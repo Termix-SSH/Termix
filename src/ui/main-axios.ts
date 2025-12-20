@@ -878,6 +878,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       domain: hostData.domain || null,
       security: hostData.security || null,
       ignoreCert: Boolean(hostData.ignoreCert),
+      // Guacamole configuration for RDP/VNC
+      guacamoleConfig: hostData.guacamoleConfig || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -955,6 +957,8 @@ export async function updateSSHHost(
       domain: hostData.domain || null,
       security: hostData.security || null,
       ignoreCert: Boolean(hostData.ignoreCert),
+      // Guacamole configuration for RDP/VNC
+      guacamoleConfig: hostData.guacamoleConfig || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -3142,16 +3146,171 @@ export interface GuacamoleTokenRequest {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
+  // Extended guacamole configuration
+  guacamoleConfig?: {
+    // Display settings
+    colorDepth?: number;
+    width?: number;
+    height?: number;
+    dpi?: number;
+    resizeMethod?: string;
+    forceLossless?: boolean;
+    // Audio settings
+    disableAudio?: boolean;
+    enableAudioInput?: boolean;
+    // RDP Performance settings
+    enableWallpaper?: boolean;
+    enableTheming?: boolean;
+    enableFontSmoothing?: boolean;
+    enableFullWindowDrag?: boolean;
+    enableDesktopComposition?: boolean;
+    enableMenuAnimations?: boolean;
+    disableBitmapCaching?: boolean;
+    disableOffscreenCaching?: boolean;
+    disableGlyphCaching?: boolean;
+    disableGfx?: boolean;
+    // RDP Device redirection
+    enablePrinting?: boolean;
+    printerName?: string;
+    enableDrive?: boolean;
+    driveName?: string;
+    drivePath?: string;
+    createDrivePath?: boolean;
+    disableDownload?: boolean;
+    disableUpload?: boolean;
+    enableTouch?: boolean;
+    // RDP Session settings
+    clientName?: string;
+    console?: boolean;
+    initialProgram?: string;
+    serverLayout?: string;
+    timezone?: string;
+    // RDP Gateway settings
+    gatewayHostname?: string;
+    gatewayPort?: number;
+    gatewayUsername?: string;
+    gatewayPassword?: string;
+    gatewayDomain?: string;
+    // RDP RemoteApp settings
+    remoteApp?: string;
+    remoteAppDir?: string;
+    remoteAppArgs?: string;
+    // Clipboard settings
+    normalizeClipboard?: string;
+    disableCopy?: boolean;
+    disablePaste?: boolean;
+    // VNC specific settings
+    cursor?: string;
+    swapRedBlue?: boolean;
+    readOnly?: boolean;
+    // Recording settings
+    recordingPath?: string;
+    recordingName?: string;
+    createRecordingPath?: boolean;
+    recordingExcludeOutput?: boolean;
+    recordingExcludeMouse?: boolean;
+    recordingIncludeKeys?: boolean;
+    // Wake-on-LAN settings
+    wolSendPacket?: boolean;
+    wolMacAddr?: string;
+    wolBroadcastAddr?: string;
+    wolUdpPort?: number;
+    wolWaitTime?: number;
+  };
 }
 
 export interface GuacamoleTokenResponse {
   token: string;
 }
 
+// Helper to convert camelCase to kebab-case for guacamole parameters
+function toGuacamoleParams(config: GuacamoleTokenRequest["guacamoleConfig"]): Record<string, unknown> {
+  if (!config) return {};
+
+  const params: Record<string, unknown> = {};
+
+  // Map camelCase to guacamole's kebab-case parameter names
+  const mappings: Record<string, string> = {
+    colorDepth: "color-depth",
+    resizeMethod: "resize-method",
+    forceLossless: "force-lossless",
+    disableAudio: "disable-audio",
+    enableAudioInput: "enable-audio-input",
+    enableWallpaper: "enable-wallpaper",
+    enableTheming: "enable-theming",
+    enableFontSmoothing: "enable-font-smoothing",
+    enableFullWindowDrag: "enable-full-window-drag",
+    enableDesktopComposition: "enable-desktop-composition",
+    enableMenuAnimations: "enable-menu-animations",
+    disableBitmapCaching: "disable-bitmap-caching",
+    disableOffscreenCaching: "disable-offscreen-caching",
+    disableGlyphCaching: "disable-glyph-caching",
+    disableGfx: "disable-gfx",
+    enablePrinting: "enable-printing",
+    printerName: "printer-name",
+    enableDrive: "enable-drive",
+    driveName: "drive-name",
+    drivePath: "drive-path",
+    createDrivePath: "create-drive-path",
+    disableDownload: "disable-download",
+    disableUpload: "disable-upload",
+    enableTouch: "enable-touch",
+    clientName: "client-name",
+    initialProgram: "initial-program",
+    serverLayout: "server-layout",
+    gatewayHostname: "gateway-hostname",
+    gatewayPort: "gateway-port",
+    gatewayUsername: "gateway-username",
+    gatewayPassword: "gateway-password",
+    gatewayDomain: "gateway-domain",
+    remoteApp: "remote-app",
+    remoteAppDir: "remote-app-dir",
+    remoteAppArgs: "remote-app-args",
+    normalizeClipboard: "normalize-clipboard",
+    disableCopy: "disable-copy",
+    disablePaste: "disable-paste",
+    swapRedBlue: "swap-red-blue",
+    readOnly: "read-only",
+    recordingPath: "recording-path",
+    recordingName: "recording-name",
+    createRecordingPath: "create-recording-path",
+    recordingExcludeOutput: "recording-exclude-output",
+    recordingExcludeMouse: "recording-exclude-mouse",
+    recordingIncludeKeys: "recording-include-keys",
+    wolSendPacket: "wol-send-packet",
+    wolMacAddr: "wol-mac-addr",
+    wolBroadcastAddr: "wol-broadcast-addr",
+    wolUdpPort: "wol-udp-port",
+    wolWaitTime: "wol-wait-time",
+  };
+
+  for (const [key, value] of Object.entries(config)) {
+    if (value !== undefined && value !== null && value !== "") {
+      const paramName = mappings[key] || key;
+      // Guacamole expects boolean values as strings "true" or "false"
+      if (typeof value === "boolean") {
+        params[paramName] = value ? "true" : "false";
+      } else {
+        params[paramName] = value;
+      }
+    }
+  }
+
+  return params;
+}
+
 export async function getGuacamoleToken(
   request: GuacamoleTokenRequest,
 ): Promise<GuacamoleTokenResponse> {
   try {
+    // Convert guacamoleConfig to guacamole parameter format
+    const guacParams = toGuacamoleParams(request.guacamoleConfig);
+
+    // Debug: log guacamoleConfig and converted params
+    console.log("[Guacamole] Request guacamoleConfig:", request.guacamoleConfig);
+    console.log("[Guacamole] Converted params:", guacParams);
+    console.log("[Guacamole] Param count:", Object.keys(guacParams).length);
+
     // Use authApi (port 30001 without /ssh prefix) since guacamole routes are at /guacamole
     const response = await authApi.post("/guacamole/token", {
       type: request.protocol,
@@ -3162,6 +3321,7 @@ export async function getGuacamoleToken(
       domain: request.domain,
       security: request.security,
       "ignore-cert": request.ignoreCert,
+      ...guacParams,
     });
     return response.data;
   } catch (error) {

@@ -500,6 +500,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
   addColumnIfNotExists("ssh_data", "security", "TEXT");
   addColumnIfNotExists("ssh_data", "ignore_cert", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("ssh_data", "guacamole_config", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");

@@ -27,6 +27,97 @@ export interface DockerConfig {
 
 export type HostConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
 
+// Guacamole configuration for RDP/VNC/Telnet connections
+export interface GuacamoleConfig {
+  // Display settings
+  colorDepth?: number;
+  width?: number;
+  height?: number;
+  dpi?: number;
+  resizeMethod?: string;
+  forceLossless?: boolean;
+  // Audio settings
+  disableAudio?: boolean;
+  enableAudioInput?: boolean;
+  // RDP Performance settings
+  enableWallpaper?: boolean;
+  enableTheming?: boolean;
+  enableFontSmoothing?: boolean;
+  enableFullWindowDrag?: boolean;
+  enableDesktopComposition?: boolean;
+  enableMenuAnimations?: boolean;
+  disableBitmapCaching?: boolean;
+  disableOffscreenCaching?: boolean;
+  disableGlyphCaching?: boolean;
+  disableGfx?: boolean;
+  // RDP Device redirection
+  enablePrinting?: boolean;
+  printerName?: string;
+  enableDrive?: boolean;
+  driveName?: string;
+  drivePath?: string;
+  createDrivePath?: boolean;
+  disableDownload?: boolean;
+  disableUpload?: boolean;
+  enableTouch?: boolean;
+  // RDP Session settings
+  clientName?: string;
+  console?: boolean;
+  initialProgram?: string;
+  serverLayout?: string;
+  timezone?: string;
+  // RDP Gateway settings
+  gatewayHostname?: string;
+  gatewayPort?: number;
+  gatewayUsername?: string;
+  gatewayPassword?: string;
+  gatewayDomain?: string;
+  // RDP RemoteApp settings
+  remoteApp?: string;
+  remoteAppDir?: string;
+  remoteAppArgs?: string;
+  // RDP Preconnection settings (Hyper-V)
+  preconnectionId?: number;
+  preconnectionBlob?: string;
+  // RDP Load balancing
+  loadBalanceInfo?: string;
+  // Clipboard settings
+  normalizeClipboard?: string;
+  disableCopy?: boolean;
+  disablePaste?: boolean;
+  // VNC specific settings
+  cursor?: string;
+  swapRedBlue?: boolean;
+  readOnly?: boolean;
+  // VNC Repeater settings
+  destHost?: string;
+  destPort?: number;
+  // VNC Reverse connection
+  reverseConnect?: boolean;
+  listenTimeout?: number;
+  // Common SFTP settings (for RDP/VNC file transfer)
+  enableSftp?: boolean;
+  sftpHostname?: string;
+  sftpPort?: number;
+  sftpUsername?: string;
+  sftpPassword?: string;
+  sftpPrivateKey?: string;
+  sftpDirectory?: string;
+  // Recording settings
+  recordingPath?: string;
+  recordingName?: string;
+  createRecordingPath?: boolean;
+  recordingExcludeOutput?: boolean;
+  recordingExcludeMouse?: boolean;
+  recordingIncludeKeys?: boolean;
+  // Wake-on-LAN settings
+  wolSendPacket?: boolean;
+  wolMacAddr?: string;
+  wolBroadcastAddr?: string;
+  wolUdpPort?: number;
+  wolWaitTime?: number;
+}
+
 export interface SSHHost {
   id: number;
   connectionType: HostConnectionType;
@@ -62,10 +153,12 @@ export interface SSHHost {
   statsConfig?: string;
   dockerConfig?: string;
   terminalConfig?: TerminalConfig;
-  // RDP/VNC specific fields
+  // RDP/VNC specific fields (basic)
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
+  // RDP/VNC extended configuration (stored as JSON)
+  guacamoleConfig?: GuacamoleConfig | string;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,10 +200,12 @@ export interface SSHHostData {
   statsConfig?: string | Record<string, unknown>;
   dockerConfig?: DockerConfig | string;
   terminalConfig?: TerminalConfig;
-  // RDP/VNC specific fields
+  // RDP/VNC specific fields (basic)
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
+  // RDP/VNC extended configuration
+  guacamoleConfig?: GuacamoleConfig;
 }
 
 export interface SSHFolder {

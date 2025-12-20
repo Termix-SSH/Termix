@@ -249,6 +249,7 @@ router.post(
       domain,
       security,
       ignoreCert,
+      guacamoleConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -299,6 +300,7 @@ router.post(
       domain: domain || null,
       security: security || null,
       ignoreCert: ignoreCert ? 1 : 0,
+      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -362,6 +364,9 @@ router.post(
           : undefined,
         dockerConfig: createdHost.dockerConfig
           ? JSON.parse(createdHost.dockerConfig as string)
+          : undefined,
+        guacamoleConfig: createdHost.guacamoleConfig
+          ? JSON.parse(createdHost.guacamoleConfig as string)
           : undefined,
       };
 
@@ -490,6 +495,7 @@ router.put(
       domain,
       security,
       ignoreCert,
+      guacamoleConfig,
     } = hostData;
     if (
       !isNonEmptyString(userId) ||
@@ -540,6 +546,7 @@ router.put(
       domain: domain || null,
       security: security || null,
       ignoreCert: ignoreCert ? 1 : 0,
+      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -621,6 +628,9 @@ router.put(
           : undefined,
         dockerConfig: updatedHost.dockerConfig
           ? JSON.parse(updatedHost.dockerConfig as string)
+          : undefined,
+        guacamoleConfig: updatedHost.guacamoleConfig
+          ? JSON.parse(updatedHost.guacamoleConfig as string)
           : undefined,
       };
 
@@ -730,6 +740,9 @@ router.get(
             terminalConfig: row.terminalConfig
               ? JSON.parse(row.terminalConfig as string)
               : undefined,
+            guacamoleConfig: row.guacamoleConfig
+              ? JSON.parse(row.guacamoleConfig as string)
+              : undefined,
             forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
           };
 
@@ -804,6 +817,9 @@ router.get(
           : undefined,
         terminalConfig: host.terminalConfig
           ? JSON.parse(host.terminalConfig)
+          : undefined,
+        guacamoleConfig: host.guacamoleConfig
+          ? JSON.parse(host.guacamoleConfig)
           : undefined,
         forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
       };

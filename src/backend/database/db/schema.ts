@@ -100,6 +100,8 @@ export const sshData = sqliteTable("ssh_data", {
   domain: text("domain"),
   security: text("security"),
   ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
+  // RDP/VNC extended configuration (stored as JSON)
+  guacamoleConfig: text("guacamole_config"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

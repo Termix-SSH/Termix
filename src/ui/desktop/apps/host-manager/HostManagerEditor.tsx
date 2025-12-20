@@ -78,7 +78,7 @@ import {
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
 import { TerminalPreview } from "@/ui/desktop/apps/terminal/TerminalPreview.tsx";
-import type { TerminalConfig } from "@/types";
+import type { TerminalConfig, SSHHost } from "@/types";
 import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
 
 interface JumpHostItemProps {
@@ -277,46 +277,6 @@ function QuickActionItem({
   );
 }
 
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  folder: string;
-  tags: string[];
-  pin: boolean;
-  authType: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  enableTerminal: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
-  defaultPath: string;
-  tunnelConnections: Array<{
-    sourcePort: number;
-    endpointPort: number;
-    endpointHost: string;
-    maxRetries: number;
-    retryInterval: number;
-    autoStart: boolean;
-  }>;
-  jumpHosts?: Array<{
-    hostId: number;
-  }>;
-  quickActions?: Array<{
-    name: string;
-    snippetId: number;
-  }>;
-  statsConfig?: StatsConfig;
-  terminalConfig?: TerminalConfig;
-  createdAt: string;
-  updatedAt: string;
-  credentialId?: number;
-}
-
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
   onFormSubmit?: (updatedHost?: SSHHost) => void;
@@ -448,6 +408,77 @@ export function HostManagerEditor({
       domain: z.string().optional(),
       security: z.string().optional(),
       ignoreCert: z.boolean().default(false),
+      // RDP/VNC extended configuration
+      guacamoleConfig: z.object({
+        // Display settings
+        colorDepth: z.coerce.number().optional(),
+        width: z.coerce.number().optional(),
+        height: z.coerce.number().optional(),
+        dpi: z.coerce.number().optional(),
+        resizeMethod: z.string().optional(),
+        forceLossless: z.boolean().optional(),
+        // Audio settings
+        disableAudio: z.boolean().optional(),
+        enableAudioInput: z.boolean().optional(),
+        // RDP Performance settings
+        enableWallpaper: z.boolean().optional(),
+        enableTheming: z.boolean().optional(),
+        enableFontSmoothing: z.boolean().optional(),
+        enableFullWindowDrag: z.boolean().optional(),
+        enableDesktopComposition: z.boolean().optional(),
+        enableMenuAnimations: z.boolean().optional(),
+        disableBitmapCaching: z.boolean().optional(),
+        disableOffscreenCaching: z.boolean().optional(),
+        disableGlyphCaching: z.boolean().optional(),
+        disableGfx: z.boolean().optional(),
+        // RDP Device redirection
+        enablePrinting: z.boolean().optional(),
+        printerName: z.string().optional(),
+        enableDrive: z.boolean().optional(),
+        driveName: z.string().optional(),
+        drivePath: z.string().optional(),
+        createDrivePath: z.boolean().optional(),
+        disableDownload: z.boolean().optional(),
+        disableUpload: z.boolean().optional(),
+        enableTouch: z.boolean().optional(),
+        // RDP Session settings
+        clientName: z.string().optional(),
+        console: z.boolean().optional(),
+        initialProgram: z.string().optional(),
+        serverLayout: z.string().optional(),
+        timezone: z.string().optional(),
+        // RDP Gateway settings
+        gatewayHostname: z.string().optional(),
+        gatewayPort: z.coerce.number().optional(),
+        gatewayUsername: z.string().optional(),
+        gatewayPassword: z.string().optional(),
+        gatewayDomain: z.string().optional(),
+        // RDP RemoteApp settings
+        remoteApp: z.string().optional(),
+        remoteAppDir: z.string().optional(),
+        remoteAppArgs: z.string().optional(),
+        // Clipboard settings
+        normalizeClipboard: z.string().optional(),
+        disableCopy: z.boolean().optional(),
+        disablePaste: z.boolean().optional(),
+        // VNC specific settings
+        cursor: z.string().optional(),
+        swapRedBlue: z.boolean().optional(),
+        readOnly: z.boolean().optional(),
+        // Recording settings
+        recordingPath: z.string().optional(),
+        recordingName: z.string().optional(),
+        createRecordingPath: z.boolean().optional(),
+        recordingExcludeOutput: z.boolean().optional(),
+        recordingExcludeMouse: z.boolean().optional(),
+        recordingIncludeKeys: z.boolean().optional(),
+        // Wake-on-LAN settings
+        wolSendPacket: z.boolean().optional(),
+        wolMacAddr: z.string().optional(),
+        wolBroadcastAddr: z.string().optional(),
+        wolUdpPort: z.coerce.number().optional(),
+        wolWaitTime: z.coerce.number().optional(),
+      }).optional(),
       credentialId: z.number().optional().nullable(),
       overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
@@ -692,6 +723,76 @@ export function HostManagerEditor({
       domain: "",
       security: "",
       ignoreCert: false,
+      guacamoleConfig: {
+        // Display settings
+        colorDepth: undefined,
+        width: undefined,
+        height: undefined,
+        dpi: 96,
+        resizeMethod: "display-update",
+        forceLossless: false,
+        // Audio settings
+        disableAudio: false,
+        enableAudioInput: false,
+        // RDP Performance settings
+        enableWallpaper: false,
+        enableTheming: false,
+        enableFontSmoothing: true,
+        enableFullWindowDrag: false,
+        enableDesktopComposition: false,
+        enableMenuAnimations: false,
+        disableBitmapCaching: false,
+        disableOffscreenCaching: false,
+        disableGlyphCaching: false,
+        disableGfx: false,
+        // RDP Device redirection
+        enablePrinting: false,
+        printerName: "",
+        enableDrive: false,
+        driveName: "",
+        drivePath: "",
+        createDrivePath: false,
+        disableDownload: false,
+        disableUpload: false,
+        enableTouch: false,
+        // RDP Session settings
+        clientName: "",
+        console: false,
+        initialProgram: "",
+        serverLayout: "en-us-qwerty",
+        timezone: "",
+        // RDP Gateway settings
+        gatewayHostname: "",
+        gatewayPort: 443,
+        gatewayUsername: "",
+        gatewayPassword: "",
+        gatewayDomain: "",
+        // RDP RemoteApp settings
+        remoteApp: "",
+        remoteAppDir: "",
+        remoteAppArgs: "",
+        // Clipboard settings
+        normalizeClipboard: "preserve",
+        disableCopy: false,
+        disablePaste: false,
+        // VNC specific settings
+        cursor: "remote",
+        swapRedBlue: false,
+        readOnly: false,
+        // Recording settings
+        recordingPath: "",
+        recordingName: "",
+        createRecordingPath: false,
+        recordingExcludeOutput: false,
+        recordingExcludeMouse: false,
+        recordingIncludeKeys: false,
+        // Wake-on-LAN settings
+        wolSendPacket: false,
+        wolMacAddr: "",
+        wolBroadcastAddr: "",
+        wolUdpPort: 9,
+        wolWaitTime: 0,
+      },
     },
   });
 
@@ -768,6 +869,81 @@ export function HostManagerEditor({
         console.error("Failed to parse dockerConfig:", error);
       }
 
+      // Parse guacamoleConfig if it exists - merge with defaults
+      const defaultGuacamoleConfig = {
+        colorDepth: undefined,
+        width: undefined,
+        height: undefined,
+        dpi: 96,
+        resizeMethod: "display-update",
+        forceLossless: false,
+        disableAudio: false,
+        enableAudioInput: false,
+        enableWallpaper: false,
+        enableTheming: false,
+        enableFontSmoothing: true,
+        enableFullWindowDrag: false,
+        enableDesktopComposition: false,
+        enableMenuAnimations: false,
+        disableBitmapCaching: false,
+        disableOffscreenCaching: false,
+        disableGlyphCaching: false,
+        disableGfx: false,
+        enablePrinting: false,
+        printerName: "",
+        enableDrive: false,
+        driveName: "",
+        drivePath: "",
+        createDrivePath: false,
+        disableDownload: false,
+        disableUpload: false,
+        enableTouch: false,
+        clientName: "",
+        console: false,
+        initialProgram: "",
+        serverLayout: "en-us-qwerty",
+        timezone: "",
+        gatewayHostname: "",
+        gatewayPort: 443,
+        gatewayUsername: "",
+        gatewayPassword: "",
+        gatewayDomain: "",
+        remoteApp: "",
+        remoteAppDir: "",
+        remoteAppArgs: "",
+        normalizeClipboard: "preserve",
+        disableCopy: false,
+        disablePaste: false,
+        cursor: "remote",
+        swapRedBlue: false,
+        readOnly: false,
+        recordingPath: "",
+        recordingName: "",
+        createRecordingPath: false,
+        recordingExcludeOutput: false,
+        recordingExcludeMouse: false,
+        recordingIncludeKeys: false,
+        wolSendPacket: false,
+        wolMacAddr: "",
+        wolBroadcastAddr: "",
+        wolUdpPort: 9,
+        wolWaitTime: 0,
+      };
+      let parsedGuacamoleConfig = { ...defaultGuacamoleConfig };
+      try {
+        if (cleanedHost.guacamoleConfig) {
+          console.log("[HostManagerEditor] Loading host guacamoleConfig:", cleanedHost.guacamoleConfig);
+          const parsed =
+            typeof cleanedHost.guacamoleConfig === "string"
+              ? JSON.parse(cleanedHost.guacamoleConfig)
+              : cleanedHost.guacamoleConfig;
+          parsedGuacamoleConfig = { ...defaultGuacamoleConfig, ...parsed };
+          console.log("[HostManagerEditor] Merged guacamoleConfig:", parsedGuacamoleConfig);
+        }
+      } catch (error) {
+        console.error("Failed to parse guacamoleConfig:", error);
+      }
+
       const formData = {
         connectionType: (cleanedHost.connectionType || "ssh") as "ssh" | "rdp" | "vnc" | "telnet",
         name: cleanedHost.name || "",
@@ -816,6 +992,8 @@ export function HostManagerEditor({
         domain: cleanedHost.domain || "",
         security: cleanedHost.security || "",
         ignoreCert: Boolean(cleanedHost.ignoreCert),
+        // Guacamole config for RDP/VNC
+        guacamoleConfig: parsedGuacamoleConfig,
       };
 
       if (defaultAuthType === "password") {
@@ -904,6 +1082,12 @@ export function HostManagerEditor({
       isSubmittingRef.current = true;
       setFormError(null);
 
+      // Debug: log form data being submitted
+      console.log("[HostManagerEditor] Form data on submit:", data);
+      console.log("[HostManagerEditor] data.guacamoleConfig:", data.guacamoleConfig);
+      console.log("[HostManagerEditor] data.guacamoleConfig.enableWallpaper:", data.guacamoleConfig?.enableWallpaper);
+      console.log("[HostManagerEditor] form.getValues('guacamoleConfig'):", form.getValues("guacamoleConfig"));
+
       if (!data.name || data.name.trim() === "") {
         data.name = `${data.username}@${data.ip}`;
       }
@@ -956,7 +1140,12 @@ export function HostManagerEditor({
         domain: data.domain || null,
         security: data.security || null,
         ignoreCert: Boolean(data.ignoreCert),
+        // Guacamole configuration for RDP/VNC
+        guacamoleConfig: data.guacamoleConfig || null,
       };
+
+      // Debug: log what we're submitting
+      console.log("[HostManagerEditor] submitData.guacamoleConfig:", submitData.guacamoleConfig);
 
       submitData.credentialId = null;
       submitData.password = null;
@@ -1271,6 +1460,38 @@ export function HostManagerEditor({
                     </TabsTrigger>
                     <TabsTrigger value="statistics">
                       {t("hosts.statistics")}
+                    </TabsTrigger>
+                  </TabsList>
+                )}
+                {/* RDP tabs */}
+                {form.watch("connectionType") === "rdp" && (
+                  <TabsList>
+                    <TabsTrigger value="general">
+                      {t("hosts.general")}
+                    </TabsTrigger>
+                    <TabsTrigger value="display">
+                      {t("hosts.display", "Display")}
+                    </TabsTrigger>
+                    <TabsTrigger value="audio">
+                      {t("hosts.audio", "Audio")}
+                    </TabsTrigger>
+                    <TabsTrigger value="performance">
+                      {t("hosts.performance", "Performance")}
+                    </TabsTrigger>
+
+                  </TabsList>
+                )}
+                {/* VNC tabs */}
+                {form.watch("connectionType") === "vnc" && (
+                  <TabsList>
+                    <TabsTrigger value="general">
+                      {t("hosts.general")}
+                    </TabsTrigger>
+                    <TabsTrigger value="display">
+                      {t("hosts.display", "Display")}
+                    </TabsTrigger>
+                    <TabsTrigger value="audio">
+                      {t("hosts.audio", "Audio")}
                     </TabsTrigger>
                   </TabsList>
                 )}
@@ -3811,6 +4032,521 @@ export function HostManagerEditor({
                           <FormDescription>
                             {t("hosts.quickActionsOrder")}
                           </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* RDP/VNC Display Tab */}
+                <TabsContent value="display" className="pt-2 space-y-4">
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.displaySettings", "Display Settings")}
+                  </FormLabel>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.width"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.width", "Width")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Auto"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.widthDesc", "Display width in pixels (leave empty for auto)")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.height"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.height", "Height")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Auto"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.heightDesc", "Display height in pixels (leave empty for auto)")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.dpi"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.dpi", "DPI")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="96"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {t("hosts.dpiDesc", "Display resolution in DPI")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.colorDepth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("hosts.colorDepth", "Color Depth")}</FormLabel>
+                          <Select
+                            value={field.value?.toString() || "auto"}
+                            onValueChange={(value) => field.onChange(value === "auto" ? undefined : parseInt(value))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("hosts.selectColorDepth", "Select color depth")} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="auto">Auto</SelectItem>
+                              <SelectItem value="8">8-bit (256 colors)</SelectItem>
+                              <SelectItem value="16">16-bit (65536 colors)</SelectItem>
+                              <SelectItem value="24">24-bit (True color)</SelectItem>
+                              <SelectItem value="32">32-bit (True color + alpha)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {t("hosts.colorDepthDesc", "Color depth for the remote display")}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {form.watch("connectionType") === "rdp" && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="guacamoleConfig.resizeMethod"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("hosts.resizeMethod", "Resize Method")}</FormLabel>
+                            <Select
+                              value={field.value || "display-update"}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="display-update">Display Update</SelectItem>
+                                <SelectItem value="reconnect">Reconnect</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              {t("hosts.resizeMethodDesc", "Method to use when resizing the display")}
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="guacamoleConfig.forceLossless"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>{t("hosts.forceLossless", "Force Lossless")}</FormLabel>
+                              <FormDescription>
+                                {t("hosts.forceLosslessDesc", "Force lossless compression (higher bandwidth)")}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+
+                  {form.watch("connectionType") === "vnc" && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="guacamoleConfig.cursor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("hosts.cursor", "Cursor Mode")}</FormLabel>
+                            <Select
+                              value={field.value || "remote"}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="remote">Remote (server-side)</SelectItem>
+                                <SelectItem value="local">Local (client-side)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              {t("hosts.cursorDesc", "How to render the mouse cursor")}
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="guacamoleConfig.swapRedBlue"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>{t("hosts.swapRedBlue", "Swap Red/Blue")}</FormLabel>
+                              <FormDescription>
+                                {t("hosts.swapRedBlueDesc", "Swap red and blue color components")}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="guacamoleConfig.readOnly"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>{t("hosts.readOnly", "Read Only")}</FormLabel>
+                              <FormDescription>
+                                {t("hosts.readOnlyDesc", "View only mode - no input sent to server")}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* RDP/VNC Audio Tab */}
+                <TabsContent value="audio" className="pt-2 space-y-4">
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.audioSettings", "Audio Settings")}
+                  </FormLabel>
+
+                  <FormField
+                    control={form.control}
+                    name="guacamoleConfig.disableAudio"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>{t("hosts.disableAudio", "Disable Audio")}</FormLabel>
+                          <FormDescription>
+                            {t("hosts.disableAudioDesc", "Disable audio playback from the remote session")}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("connectionType") === "rdp" && (
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableAudioInput"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableAudioInput", "Enable Audio Input")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableAudioInputDesc", "Enable microphone input to the remote session")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </TabsContent>
+
+                {/* RDP Performance Tab */}
+                <TabsContent value="performance" className="pt-2 space-y-4">
+                  <FormLabel className="mb-3 font-bold">
+                    {t("hosts.performanceSettings", "Performance Settings")}
+                  </FormLabel>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableWallpaper"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableWallpaper", "Wallpaper")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableWallpaperDesc", "Show desktop wallpaper")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={(checked) => {
+                                console.log("[HostManagerEditor] Wallpaper toggled to:", checked);
+                                field.onChange(checked);
+                                // Log the full guacamoleConfig after change
+                                setTimeout(() => {
+                                  console.log("[HostManagerEditor] After toggle, guacamoleConfig:", form.getValues("guacamoleConfig"));
+                                }, 0);
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableTheming"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableTheming", "Theming")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableThemingDesc", "Enable window theming")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableFontSmoothing"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableFontSmoothing", "Font Smoothing")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableFontSmoothingDesc", "Enable ClearType font smoothing")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value ?? true}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableFullWindowDrag"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableFullWindowDrag", "Full Window Drag")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableFullWindowDragDesc", "Show window contents while dragging")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableDesktopComposition"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableDesktopComposition", "Desktop Composition")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableDesktopCompositionDesc", "Enable Aero glass effects")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.enableMenuAnimations"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.enableMenuAnimations", "Menu Animations")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.enableMenuAnimationsDesc", "Enable menu animations")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormLabel className="mb-3 font-bold pt-4">
+                    {t("hosts.cachingSettings", "Caching Settings")}
+                  </FormLabel>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.disableBitmapCaching"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.disableBitmapCaching", "Disable Bitmap Caching")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.disableBitmapCachingDesc", "Disable bitmap caching")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.disableOffscreenCaching"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.disableOffscreenCaching", "Disable Offscreen Caching")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.disableOffscreenCachingDesc", "Disable offscreen caching")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.disableGlyphCaching"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.disableGlyphCaching", "Disable Glyph Caching")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.disableGlyphCachingDesc", "Disable glyph caching")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="guacamoleConfig.disableGfx"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>{t("hosts.disableGfx", "Disable GFX")}</FormLabel>
+                            <FormDescription>
+                              {t("hosts.disableGfxDesc", "Disable graphics pipeline extension")}
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
                         </FormItem>
                       )}
                     />

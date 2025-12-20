@@ -38,6 +38,24 @@ router.post("/token", async (req, res) => {
       return res.status(400).json({ error: "Invalid connection type. Must be rdp, vnc, or telnet" });
     }
 
+    // Log received options for debugging
+    guacLogger.info("Guacamole token request received", {
+      operation: "guac_token_request",
+      type,
+      hostname,
+      port,
+      optionKeys: Object.keys(options),
+      optionsCount: Object.keys(options).length,
+    });
+
+    // Log specific option values for debugging
+    if (Object.keys(options).length > 0) {
+      guacLogger.info("Guacamole options received", {
+        operation: "guac_token_options",
+        options: JSON.stringify(options),
+      });
+    }
+
     let token: string;
 
     switch (type) {

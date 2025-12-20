@@ -115,6 +115,16 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
       addTab({ type: "terminal", title, hostConfig: host });
     } else if (connectionType === "rdp" || connectionType === "vnc") {
       try {
+        // Parse guacamoleConfig if it's a string
+        const guacConfig = typeof host.guacamoleConfig === "string"
+          ? JSON.parse(host.guacamoleConfig)
+          : host.guacamoleConfig;
+
+        // Debug: log what guacamoleConfig we have
+        console.log("[Host.tsx] host.guacamoleConfig type:", typeof host.guacamoleConfig);
+        console.log("[Host.tsx] host.guacamoleConfig:", host.guacamoleConfig);
+        console.log("[Host.tsx] Parsed guacConfig:", guacConfig);
+
         // Get guacamole token for RDP/VNC connection
         const tokenResponse = await getGuacamoleToken({
           protocol: connectionType,
@@ -125,6 +135,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
           domain: host.domain,
           security: host.security,
           ignoreCert: host.ignoreCert,
+          guacamoleConfig: guacConfig,
         });
 
         addTab({

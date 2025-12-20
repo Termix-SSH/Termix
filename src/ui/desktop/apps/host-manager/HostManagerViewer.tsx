@@ -1496,6 +1496,11 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                               });
                                             } else if (connectionType === "rdp" || connectionType === "vnc") {
                                               try {
+                                                // Parse guacamoleConfig if it's a string
+                                                const guacConfig = typeof host.guacamoleConfig === "string"
+                                                  ? JSON.parse(host.guacamoleConfig)
+                                                  : host.guacamoleConfig;
+
                                                 const tokenResponse = await getGuacamoleToken({
                                                   protocol: connectionType,
                                                   hostname: host.ip,
@@ -1505,6 +1510,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                                   domain: host.domain,
                                                   security: host.security,
                                                   ignoreCert: host.ignoreCert,
+                                                  guacamoleConfig: guacConfig,
                                                 });
                                                 addTab({
                                                   type: connectionType,
