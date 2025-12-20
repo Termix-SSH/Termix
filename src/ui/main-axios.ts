@@ -924,11 +924,6 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
         : null,
-      dockerConfig: hostData.dockerConfig
-        ? typeof hostData.dockerConfig === "string"
-          ? hostData.dockerConfig
-          : JSON.stringify(hostData.dockerConfig)
-        : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1003,11 +998,6 @@ export async function updateSSHHost(
         ? typeof hostData.statsConfig === "string"
           ? hostData.statsConfig
           : JSON.stringify(hostData.statsConfig)
-        : null,
-      dockerConfig: hostData.dockerConfig
-        ? typeof hostData.dockerConfig === "string"
-          ? hostData.dockerConfig
-          : JSON.stringify(hostData.dockerConfig)
         : null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),

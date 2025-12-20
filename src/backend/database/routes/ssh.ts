@@ -774,6 +774,13 @@ router.get(
           quickActions: sshData.quickActions,
           notes: sshData.notes,
           expirationDate: sshData.expirationDate,
+          enableDocker: sshData.enableDocker,
+          useSocks5: sshData.useSocks5,
+          socks5Host: sshData.socks5Host,
+          socks5Port: sshData.socks5Port,
+          socks5Username: sshData.socks5Username,
+          socks5Password: sshData.socks5Password,
+          socks5ProxyChain: sshData.socks5ProxyChain,
 
           // Shared access info
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
