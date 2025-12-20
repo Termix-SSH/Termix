@@ -15,6 +15,8 @@ import {
   sshCredentialUsage,
   recentActivity,
   snippets,
+  roles,
+  userRoles,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -209,6 +211,41 @@ router.post("/create", async (req, res) => {
       totp_enabled: false,
       totp_backup_codes: null,
     });
+
+    // Assign default role to new user
+    try {
+      const defaultRoleName = isFirstUser ? "admin" : "user";
+      const defaultRole = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(eq(roles.name, defaultRoleName))
+        .limit(1);
+
+      if (defaultRole.length > 0) {
+        await db.insert(userRoles).values({
+          userId: id,
+          roleId: defaultRole[0].id,
+          grantedBy: id, // Self-assigned during registration
+        });
+        authLogger.info("Assigned default role to new user", {
+          operation: "assign_default_role",
+          userId: id,
+          roleName: defaultRoleName,
+        });
+      } else {
+        authLogger.warn("Default role not found during user registration", {
+          operation: "assign_default_role",
+          userId: id,
+          roleName: defaultRoleName,
+        });
+      }
+    } catch (roleError) {
+      authLogger.error("Failed to assign default role", roleError, {
+        operation: "assign_default_role",
+        userId: id,
+      });
+      // Don't fail user creation if role assignment fails
+    }
 
     try {
       await authManager.registerUser(id, password);
@@ -815,6 +852,41 @@ router.get("/oidc/callback", async (req, res) => {
         name_path: String(config.name_path),
         scopes: String(config.scopes),
       });
+
+      // Assign default role to new OIDC user
+      try {
+        const defaultRoleName = isFirstUser ? "admin" : "user";
+        const defaultRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, defaultRoleName))
+          .limit(1);
+
+        if (defaultRole.length > 0) {
+          await db.insert(userRoles).values({
+            userId: id,
+            roleId: defaultRole[0].id,
+            grantedBy: id, // Self-assigned during registration
+          });
+          authLogger.info("Assigned default role to new OIDC user", {
+            operation: "assign_default_role_oidc",
+            userId: id,
+            roleName: defaultRoleName,
+          });
+        } else {
+          authLogger.warn("Default role not found during OIDC user registration", {
+            operation: "assign_default_role_oidc",
+            userId: id,
+            roleName: defaultRoleName,
+          });
+        }
+      } catch (roleError) {
+        authLogger.error("Failed to assign default role to OIDC user", roleError, {
+          operation: "assign_default_role_oidc",
+          userId: id,
+        });
+        // Don't fail user creation if role assignment fails
+      }
 
       try {
         const sessionDurationMs =

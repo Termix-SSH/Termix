@@ -1,4 +1,7 @@
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type {
+  AuthenticatedRequest,
+  CredentialBackend,
+} from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
@@ -1124,10 +1127,9 @@ router.post(
 
 async function deploySSHKeyToHost(
   hostConfig: Record<string, unknown>,
-  publicKey: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _credentialData: Record<string, unknown>,
+  credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
+  const publicKey = credData.public_key as string;
   return new Promise((resolve) => {
     const conn = new Client();
 
@@ -1248,7 +1250,7 @@ async function deploySSHKeyToHost(
             .replace(/'/g, "'\\''");
 
           conn.exec(
-            `printf '%s\\n' '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
               if (err) {
                 clearTimeout(addTimeout);
@@ -1510,7 +1512,7 @@ router.post(
         });
       }
 
-      const credData = credential[0];
+      const credData = credential[0] as unknown as CredentialBackend;
 
       if (credData.authType !== "key") {
         return res.status(400).json({
@@ -1519,7 +1521,7 @@ router.post(
         });
       }
 
-      const publicKey = credData.public_key || credData.publicKey;
+      const publicKey = credData.public_key;
       if (!publicKey) {
         return res.status(400).json({
           success: false,
@@ -1601,7 +1603,6 @@ router.post(
 
       const deployResult = await deploySSHKeyToHost(
         hostConfig,
-        publicKey as string,
         credData,
       );
 

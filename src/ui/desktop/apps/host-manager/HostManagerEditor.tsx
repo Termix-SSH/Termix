@@ -37,6 +37,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/desktop/apps/credentials/CredentialSelector.tsx";
+import { HostSharingTab } from "./HostSharingTab.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
@@ -514,6 +515,7 @@ export function HostManagerEditor({
           startupSnippetId: z.number().nullable(),
           autoMosh: z.boolean(),
           moshCommand: z.string(),
+          sudoPasswordAutoFill: z.boolean(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
@@ -548,6 +550,7 @@ export function HostManagerEditor({
           }),
         )
         .optional(),
+      enableDocker: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -610,7 +613,7 @@ export function HostManagerEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       ip: "",
@@ -642,6 +645,7 @@ export function HostManagerEditor({
       socks5Username: "",
       socks5Password: "",
       socks5ProxyChain: [],
+      enableDocker: false,
     },
   });
 
@@ -745,6 +749,7 @@ export function HostManagerEditor({
         socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
           ? cleanedHost.socks5ProxyChain
           : [],
+        enableDocker: Boolean(cleanedHost.enableDocker),
       };
 
       // Determine proxy mode based on existing data
@@ -805,6 +810,7 @@ export function HostManagerEditor({
         statsConfig: DEFAULT_STATS_CONFIG,
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
+        enableDocker: false,
       };
 
       form.reset(defaultFormData as FormData);
@@ -856,14 +862,7 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
-
-      console.log("Submitting host data:", {
-        useSocks5: submitData.useSocks5,
-        socks5Host: submitData.socks5Host,
-        socks5ProxyChain: submitData.socks5ProxyChain,
-        proxyMode,
-      });
-
+          
       if (proxyMode === "single") {
         submitData.socks5ProxyChain = [];
       } else if (proxyMode === "chain") {
@@ -974,6 +973,8 @@ export function HostManagerEditor({
       setActiveTab("general");
     } else if (errors.enableTerminal || errors.terminalConfig) {
       setActiveTab("terminal");
+    } else if (errors.enableDocker) {
+      setActiveTab("docker");
     } else if (errors.enableTunnel || errors.tunnelConnections) {
       setActiveTab("tunnel");
     } else if (errors.enableFileManager || errors.defaultPath) {
@@ -1166,6 +1167,7 @@ export function HostManagerEditor({
                   <TabsTrigger value="terminal">
                     {t("hosts.terminal")}
                   </TabsTrigger>
+                  <TabsTrigger value="docker">Docker</TabsTrigger>
                   <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                   <TabsTrigger value="file_manager">
                     {t("hosts.fileManager")}
@@ -1173,6 +1175,11 @@ export function HostManagerEditor({
                   <TabsTrigger value="statistics">
                     {t("hosts.statistics")}
                   </TabsTrigger>
+                  {!editingHost?.isShared && (
+                    <TabsTrigger value="sharing">
+                      {t("rbac.sharing")}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
                 <TabsContent value="general" className="pt-2">
                   <FormLabel className="mb-3 font-bold">
@@ -2680,6 +2687,29 @@ export function HostManagerEditor({
                           />
                         )}
 
+                        <FormField
+                          control={form.control}
+                          name="terminalConfig.sudoPasswordAutoFill"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>
+                                  {t("hosts.sudoPasswordAutoFill")}
+                                </FormLabel>
+                                <FormDescription>
+                                  {t("hosts.sudoPasswordAutoFillDesc")}
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
                             Environment Variables
@@ -2757,6 +2787,26 @@ export function HostManagerEditor({
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
+                </TabsContent>
+                <TabsContent value="docker" className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="enableDocker"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enable Docker</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enable Docker integration for this host
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
                 </TabsContent>
                 <TabsContent value="tunnel">
                   <FormField
@@ -3513,18 +3563,27 @@ export function HostManagerEditor({
                     />
                   </div>
                 </TabsContent>
+
+                <TabsContent value="sharing" className="space-y-6">
+                  <HostSharingTab
+                    hostId={editingHost?.id}
+                    isNewHost={!editingHost?.id}
+                  />
+                </TabsContent>
               </Tabs>
             </div>
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            <Button className="translate-y-2" type="submit" variant="outline">
-              {editingHost
-                ? editingHost.id
-                  ? t("hosts.updateHost")
-                  : t("hosts.cloneHost")
-                : t("hosts.addHost")}
-            </Button>
+            {!(editingHost?.permissionLevel === "view") && (
+              <Button className="translate-y-2" type="submit" variant="outline">
+                {editingHost
+                  ? editingHost.id
+                    ? t("hosts.updateHost")
+                    : t("hosts.cloneHost")
+                  : t("hosts.addHost")}
+              </Button>
+            )}
           </footer>
         </form>
       </Form>

@@ -155,7 +155,9 @@ function AppContent() {
   const showTerminalView =
     currentTabData?.type === "terminal" ||
     currentTabData?.type === "server" ||
-    currentTabData?.type === "file_manager";
+    currentTabData?.type === "file_manager" ||
+    currentTabData?.type === "tunnel" ||
+    currentTabData?.type === "docker";
   const showHome = currentTabData?.type === "home";
   const showSshManager = currentTabData?.type === "ssh_manager";
   const showAdmin = currentTabData?.type === "admin";

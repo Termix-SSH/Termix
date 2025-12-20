@@ -43,11 +43,6 @@ export function TunnelViewer({
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden p-3 min-h-0">
-      <div className="w-full flex-shrink-0 mb-2">
-        <h1 className="text-xl font-semibold text-foreground">
-          {t("tunnels.title")}
-        </h1>
-      </div>
       <div className="min-h-0 flex-1 overflow-auto pr-1">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full">
           {activeHost.tunnelConnections.map((t, idx) => (

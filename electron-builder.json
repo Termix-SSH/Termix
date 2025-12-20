@@ -124,5 +124,6 @@
       "ITSAppUsesNonExemptEncryption": false,
       "NSAppleEventsUsageDescription": "Termix needs access to control other applications for terminal operations."
     }
-  }
+  },
+  "generateUpdatesFilesForAllChannels": true
 }

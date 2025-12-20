@@ -76,7 +76,11 @@ export function TabProvider({ children }: TabProviderProps) {
         ? t("nav.serverStats")
         : tabType === "file_manager"
           ? t("nav.fileManager")
-          : t("nav.terminal");
+          : tabType === "tunnel"
+            ? t("nav.tunnels")
+            : tabType === "docker"
+              ? t("nav.docker")
+              : t("nav.terminal");
     const baseTitle = (desiredTitle || defaultTitle).trim();
     const match = baseTitle.match(/^(.*) \((\d+)\)$/);
     const root = match ? match[1] : baseTitle;
@@ -137,7 +141,9 @@ export function TabProvider({ children }: TabProviderProps) {
     const needsUniqueTitle =
       tabData.type === "terminal" ||
       tabData.type === "server" ||
-      tabData.type === "file_manager";
+      tabData.type === "file_manager" ||
+      tabData.type === "tunnel" ||
+      tabData.type === "docker";
     const effectiveTitle = needsUniqueTitle
       ? computeUniqueTitle(tabData.type, tabData.title)
       : tabData.title || "";

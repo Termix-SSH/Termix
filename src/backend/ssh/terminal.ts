@@ -323,7 +323,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
-  let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
   let isKeyboardInteractive = false;
@@ -808,8 +807,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }),
             );
           });
-
-          setupPingInterval();
 
           if (initialPath && initialPath.trim() !== "") {
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
@@ -1333,11 +1330,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(timeoutId);
     }
 
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
-
     if (sshStream) {
       try {
         sshStream.end();
@@ -1374,24 +1366,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 100);
   }
 
-  function setupPingInterval() {
-    pingInterval = setInterval(() => {
-      if (sshConn && sshStream) {
-        try {
-          sshStream.write("\x00");
-        } catch (e: unknown) {
-          sshLogger.error(
-            "SSH keepalive failed: " +
-              (e instanceof Error ? e.message : "Unknown error"),
-          );
-          cleanupSSH();
-        }
-      } else if (!sshConn || !sshStream) {
-        if (pingInterval) {
-          clearInterval(pingInterval);
-          pingInterval = null;
-        }
-      }
-    }, 30000);
-  }
+  // Note: PTY-level keepalive (writing \x00 to the stream) was removed.
+  // It was causing ^@ characters to appear in terminals with echoctl enabled.
+  // SSH-level keepalive is configured via connectConfig (keepaliveInterval,
+  // keepaliveCountMax, tcpKeepAlive), which handles connection health monitoring
+  // without producing visible output on the terminal.
+  //
+  // See: https://github.com/Termix-SSH/Support/issues/232
+  // See: https://github.com/Termix-SSH/Support/issues/309
 });

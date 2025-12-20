@@ -61,6 +61,8 @@ import {
   HardDrive,
   Globe,
   FolderOpen,
+  Share2,
+  Users,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -1230,6 +1232,14 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         {host.name ||
                                           `${host.username}@${host.ip}`}
                                       </h3>
+                                      {(host as any).isShared && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs px-1 py-0 text-violet-500 border-violet-500/50"
+                                        >
+                                          {t("rbac.shared")}
+                                        </Badge>
+                                      )}
                                     </div>
                                     <p className="text-xs text-muted-foreground truncate">
                                       {host.ip}:{host.port}
