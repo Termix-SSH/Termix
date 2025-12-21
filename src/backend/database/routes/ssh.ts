@@ -13,6 +13,7 @@ import {
   recentActivity,
   hostAccess,
   userRoles,
+  sessionRecordings,
 } from "../db/schema.js";
 import {
   eq,
@@ -1069,60 +1070,40 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
+      // Delete all related data in correct order (child tables first)
       await db
         .delete(fileManagerRecent)
-        .where(
-          and(
-            eq(fileManagerRecent.hostId, numericHostId),
-            eq(fileManagerRecent.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerRecent.hostId, numericHostId));
 
       await db
         .delete(fileManagerPinned)
-        .where(
-          and(
-            eq(fileManagerPinned.hostId, numericHostId),
-            eq(fileManagerPinned.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerPinned.hostId, numericHostId));
 
       await db
         .delete(fileManagerShortcuts)
-        .where(
-          and(
-            eq(fileManagerShortcuts.hostId, numericHostId),
-            eq(fileManagerShortcuts.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerShortcuts.hostId, numericHostId));
 
       await db
         .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.hostId, numericHostId),
-            eq(commandHistory.userId, userId),
-          ),
-        );
+        .where(eq(commandHistory.hostId, numericHostId));
 
       await db
         .delete(sshCredentialUsage)
-        .where(
-          and(
-            eq(sshCredentialUsage.hostId, numericHostId),
-            eq(sshCredentialUsage.userId, userId),
-          ),
-        );
+        .where(eq(sshCredentialUsage.hostId, numericHostId));
 
       await db
         .delete(recentActivity)
-        .where(
-          and(
-            eq(recentActivity.hostId, numericHostId),
-            eq(recentActivity.userId, userId),
-          ),
-        );
+        .where(eq(recentActivity.hostId, numericHostId));
 
+      // Delete RBAC host access entries
+      await db.delete(hostAccess).where(eq(hostAccess.hostId, numericHostId));
+
+      // Delete session recordings
+      await db
+        .delete(sessionRecordings)
+        .where(eq(sessionRecordings.hostId, numericHostId));
+
+      // Finally delete the host itself
       await db
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
@@ -1887,10 +1868,49 @@ router.delete(
         });
       }
 
+      const hostIds = hostsToDelete.map((host) => host.id);
+
+      // Delete all related data for all hosts in the folder (child tables first)
+      if (hostIds.length > 0) {
+        await db
+          .delete(fileManagerRecent)
+          .where(inArray(fileManagerRecent.hostId, hostIds));
+
+        await db
+          .delete(fileManagerPinned)
+          .where(inArray(fileManagerPinned.hostId, hostIds));
+
+        await db
+          .delete(fileManagerShortcuts)
+          .where(inArray(fileManagerShortcuts.hostId, hostIds));
+
+        await db
+          .delete(commandHistory)
+          .where(inArray(commandHistory.hostId, hostIds));
+
+        await db
+          .delete(sshCredentialUsage)
+          .where(inArray(sshCredentialUsage.hostId, hostIds));
+
+        await db
+          .delete(recentActivity)
+          .where(inArray(recentActivity.hostId, hostIds));
+
+        // Delete RBAC host access entries
+        await db.delete(hostAccess).where(inArray(hostAccess.hostId, hostIds));
+
+        // Delete session recordings
+        await db
+          .delete(sessionRecordings)
+          .where(inArray(sessionRecordings.hostId, hostIds));
+      }
+
+      // Now delete the hosts themselves
       await db
         .delete(sshData)
         .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
 
+      // Finally delete the folder metadata
       await db
         .delete(sshFolders)
         .where(

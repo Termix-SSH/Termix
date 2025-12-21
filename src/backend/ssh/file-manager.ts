@@ -824,12 +824,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     useSocks5,
     socks5Host,
     socks5Port,
-    hasSocks5ProxyChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
+    hasSocks5ProxyChain: !!(
+      socks5ProxyChain && (socks5ProxyChain as any).length > 0
+    ),
     proxyChainLength: socks5ProxyChain ? (socks5ProxyChain as any).length : 0,
   });
 
   // Check if SOCKS5 proxy is enabled (either single proxy or chain)
-  if (useSocks5 && (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))) {
+  if (
+    useSocks5 &&
+    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
+  ) {
     fileLogger.info("SOCKS5 enabled for SFTP, creating connection", {
       operation: "sftp_socks5_enabled",
       sessionId,
@@ -839,18 +844,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     });
 
     try {
-      const socks5Socket = await createSocks5Connection(
-        ip,
-        port,
-        {
-          useSocks5,
-          socks5Host,
-          socks5Port,
-          socks5Username,
-          socks5Password,
-          socks5ProxyChain: socks5ProxyChain as any,
-        },
-      );
+      const socks5Socket = await createSocks5Connection(ip, port, {
+        useSocks5,
+        socks5Host,
+        socks5Port,
+        socks5Username,
+        socks5Password,
+        socks5ProxyChain: socks5ProxyChain as any,
+      });
 
       if (socks5Socket) {
         fileLogger.info("SOCKS5 socket created for SFTP", {
@@ -1545,7 +1546,22 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     try {
-      const base64Content = Buffer.from(content, "utf8").toString("base64");
+      let contentBuffer: Buffer;
+      if (typeof content === "string") {
+        try {
+          contentBuffer = Buffer.from(content, "base64");
+          if (contentBuffer.toString("base64") !== content) {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } catch {
+          contentBuffer = Buffer.from(content, "utf8");
+        }
+      } else if (Buffer.isBuffer(content)) {
+        contentBuffer = content;
+      } else {
+        contentBuffer = Buffer.from(content);
+      }
+      const base64Content = contentBuffer.toString("base64");
       const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
       const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
@@ -1746,7 +1762,22 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     try {
-      const base64Content = Buffer.from(content, "utf8").toString("base64");
+      let contentBuffer: Buffer;
+      if (typeof content === "string") {
+        try {
+          contentBuffer = Buffer.from(content, "base64");
+          if (contentBuffer.toString("base64") !== content) {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } catch {
+          contentBuffer = Buffer.from(content, "utf8");
+        }
+      } else if (Buffer.isBuffer(content)) {
+        contentBuffer = content;
+      } else {
+        contentBuffer = Buffer.from(content);
+      }
+      const base64Content = contentBuffer.toString("base64");
       const chunkSize = 1000000;
       const chunks = [];
 
