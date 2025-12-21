@@ -1966,6 +1966,7 @@ export async function getServerStatusById(id: number): Promise<ServerStatus> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch server status");
+    throw error; // Explicit throw to propagate error
   }
 }
 
@@ -1975,6 +1976,7 @@ export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch server metrics");
+    throw error; // Explicit throw to propagate error
   }
 }
 

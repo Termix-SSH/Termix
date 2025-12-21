@@ -77,9 +77,9 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
               </div>
             ) : (
               <div className="space-y-1">
-                {recentLogins.slice(0, 5).map((login, idx) => (
+                {recentLogins.slice(0, 5).map((login) => (
                   <div
-                    key={idx}
+                    key={`${login.user}-${login.time}-${login.ip}`}
                     className="text-xs bg-dark-bg-darker p-2 rounded border border-dark-border/30 flex justify-between items-center"
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -111,9 +111,9 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
                 </span>
               </div>
               <div className="space-y-1">
-                {failedLogins.slice(0, 3).map((login, idx) => (
+                {failedLogins.slice(0, 3).map((login) => (
                   <div
-                    key={idx}
+                    key={`failed-${login.user}-${login.time}-${login.ip || "unknown"}`}
                     className="text-xs bg-red-900/20 p-2 rounded border border-red-500/30 flex justify-between items-center"
                   >
                     <div className="flex items-center gap-2 min-w-0">

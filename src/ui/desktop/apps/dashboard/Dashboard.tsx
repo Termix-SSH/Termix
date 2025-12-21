@@ -301,6 +301,19 @@ export function Dashboard({
     });
   };
 
+  const handleServerStatClick = (serverId: number, serverName: string) => {
+    getSSHHosts().then((hosts) => {
+      const host = hosts.find((h: { id: number }) => h.id === serverId);
+      if (!host) return;
+
+      addTab({
+        type: "server",
+        title: serverName,
+        hostConfig: host,
+      });
+    });
+  };
+
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
@@ -714,6 +727,9 @@ export function Dashboard({
                             key={server.id}
                             variant="outline"
                             className="border-2 !border-dark-border bg-dark-bg h-auto p-3 min-w-0"
+                            onClick={() =>
+                              handleServerStatClick(server.id, server.name)
+                            }
                           >
                             <div className="flex flex-col w-full">
                               <div className="flex flex-row items-center mb-2">

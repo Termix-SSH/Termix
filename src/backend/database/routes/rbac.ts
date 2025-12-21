@@ -85,6 +85,15 @@ router.post(
         return res.status(403).json({ error: "Not host owner" });
       }
 
+      // Check if host uses credentials (required for sharing)
+      if (!host[0].credentialId) {
+        return res.status(400).json({
+          error:
+            "Only hosts using credentials can be shared. Please create a credential and assign it to this host before sharing.",
+          code: "CREDENTIAL_REQUIRED_FOR_SHARING",
+        });
+      }
+
       // Verify target exists (user or role)
       if (targetType === "user") {
         const targetUser = await db

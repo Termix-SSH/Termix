@@ -236,13 +236,21 @@ export function ServerStats({
     };
 
     fetchStatus();
-    intervalId = window.setInterval(fetchStatus, 10000);
+    intervalId = window.setInterval(
+      fetchStatus,
+      statsConfig.statusCheckInterval * 1000,
+    );
 
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [currentHostConfig?.id, isVisible, statusCheckEnabled]);
+  }, [
+    currentHostConfig?.id,
+    isVisible,
+    statusCheckEnabled,
+    statsConfig.statusCheckInterval,
+  ]);
 
   React.useEffect(() => {
     if (!metricsEnabled || !currentHostConfig?.id || !isVisible) {
@@ -297,13 +305,21 @@ export function ServerStats({
     };
 
     fetchMetrics();
-    intervalId = window.setInterval(fetchMetrics, 10000);
+    intervalId = window.setInterval(
+      fetchMetrics,
+      statsConfig.metricsInterval * 1000,
+    );
 
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [currentHostConfig?.id, isVisible, metricsEnabled]);
+  }, [
+    currentHostConfig?.id,
+    isVisible,
+    metricsEnabled,
+    statsConfig.metricsInterval,
+  ]);
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = sidebarState === "collapsed" ? 16 : 8;

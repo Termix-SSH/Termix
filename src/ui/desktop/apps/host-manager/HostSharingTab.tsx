@@ -285,13 +285,13 @@ export function HostSharingTab({
 
   return (
     <div className="space-y-6">
-      {/* Credential Authentication Warning */}
-      {hostData?.authType === "Credential" && (
+      {/* Credential Requirement Warning */}
+      {!hostData?.credentialId && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("rbac.credentialSharingWarning")}</AlertTitle>
+          <AlertTitle>{t("rbac.credentialRequired")}</AlertTitle>
           <AlertDescription>
-            {t("rbac.credentialSharingWarningDescription")}
+            {t("rbac.credentialRequiredDescription")}
           </AlertDescription>
         </Alert>
       )}
@@ -464,7 +464,12 @@ export function HostSharingTab({
           />
         </div>
 
-        <Button type="button" onClick={handleShare} className="w-full">
+        <Button
+          type="button"
+          onClick={handleShare}
+          className="w-full"
+          disabled={!hostData?.credentialId}
+        >
           <Plus className="h-4 w-4 mr-2" />
           {t("rbac.share")}
         </Button>

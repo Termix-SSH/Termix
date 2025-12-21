@@ -30,35 +30,32 @@ interface PermissionCheckResult {
 
 class PermissionManager {
   private static instance: PermissionManager;
-  private permissionCache: Map<string, { permissions: string[]; timestamp: number }>;
+  private permissionCache: Map<
+    string,
+    { permissions: string[]; timestamp: number }
+  >;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {
     this.permissionCache = new Map();
 
     // Auto-cleanup expired host access every 1 minute
-    setInterval(
-      () => {
-        this.cleanupExpiredAccess().catch((error) => {
-          databaseLogger.error(
-            "Failed to run periodic host access cleanup",
-            error,
-            {
-              operation: "host_access_cleanup_periodic",
-            },
-          );
-        });
-      },
-      60 * 1000,
-    );
+    setInterval(() => {
+      this.cleanupExpiredAccess().catch((error) => {
+        databaseLogger.error(
+          "Failed to run periodic host access cleanup",
+          error,
+          {
+            operation: "host_access_cleanup_periodic",
+          },
+        );
+      });
+    }, 60 * 1000);
 
     // Clear permission cache every 5 minutes
-    setInterval(
-      () => {
-        this.clearPermissionCache();
-      },
-      this.CACHE_TTL,
-    );
+    setInterval(() => {
+      this.clearPermissionCache();
+    }, this.CACHE_TTL);
   }
 
   static getInstance(): PermissionManager {
@@ -168,10 +165,7 @@ class PermissionManager {
    * Check if user has a specific permission
    * Supports wildcards: "hosts.*", "*"
    */
-  async hasPermission(
-    userId: string,
-    permission: string,
-  ): Promise<boolean> {
+  async hasPermission(userId: string, permission: string): Promise<boolean> {
     const userPermissions = await this.getUserPermissions(userId);
 
     // Check for wildcard "*" (god mode)
@@ -220,7 +214,14 @@ class PermissionManager {
         };
       }
 
-      // Check if host is shared with user
+      // Get user's role IDs
+      const userRoleIds = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleIds.map((r) => r.roleId);
+
+      // Check if host is shared with user OR user's roles
       const now = new Date().toISOString();
       const sharedAccess = await db
         .select()
@@ -228,11 +229,16 @@ class PermissionManager {
         .where(
           and(
             eq(hostAccess.hostId, hostId),
-            eq(hostAccess.userId, userId),
             or(
-              isNull(hostAccess.expiresAt),
-              gte(hostAccess.expiresAt, now),
+              eq(hostAccess.userId, userId),
+              roleIds.length > 0
+                ? sql`${hostAccess.roleId} IN (${sql.join(
+                    roleIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`
+                : sql`false`,
             ),
+            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
           ),
         )
         .limit(1);
@@ -243,7 +249,7 @@ class PermissionManager {
         // Check permission level for write/delete actions
         if (action === "write" || action === "delete") {
           const level = access.permissionLevel;
-          if (level === "readonly") {
+          if (level === "view" || level === "readonly") {
             return {
               hasAccess: false,
               isOwner: false,

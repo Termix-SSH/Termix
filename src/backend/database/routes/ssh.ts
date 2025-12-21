@@ -31,6 +31,7 @@ import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
@@ -48,6 +49,7 @@ function isValidPort(port: unknown): port is number {
 }
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -601,23 +603,55 @@ router.put(
     }
 
     try {
+      // Check if user can update this host (owner or manage permission)
+      const accessInfo = await permissionManager.canAccessHost(
+        userId,
+        Number(hostId),
+        "write",
+      );
+
+      if (!accessInfo.hasAccess) {
+        sshLogger.warn("User does not have permission to update host", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Get the actual owner ID for the update
+      const hostRecord = await db
+        .select({ userId: sshData.userId })
+        .from(sshData)
+        .where(eq(sshData.id, Number(hostId)))
+        .limit(1);
+
+      if (hostRecord.length === 0) {
+        sshLogger.warn("Host not found for update", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const ownerId = hostRecord[0].userId;
+
       await SimpleDBOps.update(
         sshData,
         "ssh_data",
-        and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
+        eq(sshData.id, Number(hostId)),
         sshDataObj,
-        userId,
+        ownerId,
       );
 
       const updatedHosts = await SimpleDBOps.select(
         db
           .select()
           .from(sshData)
-          .where(
-            and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
-          ),
+          .where(eq(sshData.id, Number(hostId))),
         "ssh_data",
-        userId,
+        ownerId,
       );
 
       if (updatedHosts.length === 0) {
@@ -780,6 +814,7 @@ router.get(
           socks5ProxyChain: sshData.socks5ProxyChain,
 
           // Shared access info
+          ownerId: sshData.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
@@ -1611,32 +1646,9 @@ async function resolveHostCredentials(
   host: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   try {
-    // Skip credential resolution for shared hosts
-    // Shared users cannot access the owner's encrypted credentials
-    if (host.isShared && host.credentialId) {
-      sshLogger.info(
-        `Skipping credential resolution for shared host ${host.id} with credentialId ${host.credentialId}`,
-        {
-          operation: "resolve_host_credentials_shared",
-          hostId: host.id as number,
-          isShared: host.isShared,
-        },
-      );
-      // Return host without resolving credentials
-      // The frontend should handle credential auth for shared hosts differently
-      const result = { ...host };
-      if (host.key_password !== undefined) {
-        if (result.keyPassword === undefined) {
-          result.keyPassword = host.key_password;
-        }
-        delete result.key_password;
-      }
-      return result;
-    }
-
-    if (host.credentialId && host.userId) {
+    if (host.credentialId && (host.userId || host.ownerId)) {
       const credentialId = host.credentialId as number;
-      const userId = host.userId as string;
+      const ownerId = (host.ownerId || host.userId) as string;
 
       const credentials = await SimpleDBOps.select(
         db
@@ -1645,11 +1657,11 @@ async function resolveHostCredentials(
           .where(
             and(
               eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, userId),
+              eq(sshCredentials.userId, ownerId),
             ),
           ),
         "ssh_credentials",
-        userId,
+        ownerId,
       );
 
       if (credentials.length > 0) {

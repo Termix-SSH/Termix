@@ -8,8 +8,8 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   top: Array<{
     pid: string;
     user: string;
-    cpu: string;
-    mem: string;
+    cpu: number;
+    mem: number;
     command: string;
   }>;
 }> {
@@ -18,8 +18,8 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   const topProcesses: Array<{
     pid: string;
     user: string;
-    cpu: string;
-    mem: string;
+    cpu: number;
+    mem: number;
     command: string;
   }> = [];
 
@@ -33,11 +33,13 @@ export async function collectProcessesMetrics(client: Client): Promise<{
       for (let i = 1; i < Math.min(psLines.length, 11); i++) {
         const parts = psLines[i].split(/\s+/);
         if (parts.length >= 11) {
+          const cpuVal = Number(parts[2]);
+          const memVal = Number(parts[3]);
           topProcesses.push({
             pid: parts[1],
             user: parts[0],
-            cpu: parts[2],
-            mem: parts[3],
+            cpu: Number.isFinite(cpuVal) ? cpuVal : 0,
+            mem: Number.isFinite(memVal) ? memVal : 0,
             command: parts.slice(10).join(" ").substring(0, 50),
           });
         }
@@ -46,8 +48,12 @@ export async function collectProcessesMetrics(client: Client): Promise<{
 
     const procCount = await execCommand(client, "ps aux | wc -l");
     const runningCount = await execCommand(client, "ps aux | grep -c ' R '");
-    totalProcesses = Number(procCount.stdout.trim()) - 1;
-    runningProcesses = Number(runningCount.stdout.trim());
+
+    const totalCount = Number(procCount.stdout.trim()) - 1;
+    totalProcesses = Number.isFinite(totalCount) ? totalCount : null;
+
+    const runningCount2 = Number(runningCount.stdout.trim());
+    runningProcesses = Number.isFinite(runningCount2) ? runningCount2 : null;
   } catch (e) {
     statsLogger.debug("Failed to collect process stats", {
       operation: "process_stats_failed",

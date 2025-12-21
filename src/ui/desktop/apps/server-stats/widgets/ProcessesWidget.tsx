@@ -59,9 +59,9 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {topProcesses.map((proc, index: number) => (
+            {topProcesses.map((proc) => (
               <div
-                key={index}
+                key={proc.pid}
                 className="p-2.5 rounded-lg bg-dark-bg/30 hover:bg-dark-bg/50 transition-colors border border-dark-border/20"
               >
                 <div className="flex items-center justify-between mb-1.5">
