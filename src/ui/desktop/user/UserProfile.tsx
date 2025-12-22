@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tabs.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
-import { User, Shield, AlertCircle } from "lucide-react";
+import { User, Shield, AlertCircle, Palette } from "lucide-react";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
 import {
   getUserInfo,
@@ -107,6 +107,10 @@ export function UserProfile({
     useState<boolean>(
       localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
     );
+  const [showHostTags, setShowHostTags] = useState<boolean>(() => {
+    const saved = localStorage.getItem("showHostTags");
+    return saved !== null ? saved === "true" : true;
+  });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -174,6 +178,12 @@ export function UserProfile({
     setDefaultSnippetFoldersCollapsed(enabled);
     localStorage.setItem("defaultSnippetFoldersCollapsed", enabled.toString());
     window.dispatchEvent(new Event("defaultSnippetFoldersCollapsedChanged"));
+  };
+
+  const handleShowHostTagsToggle = (enabled: boolean) => {
+    setShowHostTags(enabled);
+    localStorage.setItem("showHostTags", enabled.toString());
+    window.dispatchEvent(new Event("showHostTagsChanged"));
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -285,7 +295,14 @@ export function UserProfile({
                   className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button"
                 >
                   <User className="w-4 h-4" />
-                  {t("nav.userProfile")}
+                  {t("profile.account")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="appearance"
+                  className="flex items-center gap-2 data-[state=active]:bg-dark-bg-button"
+                >
+                  <Palette className="w-4 h-4" />
+                  {t("profile.appearance")}
                 </TabsTrigger>
                 {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
                   <TabsTrigger
@@ -383,73 +400,6 @@ export function UserProfile({
                   <div className="mt-6 pt-6 border-t border-dark-border">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-gray-300">
-                          {t("common.language")}
-                        </Label>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {t("profile.selectPreferredLanguage")}
-                        </p>
-                      </div>
-                      <LanguageSwitcher />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-dark-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-gray-300">
-                          {t("profile.fileColorCoding")}
-                        </Label>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {t("profile.fileColorCodingDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={fileColorCoding}
-                        onCheckedChange={handleFileColorCodingToggle}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-dark-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-gray-300">
-                          {t("profile.commandAutocomplete")}
-                        </Label>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {t("profile.commandAutocompleteDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={commandAutocomplete}
-                        onCheckedChange={handleCommandAutocompleteToggle}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-dark-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-gray-300">
-                          {t("profile.defaultSnippetFoldersCollapsed")}
-                        </Label>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {t("profile.defaultSnippetFoldersCollapsedDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={defaultSnippetFoldersCollapsed}
-                        onCheckedChange={
-                          handleDefaultSnippetFoldersCollapsedToggle
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-dark-border">
-                    <div className="flex items-center justify-between">
-                      <div>
                         <Label className="text-red-400">
                           {t("leftSidebar.deleteAccount")}
                         </Label>
@@ -466,6 +416,122 @@ export function UserProfile({
                       >
                         {t("leftSidebar.deleteAccount")}
                       </Button>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="appearance" className="space-y-4">
+                {/* Language & Localization Section */}
+                <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.languageLocalization")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("common.language")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.selectPreferredLanguage")}
+                        </p>
+                      </div>
+                      <LanguageSwitcher />
+                    </div>
+                  </div>
+                </div>
+
+                {/* File Manager Section */}
+                <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.fileManagerSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.fileColorCoding")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.fileColorCodingDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={fileColorCoding}
+                        onCheckedChange={handleFileColorCodingToggle}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Terminal Section */}
+                <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.terminalSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.commandAutocomplete")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.commandAutocompleteDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandAutocomplete}
+                        onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Host & Sidebar Section */}
+                <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.hostSidebarSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.showHostTags")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.showHostTagsDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={showHostTags}
+                        onCheckedChange={handleShowHostTagsToggle}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Snippets Section */}
+                <div className="rounded-lg border-2 border-dark-border bg-dark-bg-darker p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.snippetsSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          {t("profile.defaultSnippetFoldersCollapsed")}
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {t("profile.defaultSnippetFoldersCollapsedDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={defaultSnippetFoldersCollapsed}
+                        onCheckedChange={
+                          handleDefaultSnippetFoldersCollapsedToggle
+                        }
+                      />
                     </div>
                   </div>
                 </div>

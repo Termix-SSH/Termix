@@ -60,6 +60,15 @@ export function TerminalWindow({
 
   const handleMaximize = () => {
     maximizeWindow(windowId);
+    // Trigger resize after maximize/restore
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    resizeTimeoutRef.current = setTimeout(() => {
+      if (terminalRef.current?.fit) {
+        terminalRef.current.fit();
+      }
+    }, 150);
   };
 
   const handleFocus = () => {

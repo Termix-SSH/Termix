@@ -28,6 +28,10 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const [serverStatus, setServerStatus] = useState<
     "online" | "offline" | "degraded"
   >("degraded");
+  const [showTags, setShowTags] = useState<boolean>(() => {
+    const saved = localStorage.getItem("showHostTags");
+    return saved !== null ? saved === "true" : true;
+  });
   const tags = Array.isArray(host.tags) ? host.tags : [];
   const hasTags = tags.length > 0;
 
@@ -53,6 +57,17 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     return () =>
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [host.id]);
+
+  useEffect(() => {
+    const handleShowTagsChanged = () => {
+      const saved = localStorage.getItem("showHostTags");
+      setShowTags(saved !== null ? saved === "true" : true);
+    };
+
+    window.addEventListener("showHostTagsChanged", handleShowTagsChanged);
+    return () =>
+      window.removeEventListener("showHostTagsChanged", handleShowTagsChanged);
+  }, []);
 
   const statsConfig = useMemo(() => {
     try {
@@ -216,8 +231,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
           </DropdownMenu>
         </ButtonGroup>
       </div>
-
-      {hasTags && (
+      {showTags && hasTags && (
         <div className="flex flex-wrap items-center gap-2 mt-1">
           {tags.map((tag: string) => (
             <div

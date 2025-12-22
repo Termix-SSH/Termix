@@ -48,8 +48,6 @@ import {
   Pencil,
   FolderMinus,
   Copy,
-  Activity,
-  Clock,
   Palette,
   Trash,
   Cloud,
@@ -63,6 +61,8 @@ import {
   FolderOpen,
   Share2,
   Users,
+  ArrowDownUp,
+  Container,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -583,46 +583,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     }
   };
 
-  const getMonitoringStatus = (host: SSHHost) => {
-    try {
-      const statsConfig = host.statsConfig
-        ? JSON.parse(host.statsConfig)
-        : DEFAULT_STATS_CONFIG;
-
-      const formatInterval = (seconds: number): string => {
-        if (seconds >= 60) {
-          const minutes = Math.round(seconds / 60);
-          return `${minutes}m`;
-        }
-        return `${seconds}s`;
-      };
-
-      const statusEnabled = statsConfig.statusCheckEnabled !== false;
-      const metricsEnabled = statsConfig.metricsEnabled !== false;
-      const statusInterval = statusEnabled
-        ? formatInterval(statsConfig.statusCheckInterval || 30)
-        : null;
-      const metricsInterval = metricsEnabled
-        ? formatInterval(statsConfig.metricsInterval || 30)
-        : null;
-
-      return {
-        statusEnabled,
-        metricsEnabled,
-        statusInterval,
-        metricsInterval,
-        bothDisabled: !statusEnabled && !metricsEnabled,
-      };
-    } catch {
-      return {
-        statusEnabled: true,
-        metricsEnabled: true,
-        statusInterval: "30s",
-        metricsInterval: "30s",
-        bothDisabled: false,
-      };
-    }
-  };
 
   const filteredAndSortedHosts = useMemo(() => {
     let filtered = hosts;
@@ -1419,48 +1379,15 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         {t("hosts.fileManagerBadge")}
                                       </Badge>
                                     )}
-
-                                    {(() => {
-                                      const monitoringStatus =
-                                        getMonitoringStatus(host);
-
-                                      if (monitoringStatus.bothDisabled) {
-                                        return (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs px-1 py-0 text-muted-foreground"
-                                          >
-                                            <Activity className="h-2 w-2 mr-0.5" />
-                                            {t("hosts.monitoringDisabledBadge")}
-                                          </Badge>
-                                        );
-                                      }
-
-                                      return (
-                                        <>
-                                          {monitoringStatus.statusEnabled && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs px-1 py-0"
-                                            >
-                                              <Activity className="h-2 w-2 mr-0.5" />
-                                              {t("hosts.statusMonitoring")}:{" "}
-                                              {monitoringStatus.statusInterval}
-                                            </Badge>
-                                          )}
-                                          {monitoringStatus.metricsEnabled && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs px-1 py-0"
-                                            >
-                                              <Clock className="h-2 w-2 mr-0.5" />
-                                              {t("hosts.metricsMonitoring")}:{" "}
-                                              {monitoringStatus.metricsInterval}
-                                            </Badge>
-                                          )}
-                                        </>
-                                      );
-                                    })()}
+                                    {host.enableDocker && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs px-1 py-0"
+                                      >
+                                        <Container className="h-2 w-2 mr-0.5" />
+                                        Docker
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1516,6 +1443,60 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>Open File Manager</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {host.enableTunnel && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const title = host.name?.trim()
+                                              ? host.name
+                                              : `${host.username}@${host.ip}:${host.port}`;
+                                            addTab({
+                                              type: "tunnel",
+                                              title,
+                                              hostConfig: host,
+                                            });
+                                          }}
+                                          className="h-7 px-2 hover:bg-orange-500/10 hover:border-orange-500/50 flex-1"
+                                        >
+                                          <ArrowDownUp className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Open Tunnels</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {host.enableDocker && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const title = host.name?.trim()
+                                              ? host.name
+                                              : `${host.username}@${host.ip}:${host.port}`;
+                                            addTab({
+                                              type: "docker",
+                                              title,
+                                              hostConfig: host,
+                                            });
+                                          }}
+                                          className="h-7 px-2 hover:bg-cyan-500/10 hover:border-cyan-500/50 flex-1"
+                                        >
+                                          <Container className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Open Docker</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}

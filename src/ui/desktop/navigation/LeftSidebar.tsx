@@ -363,20 +363,78 @@ export function LeftSidebar({
 
   const filteredHosts = React.useMemo(() => {
     if (!debouncedSearch.trim()) return hosts;
-    const q = debouncedSearch.trim().toLowerCase();
+    const searchQuery = debouncedSearch.trim().toLowerCase();
+
     return hosts.filter((h) => {
-      const searchableText = [
-        h.name || "",
-        h.username,
-        h.ip,
-        h.folder || "",
-        ...(h.tags || []),
-        h.authType,
-        h.defaultPath || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return searchableText.includes(q);
+      // Check for field-specific search patterns
+      const fieldMatches: Record<string, string> = {};
+      let remainingQuery = searchQuery;
+
+      // Extract field-specific queries (e.g., "tag:production", "user:root", "ip:192.168")
+      const fieldPattern = /(\w+):([^\s]+)/g;
+      let match;
+      while ((match = fieldPattern.exec(searchQuery)) !== null) {
+        const [fullMatch, field, value] = match;
+        fieldMatches[field] = value;
+        remainingQuery = remainingQuery.replace(fullMatch, "").trim();
+      }
+
+      // Handle field-specific searches
+      for (const [field, value] of Object.entries(fieldMatches)) {
+        switch (field) {
+          case "tag":
+          case "tags":
+            const tags = Array.isArray(h.tags) ? h.tags : [];
+            const hasMatchingTag = tags.some((tag) =>
+              tag.toLowerCase().includes(value)
+            );
+            if (!hasMatchingTag) return false;
+            break;
+          case "name":
+            if (!(h.name || "").toLowerCase().includes(value)) return false;
+            break;
+          case "user":
+          case "username":
+            if (!h.username.toLowerCase().includes(value)) return false;
+            break;
+          case "ip":
+          case "host":
+            if (!h.ip.toLowerCase().includes(value)) return false;
+            break;
+          case "port":
+            if (!String(h.port).includes(value)) return false;
+            break;
+          case "folder":
+            if (!(h.folder || "").toLowerCase().includes(value)) return false;
+            break;
+          case "auth":
+          case "authtype":
+            if (!h.authType.toLowerCase().includes(value)) return false;
+            break;
+          case "path":
+            if (!(h.defaultPath || "").toLowerCase().includes(value))
+              return false;
+            break;
+        }
+      }
+
+      // If there's remaining query text (not field-specific), search across all fields
+      if (remainingQuery) {
+        const searchableText = [
+          h.name || "",
+          h.username,
+          h.ip,
+          h.folder || "",
+          ...(h.tags || []),
+          h.authType,
+          h.defaultPath || "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!searchableText.includes(remainingQuery)) return false;
+      }
+
+      return true;
     });
   }, [hosts, debouncedSearch]);
 

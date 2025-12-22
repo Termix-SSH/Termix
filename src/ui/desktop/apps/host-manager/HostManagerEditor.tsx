@@ -219,6 +219,7 @@ function QuickActionItem({
             placeholder={t("hosts.quickActionName")}
             value={quickAction.name}
             onChange={(e) => onUpdate(e.target.value, quickAction.snippetId)}
+            onBlur={(e) => onUpdate(e.target.value.trim(), quickAction.snippetId)}
             className="flex-1"
           />
         </div>
@@ -1196,6 +1197,10 @@ export function HostManagerEditor({
                                 field.ref(e);
                                 ipInputRef.current = e;
                               }}
+                              onBlur={(e) => {
+                                field.onChange(e.target.value.trim());
+                                field.onBlur();
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -1238,6 +1243,10 @@ export function HostManagerEditor({
                                 placeholder={t("placeholders.username")}
                                 disabled={shouldDisable}
                                 {...field}
+                                onBlur={(e) => {
+                                  field.onChange(e.target.value.trim());
+                                  field.onBlur();
+                                }}
                               />
                             </FormControl>
                           </FormItem>
@@ -1259,6 +1268,10 @@ export function HostManagerEditor({
                             <Input
                               placeholder={t("placeholders.hostname")}
                               {...field}
+                              onBlur={(e) => {
+                                field.onChange(e.target.value.trim());
+                                field.onBlur();
+                              }}
                             />
                           </FormControl>
                         </FormItem>
@@ -1282,6 +1295,10 @@ export function HostManagerEditor({
                               onChange={(e) => {
                                 field.onChange(e);
                                 setFolderDropdownOpen(true);
+                              }}
+                              onBlur={(e) => {
+                                field.onChange(e.target.value.trim());
+                                field.onBlur();
                               }}
                             />
                           </FormControl>
@@ -1878,6 +1895,10 @@ export function HostManagerEditor({
                                         <Input
                                           placeholder="proxy.example.com"
                                           {...field}
+                                          onBlur={(e) => {
+                                            field.onChange(e.target.value.trim());
+                                            field.onBlur();
+                                          }}
                                         />
                                       </FormControl>
                                       <FormDescription>
@@ -1927,6 +1948,10 @@ export function HostManagerEditor({
                                         <Input
                                           placeholder={t("hosts.username")}
                                           {...field}
+                                          onBlur={(e) => {
+                                            field.onChange(e.target.value.trim());
+                                            field.onBlur();
+                                          }}
                                         />
                                       </FormControl>
                                     </FormItem>
@@ -2047,6 +2072,23 @@ export function HostManagerEditor({
                                                 newChain,
                                               );
                                             }}
+                                            onBlur={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                host: e.target.value.trim(),
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
                                           />
                                         </div>
 
@@ -2136,6 +2178,23 @@ export function HostManagerEditor({
                                               newChain[index] = {
                                                 ...newChain[index],
                                                 username: e.target.value,
+                                              };
+                                              form.setValue(
+                                                "socks5ProxyChain",
+                                                newChain,
+                                              );
+                                            }}
+                                            onBlur={(e) => {
+                                              const currentChain =
+                                                form.watch(
+                                                  "socks5ProxyChain",
+                                                ) || [];
+                                              const newChain = [
+                                                ...currentChain,
+                                              ];
+                                              newChain[index] = {
+                                                ...newChain[index],
+                                                username: e.target.value.trim(),
                                               };
                                               form.setValue(
                                                 "socks5ProxyChain",
@@ -2694,6 +2753,10 @@ export function HostManagerEditor({
                                   <Input
                                     placeholder="mosh user@server"
                                     {...field}
+                                    onBlur={(e) => {
+                                      field.onChange(e.target.value.trim());
+                                      field.onBlur();
+                                    }}
                                   />
                                 </FormControl>
                                 <FormDescription>
@@ -2769,6 +2832,10 @@ export function HostManagerEditor({
                                         <Input
                                           placeholder="Variable name"
                                           {...field}
+                                          onBlur={(e) => {
+                                            field.onChange(e.target.value.trim());
+                                            field.onBlur();
+                                          }}
                                         />
                                       </FormControl>
                                     </FormItem>
@@ -2780,7 +2847,14 @@ export function HostManagerEditor({
                                   render={({ field }) => (
                                     <FormItem className="flex-1">
                                       <FormControl>
-                                        <Input placeholder="Value" {...field} />
+                                        <Input
+                                          placeholder="Value"
+                                          {...field}
+                                          onBlur={(e) => {
+                                            field.onChange(e.target.value.trim());
+                                            field.onBlur();
+                                          }}
+                                        />
                                       </FormControl>
                                     </FormItem>
                                   )}
@@ -3057,6 +3131,10 @@ export function HostManagerEditor({
                                                     }),
                                                   );
                                                 }}
+                                                onBlur={(e) => {
+                                                  endpointHostField.onChange(e.target.value.trim());
+                                                  endpointHostField.onBlur();
+                                                }}
                                               />
                                             </FormControl>
                                             {sshConfigDropdownOpen[index] &&
@@ -3244,6 +3322,10 @@ export function HostManagerEditor({
                               <Input
                                 placeholder={t("placeholders.homePath")}
                                 {...field}
+                                onBlur={(e) => {
+                                  field.onChange(e.target.value.trim());
+                                  field.onBlur();
+                                }}
                               />
                             </FormControl>
                             <FormDescription>

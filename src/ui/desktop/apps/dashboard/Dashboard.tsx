@@ -616,23 +616,35 @@ export function Dashboard({
                           {t("dashboard.noRecentActivity")}
                         </p>
                       ) : (
-                        recentActivity.map((item) => (
-                          <Button
-                            key={item.id}
-                            variant="outline"
-                            className="border-2 !border-dark-border bg-dark-bg min-w-0"
-                            onClick={() => handleActivityClick(item)}
-                          >
-                            {item.type === "terminal" ? (
-                              <Terminal size={20} className="shrink-0" />
-                            ) : (
-                              <FolderOpen size={20} className="shrink-0" />
-                            )}
-                            <p className="truncate ml-2 font-semibold">
-                              {item.hostName}
-                            </p>
-                          </Button>
-                        ))
+                        recentActivity
+                          .filter((item, index, array) => {
+                            // Always show the first item
+                            if (index === 0) return true;
+
+                            // Show if different from previous item (by hostId and type)
+                            const prevItem = array[index - 1];
+                            return !(
+                              item.hostId === prevItem.hostId &&
+                              item.type === prevItem.type
+                            );
+                          })
+                          .map((item) => (
+                            <Button
+                              key={item.id}
+                              variant="outline"
+                              className="border-2 !border-dark-border bg-dark-bg min-w-0"
+                              onClick={() => handleActivityClick(item)}
+                            >
+                              {item.type === "terminal" ? (
+                                <Terminal size={20} className="shrink-0" />
+                              ) : (
+                                <FolderOpen size={20} className="shrink-0" />
+                              )}
+                              <p className="truncate ml-2 font-semibold">
+                                {item.hostName}
+                              </p>
+                            </Button>
+                          ))
                       )}
                     </div>
                   </div>
