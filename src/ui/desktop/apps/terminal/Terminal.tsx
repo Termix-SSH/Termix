@@ -637,7 +637,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               attemptReconnection();
             }
           }
-        }, 10000);
+        }, 15000);
 
         ws.send(
           JSON.stringify({
@@ -765,6 +765,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 ...hostConfig.terminalConfig,
               };
 
+              // Send all environment variables immediately without delays
               if (
                 terminalConfig.environmentVariables &&
                 terminalConfig.environmentVariables.length > 0
@@ -777,11 +778,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                         data: `export ${envVar.key}="${envVar.value}"\n`,
                       }),
                     );
-                    await new Promise((resolve) => setTimeout(resolve, 100));
                   }
                 }
               }
 
+              // Send startup snippet immediately after env vars
               if (terminalConfig.startupSnippetId) {
                 try {
                   const snippets = await getSnippets();
@@ -796,13 +797,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                         data: snippet.content + "\n",
                       }),
                     );
-                    await new Promise((resolve) => setTimeout(resolve, 200));
                   }
                 } catch (err) {
                   console.warn("Failed to execute startup snippet:", err);
                 }
               }
 
+              // Execute mosh command immediately if enabled
               if (terminalConfig.autoMosh && ws.readyState === 1) {
                 ws.send(
                   JSON.stringify({
@@ -811,7 +812,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
-            }, 500);
+            }, 100);
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);
@@ -1405,41 +1406,34 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       setIsConnecting(true);
 
-      const readyFonts =
-        (document as { fonts?: { ready?: Promise<unknown> } }).fonts
-          ?.ready instanceof Promise
-          ? (document as { fonts?: { ready?: Promise<unknown> } }).fonts.ready
-          : Promise.resolve();
+      // Start connection immediately without waiting for fonts
+      requestAnimationFrame(() => {
+        fitAddonRef.current?.fit();
+        if (terminal && terminal.cols > 0 && terminal.rows > 0) {
+          scheduleNotify(terminal.cols, terminal.rows);
+        }
+        hardRefresh();
 
-      readyFonts.then(() => {
-        requestAnimationFrame(() => {
-          fitAddonRef.current?.fit();
-          if (terminal && terminal.cols > 0 && terminal.rows > 0) {
-            scheduleNotify(terminal.cols, terminal.rows);
-          }
-          hardRefresh();
+        setVisible(true);
+        setIsReady(true);
 
-          setVisible(true);
-          setIsReady(true);
+        if (terminal && !splitScreen) {
+          terminal.focus();
+        }
 
-          if (terminal && !splitScreen) {
-            terminal.focus();
-          }
+        const jwtToken = getCookie("jwt");
 
-          const jwtToken = getCookie("jwt");
+        if (!jwtToken || jwtToken.trim() === "") {
+          setIsConnected(false);
+          setIsConnecting(false);
+          setConnectionError("Authentication required");
+          return;
+        }
 
-          if (!jwtToken || jwtToken.trim() === "") {
-            setIsConnected(false);
-            setIsConnecting(false);
-            setConnectionError("Authentication required");
-            return;
-          }
+        const cols = terminal.cols;
+        const rows = terminal.rows;
 
-          const cols = terminal.cols;
-          const rows = terminal.rows;
-
-          connectToHost(cols, rows);
-        });
+        connectToHost(cols, rows);
       });
     }, [terminal, hostConfig, visible, isConnected, isConnecting, splitScreen]);
 

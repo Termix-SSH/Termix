@@ -137,10 +137,14 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
-    for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+    // Fetch all jump host configurations in parallel
+    const jumpHostConfigs = await Promise.all(
+      jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
+    );
 
-      if (!jumpHostConfig) {
+    // Validate all configs resolved
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
@@ -148,6 +152,11 @@ async function createJumpHostChain(
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    // Connect through jump hosts sequentially
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i];
 
       const jumpClient = new Client();
       clients.push(jumpClient);
@@ -623,7 +632,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         cleanupSSH(connectionTimeout);
       }
-    }, 120000);
+    }, 30000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
@@ -1053,10 +1062,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
-      readyTimeout: 120000,
+      readyTimeout: 30000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-      timeout: 120000,
+      timeout: 30000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -1191,21 +1200,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
-        (hostConfig.socks5ProxyChain && (hostConfig.socks5ProxyChain as any).length > 0))
+        (hostConfig.socks5ProxyChain &&
+          (hostConfig.socks5ProxyChain as any).length > 0))
     ) {
       try {
-        const socks5Socket = await createSocks5Connection(
-          ip,
-          port,
-          {
-            useSocks5: hostConfig.useSocks5,
-            socks5Host: hostConfig.socks5Host,
-            socks5Port: hostConfig.socks5Port,
-            socks5Username: hostConfig.socks5Username,
-            socks5Password: hostConfig.socks5Password,
-            socks5ProxyChain: hostConfig.socks5ProxyChain as any,
-          },
-        );
+        const socks5Socket = await createSocks5Connection(ip, port, {
+          useSocks5: hostConfig.useSocks5,
+          socks5Host: hostConfig.socks5Host,
+          socks5Port: hostConfig.socks5Port,
+          socks5Username: hostConfig.socks5Username,
+          socks5Password: hostConfig.socks5Password,
+          socks5ProxyChain: hostConfig.socks5ProxyChain as any,
+        });
 
         if (socks5Socket) {
           connectConfig.sock = socks5Socket;
