@@ -8,8 +8,8 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   top: Array<{
     pid: string;
     user: string;
-    cpu: number;
-    mem: number;
+    cpu: string;
+    mem: string;
     command: string;
   }>;
 }> {
@@ -18,8 +18,8 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   const topProcesses: Array<{
     pid: string;
     user: string;
-    cpu: number;
-    mem: number;
+    cpu: string;
+    mem: string;
     command: string;
   }> = [];
 
@@ -38,8 +38,8 @@ export async function collectProcessesMetrics(client: Client): Promise<{
           topProcesses.push({
             pid: parts[1],
             user: parts[0],
-            cpu: Number.isFinite(cpuVal) ? cpuVal : 0,
-            mem: Number.isFinite(memVal) ? memVal : 0,
+            cpu: Number.isFinite(cpuVal) ? cpuVal.toString() : "0",
+            mem: Number.isFinite(memVal) ? memVal.toString() : "0",
             command: parts.slice(10).join(" ").substring(0, 50),
           });
         }

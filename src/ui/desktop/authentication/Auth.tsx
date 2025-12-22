@@ -799,59 +799,76 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
-        style={{ maxHeight: "calc(100vh - 1rem)" }}
+        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
+        style={{
+          background: "#0e0e10",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            rgba(255, 255, 255, 0.03) 35px,
+            rgba(255, 255, 255, 0.03) 37px
+          )`,
+        }}
         {...props}
       >
-        <div className="mb-6 text-center">
-          <h2 className="text-xl font-bold mb-1">
-            {t("errors.databaseConnection")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t("messages.databaseConnectionFailed")}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11 text-base font-semibold"
-            disabled={dbHealthChecking}
-            onClick={() => window.location.reload()}
-          >
-            {t("common.refresh")}
-          </Button>
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm text-muted-foreground">
-                {t("common.language")}
-              </Label>
-            </div>
-            <LanguageSwitcher />
+        <div
+          className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
+          style={{ maxHeight: "calc(100vh - 1rem)" }}
+          {...props}
+        >
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold mb-1">
+              {t("errors.databaseConnection")}
+            </h2>
+            <p className="text-muted-foreground">
+              {t("messages.databaseConnectionFailed")}
+            </p>
           </div>
-          {isElectron() && currentServerUrl && (
+
+          <div className="flex flex-col gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 text-base font-semibold"
+              disabled={dbHealthChecking}
+              onClick={() => window.location.reload()}
+            >
+              {t("common.refresh")}
+            </Button>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-sm text-muted-foreground">Server</Label>
-                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {currentServerUrl}
-                </div>
+                <Label className="text-sm text-muted-foreground">
+                  {t("common.language")}
+                </Label>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowServerConfig(true)}
-                className="h-8 px-3"
-              >
-                Edit
-              </Button>
+              <LanguageSwitcher />
             </div>
-          )}
+            {isElectron() && currentServerUrl && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm text-muted-foreground">
+                    Server
+                  </Label>
+                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    {currentServerUrl}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowServerConfig(true)}
+                  className="h-8 px-3"
+                >
+                  Edit
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

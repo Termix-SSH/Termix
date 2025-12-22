@@ -1,5 +1,6 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
+import { statsLogger } from "../../utils/logger.js";
 
 export interface LoginRecord {
   user: string;

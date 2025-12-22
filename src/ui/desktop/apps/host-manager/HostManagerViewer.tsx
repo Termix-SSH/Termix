@@ -363,7 +363,12 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
         ),
       );
 
-      const blob = new Blob([JSON.stringify(cleanExportData, null, 2)], {
+      // Wrap in hosts array for valid import format
+      const exportFormat = {
+        hosts: [cleanExportData],
+      };
+
+      const blob = new Blob([JSON.stringify(exportFormat, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
