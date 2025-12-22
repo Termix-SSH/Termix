@@ -53,16 +53,18 @@ ENV DATA_DIR=/app/data \
 
 RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads && \
-    chown -R node:node /app/data /app/uploads && \
-    useradd -r -s /bin/false nginx
+    mkdir -p /app/data /app/uploads /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
+    chown -R node:node /app && \
+    chmod 755 /app/data /app/uploads /app/nginx && \
+    touch /app/nginx/nginx.conf && \
+    chown node:node /app/nginx/nginx.conf
 
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
+COPY docker/nginx.conf /app/nginx/nginx.conf.template
+COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
 
-COPY --chown=nginx:nginx --from=frontend-builder /app/dist /usr/share/nginx/html
-COPY --chown=nginx:nginx --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
-COPY --chown=nginx:nginx --from=frontend-builder /app/public/fonts /usr/share/nginx/html/fonts
+COPY --chown=node:node --from=frontend-builder /app/dist /app/html
+COPY --chown=node:node --from=frontend-builder /app/src/locales /app/html/locales
+COPY --chown=node:node --from=frontend-builder /app/public/fonts /app/html/fonts
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
@@ -74,4 +76,7 @@ EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+USER node
+
 CMD ["/entrypoint.sh"]

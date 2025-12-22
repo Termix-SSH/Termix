@@ -11,24 +11,21 @@ echo "Configuring web UI to run on port: $PORT"
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "SSL enabled - using HTTPS configuration with redirect"
-    NGINX_CONF_SOURCE="/etc/nginx/nginx-https.conf"
+    NGINX_CONF_SOURCE="/app/nginx/nginx-https.conf.template"
 else
     echo "SSL disabled - using HTTP-only configuration (default)"
-    NGINX_CONF_SOURCE="/etc/nginx/nginx.conf"
+    NGINX_CONF_SOURCE="/app/nginx/nginx.conf.template"
 fi
 
-envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /etc/nginx/nginx.conf.tmp
-mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /app/nginx/nginx.conf
 
 mkdir -p /app/data /app/uploads
-chown -R node:node /app/data /app/uploads
-chmod 755 /app/data /app/uploads
+chmod 755 /app/data /app/uploads 2>/dev/null || true
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."
     mkdir -p /app/data/ssl
-    chown -R node:node /app/data/ssl
-    chmod 755 /app/data/ssl
+    chmod 755 /app/data/ssl 2>/dev/null || true
 
     DOMAIN=${SSL_DOMAIN:-localhost}
     
@@ -84,7 +81,6 @@ EOF
 
         chmod 600 /app/data/ssl/termix.key
         chmod 644 /app/data/ssl/termix.crt
-        chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
 
         rm -f /app/data/ssl/openssl.conf
         
@@ -93,7 +89,7 @@ EOF
 fi
 
 echo "Starting nginx..."
-nginx
+nginx -c /app/nginx/nginx.conf
 
 echo "Starting backend services..."
 cd /app
@@ -110,11 +106,7 @@ else
     echo "Warning: package.json not found"
 fi
 
-if command -v su-exec > /dev/null 2>&1; then
-  su-exec node node dist/backend/backend/starter.js
-else
-  su -s /bin/sh node -c "node dist/backend/backend/starter.js"
-fi
+node dist/backend/backend/starter.js
 
 echo "All services started"
 
