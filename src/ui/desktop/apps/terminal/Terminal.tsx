@@ -28,6 +28,7 @@ import {
 } from "@/constants/terminal-themes";
 import type { TerminalConfig } from "@/types";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
+import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory";
 import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
@@ -662,7 +663,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           const msg = JSON.parse(event.data);
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
-              terminal.write(msg.data);
+              // Apply syntax highlighting if enabled (BETA - defaults to false/off)
+              const syntaxHighlightingEnabled =
+                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+
+              const outputData = syntaxHighlightingEnabled
+                ? highlightTerminalOutput(msg.data)
+                : msg.data;
+
+              terminal.write(outputData);
               // Sudo password prompt detection
               const sudoPasswordPattern =
                 /(?:\[sudo\] password for \S+:|sudo: a password is required)/;
@@ -699,7 +708,16 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }, 15000);
               }
             } else {
-              terminal.write(String(msg.data));
+              // Apply syntax highlighting to non-string data as well (BETA - defaults to false/off)
+              const syntaxHighlightingEnabled =
+                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+
+              const stringData = String(msg.data);
+              const outputData = syntaxHighlightingEnabled
+                ? highlightTerminalOutput(stringData)
+                : stringData;
+
+              terminal.write(outputData);
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");

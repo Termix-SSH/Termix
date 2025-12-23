@@ -103,6 +103,10 @@ export function UserProfile({
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") === "true",
   );
+  const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
+    useState<boolean>(
+      () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
+    );
   const [defaultSnippetFoldersCollapsed, setDefaultSnippetFoldersCollapsed] =
     useState<boolean>(
       localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
@@ -172,6 +176,12 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+  };
+
+  const handleTerminalSyntaxHighlightingToggle = (enabled: boolean) => {
+    setTerminalSyntaxHighlighting(enabled);
+    localStorage.setItem("terminalSyntaxHighlighting", enabled.toString());
+    window.dispatchEvent(new Event("terminalSyntaxHighlightingChanged"));
   };
 
   const handleDefaultSnippetFoldersCollapsedToggle = (enabled: boolean) => {
@@ -483,6 +493,24 @@ export function UserProfile({
                       <Switch
                         checked={commandAutocomplete}
                         onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-gray-300">
+                          Terminal Syntax Highlighting{" "}
+                          <span className="text-xs text-yellow-500 font-semibold">
+                            (BETA)
+                          </span>
+                        </Label>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Automatically highlight commands, paths, IPs, and log
+                          levels in terminal output
+                        </p>
+                      </div>
+                      <Switch
+                        checked={terminalSyntaxHighlighting}
+                        onCheckedChange={handleTerminalSyntaxHighlightingToggle}
                       />
                     </div>
                   </div>
