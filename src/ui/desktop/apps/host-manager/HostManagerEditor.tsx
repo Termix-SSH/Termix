@@ -219,7 +219,9 @@ function QuickActionItem({
             placeholder={t("hosts.quickActionName")}
             value={quickAction.name}
             onChange={(e) => onUpdate(e.target.value, quickAction.snippetId)}
-            onBlur={(e) => onUpdate(e.target.value.trim(), quickAction.snippetId)}
+            onBlur={(e) =>
+              onUpdate(e.target.value.trim(), quickAction.snippetId)
+            }
             className="flex-1"
           />
         </div>
@@ -1896,7 +1898,9 @@ export function HostManagerEditor({
                                           placeholder="proxy.example.com"
                                           {...field}
                                           onBlur={(e) => {
-                                            field.onChange(e.target.value.trim());
+                                            field.onChange(
+                                              e.target.value.trim(),
+                                            );
                                             field.onBlur();
                                           }}
                                         />
@@ -1949,7 +1953,9 @@ export function HostManagerEditor({
                                           placeholder={t("hosts.username")}
                                           {...field}
                                           onBlur={(e) => {
-                                            field.onChange(e.target.value.trim());
+                                            field.onChange(
+                                              e.target.value.trim(),
+                                            );
                                             field.onBlur();
                                           }}
                                         />
@@ -2833,7 +2839,9 @@ export function HostManagerEditor({
                                           placeholder="Variable name"
                                           {...field}
                                           onBlur={(e) => {
-                                            field.onChange(e.target.value.trim());
+                                            field.onChange(
+                                              e.target.value.trim(),
+                                            );
                                             field.onBlur();
                                           }}
                                         />
@@ -2851,7 +2859,9 @@ export function HostManagerEditor({
                                           placeholder="Value"
                                           {...field}
                                           onBlur={(e) => {
-                                            field.onChange(e.target.value.trim());
+                                            field.onChange(
+                                              e.target.value.trim(),
+                                            );
                                             field.onBlur();
                                           }}
                                         />
@@ -3132,7 +3142,9 @@ export function HostManagerEditor({
                                                   );
                                                 }}
                                                 onBlur={(e) => {
-                                                  endpointHostField.onChange(e.target.value.trim());
+                                                  endpointHostField.onChange(
+                                                    e.target.value.trim(),
+                                                  );
                                                   endpointHostField.onBlur();
                                                 }}
                                               />

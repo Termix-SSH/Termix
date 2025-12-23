@@ -583,7 +583,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     }
   };
 
-
   const filteredAndSortedHosts = useMemo(() => {
     let filtered = hosts;
 

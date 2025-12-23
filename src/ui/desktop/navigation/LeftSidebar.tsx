@@ -386,7 +386,7 @@ export function LeftSidebar({
           case "tags":
             const tags = Array.isArray(h.tags) ? h.tags : [];
             const hasMatchingTag = tags.some((tag) =>
-              tag.toLowerCase().includes(value)
+              tag.toLowerCase().includes(value),
             );
             if (!hasMatchingTag) return false;
             break;
