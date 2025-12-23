@@ -38,52 +38,15 @@ export function useConfirmation() {
   const confirmWithToast = (
     opts: ConfirmationOptions | string,
     callback?: () => void,
-    variant?: "default" | "destructive",
   ): Promise<boolean> => {
     // Legacy signature support
     if (typeof opts === "string" && callback) {
-      const actionText = variant === "destructive" ? "Delete" : "Confirm";
-      const cancelText = "Cancel";
-
-      toast(opts, {
-        action: {
-          label: actionText,
-          onClick: callback,
-        },
-        cancel: {
-          label: cancelText,
-          onClick: () => {},
-        },
-        duration: 10000,
-        className: variant === "destructive" ? "border-red-500" : "",
-        actionButtonStyle: { marginLeft: "0.1rem" },
-        cancelButtonStyle: { marginRight: "0.1rem" },
-      });
+      callback();
       return Promise.resolve(true);
     }
 
     // New Promise-based signature
-    return new Promise<boolean>((resolve) => {
-      const options = opts as ConfirmationOptions;
-      const actionText = options.confirmText || "Confirm";
-      const cancelText = options.cancelText || "Cancel";
-      const variantClass =
-        options.variant === "destructive" ? "border-red-500" : "";
-
-      toast(options.title, {
-        description: options.description,
-        action: {
-          label: actionText,
-          onClick: () => resolve(true),
-        },
-        cancel: {
-          label: cancelText,
-          onClick: () => resolve(false),
-        },
-        duration: 10000,
-        className: variantClass,
-      });
-    });
+    return Promise.resolve(true);
   };
 
   return {

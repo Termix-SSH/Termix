@@ -2079,13 +2079,38 @@ router.post(
           enableTerminal: hostData.enableTerminal !== false,
           enableTunnel: hostData.enableTunnel !== false,
           enableFileManager: hostData.enableFileManager !== false,
+          enableDocker: hostData.enableDocker || false,
           defaultPath: hostData.defaultPath || "/",
           tunnelConnections: hostData.tunnelConnections
             ? JSON.stringify(hostData.tunnelConnections)
             : "[]",
+          jumpHosts: hostData.jumpHosts
+            ? JSON.stringify(hostData.jumpHosts)
+            : null,
+          quickActions: hostData.quickActions
+            ? JSON.stringify(hostData.quickActions)
+            : null,
           statsConfig: hostData.statsConfig
             ? JSON.stringify(hostData.statsConfig)
             : null,
+          terminalConfig: hostData.terminalConfig
+            ? JSON.stringify(hostData.terminalConfig)
+            : null,
+          forceKeyboardInteractive: hostData.forceKeyboardInteractive
+            ? "true"
+            : "false",
+          notes: hostData.notes || null,
+          useSocks5: hostData.useSocks5 ? 1 : 0,
+          socks5Host: hostData.socks5Host || null,
+          socks5Port: hostData.socks5Port || null,
+          socks5Username: hostData.socks5Username || null,
+          socks5Password: hostData.socks5Password || null,
+          socks5ProxyChain: hostData.socks5ProxyChain
+            ? JSON.stringify(hostData.socks5ProxyChain)
+            : null,
+          overrideCredentialUsername: hostData.overrideCredentialUsername
+            ? 1
+            : 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };

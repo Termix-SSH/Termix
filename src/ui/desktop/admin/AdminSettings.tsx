@@ -43,6 +43,8 @@ import {
   Globe,
   Clock,
   UserCog,
+  UserPlus,
+  Edit,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -75,6 +77,8 @@ import {
   type Role,
 } from "@/ui/main-axios.ts";
 import { RoleManagement } from "./RoleManagement.tsx";
+import { CreateUserDialog } from "./CreateUserDialog.tsx";
+import { UserEditDialog } from "./UserEditDialog.tsx";
 
 interface AdminSettingsProps {
   isTopbarOpen?: boolean;
@@ -121,21 +125,17 @@ export function AdminSettings({
     }>
   >([]);
   const [usersLoading, setUsersLoading] = React.useState(false);
-  const [newAdminUsername, setNewAdminUsername] = React.useState("");
-  const [makeAdminLoading, setMakeAdminLoading] = React.useState(false);
-  const [makeAdminError, setMakeAdminError] = React.useState<string | null>(
-    null,
-  );
 
-  // Role management states
-  const [rolesDialogOpen, setRolesDialogOpen] = React.useState(false);
-  const [selectedUser, setSelectedUser] = React.useState<{
+  // New dialog states
+  const [createUserDialogOpen, setCreateUserDialogOpen] = React.useState(false);
+  const [userEditDialogOpen, setUserEditDialogOpen] = React.useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = React.useState<{
     id: string;
     username: string;
+    is_admin: boolean;
+    is_oidc: boolean;
+    password_hash?: string;
   } | null>(null);
-  const [userRoles, setUserRoles] = React.useState<UserRole[]>([]);
-  const [availableRoles, setAvailableRoles] = React.useState<Role[]>([]);
-  const [rolesLoading, setRolesLoading] = React.useState(false);
 
   const [securityInitialized, setSecurityInitialized] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<{
@@ -285,62 +285,30 @@ export function AdminSettings({
     }
   };
 
-  // Role management functions
-  const handleOpenRolesDialog = async (user: {
-    id: string;
-    username: string;
-  }) => {
-    setSelectedUser(user);
-    setRolesDialogOpen(true);
-    setRolesLoading(true);
-
-    try {
-      // Load user's current roles
-      const rolesResponse = await getUserRoles(user.id);
-      setUserRoles(rolesResponse.roles || []);
-
-      // Load all available roles
-      const allRolesResponse = await getRoles();
-      setAvailableRoles(allRolesResponse.roles || []);
-    } catch (error) {
-      console.error("Failed to load roles:", error);
-      toast.error(t("rbac.failedToLoadRoles"));
-    } finally {
-      setRolesLoading(false);
-    }
+  // New dialog handlers
+  const handleEditUser = (user: (typeof users)[0]) => {
+    setSelectedUserForEdit(user);
+    setUserEditDialogOpen(true);
   };
 
-  const handleAssignRole = async (roleId: number) => {
-    if (!selectedUser) return;
-
-    try {
-      await assignRoleToUser(selectedUser.id, roleId);
-      toast.success(
-        t("rbac.roleAssignedSuccessfully", { username: selectedUser.username }),
-      );
-
-      // Reload user roles
-      const rolesResponse = await getUserRoles(selectedUser.id);
-      setUserRoles(rolesResponse.roles || []);
-    } catch (error) {
-      toast.error(t("rbac.failedToAssignRole"));
-    }
+  const handleCreateUserSuccess = () => {
+    fetchUsers();
+    setCreateUserDialogOpen(false);
   };
 
-  const handleRemoveRole = async (roleId: number) => {
-    if (!selectedUser) return;
+  const handleEditUserSuccess = () => {
+    fetchUsers();
+    setUserEditDialogOpen(false);
+    setSelectedUserForEdit(null);
+  };
 
-    try {
-      await removeRoleFromUser(selectedUser.id, roleId);
-      toast.success(
-        t("rbac.roleRemovedSuccessfully", { username: selectedUser.username }),
-      );
-
-      // Reload user roles
-      const rolesResponse = await getUserRoles(selectedUser.id);
-      setUserRoles(rolesResponse.roles || []);
-    } catch (error) {
-      toast.error(t("rbac.failedToRemoveRole"));
+  const getAuthTypeDisplay = (user: (typeof users)[0]): string => {
+    if (user.is_oidc && user.password_hash) {
+      return t("admin.dualAuth");
+    } else if (user.is_oidc) {
+      return t("admin.externalOIDC");
+    } else {
+      return t("admin.localPassword");
     }
   };
 
@@ -445,39 +413,7 @@ export function AdminSettings({
     setOidcConfig((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleMakeUserAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAdminUsername.trim()) return;
-    setMakeAdminLoading(true);
-    setMakeAdminError(null);
-    try {
-      await makeUserAdmin(newAdminUsername.trim());
-      toast.success(t("admin.userIsNowAdmin", { username: newAdminUsername }));
-      setNewAdminUsername("");
-      fetchUsers();
-    } catch (err: unknown) {
-      setMakeAdminError(
-        (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || t("admin.failedToMakeUserAdmin"),
-      );
-    } finally {
-      setMakeAdminLoading(false);
-    }
-  };
-
-  const handleRemoveAdminStatus = async (username: string) => {
-    confirmWithToast(t("admin.removeAdminStatus", { username }), async () => {
-      try {
-        await removeAdminStatus(username);
-        toast.success(t("admin.adminStatusRemoved", { username }));
-        fetchUsers();
-      } catch {
-        toast.error(t("admin.failedToRemoveAdminStatus"));
-      }
-    });
-  };
-
-  const handleDeleteUser = async (username: string) => {
+  const handleDeleteUserQuick = async (username: string) => {
     confirmWithToast(
       t("admin.deleteUser", { username }),
       async () => {
@@ -844,10 +780,6 @@ export function AdminSettings({
                 <Clock className="h-4 w-4" />
                 Sessions
               </TabsTrigger>
-              <TabsTrigger value="admins" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                {t("admin.adminManagement")}
-              </TabsTrigger>
               <TabsTrigger value="roles" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 {t("rbac.roles.label")}
@@ -1148,14 +1080,25 @@ export function AdminSettings({
                   <h3 className="text-lg font-semibold">
                     {t("admin.userManagement")}
                   </h3>
-                  <Button
-                    onClick={fetchUsers}
-                    disabled={usersLoading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {usersLoading ? t("admin.loading") : t("admin.refresh")}
-                  </Button>
+                  <div className="flex gap-2">
+                    {allowPasswordLogin && (
+                      <Button
+                        onClick={() => setCreateUserDialogOpen(true)}
+                        size="sm"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {t("admin.createUser")}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={fetchUsers}
+                      disabled={usersLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {usersLoading ? t("admin.loading") : t("admin.refresh")}
+                    </Button>
+                  </div>
                 </div>
                 {usersLoading ? (
                   <div className="text-center py-8 text-muted-foreground">
@@ -1166,7 +1109,7 @@ export function AdminSettings({
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t("admin.username")}</TableHead>
-                        <TableHead>{t("admin.type")}</TableHead>
+                        <TableHead>{t("admin.authType")}</TableHead>
                         <TableHead>{t("admin.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1181,15 +1124,18 @@ export function AdminSettings({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {user.is_oidc && user.password_hash
-                              ? "Dual Auth"
-                              : user.is_oidc
-                                ? t("admin.external")
-                                : t("admin.local")}
-                          </TableCell>
+                          <TableCell>{getAuthTypeDisplay(user)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title={t("admin.manageUser")}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                               {user.is_oidc && !user.password_hash && (
                                 <Button
                                   variant="ghost"
@@ -1200,7 +1146,7 @@ export function AdminSettings({
                                       username: user.username,
                                     })
                                   }
-                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                                   title="Link to password account"
                                 >
                                   <Link2 className="h-4 w-4" />
@@ -1223,20 +1169,8 @@ export function AdminSettings({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  handleOpenRolesDialog({
-                                    id: user.id,
-                                    username: user.username,
-                                  })
+                                  handleDeleteUserQuick(user.username)
                                 }
-                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                title={t("rbac.manageRoles")}
-                              >
-                                <UserCog className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteUser(user.username)}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 disabled={user.is_admin}
                               >
@@ -1376,94 +1310,6 @@ export function AdminSettings({
                     </TableBody>
                   </Table>
                 )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="admins" className="space-y-6">
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold">
-                  {t("admin.adminManagement")}
-                </h3>
-                <div className="space-y-4 p-4 border rounded-md bg-dark-bg-panel">
-                  <h4 className="font-semibold">{t("admin.makeUserAdmin")}</h4>
-                  <form onSubmit={handleMakeUserAdmin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-admin-username">
-                        {t("admin.username")}
-                      </Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="new-admin-username"
-                          value={newAdminUsername}
-                          onChange={(e) => setNewAdminUsername(e.target.value)}
-                          placeholder={t("admin.enterUsernameToMakeAdmin")}
-                          required
-                        />
-                        <Button
-                          type="submit"
-                          disabled={
-                            makeAdminLoading || !newAdminUsername.trim()
-                          }
-                        >
-                          {makeAdminLoading
-                            ? t("admin.adding")
-                            : t("admin.makeAdmin")}
-                        </Button>
-                      </div>
-                    </div>
-                    {makeAdminError && (
-                      <Alert variant="destructive">
-                        <AlertTitle>{t("common.error")}</AlertTitle>
-                        <AlertDescription>{makeAdminError}</AlertDescription>
-                      </Alert>
-                    )}
-                  </form>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">{t("admin.currentAdmins")}</h4>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("admin.username")}</TableHead>
-                        <TableHead>{t("admin.type")}</TableHead>
-                        <TableHead>{t("admin.actions")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users
-                        .filter((u) => u.is_admin)
-                        .map((admin) => (
-                          <TableRow key={admin.id}>
-                            <TableCell className="font-medium">
-                              {admin.username}
-                              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
-                                {t("admin.adminBadge")}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              {admin.is_oidc
-                                ? t("admin.external")
-                                : t("admin.local")}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleRemoveAdminStatus(admin.username)
-                                }
-                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                              >
-                                <Shield className="h-4 w-4" />
-                                {t("admin.removeAdminButton")}
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </div>
               </div>
             </TabsContent>
 
@@ -1687,113 +1533,21 @@ export function AdminSettings({
         </Dialog>
       )}
 
-      {/* Role Management Dialog */}
-      <Dialog open={rolesDialogOpen} onOpenChange={setRolesDialogOpen}>
-        <DialogContent className="max-w-2xl bg-dark-bg border-2 border-dark-border">
-          <DialogHeader>
-            <DialogTitle>{t("rbac.manageRoles")}</DialogTitle>
-            <DialogDescription>
-              {t("rbac.manageRolesFor", {
-                username: selectedUser?.username || "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
+      {/* New User Management Dialogs */}
+      <CreateUserDialog
+        open={createUserDialogOpen}
+        onOpenChange={setCreateUserDialogOpen}
+        onSuccess={handleCreateUserSuccess}
+      />
 
-          {rolesLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t("common.loading")}
-            </div>
-          ) : (
-            <div className="space-y-6 py-4">
-              {/* Current Roles */}
-              <div className="space-y-3">
-                <Label>{t("rbac.currentRoles")}</Label>
-                {userRoles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t("rbac.noRolesAssigned")}
-                  </p>
-                ) : (
-                  <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
-                    {userRoles.map((userRole) => (
-                      <div
-                        key={userRole.roleId}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {t(userRole.roleDisplayName)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {userRole.roleName}
-                          </p>
-                        </div>
-                        {userRole.isSystem ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {t("rbac.systemRole")}
-                          </Badge>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveRole(userRole.roleId)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Assign New Role */}
-              <div className="space-y-3">
-                <Label>{t("rbac.assignNewRole")}</Label>
-                <div className="flex gap-2">
-                  {availableRoles
-                    .filter(
-                      (role) =>
-                        !role.isSystem &&
-                        !userRoles.some((ur) => ur.roleId === role.id),
-                    )
-                    .map((role) => (
-                      <Button
-                        key={role.id}
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAssignRole(role.id)}
-                      >
-                        {t(role.displayName)}
-                      </Button>
-                    ))}
-                  {availableRoles.filter(
-                    (role) =>
-                      !role.isSystem &&
-                      !userRoles.some((ur) => ur.roleId === role.id),
-                  ).length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {t("rbac.noCustomRolesToAssign")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setRolesDialogOpen(false)}
-            >
-              {t("common.close")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserEditDialog
+        open={userEditDialogOpen}
+        onOpenChange={setUserEditDialogOpen}
+        user={selectedUserForEdit}
+        currentUser={currentUser}
+        onSuccess={handleEditUserSuccess}
+        allowPasswordLogin={allowPasswordLogin}
+      />
     </div>
   );
 }
