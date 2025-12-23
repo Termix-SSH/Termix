@@ -381,7 +381,9 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       URL.revokeObjectURL(url);
 
       toast.success(
-        `Exported host configuration for ${host.name || host.username}@${host.ip}`,
+        t("hosts.exportedHostConfig", {
+          name: host.name || `${host.username}@${host.ip}`,
+        }),
       );
     } catch {
       toast.error(t("hosts.failedToExportHost"));
@@ -1072,7 +1074,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                             }}
                             title={
                               folder !== t("hosts.uncategorized")
-                                ? "Click to rename folder"
+                                ? t("hosts.clickToRenameFolder")
                                 : ""
                             }
                           >
@@ -1087,7 +1089,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 startFolderEdit(folder);
                               }}
                               className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
-                              title="Rename folder"
+                              title={t("hosts.renameFolder")}
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -1234,7 +1236,9 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           <p>
-                                            Remove from folder "{host.folder}"
+                                            {t("hosts.removeFromFolder", {
+                                              folder: host.folder,
+                                            })}
                                           </p>
                                         </TooltipContent>
                                       </Tooltip>
@@ -1254,7 +1258,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Edit host</p>
+                                        <p>{t("hosts.editHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
@@ -1276,7 +1280,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Delete host</p>
+                                        <p>{t("hosts.deleteHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
@@ -1294,7 +1298,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Export host</p>
+                                        <p>{t("hosts.exportHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
@@ -1312,7 +1316,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Clone host</p>
+                                        <p>{t("hosts.cloneHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
@@ -1384,7 +1388,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         className="text-xs px-1 py-0"
                                       >
                                         <Container className="h-2 w-2 mr-0.5" />
-                                        Docker
+                                        {t("hosts.docker")}
                                       </Badge>
                                     )}
                                   </div>
@@ -1414,7 +1418,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Open Terminal</p>
+                                        <p>{t("hosts.openTerminal")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
@@ -1495,7 +1499,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Open Docker</p>
+                                        <p>{t("hosts.openDocker")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
@@ -1530,10 +1534,10 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                             <TooltipContent>
                               <div className="text-center">
                                 <p className="font-medium">
-                                  Click to edit host
+                                  {t("hosts.clickToEditHost")}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  Drag to move between folders
+                                  {t("hosts.dragToMoveBetweenFolders")}
                                 </p>
                               </div>
                             </TooltipContent>

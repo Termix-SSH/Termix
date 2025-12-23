@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import type { SSHHost } from "@/types/index.js";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+import { useTranslation } from "react-i18next";
 
 interface ConsoleTerminalProps {
   sessionId: string;
@@ -33,6 +34,7 @@ export function ConsoleTerminal({
   containerState,
   hostConfig,
 }: ConsoleTerminalProps): React.ReactElement {
+  const { t } = useTranslation();
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const [isConnected, setIsConnected] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
@@ -150,7 +152,7 @@ export function ConsoleTerminal({
     if (terminal) {
       try {
         terminal.clear();
-        terminal.write("Disconnected from container console.\r\n");
+        terminal.write(`${t("docker.disconnectedFromContainer")}\r\n`);
       } catch (error) {
         // Terminal might be disposed
       }
@@ -159,7 +161,7 @@ export function ConsoleTerminal({
 
   const connect = React.useCallback(() => {
     if (!terminal || containerState !== "running") {
-      toast.error("Container must be running to connect to console");
+      toast.error(t("docker.containerMustBeRunning"));
       return;
     }
 
@@ -170,7 +172,7 @@ export function ConsoleTerminal({
         ? localStorage.getItem("jwt")
         : getCookie("jwt");
       if (!token) {
-        toast.error("Authentication required");
+        toast.error(t("docker.authenticationRequired"));
         setIsConnecting(false);
         return;
       }
@@ -214,7 +216,7 @@ export function ConsoleTerminal({
             case "connected":
               setIsConnected(true);
               setIsConnecting(false);
-              toast.success(`Connected to ${containerName}`);
+              toast.success(t("docker.connectedTo", { containerName }));
 
               // Fit terminal and send resize to ensure correct dimensions
               setTimeout(() => {
@@ -238,7 +240,7 @@ export function ConsoleTerminal({
               setIsConnected(false);
               setIsConnecting(false);
               terminal.write(
-                `\r\n\x1b[1;33m${msg.message || "Disconnected"}\x1b[0m\r\n`,
+                `\r\n\x1b[1;33m${msg.message || t("docker.disconnected")}\x1b[0m\r\n`,
               );
               if (wsRef.current) {
                 wsRef.current.close();
@@ -248,8 +250,8 @@ export function ConsoleTerminal({
 
             case "error":
               setIsConnecting(false);
-              toast.error(msg.message || "Console error");
-              terminal.write(`\r\n\x1b[1;31mError: ${msg.message}\x1b[0m\r\n`);
+              toast.error(msg.message || t("docker.consoleError"));
+              terminal.write(`\r\n\x1b[1;31m${t("docker.errorMessage", { message: msg.message })}\x1b[0m\r\n`);
               break;
           }
         } catch (error) {
@@ -261,7 +263,7 @@ export function ConsoleTerminal({
         console.error("WebSocket error:", error);
         setIsConnecting(false);
         setIsConnected(false);
-        toast.error("Failed to connect to console");
+        toast.error(t("docker.failedToConnect"));
       };
 
       // Set up periodic ping to keep connection alive
@@ -340,9 +342,9 @@ export function ConsoleTerminal({
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
           <TerminalIcon className="h-12 w-12 text-gray-600 mx-auto" />
-          <p className="text-gray-400 text-lg">Container is not running</p>
+          <p className="text-gray-400 text-lg">{t("docker.containerNotRunning")}</p>
           <p className="text-gray-500 text-sm">
-            Start the container to access the console
+            {t("docker.startContainerToAccess")}
           </p>
         </div>
       </div>
@@ -357,7 +359,7 @@ export function ConsoleTerminal({
           <div className="flex flex-col sm:flex-row gap-2 items-center sm:items-center">
             <div className="flex items-center gap-2 flex-1">
               <TerminalIcon className="h-5 w-5" />
-              <span className="text-base font-medium">Console</span>
+              <span className="text-base font-medium">{t("docker.console")}</span>
             </div>
             <Select
               value={selectedShell}
@@ -365,12 +367,12 @@ export function ConsoleTerminal({
               disabled={isConnected}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select shell" />
+                <SelectValue placeholder={t("docker.selectShell")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bash">Bash</SelectItem>
-                <SelectItem value="sh">Sh</SelectItem>
-                <SelectItem value="ash">Ash</SelectItem>
+                <SelectItem value="bash">{t("docker.bash")}</SelectItem>
+                <SelectItem value="sh">{t("docker.sh")}</SelectItem>
+                <SelectItem value="ash">{t("docker.ash")}</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-2 sm:gap-2">
@@ -383,12 +385,12 @@ export function ConsoleTerminal({
                   {isConnecting ? (
                     <>
                       <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                      Connecting...
+                      {t("docker.connecting")}
                     </>
                   ) : (
                     <>
                       <Power className="h-4 w-4 mr-2" />
-                      Connect
+                      {t("docker.connect")}
                     </>
                   )}
                 </Button>
@@ -399,7 +401,7 @@ export function ConsoleTerminal({
                   className="min-w-[120px]"
                 >
                   <PowerOff className="h-4 w-4 mr-2" />
-                  Disconnect
+                  {t("docker.disconnect")}
                 </Button>
               )}
             </div>
@@ -422,9 +424,9 @@ export function ConsoleTerminal({
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center space-y-2">
                 <TerminalIcon className="h-12 w-12 text-gray-600 mx-auto" />
-                <p className="text-gray-400">Not connected</p>
+                <p className="text-gray-400">{t("docker.notConnected")}</p>
                 <p className="text-gray-500 text-sm">
-                  Click Connect to start an interactive shell
+                  {t("docker.clickToConnect")}
                 </p>
               </div>
             </div>
@@ -436,7 +438,7 @@ export function ConsoleTerminal({
               <div className="text-center">
                 <SimpleLoader size="lg" />
                 <p className="text-gray-400 mt-4">
-                  Connecting to {containerName}...
+                  {t("docker.connectingTo", { containerName })}
                 </p>
               </div>
             </div>

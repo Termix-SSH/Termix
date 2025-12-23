@@ -116,11 +116,13 @@ export function ContainerCard({
     setIsStarting(true);
     try {
       await startDockerContainer(sessionId, container.id);
-      toast.success(`Container ${container.name} started`);
+      toast.success(t("docker.containerStarted", { name: container.name }));
       onRefresh?.();
     } catch (error) {
       toast.error(
-        `Failed to start container: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("docker.failedToStartContainer", {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
       );
     } finally {
       setIsStarting(false);
@@ -132,11 +134,13 @@ export function ContainerCard({
     setIsStopping(true);
     try {
       await stopDockerContainer(sessionId, container.id);
-      toast.success(`Container ${container.name} stopped`);
+      toast.success(t("docker.containerStopped", { name: container.name }));
       onRefresh?.();
     } catch (error) {
       toast.error(
-        `Failed to stop container: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("docker.failedToStopContainer", {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
       );
     } finally {
       setIsStopping(false);
@@ -148,11 +152,13 @@ export function ContainerCard({
     setIsRestarting(true);
     try {
       await restartDockerContainer(sessionId, container.id);
-      toast.success(`Container ${container.name} restarted`);
+      toast.success(t("docker.containerRestarted", { name: container.name }));
       onRefresh?.();
     } catch (error) {
       toast.error(
-        `Failed to restart container: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("docker.failedToRestartContainer", {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
       );
     } finally {
       setIsRestarting(false);
@@ -165,15 +171,18 @@ export function ContainerCard({
     try {
       if (container.state === "paused") {
         await unpauseDockerContainer(sessionId, container.id);
-        toast.success(`Container ${container.name} unpaused`);
+        toast.success(t("docker.containerUnpaused", { name: container.name }));
       } else {
         await pauseDockerContainer(sessionId, container.id);
-        toast.success(`Container ${container.name} paused`);
+        toast.success(t("docker.containerPaused", { name: container.name }));
       }
       onRefresh?.();
     } catch (error) {
       toast.error(
-        `Failed to ${container.state === "paused" ? "unpause" : "pause"} container: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("docker.failedToTogglePauseContainer", {
+          action: container.state === "paused" ? "unpause" : "pause",
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
       );
     } finally {
       setIsPausing(false);
@@ -185,12 +194,14 @@ export function ContainerCard({
     try {
       const force = container.state === "running";
       await removeDockerContainer(sessionId, container.id, force);
-      toast.success(`Container ${container.name} removed`);
+      toast.success(t("docker.containerRemoved", { name: container.name }));
       setShowRemoveDialog(false);
       onRefresh?.();
     } catch (error) {
       toast.error(
-        `Failed to remove container: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("docker.failedToRemoveContainer", {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
       );
     } finally {
       setIsRemoving(false);
@@ -249,21 +260,19 @@ export function ContainerCard({
         <CardContent className="space-y-3 px-4 pb-3">
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs">Image:</span>
+              <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.image")}</span>
               <span className="truncate text-gray-200 text-xs">
                 {container.image}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs">ID:</span>
+              <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.idLabel")}</span>
               <span className="font-mono text-xs text-gray-200">
                 {container.id.substring(0, 12)}
               </span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs shrink-0">
-                Ports:
-              </span>
+                            <span className="text-gray-400 min-w-[50px] text-xs shrink-0">{t("docker.ports")}</span>
               <div className="flex flex-wrap gap-1">
                 {portsList.length > 0 ? (
                   portsList.map((port, idx) => (
@@ -280,15 +289,13 @@ export function ContainerCard({
                     variant="outline"
                     className="text-xs bg-gray-500/10 text-gray-400 border-gray-500/30"
                   >
-                    None
+                    {t("docker.noPorts")}
                   </Badge>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs">
-                Created:
-              </span>
+                            <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.created")}</span>
               <span className="text-gray-200 text-xs">
                 {formatCreatedDate(container.created)}
               </span>
@@ -314,7 +321,7 @@ export function ContainerCard({
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Start</TooltipContent>
+                  <TooltipContent>{t("docker.start")}</TooltipContent>
                 </Tooltip>
               )}
 
@@ -335,7 +342,7 @@ export function ContainerCard({
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Stop</TooltipContent>
+                  <TooltipContent>{t("docker.stop")}</TooltipContent>
                 </Tooltip>
               )}
 
@@ -360,7 +367,9 @@ export function ContainerCard({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {container.state === "paused" ? "Unpause" : "Pause"}
+                    {container.state === "paused"
+                      ? t("docker.unpause")
+                      : t("docker.pause")}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -381,8 +390,7 @@ export function ContainerCard({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Restart</TooltipContent>
-              </Tooltip>
+                                  <TooltipContent>{t("docker.restart")}</TooltipContent>              </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -399,8 +407,7 @@ export function ContainerCard({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Remove</TooltipContent>
-              </Tooltip>
+                                  <TooltipContent>{t("docker.remove")}</TooltipContent>              </Tooltip>
             </TooltipProvider>
           </div>
         </CardContent>
@@ -409,25 +416,22 @@ export function ContainerCard({
       <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Container</AlertDialogTitle>
+            <AlertDialogTitle>{t("docker.removeContainer")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove container{" "}
-              <span className="font-semibold">
-                {container.name.startsWith("/")
+              {t("docker.confirmRemoveContainer", {
+                name: container.name.startsWith("/")
                   ? container.name.slice(1)
-                  : container.name}
-              </span>
-              ?
+                  : container.name,
+              })}
               {container.state === "running" && (
                 <div className="mt-2 text-yellow-400">
-                  Warning: This container is currently running and will be
-                  force-removed.
+                  {t("docker.runningContainerWarning")}
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isRemoving}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -436,7 +440,7 @@ export function ContainerCard({
               disabled={isRemoving}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isRemoving ? "Removing..." : "Remove"}
+              {isRemoving ? t("docker.removing") : t("common.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

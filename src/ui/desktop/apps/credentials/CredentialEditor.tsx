@@ -311,14 +311,14 @@ export function CredentialEditor({
 
   const getFriendlyKeyTypeName = (keyType: string): string => {
     const keyTypeMap: Record<string, string> = {
-      "ssh-rsa": "RSA (SSH)",
-      "ssh-ed25519": "Ed25519 (SSH)",
-      "ecdsa-sha2-nistp256": "ECDSA P-256 (SSH)",
-      "ecdsa-sha2-nistp384": "ECDSA P-384 (SSH)",
-      "ecdsa-sha2-nistp521": "ECDSA P-521 (SSH)",
-      "ssh-dss": "DSA (SSH)",
-      "rsa-sha2-256": "RSA-SHA2-256",
-      "rsa-sha2-512": "RSA-SHA2-512",
+      "ssh-rsa": t("credentials.keyTypeRSA"),
+      "ssh-ed25519": t("credentials.keyTypeEd25519"),
+      "ecdsa-sha2-nistp256": t("credentials.keyTypeEcdsaP256"),
+      "ecdsa-sha2-nistp384": t("credentials.keyTypeEcdsaP384"),
+      "ecdsa-sha2-nistp521": t("credentials.keyTypeEcdsaP521"),
+      "ssh-dss": t("credentials.keyTypeDsa"),
+      "rsa-sha2-256": t("credentials.keyTypeRsaSha256"),
+      "rsa-sha2-512": t("credentials.keyTypeRsaSha512"),
       invalid: t("credentials.invalidKey"),
       error: t("credentials.detectionError"),
       unknown: t("credentials.unknown"),

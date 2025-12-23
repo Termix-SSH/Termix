@@ -9,12 +9,13 @@ import ptbrTranslation from "../locales/pt-BR/translation.json";
 import ruTranslation from "../locales/ru/translation.json";
 import frTranslation from "../locales/fr/translation.json";
 import koTranslation from "../locales/ko/translation.json";
+import itTranslation from "../locales/it/translation.json";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    supportedLngs: ["en", "zh", "de", "ptbr", "ru", "fr", "ko"],
+    supportedLngs: ["en", "zh", "de", "ptbr", "ru", "fr", "ko", "it"],
     fallbackLng: "en",
     debug: false,
 
@@ -47,6 +48,9 @@ i18n
       },
       ko: {
         translation: koTranslation,
+      },
+      it: {
+        translation: itTranslation,
       },
     },
 

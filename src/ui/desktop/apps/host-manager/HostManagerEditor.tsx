@@ -1166,7 +1166,7 @@ export function HostManagerEditor({
                   <TabsTrigger value="terminal">
                     {t("hosts.terminal")}
                   </TabsTrigger>
-                  <TabsTrigger value="docker">Docker</TabsTrigger>
+                  <TabsTrigger value="docker">{t("hosts.docker")}</TabsTrigger>
                   <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
                   <TabsTrigger value="file_manager">
                     {t("hosts.fileManager")}
@@ -1895,7 +1895,7 @@ export function HostManagerEditor({
                                       </FormLabel>
                                       <FormControl>
                                         <Input
-                                          placeholder="proxy.example.com"
+                                          placeholder={t("placeholders.socks5Host")}
                                           {...field}
                                           onBlur={(e) => {
                                             field.onChange(
@@ -1923,7 +1923,7 @@ export function HostManagerEditor({
                                       <FormControl>
                                         <Input
                                           type="number"
-                                          placeholder="1080"
+                                          placeholder={t("placeholders.socks5Port")}
                                           {...field}
                                           onChange={(e) =>
                                             field.onChange(
@@ -1945,8 +1945,7 @@ export function HostManagerEditor({
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>
-                                        {t("hosts.socks5Username")} (
-                                        {t("hosts.optional")})
+                                        {t("hosts.socks5Username")} {t("hosts.optional")}
                                       </FormLabel>
                                       <FormControl>
                                         <Input
@@ -1970,8 +1969,7 @@ export function HostManagerEditor({
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>
-                                        {t("hosts.socks5Password")} (
-                                        {t("hosts.optional")})
+                                        {t("hosts.socks5Password")} {t("hosts.optional")}
                                       </FormLabel>
                                       <FormControl>
                                         <PasswordInput
@@ -2059,7 +2057,7 @@ export function HostManagerEditor({
                                             {t("hosts.socks5Host")}
                                           </FormLabel>
                                           <Input
-                                            placeholder="proxy.example.com"
+                                            placeholder={t("placeholders.socks5Host")}
                                             value={node.host}
                                             onChange={(e) => {
                                               const currentChain =
@@ -2104,7 +2102,7 @@ export function HostManagerEditor({
                                           </FormLabel>
                                           <Input
                                             type="number"
-                                            placeholder="1080"
+                                            placeholder={t("placeholders.socks5Port")}
                                             value={node.port}
                                             onChange={(e) => {
                                               const currentChain =
@@ -2155,10 +2153,10 @@ export function HostManagerEditor({
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="4">
-                                              SOCKS4
+                                              {t("hosts.socks4")}
                                             </SelectItem>
                                             <SelectItem value="5">
-                                              SOCKS5
+                                              {t("hosts.socks5")}
                                             </SelectItem>
                                           </SelectContent>
                                         </Select>
@@ -2167,8 +2165,7 @@ export function HostManagerEditor({
                                       <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-2">
                                           <FormLabel>
-                                            {t("hosts.socks5Username")} (
-                                            {t("hosts.optional")})
+                                            {t("hosts.socks5Username")} {t("hosts.optional")}
                                           </FormLabel>
                                           <Input
                                             placeholder={t("hosts.username")}
@@ -2212,8 +2209,7 @@ export function HostManagerEditor({
 
                                         <div className="space-y-2">
                                           <FormLabel>
-                                            {t("hosts.socks5Password")} (
-                                            {t("hosts.optional")})
+                                            {t("hosts.socks5Password")} {t("hosts.optional")}
                                           </FormLabel>
                                           <PasswordInput
                                             placeholder={t("hosts.password")}
@@ -2720,7 +2716,7 @@ export function HostManagerEditor({
                                   </PopoverContent>
                                 </Popover>
                                 <FormDescription>
-                                  Execute a snippet when the terminal connects
+                                  {t("hosts.executeSnippetOnConnect")}
                                 </FormDescription>
                               </FormItem>
                             );
@@ -2733,9 +2729,9 @@ export function HostManagerEditor({
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                               <div className="space-y-0.5">
-                                <FormLabel>Auto-MOSH</FormLabel>
+                                <FormLabel>{t("hosts.autoMosh")}</FormLabel>
                                 <FormDescription>
-                                  Automatically run MOSH command on connect
+                                  {t("hosts.autoMoshDesc")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -2754,11 +2750,10 @@ export function HostManagerEditor({
                             name="terminalConfig.moshCommand"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>MOSH Command</FormLabel>
+                                <FormLabel>{t("hosts.moshCommand")}</FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="mosh user@server"
-                                    {...field}
+                                                                              placeholder={t("placeholders.moshCommand")}                                    {...field}
                                     onBlur={(e) => {
                                       field.onChange(e.target.value.trim());
                                       field.onBlur();
@@ -2766,7 +2761,7 @@ export function HostManagerEditor({
                                   />
                                 </FormControl>
                                 <FormDescription>
-                                  The MOSH command to execute
+                                  {t("hosts.moshCommandDesc")}
                                 </FormDescription>
                               </FormItem>
                             )}
@@ -2819,11 +2814,10 @@ export function HostManagerEditor({
 
                         <div className="space-y-2">
                           <label className="text-sm font-medium">
-                            Environment Variables
+                            {t("hosts.environmentVariables")}
                           </label>
                           <FormDescription>
-                            Set custom environment variables for the terminal
-                            session
+                            {t("hosts.environmentVariablesDesc")}
                           </FormDescription>
                           {form
                             .watch("terminalConfig.environmentVariables")
@@ -2836,7 +2830,7 @@ export function HostManagerEditor({
                                     <FormItem className="flex-1">
                                       <FormControl>
                                         <Input
-                                          placeholder="Variable name"
+                                          placeholder={t("hosts.variableName")}
                                           {...field}
                                           onBlur={(e) => {
                                             field.onChange(
@@ -2856,7 +2850,7 @@ export function HostManagerEditor({
                                     <FormItem className="flex-1">
                                       <FormControl>
                                         <Input
-                                          placeholder="Value"
+                                          placeholder={t("hosts.variableValue")}
                                           {...field}
                                           onBlur={(e) => {
                                             field.onChange(
@@ -2903,7 +2897,7 @@ export function HostManagerEditor({
                             }}
                           >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Variable
+                            {t("hosts.addVariable")}
                           </Button>
                         </div>
                       </AccordionContent>
@@ -2916,7 +2910,7 @@ export function HostManagerEditor({
                     name="enableDocker"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Enable Docker</FormLabel>
+                        <FormLabel>{t("hosts.enableDocker")}</FormLabel>
                         <FormControl>
                           <Switch
                             checked={field.value}
@@ -2924,7 +2918,7 @@ export function HostManagerEditor({
                           />
                         </FormControl>
                         <FormDescription>
-                          Enable Docker integration for this host
+                          {t("hosts.enableDockerDesc")}
                         </FormDescription>
                       </FormItem>
                     )}
@@ -3075,7 +3069,7 @@ export function HostManagerEditor({
                                             </FormLabel>
                                             <FormControl>
                                               <Input
-                                                placeholder="22"
+                                                placeholder={t("placeholders.defaultPort")}
                                                 {...sourcePortField}
                                               />
                                             </FormControl>
@@ -3094,7 +3088,7 @@ export function HostManagerEditor({
                                             </FormLabel>
                                             <FormControl>
                                               <Input
-                                                placeholder="224"
+                                                placeholder={t("placeholders.defaultEndpointPort")}
                                                 {...endpointPortField}
                                               />
                                             </FormControl>

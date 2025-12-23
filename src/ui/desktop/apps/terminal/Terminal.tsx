@@ -684,9 +684,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 !sudoPromptShownRef.current
               ) {
                 sudoPromptShownRef.current = true;
-                confirmWithToast(
-                  t("terminal.sudoPasswordPopupTitle", "Insert password?"),
-                  async () => {
+                confirmWithToast(t("terminal.sudoPasswordPopupTitle"), async () => {
                     if (
                       webSocketRef.current &&
                       webSocketRef.current.readyState === WebSocket.OPEN
@@ -843,7 +841,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "totp_required") {
             setTotpRequired(true);
-            setTotpPrompt(msg.prompt || "Verification code:");
+            setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
@@ -851,7 +849,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "password_required") {
             setTotpRequired(true);
-            setTotpPrompt(msg.prompt || "Password:");
+            setTotpPrompt(msg.prompt || t("common.password"));
             setIsPasswordPrompt(true);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);

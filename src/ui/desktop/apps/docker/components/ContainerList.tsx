@@ -55,10 +55,8 @@ export function ContainerList({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
-          <p className="text-gray-400 text-lg">No containers found</p>
-          <p className="text-gray-500 text-sm">
-            Start by creating containers on your server
-          </p>
+          <p className="text-gray-400 text-lg">{t("docker.noContainersFound")}</p>
+          <p className="text-gray-500 text-sm">{t("docker.noContainersFoundHint")}</p>
         </div>
       </div>
     );
@@ -71,7 +69,7 @@ export function ContainerList({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by name, image, or ID..."
+            placeholder={t("docker.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -81,13 +79,13 @@ export function ContainerList({
           <Filter className="h-4 w-4 text-gray-400" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={t("docker.filterByStatusPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All ({containers.length})</SelectItem>
+              <SelectItem value="all">{t("docker.allContainersCount", { count: containers.length })}</SelectItem>
               {Object.entries(statusCounts).map(([status, count]) => (
                 <SelectItem key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
+                  {t("docker.statusCount", { status: status.charAt(0).toUpperCase() + status.slice(1), count })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -99,10 +97,8 @@ export function ContainerList({
       {filteredContainers.length === 0 ? (
         <div className="flex items-center justify-center flex-1">
           <div className="text-center space-y-2">
-            <p className="text-gray-400">No containers match your filters</p>
-            <p className="text-gray-500 text-sm">
-              Try adjusting your search or filter
-            </p>
+            <p className="text-gray-400">{t("docker.noContainersMatchFilters")}</p>
+            <p className="text-gray-500 text-sm">{t("docker.noContainersMatchFiltersHint")}</p>
           </div>
         </div>
       ) : (

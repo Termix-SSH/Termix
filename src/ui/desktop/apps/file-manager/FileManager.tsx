@@ -348,7 +348,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       if (result?.requires_totp) {
         setTotpRequired(true);
         setTotpSessionId(sessionId);
-        setTotpPrompt(result.prompt || "Verification code:");
+        setTotpPrompt(result.prompt || t("fileManager.verificationCodePrompt"));
         setIsLoading(false);
         return;
       }
@@ -586,7 +586,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         error.message?.includes("established")
       ) {
         toast.error(
-          `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+          t("fileManager.sshConnectionFailed", { name: currentHost?.name, ip: currentHost?.ip, port: currentHost?.port }),
         );
       } else {
         toast.error(t("fileManager.failedToUploadFile"));
@@ -633,7 +633,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         error.message?.includes("established")
       ) {
         toast.error(
-          `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+          t("fileManager.sshConnectionFailed", { name: currentHost?.name, ip: currentHost?.ip, port: currentHost?.port }),
         );
       } else {
         toast.error(t("fileManager.failedToDownloadFile"));
@@ -1497,7 +1497,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       if (result?.requires_totp) {
         setTotpRequired(true);
         setTotpSessionId(sessionId);
-        setTotpPrompt(result.prompt || "Verification code:");
+        setTotpPrompt(result.prompt || t("fileManager.verificationCodePrompt"));
         setIsLoading(false);
         return;
       }

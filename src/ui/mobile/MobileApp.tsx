@@ -55,7 +55,7 @@ const AppContent: FC = () => {
 
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
-            console.warn("Session expired - please log in again");
+            console.warn(t("errors.sessionExpired"));
           }
         })
         .finally(() => setAuthLoading(false));

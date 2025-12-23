@@ -901,7 +901,7 @@ export function Auth({
                   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
               }}
             >
-              TERMIX
+              {t("common.appName").toUpperCase()}
             </div>
             <div className="text-lg text-muted-foreground tracking-widest font-light">
               {t("auth.tagline")}
@@ -1389,7 +1389,7 @@ export function Auth({
                             <div className="flex items-center justify-between">
                               <div>
                                 <Label className="text-sm text-muted-foreground">
-                                  Server
+                                  {t("serverConfig.serverUrl")}
                                 </Label>
                                 <div className="text-xs text-muted-foreground truncate max-w-[200px]">
                                   {currentServerUrl}
@@ -1402,7 +1402,7 @@ export function Auth({
                                 onClick={() => setShowServerConfig(true)}
                                 className="h-8 px-3"
                               >
-                                Edit
+                                {t("common.edit")}
                               </Button>
                             </div>
                           )}

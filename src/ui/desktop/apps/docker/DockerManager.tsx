@@ -253,8 +253,7 @@ export function DockerManager({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Docker is not enabled for this host. Enable it in Host Settings
-                to use Docker features.
+                {t("docker.notEnabled")}
               </AlertDescription>
             </Alert>
           </div>
@@ -284,8 +283,8 @@ export function DockerManager({
               <SimpleLoader size="lg" />
               <p className="text-gray-400 mt-4">
                 {isValidating
-                  ? "Validating Docker..."
-                  : "Connecting to host..."}
+                  ? t("docker.validating")
+                  : t("docker.connectingToHost")}
               </p>
             </div>
           </div>
@@ -314,11 +313,11 @@ export function DockerManager({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <div className="font-semibold mb-2">Docker Error</div>
+                <div className="font-semibold mb-2">{t("docker.error")}</div>
                 <div>{dockerValidation.error}</div>
                 {dockerValidation.code && (
                   <div className="mt-2 text-xs opacity-70">
-                    Error code: {dockerValidation.code}
+                    {t("docker.errorCode", { code: dockerValidation.code })}
                   </div>
                 )}
               </AlertDescription>
@@ -340,7 +339,7 @@ export function DockerManager({
               </h1>
               {dockerValidation?.version && (
                 <p className="text-xs text-gray-400">
-                  Docker v{dockerValidation.version}
+                  {t("docker.version", { version: dockerValidation.version })}
                 </p>
               )}
             </div>
