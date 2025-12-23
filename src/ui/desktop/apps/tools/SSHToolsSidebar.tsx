@@ -283,9 +283,9 @@ export function SSHToolsSidebar({
             console.error("Failed to fetch command history", err);
             const errorMessage =
               err?.response?.status === 401
-                ? "Authentication required. Please refresh the page."
+                ? t("commandHistory.authRequiredRefresh")
                 : err?.response?.status === 403
-                  ? "Data access locked. Please re-authenticate."
+                  ? t("commandHistory.dataAccessLockedReauth")
                   : err?.message || "Failed to load command history";
 
             setHistoryError(errorMessage);
@@ -814,9 +814,7 @@ export function SSHToolsSidebar({
 
     if (sourceFolder !== targetFolder) {
       toast.error(
-        t("snippets.reorderSameFolder", {
-          defaultValue: "Can only reorder snippets within the same folder",
-        }),
+        t("snippets.reorderSameFolder"),
       );
       setDraggedSnippet(null);
       setDragOverFolder(null);
@@ -853,16 +851,12 @@ export function SSHToolsSidebar({
     try {
       await reorderSnippets(updates);
       toast.success(
-        t("snippets.reorderSuccess", {
-          defaultValue: "Snippets reordered successfully",
-        }),
+        t("snippets.reorderSuccess"),
       );
       fetchSnippets();
     } catch {
       toast.error(
-        t("snippets.reorderFailed", {
-          defaultValue: "Failed to reorder snippets",
-        }),
+        t("snippets.reorderFailed"),
       );
     }
 
@@ -901,23 +895,13 @@ export function SSHToolsSidebar({
     confirmWithToast(
       t("snippets.deleteFolderConfirm", {
         name: folderName,
-        defaultValue: `Delete folder "${folderName}"? All snippets will be moved to Uncategorized.`,
-      }),
       async () => {
         try {
           await deleteSnippetFolder(folderName);
-          toast.success(
-            t("snippets.deleteFolderSuccess", {
-              defaultValue: "Folder deleted successfully",
-            }),
-          );
+          toast.success(t("snippets.deleteFolderSuccess"));
           fetchSnippets();
         } catch {
-          toast.error(
-            t("snippets.deleteFolderFailed", {
-              defaultValue: "Failed to delete folder",
-            }),
-          );
+          toast.error(t("snippets.deleteFolderFailed"));
         }
       },
       "destructive",
@@ -944,22 +928,14 @@ export function SSHToolsSidebar({
           color: folderFormData.color || undefined,
           icon: folderFormData.icon || undefined,
         });
-        toast.success(
-          t("snippets.updateFolderSuccess", {
-            defaultValue: "Folder updated successfully",
-          }),
-        );
+        toast.success(t("snippets.updateFolderSuccess"));
       } else {
         await createSnippetFolder({
           name: folderFormData.name,
           color: folderFormData.color || undefined,
           icon: folderFormData.icon || undefined,
         });
-        toast.success(
-          t("snippets.createFolderSuccess", {
-            defaultValue: "Folder created successfully",
-          }),
-        );
+        toast.success(t("snippets.createFolderSuccess"));
       }
 
       setShowFolderDialog(false);
@@ -967,12 +943,8 @@ export function SSHToolsSidebar({
     } catch {
       toast.error(
         editingFolder
-          ? t("snippets.updateFolderFailed", {
-              defaultValue: "Failed to update folder",
-            })
-          : t("snippets.createFolderFailed", {
-              defaultValue: "Failed to create folder",
-            }),
+          ? t("snippets.updateFolderFailed")
+          : t("snippets.createFolderFailed"),
       );
     }
   };
@@ -1042,9 +1014,7 @@ export function SSHToolsSidebar({
 
     if (splitAssignments.size === 0) {
       toast.error(
-        t("splitScreen.error.noAssignments", {
-          defaultValue: "Please drag tabs to cells before applying",
-        }),
+        t("splitScreen.error.noAssignments"),
       );
       return;
     }
@@ -1054,7 +1024,6 @@ export function SSHToolsSidebar({
     if (splitAssignments.size < requiredSlots) {
       toast.error(
         t("splitScreen.error.fillAllSlots", {
-          defaultValue: `Please fill all ${requiredSlots} layout spots before applying`,
           count: requiredSlots,
         }),
       );
@@ -1083,9 +1052,7 @@ export function SSHToolsSidebar({
     }
 
     toast.success(
-      t("splitScreen.success", {
-        defaultValue: "Split screen applied",
-      }),
+      t("splitScreen.success"),
     );
   };
 
@@ -1099,9 +1066,7 @@ export function SSHToolsSidebar({
     setPreviewKey((prev) => prev + 1);
 
     toast.success(
-      t("splitScreen.cleared", {
-        defaultValue: "Split screen cleared",
-      }),
+      t("splitScreen.cleared"),
     );
   };
 
@@ -1121,15 +1086,11 @@ export function SSHToolsSidebar({
         await deleteCommandFromHistory(activeTerminalHostId, command);
         setCommandHistory((prev) => prev.filter((c) => c !== command));
         toast.success(
-          t("commandHistory.deleteSuccess", {
-            defaultValue: "Command deleted from history",
-          }),
+          t("commandHistory.deleteSuccess"),
         );
       } catch {
         toast.error(
-          t("commandHistory.deleteFailed", {
-            defaultValue: "Failed to delete command.",
-          }),
+          t("commandHistory.deleteFailed"),
         );
       }
     }
@@ -1159,7 +1120,7 @@ export function SSHToolsSidebar({
                       variant="outline"
                       onClick={() => setSidebarWidth(400)}
                       className="w-[28px] h-[28px]"
-                      title="Reset sidebar width"
+                      title={t("common.resetSidebarWidth")}
                     >
                       <RotateCcw className="h-4 w-4" />
                     </Button>
@@ -1189,10 +1150,10 @@ export function SSHToolsSidebar({
                       {t("snippets.title")}
                     </TabsTrigger>
                     <TabsTrigger value="command-history">
-                      {t("commandHistory.title", { defaultValue: "History" })}
+                      {t("commandHistory.title")}
                     </TabsTrigger>
                     <TabsTrigger value="split-screen">
-                      {t("splitScreen.title", { defaultValue: "Split Screen" })}
+                      {t("splitScreen.title")}
                     </TabsTrigger>
                   </TabsList>
 
@@ -1300,21 +1261,15 @@ export function SSHToolsSidebar({
                       {terminalTabs.length > 0 && (
                         <>
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">
-                              {t("snippets.selectTerminals", {
-                                defaultValue: "Select Terminals (optional)",
-                              })}
+                            <label className="text-sm font-medium text-white">
+                              {t("snippets.selectTerminals")}
                             </label>
                             <p className="text-xs text-muted-foreground">
                               {selectedSnippetTabIds.length > 0
                                 ? t("snippets.executeOnSelected", {
-                                    defaultValue: `Execute on ${selectedSnippetTabIds.length} selected terminal(s)`,
                                     count: selectedSnippetTabIds.length,
                                   })
-                                : t("snippets.executeOnCurrent", {
-                                    defaultValue:
-                                      "Execute on current terminal (click to select multiple)",
-                                  })}
+                                : t("snippets.executeOnCurrent")}
                             </p>
                             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto thin-scrollbar">
                               {terminalTabs.map((tab) => (
@@ -1354,9 +1309,7 @@ export function SSHToolsSidebar({
                           variant="outline"
                         >
                           <FolderPlus className="w-4 h-4 mr-2" />
-                          {t("snippets.newFolder", {
-                            defaultValue: "New Folder",
-                          })}
+                          {t("snippets.newFolder")}
                         </Button>
                       </div>
                     </div>
@@ -1606,9 +1559,7 @@ export function SSHToolsSidebar({
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder={t("commandHistory.searchPlaceholder", {
-                            defaultValue: "Search commands...",
-                          })}
+                          placeholder={t("commandHistory.searchPlaceholder")}
                           value={searchQuery}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -1627,10 +1578,7 @@ export function SSHToolsSidebar({
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground bg-muted/30 px-2 py-1.5 rounded">
-                        {t("commandHistory.tabHint", {
-                          defaultValue:
-                            "Use Tab in Terminal to autocomplete from command history",
-                        })}
+                        {t("commandHistory.tabHint")}
                       </p>
                     </div>
 
@@ -1639,9 +1587,7 @@ export function SSHToolsSidebar({
                         <div className="text-center py-8">
                           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
                             <p className="text-destructive font-medium mb-2">
-                              {t("commandHistory.error", {
-                                defaultValue: "Error loading history",
-                              })}
+                              {t("commandHistory.error")}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {historyError}
@@ -1653,32 +1599,23 @@ export function SSHToolsSidebar({
                             }
                             variant="outline"
                           >
-                            {t("common.retry", { defaultValue: "Retry" })}
+                            {t("common.retry")}
                           </Button>
                         </div>
                       ) : !activeTerminal ? (
                         <div className="text-center text-muted-foreground py-8">
                           <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
                           <p className="mb-2 font-medium">
-                            {t("commandHistory.noTerminal", {
-                              defaultValue: "No active terminal",
-                            })}
-                          </p>
+                                                      {t("commandHistory.noTerminal")}                          </p>
                           <p className="text-sm">
-                            {t("commandHistory.noTerminalHint", {
-                              defaultValue:
-                                "Open a terminal to see its command history.",
-                            })}
+                            {t("commandHistory.noTerminalHint")}
                           </p>
                         </div>
                       ) : isHistoryLoading && commandHistory.length === 0 ? (
                         <div className="text-center text-muted-foreground py-8">
                           <Loader2 className="h-12 w-12 mb-4 opacity-20 mx-auto animate-spin" />
                           <p className="mb-2 font-medium">
-                            {t("commandHistory.loading", {
-                              defaultValue: "Loading command history...",
-                            })}
-                          </p>
+                                                      {t("commandHistory.loading")}                          </p>
                         </div>
                       ) : filteredCommands.length === 0 ? (
                         <div className="text-center text-muted-foreground py-8">
@@ -1686,13 +1623,10 @@ export function SSHToolsSidebar({
                             <>
                               <Search className="h-12 w-12 mb-2 opacity-20 mx-auto" />
                               <p className="mb-2 font-medium">
-                                {t("commandHistory.noResults", {
-                                  defaultValue: "No commands found",
-                                })}
+                                {t("commandHistory.noResults")}
                               </p>
                               <p className="text-sm">
                                 {t("commandHistory.noResultsHint", {
-                                  defaultValue: `No commands matching "${searchQuery}"`,
                                   query: searchQuery,
                                 })}
                               </p>
@@ -1700,15 +1634,10 @@ export function SSHToolsSidebar({
                           ) : (
                             <>
                               <p className="mb-2 font-medium">
-                                {t("commandHistory.empty", {
-                                  defaultValue: "No command history yet",
-                                })}
+                                {t("commandHistory.empty")}
                               </p>
                               <p className="text-sm">
-                                {t("commandHistory.emptyHint", {
-                                  defaultValue:
-                                    "Execute commands in the active terminal to build its history.",
-                                })}
+                                {t("commandHistory.emptyHint")}
                               </p>
                             </>
                           )}
@@ -1739,9 +1668,7 @@ export function SSHToolsSidebar({
                                     e.stopPropagation();
                                     handleCommandDelete(command);
                                   }}
-                                  title={t("commandHistory.deleteTooltip", {
-                                    defaultValue: "Delete command",
-                                  })}
+                                  title={t("commandHistory.deleteTooltip")}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -1769,23 +1696,14 @@ export function SSHToolsSidebar({
                       >
                         <TabsList className="w-full grid grid-cols-4">
                           <TabsTrigger value="none">
-                            {t("splitScreen.none", { defaultValue: "None" })}
+                            {t("splitScreen.none")}
                           </TabsTrigger>
                           <TabsTrigger value="2">
-                            {t("splitScreen.twoSplit", {
-                              defaultValue: "2-Split",
-                            })}
-                          </TabsTrigger>
+                                                      {t("splitScreen.twoSplit")}                          </TabsTrigger>
                           <TabsTrigger value="3">
-                            {t("splitScreen.threeSplit", {
-                              defaultValue: "3-Split",
-                            })}
-                          </TabsTrigger>
+                                                      {t("splitScreen.threeSplit")}                          </TabsTrigger>
                           <TabsTrigger value="4">
-                            {t("splitScreen.fourSplit", {
-                              defaultValue: "4-Split",
-                            })}
-                          </TabsTrigger>
+                                                      {t("splitScreen.fourSplit")}                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
 
@@ -1794,16 +1712,11 @@ export function SSHToolsSidebar({
                           <Separator />
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">
-                              {t("splitScreen.availableTabs", {
-                                defaultValue: "Available Tabs",
-                              })}
+                            <label className="text-sm font-medium text-white">
+                              {t("splitScreen.availableTabs")}
                             </label>
                             <p className="text-xs text-muted-foreground mb-2">
-                              {t("splitScreen.dragTabsHint", {
-                                defaultValue:
-                                  "Drag tabs into the grid below to position them",
-                              })}
+                              {t("splitScreen.dragTabsHint")}
                             </p>
                             <div className="space-y-1 max-h-[200px] overflow-y-auto thin-scrollbar">
                               {splittableTabs.map((tab) => {
@@ -1842,10 +1755,8 @@ export function SSHToolsSidebar({
                           <Separator />
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">
-                              {t("splitScreen.layout", {
-                                defaultValue: "Layout",
-                              })}
+                            <label className="text-sm font-medium text-white">
+                              {t("splitScreen.layout")}
                             </label>
                             <div
                               className={`grid gap-2 ${
@@ -1904,14 +1815,12 @@ export function SSHToolsSidebar({
                                             }
                                             className="h-6 text-xs hover:bg-red-500/20"
                                           >
-                                            Remove
+                                            {t("common.remove")}
                                           </Button>
                                         </>
                                       ) : (
                                         <span className="text-xs text-muted-foreground">
-                                          {t("splitScreen.dropHere", {
-                                            defaultValue: "Drop tab here",
-                                          })}
+                                          {t("splitScreen.dropHere")}
                                         </span>
                                       )}
                                     </div>
@@ -1927,18 +1836,14 @@ export function SSHToolsSidebar({
                               className="flex-1"
                               disabled={splitAssignments.size === 0}
                             >
-                              {t("splitScreen.apply", {
-                                defaultValue: "Apply Split",
-                              })}
+                              {t("splitScreen.apply")}
                             </Button>
                             <Button
                               variant="outline"
                               onClick={handleClearSplit}
                               className="flex-1"
                             >
-                              {t("splitScreen.clear", {
-                                defaultValue: "Clear",
-                              })}
+                              {t("splitScreen.clear")}
                             </Button>
                           </div>
                         </>
@@ -1948,16 +1853,10 @@ export function SSHToolsSidebar({
                         <div className="text-center py-8">
                           <LayoutGrid className="h-12 w-12 mb-4 opacity-20 mx-auto" />
                           <p className="text-sm text-muted-foreground mb-2">
-                            {t("splitScreen.selectMode", {
-                              defaultValue:
-                                "Select a split mode to get started",
-                            })}
+                            {t("splitScreen.selectMode")}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {t("splitScreen.helpText", {
-                              defaultValue:
-                                "Choose how many tabs you want to display at once",
-                            })}
+                            {t("splitScreen.helpText")}
                           </p>
                         </div>
                       )}
@@ -1987,7 +1886,7 @@ export function SSHToolsSidebar({
                       e.currentTarget.style.backgroundColor = "transparent";
                     }
                   }}
-                  title="Drag to resize sidebar"
+                  title={t("common.dragToResizeSidebar")}
                 />
               )}
             </Sidebar>
@@ -2056,7 +1955,7 @@ export function SSHToolsSidebar({
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Folder className="h-4 w-4" />
-                  {t("snippets.folder", { defaultValue: "Folder" })}
+                  {t("snippets.folder")}
                   <span className="text-muted-foreground">
                     ({t("common.optional")})
                   </span>
@@ -2072,16 +1971,12 @@ export function SSHToolsSidebar({
                 >
                   <SelectTrigger>
                     <SelectValue
-                      placeholder={t("snippets.selectFolder", {
-                        defaultValue: "Select a folder or leave empty",
-                      })}
+                      placeholder={t("snippets.selectFolder")}
                     />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__no_folder__">
-                      {t("snippets.noFolder", {
-                        defaultValue: "No folder (Uncategorized)",
-                      })}
+                      {t("snippets.noFolder")}
                     </SelectItem>
                     {snippetFolders.map((folder) => {
                       const FolderIcon = getFolderIcon(folder.name);
@@ -2155,26 +2050,20 @@ export function SSHToolsSidebar({
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-foreground">
                 {editingFolder
-                  ? t("snippets.editFolder", { defaultValue: "Edit Folder" })
-                  : t("snippets.createFolder", {
-                      defaultValue: "Create Folder",
-                    })}
+                  ? t("snippets.editFolder")
+                  : t("snippets.createFolder")
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {editingFolder
-                  ? t("snippets.editFolderDescription", {
-                      defaultValue: "Customize your snippet folder",
-                    })
-                  : t("snippets.createFolderDescription", {
-                      defaultValue: "Organize your snippets into folders",
-                    })}
+                  ? t("snippets.editFolderDescription")
+                  : t("snippets.createFolderDescription")}
               </p>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground flex items-center gap-1">
-                  {t("snippets.folderName", { defaultValue: "Folder Name" })}
+                <label className="text-sm font-medium text-white flex items-center gap-1">
+                  {t("snippets.folderName")}
                   <span className="text-destructive">*</span>
                 </label>
                 <Input
@@ -2185,24 +2074,20 @@ export function SSHToolsSidebar({
                       name: e.target.value,
                     })
                   }
-                  placeholder={t("snippets.folderNamePlaceholder", {
-                    defaultValue: "e.g., System Commands, Docker Scripts",
-                  })}
+                  placeholder={t("sshTools.scripts.inputPlaceholder")}
                   className={`${folderFormErrors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   autoFocus
                 />
                 {folderFormErrors.name && (
                   <p className="text-xs text-destructive mt-1">
-                    {t("snippets.folderNameRequired", {
-                      defaultValue: "Folder name is required",
-                    })}
+                    {t("snippets.folderNameRequired")}
                   </p>
                 )}
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-foreground">
-                  {t("snippets.folderColor", { defaultValue: "Folder Color" })}
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.folderColor")}
                 </Label>
                 <div className="grid grid-cols-4 gap-3">
                   {AVAILABLE_COLORS.map((color) => (
@@ -2228,8 +2113,8 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-foreground">
-                  {t("snippets.folderIcon", { defaultValue: "Folder Icon" })}
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.folderIcon")}
                 </Label>
                 <div className="grid grid-cols-5 gap-3">
                   {AVAILABLE_ICONS.map(({ value, label, Icon }) => (
@@ -2253,8 +2138,8 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-foreground">
-                  {t("snippets.preview", { defaultValue: "Preview" })}
+                <Label className="text-base font-semibold text-white">
+                  {t("snippets.preview")}
                 </Label>
                 <div className="flex items-center gap-3 p-4 rounded-md bg-elevated border border-edge">
                   {(() => {
@@ -2271,7 +2156,7 @@ export function SSHToolsSidebar({
                   })()}
                   <span className="font-medium">
                     {folderFormData.name ||
-                      t("snippets.folderName", { defaultValue: "Folder Name" })}
+                      t("snippets.folderName")}
                   </span>
                 </div>
               </div>
@@ -2289,12 +2174,8 @@ export function SSHToolsSidebar({
               </Button>
               <Button onClick={handleFolderSubmit} className="flex-1">
                 {editingFolder
-                  ? t("snippets.updateFolder", {
-                      defaultValue: "Update Folder",
-                    })
-                  : t("snippets.createFolder", {
-                      defaultValue: "Create Folder",
-                    })}
+                  ? t("snippets.updateFolder")
+                  : t("snippets.createFolder")
               </Button>
             </div>
           </div>

@@ -36,10 +36,10 @@ export function ContainerDetail({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
-          <p className="text-gray-400 text-lg">Container not found</p>
+          <p className="text-gray-400 text-lg">{t("docker.containerNotFound")}</p>
           <Button onClick={onBack} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to list
+            {t("docker.backToList")}
           </Button>
         </div>
       </div>
@@ -52,7 +52,7 @@ export function ContainerDetail({
       <div className="flex items-center gap-4 px-4 pt-3 pb-3">
         <Button variant="ghost" onClick={onBack} size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t("common.back")}
         </Button>
         <div className="min-w-0 flex-1">
           <h2 className="font-bold text-lg truncate">{container.name}</h2>
@@ -70,9 +70,9 @@ export function ContainerDetail({
         >
           <div className="px-4 pt-2">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="logs">Logs</TabsTrigger>
-              <TabsTrigger value="stats">Stats</TabsTrigger>
-              <TabsTrigger value="console">Console</TabsTrigger>
+              <TabsTrigger value="logs">{t("docker.logs")}</TabsTrigger>
+              <TabsTrigger value="stats">{t("docker.stats")}</TabsTrigger>
+              <TabsTrigger value="console">{t("docker.consoleTab")}</TabsTrigger>
             </TabsList>
           </div>
 

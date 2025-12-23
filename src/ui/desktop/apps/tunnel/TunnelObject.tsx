@@ -104,7 +104,7 @@ export function TunnelObject({
       default:
         return {
           icon: <WifiOff className="h-4 w-4" />,
-          text: statusValue,
+          text: t("tunnels.unknown"),
           color: "text-muted-foreground",
           bgColor: "bg-muted/30",
           borderColor: "border-border",
@@ -243,7 +243,7 @@ export function TunnelObject({
                                   >
                                     {t("tunnels.discord")}
                                   </a>{" "}
-                                  or create a{" "}
+                                  {t("tunnels.orCreate")}{" "}
                                   <a
                                     href="https://github.com/Termix-SSH/Termix/issues/new"
                                     target="_blank"
@@ -479,7 +479,7 @@ export function TunnelObject({
                                   >
                                     {t("tunnels.discord")}
                                   </a>{" "}
-                                  or create a{" "}
+                                  {t("tunnels.orCreate")}{" "}
                                   <a
                                     href="https://github.com/Termix-SSH/Termix/issues/new"
                                     target="_blank"

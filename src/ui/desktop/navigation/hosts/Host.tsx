@@ -21,10 +21,12 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
 import { getServerStatusById } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { useTranslation } from "react-i18next";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
   const [host, setHost] = useState(initialHost);
+  const { t } = useTranslation();
   const [serverStatus, setServerStatus] = useState<
     "online" | "offline" | "degraded"
   >("degraded");
@@ -177,7 +179,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <Server className="h-4 w-4" />
-                  <span className="flex-1">Open Server Stats</span>
+                  <span className="flex-1">{t('hosts.openServerStats')}</span>
                 </DropdownMenuItem>
               )}
               {host.enableFileManager && (
@@ -188,7 +190,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <FolderOpen className="h-4 w-4" />
-                  <span className="flex-1">Open File Manager</span>
+                  <span className="flex-1">{t('hosts.openFileManager')}</span>
                 </DropdownMenuItem>
               )}
               {host.enableTunnel && (
@@ -199,7 +201,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <ArrowDownUp className="h-4 w-4" />
-                  <span className="flex-1">Open Tunnels</span>
+                  <span className="flex-1">{t('hosts.openTunnels')}</span>
                 </DropdownMenuItem>
               )}
               {host.enableDocker && (
@@ -210,14 +212,14 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <Container className="h-4 w-4" />
-                  <span className="flex-1">Open Docker</span>
+                  <span className="flex-1">{t('hosts.openDocker')}</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({
                     type: "ssh_manager",
-                    title: "Host Manager",
+                    title: t('nav.hostManager'),
                     hostConfig: host,
                     initialTab: "add_host",
                   })
@@ -225,7 +227,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                 className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
               >
                 <Pencil className="h-4 w-4" />
-                <span className="flex-1">Edit</span>
+                <span className="flex-1">{t('common.edit')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

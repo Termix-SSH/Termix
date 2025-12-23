@@ -120,7 +120,7 @@ export function LeftSidebar({
       setCurrentTab(sshManagerTab.id);
       return;
     }
-    const id = addTab({ type: "ssh_manager", title: "Host Manager" });
+    const id = addTab({ type: "ssh_manager", title: t('nav.hostManager') });
     setCurrentTab(id);
   };
   const adminTab = tabList.find((t) => t.type === "admin");
@@ -386,7 +386,7 @@ export function LeftSidebar({
           case "tags":
             const tags = Array.isArray(h.tags) ? h.tags : [];
             const hasMatchingTag = tags.some((tag) =>
-              tag.toLowerCase().includes(value)
+              tag.toLowerCase().includes(value),
             );
             if (!hasMatchingTag) return false;
             break;
@@ -481,13 +481,13 @@ export function LeftSidebar({
           <Sidebar variant="floating">
             <SidebarHeader>
               <SidebarGroupLabel className="text-lg font-bold text-foreground">
-                Termix
+                {t('common.appName')}
                 <div className="absolute right-5 flex gap-1">
                   <Button
                     variant="outline"
                     onClick={() => setSidebarWidth(250)}
                     className="w-[28px] h-[28px]"
-                    title="Reset sidebar width"
+                    title={t("common.resetSidebarWidth")}
                   >
                     <RotateCcw className="h-4 w-4" />
                   </Button>
@@ -635,7 +635,7 @@ export function LeftSidebar({
                     e.currentTarget.style.backgroundColor = "transparent";
                   }
                 }}
-                title="Drag to resize sidebar"
+                title={t("common.dragToResizeSidebar")}
               />
             )}
           </Sidebar>

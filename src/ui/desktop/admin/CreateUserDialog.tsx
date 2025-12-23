@@ -140,7 +140,7 @@ export function CreateUserDialog({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Password must be at least 6 characters
+              {t("admin.passwordMinLength")}
             </p>
           </div>
 

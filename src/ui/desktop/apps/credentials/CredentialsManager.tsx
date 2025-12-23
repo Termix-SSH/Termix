@@ -141,11 +141,11 @@ export function CredentialsManager({
 
   const handleDeploy = (credential: Credential) => {
     if (credential.authType !== "key") {
-      toast.error("Only SSH key-based credentials can be deployed");
+      toast.error(t("credentials.keyBasedOnlyForDeployment"));
       return;
     }
     if (!credential.publicKey) {
-      toast.error("Public key is required for deployment");
+      toast.error(t("credentials.publicKeyRequiredForDeployment"));
       return;
     }
     setDeployingCredential(credential);
@@ -156,7 +156,7 @@ export function CredentialsManager({
 
   const performDeploy = async () => {
     if (!deployingCredential || !selectedHostId) {
-      toast.error("Please select a target host");
+      toast.error(t("credentials.selectTargetHost"));
       return;
     }
 
@@ -173,11 +173,11 @@ export function CredentialsManager({
         setDeployingCredential(null);
         setSelectedHostId("");
       } else {
-        toast.error(result.error || "Deployment failed");
+        toast.error(result.error || t("credentials.deploymentFailed"));
       }
     } catch (error) {
       console.error("Deployment error:", error);
-      toast.error("Failed to deploy SSH key");
+      toast.error(t("credentials.failedToDeployKey"));
     } finally {
       setDeployLoading(false);
     }
@@ -564,7 +564,7 @@ export function CredentialsManager({
                               }}
                               title={
                                 folder !== t("credentials.uncategorized")
-                                  ? "Click to rename folder"
+                                  ? t("credentials.clickToRenameFolder")
                                   : ""
                               }
                             >
@@ -579,7 +579,7 @@ export function CredentialsManager({
                                   startFolderEdit(folder);
                                 }}
                                 className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
-                                title="Rename folder"
+                                title={t("credentials.renameFolder")}
                               >
                                 <Pencil className="h-3 w-3" />
                               </Button>
@@ -622,7 +622,7 @@ export function CredentialsManager({
                                         {credential.username}
                                       </p>
                                       <p className="text-xs text-muted-foreground truncate">
-                                        ID: {credential.id}
+                                        {t("credentials.idLabel")} {credential.id}
                                       </p>
                                       <p className="text-xs text-muted-foreground truncate">
                                         {credential.authType === "password"
@@ -867,7 +867,7 @@ export function CredentialsManager({
                           {t("credentials.keyType")}
                         </div>
                         <div className="text-sm font-medium">
-                          {deployingCredential.keyType || "SSH Key"}
+                          {deployingCredential.keyType || t("credentials.sshKey")}
                         </div>
                       </div>
                     </div>

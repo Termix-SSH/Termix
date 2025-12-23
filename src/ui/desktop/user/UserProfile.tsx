@@ -551,7 +551,7 @@ export function UserProfile({
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-foreground-secondary">
-                          Terminal Syntax Highlighting{" "}
+                          {t("profile.terminalSyntaxHighlighting")}{" "}
                           <span className="text-xs text-yellow-500 font-semibold">
                             (BETA)
                           </span>

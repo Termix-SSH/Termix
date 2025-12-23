@@ -266,7 +266,11 @@ export function TabProvider({ children }: TabProviderProps) {
             hostConfig: newHostConfig,
             title: newHostConfig.name?.trim()
               ? newHostConfig.name
-              : `${newHostConfig.username}@${newHostConfig.ip}:${newHostConfig.port}`,
+              : t("nav.hostTabTitle", {
+                  username: newHostConfig.username,
+                  ip: newHostConfig.ip,
+                  port: newHostConfig.port,
+                }),
           };
         }
         return tab;

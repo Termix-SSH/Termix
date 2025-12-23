@@ -1189,7 +1189,7 @@ export function AdminSettings({
             <TabsContent value="sessions" className="space-y-6">
               <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Session Management</h3>
+                  <h3 className="text-lg font-semibold">{t("admin.sessionManagement")}</h3>
                   <Button
                     onClick={fetchSessions}
                     disabled={sessionsLoading}
@@ -1201,21 +1201,21 @@ export function AdminSettings({
                 </div>
                 {sessionsLoading ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    Loading sessions...
+                    {t("admin.loadingSessions")}
                   </div>
                 ) : sessions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No active sessions found.
+                    {t("admin.noActiveSessions")}
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Device</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Last Active</TableHead>
-                        <TableHead>Expires</TableHead>
+                        <TableHead>{t("admin.device")}</TableHead>
+                        <TableHead>{t("admin.user")}</TableHead>
+                        <TableHead>{t("admin.created")}</TableHead>
+                        <TableHead>{t("admin.lastActive")}</TableHead>
+                        <TableHead>{t("admin.expires")}</TableHead>
                         <TableHead>{t("admin.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1256,7 +1256,7 @@ export function AdminSettings({
                                   </span>
                                   {session.isRevoked && (
                                     <span className="text-xs text-red-600">
-                                      Revoked
+                                      {t("admin.revoked")}
                                     </span>
                                   )}
                                 </div>
@@ -1297,9 +1297,9 @@ export function AdminSettings({
                                       )
                                     }
                                     className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
-                                    title="Revoke all sessions for this user"
+                                    title={t("admin.revokeAllUserSessionsTitle")}
                                   >
-                                    Revoke All
+                                    {t("admin.revokeAll")}
                                   </Button>
                                 )}
                               </div>
@@ -1457,34 +1457,25 @@ export function AdminSettings({
         >
           <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Link2 className="w-5 h-5" />
-                Link OIDC Account to Password Account
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Link{" "}
-                <span className="font-mono text-foreground">
-                  {linkOidcUser?.username}
-                </span>{" "}
-                (OIDC user) to an existing password account. This will enable
-                dual authentication for the password account.
+                              <DialogTitle className="flex items-center gap-2">
+                                <Link2 className="w-5 h-5" />
+                                {t("admin.linkOidcToPasswordAccount")}
+                              </DialogTitle>              <DialogDescription className="text-muted-foreground">
+                {t("admin.linkOidcToPasswordAccountDescription", {
+                  username: linkOidcUser?.username,
+                })}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <Alert variant="destructive">
-                <AlertTitle>Warning: OIDC User Data Will Be Deleted</AlertTitle>
+                <AlertTitle>{t("admin.linkOidcWarningTitle")}</AlertTitle>
                 <AlertDescription>
-                  This action will:
+                  {t("admin.linkOidcWarningDescription")}
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Delete the OIDC user account and all their data</li>
-                    <li>
-                      Add OIDC login capability to the target password account
-                    </li>
-                    <li>
-                      Allow the password account to login with both password and
-                      OIDC
-                    </li>
+                    <li>{t("admin.linkOidcActionDeleteUser")}</li>
+                    <li>{t("admin.linkOidcActionAddCapability")}</li>
+                    <li>{t("admin.linkOidcActionDualAuth")}</li>
                   </ul>
                 </AlertDescription>
               </Alert>
@@ -1494,13 +1485,13 @@ export function AdminSettings({
                   htmlFor="link-target-username"
                   className="text-base font-semibold text-foreground"
                 >
-                  Target Password Account Username
+                  {t("admin.linkTargetUsernameLabel")}
                 </Label>
                 <Input
                   id="link-target-username"
                   value={linkTargetUsername}
                   onChange={(e) => setLinkTargetUsername(e.target.value)}
-                  placeholder="Enter username of password account"
+                  placeholder={t("admin.linkTargetUsernamePlaceholder")}
                   disabled={linkLoading}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && linkTargetUsername.trim()) {
@@ -1524,7 +1515,9 @@ export function AdminSettings({
                 disabled={linkLoading || !linkTargetUsername.trim()}
                 variant="destructive"
               >
-                {linkLoading ? "Linking..." : "Link Accounts"}
+                {linkLoading
+                  ? t("admin.linkingAccounts")
+                  : t("admin.linkAccountsButton")}
               </Button>
             </DialogFooter>
           </DialogContent>
