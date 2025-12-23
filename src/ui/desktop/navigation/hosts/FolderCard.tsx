@@ -93,9 +93,9 @@ export function FolderCard({
     folderIcon && iconMap[folderIcon] ? iconMap[folderIcon] : Folder;
 
   return (
-    <div className="bg-dark-bg-darker border-2 border-dark-border rounded-lg overflow-hidden p-0 m-0">
+    <div className="bg-elevated border-2 border-edge rounded-lg overflow-hidden p-0 m-0">
       <div
-        className={`px-4 py-3 relative ${isExpanded ? "border-b-2" : ""} bg-dark-bg-header`}
+        className={`px-4 py-3 relative ${isExpanded ? "border-b-2" : ""} bg-header`}
       >
         <div className="flex gap-2 pr-10">
           <div className="flex-shrink-0 flex items-center">

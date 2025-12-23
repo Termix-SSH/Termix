@@ -18,6 +18,7 @@ import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
+import { useTheme } from "@/components/theme-provider";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 
 interface TabData {
@@ -53,6 +54,14 @@ export function AppView({
     removeTab: (id: number) => void;
   };
   const { state: sidebarState } = useSidebar();
+  const { theme: appTheme } = useTheme();
+
+  // Auto-switch terminal theme based on app theme
+  const isDarkMode = useMemo(() => {
+    if (appTheme === "dark") return true;
+    if (appTheme === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }, [appTheme]);
 
   const terminalTabs = useMemo(
     () =>
@@ -306,9 +315,15 @@ export function AppView({
             ...DEFAULT_TERMINAL_CONFIG,
             ...(t.hostConfig as any)?.terminalConfig,
           };
-          const themeColors =
-            TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-            TERMINAL_THEMES.termix.colors;
+          // Auto-switch between termixDark and termixLight based on app theme
+          let themeColors;
+          if (terminalConfig.theme === "termix") {
+            themeColors = isDarkMode
+              ? TERMINAL_THEMES.termixDark.colors
+              : TERMINAL_THEMES.termixLight.colors;
+          } else {
+            themeColors = TERMINAL_THEMES[terminalConfig.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+          }
           const backgroundColor = themeColors.background;
 
           return (
@@ -316,7 +331,7 @@ export function AppView({
               <div
                 className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
-                  backgroundColor: isTerminal ? backgroundColor : "#18181b",
+                  backgroundColor: isTerminal ? backgroundColor : "var(--bg-base)",
                 }}
               >
                 {t.type === "terminal" ? (
@@ -374,7 +389,7 @@ export function AppView({
       variant="ghost"
       onClick={onClick}
       aria-label="Reset split sizes"
-      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-dark-border-panel bg-dark-bg-panel hover:bg-dark-bg-panel-hover text-white flex items-center justify-center p-0"
+      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-edge-panel bg-surface hover:bg-surface-hover text-foreground flex items-center justify-center p-0"
     >
       <RefreshCcw className="h-4 w-4" />
     </Button>
@@ -394,7 +409,7 @@ export function AppView({
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
-      background: "var(--color-dark-border)",
+      background: "var(--color-border-base)",
     } as React.CSSProperties;
     const commonGroupProps: {
       onLayout: () => void;
@@ -427,7 +442,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col bg-transparent relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {a.title}
                 </div>
               </div>
@@ -446,7 +461,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col bg-transparent relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {b.title}
                   <ResetButton onClick={handleReset} />
                 </div>
@@ -494,7 +509,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {a.title}
                     </div>
                   </div>
@@ -513,7 +528,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {b.title}
                       <ResetButton onClick={handleReset} />
                     </div>
@@ -535,7 +550,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {c.title}
                 </div>
               </div>
@@ -582,7 +597,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {a.title}
                     </div>
                   </div>
@@ -601,7 +616,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {b.title}
                       <ResetButton onClick={handleReset} />
                     </div>
@@ -637,7 +652,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {c.title}
                     </div>
                   </div>
@@ -656,7 +671,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {d.title}
                     </div>
                   </div>
@@ -681,18 +696,24 @@ export function AppView({
     ...DEFAULT_TERMINAL_CONFIG,
     ...(currentTabData?.hostConfig as any)?.terminalConfig,
   };
-  const themeColors =
-    TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-    TERMINAL_THEMES.termix.colors;
-  const terminalBackgroundColor = themeColors.background;
+  // Auto-switch between termixDark and termixLight based on app theme
+  let containerThemeColors;
+  if (terminalConfig.theme === "termix") {
+    containerThemeColors = isDarkMode
+      ? TERMINAL_THEMES.termixDark.colors
+      : TERMINAL_THEMES.termixLight.colors;
+  } else {
+    containerThemeColors = TERMINAL_THEMES[terminalConfig.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+  }
+  const terminalBackgroundColor = containerThemeColors.background;
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
 
-  let containerBackground = "var(--color-dark-bg)";
+  let containerBackground = "var(--color-canvas)";
   if ((isFileManager || isTunnel || isDocker) && !isSplitScreen) {
-    containerBackground = "var(--color-dark-bg-darkest)";
+    containerBackground = "var(--color-deepest)";
   } else if (isTerminal) {
     containerBackground = terminalBackgroundColor;
   }
@@ -700,7 +721,7 @@ export function AppView({
   return (
     <div
       ref={containerRef}
-      className="border-2 border-dark-border rounded-lg overflow-hidden overflow-x-hidden relative"
+      className="border-2 border-edge rounded-lg overflow-hidden overflow-x-hidden relative"
       style={{
         background: containerBackground,
         marginLeft: leftMarginPx,

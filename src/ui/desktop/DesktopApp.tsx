@@ -14,6 +14,7 @@ import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo } from "@/ui/main-axios.ts";
+import { useTheme } from "@/components/theme-provider";
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,10 +31,15 @@ function AppContent() {
   >("idle");
   const { currentTab, tabs } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
 
   const lastShiftPressTime = useRef(0);
+
+  // DEBUG: Theme toggle - double-tap left Alt/Option to toggle light/dark mode
+  // Comment out the next line and the AltLeft handler below to disable
+  const lastAltPressTime = useRef(0);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -49,6 +55,26 @@ function AppContent() {
           lastShiftPressTime.current = now;
         }
       }
+
+      // DEBUG: Double-tap left Alt/Option to toggle light/dark theme
+      // Remove or comment out this block for production
+      /* DEBUG_THEME_TOGGLE_START */
+      if (event.code === "AltLeft" && !event.repeat) {
+        const now = Date.now();
+        if (now - lastAltPressTime.current < 300) {
+          // Use setTheme to properly update React state (not just DOM class)
+          const currentIsDark = theme === "dark" ||
+            (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          const newTheme = currentIsDark ? "light" : "dark";
+          setTheme(newTheme);
+          console.log("[DEBUG] Theme toggled:", newTheme);
+          lastAltPressTime.current = 0;
+        } else {
+          lastAltPressTime.current = now;
+        }
+      }
+      /* DEBUG_THEME_TOGGLE_END */
+
       if (event.key === "Escape") {
         setIsCommandPaletteOpen(false);
       }
@@ -58,7 +84,7 @@ function AppContent() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [theme, setTheme]);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -166,7 +192,7 @@ function AppContent() {
   if (authLoading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest"
+        className="h-screen w-screen flex items-center justify-center bg-deepest"
         style={{
           backgroundImage: `repeating-linear-gradient(
             225deg,
@@ -259,7 +285,7 @@ function AppContent() {
           )}
 
           {showProfile && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
               <UserProfile
                 isTopbarOpen={isTopbarOpen}
                 rightSidebarOpen={rightSidebarOpen}

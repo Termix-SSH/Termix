@@ -239,7 +239,7 @@ export function CommandPalette({
     >
       <Command
         className={cn(
-          "w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-dark-border shadow-md flex flex-col",
+          "w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-edge shadow-md flex flex-col",
           "transition-all duration-200 ease-out",
           !isOpen && "scale-95 opacity-0",
         )}
@@ -251,7 +251,7 @@ export function CommandPalette({
         />
         <CommandList
           key={recentActivity.length}
-          className="w-full h-auto flex-grow overflow-y-auto"
+          className="w-full h-auto flex-grow overflow-y-auto thin-scrollbar"
           style={{ maxHeight: "inherit" }}
         >
           {recentActivity.length > 0 && (
@@ -324,7 +324,7 @@ export function CommandPalette({
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
-                              className="!px-2 h-7 border-1 border-dark-border"
+                              className="!px-2 h-7 border-1 border-edge"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-3 w-3" />
@@ -333,14 +333,14 @@ export function CommandPalette({
                           <DropdownMenuContent
                             align="end"
                             side="right"
-                            className="w-56 bg-dark-bg border-dark-border text-white"
+                            className="w-56 bg-canvas border-edge text-foreground"
                           >
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleHostServerDetailsClick(host);
                               }}
-                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                             >
                               <Server className="h-4 w-4" />
                               <span className="flex-1">
@@ -352,7 +352,7 @@ export function CommandPalette({
                                 e.stopPropagation();
                                 handleHostFileManagerClick(host);
                               }}
-                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                             >
                               <FolderOpen className="h-4 w-4" />
                               <span className="flex-1">
@@ -364,7 +364,7 @@ export function CommandPalette({
                                 e.stopPropagation();
                                 handleHostEditClick(host);
                               }}
-                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                             >
                               <Pencil className="h-4 w-4" />
                               <span className="flex-1">
@@ -400,7 +400,7 @@ export function CommandPalette({
             </CommandItem>
           </CommandGroup>
         </CommandList>
-        <div className="border-t border-dark-border px-4 py-2 bg-dark-hover/50 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="border-t border-edge px-4 py-2 bg-hover/50 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span>{t("commandPalette.press")}</span>
             <KbdGroup>

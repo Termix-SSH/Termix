@@ -21,10 +21,11 @@ export function SystemWidget({ metrics }: SystemWidgetProps) {
   const system = metricsWithSystem?.system;
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-dark-bg-darker border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">
+    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
+
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <Server className="h-5 w-5 text-purple-400" />
-        <h3 className="font-semibold text-lg text-white">
+        <h3 className="font-semibold text-lg text-foreground">
           {t("serverStats.systemInfo")}
         </h3>
       </div>
@@ -33,10 +34,10 @@ export function SystemWidget({ metrics }: SystemWidgetProps) {
         <div className="flex items-start gap-3">
           <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1.5">
+            <p className="text-xs text-muted-foreground mb-1.5">
               {t("serverStats.hostname")}
             </p>
-            <p className="text-sm text-white font-mono truncate font-medium">
+            <p className="text-sm text-foreground font-mono truncate font-medium">
               {system?.hostname || "N/A"}
             </p>
           </div>
@@ -45,10 +46,10 @@ export function SystemWidget({ metrics }: SystemWidgetProps) {
         <div className="flex items-start gap-3">
           <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1.5">
+            <p className="text-xs text-muted-foreground mb-1.5">
               {t("serverStats.operatingSystem")}
             </p>
-            <p className="text-sm text-white font-mono truncate font-medium">
+            <p className="text-sm text-foreground font-mono truncate font-medium">
               {system?.os || "N/A"}
             </p>
           </div>
@@ -57,10 +58,10 @@ export function SystemWidget({ metrics }: SystemWidgetProps) {
         <div className="flex items-start gap-3">
           <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 mb-1.5">
+            <p className="text-xs text-muted-foreground mb-1.5">
               {t("serverStats.kernel")}
             </p>
-            <p className="text-sm text-white font-mono truncate font-medium">
+            <p className="text-sm text-foreground font-mono truncate font-medium">
               {system?.kernel || "N/A"}
             </p>
           </div>

@@ -124,7 +124,7 @@ const AppContent: FC = () => {
 
   if (authLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg">
+      <div className="h-screen w-screen flex items-center justify-center bg-canvas">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">{t("common.loading")}</p>
@@ -135,7 +135,7 @@ const AppContent: FC = () => {
 
   if (!isAuthenticated || isReactNativeWebView()) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg p-4">
+      <div className="h-screen w-screen flex items-center justify-center bg-canvas p-4">
         <Auth
           setLoggedIn={setIsAuthenticated}
           setIsAdmin={setIsAdmin}
@@ -152,12 +152,12 @@ const AppContent: FC = () => {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-dark-bg-darkest overflow-y-hidden overflow-x-hidden relative">
+    <div className="h-screen w-screen flex flex-col bg-deepest overflow-y-hidden overflow-x-hidden relative">
       <div className="flex-1 min-h-0 relative">
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`absolute inset-0 mb-2 ${tab.id === currentTab ? "visible" : "invisible"} ${ready ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 mb-2 bg-elevated ${tab.id === currentTab ? "visible" : "invisible"} ${ready ? "opacity-100" : "opacity-0"}`}
           >
             <Terminal
               ref={tab.terminalRef}
@@ -167,11 +167,11 @@ const AppContent: FC = () => {
           </div>
         ))}
         {tabs.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-white gap-3 px-4 text-center">
+          <div className="flex flex-col items-center justify-center h-full text-foreground gap-3 px-4 text-center">
             <h1 className="text-lg font-semibold">
               {t("mobile.selectHostToStart")}
             </h1>
-            <p className="text-sm text-gray-300 max-w-xs">
+            <p className="text-sm text-foreground-secondary max-w-xs">
               {t("mobile.limitedSupportMessage")}
             </p>
             <button

@@ -79,13 +79,13 @@ function RootApp() {
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
-          backgroundColor: "#09090b",
+          backgroundColor: "var(--bg-base)",
           backgroundImage: `linear-gradient(
             135deg,
             transparent 0%,
             transparent 49%,
-            rgba(255, 255, 255, 0.03) 49%,
-            rgba(255, 255, 255, 0.03) 51%,
+            rgba(128, 128, 128, 0.03) 49%,
+            rgba(128, 128, 128, 0.03) 51%,
             transparent 51%,
             transparent 100%
           )`,

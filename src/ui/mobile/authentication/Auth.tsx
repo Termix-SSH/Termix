@@ -562,7 +562,7 @@ export function Auth({
 
   const Spinner = (
     <svg
-      className="animate-spin mr-2 h-4 w-4 text-white inline-block"
+      className="animate-spin mr-2 h-4 w-4 text-foreground inline-block"
       viewBox="0 0 24 24"
     >
       <circle
@@ -585,7 +585,7 @@ export function Auth({
   if (isReactNativeWebView() && mobileAuthSuccess) {
     return (
       <div
-        className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+        className={`w-full max-w-md flex flex-col bg-canvas overflow-y-auto thin-scrollbar my-2 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -620,7 +620,7 @@ export function Auth({
 
   return (
     <div
-      className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+      className={`w-full max-w-md flex flex-col bg-canvas overflow-y-auto thin-scrollbar my-2 ${className || ""}`}
       style={{ maxHeight: "calc(100vh - 1rem)" }}
       {...props}
     >
@@ -1094,7 +1094,7 @@ export function Auth({
                     </form>
                   )}
 
-                  <div className="mt-6 pt-4 border-t border-dark-border">
+                  <div className="mt-6 pt-4 border-t border-edge">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-sm text-muted-foreground">

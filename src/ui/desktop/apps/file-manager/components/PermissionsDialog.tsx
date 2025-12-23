@@ -140,7 +140,7 @@ export function PermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+      <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
@@ -155,7 +155,7 @@ export function PermissionsDialog({
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <Label className="text-gray-400">
+              <Label className="text-muted-foreground">
                 {t("fileManager.currentPermissions")}
               </Label>
               <p className="font-mono text-lg mt-1">
@@ -163,7 +163,7 @@ export function PermissionsDialog({
               </p>
             </div>
             <div>
-              <Label className="text-gray-400">
+              <Label className="text-muted-foreground">
                 {t("fileManager.newPermissions")}
               </Label>
               <p className="font-mono text-lg mt-1">{octal}</p>

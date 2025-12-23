@@ -140,7 +140,7 @@ function JumpHostItem({
             <Command>
               <CommandInput placeholder={t("hosts.searchServers")} />
               <CommandEmpty>{t("hosts.noServerFound")}</CommandEmpty>
-              <CommandGroup className="max-h-[300px] overflow-y-auto">
+              <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                 {hosts
                   .filter((h) => !editingHost || h.id !== editingHost.id)
                   .map((host) => (
@@ -246,7 +246,7 @@ function QuickActionItem({
             <Command>
               <CommandInput placeholder={t("hosts.searchSnippets")} />
               <CommandEmpty>{t("hosts.noSnippetFound")}</CommandEmpty>
-              <CommandGroup className="max-h-[300px] overflow-y-auto">
+              <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                 {snippets.map((snippet) => (
                   <CommandItem
                     key={snippet.id}
@@ -1159,19 +1159,19 @@ export function HostManagerEditor({
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList>
-                  <TabsTrigger value="general">
+                <TabsList className="bg-button border border-edge-medium">
+                  <TabsTrigger value="general" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                     {t("hosts.general")}
                   </TabsTrigger>
-                  <TabsTrigger value="terminal">
+                  <TabsTrigger value="terminal" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                     {t("hosts.terminal")}
                   </TabsTrigger>
-                  <TabsTrigger value="docker">{t("hosts.docker")}</TabsTrigger>
-                  <TabsTrigger value="tunnel">{t("hosts.tunnel")}</TabsTrigger>
-                  <TabsTrigger value="file_manager">
+                  <TabsTrigger value="docker" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">Docker</TabsTrigger>
+                  <TabsTrigger value="tunnel" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">{t("hosts.tunnel")}</TabsTrigger>
+                  <TabsTrigger value="file_manager" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                     {t("hosts.fileManager")}
                   </TabsTrigger>
-                  <TabsTrigger value="statistics">
+                  <TabsTrigger value="statistics" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                     {t("hosts.statistics")}
                   </TabsTrigger>
                   {!editingHost?.isShared && (
@@ -1307,7 +1307,7 @@ export function HostManagerEditor({
                           {folderDropdownOpen && filteredFolders.length > 0 && (
                             <div
                               ref={folderDropdownRef}
-                              className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                              className="absolute top-full left-0 z-50 mt-1 w-full bg-canvas border border-input rounded-md shadow-lg max-h-40 overflow-y-auto thin-scrollbar p-1"
                             >
                               <div className="grid grid-cols-1 gap-1 p-0">
                                 {filteredFolders.map((folder) => (
@@ -1336,7 +1336,7 @@ export function HostManagerEditor({
                         <FormItem className="col-span-10 overflow-visible">
                           <FormLabel>{t("hosts.tags")}</FormLabel>
                           <FormControl>
-                            <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
+                            <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-field focus-within:ring-2 ring-ring min-h-[40px]">
                               {field.value.map((tag: string, idx: number) => (
                                 <span
                                   key={tag + idx}
@@ -1443,15 +1443,15 @@ export function HostManagerEditor({
                     }}
                     className="flex-1 flex flex-col h-full min-h-0"
                   >
-                    <TabsList>
-                      <TabsTrigger value="password">
+                    <TabsList className="bg-button border border-edge-medium">
+                      <TabsTrigger value="password" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                         {t("hosts.password")}
                       </TabsTrigger>
-                      <TabsTrigger value="key">{t("hosts.key")}</TabsTrigger>
-                      <TabsTrigger value="credential">
+                      <TabsTrigger value="key" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">{t("hosts.key")}</TabsTrigger>
+                      <TabsTrigger value="credential" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                         {t("hosts.credential")}
                       </TabsTrigger>
-                      <TabsTrigger value="none">{t("hosts.none")}</TabsTrigger>
+                      <TabsTrigger value="none" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">{t("hosts.none")}</TabsTrigger>
                     </TabsList>
                     <TabsContent value="password">
                       <FormField
@@ -1573,6 +1573,8 @@ export function HostManagerEditor({
                                       EditorView.theme({
                                         ".cm-scroller": {
                                           overflow: "auto",
+                                          scrollbarWidth: "thin",
+                                          scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
                                         },
                                       }),
                                     ]}
@@ -1611,7 +1613,7 @@ export function HostManagerEditor({
                                     ref={keyTypeButtonRef}
                                     type="button"
                                     variant="outline"
-                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-dark-bg border border-input text-foreground"
+                                    className="w-full justify-start text-left rounded-md px-2 py-2 bg-canvas border border-input text-foreground"
                                     onClick={() =>
                                       setKeyTypeDropdownOpen((open) => !open)
                                     }
@@ -1623,7 +1625,7 @@ export function HostManagerEditor({
                                   {keyTypeDropdownOpen && (
                                     <div
                                       ref={keyTypeDropdownRef}
-                                      className="absolute bottom-full left-0 z-50 mb-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                      className="absolute bottom-full left-0 z-50 mb-1 w-full bg-canvas border border-input rounded-md shadow-lg max-h-40 overflow-y-auto thin-scrollbar p-1"
                                     >
                                       <div className="grid grid-cols-1 gap-1 p-0">
                                         {keyTypeOptions.map((opt) => (
@@ -1632,7 +1634,7 @@ export function HostManagerEditor({
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-dark-bg text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                            className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-canvas text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
                                             onClick={() => {
                                               field.onChange(opt.value);
                                               setKeyTypeDropdownOpen(false);
@@ -1686,7 +1688,7 @@ export function HostManagerEditor({
                             control={form.control}
                             name="overrideCredentialUsername"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                                 <div className="space-y-0.5">
                                   <FormLabel>
                                     {t("hosts.overrideCredentialUsername")}
@@ -1732,7 +1734,7 @@ export function HostManagerEditor({
                           control={form.control}
                           name="forceKeyboardInteractive"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                               <div className="space-y-0.5">
                                 <FormLabel>
                                   {t("hosts.forceKeyboardInteractive")}
@@ -2353,7 +2355,7 @@ export function HostManagerEditor({
                           control={form.control}
                           name="terminalConfig.cursorBlink"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                               <div className="space-y-0.5">
                                 <FormLabel>{t("hosts.cursorBlink")}</FormLabel>
                                 <FormDescription>
@@ -2446,7 +2448,7 @@ export function HostManagerEditor({
                           control={form.control}
                           name="terminalConfig.rightClickSelectsWord"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                               <div className="space-y-0.5">
                                 <FormLabel>
                                   {t("hosts.rightClickSelectsWord")}
@@ -2568,7 +2570,7 @@ export function HostManagerEditor({
                           control={form.control}
                           name="terminalConfig.agentForwarding"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                               <div className="space-y-0.5">
                                 <FormLabel>
                                   {t("hosts.sshAgentForwarding")}
@@ -2666,7 +2668,7 @@ export function HostManagerEditor({
                                       <CommandEmpty>
                                         {t("hosts.noSnippetFound")}
                                       </CommandEmpty>
-                                      <CommandGroup className="max-h-[300px] overflow-y-auto">
+                                      <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                                         <CommandItem
                                           value="none"
                                           onSelect={() => {
@@ -2727,7 +2729,7 @@ export function HostManagerEditor({
                           control={form.control}
                           name="terminalConfig.autoMosh"
                           render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                               <div className="space-y-0.5">
                                 <FormLabel>{t("hosts.autoMosh")}</FormLabel>
                                 <FormDescription>
@@ -3152,7 +3154,7 @@ export function HostManagerEditor({
                                                       index
                                                     ] = el;
                                                   }}
-                                                  className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                                                  className="absolute top-full left-0 z-50 mt-1 w-full bg-canvas border border-input rounded-md shadow-lg max-h-40 overflow-y-auto thin-scrollbar p-1"
                                                 >
                                                   <div className="grid grid-cols-1 gap-1 p-0">
                                                     {getFilteredSshConfigs(
@@ -3364,7 +3366,7 @@ export function HostManagerEditor({
                         control={form.control}
                         name="statsConfig.statusCheckEnabled"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                             <div className="space-y-0.5">
                               <FormLabel>
                                 {t("hosts.statusCheckEnabled")}
@@ -3461,7 +3463,7 @@ export function HostManagerEditor({
                         control={form.control}
                         name="statsConfig.metricsEnabled"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                             <div className="space-y-0.5">
                               <FormLabel>{t("hosts.metricsEnabled")}</FormLabel>
                               <FormDescription>

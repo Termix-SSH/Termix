@@ -30,10 +30,11 @@ export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
   }, [metricsHistory]);
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-dark-bg-darker border border-dark-border/50 hover:bg-dark-bg/70 transition-colors duration-200 flex flex-col overflow-hidden">
+    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
+
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <Cpu className="h-5 w-5 text-blue-400" />
-        <h3 className="font-semibold text-lg text-white">
+        <h3 className="font-semibold text-lg text-foreground">
           {t("serverStats.cpuUsage")}
         </h3>
       </div>
@@ -45,13 +46,13 @@ export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
               ? `${metrics.cpu.percent}%`
               : "N/A"}
           </div>
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-muted-foreground">
             {typeof metrics?.cpu?.cores === "number"
               ? t("serverStats.cpuCores", { count: metrics.cpu.cores })
               : t("serverStats.naCpus")}
           </div>
         </div>
-        <div className="text-xs text-gray-500 flex-shrink-0">
+        <div className="text-xs text-foreground-subtle flex-shrink-0">
           {metrics?.cpu?.load
             ? t("serverStats.loadAverage", {
                 avg1: metrics.cpu.load[0].toFixed(2),

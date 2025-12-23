@@ -513,7 +513,7 @@ export function FileManagerContextMenu({
       <div
         data-context-menu
         className={cn(
-          "fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
+          "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
         )}
         style={{
           left: menuPosition.x,
@@ -525,7 +525,7 @@ export function FileManagerContextMenu({
             return (
               <div
                 key={`separator-${index}`}
-                className="border-t border-dark-border"
+                className="border-t border-edge"
               />
             );
           }
@@ -535,7 +535,7 @@ export function FileManagerContextMenu({
               key={index}
               className={cn(
                 "w-full px-3 py-2 text-left text-sm flex items-center justify-between",
-                "hover:bg-dark-hover transition-colors",
+                "hover:bg-hover transition-colors",
                 "first:rounded-t-lg last:rounded-b-lg",
                 item.disabled && "opacity-50 cursor-not-allowed",
                 item.danger && "text-red-400 hover:bg-red-500/10",

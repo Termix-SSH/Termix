@@ -83,7 +83,7 @@ export function TabDropdown(): React.ReactElement {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="w-[30px] h-[30px] border-dark-border"
+          className="w-[30px] h-[30px] border-edge"
           title={t("nav.tabNavigation", { defaultValue: "Tab Navigation" })}
         >
           <ChevronDown className="h-4 w-4" />
@@ -91,7 +91,7 @@ export function TabDropdown(): React.ReactElement {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 bg-dark-bg border-dark-border text-white"
+        className="w-56 bg-canvas border-edge text-foreground"
       >
         {tabs.map((tab) => {
           const isActive = tab.id === currentTab;
@@ -101,8 +101,8 @@ export function TabDropdown(): React.ReactElement {
               onClick={() => handleTabSwitch(tab.id)}
               className={`flex items-center gap-2 cursor-pointer px-3 py-2 ${
                 isActive
-                  ? "bg-dark-bg-active text-white"
-                  : "hover:bg-dark-hover text-gray-300"
+                  ? "bg-active text-foreground"
+                  : "hover:bg-hover text-foreground-secondary"
               }`}
             >
               {getTabIcon(tab.type)}

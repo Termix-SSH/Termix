@@ -27,6 +27,7 @@ import {
   TERMINAL_FONTS,
 } from "@/constants/terminal-themes";
 import type { TerminalConfig } from "@/types";
+import { useTheme } from "@/components/theme-provider";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory";
@@ -95,10 +96,23 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { instance: terminal, ref: xtermRef } = useXTerm();
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
+    const { theme: appTheme } = useTheme();
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
-    const themeColors =
-      TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termix.colors;
+
+    // Auto-switch terminal theme based on app theme when using "termix" (default)
+    const isDarkMode = appTheme === "dark" ||
+      (appTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    let themeColors;
+    if (config.theme === "termix") {
+      // Auto-switch between termixDark and termixLight based on app theme
+      themeColors = isDarkMode
+        ? TERMINAL_THEMES.termixDark.colors
+        : TERMINAL_THEMES.termixLight.colors;
+    } else {
+      themeColors = TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+    }
     const backgroundColor = themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
@@ -1046,8 +1060,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      const themeColors =
-        TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termix.colors;
+      // Auto-switch terminal theme based on app theme when using "termix" (default)
+      let themeColors;
+      if (config.theme === "termix") {
+        themeColors = isDarkMode
+          ? TERMINAL_THEMES.termixDark.colors
+          : TERMINAL_THEMES.termixLight.colors;
+      } else {
+        themeColors = TERMINAL_THEMES[config.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+      }
 
       const fontConfig = TERMINAL_FONTS.find(
         (f) => f.value === config.fontFamily,
@@ -1228,7 +1249,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         webSocketRef.current?.close();
       };
-    }, [xtermRef, terminal, hostConfig]);
+    }, [xtermRef, terminal, hostConfig, isDarkMode]);
 
     useEffect(() => {
       if (!terminal) return;
@@ -1579,20 +1600,32 @@ style.innerHTML = `
   font-display: swap;
 }
 
+/* Light theme scrollbars */
 .xterm .xterm-viewport::-webkit-scrollbar {
   width: 8px;
   background: transparent;
 }
 .xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(180,180,180,0.7);
+  background: rgba(0,0,0,0.3);
   border-radius: 4px;
 }
 .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(120,120,120,0.9);
+  background: rgba(0,0,0,0.5);
 }
 .xterm .xterm-viewport {
   scrollbar-width: thin;
-  scrollbar-color: rgba(180,180,180,0.7) transparent;
+  scrollbar-color: rgba(0,0,0,0.3) transparent;
+}
+
+/* Dark theme scrollbars */
+.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+}
+.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
+}
+.dark .xterm .xterm-viewport {
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
 }
 
 .xterm {

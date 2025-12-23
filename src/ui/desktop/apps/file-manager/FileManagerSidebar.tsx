@@ -375,9 +375,9 @@ export function FileManagerSidebar({
       <div key={item.id}>
         <div
           className={cn(
-            "flex items-center gap-2 py-1.5 text-sm cursor-pointer hover:bg-dark-hover rounded",
+            "flex items-center gap-2 py-1.5 text-sm cursor-pointer hover:bg-hover rounded",
             isActive && "bg-primary/20 text-primary",
-            "text-white",
+            "text-foreground",
           )}
           style={{ paddingLeft: `${12 + level * 16}px`, paddingRight: "12px" }}
           onClick={() => handleItemClick(item)}
@@ -397,7 +397,7 @@ export function FileManagerSidebar({
                 e.stopPropagation();
                 toggleFolder(item.id, item.path);
               }}
-              className="p-0.5 hover:bg-dark-hover rounded"
+              className="p-0.5 hover:bg-hover rounded"
             >
               {isExpanded ? (
                 <ChevronDown className="w-3 h-3" />
@@ -454,7 +454,7 @@ export function FileManagerSidebar({
 
   return (
     <>
-      <div className="h-full flex flex-col bg-dark-bg border-r border-dark-border">
+      <div className="h-full flex flex-col bg-canvas border-r border-edge">
         <div className="flex-1 relative overflow-hidden">
           <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-4">
             {renderSection(
@@ -475,7 +475,7 @@ export function FileManagerSidebar({
 
             <div
               className={cn(
-                hasQuickAccessItems && "pt-4 border-t border-dark-border",
+                hasQuickAccessItems && "pt-4 border-t border-edge",
               )}
             >
               <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -495,7 +495,7 @@ export function FileManagerSidebar({
           <div className="fixed inset-0 z-40" />
           <div
             data-sidebar-context-menu
-            className="fixed bg-dark-bg border border-dark-border rounded-lg shadow-xl min-w-[160px] z-50 overflow-hidden"
+            className="fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[160px] z-50 overflow-hidden"
             style={{
               left: contextMenu.x,
               top: contextMenu.y,
@@ -504,7 +504,7 @@ export function FileManagerSidebar({
             {contextMenu.item.type === "recent" && (
               <>
                 <button
-                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-foreground first:rounded-t-lg last:rounded-b-lg"
                   onClick={() => {
                     handleRemoveRecentFile(contextMenu.item!);
                     closeContextMenu();
@@ -519,9 +519,9 @@ export function FileManagerSidebar({
                 </button>
                 {recentItems.length > 1 && (
                   <>
-                    <div className="border-t border-dark-border" />
+                    <div className="border-t border-edge" />
                     <button
-                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-red-400 hover:bg-red-500/10 first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-red-400 hover:bg-red-500/10 first:rounded-t-lg last:rounded-b-lg"
                       onClick={() => {
                         handleClearAllRecent();
                         closeContextMenu();
@@ -541,7 +541,7 @@ export function FileManagerSidebar({
 
             {contextMenu.item.type === "pinned" && (
               <button
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-foreground first:rounded-t-lg last:rounded-b-lg"
                 onClick={() => {
                   handleUnpinFile(contextMenu.item!);
                   closeContextMenu();
@@ -556,7 +556,7 @@ export function FileManagerSidebar({
 
             {contextMenu.item.type === "shortcut" && (
               <button
-                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-dark-hover text-white first:rounded-t-lg last:rounded-b-lg"
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-foreground first:rounded-t-lg last:rounded-b-lg"
                 onClick={() => {
                   handleRemoveShortcut(contextMenu.item!);
                   closeContextMenu();

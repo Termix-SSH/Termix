@@ -482,7 +482,7 @@ export function RoleManagement(): React.ReactElement {
                   <Command>
                     <CommandInput placeholder={t("rbac.searchUsers")} />
                     <CommandEmpty>{t("rbac.noUserFound")}</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                       {users.map((user) => (
                         <CommandItem
                           key={user.id}
@@ -519,7 +519,7 @@ export function RoleManagement(): React.ReactElement {
                     {t("rbac.noRolesAssigned")}
                   </p>
                 ) : (
-                  <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-[40vh] overflow-y-auto thin-scrollbar pr-2">
                     {userRoles.map((userRole, index) => (
                       <div
                         key={index}
@@ -592,7 +592,7 @@ export function RoleManagement(): React.ReactElement {
                       <Command>
                         <CommandInput placeholder={t("rbac.searchRoles")} />
                         <CommandEmpty>{t("rbac.noRoleFound")}</CommandEmpty>
-                        <CommandGroup className="max-h-[300px] overflow-y-auto">
+                        <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                           {roles
                             .filter(
                               (role) =>

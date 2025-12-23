@@ -184,7 +184,7 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
 
   return (
     <Sheet open={true} onOpenChange={onClose}>
-      <SheetContent className="w-[600px] max-w-[50vw] overflow-y-auto">
+      <SheetContent className="w-[600px] max-w-[50vw] overflow-y-auto thin-scrollbar">
         <SheetHeader className="space-y-6 pb-8">
           <SheetTitle className="flex items-center space-x-4">
             <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800">

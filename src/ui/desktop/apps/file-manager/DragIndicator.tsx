@@ -79,7 +79,7 @@ export function DragIndicator({
     <div
       className={cn(
         "fixed top-4 right-4 z-50 min-w-[300px] max-w-[400px]",
-        "bg-dark-bg border border-dark-border rounded-lg shadow-lg",
+        "bg-canvas border border-edge rounded-lg shadow-lg",
         "p-4 transition-all duration-300 ease-in-out",
         isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full",
         className,
@@ -109,7 +109,7 @@ export function DragIndicator({
           </div>
 
           {(isDownloading || isDragging) && !error && (
-            <div className="w-full bg-dark-border rounded-full h-2 mb-2">
+            <div className="w-full bg-border-base rounded-full h-2 mb-2">
               <div
                 className={cn(
                   "h-2 rounded-full transition-all duration-300",

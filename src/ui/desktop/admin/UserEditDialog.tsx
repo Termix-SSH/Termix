@@ -365,7 +365,7 @@ export function UserEditDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto thin-scrollbar pr-2">
           {/* READ-ONLY INFO SECTION */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-dark-bg-panel rounded-lg border border-dark-border">
             <div>
