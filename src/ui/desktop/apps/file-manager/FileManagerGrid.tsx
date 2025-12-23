@@ -873,14 +873,14 @@ export function FileManagerGrid({
   ]);
 
   return (
-    <div className="h-full flex flex-col bg-dark-bg overflow-hidden relative">
-      <div className="flex-shrink-0 border-b border-dark-border">
-        <div className="flex items-center gap-1 p-2 border-b border-dark-border">
+    <div className="h-full flex flex-col bg-canvas overflow-hidden relative">
+      <div className="flex-shrink-0 border-b border-edge">
+        <div className="flex items-center gap-1 p-2 border-b border-edge">
           <button
             onClick={goBack}
             disabled={historyIndex <= 0}
             className={cn(
-              "p-1 rounded hover:bg-dark-hover",
+              "p-1 rounded hover:bg-hover",
               historyIndex <= 0 && "opacity-50 cursor-not-allowed",
             )}
             title={t("common.back")}
@@ -891,7 +891,7 @@ export function FileManagerGrid({
             onClick={goForward}
             disabled={historyIndex >= navigationHistory.length - 1}
             className={cn(
-              "p-1 rounded hover:bg-dark-hover",
+              "p-1 rounded hover:bg-hover",
               historyIndex >= navigationHistory.length - 1 &&
                 "opacity-50 cursor-not-allowed",
             )}
@@ -903,7 +903,7 @@ export function FileManagerGrid({
             onClick={goUp}
             disabled={currentPath === "/"}
             className={cn(
-              "p-1 rounded hover:bg-dark-hover",
+              "p-1 rounded hover:bg-hover",
               currentPath === "/" && "opacity-50 cursor-not-allowed",
             )}
             title={t("fileManager.parentDirectory")}
@@ -912,7 +912,7 @@ export function FileManagerGrid({
           </button>
           <button
             onClick={onRefresh}
-            className="p-1 rounded hover:bg-dark-hover"
+            className="p-1 rounded hover:bg-hover"
             title={t("common.refresh")}
           >
             <RefreshCw className="w-4 h-4" />
@@ -933,7 +933,7 @@ export function FileManagerGrid({
                     cancelEditingPath();
                   }
                 }}
-                className="flex-1 px-2 py-1 bg-dark-hover border border-dark-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 px-2 py-1 bg-hover border border-edge rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder={t("fileManager.enterPath")}
                 autoFocus
               />
@@ -973,7 +973,7 @@ export function FileManagerGrid({
               ))}
               <button
                 onClick={startEditingPath}
-                className="ml-2 p-1 rounded hover:bg-dark-hover opacity-60 hover:opacity-100 flex items-center justify-center"
+                className="ml-2 p-1 rounded hover:bg-hover opacity-60 hover:opacity-100 flex items-center justify-center"
                 title={t("fileManager.editPath")}
               >
                 <Edit className="w-3 h-3" />
@@ -1246,7 +1246,7 @@ export function FileManagerGrid({
         </div>
       </div>
 
-      <div className="flex-shrink-0 border-t border-dark-border px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex-shrink-0 border-t border-edge px-4 py-2 text-xs text-muted-foreground">
         <div className="flex justify-between items-center">
           <span>{t("fileManager.itemCount", { count: files.length })}</span>
           {selectedFiles.length > 0 && (

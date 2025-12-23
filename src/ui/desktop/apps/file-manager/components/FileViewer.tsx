@@ -133,14 +133,14 @@ function getLanguageIcon(filename: string): React.ReactNode {
     yml: <SiYaml className="w-6 h-6 text-red-400" />,
     toml: <SiToml className="w-6 h-6 text-orange-400" />,
     sql: <SiMysql className="w-6 h-6 text-blue-500" />,
-    sh: <SiGnubash className="w-6 h-6 text-gray-700" />,
-    bash: <SiGnubash className="w-6 h-6 text-gray-700" />,
-    zsh: <SiShell className="w-6 h-6 text-gray-700" />,
+    sh: <SiGnubash className="w-6 h-6 text-foreground" />,
+    bash: <SiGnubash className="w-6 h-6 text-foreground" />,
+    zsh: <SiShell className="w-6 h-6 text-foreground" />,
     vue: <SiVuedotjs className="w-6 h-6 text-green-500" />,
     svelte: <SiSvelte className="w-6 h-6 text-orange-500" />,
-    md: <SiMarkdown className="w-6 h-6 text-gray-600" />,
-    conf: <SiShell className="w-6 h-6 text-gray-600" />,
-    ini: <Code className="w-6 h-6 text-gray-600" />,
+    md: <SiMarkdown className="w-6 h-6 text-muted-foreground" />,
+    conf: <SiShell className="w-6 h-6 text-muted-foreground" />,
+    ini: <Code className="w-6 h-6 text-muted-foreground" />,
   };
 
   return iconMap[ext] || <Code className="w-6 h-6 text-yellow-500" />;
@@ -238,7 +238,7 @@ function getFileType(filename: string): {
     return {
       type: "unknown",
       icon: <FileIcon className="w-6 h-6" />,
-      color: "text-gray-500",
+      color: "text-foreground-subtle",
     };
   }
 }
@@ -423,7 +423,7 @@ export function FileViewer({
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-sm text-gray-600">Loading file...</p>
+          <p className="text-sm text-muted-foreground">Loading file...</p>
         </div>
       </div>
     );
@@ -812,6 +812,8 @@ export function FileViewer({
                     },
                     ".cm-scroller": {
                       overflow: "auto",
+                      scrollbarWidth: "thin",
+                      scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
                     },
                     ".cm-editor": {
                       height: "100%",
@@ -835,7 +837,7 @@ export function FileViewer({
                 }}
               />
             ) : (
-              <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-background text-foreground">
+              <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto thin-scrollbar bg-background text-foreground">
                 {editedContent || content || t("fileManager.fileIsEmpty")}
               </div>
             )}
@@ -969,7 +971,7 @@ export function FileViewer({
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-auto bg-muted/10">
+                  <div className="flex-1 overflow-auto thin-scrollbar bg-muted/10">
                     <div className="p-4">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
@@ -1041,7 +1043,7 @@ export function FileViewer({
                             </blockquote>
                           ),
                           table: ({ children }) => (
-                            <div className="mb-3 overflow-x-auto">
+                            <div className="mb-3 overflow-x-auto thin-scrollbar">
                               <table className="min-w-full border border-border rounded-lg text-sm">
                                 {children}
                               </table>
@@ -1084,7 +1086,7 @@ export function FileViewer({
                   </div>
                 </>
               ) : (
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto thin-scrollbar p-6">
                   <div className="max-w-4xl mx-auto">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -1154,7 +1156,7 @@ export function FileViewer({
                           </blockquote>
                         ),
                         table: ({ children }) => (
-                          <div className="mb-4 overflow-x-auto">
+                          <div className="mb-4 overflow-x-auto thin-scrollbar">
                             <table className="min-w-full border border-border rounded-lg">
                               {children}
                             </table>
@@ -1252,7 +1254,7 @@ export function FileViewer({
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-gray-900">
+            <div className="flex-1 overflow-auto thin-scrollbar p-6 bg-gray-100 dark:bg-gray-900">
               <div className="flex justify-center">
                 {pdfError ? (
                   <div className="text-center text-muted-foreground p-8">

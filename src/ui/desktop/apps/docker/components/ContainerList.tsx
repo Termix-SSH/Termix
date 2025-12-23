@@ -106,7 +106,7 @@ export function ContainerList({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 overflow-auto pb-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 overflow-auto thin-scrollbar pb-2">
           {filteredContainers.map((container) => (
             <ContainerCard
               key={container.id}

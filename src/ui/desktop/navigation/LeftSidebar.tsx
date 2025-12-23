@@ -480,7 +480,7 @@ export function LeftSidebar({
         <div className="flex h-screen w-screen overflow-hidden">
           <Sidebar variant="floating">
             <SidebarHeader>
-              <SidebarGroupLabel className="text-lg font-bold text-white">
+              <SidebarGroupLabel className="text-lg font-bold text-foreground">
                 Termix
                 <div className="absolute right-5 flex gap-1">
                   <Button
@@ -506,7 +506,7 @@ export function LeftSidebar({
             <SidebarContent>
               <SidebarGroup className="!m-0 !p-0 !-mb-2">
                 <Button
-                  className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
+                  className="m-2 flex flex-row font-semibold border-2 !border-edge"
                   variant="outline"
                   onClick={openSshManagerTab}
                   disabled={isSplitScreenActive}
@@ -522,19 +522,19 @@ export function LeftSidebar({
               </SidebarGroup>
               <Separator className="p-0.25" />
               <SidebarGroup className="flex flex-col gap-y-2 !-mt-2">
-                <div className="!bg-dark-bg-input rounded-lg">
+                <div className="!bg-field rounded-lg">
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t("placeholders.searchHostsAny")}
-                    className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
+                    className="w-full h-8 text-sm border-2 !bg-field border-edge rounded-md"
                     autoComplete="off"
                   />
                 </div>
 
                 {hostsError && (
-                  <div className="!bg-dark-bg-input rounded-lg">
-                    <div className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md px-3 py-1.5 flex items-center text-red-500">
+                  <div className="!bg-field rounded-lg">
+                    <div className="w-full h-8 text-sm border-2 !bg-field border-edge rounded-md px-3 py-1.5 flex items-center text-red-500">
                       {t("leftSidebar.failedToLoadHosts")}
                     </div>
                   </div>
@@ -621,13 +621,13 @@ export function LeftSidebar({
                   right: "-8px",
                   width: "18px",
                   backgroundColor: isResizing
-                    ? "var(--dark-active)"
+                    ? "var(--bg-interact)"
                     : "transparent",
                 }}
                 onMouseEnter={(e) => {
                   if (!isResizing) {
                     e.currentTarget.style.backgroundColor =
-                      "var(--dark-border-hover)";
+                      "var(--border-hover)";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -650,8 +650,8 @@ export function LeftSidebar({
           className="fixed top-0 left-0 w-[10px] h-full cursor-pointer flex items-center justify-center rounded-tr-md rounded-br-md"
           style={{
             zIndex: 9999,
-            backgroundColor: "#18181b",
-            border: "2px solid #27272a",
+            backgroundColor: "var(--bg-base)",
+            border: "2px solid var(--border-base)",
             borderLeft: "none",
           }}
         >

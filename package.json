@@ -58,6 +58,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
     "@uiw/codemirror-extensions-langs": "^4.24.1",
+    "@uiw/codemirror-theme-github": "^4.25.4",
     "@uiw/react-codemirror": "^4.24.1",
     "@xterm/addon-clipboard": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",

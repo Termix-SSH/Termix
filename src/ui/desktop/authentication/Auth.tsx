@@ -14,7 +14,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { toast } from "sonner";
-import { Monitor } from "lucide-react";
+import { Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 import {
   registerUser,
   loginUser,
@@ -72,6 +73,7 @@ export function Auth({
   ...props
 }: AuthProps) {
   const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
 
   const isInElectronWebView = () => {
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
@@ -645,7 +647,7 @@ export function Auth({
 
   const Spinner = (
     <svg
-      className="animate-spin mr-2 h-4 w-4 text-white inline-block"
+      className="animate-spin mr-2 h-4 w-4 text-foreground inline-block"
       viewBox="0 0 24 24"
     >
       <circle
@@ -697,7 +699,7 @@ export function Auth({
   if (showServerConfig === null && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -711,7 +713,7 @@ export function Auth({
   if (showServerConfig && !isInElectronWebView()) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -736,7 +738,7 @@ export function Auth({
   ) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
+        className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -769,20 +771,10 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
-        style={{
-          background: "#0e0e10",
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 35px,
-            rgba(255, 255, 255, 0.03) 35px,
-            rgba(255, 255, 255, 0.03) 37px
-          )`,
-        }}
+        className={`fixed inset-0 flex items-center justify-center bg-canvas ${className || ""}`}
         {...props}
       >
-        <div className="w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300">
+        <div className="w-[420px] max-w-full p-6 flex flex-col bg-elevated border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex items-center justify-center h-32">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -799,23 +791,12 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
-        style={{
-          background: "#0e0e10",
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 35px,
-            rgba(255, 255, 255, 0.03) 35px,
-            rgba(255, 255, 255, 0.03) 37px
-          )`,
-        }}
+        className={`fixed inset-0 flex items-center justify-center bg-canvas ${className || ""}`}
         {...props}
       >
         <div
-          className={`w-[420px] max-w-full p-6 flex flex-col bg-dark-bg border-2 border-dark-border rounded-md overflow-y-auto my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
+          className="w-[420px] max-w-full p-6 flex flex-col bg-elevated border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300"
           style={{ maxHeight: "calc(100vh - 1rem)" }}
-          {...props}
         >
           <div className="mb-6 text-center">
             <h2 className="text-xl font-bold mb-1">
@@ -838,13 +819,24 @@ export function Auth({
             </Button>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
+          <div className="mt-6 pt-4 border-t border-edge space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm text-muted-foreground">
-                  {t("common.language")}
-                </Label>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                  setTheme(isDark ? "light" : "dark");
+                }}
+              >
+                {(theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) ? (
+                  <Moon className="w-4 h-4" />
+                ) : (
+                  <Sun className="w-4 h-4" />
+                )}
+              </Button>
               <LanguageSwitcher />
             </div>
             {isElectron() && currentServerUrl && (
@@ -881,15 +873,15 @@ export function Auth({
     >
       <div className="w-full h-full flex flex-col md:flex-row">
         <div
-          className="hidden md:flex md:w-2/5 items-center justify-center relative border-r-2 border-bg-border-dark"
+          className="hidden md:flex md:w-2/5 items-center justify-center relative border-r-2 border-edge"
           style={{
-            background: "#0e0e10",
+            background: "var(--bg-elevated)",
             backgroundImage: `repeating-linear-gradient(
               45deg,
               transparent,
               transparent 35px,
-              rgba(255, 255, 255, 0.03) 35px,
-              rgba(255, 255, 255, 0.03) 37px
+              rgba(128, 128, 128, 0.05) 35px,
+              rgba(128, 128, 128, 0.05) 37px
             )`,
           }}
         >
@@ -909,8 +901,8 @@ export function Auth({
           </div>
         </div>
 
-        <div className="flex-1 flex p-6 md:p-12 bg-background overflow-y-auto">
-          <div className="m-auto w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-dark-border animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col">
+        <div className="flex-1 flex p-6 md:p-12 bg-background overflow-y-auto thin-scrollbar">
+          <div className="m-auto w-full max-w-md backdrop-blur-sm bg-card/50 rounded-2xl p-8 shadow-xl border-2 border-edge animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col">
             {isInElectronWebView() && !webviewAuthSuccess && (
               <Alert className="mb-4 border-blue-500 bg-blue-500/10">
                 <Monitor className="h-4 w-4" />
@@ -1376,13 +1368,24 @@ export function Auth({
                           </form>
                         )}
 
-                        <div className="mt-6 pt-4 border-t border-dark-border space-y-4">
+                        <div className="mt-6 pt-4 border-t border-edge space-y-4">
                           <div className="flex items-center justify-between">
-                            <div>
-                              <Label className="text-sm text-muted-foreground">
-                                {t("common.language")}
-                              </Label>
-                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                                setTheme(isDark ? "light" : "dark");
+                              }}
+                            >
+                              {(theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) ? (
+                                <Moon className="w-4 h-4" />
+                              ) : (
+                                <Sun className="w-4 h-4" />
+                              )}
+                            </Button>
                             <LanguageSwitcher />
                           </div>
                           {isElectron() && currentServerUrl && (

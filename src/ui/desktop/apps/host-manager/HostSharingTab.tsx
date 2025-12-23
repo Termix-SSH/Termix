@@ -343,7 +343,7 @@ export function HostSharingTab({
                   <Command>
                     <CommandInput placeholder={t("rbac.searchUsers")} />
                     <CommandEmpty>{t("rbac.noUserFound")}</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                       {availableUsers.map((user) => (
                         <CommandItem
                           key={user.id}
@@ -396,7 +396,7 @@ export function HostSharingTab({
                   <Command>
                     <CommandInput placeholder={t("rbac.searchRoles")} />
                     <CommandEmpty>{t("rbac.noRoleFound")}</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                       {roles.map((role) => (
                         <CommandItem
                           key={role.id}

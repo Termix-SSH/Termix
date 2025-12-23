@@ -78,7 +78,7 @@ export function ContainerDetail({
 
           <TabsContent
             value="logs"
-            className="flex-1 overflow-auto px-3 pb-3 mt-3"
+            className="flex-1 overflow-auto thin-scrollbar px-3 pb-3 mt-3"
           >
             <LogViewer
               sessionId={sessionId}
@@ -89,7 +89,7 @@ export function ContainerDetail({
 
           <TabsContent
             value="stats"
-            className="flex-1 overflow-auto px-3 pb-3 mt-3"
+            className="flex-1 overflow-auto thin-scrollbar px-3 pb-3 mt-3"
           >
             <ContainerStats
               sessionId={sessionId}

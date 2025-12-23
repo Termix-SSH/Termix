@@ -348,18 +348,18 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-edge rounded-lg flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: rightPosition,
-          backgroundColor: "#18181b",
+          backgroundColor: "var(--bg-base)",
           transition: "top 200ms linear, left 200ms linear, right 200ms linear",
         }}
       >
         <div
           ref={containerRef}
-          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden skinny-scrollbar gap-1"
+          className="h-full p-1 pr-2 border-r-2 border-edge w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden skinny-scrollbar gap-1"
         >
           {tabs.map((tab: TabData, index: number) => {
             const isActive = tab.id === currentTab;
@@ -526,7 +526,7 @@ export function TopNavbar({
           <Button
             variant="outline"
             onClick={() => setToolsSidebarOpen(!toolsSidebarOpen)}
-            className="w-[30px] h-[30px] border-dark-border"
+            className="w-[30px] h-[30px] border-edge"
             title={t("nav.tools")}
           >
             <Hammer className="h-4 w-4" />
@@ -551,8 +551,8 @@ export function TopNavbar({
             right: rightPosition,
             height: "10px",
             zIndex: 9999,
-            backgroundColor: "#18181b",
-            border: "2px solid #27272a",
+            backgroundColor: "var(--bg-base)",
+            border: "2px solid var(--border-base)",
             borderTop: "none",
           }}
         >

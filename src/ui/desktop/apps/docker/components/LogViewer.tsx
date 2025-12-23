@@ -230,7 +230,7 @@ export function LogViewer({
               <SimpleLoader size="lg" />
             </div>
           ) : (
-            <div className="h-full overflow-auto">
+            <div className="h-full overflow-auto thin-scrollbar">
               <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-gray-200 leading-relaxed">
                 {filteredLogs || (
                   <span className="text-gray-500">No logs available</span>

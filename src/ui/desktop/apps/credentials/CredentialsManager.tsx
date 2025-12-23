@@ -603,7 +603,7 @@ export function CredentialsManager({
                                     handleDragStart(e, credential)
                                   }
                                   onDragEnd={handleDragEnd}
-                                  className={`bg-dark-bg-input border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-dark-hover-alt transition-all duration-200 p-3 group relative ${
+                                  className={`bg-field border border-input rounded-lg cursor-pointer hover:shadow-lg hover:border-blue-400/50 hover:bg-hover-alt transition-all duration-200 p-3 group relative ${
                                     draggedCredential?.id === credential.id
                                       ? "opacity-50 scale-95"
                                       : ""
@@ -808,7 +808,7 @@ export function CredentialsManager({
       )}
 
       <Sheet open={showDeployDialog} onOpenChange={setShowDeployDialog}>
-        <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto bg-dark-bg">
+        <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto thin-scrollbar bg-canvas">
           <div className="px-4 py-4">
             <div className="space-y-3 pb-4">
               <div className="flex items-center space-x-3">
@@ -917,7 +917,7 @@ export function CredentialsManager({
                           ? t("credentials.noHostsAvailable")
                           : t("credentials.noHostsMatchSearch")}
                       </CommandEmpty>
-                      <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      <CommandGroup className="max-h-[300px] overflow-y-auto thin-scrollbar">
                         {availableHosts.map((host) => (
                           <CommandItem
                             key={host.id}

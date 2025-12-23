@@ -165,7 +165,7 @@ export function CredentialSelector({
                 />
               </div>
 
-              <div className="max-h-60 overflow-y-auto p-2">
+              <div className="max-h-60 overflow-y-auto thin-scrollbar p-2">
                 {loading ? (
                   <div className="p-3 text-center text-sm text-muted-foreground">
                     {t("common.loading")}

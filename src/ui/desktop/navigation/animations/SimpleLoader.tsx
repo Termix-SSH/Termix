@@ -34,8 +34,8 @@ export function SimpleLoader({
           .simple-spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: rgba(255, 255, 255, 0.8);
+            border: 4px solid var(--border-base);
+            border-top-color: var(--foreground);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
           }
@@ -47,12 +47,12 @@ export function SimpleLoader({
           "absolute inset-0 flex items-center justify-center z-50",
           className,
         )}
-        style={{ backgroundColor: backgroundColor || "#18181b" }}
+        style={{ backgroundColor: backgroundColor || "var(--bg-base)" }}
       >
         <div className="flex flex-col items-center gap-4">
           <div className="simple-spinner"></div>
           {message && (
-            <p className="text-sm text-gray-300 font-medium">{message}</p>
+            <p className="text-sm text-foreground-secondary font-medium">{message}</p>
           )}
         </div>
       </div>

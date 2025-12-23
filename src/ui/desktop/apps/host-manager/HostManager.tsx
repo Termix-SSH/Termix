@@ -98,7 +98,7 @@ export function HostManager({
     <div>
       <div className="w-full">
         <div
-          className="bg-dark-bg text-white p-4 pt-0 rounded-lg border-2 border-dark-border flex flex-col min-h-0 overflow-hidden"
+          className="bg-canvas text-foreground p-4 pt-0 rounded-lg border-2 border-edge flex flex-col min-h-0 overflow-hidden"
           style={{
             marginLeft: leftMarginPx,
             marginRight: rightSidebarOpen
@@ -116,22 +116,22 @@ export function HostManager({
             onValueChange={handleTabChange}
             className="flex-1 flex flex-col h-full min-h-0"
           >
-            <TabsList className="bg-dark-bg border-2 border-dark-border mt-1.5">
-              <TabsTrigger value="host_viewer">
+            <TabsList className="bg-elevated border-2 border-edge mt-1.5">
+              <TabsTrigger value="host_viewer" className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
                 {t("hosts.hostViewer")}
               </TabsTrigger>
-              <TabsTrigger value="add_host">
+              <TabsTrigger value="add_host" className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
                 {editingHost
                   ? editingHost.id
                     ? t("hosts.editHost")
                     : t("hosts.cloneHost")
                   : t("hosts.addHost")}
               </TabsTrigger>
-              <div className="h-6 w-px bg-dark-border mx-1"></div>
-              <TabsTrigger value="credentials">
+              <div className="h-6 w-px bg-border-base mx-1"></div>
+              <TabsTrigger value="credentials" className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
                 {t("credentials.credentialsViewer")}
               </TabsTrigger>
-              <TabsTrigger value="add_credential">
+              <TabsTrigger value="add_credential" className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
                 {editingCredential
                   ? t("credentials.editCredential")
                   : t("credentials.addCredential")}
@@ -161,7 +161,7 @@ export function HostManager({
               className="flex-1 flex flex-col h-full min-h-0"
             >
               <Separator className="p-0.25 -mt-0.5 mb-1" />
-              <div className="flex flex-col h-full min-h-0 overflow-auto">
+              <div className="flex flex-col h-full min-h-0 overflow-auto thin-scrollbar">
                 <CredentialsManager onEditCredential={handleEditCredential} />
               </div>
             </TabsContent>

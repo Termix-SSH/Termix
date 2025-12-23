@@ -382,7 +382,7 @@ export function Dashboard({
         </div>
       ) : (
         <div
-          className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden flex min-w-0"
+          className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden flex min-w-0"
           style={{
             marginLeft: leftMarginPx,
             marginRight: rightSidebarOpen
@@ -397,7 +397,7 @@ export function Dashboard({
         >
           <div className="flex flex-col relative z-10 w-full h-full min-w-0">
             <div className="flex flex-row items-center justify-between w-full px-3 mt-3 min-w-0 flex-wrap gap-2">
-              <div className="text-2xl text-white font-semibold shrink-0">
+              <div className="text-2xl text-foreground font-semibold shrink-0">
                 {t("dashboard.title")}
               </div>
               <div className="flex flex-row gap-3 flex-wrap min-w-0">
@@ -458,18 +458,17 @@ export function Dashboard({
 
             <div className="flex flex-col flex-1 my-5 mx-5 gap-4 min-h-0 min-w-0">
               <div className="flex flex-row flex-1 gap-4 min-h-0 min-w-0">
-                <div className="flex-1 min-w-0 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden">
-                  <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
+                <div className="flex-1 min-w-0 border-2 border-edge rounded-md bg-elevated flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+                  <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden thin-scrollbar">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <Server className="mr-3" />
                       {t("dashboard.serverOverview")}
                     </p>
-                    <div className="bg-dark-bg w-full h-auto border-2 border-dark-border rounded-md px-3 py-3">
+                    <div className="bg-canvas w-full h-auto border-2 border-edge rounded-md px-3 py-3">
                       <div className="flex flex-row items-center justify-between mb-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
                           <History
                             size={20}
-                            color="#FFFFFF"
                             className="shrink-0"
                           />
                           <p className="ml-2 leading-none truncate">
@@ -484,7 +483,7 @@ export function Dashboard({
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`ml-2 text-sm border-1 border-dark-border ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
+                            className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
                           >
                             {versionStatus === "up_to_date"
                               ? t("dashboard.upToDate")
@@ -498,7 +497,6 @@ export function Dashboard({
                         <div className="flex flex-row items-center min-w-0">
                           <Clock
                             size={20}
-                            color="#FFFFFF"
                             className="shrink-0"
                           />
                           <p className="ml-2 leading-none truncate">
@@ -517,7 +515,6 @@ export function Dashboard({
                         <div className="flex flex-row items-center min-w-0">
                           <Database
                             size={20}
-                            color="#FFFFFF"
                             className="shrink-0"
                           />
                           <p className="ml-2 leading-none truncate">
@@ -537,11 +534,10 @@ export function Dashboard({
                       </div>
                     </div>
                     <div className="flex flex-col grid grid-cols-2 gap-2 mt-2">
-                      <div className="flex flex-row items-center justify-between bg-dark-bg w-full h-auto mt-3 border-2 border-dark-border rounded-md px-3 py-3 min-w-0 gap-2">
+                      <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
                           <Server
                             size={16}
-                            color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
                           <p className="m-0 leading-none truncate">
@@ -552,11 +548,10 @@ export function Dashboard({
                           {totalServers}
                         </p>
                       </div>
-                      <div className="flex flex-row items-center justify-between bg-dark-bg w-full h-auto mt-3 border-2 border-dark-border rounded-md px-3 py-3 min-w-0 gap-2">
+                      <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
                           <Network
                             size={16}
-                            color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
                           <p className="m-0 leading-none truncate">
@@ -569,11 +564,10 @@ export function Dashboard({
                       </div>
                     </div>
                     <div className="flex flex-col grid grid-cols-2 gap-2 mt-2">
-                      <div className="flex flex-row items-center justify-between bg-dark-bg w-full h-auto mt-3 border-2 border-dark-border rounded-md px-3 py-3 min-w-0 gap-2">
+                      <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
                           <Key
                             size={16}
-                            color="#FFFFFF"
                             className="mr-3 shrink-0"
                           />
                           <p className="m-0 leading-none truncate">
@@ -587,7 +581,7 @@ export function Dashboard({
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+                <div className="flex-1 min-w-0 border-2 border-edge rounded-md bg-elevated flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <div className="flex flex-row items-center justify-between mb-3 mt-1">
                       <p className="text-xl font-semibold flex flex-row items-center">
@@ -597,14 +591,14 @@ export function Dashboard({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-2 !border-dark-border h-7"
+                        className="border-2 !border-edge h-7"
                         onClick={handleResetActivity}
                       >
                         {t("dashboard.reset")}
                       </Button>
                     </div>
                     <div
-                      className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
+                      className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden thin-scrollbar ${recentActivityLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
                     >
                       {recentActivityLoading ? (
                         <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
@@ -632,7 +626,7 @@ export function Dashboard({
                             <Button
                               key={item.id}
                               variant="outline"
-                              className="border-2 !border-dark-border bg-dark-bg min-w-0"
+                              className="border-2 !border-edge bg-canvas min-w-0"
                               onClick={() => handleActivityClick(item)}
                             >
                               {item.type === "terminal" ? (
@@ -651,16 +645,16 @@ export function Dashboard({
                 </div>
               </div>
               <div className="flex flex-row flex-1 gap-4 min-h-0 min-w-0">
-                <div className="flex-1 min-w-0 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
-                  <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden">
+                <div className="flex-1 min-w-0 border-2 border-edge rounded-md bg-elevated flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+                  <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden thin-scrollbar">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <FastForward className="mr-3" />
                       {t("dashboard.quickActions")}
                     </p>
-                    <div className="grid gap-4 grid-cols-3 auto-rows-min overflow-y-auto overflow-x-hidden">
+                    <div className="grid gap-4 grid-cols-3 auto-rows-min overflow-y-auto overflow-x-hidden thin-scrollbar">
                       <Button
                         variant="outline"
-                        className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
                         onClick={handleAddHost}
                       >
                         <Server
@@ -673,7 +667,7 @@ export function Dashboard({
                       </Button>
                       <Button
                         variant="outline"
-                        className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
                         onClick={handleAddCredential}
                       >
                         <Key
@@ -687,7 +681,7 @@ export function Dashboard({
                       {isAdmin && (
                         <Button
                           variant="outline"
-                          className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                          className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
                           onClick={handleOpenAdminSettings}
                         >
                           <Settings
@@ -701,7 +695,7 @@ export function Dashboard({
                       )}
                       <Button
                         variant="outline"
-                        className="border-2 !border-dark-border flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
                         onClick={handleOpenUserProfile}
                       >
                         <User
@@ -715,14 +709,14 @@ export function Dashboard({
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0 border-2 border-dark-border rounded-md bg-dark-bg-darker flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+                <div className="flex-1 min-w-0 border-2 border-edge rounded-md bg-elevated flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
                   <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
                     <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
                       <ChartLine className="mr-3" />
                       {t("dashboard.serverStats")}
                     </p>
                     <div
-                      className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden ${serverStatsLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
+                      className={`grid gap-4 grid-cols-3 auto-rows-min overflow-x-hidden thin-scrollbar ${serverStatsLoading ? "overflow-y-hidden" : "overflow-y-auto"}`}
                     >
                       {serverStatsLoading ? (
                         <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
@@ -738,7 +732,7 @@ export function Dashboard({
                           <Button
                             key={server.id}
                             variant="outline"
-                            className="border-2 !border-dark-border bg-dark-bg h-auto p-3 min-w-0"
+                            className="border-2 !border-edge bg-canvas h-auto p-3 min-w-0"
                             onClick={() =>
                               handleServerStatClick(server.id, server.name)
                             }

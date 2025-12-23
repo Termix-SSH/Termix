@@ -71,7 +71,7 @@ export function CompressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+      <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
         <DialogHeader>
           <DialogTitle>{t("fileManager.compressFiles")}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -123,8 +123,8 @@ export function CompressDialog({
             </Select>
           </div>
 
-          <div className="rounded-md bg-dark-hover/50 border border-dark-border p-3">
-            <p className="text-sm text-gray-400 mb-2">
+          <div className="rounded-md bg-hover/50 border border-edge p-3">
+            <p className="text-sm text-muted-foreground mb-2">
               {t("fileManager.selectedFiles")}:
             </p>
             <ul className="text-sm space-y-1">
@@ -134,7 +134,7 @@ export function CompressDialog({
                 </li>
               ))}
               {fileNames.length > 5 && (
-                <li className="text-gray-400 italic">
+                <li className="text-muted-foreground italic">
                   {t("fileManager.andMoreFiles", {
                     count: fileNames.length - 5,
                   })}

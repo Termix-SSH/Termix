@@ -84,7 +84,7 @@ export function ElectronVersionCheck({
   if (versionChecking && !versionInfo) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+        <div className="bg-canvas border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
           <div className="flex items-center justify-center mb-4">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
@@ -99,7 +99,7 @@ export function ElectronVersionCheck({
   if (!versionInfo || versionDismissed) {
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+        <div className="bg-canvas border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
               {t("versionCheck.checkUpdates")}
@@ -127,7 +127,7 @@ export function ElectronVersionCheck({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
+      <div className="bg-canvas border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">
             {t("versionCheck.updateRequired")}

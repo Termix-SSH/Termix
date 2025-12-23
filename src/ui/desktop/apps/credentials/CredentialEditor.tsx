@@ -32,7 +32,9 @@ import {
 import { useTranslation } from "react-i18next";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { githubLight } from "@uiw/codemirror-theme-github";
 import { EditorView } from "@codemirror/view";
+import { useTheme } from "@/components/theme-provider";
 import type {
   Credential,
   CredentialEditorProps,
@@ -44,6 +46,14 @@ export function CredentialEditor({
   onFormSubmit,
 }: CredentialEditorProps) {
   const { t } = useTranslation();
+  const { theme: appTheme } = useTheme();
+
+  // Determine CodeMirror theme based on app theme
+  const isDarkMode =
+    appTheme === "dark" ||
+    (appTheme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const editorTheme = isDarkMode ? oneDark : githubLight;
   const [, setCredentials] = useState<Credential[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
   const [, setLoading] = useState(true);
@@ -473,11 +483,11 @@ export function CredentialEditor({
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList>
-                <TabsTrigger value="general">
+              <TabsList className="bg-button border border-edge-medium">
+                <TabsTrigger value="general" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                   {t("credentials.general")}
                 </TabsTrigger>
-                <TabsTrigger value="authentication">
+                <TabsTrigger value="authentication" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                   {t("credentials.authentication")}
                 </TabsTrigger>
               </TabsList>
@@ -561,7 +571,7 @@ export function CredentialEditor({
                         {folderDropdownOpen && filteredFolders.length > 0 && (
                           <div
                             ref={folderDropdownRef}
-                            className="absolute top-full left-0 z-50 mt-1 w-full bg-dark-bg border border-input rounded-md shadow-lg max-h-40 overflow-y-auto p-1"
+                            className="absolute top-full left-0 z-50 mt-1 w-full bg-canvas border border-input rounded-md shadow-lg max-h-40 overflow-y-auto thin-scrollbar p-1"
                           >
                             <div className="grid grid-cols-1 gap-1 p-0">
                               {filteredFolders.map((folder) => (
@@ -590,7 +600,7 @@ export function CredentialEditor({
                       <FormItem className="col-span-10 overflow-visible">
                         <FormLabel>{t("credentials.tags")}</FormLabel>
                         <FormControl>
-                          <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-dark-bg-input focus-within:ring-2 ring-ring min-h-[40px]">
+                          <div className="flex flex-wrap items-center gap-1 border border-input rounded-md px-3 py-2 bg-field focus-within:ring-2 ring-ring min-h-[40px]">
                             {(field.value || []).map(
                               (tag: string, idx: number) => (
                                 <span
@@ -682,11 +692,11 @@ export function CredentialEditor({
                   }}
                   className="flex-1 flex flex-col h-full min-h-0"
                 >
-                  <TabsList>
-                    <TabsTrigger value="password">
+                  <TabsList className="bg-button border border-edge-medium">
+                    <TabsTrigger value="password" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                       {t("credentials.password")}
                     </TabsTrigger>
-                    <TabsTrigger value="key">
+                    <TabsTrigger value="key" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
                       {t("credentials.key")}
                     </TabsTrigger>
                   </TabsList>
@@ -927,7 +937,7 @@ export function CredentialEditor({
                                   placeholder={t(
                                     "placeholders.pastePrivateKey",
                                   )}
-                                  theme={oneDark}
+                                  theme={editorTheme}
                                   className="border border-input rounded-md"
                                   minHeight="120px"
                                   basicSetup={{
@@ -943,6 +953,8 @@ export function CredentialEditor({
                                     EditorView.theme({
                                       ".cm-scroller": {
                                         overflow: "auto",
+                                        scrollbarWidth: "thin",
+                                        scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
                                       },
                                     }),
                                   ]}
@@ -1087,7 +1099,7 @@ export function CredentialEditor({
                                     debouncedPublicKeyDetection(value);
                                   }}
                                   placeholder={t("placeholders.pastePublicKey")}
-                                  theme={oneDark}
+                                  theme={editorTheme}
                                   className="border border-input rounded-md"
                                   minHeight="120px"
                                   basicSetup={{
@@ -1103,6 +1115,8 @@ export function CredentialEditor({
                                     EditorView.theme({
                                       ".cm-scroller": {
                                         overflow: "auto",
+                                        scrollbarWidth: "thin",
+                                        scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
                                       },
                                     }),
                                   ]}

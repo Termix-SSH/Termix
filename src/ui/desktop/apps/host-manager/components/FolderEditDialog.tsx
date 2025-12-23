@@ -94,7 +94,7 @@ export function FolderEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+      <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Folder className="w-5 h-5" />
@@ -119,7 +119,7 @@ export function FolderEditDialog({
                   className={`h-12 rounded-md border-2 transition-all hover:scale-105 ${
                     selectedColor === color.value
                       ? "border-white shadow-lg scale-105"
-                      : "border-dark-border"
+                      : "border-edge"
                   }`}
                   style={{ backgroundColor: color.value }}
                   onClick={() => setSelectedColor(color.value)}
@@ -141,7 +141,7 @@ export function FolderEditDialog({
                   className={`h-14 rounded-md border-2 transition-all hover:scale-105 flex items-center justify-center ${
                     selectedIcon === value
                       ? "border-primary bg-primary/10"
-                      : "border-dark-border bg-dark-bg-darker"
+                      : "border-edge bg-elevated"
                   }`}
                   onClick={() => setSelectedIcon(value)}
                   title={label}
@@ -156,7 +156,7 @@ export function FolderEditDialog({
             <Label className="text-base font-semibold text-foreground">
               {t("hosts.preview")}
             </Label>
-            <div className="flex items-center gap-3 p-4 rounded-md bg-dark-bg-darker border border-dark-border">
+            <div className="flex items-center gap-3 p-4 rounded-md bg-elevated border border-edge">
               {(() => {
                 const IconComponent =
                   AVAILABLE_ICONS.find((i) => i.value === selectedIcon)?.Icon ||
