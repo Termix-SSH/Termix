@@ -462,6 +462,7 @@ export function HostManagerEditor({
                 "processes",
                 "system",
                 "login_stats",
+                "ports",
               ]),
             )
             .default([
@@ -3576,6 +3577,7 @@ export function HostManagerEditor({
                                   "processes",
                                   "system",
                                   "login_stats",
+                                  "ports",
                                 ] as const
                               ).map((widget) => (
                                 <div
@@ -3617,6 +3619,8 @@ export function HostManagerEditor({
                                       t("serverStats.systemInfo")}
                                     {widget === "login_stats" &&
                                       t("serverStats.loginStats")}
+                                    {widget === "ports" &&
+                                      t("serverStats.ports.title")}
                                   </label>
                                 </div>
                               ))}

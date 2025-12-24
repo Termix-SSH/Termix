@@ -416,5 +416,16 @@
     "hostManager": "主机管理器",
     "cannotSplitTab": "无法分割此标签页",
     "tabNavigation": "标签导航"
+  },
+  "serverStats": {
+    "ports": {
+      "title": "监听端口",
+      "protocol": "协议",
+      "port": "端口",
+      "address": "地址",
+      "state": "状态",
+      "process": "进程",
+      "noData": "无监听端口数据"
+    }
   }
 }
