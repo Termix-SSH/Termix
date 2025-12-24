@@ -23,6 +23,7 @@ jobs:
           api-key: ${{ secrets.GEMINI_API_KEY }}
           engine: gemini
           output-languages: de fr it ko pt-br ru zh
+          base-branch: ${{ github.ref_name }}
 
       - name: Commit and push translations
         run: |
