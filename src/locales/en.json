@@ -1731,7 +1731,25 @@
     "executingQuickAction": "Executing {{name}}...",
     "quickActionSuccess": "{{name}} completed successfully",
     "quickActionFailed": "{{name}} failed",
-    "quickActionError": "Failed to execute {{name}}"
+    "quickActionError": "Failed to execute {{name}}",
+    "firewall": {
+      "title": "Firewall",
+      "active": "Active",
+      "inactive": "Inactive",
+      "notDetected": "Not Detected",
+      "policy": "Policy",
+      "rules": "rules",
+      "noRules": "No rules",
+      "noData": "No firewall data available",
+      "action": "Action",
+      "protocol": "Proto",
+      "port": "Port",
+      "source": "Source",
+      "accept": "ACCEPT",
+      "drop": "DROP",
+      "reject": "REJECT",
+      "anywhere": "Anywhere"
+    }
   },
   "auth": {
     "tagline": "SSH SERVER MANAGER",

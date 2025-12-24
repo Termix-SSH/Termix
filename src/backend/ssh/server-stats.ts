@@ -19,6 +19,7 @@ import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
+import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 async function resolveJumpHost(
@@ -1782,6 +1783,39 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           login_stats = await collectLoginStats(client);
         } catch (e) {}
 
+        let firewall: {
+          type: "iptables" | "nftables" | "none";
+          status: "active" | "inactive" | "unknown";
+          chains: Array<{
+            name: string;
+            policy: string;
+            rules: Array<{
+              chain: string;
+              target: string;
+              protocol: string;
+              source: string;
+              destination: string;
+              dport?: string;
+              sport?: string;
+              state?: string;
+              interface?: string;
+              extra?: string;
+            }>;
+          }>;
+        } = {
+          type: "none",
+          status: "unknown",
+          chains: [],
+        };
+        try {
+          firewall = await collectFirewallMetrics(client);
+        } catch (e) {
+          statsLogger.debug("Failed to collect firewall metrics", {
+            operation: "firewall_metrics_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+
         const result = {
           cpu,
           memory,
@@ -1791,6 +1825,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           processes,
           system,
           login_stats,
+          firewall,
         };
 
         metricsCache.set(host.id, result);
