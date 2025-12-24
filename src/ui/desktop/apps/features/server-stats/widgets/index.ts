@@ -6,3 +6,4 @@ export { UptimeWidget } from "./UptimeWidget.tsx";
 export { ProcessesWidget } from "./ProcessesWidget.tsx";
 export { SystemWidget } from "./SystemWidget.tsx";
 export { LoginStatsWidget } from "./LoginStatsWidget.tsx";
+export { PortsWidget } from "./PortsWidget.tsx";

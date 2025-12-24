@@ -317,6 +317,7 @@ export function HostManagerEditor({
                 "processes",
                 "system",
                 "login_stats",
+                "ports",
               ]),
             )
             .default([
@@ -327,6 +328,7 @@ export function HostManagerEditor({
               "uptime",
               "system",
               "login_stats",
+              "ports",
             ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
@@ -342,6 +344,7 @@ export function HostManagerEditor({
             "uptime",
             "system",
             "login_stats",
+            "ports",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
