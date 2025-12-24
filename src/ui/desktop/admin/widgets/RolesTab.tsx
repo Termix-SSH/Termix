@@ -32,7 +32,7 @@ import {
   type Role,
 } from "@/ui/main-axios.ts";
 
-export function RoleManagement(): React.ReactElement {
+export function RolesTab(): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
 
@@ -234,7 +234,7 @@ export function RoleManagement(): React.ReactElement {
 
       {/* Create/Edit Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+        <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
           <DialogHeader>
             <DialogTitle>
               {editingRole ? t("rbac.editRole") : t("rbac.createRole")}

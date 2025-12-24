@@ -484,10 +484,16 @@ export function CredentialEditor({
               className="w-full"
             >
               <TabsList className="bg-button border border-edge-medium">
-                <TabsTrigger value="general" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
+                <TabsTrigger
+                  value="general"
+                  className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                >
                   {t("credentials.general")}
                 </TabsTrigger>
-                <TabsTrigger value="authentication" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
+                <TabsTrigger
+                  value="authentication"
+                  className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                >
                   {t("credentials.authentication")}
                 </TabsTrigger>
               </TabsList>
@@ -693,10 +699,16 @@ export function CredentialEditor({
                   className="flex-1 flex flex-col h-full min-h-0"
                 >
                   <TabsList className="bg-button border border-edge-medium">
-                    <TabsTrigger value="password" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
+                    <TabsTrigger
+                      value="password"
+                      className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                    >
                       {t("credentials.password")}
                     </TabsTrigger>
-                    <TabsTrigger value="key" className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium">
+                    <TabsTrigger
+                      value="key"
+                      className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                    >
                       {t("credentials.key")}
                     </TabsTrigger>
                   </TabsList>
@@ -719,7 +731,7 @@ export function CredentialEditor({
                   </TabsContent>
                   <TabsContent value="key">
                     <div className="mt-2">
-                      <div className="mb-3 p-3 bg-muted/20 border border-muted rounded-md">
+                      <div className="mb-3 p-3 border border-muted rounded-md">
                         <FormLabel className="mb-2 font-bold block">
                           {t("credentials.generateKeyPair")}
                         </FormLabel>
@@ -954,7 +966,8 @@ export function CredentialEditor({
                                       ".cm-scroller": {
                                         overflow: "auto",
                                         scrollbarWidth: "thin",
-                                        scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
+                                        scrollbarColor:
+                                          "var(--scrollbar-thumb) var(--scrollbar-track)",
                                       },
                                     }),
                                   ]}
@@ -1116,7 +1129,8 @@ export function CredentialEditor({
                                       ".cm-scroller": {
                                         overflow: "auto",
                                         scrollbarWidth: "thin",
-                                        scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
+                                        scrollbarColor:
+                                          "var(--scrollbar-thumb) var(--scrollbar-track)",
                                       },
                                     }),
                                   ]}

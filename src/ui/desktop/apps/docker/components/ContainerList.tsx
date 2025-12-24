@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 import { Search, Filter } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { DockerContainer } from "@/types/index.js";
 import { ContainerCard } from "./ContainerCard.tsx";
 
@@ -26,6 +27,7 @@ export function ContainerList({
   selectedContainerId = null,
   onRefresh,
 }: ContainerListProps): React.ReactElement {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
@@ -55,8 +57,12 @@ export function ContainerList({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
-          <p className="text-gray-400 text-lg">{t("docker.noContainersFound")}</p>
-          <p className="text-gray-500 text-sm">{t("docker.noContainersFoundHint")}</p>
+          <p className="text-muted-foreground text-lg">
+            {t("docker.noContainersFound")}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {t("docker.noContainersFoundHint")}
+          </p>
         </div>
       </div>
     );
@@ -67,7 +73,7 @@ export function ContainerList({
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t("docker.searchPlaceholder")}
             value={searchQuery}
@@ -76,16 +82,23 @@ export function ContainerList({
           />
         </div>
         <div className="flex items-center gap-2 sm:min-w-[200px]">
-          <Filter className="h-4 w-4 text-gray-400" />
+          <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("docker.filterByStatusPlaceholder")} />
+              <SelectValue
+                placeholder={t("docker.filterByStatusPlaceholder")}
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("docker.allContainersCount", { count: containers.length })}</SelectItem>
+              <SelectItem value="all">
+                {t("docker.allContainersCount", { count: containers.length })}
+              </SelectItem>
               {Object.entries(statusCounts).map(([status, count]) => (
                 <SelectItem key={status} value={status}>
-                  {t("docker.statusCount", { status: status.charAt(0).toUpperCase() + status.slice(1), count })}
+                  {t("docker.statusCount", {
+                    status: status.charAt(0).toUpperCase() + status.slice(1),
+                    count,
+                  })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -97,8 +110,12 @@ export function ContainerList({
       {filteredContainers.length === 0 ? (
         <div className="flex items-center justify-center flex-1">
           <div className="text-center space-y-2">
-            <p className="text-gray-400">{t("docker.noContainersMatchFilters")}</p>
-            <p className="text-gray-500 text-sm">{t("docker.noContainersMatchFiltersHint")}</p>
+            <p className="text-muted-foreground">
+              {t("docker.noContainersMatchFilters")}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {t("docker.noContainersMatchFiltersHint")}
+            </p>
           </div>
         </div>
       ) : (

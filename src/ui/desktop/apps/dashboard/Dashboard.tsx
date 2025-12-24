@@ -407,7 +407,7 @@ export function Dashboard({
                   </p>
                 </div>
                 <Button
-                  className="font-semibold shrink-0"
+                  className="font-semibold shrink-0 !bg-canvas"
                   variant="outline"
                   onClick={() =>
                     window.open(
@@ -419,7 +419,7 @@ export function Dashboard({
                   {t("dashboard.github")}
                 </Button>
                 <Button
-                  className="font-semibold shrink-0"
+                  className="font-semibold shrink-0 !bg-canvas"
                   variant="outline"
                   onClick={() =>
                     window.open(
@@ -431,7 +431,7 @@ export function Dashboard({
                   {t("dashboard.support")}
                 </Button>
                 <Button
-                  className="font-semibold shrink-0"
+                  className="font-semibold shrink-0 !bg-canvas"
                   variant="outline"
                   onClick={() =>
                     window.open(
@@ -443,7 +443,7 @@ export function Dashboard({
                   {t("dashboard.discord")}
                 </Button>
                 <Button
-                  className="font-semibold shrink-0"
+                  className="font-semibold shrink-0 !bg-canvas"
                   variant="outline"
                   onClick={() =>
                     window.open("https://github.com/sponsors/LukeGus", "_blank")
@@ -467,10 +467,7 @@ export function Dashboard({
                     <div className="bg-canvas w-full h-auto border-2 border-edge rounded-md px-3 py-3">
                       <div className="flex flex-row items-center justify-between mb-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <History
-                            size={20}
-                            className="shrink-0"
-                          />
+                          <History size={20} className="shrink-0" />
                           <p className="ml-2 leading-none truncate">
                             {t("dashboard.version")}
                           </p>
@@ -495,10 +492,7 @@ export function Dashboard({
 
                       <div className="flex flex-row items-center justify-between mb-5 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Clock
-                            size={20}
-                            className="shrink-0"
-                          />
+                          <Clock size={20} className="shrink-0" />
                           <p className="ml-2 leading-none truncate">
                             {t("dashboard.uptime")}
                           </p>
@@ -513,10 +507,7 @@ export function Dashboard({
 
                       <div className="flex flex-row items-center justify-between min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Database
-                            size={20}
-                            className="shrink-0"
-                          />
+                          <Database size={20} className="shrink-0" />
                           <p className="ml-2 leading-none truncate">
                             {t("dashboard.database")}
                           </p>
@@ -536,10 +527,7 @@ export function Dashboard({
                     <div className="flex flex-col grid grid-cols-2 gap-2 mt-2">
                       <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Server
-                            size={16}
-                            className="mr-3 shrink-0"
-                          />
+                          <Server size={16} className="mr-3 shrink-0" />
                           <p className="m-0 leading-none truncate">
                             {t("dashboard.totalServers")}
                           </p>
@@ -550,10 +538,7 @@ export function Dashboard({
                       </div>
                       <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Network
-                            size={16}
-                            className="mr-3 shrink-0"
-                          />
+                          <Network size={16} className="mr-3 shrink-0" />
                           <p className="m-0 leading-none truncate">
                             {t("dashboard.totalTunnels")}
                           </p>
@@ -566,10 +551,7 @@ export function Dashboard({
                     <div className="flex flex-col grid grid-cols-2 gap-2 mt-2">
                       <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Key
-                            size={16}
-                            className="mr-3 shrink-0"
-                          />
+                          <Key size={16} className="mr-3 shrink-0" />
                           <p className="m-0 leading-none truncate">
                             {t("dashboard.totalCredentials")}
                           </p>
@@ -591,7 +573,7 @@ export function Dashboard({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-2 !border-edge h-7"
+                        className="border-2 !border-edge h-7 !bg-canvas"
                         onClick={handleResetActivity}
                       >
                         {t("dashboard.reset")}
@@ -626,7 +608,7 @@ export function Dashboard({
                             <Button
                               key={item.id}
                               variant="outline"
-                              className="border-2 !border-edge bg-canvas min-w-0"
+                              className="border-2 !border-edge !bg-canvas min-w-0"
                               onClick={() => handleActivityClick(item)}
                             >
                               {item.type === "terminal" ? (
@@ -654,7 +636,7 @@ export function Dashboard({
                     <div className="grid gap-4 grid-cols-3 auto-rows-min overflow-y-auto overflow-x-hidden thin-scrollbar">
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
                         onClick={handleAddHost}
                       >
                         <Server
@@ -667,7 +649,7 @@ export function Dashboard({
                       </Button>
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
                         onClick={handleAddCredential}
                       >
                         <Key
@@ -681,7 +663,7 @@ export function Dashboard({
                       {isAdmin && (
                         <Button
                           variant="outline"
-                          className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                          className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
                           onClick={handleOpenAdminSettings}
                         >
                           <Settings
@@ -695,7 +677,7 @@ export function Dashboard({
                       )}
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
                         onClick={handleOpenUserProfile}
                       >
                         <User
@@ -732,7 +714,7 @@ export function Dashboard({
                           <Button
                             key={server.id}
                             variant="outline"
-                            className="border-2 !border-edge bg-canvas h-auto p-3 min-w-0"
+                            className="border-2 !border-edge bg-canvas h-auto p-3 min-w-0 !bg-canvas"
                             onClick={() =>
                               handleServerStatClick(server.id, server.name)
                             }

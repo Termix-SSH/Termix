@@ -6,16 +6,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from "@/components/ui/dialog.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { PasswordInput } from "@/components/ui/password-input.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { registerUser } from "@/ui/main-axios";
+import { registerUser } from "@/ui/main-axios.ts";
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -95,7 +95,7 @@ export function CreateUserDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-[500px] bg-dark-bg border-2 border-dark-border">
+      <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />

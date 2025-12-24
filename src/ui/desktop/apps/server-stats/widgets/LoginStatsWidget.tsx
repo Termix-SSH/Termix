@@ -35,7 +35,7 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
   const uniqueIPs = loginStats?.uniqueIPs || 0;
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
+    <div className="h-full w-full p-4 rounded-lg bg-elevated border border-edge/50 hover:bg-elevated/70 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <UserCheck className="h-5 w-5 text-green-400" />
         <h3 className="font-semibold text-lg text-foreground">
@@ -45,7 +45,7 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
 
       <div className="flex flex-col flex-1 min-h-0 gap-3">
         <div className="grid grid-cols-2 gap-2 flex-shrink-0">
-          <div className="bg-elevated p-2 rounded border border-edge/30">
+          <div className="bg-canvas/40 p-2 rounded border border-edge/30 hover:bg-canvas/50">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
               <Activity className="h-3 w-3" />
               <span>{t("serverStats.totalLogins")}</span>
@@ -54,7 +54,7 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
               {totalLogins}
             </div>
           </div>
-          <div className="bg-elevated p-2 rounded border border-edge/30">
+          <div className="bg-canvas/40 p-2 rounded border border-edge/30 hover:bg-canvas/50">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
               <MapPin className="h-3 w-3" />
               <span>{t("serverStats.uniqueIPs")}</span>
@@ -80,7 +80,7 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
                 {recentLogins.slice(0, 5).map((login, idx) => (
                   <div
                     key={idx}
-                    className="text-xs bg-elevated p-2 rounded border border-edge/30 flex justify-between items-center"
+                    className="text-xs bg-canvas/40 p-2 rounded border border-edge/30 hover:bg-canvas/50 flex justify-between items-center"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-green-400 font-mono truncate">

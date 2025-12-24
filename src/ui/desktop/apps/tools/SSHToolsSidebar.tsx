@@ -247,7 +247,8 @@ export function SSHToolsSidebar({
       tab.type === "terminal" ||
       tab.type === "server" ||
       tab.type === "file_manager" ||
-      tab.type === "user_profile",
+      tab.type === "tunnel" ||
+      tab.type === "docker",
   );
 
   useEffect(() => {
@@ -1246,7 +1247,7 @@ export function SSHToolsSidebar({
                       {terminalTabs.length > 0 && (
                         <>
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-white">
+                            <label className="text-sm font-medium text-foreground">
                               {t("snippets.selectTerminals")}
                             </label>
                             <p className="text-xs text-muted-foreground">
@@ -1702,7 +1703,7 @@ export function SSHToolsSidebar({
                           <Separator />
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-white">
+                            <label className="text-sm font-medium text-foreground">
                               {t("splitScreen.availableTabs")}
                             </label>
                             <p className="text-xs text-muted-foreground mb-2">
@@ -1745,7 +1746,7 @@ export function SSHToolsSidebar({
                           <Separator />
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-white">
+                            <label className="text-sm font-medium text-foreground">
                               {t("splitScreen.layout")}
                             </label>
                             <div
@@ -1763,7 +1764,9 @@ export function SSHToolsSidebar({
                                   const assignedTabId =
                                     splitAssignments.get(idx);
                                   const assignedTab = assignedTabId
-                                    ? tabs.find((t) => t.id === assignedTabId)
+                                    ? splittableTabs.find(
+                                        (t) => t.id === assignedTabId,
+                                      )
                                     : null;
                                   const isHovered = dragOverCellIndex === idx;
                                   const isEmpty = !assignedTabId;
@@ -2050,7 +2053,7 @@ export function SSHToolsSidebar({
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white flex items-center gap-1">
+                <label className="text-sm font-medium text-foreground flex items-center gap-1">
                   {t("snippets.folderName")}
                   <span className="text-destructive">*</span>
                 </label>
@@ -2074,7 +2077,7 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-white">
+                <Label className="text-base font-semibold text-foreground">
                   {t("snippets.folderColor")}
                 </Label>
                 <div className="grid grid-cols-4 gap-3">
@@ -2101,7 +2104,7 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-white">
+                <Label className="text-base font-semibold text-foreground">
                   {t("snippets.folderIcon")}
                 </Label>
                 <div className="grid grid-cols-5 gap-3">
@@ -2126,7 +2129,7 @@ export function SSHToolsSidebar({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold text-white">
+                <Label className="text-base font-semibold text-foreground">
                   {t("snippets.preview")}
                 </Label>
                 <div className="flex items-center gap-3 p-4 rounded-md bg-elevated border border-edge">

@@ -230,8 +230,8 @@ export function DockerManager({
       };
 
   const containerClass = embedded
-    ? "h-full w-full text-white overflow-hidden bg-transparent"
-    : "bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden";
+    ? "h-full w-full text-foreground overflow-hidden bg-transparent"
+    : "bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden";
 
   // Check if Docker is enabled
   if (!currentHostConfig?.enableDocker) {
@@ -252,9 +252,7 @@ export function DockerManager({
           <div className="flex-1 overflow-hidden min-h-0 p-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {t("docker.notEnabled")}
-              </AlertDescription>
+              <AlertDescription>{t("docker.notEnabled")}</AlertDescription>
             </Alert>
           </div>
         </div>
@@ -281,7 +279,7 @@ export function DockerManager({
           <div className="flex-1 overflow-hidden min-h-0 p-4 flex items-center justify-center">
             <div className="text-center">
               <SimpleLoader size="lg" />
-              <p className="text-gray-400 mt-4">
+              <p className="text-muted-foreground mt-4">
                 {isValidating
                   ? t("docker.validating")
                   : t("docker.connectingToHost")}
@@ -338,7 +336,7 @@ export function DockerManager({
                 {currentHostConfig?.folder} / {title}
               </h1>
               {dockerValidation?.version && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {t("docker.version", { version: dockerValidation.version })}
                 </p>
               )}
@@ -363,7 +361,7 @@ export function DockerManager({
                 />
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-400">No session available</p>
+                  <p className="text-muted-foreground">No session available</p>
                 </div>
               )}
             </div>
@@ -377,7 +375,7 @@ export function DockerManager({
             />
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 Select a container to view details
               </p>
             </div>

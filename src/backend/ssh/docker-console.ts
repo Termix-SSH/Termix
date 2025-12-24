@@ -429,13 +429,59 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             activeSessions.set(sessionId, sshSession);
 
-            // Detect or use provided shell
-            const detectedShell =
-              shell || (await detectShell(sshSession, containerId));
-            sshSession.shell = detectedShell;
+            // Validate or detect shell
+            let shellToUse = shell || "bash";
+
+            // If a shell is explicitly provided, verify it exists in the container
+            if (shell) {
+              try {
+                await new Promise<void>((resolve, reject) => {
+                  client.exec(
+                    `docker exec ${containerId} which ${shell}`,
+                    (err, stream) => {
+                      if (err) return reject(err);
+
+                      let output = "";
+                      stream.on("data", (data: Buffer) => {
+                        output += data.toString();
+                      });
+
+                      stream.on("close", (code: number) => {
+                        if (code === 0 && output.trim()) {
+                          resolve();
+                        } else {
+                          reject(new Error(`Shell ${shell} not available`));
+                        }
+                      });
+
+                      stream.stderr.on("data", () => {
+                        // Ignore stderr
+                      });
+                    },
+                  );
+                });
+              } catch {
+                // Requested shell not found, detect available shell
+                dockerConsoleLogger.warn(
+                  `Requested shell ${shell} not found, detecting available shell`,
+                  {
+                    operation: "shell_validation",
+                    sessionId,
+                    containerId,
+                    requestedShell: shell,
+                  },
+                );
+                shellToUse = await detectShell(sshSession, containerId);
+              }
+            } else {
+              // No shell specified, detect available shell
+              shellToUse = await detectShell(sshSession, containerId);
+            }
+
+            sshSession.shell = shellToUse;
 
             // Create docker exec PTY
-            const execCommand = `docker exec -it ${containerId} /bin/${detectedShell}`;
+            const execCommand = `docker exec -it ${containerId} /bin/${shellToUse}`;
 
             client.exec(
               execCommand,
@@ -482,14 +528,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 });
 
                 stream.stderr.on("data", (data: Buffer) => {
-                  if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(
-                      JSON.stringify({
-                        type: "output",
-                        data: data.toString("utf8"),
-                      }),
-                    );
-                  }
+                  // Log stderr but don't send to terminal to avoid duplicate error messages
+                  dockerConsoleLogger.debug("Docker exec stderr", {
+                    operation: "docker_exec_stderr",
+                    sessionId,
+                    containerId,
+                    data: data.toString("utf8"),
+                  });
                 });
 
                 stream.on("close", () => {
@@ -512,7 +557,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 ws.send(
                   JSON.stringify({
                     type: "connected",
-                    data: { shell: detectedShell },
+                    data: {
+                      shell: shellToUse,
+                      requestedShell: shell,
+                      shellChanged: shell && shell !== shellToUse,
+                    },
                   }),
                 );
 
@@ -520,7 +569,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   operation: "console_start",
                   sessionId,
                   containerId,
-                  shell: detectedShell,
+                  shell: shellToUse,
+                  requestedShell: shell,
                 });
               },
             );

@@ -94,8 +94,8 @@ export function TunnelManager({
       };
 
   const containerClass = embedded
-    ? "h-full w-full text-white overflow-hidden bg-transparent"
-    : "bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden";
+    ? "h-full w-full text-foreground overflow-hidden bg-transparent"
+    : "bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden";
 
   return (
     <div style={wrapperStyle} className={containerClass}>

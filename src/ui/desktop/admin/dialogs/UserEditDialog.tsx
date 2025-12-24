@@ -6,13 +6,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from "@/components/ui/dialog.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Switch } from "@/components/ui/switch.tsx";
+import { Separator } from "@/components/ui/separator.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import {
   UserCog,
@@ -24,7 +24,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useConfirmation } from "@/hooks/use-confirmation";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getUserRoles,
   getRoles,
@@ -37,7 +37,7 @@ import {
   deleteUser,
   type UserRole,
   type Role,
-} from "@/ui/main-axios";
+} from "@/ui/main-axios.ts";
 
 interface User {
   id: string;
@@ -354,7 +354,7 @@ export function UserEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-dark-bg border-2 border-dark-border">
+      <DialogContent className="max-w-3xl bg-canvas border-2 border-edge">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCog className="w-5 h-5" />
@@ -367,7 +367,7 @@ export function UserEditDialog({
 
         <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto thin-scrollbar pr-2">
           {/* READ-ONLY INFO SECTION */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-dark-bg-panel rounded-lg border border-dark-border">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-surface rounded-lg border border-edge">
             <div>
               <Label className="text-muted-foreground text-xs">
                 {t("admin.username")}
@@ -408,7 +408,7 @@ export function UserEditDialog({
               <Shield className="h-4 w-4" />
               {t("admin.adminPrivileges")}
             </Label>
-            <div className="flex items-center justify-between p-3 border border-dark-border rounded-lg bg-dark-bg-panel">
+            <div className="flex items-center justify-between p-3 border border-edge rounded-lg bg-surface">
               <div className="flex-1">
                 <p className="font-medium">{t("admin.administratorRole")}</p>
                 <p className="text-sm text-muted-foreground">
@@ -487,7 +487,7 @@ export function UserEditDialog({
                       {userRoles.map((role) => (
                         <div
                           key={role.roleId}
-                          className="flex items-center justify-between p-3 border border-dark-border rounded-lg bg-dark-bg-panel"
+                          className="flex items-center justify-between p-3 border border-edge rounded-lg bg-surface"
                         >
                           <div>
                             <p className="font-medium text-sm">
@@ -508,7 +508,7 @@ export function UserEditDialog({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveRole(role.roleId)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -566,7 +566,7 @@ export function UserEditDialog({
               <Clock className="h-4 w-4" />
               {t("admin.sessionManagement")}
             </Label>
-            <div className="flex items-center justify-between p-3 border border-dark-border rounded-lg bg-dark-bg-panel">
+            <div className="flex items-center justify-between p-3 border border-edge rounded-lg bg-surface">
               <div className="flex-1">
                 <p className="font-medium text-sm">
                   {t("admin.revokeAllSessions")}

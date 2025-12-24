@@ -16,6 +16,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import type { DockerContainer } from "@/types/index.js";
 import {
   startDockerContainer,
@@ -57,6 +58,7 @@ export function ContainerCard({
   isSelected = false,
   onRefresh,
 }: ContainerCardProps): React.ReactElement {
+  const { t } = useTranslation();
   const [isStarting, setIsStarting] = React.useState(false);
   const [isStopping, setIsStopping] = React.useState(false);
   const [isRestarting, setIsRestarting] = React.useState(false);
@@ -102,10 +104,10 @@ export function ContainerCard({
       badge: "bg-purple-500/20 text-purple-300 border-purple-500/30",
     },
     dead: {
-      bg: "bg-gray-500/10",
-      border: "border-gray-500/20",
-      text: "text-gray-400",
-      badge: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+      bg: "bg-muted/10",
+      border: "border-muted/20",
+      text: "text-muted-foreground",
+      badge: "bg-muted/20 text-muted-foreground border-muted/30",
     },
   };
 
@@ -260,26 +262,32 @@ export function ContainerCard({
         <CardContent className="space-y-3 px-4 pb-3">
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.image")}</span>
-              <span className="truncate text-gray-200 text-xs">
+              <span className="text-muted-foreground min-w-[50px] text-xs">
+                {t("docker.image")}
+              </span>
+              <span className="truncate text-foreground text-xs">
                 {container.image}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.idLabel")}</span>
-              <span className="font-mono text-xs text-gray-200">
+              <span className="text-muted-foreground min-w-[50px] text-xs">
+                {t("docker.idLabel")}
+              </span>
+              <span className="font-mono text-xs text-foreground">
                 {container.id.substring(0, 12)}
               </span>
             </div>
             <div className="flex items-start gap-2">
-                            <span className="text-gray-400 min-w-[50px] text-xs shrink-0">{t("docker.ports")}</span>
+              <span className="text-muted-foreground min-w-[50px] text-xs shrink-0">
+                {t("docker.ports")}
+              </span>
               <div className="flex flex-wrap gap-1">
                 {portsList.length > 0 ? (
                   portsList.map((port, idx) => (
                     <Badge
                       key={idx}
                       variant="outline"
-                      className="text-xs font-mono bg-gray-500/10 text-gray-400 border-gray-500/30"
+                      className="text-xs font-mono bg-muted/10 text-muted-foreground border-muted/30"
                     >
                       {port}
                     </Badge>
@@ -287,7 +295,7 @@ export function ContainerCard({
                 ) : (
                   <Badge
                     variant="outline"
-                    className="text-xs bg-gray-500/10 text-gray-400 border-gray-500/30"
+                    className="text-xs bg-muted/10 text-muted-foreground border-muted/30"
                   >
                     {t("docker.noPorts")}
                   </Badge>
@@ -295,8 +303,10 @@ export function ContainerCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
-                            <span className="text-gray-400 min-w-[50px] text-xs">{t("docker.created")}</span>
-              <span className="text-gray-200 text-xs">
+              <span className="text-muted-foreground min-w-[50px] text-xs">
+                {t("docker.created")}
+              </span>
+              <span className="text-foreground text-xs">
                 {formatCreatedDate(container.created)}
               </span>
             </div>
@@ -390,7 +400,8 @@ export function ContainerCard({
                     )}
                   </Button>
                 </TooltipTrigger>
-                                  <TooltipContent>{t("docker.restart")}</TooltipContent>              </Tooltip>
+                <TooltipContent>{t("docker.restart")}</TooltipContent>{" "}
+              </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -407,7 +418,8 @@ export function ContainerCard({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                                  <TooltipContent>{t("docker.remove")}</TooltipContent>              </Tooltip>
+                <TooltipContent>{t("docker.remove")}</TooltipContent>{" "}
+              </Tooltip>
             </TooltipProvider>
           </div>
         </CardContent>
@@ -431,7 +443,9 @@ export function ContainerCard({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isRemoving}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();

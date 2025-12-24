@@ -209,13 +209,13 @@ export function LogViewer({
           {/* Search Filter */}
           <div className="mt-2">
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Filter logs..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-dark-bg border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -231,9 +231,11 @@ export function LogViewer({
             </div>
           ) : (
             <div className="h-full overflow-auto thin-scrollbar">
-              <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-gray-200 leading-relaxed">
+              <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-foreground leading-relaxed">
                 {filteredLogs || (
-                  <span className="text-gray-500">No logs available</span>
+                  <span className="text-muted-foreground">
+                    No logs available
+                  </span>
                 )}
                 <div ref={logsEndRef} />
               </pre>

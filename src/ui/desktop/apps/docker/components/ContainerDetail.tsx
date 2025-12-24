@@ -8,6 +8,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { DockerContainer, SSHHost } from "@/types/index.js";
 import { LogViewer } from "./LogViewer.tsx";
 import { ContainerStats } from "./ContainerStats.tsx";
@@ -28,6 +29,7 @@ export function ContainerDetail({
   hostConfig,
   onBack,
 }: ContainerDetailProps): React.ReactElement {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = React.useState("logs");
 
   const container = containers.find((c) => c.id === containerId);
@@ -36,7 +38,9 @@ export function ContainerDetail({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
-          <p className="text-gray-400 text-lg">{t("docker.containerNotFound")}</p>
+          <p className="text-muted-foreground text-lg">
+            {t("docker.containerNotFound")}
+          </p>
           <Button onClick={onBack} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t("docker.backToList")}
@@ -56,7 +60,9 @@ export function ContainerDetail({
         </Button>
         <div className="min-w-0 flex-1">
           <h2 className="font-bold text-lg truncate">{container.name}</h2>
-          <p className="text-sm text-gray-400 truncate">{container.image}</p>
+          <p className="text-sm text-muted-foreground truncate">
+            {container.image}
+          </p>
         </div>
       </div>
       <Separator className="p-0.25 w-full" />
@@ -72,7 +78,9 @@ export function ContainerDetail({
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="logs">{t("docker.logs")}</TabsTrigger>
               <TabsTrigger value="stats">{t("docker.stats")}</TabsTrigger>
-              <TabsTrigger value="console">{t("docker.consoleTab")}</TabsTrigger>
+              <TabsTrigger value="console">
+                {t("docker.consoleTab")}
+              </TabsTrigger>
             </TabsList>
           </div>
 

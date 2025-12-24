@@ -24,8 +24,7 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
   const interfaces = network?.interfaces || [];
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
-
+    <div className="h-full w-full p-4 rounded-lg bg-elevated border border-edge/50 hover:bg-elevated/70 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <Network className="h-5 w-5 text-indigo-400" />
         <h3 className="font-semibold text-lg text-foreground">
@@ -43,7 +42,7 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
           interfaces.map((iface, index: number) => (
             <div
               key={index}
-              className="p-3 rounded-lg bg-canvas/50 border border-edge/30 hover:bg-canvas/60 transition-colors"
+              className="p-3 rounded-lg bg-canvas/40 border border-edge/30 hover:bg-canvas/50"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

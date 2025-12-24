@@ -322,7 +322,9 @@ export function AppView({
               ? TERMINAL_THEMES.termixDark.colors
               : TERMINAL_THEMES.termixLight.colors;
           } else {
-            themeColors = TERMINAL_THEMES[terminalConfig.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+            themeColors =
+              TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+              TERMINAL_THEMES.termixDark.colors;
           }
           const backgroundColor = themeColors.background;
 
@@ -331,7 +333,9 @@ export function AppView({
               <div
                 className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
-                  backgroundColor: isTerminal ? backgroundColor : "var(--bg-base)",
+                  backgroundColor: isTerminal
+                    ? backgroundColor
+                    : "var(--bg-base)",
                 }}
               >
                 {t.type === "terminal" ? (
@@ -409,7 +413,7 @@ export function AppView({
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
-      background: "var(--color-border-base)",
+      background: isDarkMode ? "#303032" : "#e5e7eb",
     } as React.CSSProperties;
     const commonGroupProps: {
       onLayout: () => void;
@@ -703,7 +707,9 @@ export function AppView({
       ? TERMINAL_THEMES.termixDark.colors
       : TERMINAL_THEMES.termixLight.colors;
   } else {
-    containerThemeColors = TERMINAL_THEMES[terminalConfig.theme]?.colors || TERMINAL_THEMES.termixDark.colors;
+    containerThemeColors =
+      TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+      TERMINAL_THEMES.termixDark.colors;
   }
   const terminalBackgroundColor = containerThemeColors.background;
 

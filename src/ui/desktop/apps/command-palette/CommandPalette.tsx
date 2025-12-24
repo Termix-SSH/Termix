@@ -239,7 +239,7 @@ export function CommandPalette({
     >
       <Command
         className={cn(
-          "w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-edge shadow-md flex flex-col",
+          "w-3/4 max-w-2xl max-h-[60vh] rounded-lg border-2 border-edge shadow-md flex flex-col bg-elevated",
           "transition-all duration-200 ease-out",
           !isOpen && "scale-95 opacity-0",
         )}

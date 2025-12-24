@@ -52,15 +52,15 @@
   --bg-base: #fcfcfc;
   --bg-elevated: #ffffff;
   --bg-surface: #f3f4f6;
-  --bg-surface-hover: #e5e7eb;            /* Panel hover - replaces dark-bg-panel-hover */
+  --bg-surface-hover: #e5e7eb; /* Panel hover - replaces dark-bg-panel-hover */
   --bg-input: #ffffff;
   --bg-deepest: #e5e7eb;
   --bg-header: #eeeeef;
   --bg-button: #f3f4f6;
   --bg-active: #e5e7eb;
-  --bg-light: #fafafa;                    /* Light background - replaces dark-bg-light */
-  --bg-subtle: #f5f5f5;                   /* Very light background - replaces dark-bg-very-light */
-  --bg-interact: #d1d5db;                 /* Interactive/active state - replaces dark-active */
+  --bg-light: #fafafa; /* Light background - replaces dark-bg-light */
+  --bg-subtle: #f5f5f5; /* Very light background - replaces dark-bg-very-light */
+  --bg-interact: #d1d5db; /* Interactive/active state - replaces dark-active */
   --border-base: #e5e7eb;
   --border-panel: #d1d5db;
   --border-subtle: #f3f4f6;
@@ -203,19 +203,18 @@
   --sidebar-border: #ffffff1a;
   --sidebar-ring: #71717a;
 
-  /* NEW SEMANTIC VARIABLES - Dark Mode Background Overrides */
   --bg-base: #18181b;
   --bg-elevated: #0e0e10;
   --bg-surface: #1b1b1e;
-  --bg-surface-hover: #232327;            /* Panel hover */
+  --bg-surface-hover: #232327;
   --bg-input: #222225;
   --bg-deepest: #09090b;
   --bg-header: #131316;
   --bg-button: #23232a;
   --bg-active: #1d1d1f;
-  --bg-light: #141416;                    /* Light background */
-  --bg-subtle: #101014;                   /* Very light background */
-  --bg-interact: #2a2a2c;                 /* Interactive/active state */
+  --bg-light: #141416;
+  --bg-subtle: #101014;
+  --bg-interact: #2a2a2c;
   --border-base: #303032;
   --border-panel: #222224;
   --border-subtle: #5a5a5d;
@@ -227,8 +226,8 @@
   --border-active: #2d2d30;
 
   /* NEW SEMANTIC VARIABLES - Dark Mode Text Color Overrides */
-  --foreground-secondary: #d1d5db;                    /* Matches text-gray-300 */
-  --foreground-subtle: #6b7280;                       /* Matches text-gray-500 */
+  --foreground-secondary: #d1d5db; /* Matches text-gray-300 */
+  --foreground-subtle: #6b7280; /* Matches text-gray-500 */
 
   /* Scrollbar Colors - Dark Mode */
   --scrollbar-thumb: #434345;

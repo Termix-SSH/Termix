@@ -42,7 +42,9 @@ export function ContainerStats({
       const data = await getContainerStats(sessionId, containerId);
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("docker.failedToFetchStats"));
+      setError(
+        err instanceof Error ? err.message : t("docker.failedToFetchStats"),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -61,11 +63,11 @@ export function ContainerStats({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-2">
-          <Activity className="h-12 w-12 text-gray-600 mx-auto" />
-          <p className="text-gray-400 text-lg">
+          <Activity className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+          <p className="text-muted-foreground text-lg">
             {t("docker.containerNotRunning")}
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             {t("docker.startContainerToViewStats")}
           </p>
         </div>
@@ -78,7 +80,9 @@ export function ContainerStats({
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <SimpleLoader size="lg" />
-          <p className="text-gray-400 mt-4">{t("docker.loadingStats")}</p>
+          <p className="text-muted-foreground mt-4">
+            {t("docker.loadingStats")}
+          </p>
         </div>
       </div>
     );
@@ -91,7 +95,7 @@ export function ContainerStats({
           <p className="text-red-400 text-lg">
             {t("docker.errorLoadingStats")}
           </p>
-          <p className="text-gray-500 text-sm">{error}</p>
+          <p className="text-muted-foreground text-sm">{error}</p>
         </div>
       </div>
     );
@@ -100,7 +104,7 @@ export function ContainerStats({
   if (!stats) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-400">{t("docker.noStatsAvailable")}</p>
+        <p className="text-muted-foreground">{t("docker.noStatsAvailable")}</p>
       </div>
     );
   }
@@ -121,7 +125,10 @@ export function ContainerStats({
         <CardContent className="px-4 pb-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-400">{t("docker.current")}</span>              <span className="font-mono font-semibold text-blue-300">
+              <span className="text-muted-foreground">
+                {t("docker.current")}
+              </span>{" "}
+              <span className="font-mono font-semibold text-blue-400">
                 {stats.cpu}
               </span>
             </div>
@@ -141,14 +148,18 @@ export function ContainerStats({
         <CardContent className="px-4 pb-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.usedLimit")}</span>
-              <span className="font-mono font-semibold text-purple-300">
+              <span className="text-muted-foreground">
+                {t("docker.usedLimit")}
+              </span>
+              <span className="font-mono font-semibold text-purple-400">
                 {stats.memoryUsed} / {stats.memoryLimit}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.percentage")}</span>
-              <span className="font-mono text-purple-300">
+              <span className="text-muted-foreground">
+                {t("docker.percentage")}
+              </span>
+              <span className="font-mono text-purple-400">
                 {stats.memoryPercent}
               </span>
             </div>
@@ -168,12 +179,14 @@ export function ContainerStats({
         <CardContent className="px-4 pb-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.input")}</span>
-              <span className="font-mono text-green-300">{stats.netInput}</span>
+              <span className="text-muted-foreground">{t("docker.input")}</span>
+              <span className="font-mono text-green-400">{stats.netInput}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.output")}</span>
-              <span className="font-mono text-green-300">
+              <span className="text-muted-foreground">
+                {t("docker.output")}
+              </span>
+              <span className="font-mono text-green-400">
                 {stats.netOutput}
               </span>
             </div>
@@ -192,21 +205,23 @@ export function ContainerStats({
         <CardContent className="px-4 pb-3">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.read")}</span>
-              <span className="font-mono text-orange-300">
+              <span className="text-muted-foreground">{t("docker.read")}</span>
+              <span className="font-mono text-orange-400">
                 {stats.blockRead}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">{t("docker.write")}</span>
-              <span className="font-mono text-orange-300">
+              <span className="text-muted-foreground">{t("docker.write")}</span>
+              <span className="font-mono text-orange-400">
                 {stats.blockWrite}
               </span>
             </div>
             {stats.pids && (
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">{t("docker.pids")}</span>
-                <span className="font-mono text-orange-300">{stats.pids}</span>
+                <span className="text-muted-foreground">
+                  {t("docker.pids")}
+                </span>
+                <span className="font-mono text-orange-400">{stats.pids}</span>
               </div>
             )}
           </div>
@@ -224,17 +239,17 @@ export function ContainerStats({
         <CardContent className="px-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">{t("docker.name")}</span>
-              <span className="font-mono text-gray-200">{containerName}</span>
+              <span className="text-muted-foreground">{t("docker.name")}</span>
+              <span className="font-mono text-foreground">{containerName}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">{t("docker.id")}</span>
-              <span className="font-mono text-sm text-gray-300">
+              <span className="text-muted-foreground">{t("docker.id")}</span>
+              <span className="font-mono text-sm text-foreground">
                 {containerId.substring(0, 12)}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">{t("docker.state")}</span>
+              <span className="text-muted-foreground">{t("docker.state")}</span>
               <span className="font-semibold text-green-400 capitalize">
                 {containerState}
               </span>
