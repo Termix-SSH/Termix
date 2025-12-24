@@ -6,3 +6,4 @@ export { UptimeWidget } from "./UptimeWidget";
 export { ProcessesWidget } from "./ProcessesWidget";
 export { SystemWidget } from "./SystemWidget";
 export { LoginStatsWidget } from "./LoginStatsWidget";
+export { FirewallWidget } from "./FirewallWidget";
