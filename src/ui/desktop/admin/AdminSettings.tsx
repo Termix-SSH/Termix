@@ -768,23 +768,38 @@ export function AdminSettings({
                 <Users className="h-4 w-4" />
                 {t("admin.general")}
               </TabsTrigger>
-              <TabsTrigger value="oidc" className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
+              <TabsTrigger
+                value="oidc"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
                 <Shield className="h-4 w-4" />
                 OIDC
               </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
+              <TabsTrigger
+                value="users"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
                 <Users className="h-4 w-4" />
                 {t("admin.users")}
               </TabsTrigger>
-              <TabsTrigger value="sessions" className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
+              <TabsTrigger
+                value="sessions"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
                 <Clock className="h-4 w-4" />
                 Sessions
               </TabsTrigger>
-              <TabsTrigger value="roles" className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
+              <TabsTrigger
+                value="roles"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
                 <Shield className="h-4 w-4" />
                 {t("rbac.roles.label")}
               </TabsTrigger>
-              <TabsTrigger value="security" className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge">
+              <TabsTrigger
+                value="security"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
                 <Database className="h-4 w-4" />
                 {t("admin.databaseSecurity")}
               </TabsTrigger>
@@ -795,27 +810,27 @@ export function AdminSettings({
                 <h3 className="text-lg font-semibold">
                   {t("admin.userRegistration")}
                 </h3>
-                  <label className="flex items-center gap-2">
-                    <Checkbox
-                      checked={allowRegistration}
-                      onCheckedChange={handleToggleRegistration}
-                      disabled={regLoading || !allowPasswordLogin}
-                    />
-                    {t("admin.allowNewAccountRegistration")}
-                    {!allowPasswordLogin && (
-                      <span className="text-xs text-muted-foreground">
-                        ({t("admin.requiresPasswordLogin")})
-                      </span>
-                    )}
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <Checkbox
-                      checked={allowPasswordLogin}
-                      onCheckedChange={handleTogglePasswordLogin}
-                      disabled={passwordLoginLoading}
-                    />
-                    {t("admin.allowPasswordLogin")}
-                  </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allowRegistration}
+                    onCheckedChange={handleToggleRegistration}
+                    disabled={regLoading || !allowPasswordLogin}
+                  />
+                  {t("admin.allowNewAccountRegistration")}
+                  {!allowPasswordLogin && (
+                    <span className="text-xs text-muted-foreground">
+                      ({t("admin.requiresPasswordLogin")})
+                    </span>
+                  )}
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allowPasswordLogin}
+                    onCheckedChange={handleTogglePasswordLogin}
+                    disabled={passwordLoginLoading}
+                  />
+                  {t("admin.allowPasswordLogin")}
+                </label>
               </div>
             </TabsContent>
 
@@ -1189,7 +1204,9 @@ export function AdminSettings({
             <TabsContent value="sessions" className="space-y-6">
               <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">{t("admin.sessionManagement")}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {t("admin.sessionManagement")}
+                  </h3>
                   <Button
                     onClick={fetchSessions}
                     disabled={sessionsLoading}
@@ -1297,7 +1314,9 @@ export function AdminSettings({
                                       )
                                     }
                                     className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 text-xs"
-                                    title={t("admin.revokeAllUserSessionsTitle")}
+                                    title={t(
+                                      "admin.revokeAllUserSessionsTitle",
+                                    )}
                                   >
                                     {t("admin.revokeAll")}
                                   </Button>
@@ -1314,7 +1333,9 @@ export function AdminSettings({
             </TabsContent>
 
             <TabsContent value="roles" className="space-y-6">
-              <RoleManagement />
+              <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
+                <RoleManagement />
+              </div>
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
@@ -1457,10 +1478,11 @@ export function AdminSettings({
         >
           <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
             <DialogHeader>
-                              <DialogTitle className="flex items-center gap-2">
-                                <Link2 className="w-5 h-5" />
-                                {t("admin.linkOidcToPasswordAccount")}
-                              </DialogTitle>              <DialogDescription className="text-muted-foreground">
+              <DialogTitle className="flex items-center gap-2">
+                <Link2 className="w-5 h-5" />
+                {t("admin.linkOidcToPasswordAccount")}
+              </DialogTitle>{" "}
+              <DialogDescription className="text-muted-foreground">
                 {t("admin.linkOidcToPasswordAccountDescription", {
                   username: linkOidcUser?.username,
                 })}

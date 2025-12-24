@@ -29,7 +29,6 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
 
   return (
     <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
-
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <List className="h-5 w-5 text-yellow-400" />
         <h3 className="font-semibold text-lg text-foreground">
@@ -60,15 +59,10 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {topProcesses.map((proc) => (
+            {topProcesses.map((proc, index) => (
               <div
-
-                key={proc.pid}
-                className="p-2.5 rounded-lg bg-dark-bg/30 hover:bg-dark-bg/50 transition-colors border border-dark-border/20"
-
                 key={index}
                 className="p-2.5 rounded-lg bg-canvas/30 hover:bg-canvas/50 transition-colors border border-edge/20"
-
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-mono text-muted-foreground font-medium">
@@ -82,7 +76,9 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
                 <div className="text-xs text-foreground font-mono truncate mb-1">
                   {proc.command}
                 </div>
-                <div className="text-xs text-foreground-subtle">User: {proc.user}</div>
+                <div className="text-xs text-foreground-subtle">
+                  User: {proc.user}
+                </div>
               </div>
             ))}
           </div>

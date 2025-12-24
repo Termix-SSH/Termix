@@ -165,8 +165,7 @@
     "keyTypeEcdsaP521": "ECDSA P-521 (SSH)",
     "keyTypeDsa": "DSA (SSH)",
     "keyTypeRsaSha256": "RSA-SHA2-256",
-    "keyTypeRsaSha512": "RSA-SHA2-512"
-  },
+    "keyTypeRsaSha512": "RSA-SHA2-512",
     "keyPairGeneratedSuccessfully": "{{keyType}} key pair generated successfully",
     "failedToGenerateKeyPair": "Failed to generate key pair",
     "generateKeyPairNote": "Generate a new SSH key pair directly. This will replace any existing keys in the form.",
@@ -286,7 +285,30 @@
     "deleteTooltip": "Delete command",
     "tabHint": "Use Tab in Terminal to autocomplete from command history",
     "authRequiredRefresh": "Authentication required. Please refresh the page.",
-    "dataAccessLockedReauth": "Data access locked. Please re-authenticate."
+    "dataAccessLockedReauth": "Data access locked. Please re-authenticate.",
+    "loading": "Loading command history...",
+    "error": "Error Loading History"
+  },
+  "splitScreen": {
+    "title": "Split Screen",
+    "none": "None",
+    "twoSplit": "2-Way",
+    "threeSplit": "3-Way",
+    "fourSplit": "4-Way",
+    "availableTabs": "Available Tabs",
+    "dragTabsHint": "Drag tabs to the layout cells below to assign them",
+    "layout": "Split Screen Layout",
+    "dropHere": "Drop tab here",
+    "apply": "Apply Split",
+    "clear": "Clear Split",
+    "selectMode": "Select a split screen mode",
+    "helpText": "Choose how many tabs you want to view at once",
+    "success": "Split screen applied successfully",
+    "cleared": "Split screen cleared",
+    "error": {
+      "noAssignments": "Please assign at least one tab to the layout",
+      "fillAllSlots": "Please fill all {{count}} slots before applying"
+    }
   },
   "homepage": {
     "loggedInTitle": "Logged in!",
@@ -1578,7 +1600,7 @@
     "connecting": "Connecting...",
     "disconnecting": "Disconnecting...",
     "unknownTunnelStatus": "Unknown",
-    "statusUnknown": "Unknown"
+    "statusUnknown": "Unknown",
     "error": "Error",
     "failed": "Failed",
     "retrying": "Retrying",
@@ -1593,7 +1615,7 @@
     "attempt": "Attempt {{current}} of {{max}}",
     "nextRetryIn": "Next retry in {{seconds}} seconds",
     "checkDockerLogs": "Check your Docker logs for the error reason, join the",
-    "orCreate": "or create a ",,
+    "orCreate": "or create a ",
     "noTunnelConnections": "No tunnel connections configured",
     "tunnelConnections": "Tunnel Connections",
     "addTunnel": "Add Tunnel",

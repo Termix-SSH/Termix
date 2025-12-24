@@ -120,7 +120,7 @@ export function LeftSidebar({
       setCurrentTab(sshManagerTab.id);
       return;
     }
-    const id = addTab({ type: "ssh_manager", title: t('nav.hostManager') });
+    const id = addTab({ type: "ssh_manager", title: t("nav.hostManager") });
     setCurrentTab(id);
   };
   const adminTab = tabList.find((t) => t.type === "admin");
@@ -481,7 +481,7 @@ export function LeftSidebar({
           <Sidebar variant="floating">
             <SidebarHeader>
               <SidebarGroupLabel className="text-lg font-bold text-foreground">
-                {t('common.appName')}
+                {t("common.appName")}
                 <div className="absolute right-5 flex gap-1">
                   <Button
                     variant="outline"
@@ -618,8 +618,8 @@ export function LeftSidebar({
                 className="absolute top-0 h-full cursor-col-resize z-[60]"
                 onMouseDown={handleMouseDown}
                 style={{
-                  right: "-8px",
-                  width: "18px",
+                  right: "-4px",
+                  width: "8px",
                   backgroundColor: isResizing
                     ? "var(--bg-interact)"
                     : "transparent",

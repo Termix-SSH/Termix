@@ -36,7 +36,6 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
 
   return (
     <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
-
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <UserCheck className="h-5 w-5 text-green-400" />
         <h3 className="font-semibold text-lg text-foreground">
@@ -78,15 +77,10 @@ export function LoginStatsWidget({ metrics }: LoginStatsWidgetProps) {
               </div>
             ) : (
               <div className="space-y-1">
-                {recentLogins.slice(0, 5).map((login) => (
+                {recentLogins.slice(0, 5).map((login, idx) => (
                   <div
-
-                    key={`${login.user}-${login.time}-${login.ip}`}
-                    className="text-xs bg-dark-bg-darker p-2 rounded border border-dark-border/30 flex justify-between items-center"
-
                     key={idx}
                     className="text-xs bg-elevated p-2 rounded border border-edge/30 flex justify-between items-center"
-
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-green-400 font-mono truncate">
