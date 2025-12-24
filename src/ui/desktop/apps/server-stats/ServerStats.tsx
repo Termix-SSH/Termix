@@ -26,6 +26,7 @@ import {
   ProcessesWidget,
   SystemWidget,
   LoginStatsWidget,
+  PortsWidget,
 } from "./widgets";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
@@ -157,6 +158,11 @@ export function ServerStats({
       case "login_stats":
         return (
           <LoginStatsWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "ports":
+        return (
+          <PortsWidget metrics={metrics} metricsHistory={metricsHistory} />
         );
 
       default:
