@@ -16,13 +16,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t zh
-      - run: |
-          mkdir -p src/locales/zh
-          [ -f "src/locales/zh.json" ] && mv src/locales/zh.json src/locales/zh/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-zh
-          path: src/locales/zh/
+          path: src/locales/zh.json
         continue-on-error: true
 
   translate-ru:
@@ -33,16 +30,13 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ru
-      - run: |
-          mkdir -p src/locales/ru
-          [ -f "src/locales/ru.json" ] && mv src/locales/ru.json src/locales/ru/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ru
-          path: src/locales/ru/
+          path: src/locales/ru.json
         continue-on-error: true
 
-  translate-pt-br:
+  translate-pt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +44,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pt
-      - run: |
-          mkdir -p src/locales/pt-BR
-          [ -f "src/locales/pt.json" ] && mv src/locales/pt.json src/locales/pt-BR/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
-          name: translations-pt-br
-          path: src/locales/pt-BR/
+          name: translations-pt
+          path: src/locales/pt.json
         continue-on-error: true
 
   translate-fr:
@@ -67,13 +58,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t fr
-      - run: |
-          mkdir -p src/locales/fr
-          [ -f "src/locales/fr.json" ] && mv src/locales/fr.json src/locales/fr/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-fr
-          path: src/locales/fr/
+          path: src/locales/fr.json
         continue-on-error: true
 
   translate-es:
@@ -84,13 +72,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t es
-      - run: |
-          mkdir -p src/locales/es
-          [ -f "src/locales/es.json" ] && mv src/locales/es.json src/locales/es/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-es
-          path: src/locales/es/
+          path: src/locales/es.json
         continue-on-error: true
 
   translate-de:
@@ -101,13 +86,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t de
-      - run: |
-          mkdir -p src/locales/de
-          [ -f "src/locales/de.json" ] && mv src/locales/de.json src/locales/de/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-de
-          path: src/locales/de/
+          path: src/locales/de.json
         continue-on-error: true
 
   translate-hi:
@@ -118,13 +100,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t hi
-      - run: |
-          mkdir -p src/locales/hi
-          [ -f "src/locales/hi.json" ] && mv src/locales/hi.json src/locales/hi/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-hi
-          path: src/locales/hi/
+          path: src/locales/hi.json
         continue-on-error: true
 
   translate-bn:
@@ -135,13 +114,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t bn
-      - run: |
-          mkdir -p src/locales/bn
-          [ -f "src/locales/bn.json" ] && mv src/locales/bn.json src/locales/bn/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-bn
-          path: src/locales/bn/
+          path: src/locales/bn.json
         continue-on-error: true
 
   translate-ja:
@@ -152,13 +128,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ja
-      - run: |
-          mkdir -p src/locales/ja
-          [ -f "src/locales/ja.json" ] && mv src/locales/ja.json src/locales/ja/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ja
-          path: src/locales/ja/
+          path: src/locales/ja.json
         continue-on-error: true
 
   translate-vi:
@@ -169,13 +142,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t vi
-      - run: |
-          mkdir -p src/locales/vi
-          [ -f "src/locales/vi.json" ] && mv src/locales/vi.json src/locales/vi/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-vi
-          path: src/locales/vi/
+          path: src/locales/vi.json
         continue-on-error: true
 
   translate-tr:
@@ -186,13 +156,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t tr
-      - run: |
-          mkdir -p src/locales/tr
-          [ -f "src/locales/tr.json" ] && mv src/locales/tr.json src/locales/tr/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-tr
-          path: src/locales/tr/
+          path: src/locales/tr.json
         continue-on-error: true
 
   translate-ko:
@@ -203,13 +170,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ko
-      - run: |
-          mkdir -p src/locales/ko
-          [ -f "src/locales/ko.json" ] && mv src/locales/ko.json src/locales/ko/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ko
-          path: src/locales/ko/
+          path: src/locales/ko.json
         continue-on-error: true
 
   translate-it:
@@ -220,13 +184,10 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t it
-      - run: |
-          mkdir -p src/locales/it
-          [ -f "src/locales/it.json" ] && mv src/locales/it.json src/locales/it/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-it
-          path: src/locales/it/
+          path: src/locales/it.json
         continue-on-error: true
 
   translate-he:
@@ -237,17 +198,14 @@ jobs:
         with:
           node-version: "20"
       - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t he
-      - run: |
-          mkdir -p src/locales/he
-          [ -f "src/locales/he.json" ] && mv src/locales/he.json src/locales/he/translation.json || true
       - uses: actions/upload-artifact@v4
         with:
           name: translations-he
-          path: src/locales/he/
+          path: src/locales/he.json
         continue-on-error: true
 
   create-pr:
-    needs: [translate-zh, translate-ru, translate-pt-br, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he]
+    needs: [translate-zh, translate-ru, translate-pt, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -257,23 +215,22 @@ jobs:
         with:
           path: translations-temp
 
-      - name: Move translations to correct locations
+      - name: Move translations to src/locales
         run: |
-          mkdir -p src/locales
-          cp -r translations-temp/translations-zh/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-ru/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-pt-br/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-fr/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-es/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-de/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-hi/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-bn/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-ja/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-vi/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-tr/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-ko/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-it/* src/locales/ 2>/dev/null || true
-          cp -r translations-temp/translations-he/* src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-zh/zh.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-ru/ru.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-pt/pt.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-fr/fr.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-es/es.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-de/de.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-hi/hi.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-bn/bn.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-ja/ja.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-vi/vi.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-tr/tr.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-ko/ko.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-it/it.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-he/he.json src/locales/ 2>/dev/null || true
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6

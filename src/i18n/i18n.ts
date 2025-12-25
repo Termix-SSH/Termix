@@ -3,20 +3,20 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 import enTranslation from "../locales/en.json";
-import zhTranslation from "../locales/zh/translation.json";
-import deTranslation from "../locales/de/translation.json";
-import ptbrTranslation from "../locales/pt-BR/translation.json";
-import ruTranslation from "../locales/ru/translation.json";
-import frTranslation from "../locales/fr/translation.json";
-import koTranslation from "../locales/ko/translation.json";
-import itTranslation from "../locales/it/translation.json";
-import esTranslation from "../locales/es/translation.json";
-import hiTranslation from "../locales/hi/translation.json";
-import bnTranslation from "../locales/bn/translation.json";
-import jaTranslation from "../locales/ja/translation.json";
-import viTranslation from "../locales/vi/translation.json";
-import trTranslation from "../locales/tr/translation.json";
-import heTranslation from "../locales/he/translation.json";
+import zhTranslation from "../locales/zh.json";
+import deTranslation from "../locales/de.json";
+import ptTranslation from "../locales/pt.json";
+import ruTranslation from "../locales/ru.json";
+import frTranslation from "../locales/fr.json";
+import koTranslation from "../locales/ko.json";
+import itTranslation from "../locales/it.json";
+import esTranslation from "../locales/es.json";
+import hiTranslation from "../locales/hi.json";
+import bnTranslation from "../locales/bn.json";
+import jaTranslation from "../locales/ja.json";
+import viTranslation from "../locales/vi.json";
+import trTranslation from "../locales/tr.json";
+import heTranslation from "../locales/he.json";
 
 i18n
   .use(LanguageDetector)
@@ -26,7 +26,7 @@ i18n
       "en",
       "zh",
       "de",
-      "ptbr",
+      "pt",
       "ru",
       "fr",
       "ko",
@@ -60,8 +60,8 @@ i18n
       de: {
         translation: deTranslation,
       },
-      ptbr: {
-        translation: ptbrTranslation,
+      pt: {
+        translation: ptTranslation,
       },
       ru: {
         translation: ruTranslation,

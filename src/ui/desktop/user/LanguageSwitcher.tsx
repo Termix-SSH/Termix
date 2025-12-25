@@ -14,9 +14,9 @@ const languages = [
   { code: "zh", name: "Chinese", nativeName: "中文" },
   { code: "de", name: "German", nativeName: "Deutsch" },
   {
-    code: "ptbr",
-    name: "Brazilian Portuguese",
-    nativeName: "Português Brasileiro",
+    code: "pt",
+    name: "Portuguese",
+    nativeName: "Português",
   },
   { code: "ru", name: "Russian", nativeName: "Русский" },
   { code: "fr", name: "French", nativeName: "Français" },
