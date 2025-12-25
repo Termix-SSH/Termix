@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
-import { ServerStats as ServerView } from "@/ui/desktop/apps/server-stats/ServerStats.tsx";
-import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
-import { TunnelManager } from "@/ui/desktop/apps/tunnel/TunnelManager.tsx";
-import { DockerManager } from "@/ui/desktop/apps/docker/DockerManager.tsx";
+import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
+import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
+import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
+import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
+import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,

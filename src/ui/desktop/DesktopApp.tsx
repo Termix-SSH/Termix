@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host-manager/HostManager.tsx";
+import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
-import { CommandHistoryProvider } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
+import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
@@ -63,8 +63,10 @@ function AppContent() {
         const now = Date.now();
         if (now - lastAltPressTime.current < 300) {
           // Use setTheme to properly update React state (not just DOM class)
-          const currentIsDark = theme === "dark" ||
-            (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          const currentIsDark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
           const newTheme = currentIsDark ? "light" : "dark";
           setTheme(newTheme);
           console.log("[DEBUG] Theme toggled:", newTheme);

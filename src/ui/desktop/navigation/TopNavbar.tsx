@@ -8,7 +8,7 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
-import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
+import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 
 interface TabData {
   id: number;

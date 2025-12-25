@@ -1,0 +1,8 @@
+export { CpuWidget } from "./CpuWidget.tsx";
+export { MemoryWidget } from "./MemoryWidget.tsx";
+export { DiskWidget } from "./DiskWidget.tsx";
+export { NetworkWidget } from "./NetworkWidget.tsx";
+export { UptimeWidget } from "./UptimeWidget.tsx";
+export { ProcessesWidget } from "./ProcessesWidget.tsx";
+export { SystemWidget } from "./SystemWidget.tsx";
+export { LoginStatsWidget } from "./LoginStatsWidget.tsx";
