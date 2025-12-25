@@ -22,6 +22,13 @@ const languages = [
   { code: "fr", name: "French", nativeName: "Français" },
   { code: "it", name: "Italian", nativeName: "Italiano" },
   { code: "ko", name: "Korean", nativeName: "한국어" },
+  { code: "es", name: "Spanish", nativeName: "Español" },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
+  { code: "bn", name: "Bengali", nativeName: "বাংলা" },
+  { code: "ja", name: "Japanese", nativeName: "日本語" },
+  { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt" },
+  { code: "tr", name: "Turkish", nativeName: "Türkçe" },
+  { code: "he", name: "Hebrew", nativeName: "עברית" },
 ];
 
 export function LanguageSwitcher() {

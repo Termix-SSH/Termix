@@ -5,30 +5,286 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  translate:
+  translate-zh:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
-
-      - name: Translate with i18n-ai-translate
-        uses: taahamahdi/i18n-ai-translate@master
+          node-version: "20"
+      - name: Translate to Chinese
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t zh
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          json-file-path: src/locales/en/translation.json
-          api-key: ${{ secrets.GEMINI_API_KEY }}
-          engine: gemini
-          output-languages: de fr it ko pt-br ru zh
-          base-branch: ${{ github.ref_name }}
+          name: translations-zh
+          path: src/locales/zh/
 
-      - name: Commit and push translations
+  translate-ru:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Russian
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ru
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-ru
+          path: src/locales/ru/
+
+  translate-pt-br:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Portuguese (Brazil)
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add src/locales/
-          git diff --staged --quiet || git commit -m "chore: auto-translate to multiple languages [skip ci]"
-          git push
+          npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pt
+          mv src/locales/pt src/locales/pt-BR || true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-pt-br
+          path: src/locales/pt-BR/
+
+  translate-fr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to French
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t fr
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-fr
+          path: src/locales/fr/
+
+  translate-es:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Spanish
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t es
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-es
+          path: src/locales/es/
+
+  translate-de:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to German
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t de
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-de
+          path: src/locales/de/
+
+  translate-hi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Hindi
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t hi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-hi
+          path: src/locales/hi/
+
+  translate-bn:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Bengali
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t bn
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-bn
+          path: src/locales/bn/
+
+  translate-ja:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Japanese
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ja
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-ja
+          path: src/locales/ja/
+
+  translate-vi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Vietnamese
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t vi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-vi
+          path: src/locales/vi/
+
+  translate-tr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Turkish
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t tr
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-tr
+          path: src/locales/tr/
+
+  translate-ko:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Korean
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ko
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-ko
+          path: src/locales/ko/
+
+  translate-it:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Italian
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t it
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-it
+          path: src/locales/it/
+
+  translate-he:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Translate to Hebrew
+        run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t he
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: translations-he
+          path: src/locales/he/
+
+  create-pr:
+    needs: [translate-zh, translate-ru, translate-pt-br, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: translations-temp
+
+      - name: Move translations to correct locations
+        run: |
+          mkdir -p src/locales
+          cp -r translations-temp/translations-zh/* src/locales/ || true
+          cp -r translations-temp/translations-ru/* src/locales/ || true
+          cp -r translations-temp/translations-pt-br/* src/locales/ || true
+          cp -r translations-temp/translations-fr/* src/locales/ || true
+          cp -r translations-temp/translations-es/* src/locales/ || true
+          cp -r translations-temp/translations-de/* src/locales/ || true
+          cp -r translations-temp/translations-hi/* src/locales/ || true
+          cp -r translations-temp/translations-bn/* src/locales/ || true
+          cp -r translations-temp/translations-ja/* src/locales/ || true
+          cp -r translations-temp/translations-vi/* src/locales/ || true
+          cp -r translations-temp/translations-tr/* src/locales/ || true
+          cp -r translations-temp/translations-ko/* src/locales/ || true
+          cp -r translations-temp/translations-it/* src/locales/ || true
+          cp -r translations-temp/translations-he/* src/locales/ || true
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: auto-translate to multiple languages"
+          branch: translations-update
+          delete-branch: true
+          title: "chore: Update translations for all languages"
+          body: |
+            Auto-generated translations
