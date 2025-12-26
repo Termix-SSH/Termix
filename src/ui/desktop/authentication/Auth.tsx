@@ -75,6 +75,12 @@ export function Auth({
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
 
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
+
   const isInElectronWebView = () => {
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
@@ -771,7 +777,17 @@ export function Auth({
   if (dbHealthChecking && !dbConnectionFailed) {
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center bg-canvas ${className || ""}`}
+        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
+        style={{
+          background: "var(--bg-elevated)",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            ${lineColor} 35px,
+            ${lineColor} 37px
+          )`,
+        }}
         {...props}
       >
         <div className="w-[420px] max-w-full p-6 flex flex-col bg-elevated border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
@@ -791,7 +807,17 @@ export function Auth({
   if (dbConnectionFailed) {
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center bg-canvas ${className || ""}`}
+        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
+        style={{
+          background: "var(--bg-elevated)",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            ${lineColor} 35px,
+            ${lineColor} 37px
+          )`,
+        }}
         {...props}
       >
         <div
@@ -827,11 +853,17 @@ export function Auth({
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => {
-                  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                  const isDark =
+                    theme === "dark" ||
+                    (theme === "system" &&
+                      window.matchMedia("(prefers-color-scheme: dark)")
+                        .matches);
                   setTheme(isDark ? "light" : "dark");
                 }}
               >
-                {(theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) ? (
+                {theme === "dark" ||
+                (theme === "system" &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
                   <Moon className="w-4 h-4" />
                 ) : (
                   <Sun className="w-4 h-4" />
@@ -880,8 +912,8 @@ export function Auth({
               45deg,
               transparent,
               transparent 35px,
-              rgba(128, 128, 128, 0.05) 35px,
-              rgba(128, 128, 128, 0.05) 37px
+              ${lineColor} 35px,
+              ${lineColor} 37px
             )`,
           }}
         >
@@ -1376,11 +1408,20 @@ export function Auth({
                               size="icon"
                               className="h-8 w-8"
                               onClick={() => {
-                                const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                                const isDark =
+                                  theme === "dark" ||
+                                  (theme === "system" &&
+                                    window.matchMedia(
+                                      "(prefers-color-scheme: dark)",
+                                    ).matches);
                                 setTheme(isDark ? "light" : "dark");
                               }}
                             >
-                              {(theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) ? (
+                              {theme === "dark" ||
+                              (theme === "system" &&
+                                window.matchMedia(
+                                  "(prefers-color-scheme: dark)",
+                                ).matches) ? (
                                 <Moon className="w-4 h-4" />
                               ) : (
                                 <Sun className="w-4 h-4" />

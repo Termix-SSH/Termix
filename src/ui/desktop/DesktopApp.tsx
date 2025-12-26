@@ -35,6 +35,12 @@ function AppContent() {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
 
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
+
   const lastShiftPressTime = useRef(0);
 
   // DEBUG: Theme toggle - double-tap left Alt/Option to toggle light/dark mode
@@ -194,14 +200,15 @@ function AppContent() {
   if (authLoading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center bg-deepest"
+        className="h-screen w-screen flex items-center justify-center"
         style={{
+          background: "var(--bg-elevated)",
           backgroundImage: `repeating-linear-gradient(
             225deg,
             transparent,
             transparent 35px,
-            var(--border-subtle) 35px,
-            var(--border-subtle) 37px
+            ${lineColor} 35px,
+            ${lineColor} 37px
           )`,
         }}
       >
@@ -310,16 +317,17 @@ function AppContent() {
 
       {isTransitioning && (
         <div
-          className={`fixed inset-0 bg-deepest z-[20000] transition-opacity duration-700 ${
+          className={`fixed inset-0 z-[20000] transition-opacity duration-700 ${
             transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
           }`}
           style={{
+            background: "var(--bg-elevated)",
             backgroundImage: `repeating-linear-gradient(
               45deg,
               transparent,
               transparent 35px,
-              var(--border-subtle) 35px,
-              var(--border-subtle) 37px
+              ${lineColor} 35px,
+              ${lineColor} 37px
             )`,
           }}
         >
