@@ -127,10 +127,10 @@ export function TunnelManager({
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-gray-400 text-lg">
+                <p className="text-foreground-subtle text-lg">
                   {t("tunnel.noTunnelsConfigured")}
                 </p>
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-foreground-subtle text-sm mt-2">
                   {t("tunnel.configureTunnelsInHostSettings")}
                 </p>
               </div>

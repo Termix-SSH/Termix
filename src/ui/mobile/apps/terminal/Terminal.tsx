@@ -69,11 +69,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const DEBOUNCE_MS = 140;
 
     // Auto-switch terminal theme based on app theme
-    const isDarkMode = appTheme === "dark" ||
-      (appTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    const themeColors = isDarkMode
-      ? TERMINAL_THEMES.termixDark.colors
-      : TERMINAL_THEMES.termixLight.colors;
+    const isDarkMode =
+      appTheme === "dark" ||
+      (appTheme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const themeColors = {
+      background: isDarkMode ? "#0e0e10" : "#ffffff",
+      foreground: isDarkMode ? "#f7f7f7" : "#18181b",
+    };
 
     useEffect(() => {
       isVisibleRef.current = isVisible;

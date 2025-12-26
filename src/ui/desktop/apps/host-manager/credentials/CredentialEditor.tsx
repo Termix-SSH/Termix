@@ -616,12 +616,12 @@ export function CredentialEditor({
                               (tag: string, idx: number) => (
                                 <span
                                   key={`${tag}-${idx}`}
-                                  className="flex items-center bg-gray-200 text-gray-800 rounded-full px-2 py-0.5 text-xs"
+                                  className="flex items-center bg-surface text-foreground rounded-full px-2 py-0.5 text-xs"
                                 >
                                   {tag}
                                   <button
                                     type="button"
-                                    className="ml-1 text-gray-500 hover:text-red-500 focus:outline-none"
+                                    className="ml-1 text-foreground-subtle hover:text-red-500 focus:outline-none"
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();

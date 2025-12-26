@@ -1091,7 +1091,7 @@ export function FileManagerGrid({
                             onKeyDown={handleEditKeyDown}
                             onBlur={handleEditConfirm}
                             className={cn(
-                              "max-w-[120px] min-w-[60px] w-fit rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
+                              "max-w-[120px] min-w-[60px] w-fit rounded-md border border-edge bg-elevated px-2 py-1 text-xs shadow-xs transition-[color,box-shadow] outline-none",
                               "text-center text-foreground placeholder:text-muted-foreground",
                               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]",
                             )}
@@ -1180,7 +1180,7 @@ export function FileManagerGrid({
                           onKeyDown={handleEditKeyDown}
                           onBlur={handleEditConfirm}
                           className={cn(
-                            "flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none",
+                            "flex-1 min-w-0 max-w-[200px] rounded-md border border-edge bg-elevated px-2 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none",
                             "text-foreground placeholder:text-muted-foreground",
                             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]",
                           )}
@@ -1370,7 +1370,7 @@ function CreateIntentGridItem({
           onChange={(e) => setInputName(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => onConfirm?.(inputName.trim())}
-          className="w-full max-w-[120px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-center text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
+          className="w-full max-w-[120px] rounded-md border border-edge bg-elevated px-2 py-1 text-xs text-center text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
           placeholder={
             intent.type === "directory"
               ? t("fileManager.folderName")
@@ -1426,7 +1426,7 @@ function CreateIntentListItem({
         onChange={(e) => setInputName(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => onConfirm?.(inputName.trim())}
-        className="flex-1 min-w-0 max-w-[200px] rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
+        className="flex-1 min-w-0 max-w-[200px] rounded-md border border-edge bg-elevated px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px] outline-none"
         placeholder={
           intent.type === "directory"
             ? t("fileManager.folderName")

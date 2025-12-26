@@ -314,7 +314,7 @@ export function HostTunnelTab({
                                               type="button"
                                               variant="ghost"
                                               size="sm"
-                                              className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                                              className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-surface-hover focus:bg-surface-hover focus:outline-none"
                                               onClick={() =>
                                                 handleSshConfigClick(
                                                   config,

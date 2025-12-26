@@ -2427,5 +2427,9 @@
     "stats": "Stats",
     "consoleTab": "Console",
     "startContainerToAccess": "Start the container to access the console"
+  },
+  "theme": {
+    "switchToLight": "Switch to Light",
+    "switchToDark": "Switch to Dark"
   }
 }

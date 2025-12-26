@@ -411,7 +411,7 @@ export function AppView({
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
-      background: isDarkMode ? "#303032" : "#e5e7eb",
+      background: "var(--border-base)",
     } as React.CSSProperties;
     const commonGroupProps: {
       onLayout: () => void;

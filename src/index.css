@@ -79,6 +79,9 @@
   --scrollbar-thumb: #c1c1c3;
   --scrollbar-thumb-hover: #a1a1a3;
   --scrollbar-track: #f3f4f6;
+
+  /* Modal Overlay - Light Mode */
+  --bg-overlay: rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
@@ -168,6 +171,9 @@
   /* NEW SEMANTIC TEXT COLOR MAPPINGS - Creates Tailwind text classes */
   --color-foreground-secondary: var(--foreground-secondary);
   --color-foreground-subtle: var(--foreground-subtle);
+
+  /* Modal Overlay Mapping - Creates Tailwind bg-overlay class */
+  --color-overlay: var(--bg-overlay);
 }
 
 .dark {
@@ -233,6 +239,9 @@
   --scrollbar-thumb: #434345;
   --scrollbar-thumb-hover: #5a5a5d;
   --scrollbar-track: #18181b;
+
+  /* Modal Overlay - Dark Mode */
+  --bg-overlay: rgba(0, 0, 0, 0.7);
 }
 
 @layer base {

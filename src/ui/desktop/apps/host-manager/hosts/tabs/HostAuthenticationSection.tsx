@@ -268,7 +268,7 @@ export function HostAuthenticationSection({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-canvas text-foreground hover:bg-white/15 focus:bg-white/20 focus:outline-none"
+                              className="w-full justify-start text-left rounded-md px-2 py-1.5 bg-canvas text-foreground hover:bg-surface-hover focus:bg-surface-hover focus:outline-none"
                               onClick={() => {
                                 field.onChange(opt.value);
                                 setKeyTypeDropdownOpen(false);

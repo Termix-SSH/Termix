@@ -1,4 +1,4 @@
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { Toaster as Sonner, type ToasterProps, toast } from "sonner";
 import { useRef } from "react";
 

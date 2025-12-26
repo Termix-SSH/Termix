@@ -103,8 +103,8 @@ export function ConsoleTerminal({
       .trim();
 
     terminal.options.theme = {
-      background: backgroundColor || "#ffffff",
-      foreground: foregroundColor || "#09090b",
+      background: backgroundColor || "var(--bg-elevated)",
+      foreground: foregroundColor || "var(--foreground)",
     };
 
     setTimeout(() => {

@@ -11,12 +11,13 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronUp, Menu, User2 } from "lucide-react";
+import { ChevronUp, Menu, User2, Moon, Sun } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Separator } from "@/components/ui/separator.tsx";
 import { FolderCard } from "@/ui/mobile/navigation/hosts/FolderCard.tsx";
 import { getSSHHosts, logoutUser } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@/components/theme-provider";
 import { Input } from "@/components/ui/input.tsx";
 import {
   DropdownMenu,
@@ -81,6 +82,7 @@ export function LeftSidebar({
   username,
 }: LeftSidebarProps) {
   const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [hostsLoading] = useState(false);
   const [hostsError, setHostsError] = useState<string | null>(null);
@@ -252,7 +254,23 @@ export function LeftSidebar({
                     className="min-w-[var(--radix-popper-anchor-width)] bg-sidebar-accent text-sidebar-accent-foreground border border-border rounded-md shadow-2xl p-1"
                   >
                     <DropdownMenuItem
-                      className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                      className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
+                      onClick={() =>
+                        setTheme(theme === "dark" ? "light" : "dark")
+                      }
+                    >
+                      {theme === "dark" ? (
+                        <>
+                          <span>{t("theme.switchToLight")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{t("theme.switchToDark")}</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                       onClick={handleLogout}
                     >
                       <span>{t("common.logout")}</span>

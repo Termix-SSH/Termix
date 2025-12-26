@@ -312,7 +312,7 @@ export function ContainerCard({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-700/50">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-edge-panel">
             <TooltipProvider>
               {container.state !== "running" && (
                 <Tooltip>
@@ -325,7 +325,7 @@ export function ContainerCard({
                       disabled={isLoading}
                     >
                       {isStarting ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                       ) : (
                         <Play className="h-4 w-4" />
                       )}
@@ -346,7 +346,7 @@ export function ContainerCard({
                       disabled={isLoading}
                     >
                       {isStopping ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                       ) : (
                         <Square className="h-4 w-4" />
                       )}
@@ -368,7 +368,7 @@ export function ContainerCard({
                       disabled={isLoading}
                     >
                       {isPausing ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                       ) : container.state === "paused" ? (
                         <PlayCircle className="h-4 w-4" />
                       ) : (
@@ -394,7 +394,7 @@ export function ContainerCard({
                     disabled={isLoading || container.state === "exited"}
                   >
                     {isRestarting ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                     ) : (
                       <RotateCw className="h-4 w-4" />
                     )}

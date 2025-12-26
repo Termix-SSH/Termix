@@ -108,6 +108,119 @@ export function HostTerminalTab({
 
           <FormField
             control={control}
+            name="terminalConfig.theme"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("hosts.terminalTheme")}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("hosts.selectTheme")} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="termix">Termix Default</SelectItem>
+                    <SelectItem value="termixDark">Termix Dark</SelectItem>
+                    <SelectItem value="termixLight">Termix Light</SelectItem>
+                    <SelectItem value="dracula">Dracula</SelectItem>
+                    <SelectItem value="monokai">Monokai</SelectItem>
+                    <SelectItem value="nord">Nord</SelectItem>
+                    <SelectItem value="gruvboxDark">Gruvbox Dark</SelectItem>
+                    <SelectItem value="gruvboxLight">Gruvbox Light</SelectItem>
+                    <SelectItem value="solarizedDark">
+                      Solarized Dark
+                    </SelectItem>
+                    <SelectItem value="solarizedLight">
+                      Solarized Light
+                    </SelectItem>
+                    <SelectItem value="oneDark">One Dark</SelectItem>
+                    <SelectItem value="tokyoNight">Tokyo Night</SelectItem>
+                    <SelectItem value="ayuDark">Ayu Dark</SelectItem>
+                    <SelectItem value="ayuLight">Ayu Light</SelectItem>
+                    <SelectItem value="materialTheme">
+                      Material Theme
+                    </SelectItem>
+                    <SelectItem value="palenight">Palenight</SelectItem>
+                    <SelectItem value="oceanicNext">Oceanic Next</SelectItem>
+                    <SelectItem value="nightOwl">Night Owl</SelectItem>
+                    <SelectItem value="synthwave84">Synthwave '84</SelectItem>
+                    <SelectItem value="cobalt2">Cobalt2</SelectItem>
+                    <SelectItem value="snazzy">Snazzy</SelectItem>
+                    <SelectItem value="atomOneDark">Atom One Dark</SelectItem>
+                    <SelectItem value="catppuccinMocha">
+                      Catppuccin Mocha
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {t("hosts.chooseTerminalTheme")}
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="terminalConfig.fontFamily"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("hosts.terminalFont")}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("hosts.selectFont")} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Caskaydia Cove Nerd Font Mono">
+                      Caskaydia Cove Nerd Font Mono
+                    </SelectItem>
+                    <SelectItem value="JetBrains Mono">
+                      JetBrains Mono
+                    </SelectItem>
+                    <SelectItem value="Fira Code">Fira Code</SelectItem>
+                    <SelectItem value="Cascadia Code">Cascadia Code</SelectItem>
+                    <SelectItem value="Source Code Pro">
+                      Source Code Pro
+                    </SelectItem>
+                    <SelectItem value="SF Mono">SF Mono</SelectItem>
+                    <SelectItem value="Consolas">Consolas</SelectItem>
+                    <SelectItem value="Monaco">Monaco</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {t("hosts.chooseTerminalFont")}
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="terminalConfig.fontSize"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  {t("hosts.fontSizeValue", {
+                    value: field.value,
+                  })}
+                </FormLabel>
+                <FormControl>
+                  <Slider
+                    min={8}
+                    max={24}
+                    step={1}
+                    value={[field.value]}
+                    onValueChange={([value]) => field.onChange(value)}
+                  />
+                </FormControl>
+                <FormDescription>{t("hosts.adjustFontSize")}</FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
             name="terminalConfig.cursorStyle"
             render={({ field }) => (
               <FormItem>

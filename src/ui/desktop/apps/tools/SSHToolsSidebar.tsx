@@ -1184,7 +1184,7 @@ export function SSHToolsSidebar({
                                   size="sm"
                                   className={`rounded-full px-3 py-1 text-xs flex items-center gap-1 ${
                                     selectedTabIds.includes(tab.id)
-                                      ? "text-foreground bg-gray-700"
+                                      ? "text-foreground bg-surface"
                                       : "text-foreground-subtle"
                                   }`}
                                   onClick={() => handleTabToggle(tab.id)}
@@ -1266,7 +1266,7 @@ export function SSHToolsSidebar({
                                   size="sm"
                                   className={`rounded-full px-3 py-1 text-xs flex items-center gap-1 ${
                                     selectedSnippetTabIds.includes(tab.id)
-                                      ? "text-foreground bg-gray-700"
+                                      ? "text-foreground bg-surface"
                                       : "text-foreground-subtle"
                                   }`}
                                   onClick={() => handleSnippetTabToggle(tab.id)}
@@ -1415,7 +1415,7 @@ export function SSHToolsSidebar({
                                           }
                                           onDrop={(e) => handleDrop(e, snippet)}
                                           onDragEnd={handleDragEnd}
-                                          className={`bg-field border border-input rounded-lg cursor-move hover:shadow-lg hover:border-gray-400/50 hover:bg-hover-alt transition-all duration-200 p-3 group ${
+                                          className={`bg-field border border-input rounded-lg cursor-move hover:shadow-lg hover:border-edge-hover hover:bg-hover-alt transition-all duration-200 p-3 group ${
                                             draggedSnippet?.id === snippet.id
                                               ? "opacity-50"
                                               : ""
@@ -1638,7 +1638,7 @@ export function SSHToolsSidebar({
                           {filteredCommands.map((command, index) => (
                             <div
                               key={index}
-                              className="bg-canvas border-2 border-edge rounded-md px-3 py-2.5 hover:bg-hover-alt hover:border-gray-600 transition-all duration-200 group h-12 flex items-center"
+                              className="bg-canvas border-2 border-edge rounded-md px-3 py-2.5 hover:bg-hover-alt hover:border-edge-hover transition-all duration-200 group h-12 flex items-center"
                             >
                               <div className="flex items-center justify-between gap-2 w-full min-w-0">
                                 <span
@@ -1729,7 +1729,7 @@ export function SSHToolsSidebar({
                                       ${
                                         isAssigned
                                           ? "bg-canvas/50 text-muted-foreground cursor-not-allowed opacity-50"
-                                          : "bg-canvas border border-edge hover:border-gray-400 hover:bg-field"
+                                          : "bg-canvas border border-edge hover:border-edge-hover hover:bg-field"
                                       }
                                       ${isDragging ? "opacity-50" : ""}
                                     `}
@@ -1786,11 +1786,11 @@ export function SSHToolsSidebar({
                                         ${
                                           isEmpty
                                             ? "border-dashed border-edge"
-                                            : "border-solid border-gray-400 bg-gray-500/10"
+                                            : "border-solid border-edge-hover bg-surface"
                                         }
                                         ${
                                           isHovered && draggedTabId
-                                            ? "border-gray-500 bg-gray-500/20 ring-2 ring-gray-500/50"
+                                            ? "border-edge-hover bg-surface ring-2 ring-edge-hover"
                                             : ""
                                         }
                                       `}

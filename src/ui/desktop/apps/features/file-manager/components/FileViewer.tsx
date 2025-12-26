@@ -1255,7 +1255,7 @@ export function FileViewer({
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto thin-scrollbar p-6 bg-gray-100 dark:bg-gray-900">
+            <div className="flex-1 overflow-auto thin-scrollbar p-6 bg-surface">
               <div className="flex justify-center">
                 {pdfError ? (
                   <div className="text-center text-muted-foreground p-8">

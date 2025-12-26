@@ -57,7 +57,7 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
                   className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                     iface.state === "UP"
                       ? "bg-green-500/20 text-green-400"
-                      : "bg-gray-500/20 text-foreground-subtle"
+                      : "bg-surface text-foreground-subtle"
                   }`}
                 >
                   {iface.state}

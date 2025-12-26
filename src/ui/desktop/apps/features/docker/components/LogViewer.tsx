@@ -184,7 +184,7 @@ export function LogViewer({
                   className="flex-1 h-full"
                 >
                   {isLoading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
@@ -197,7 +197,7 @@ export function LogViewer({
                   className="flex-1 h-full"
                 >
                   {isDownloading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-edge-hover border-t-transparent" />
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
