@@ -123,8 +123,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const [visible, setVisible] = useState(false);
-    const [isReady, setIsReady] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(true);
@@ -342,7 +340,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (
         !fitAddonRef.current ||
         !terminal ||
-        !isVisibleRef.current ||
+        !isVisible ||
         isFittingRef.current
       ) {
         return;
@@ -1144,6 +1142,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
+      // Immediately fit to establish correct dimensions
+      fitAddonRef.current?.fit();
+      if (terminal.cols < 10 || terminal.rows < 3) {
+        // Terminal opened with invalid dimensions, retry fit in next frame
+        requestAnimationFrame(() => {
+          fitAddonRef.current?.fit();
+        });
+      }
+
       const element = xtermRef.current;
       const handleContextMenu = async (e: MouseEvent) => {
         if (!getUseRightClickCopyPaste()) return;
@@ -1225,22 +1232,19 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (!isVisibleRef.current || !isReady) return;
-          performFit();
+          if (isVisible && terminal?.cols > 0) {
+            performFit();
+          }
         }, 50);
       });
 
       resizeObserver.observe(xtermRef.current);
-
-      setVisible(true);
 
       return () => {
         isUnmountingRef.current = true;
         shouldNotReconnectRef.current = true;
         isReconnectingRef.current = false;
         setIsConnecting(false);
-        setVisible(false);
-        setIsReady(false);
         isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
@@ -1444,75 +1448,48 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.attachCustomKeyEventHandler(handleCustomKey);
     }, [terminal]);
 
+    // Connection initialization effect
     useEffect(() => {
-      if (!terminal || !hostConfig || !visible) return;
-
+      if (!terminal || !hostConfig || !isVisible) return;
       if (isConnected || isConnecting) return;
 
-      setIsConnecting(true);
-
-      // Start connection immediately without waiting for fonts
-      requestAnimationFrame(() => {
-        fitAddonRef.current?.fit();
-        if (terminal && terminal.cols > 0 && terminal.rows > 0) {
-          scheduleNotify(terminal.cols, terminal.rows);
-        }
-        hardRefresh();
-
-        setVisible(true);
-        setIsReady(true);
-
-        if (terminal && !splitScreen) {
-          terminal.focus();
-        }
-
-        const jwtToken = getCookie("jwt");
-
-        if (!jwtToken || jwtToken.trim() === "") {
-          setIsConnected(false);
-          setIsConnecting(false);
-          setConnectionError("Authentication required");
-          return;
-        }
-
-        const cols = terminal.cols;
-        const rows = terminal.rows;
-
-        connectToHost(cols, rows);
-      });
-    }, [terminal, hostConfig, visible, isConnected, isConnecting, splitScreen]);
-
-    useEffect(() => {
-      if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
+      // Ensure terminal has valid dimensions before connecting
+      if (terminal.cols < 10 || terminal.rows < 3) {
+        // Wait for next frame when dimensions will be valid
+        requestAnimationFrame(() => {
+          if (terminal.cols > 0 && terminal.rows > 0) {
+            setIsConnecting(true);
+            fitAddonRef.current?.fit();
+            scheduleNotify(terminal.cols, terminal.rows);
+            connectToHost(terminal.cols, terminal.rows);
+          }
+        });
         return;
       }
 
-      let rafId: number;
-
-      rafId = requestAnimationFrame(() => {
-        performFit();
-      });
-
-      return () => {
-        if (rafId) cancelAnimationFrame(rafId);
-      };
-    }, [isVisible, isReady, splitScreen, terminal]);
-
-    useEffect(() => {
-      if (
-        isFitted &&
-        isVisible &&
-        isReady &&
-        !isConnecting &&
-        terminal &&
-        !splitScreen
-      ) {
-        const rafId = requestAnimationFrame(() => {
-          terminal.focus();
-        });
-        return () => cancelAnimationFrame(rafId);
+      setIsConnecting(true);
+      fitAddonRef.current?.fit();
+      if (terminal.cols > 0 && terminal.rows > 0) {
+        scheduleNotify(terminal.cols, terminal.rows);
+        connectToHost(terminal.cols, terminal.rows);
       }
-    }, [isFitted, isVisible, isReady, isConnecting, terminal, splitScreen]);
+    }, [terminal, hostConfig, isVisible, isConnected, isConnecting]);
+
+    // Consolidated fitting and focus effect
+    useEffect(() => {
+      if (!terminal || !fitAddonRef.current || !isVisible) return;
+
+      const fitTimeoutId = setTimeout(() => {
+        if (!isFittingRef.current && terminal.cols > 0 && terminal.rows > 0) {
+          performFit();
+          if (!splitScreen && !isConnecting) {
+            requestAnimationFrame(() => terminal.focus());
+          }
+        }
+      }, 0);
+
+      return () => clearTimeout(fitTimeoutId);
+    }, [terminal, isVisible, splitScreen, isConnecting]);
 
     return (
       <div className="h-full w-full relative" style={{ backgroundColor }}>
@@ -1520,8 +1497,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           ref={xtermRef}
           className="h-full w-full"
           style={{
-            visibility: isReady ? "visible" : "hidden",
-            pointerEvents: isReady ? "auto" : "none",
+            pointerEvents: isVisible ? "auto" : "none",
           }}
           onClick={() => {
             if (terminal && !splitScreen) {

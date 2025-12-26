@@ -1,5 +1,5 @@
 import React from "react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import {
   Tabs,
@@ -21,12 +21,12 @@ import {
   getSessions,
   unlinkOIDCFromPasswordAccount,
 } from "@/ui/main-axios.ts";
-import { RolesTab } from "./widgets/RolesTab.tsx";
-import { GeneralSettingsTab } from "./widgets/GeneralSettingsTab.tsx";
-import { OIDCSettingsTab } from "./widgets/OIDCSettingsTab.tsx";
-import { UserManagementTab } from "./widgets/UserManagementTab.tsx";
-import { SessionManagementTab } from "./widgets/SessionManagementTab.tsx";
-import { DatabaseSecurityTab } from "./widgets/DatabaseSecurityTab.tsx";
+import { RolesTab } from "@/ui/desktop/apps/admin/tabs/RolesTab.tsx";
+import { GeneralSettingsTab } from "@/ui/desktop/apps/admin/tabs/GeneralSettingsTab.tsx";
+import { OIDCSettingsTab } from "@/ui/desktop/apps/admin/tabs/OIDCSettingsTab.tsx";
+import { UserManagementTab } from "@/ui/desktop/apps/admin/tabs/UserManagementTab.tsx";
+import { SessionManagementTab } from "@/ui/desktop/apps/admin/tabs/SessionManagementTab.tsx";
+import { DatabaseSecurityTab } from "@/ui/desktop/apps/admin/tabs/DatabaseSecurityTab.tsx";
 import { CreateUserDialog } from "./dialogs/CreateUserDialog.tsx";
 import { UserEditDialog } from "./dialogs/UserEditDialog.tsx";
 import { LinkAccountDialog } from "./dialogs/LinkAccountDialog.tsx";

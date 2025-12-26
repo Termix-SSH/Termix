@@ -70,7 +70,7 @@ import type {
   SSHManagerHostViewerProps,
 } from "../../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
-import { FolderEditDialog } from "../components/FolderEditDialog.tsx";
+import { FolderEditDialog } from "@/ui/desktop/apps/host-manager/dialogs/FolderEditDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {

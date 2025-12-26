@@ -38,7 +38,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
-import { HostSharingTab } from "./HostSharingTab.tsx";
+import { HostSharingTab } from "./tabs/HostSharingTab.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { githubLight } from "@uiw/codemirror-theme-github";

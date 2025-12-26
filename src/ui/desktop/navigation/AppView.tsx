@@ -101,13 +101,18 @@ export function AppView({
       const splitIds = allSplitScreenTab as number[];
       visibleIds.push(currentTab, ...splitIds.filter((i) => i !== currentTab));
     }
-    terminalTabs.forEach((t: TabData) => {
-      if (visibleIds.includes(t.id)) {
-        const ref = t.terminalRef?.current;
-        if (ref?.fit) ref.fit();
-        if (ref?.notifyResize) ref.notifyResize();
-        if (ref?.refresh) ref.refresh();
-      }
+
+    const operations = terminalTabs
+      .filter((t: TabData) => visibleIds.includes(t.id))
+      .map((t: TabData) => t.terminalRef?.current)
+      .filter((ref) => ref?.fit);
+
+    requestAnimationFrame(() => {
+      operations.forEach((ref) => {
+        ref.fit?.();
+        ref.notifyResize?.();
+        ref.refresh?.();
+      });
     });
   }, [allSplitScreenTab, currentTab, terminalTabs]);
 
@@ -117,18 +122,14 @@ export function AppView({
       cancelAnimationFrame(layoutScheduleRef.current);
     layoutScheduleRef.current = requestAnimationFrame(() => {
       updatePanelRects();
-      layoutScheduleRef.current = requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
   const hideThenFit = React.useCallback(() => {
     requestAnimationFrame(() => {
       updatePanelRects();
-      requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
@@ -237,7 +238,6 @@ export function AppView({
         display: "block" as const,
         pointerEvents: "auto" as const,
         opacity: 1,
-        transition: "opacity 150ms ease-in-out",
       };
       styles[mainTab.id] = newStyle;
       previousStylesRef.current[mainTab.id] = newStyle;
@@ -256,7 +256,6 @@ export function AppView({
             display: "block" as const,
             pointerEvents: "auto" as const,
             opacity: 1,
-            transition: "opacity 150ms ease-in-out",
           };
           styles[t.id] = newStyle;
           previousStylesRef.current[t.id] = newStyle;
@@ -298,7 +297,6 @@ export function AppView({
                   pointerEvents: "auto",
                   zIndex: 20,
                   display: "block",
-                  transition: "opacity 150ms ease-in-out",
                   overflow: "hidden",
                 }
               : ({
@@ -306,7 +304,7 @@ export function AppView({
                   opacity: 0,
                   pointerEvents: "none",
                   zIndex: 0,
-                  transition: "opacity 150ms ease-in-out",
+                  display: "none",
                   overflow: "hidden",
                 } as React.CSSProperties);
 
