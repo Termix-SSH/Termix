@@ -1465,6 +1465,7 @@ export function HostManagerEditor({
                   <Tabs
                     value={authTab}
                     onValueChange={(value) => {
+                      if (editingHost?.isShared) return;
                       const newAuthType = value as
                         | "password"
                         | "key"
@@ -1478,25 +1479,29 @@ export function HostManagerEditor({
                     <TabsList className="bg-button border border-edge-medium">
                       <TabsTrigger
                         value="password"
-                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                        disabled={editingHost?.isShared}
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t("hosts.password")}
                       </TabsTrigger>
                       <TabsTrigger
                         value="key"
-                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                        disabled={editingHost?.isShared}
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t("hosts.key")}
                       </TabsTrigger>
                       <TabsTrigger
                         value="credential"
-                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                        disabled={editingHost?.isShared}
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t("hosts.credential")}
                       </TabsTrigger>
                       <TabsTrigger
                         value="none"
-                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                        disabled={editingHost?.isShared}
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t("hosts.none")}
                       </TabsTrigger>
@@ -1709,26 +1714,34 @@ export function HostManagerEditor({
                           name="credentialId"
                           render={({ field }) => (
                             <FormItem>
-                              <CredentialSelector
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                onCredentialSelect={(credential) => {
-                                  if (
-                                    credential &&
-                                    !form.getValues(
-                                      "overrideCredentialUsername",
-                                    )
-                                  ) {
-                                    form.setValue(
-                                      "username",
-                                      credential.username,
-                                    );
-                                  }
-                                }}
-                              />
-                              <FormDescription>
-                                {t("hosts.credentialDescription")}
-                              </FormDescription>
+                              {editingHost?.isShared ? (
+                                <div className="text-sm text-muted-foreground p-3 bg-base border border-edge-medium rounded-md">
+                                  {t("hosts.cannotChangeAuthAsSharedUser")}
+                                </div>
+                              ) : (
+                                <CredentialSelector
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  onCredentialSelect={(credential) => {
+                                    if (
+                                      credential &&
+                                      !form.getValues(
+                                        "overrideCredentialUsername",
+                                      )
+                                    ) {
+                                      form.setValue(
+                                        "username",
+                                        credential.username,
+                                      );
+                                    }
+                                  }}
+                                />
+                              )}
+                              {!editingHost?.isShared && (
+                                <FormDescription>
+                                  {t("hosts.credentialDescription")}
+                                </FormDescription>
+                              )}
                             </FormItem>
                           )}
                         />
@@ -3769,7 +3782,7 @@ export function HostManagerEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            {!(editingHost?.permissionLevel === "view") && (
+            {!editingHost?.isShared && (
               <Button className="translate-y-2" type="submit" variant="outline">
                 {editingHost
                   ? editingHost.id

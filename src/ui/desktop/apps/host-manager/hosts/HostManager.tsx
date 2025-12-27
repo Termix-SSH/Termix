@@ -18,6 +18,7 @@ export function HostManager({
   isTopbarOpen,
   initialTab = "host_viewer",
   hostConfig,
+  _updateTimestamp,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
 }: HostManagerProps): React.ReactElement {
@@ -36,20 +37,39 @@ export function HostManager({
   const ignoreNextHostConfigChangeRef = useRef<boolean>(false);
   const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
+  // Sync state when tab is updated externally (via updateTab or addTab)
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+    // Always sync on timestamp changes
+    if (_updateTimestamp !== undefined) {
+      // Update activeTab if initialTab has changed
+      if (initialTab && initialTab !== activeTab) {
+        setActiveTab(initialTab);
+      }
 
-  // Update editingHost when hostConfig changes
-  useEffect(() => {
-    if (hostConfig) {
-      setEditingHost(hostConfig);
-      setActiveTab("add_host");
-      lastProcessedHostIdRef.current = hostConfig.id;
+      // Update editingHost if hostConfig has changed
+      if (hostConfig && hostConfig.id !== editingHost?.id) {
+        setEditingHost(hostConfig);
+        lastProcessedHostIdRef.current = hostConfig.id;
+      } else if (!hostConfig && editingHost) {
+        // Clear editingHost if hostConfig is now undefined
+        setEditingHost(null);
+      }
+
+      // Clear editingCredential if switching away from add_credential
+      if (initialTab !== "add_credential" && editingCredential) {
+        setEditingCredential(null);
+      }
+    } else {
+      // Initial mount - set state from props
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
+      if (hostConfig) {
+        setEditingHost(hostConfig);
+        lastProcessedHostIdRef.current = hostConfig.id;
+      }
     }
-  }, [hostConfig?.id]);
+  }, [_updateTimestamp, initialTab, hostConfig?.id]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);

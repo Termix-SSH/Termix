@@ -19,6 +19,8 @@ import {
   FolderOpen,
   Pencil,
   EllipsisVertical,
+  ArrowDownUp,
+  Container,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BiMoney, BiSupport } from "react-icons/bi";
@@ -27,6 +29,7 @@ import { GrUpdate } from "react-icons/gr";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { getRecentActivity, getSSHHosts } from "@/ui/main-axios.ts";
 import type { RecentActivityItem } from "@/ui/main-axios.ts";
+import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -52,8 +55,10 @@ interface SSHHost {
   enableTerminal: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  enableDocker: boolean;
   defaultPath: string;
   tunnelConnections: unknown[];
+  statsConfig?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,7 +93,10 @@ export function CommandPalette({
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, { initialTab: "add_host" });
+      updateTab(sshManagerTab.id, {
+        initialTab: "add_host",
+        hostConfig: undefined,
+      });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({
@@ -104,7 +112,10 @@ export function CommandPalette({
   const handleAddCredential = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, { initialTab: "add_credential" });
+      updateTab(sshManagerTab.id, {
+        initialTab: "add_credential",
+        hostConfig: undefined,
+      });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({
@@ -216,6 +227,22 @@ export function CommandPalette({
     setIsOpen(false);
   };
 
+  const handleHostTunnelClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({ type: "tunnel", title, hostConfig: host });
+    setIsOpen(false);
+  };
+
+  const handleHostDockerClick = (host: SSHHost) => {
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+    addTab({ type: "docker", title, hostConfig: host });
+    setIsOpen(false);
+  };
+
   const handleHostEditClick = (host: SSHHost) => {
     const title = host.name?.trim()
       ? host.name
@@ -301,6 +328,33 @@ export function CommandPalette({
                   const title = host.name?.trim()
                     ? host.name
                     : `${host.username}@${host.ip}:${host.port}`;
+
+                  // Parse statsConfig to determine if metrics should be shown
+                  let shouldShowMetrics = true;
+                  try {
+                    const statsConfig = host.statsConfig
+                      ? JSON.parse(host.statsConfig)
+                      : DEFAULT_STATS_CONFIG;
+                    shouldShowMetrics = statsConfig.metricsEnabled !== false;
+                  } catch {
+                    shouldShowMetrics = true;
+                  }
+
+                  // Check if host has at least one tunnel connection
+                  let hasTunnelConnections = false;
+                  try {
+                    const tunnelConnections = Array.isArray(
+                      host.tunnelConnections,
+                    )
+                      ? host.tunnelConnections
+                      : JSON.parse(host.tunnelConnections as string);
+                    hasTunnelConnections =
+                      Array.isArray(tunnelConnections) &&
+                      tunnelConnections.length > 0;
+                  } catch {
+                    hasTunnelConnections = false;
+                  }
+
                   return (
                     <CommandItem
                       key={`host-${index}-${host.id}`}
@@ -335,30 +389,62 @@ export function CommandPalette({
                             side="right"
                             className="w-56 bg-canvas border-edge text-foreground"
                           >
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleHostServerDetailsClick(host);
-                              }}
-                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                            >
-                              <Server className="h-4 w-4" />
-                              <span className="flex-1">
-                                {t("commandPalette.openServerDetails")}
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleHostFileManagerClick(host);
-                              }}
-                              className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                            >
-                              <FolderOpen className="h-4 w-4" />
-                              <span className="flex-1">
-                                {t("commandPalette.openFileManager")}
-                              </span>
-                            </DropdownMenuItem>
+                            {shouldShowMetrics && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleHostServerDetailsClick(host);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                              >
+                                <Server className="h-4 w-4" />
+                                <span className="flex-1">
+                                  {t("hosts.openServerStats")}
+                                </span>
+                              </DropdownMenuItem>
+                            )}
+                            {host.enableFileManager && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleHostFileManagerClick(host);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                              >
+                                <FolderOpen className="h-4 w-4" />
+                                <span className="flex-1">
+                                  {t("hosts.openFileManager")}
+                                </span>
+                              </DropdownMenuItem>
+                            )}
+                            {host.enableTunnel && hasTunnelConnections && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleHostTunnelClick(host);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                              >
+                                <ArrowDownUp className="h-4 w-4" />
+                                <span className="flex-1">
+                                  {t("hosts.openTunnels")}
+                                </span>
+                              </DropdownMenuItem>
+                            )}
+                            {host.enableDocker && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleHostDockerClick(host);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                              >
+                                <Container className="h-4 w-4" />
+                                <span className="flex-1">
+                                  {t("hosts.openDocker")}
+                                </span>
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -367,9 +453,7 @@ export function CommandPalette({
                               className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                             >
                               <Pencil className="h-4 w-4" />
-                              <span className="flex-1">
-                                {t("commandPalette.edit")}
-                              </span>
+                              <span className="flex-1">{t("common.edit")}</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

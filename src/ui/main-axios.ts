@@ -48,11 +48,9 @@ export interface AccessRecord {
   roleDisplayName: string | null;
   grantedBy: string;
   grantedByUsername: string;
-  permissionLevel: string;
+  permissionLevel: "view"; // Only view permission is supported
   expiresAt: string | null;
   createdAt: string;
-  lastAccessedAt: string | null;
-  accessCount: number;
 }
 import {
   apiLogger,
@@ -3292,7 +3290,7 @@ export async function shareHost(
     targetType: "user" | "role";
     targetUserId?: string;
     targetRoleId?: number;
-    permissionLevel: string;
+    permissionLevel: "view"; // Only view permission is supported
     durationHours?: number;
   },
 ): Promise<{ success: boolean }> {

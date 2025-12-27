@@ -60,9 +60,9 @@ export interface SSHHost {
   createdAt: string;
   updatedAt: string;
 
-  // Shared access metadata
+  // Shared access metadata (view-only)
   isShared?: boolean;
-  permissionLevel?: "view" | "manage";
+  permissionLevel?: "view";
   sharedExpiresAt?: string;
 }
 
@@ -394,6 +394,7 @@ export interface TabContextTab {
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
+  _updateTimestamp?: number;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
@@ -485,6 +486,7 @@ export interface HostManagerProps {
   isTopbarOpen?: boolean;
   initialTab?: string;
   hostConfig?: SSHHost;
+  _updateTimestamp?: number;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
 }

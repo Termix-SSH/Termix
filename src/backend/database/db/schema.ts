@@ -185,6 +185,12 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   key_password: text("key_password"),
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
+
+  // System-encrypted fields for offline credential sharing
+  systemPassword: text("system_password"),
+  systemKey: text("system_key", { length: 16384 }),
+  systemKeyPassword: text("system_key_password"),
+
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   createdAt: text("created_at")
@@ -307,10 +313,10 @@ export const hostAccess = sqliteTable("host_access", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  // Permission level
+  // Permission level (view-only)
   permissionLevel: text("permission_level")
     .notNull()
-    .default("use"), // "view" | "use" | "manage"
+    .default("view"), // Only "view" is supported
 
   // Time-based access
   expiresAt: text("expires_at"), // NULL = never expires
@@ -321,6 +327,47 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
+});
+
+// RBAC: Shared Credentials (per-user encrypted credential copies)
+export const sharedCredentials = sqliteTable("shared_credentials", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+
+  // Link to the host access grant (CASCADE delete when share revoked)
+  hostAccessId: integer("host_access_id")
+    .notNull()
+    .references(() => hostAccess.id, { onDelete: "cascade" }),
+
+  // Link to the original credential (for tracking updates/CASCADE delete)
+  originalCredentialId: integer("original_credential_id")
+    .notNull()
+    .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+  // Target user (recipient of the share) - CASCADE delete when user deleted
+  targetUserId: text("target_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  // Encrypted credential data (encrypted with targetUserId's DEK)
+  encryptedUsername: text("encrypted_username").notNull(),
+  encryptedAuthType: text("encrypted_auth_type").notNull(),
+  encryptedPassword: text("encrypted_password"),
+  encryptedKey: text("encrypted_key", { length: 16384 }),
+  encryptedKeyPassword: text("encrypted_key_password"),
+  encryptedKeyType: text("encrypted_key_type"),
+
+  // Metadata
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+
+  // Track if needs re-encryption (when original credential updated but target user offline)
+  needsReEncryption: integer("needs_re_encryption", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 // RBAC Phase 2: Roles

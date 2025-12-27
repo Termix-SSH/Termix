@@ -590,6 +590,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
 
+  // System-encrypted fields for offline credential sharing
+  addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
+
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
@@ -836,6 +841,42 @@ const migrateSchema = () => {
       });
     } catch (createError) {
       databaseLogger.warn("Failed to create session_recordings table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // RBAC: Shared Credentials table
+  try {
+    sqlite.prepare("SELECT id FROM shared_credentials LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS shared_credentials (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_access_id INTEGER NOT NULL,
+          original_credential_id INTEGER NOT NULL,
+          target_user_id TEXT NOT NULL,
+          encrypted_username TEXT NOT NULL,
+          encrypted_auth_type TEXT NOT NULL,
+          encrypted_password TEXT,
+          encrypted_key TEXT,
+          encrypted_key_password TEXT,
+          encrypted_key_type TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          needs_re_encryption INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (host_access_id) REFERENCES host_access (id) ON DELETE CASCADE,
+          FOREIGN KEY (original_credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
+          FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+      databaseLogger.info("Created shared_credentials table", {
+        operation: "schema_migration",
+      });
+    } catch (createError) {
+      databaseLogger.warn("Failed to create shared_credentials table", {
         operation: "schema_migration",
         error: createError,
       });

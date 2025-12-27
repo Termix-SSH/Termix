@@ -317,7 +317,10 @@ export function Dashboard({
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, { initialTab: "add_host" });
+      updateTab(sshManagerTab.id, {
+        initialTab: "add_host",
+        hostConfig: undefined,
+      });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({
@@ -332,7 +335,10 @@ export function Dashboard({
   const handleAddCredential = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, { initialTab: "add_credential" });
+      updateTab(sshManagerTab.id, {
+        initialTab: "add_credential",
+        hostConfig: undefined,
+      });
       setCurrentTab(sshManagerTab.id);
     } else {
       const id = addTab({

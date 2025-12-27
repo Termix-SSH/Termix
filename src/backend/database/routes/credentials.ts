@@ -4,7 +4,12 @@ import type {
 } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
+import {
+  sshCredentials,
+  sshCredentialUsage,
+  sshData,
+  hostAccess,
+} from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -473,6 +478,15 @@ router.put(
         userId,
       );
 
+      // Update shared credentials if this credential is shared
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.updateSharedCredentialsForOriginal(
+        parseInt(id),
+        userId,
+      );
+
       const credential = updated[0];
       authLogger.success(
         `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
@@ -555,7 +569,35 @@ router.delete(
               eq(sshData.userId, userId),
             ),
           );
+
+        // Revoke all shares for hosts that used this credential
+        for (const host of hostsUsingCredential) {
+          const revokedShares = await db
+            .delete(hostAccess)
+            .where(eq(hostAccess.hostId, host.id))
+            .returning({ id: hostAccess.id });
+
+          if (revokedShares.length > 0) {
+            authLogger.info(
+              "Auto-revoked host shares due to credential deletion",
+              {
+                operation: "auto_revoke_shares",
+                hostId: host.id,
+                credentialId: parseInt(id),
+                revokedCount: revokedShares.length,
+                reason: "credential_deleted",
+              },
+            );
+          }
+        }
       }
+
+      // Delete shared credentials for this original credential
+      // Note: This will also be handled by CASCADE, but we do it explicitly for logging
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 
       // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
       // No need for manual deletion
@@ -1601,10 +1643,7 @@ router.post(
         }
       }
 
-      const deployResult = await deploySSHKeyToHost(
-        hostConfig,
-        credData,
-      );
+      const deployResult = await deploySSHKeyToHost(hostConfig, credData);
 
       if (deployResult.success) {
         res.json({

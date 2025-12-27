@@ -373,12 +373,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
   }
 
   try {
-    // Get host configuration
+    // Get host configuration - check both owned and shared hosts
     const hosts = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+      getDb().select().from(sshData).where(eq(sshData.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -388,6 +385,27 @@ app.post("/docker/ssh/connect", async (req, res) => {
     }
 
     const host = hosts[0] as unknown as SSHHost;
+
+    // Verify user has access to this host (either owner or shared access)
+    if (host.userId !== userId) {
+      const { PermissionManager } =
+        await import("../utils/permission-manager.js");
+      const permissionManager = PermissionManager.getInstance();
+      const accessInfo = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "execute",
+      );
+
+      if (!accessInfo.hasAccess) {
+        dockerLogger.warn("User does not have access to host", {
+          operation: "docker_connect",
+          hostId,
+          userId,
+        });
+        return res.status(403).json({ error: "Access denied" });
+      }
+    }
     if (typeof host.jumpHosts === "string" && host.jumpHosts) {
       try {
         host.jumpHosts = JSON.parse(host.jumpHosts);
@@ -427,29 +445,61 @@ app.post("/docker/ssh/connect", async (req, res) => {
     };
 
     if (host.credentialId) {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+      const ownerId = host.userId;
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        resolvedCredentials = {
-          password: credential.password,
-          sshKey:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          authType: credential.auth_type || credential.authType,
-        };
+      // Check if this is a shared host access
+      if (userId !== ownerId) {
+        // User is accessing a shared host - use shared credential
+        try {
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            host.id,
+            userId,
+          );
+
+          if (sharedCred) {
+            resolvedCredentials = {
+              password: sharedCred.password,
+              sshKey: sharedCred.key,
+              keyPassword: sharedCred.keyPassword,
+              authType: sharedCred.authType,
+            };
+          }
+        } catch (error) {
+          dockerLogger.error("Failed to resolve shared credential", error, {
+            operation: "docker_connect",
+            hostId,
+            userId,
+          });
+        }
+      } else {
+        // Owner accessing their own host
+        const credentials = await SimpleDBOps.select(
+          getDb()
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, host.credentialId as number),
+                eq(sshCredentials.userId, userId),
+              ),
+            ),
+          "ssh_credentials",
+          userId,
+        );
+
+        if (credentials.length > 0) {
+          const credential = credentials[0];
+          resolvedCredentials = {
+            password: credential.password,
+            sshKey:
+              credential.private_key || credential.privateKey || credential.key,
+            keyPassword: credential.key_password || credential.keyPassword,
+            authType: credential.auth_type || credential.authType,
+          };
+        }
       }
     }
 

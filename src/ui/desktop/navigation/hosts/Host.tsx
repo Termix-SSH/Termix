@@ -84,6 +84,19 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
+  // Check if host has at least one tunnel connection
+  const hasTunnelConnections = useMemo(() => {
+    if (!host.tunnelConnections) return false;
+    try {
+      const tunnelConnections = Array.isArray(host.tunnelConnections)
+        ? host.tunnelConnections
+        : JSON.parse(host.tunnelConnections);
+      return Array.isArray(tunnelConnections) && tunnelConnections.length > 0;
+    } catch {
+      return false;
+    }
+  }, [host.tunnelConnections]);
+
   useEffect(() => {
     if (!shouldShowStatus) {
       setServerStatus("offline");
@@ -179,7 +192,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <Server className="h-4 w-4" />
-                  <span className="flex-1">{t('hosts.openServerStats')}</span>
+                  <span className="flex-1">{t("hosts.openServerStats")}</span>
                 </DropdownMenuItem>
               )}
               {host.enableFileManager && (
@@ -190,10 +203,10 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <FolderOpen className="h-4 w-4" />
-                  <span className="flex-1">{t('hosts.openFileManager')}</span>
+                  <span className="flex-1">{t("hosts.openFileManager")}</span>
                 </DropdownMenuItem>
               )}
-              {host.enableTunnel && (
+              {host.enableTunnel && hasTunnelConnections && (
                 <DropdownMenuItem
                   onClick={() =>
                     addTab({ type: "tunnel", title, hostConfig: host })
@@ -201,7 +214,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <ArrowDownUp className="h-4 w-4" />
-                  <span className="flex-1">{t('hosts.openTunnels')}</span>
+                  <span className="flex-1">{t("hosts.openTunnels")}</span>
                 </DropdownMenuItem>
               )}
               {host.enableDocker && (
@@ -212,14 +225,14 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
                   <Container className="h-4 w-4" />
-                  <span className="flex-1">{t('hosts.openDocker')}</span>
+                  <span className="flex-1">{t("hosts.openDocker")}</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({
                     type: "ssh_manager",
-                    title: t('nav.hostManager'),
+                    title: t("nav.hostManager"),
                     hostConfig: host,
                     initialTab: "add_host",
                   })
@@ -227,7 +240,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                 className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
               >
                 <Pencil className="h-4 w-4" />
-                <span className="flex-1">{t('common.edit')}</span>
+                <span className="flex-1">{t("common.edit")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

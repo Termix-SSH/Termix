@@ -8,6 +8,7 @@ import {
   roles,
   userRoles,
   auditLogs,
+  sharedCredentials,
 } from "../db/schema.js";
 import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -47,7 +48,7 @@ router.post(
         targetUserId,
         targetRoleId,
         durationHours,
-        permissionLevel = "use",
+        permissionLevel = "view", // Only "view" is supported
       } = req.body;
 
       // Validate target type
@@ -129,11 +130,11 @@ router.post(
         expiresAt = expiryDate.toISOString();
       }
 
-      // Validate permission level
-      const validLevels = ["view", "use", "manage"];
+      // Validate permission level (only "view" is supported)
+      const validLevels = ["view"];
       if (!validLevels.includes(permissionLevel)) {
         return res.status(400).json({
-          error: "Invalid permission level",
+          error: "Invalid permission level. Only 'view' is supported.",
           validLevels,
         });
       }
@@ -162,6 +163,30 @@ router.post(
           })
           .where(eq(hostAccess.id, existing[0].id));
 
+        // Re-create shared credential (delete old, create new)
+        await db
+          .delete(sharedCredentials)
+          .where(eq(sharedCredentials.hostAccessId, existing[0].id));
+
+        const { SharedCredentialManager } =
+          await import("../../utils/shared-credential-manager.js");
+        const sharedCredManager = SharedCredentialManager.getInstance();
+        if (targetType === "user") {
+          await sharedCredManager.createSharedCredentialForUser(
+            existing[0].id,
+            host[0].credentialId,
+            targetUserId!,
+            userId,
+          );
+        } else {
+          await sharedCredManager.createSharedCredentialsForRole(
+            existing[0].id,
+            host[0].credentialId,
+            targetRoleId!,
+            userId,
+          );
+        }
+
         databaseLogger.info("Updated existing host access", {
           operation: "share_host",
           hostId,
@@ -188,6 +213,27 @@ router.post(
         permissionLevel,
         expiresAt,
       });
+
+      // Create shared credential for the target
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+
+      if (targetType === "user") {
+        await sharedCredManager.createSharedCredentialForUser(
+          result.lastInsertRowid as number,
+          host[0].credentialId,
+          targetUserId!,
+          userId,
+        );
+      } else {
+        await sharedCredManager.createSharedCredentialsForRole(
+          result.lastInsertRowid as number,
+          host[0].credentialId,
+          targetRoleId!,
+          userId,
+        );
+      }
 
       databaseLogger.info("Created host access", {
         operation: "share_host",
@@ -308,8 +354,6 @@ router.get(
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
           createdAt: hostAccess.createdAt,
-          lastAccessedAt: hostAccess.lastAccessedAt,
-          accessCount: hostAccess.accessCount,
         })
         .from(hostAccess)
         .leftJoin(users, eq(hostAccess.userId, users.id))
@@ -331,8 +375,6 @@ router.get(
         permissionLevel: access.permissionLevel,
         expiresAt: access.expiresAt,
         createdAt: access.createdAt,
-        lastAccessedAt: access.lastAccessedAt,
-        accessCount: access.accessCount,
       }));
 
       res.json({ accessList });
@@ -651,31 +693,24 @@ router.delete(
         });
       }
 
-      // Check if role is in use
-      const usageCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(userRoles)
-        .where(eq(userRoles.roleId, roleId));
+      // Delete user-role assignments first
+      const deletedUserRoles = await db
+        .delete(userRoles)
+        .where(eq(userRoles.roleId, roleId))
+        .returning({ userId: userRoles.userId });
 
-      if (usageCount[0].count > 0) {
-        return res.status(409).json({
-          error: `Cannot delete role: ${usageCount[0].count} user(s) are assigned to this role`,
-          usageCount: usageCount[0].count,
-        });
+      // Invalidate permission cache for affected users
+      for (const { userId } of deletedUserRoles) {
+        permissionManager.invalidateUserPermissionCache(userId);
       }
 
-      // Check if role is used in host_access
-      const hostAccessCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(hostAccess)
-        .where(eq(hostAccess.roleId, roleId));
+      // Delete host_access entries for this role
+      const deletedHostAccess = await db
+        .delete(hostAccess)
+        .where(eq(hostAccess.roleId, roleId))
+        .returning({ id: hostAccess.id });
 
-      if (hostAccessCount[0].count > 0) {
-        return res.status(409).json({
-          error: `Cannot delete role: ${hostAccessCount[0].count} host(s) are shared with this role`,
-          hostAccessCount: hostAccessCount[0].count,
-        });
-      }
+      // Note: sharedCredentials will be auto-deleted by CASCADE
 
       // Delete role
       await db.delete(roles).where(eq(roles.id, roleId));
@@ -772,6 +807,51 @@ router.post(
         roleId,
         grantedBy: currentUserId,
       });
+
+      // Create shared credentials for all hosts shared with this role
+      const hostsSharedWithRole = await db
+        .select()
+        .from(hostAccess)
+        .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
+        .where(eq(hostAccess.roleId, roleId));
+
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+
+      for (const { host_access, ssh_data } of hostsSharedWithRole) {
+        if (ssh_data.credentialId) {
+          try {
+            await sharedCredManager.createSharedCredentialForUser(
+              host_access.id,
+              ssh_data.credentialId,
+              targetUserId,
+              ssh_data.userId,
+            );
+          } catch (error) {
+            databaseLogger.error(
+              "Failed to create shared credential for new role member",
+              error,
+              {
+                operation: "assign_role_create_credentials",
+                targetUserId,
+                roleId,
+                hostId: ssh_data.id,
+              },
+            );
+            // Continue with other hosts even if one fails
+          }
+        }
+      }
+
+      if (hostsSharedWithRole.length > 0) {
+        databaseLogger.info("Created shared credentials for new role member", {
+          operation: "assign_role_create_credentials",
+          targetUserId,
+          roleId,
+          hostCount: hostsSharedWithRole.length,
+        });
+      }
 
       // Invalidate permission cache
       permissionManager.invalidateUserPermissionCache(targetUserId);

@@ -277,6 +277,7 @@ function AppContent() {
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
                 hostConfig={currentTabData?.hostConfig}
+                _updateTimestamp={currentTabData?._updateTimestamp}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
               />

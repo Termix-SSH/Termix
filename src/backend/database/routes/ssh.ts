@@ -391,7 +391,8 @@ router.post(
           : undefined,
       };
 
-      const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
+      const resolvedHost =
+        (await resolveHostCredentials(baseHost, userId)) || baseHost;
 
       sshLogger.success(
         `SSH host created: ${name} (${ip}:${port}) by user ${userId}`,
@@ -619,9 +620,25 @@ router.put(
         return res.status(403).json({ error: "Access denied" });
       }
 
+      // Shared users cannot edit hosts (view-only)
+      if (!accessInfo.isOwner) {
+        sshLogger.warn("Shared user attempted to update host (view-only)", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(403).json({
+          error: "Only the host owner can modify host configuration",
+        });
+      }
+
       // Get the actual owner ID for the update
       const hostRecord = await db
-        .select({ userId: sshData.userId })
+        .select({
+          userId: sshData.userId,
+          credentialId: sshData.credentialId,
+          authType: sshData.authType,
+        })
         .from(sshData)
         .where(eq(sshData.id, Number(hostId)))
         .limit(1);
@@ -636,6 +653,56 @@ router.put(
       }
 
       const ownerId = hostRecord[0].userId;
+
+      // Only owner can change credentialId
+      if (
+        !accessInfo.isOwner &&
+        sshDataObj.credentialId !== undefined &&
+        sshDataObj.credentialId !== hostRecord[0].credentialId
+      ) {
+        return res.status(403).json({
+          error: "Only the host owner can change the credential",
+        });
+      }
+
+      // Only owner can change authType
+      if (
+        !accessInfo.isOwner &&
+        sshDataObj.authType !== undefined &&
+        sshDataObj.authType !== hostRecord[0].authType
+      ) {
+        return res.status(403).json({
+          error: "Only the host owner can change the authentication type",
+        });
+      }
+
+      // Check if credentialId is changing from non-null to null
+      // This happens when switching from "credential" auth to "password"/"key"/"none"
+      if (sshDataObj.credentialId !== undefined) {
+        if (
+          hostRecord[0].credentialId !== null &&
+          sshDataObj.credentialId === null
+        ) {
+          // Auth type changed away from credential - revoke all shares
+          const revokedShares = await db
+            .delete(hostAccess)
+            .where(eq(hostAccess.hostId, Number(hostId)))
+            .returning({ id: hostAccess.id, userId: hostAccess.userId });
+
+          if (revokedShares.length > 0) {
+            sshLogger.info(
+              "Auto-revoked host shares due to auth type change from credential",
+              {
+                operation: "auto_revoke_shares",
+                hostId: Number(hostId),
+                revokedCount: revokedShares.length,
+                reason: "auth_type_changed_from_credential",
+              },
+            );
+            // Note: sharedCredentials will be auto-deleted by CASCADE
+          }
+        }
+      }
 
       await SimpleDBOps.update(
         sshData,
@@ -691,7 +758,8 @@ router.put(
           : undefined,
       };
 
-      const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
+      const resolvedHost =
+        (await resolveHostCredentials(baseHost, userId)) || baseHost;
 
       sshLogger.success(
         `SSH host updated: ${name} (${ip}:${port}) by user ${userId}`,
@@ -854,12 +922,51 @@ router.get(
           ),
         );
 
-      // Decrypt and format the data
-      const data = await SimpleDBOps.select(
-        Promise.resolve(rawData),
-        "ssh_data",
+      // Separate own hosts from shared hosts for proper decryption
+      const ownHosts = rawData.filter((row) => row.userId === userId);
+      const sharedHosts = rawData.filter((row) => row.userId !== userId);
+
+      // Decrypt own hosts with user's DEK
+      let decryptedOwnHosts: any[] = [];
+      try {
+        decryptedOwnHosts = await SimpleDBOps.select(
+          Promise.resolve(ownHosts),
+          "ssh_data",
+          userId,
+        );
+        sshLogger.debug("Own hosts decrypted successfully", {
+          operation: "host_fetch_own_decrypted",
+          userId,
+          count: decryptedOwnHosts.length,
+        });
+      } catch (decryptError) {
+        sshLogger.error("Failed to decrypt own hosts", decryptError, {
+          operation: "host_fetch_own_decrypt_failed",
+          userId,
+        });
+        // Return empty array if decryption fails
+        decryptedOwnHosts = [];
+      }
+
+      // For shared hosts, DON'T try to decrypt them with user's DEK
+      // Just pass them through as plain objects without encrypted credential fields
+      // The credentials will be resolved via SharedCredentialManager later when resolveHostCredentials is called
+      sshLogger.info("Processing shared hosts", {
+        operation: "host_fetch_shared_process",
         userId,
-      );
+        count: sharedHosts.length,
+      });
+
+      const sanitizedSharedHosts = sharedHosts;
+
+      sshLogger.info("Combining hosts", {
+        operation: "host_fetch_combine",
+        userId,
+        ownCount: decryptedOwnHosts.length,
+        sharedCount: sanitizedSharedHosts.length,
+      });
+
+      const data = [...decryptedOwnHosts, ...sanitizedSharedHosts];
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
@@ -900,9 +1007,17 @@ router.get(
             sharedExpiresAt: row.expiresAt || undefined,
           };
 
-          return (await resolveHostCredentials(baseHost)) || baseHost;
+          const resolved =
+            (await resolveHostCredentials(baseHost, userId)) || baseHost;
+          return resolved;
         }),
       );
+
+      sshLogger.info("Credential resolution complete, sending response", {
+        operation: "host_fetch_complete",
+        userId,
+        hostCount: result.length,
+      });
 
       res.json(result);
     } catch (err) {
@@ -978,7 +1093,7 @@ router.get(
           : [],
       };
 
-      res.json((await resolveHostCredentials(result)) || result);
+      res.json((await resolveHostCredentials(result, userId)) || result);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -1022,7 +1137,7 @@ router.get(
 
       const host = hosts[0];
 
-      const resolvedHost = (await resolveHostCredentials(host)) || host;
+      const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
 
       const exportData = {
         name: resolvedHost.name,
@@ -1644,12 +1759,68 @@ router.delete(
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
+  requestingUserId?: string,
 ): Promise<Record<string, unknown>> {
   try {
+    sshLogger.info("Resolving credentials for host", {
+      operation: "resolve_credentials_start",
+      hostId: host.id as number,
+      hasCredentialId: !!host.credentialId,
+      requestingUserId,
+      ownerId: (host.ownerId || host.userId) as string,
+    });
+
     if (host.credentialId && (host.userId || host.ownerId)) {
       const credentialId = host.credentialId as number;
       const ownerId = (host.ownerId || host.userId) as string;
 
+      // Check if this is a shared host access
+      if (requestingUserId && requestingUserId !== ownerId) {
+        // User is accessing a shared host - use shared credential
+        try {
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            host.id as number,
+            requestingUserId,
+          );
+
+          if (sharedCred) {
+            const resolvedHost: Record<string, unknown> = {
+              ...host,
+              authType: sharedCred.authType,
+              password: sharedCred.password,
+              key: sharedCred.key,
+              keyPassword: sharedCred.keyPassword,
+              keyType: sharedCred.keyType,
+            };
+
+            // Only override username if overrideCredentialUsername is not enabled
+            if (!host.overrideCredentialUsername) {
+              resolvedHost.username = sharedCred.username;
+            }
+
+            return resolvedHost;
+          }
+        } catch (sharedCredError) {
+          sshLogger.warn(
+            "Failed to get shared credential, falling back to owner credential",
+            {
+              operation: "resolve_shared_credential_fallback",
+              hostId: host.id as number,
+              requestingUserId,
+              error:
+                sharedCredError instanceof Error
+                  ? sharedCredError.message
+                  : "Unknown error",
+            },
+          );
+          // Fall through to try owner's credential
+        }
+      }
+
+      // Original owner access - use original credential
       const credentials = await SimpleDBOps.select(
         db
           .select()

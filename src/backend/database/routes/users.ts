@@ -1215,6 +1215,21 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
+    // Re-encrypt any pending shared credentials for this user
+    try {
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
+    } catch (error) {
+      authLogger.warn("Failed to re-encrypt pending shared credentials", {
+        operation: "reencrypt_pending_credentials",
+        userId: userRecord.id,
+        error,
+      });
+      // Continue with login even if re-encryption fails
+    }
+
     if (userRecord.totp_enabled) {
       const tempToken = await authManager.generateJWTToken(userRecord.id, {
         pendingTOTP: true,

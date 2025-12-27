@@ -76,10 +76,8 @@ interface User {
   is_admin: boolean;
 }
 
-const PERMISSION_LEVELS = [
-  { value: "view", labelKey: "rbac.view" },
-  { value: "manage", labelKey: "rbac.manage" },
-];
+// Only view permission is supported (manage removed due to encryption constraints)
+const PERMISSION_LEVELS = [{ value: "view", labelKey: "rbac.view" }];
 
 export function HostSharingTab({
   hostId,
@@ -430,26 +428,12 @@ export function HostSharingTab({
               </TabsContent>
             </Tabs>
 
-            {/* Permission Level */}
+            {/* Permission Level - Always "view" (read-only) */}
             <div className="space-y-2">
-              <Label htmlFor="permission-level">
-                {t("rbac.permissionLevel")}
-              </Label>
-              <Select
-                value={permissionLevel || "use"}
-                onValueChange={(v) => setPermissionLevel(v || "use")}
-              >
-                <SelectTrigger id="permission-level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERMISSION_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {t(level.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>{t("rbac.permissionLevel")}</Label>
+              <div className="text-sm text-muted-foreground">
+                {t("rbac.view")} - {t("rbac.viewDesc")}
+              </div>
             </div>
 
             {/* Expiration */}
@@ -496,7 +480,6 @@ export function HostSharingTab({
                   <TableHead>{t("rbac.permissionLevel")}</TableHead>
                   <TableHead>{t("rbac.grantedBy")}</TableHead>
                   <TableHead>{t("rbac.expires")}</TableHead>
-                  <TableHead>{t("rbac.accessCount")}</TableHead>
                   <TableHead className="text-right">
                     {t("common.actions")}
                   </TableHead>
@@ -506,7 +489,7 @@ export function HostSharingTab({
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="text-center text-muted-foreground"
                     >
                       {t("common.loading")}
@@ -515,7 +498,7 @@ export function HostSharingTab({
                 ) : accessList.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="text-center text-muted-foreground"
                     >
                       {t("rbac.noAccessRecords")}
@@ -582,7 +565,6 @@ export function HostSharingTab({
                           t("rbac.never")
                         )}
                       </TableCell>
-                      <TableCell>{access.accessCount}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           type="button"

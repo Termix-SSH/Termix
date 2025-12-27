@@ -499,12 +499,7 @@ async function connectSSHTunnel(
           getDb()
             .select()
             .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-                eq(sshCredentials.userId, tunnelConfig.sourceUserId),
-              ),
-            ),
+            .where(eq(sshCredentials.id, tunnelConfig.sourceCredentialId)),
           "ssh_credentials",
           tunnelConfig.sourceUserId,
         );
@@ -582,12 +577,7 @@ async function connectSSHTunnel(
           getDb()
             .select()
             .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, tunnelConfig.endpointCredentialId),
-                eq(sshCredentials.userId, tunnelConfig.endpointUserId),
-              ),
-            ),
+            .where(eq(sshCredentials.id, tunnelConfig.endpointCredentialId)),
           "ssh_credentials",
           tunnelConfig.endpointUserId,
         );
@@ -1021,7 +1011,8 @@ async function connectSSHTunnel(
   if (
     tunnelConfig.useSocks5 &&
     (tunnelConfig.socks5Host ||
-      (tunnelConfig.socks5ProxyChain && tunnelConfig.socks5ProxyChain.length > 0))
+      (tunnelConfig.socks5ProxyChain &&
+        tunnelConfig.socks5ProxyChain.length > 0))
   ) {
     try {
       const socks5Socket = await createSocks5Connection(
@@ -1088,12 +1079,7 @@ async function killRemoteTunnelByMarker(
           getDb()
             .select()
             .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, tunnelConfig.sourceCredentialId),
-                eq(sshCredentials.userId, tunnelConfig.sourceUserId),
-              ),
-            ),
+            .where(eq(sshCredentials.id, tunnelConfig.sourceCredentialId)),
           "ssh_credentials",
           tunnelConfig.sourceUserId,
         );
@@ -1298,7 +1284,8 @@ async function killRemoteTunnelByMarker(
   if (
     tunnelConfig.useSocks5 &&
     (tunnelConfig.socks5Host ||
-      (tunnelConfig.socks5ProxyChain && tunnelConfig.socks5ProxyChain.length > 0))
+      (tunnelConfig.socks5ProxyChain &&
+        tunnelConfig.socks5ProxyChain.length > 0))
   ) {
     (async () => {
       try {

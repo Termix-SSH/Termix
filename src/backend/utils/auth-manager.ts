@@ -154,9 +154,8 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { getSqlite, saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
 
       const sqlite = getSqlite();
 
@@ -168,6 +167,33 @@ class AuthManager {
 
       if (migrationResult.migrated) {
         await saveMemoryDatabaseToFile();
+      }
+
+      // Migrate credentials to system encryption for offline sharing
+      try {
+        const { CredentialSystemEncryptionMigration } =
+          await import("./credential-system-encryption-migration.js");
+        const credMigration = new CredentialSystemEncryptionMigration();
+        const credResult = await credMigration.migrateUserCredentials(userId);
+
+        if (credResult.migrated > 0) {
+          databaseLogger.info(
+            "Credentials migrated to system encryption on login",
+            {
+              operation: "login_credential_migration",
+              userId,
+              migrated: credResult.migrated,
+            },
+          );
+          await saveMemoryDatabaseToFile();
+        }
+      } catch (error) {
+        // Log but don't fail login
+        databaseLogger.warn("Credential migration failed during login", {
+          operation: "login_credential_migration_failed",
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {
@@ -231,9 +257,8 @@ class AuthManager {
         });
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -334,9 +359,8 @@ class AuthManager {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -387,9 +411,8 @@ class AuthManager {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -430,9 +453,8 @@ class AuthManager {
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -568,9 +590,8 @@ class AuthManager {
               .where(eq(sessions.id, payload.sessionId))
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } = await import(
-                    "../database/db/index.js"
-                  );
+                  const { saveMemoryDatabaseToFile } =
+                    await import("../database/db/index.js");
                   await saveMemoryDatabaseToFile();
 
                   const remainingSessions = await db
@@ -714,9 +735,8 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(

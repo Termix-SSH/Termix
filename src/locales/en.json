@@ -875,6 +875,7 @@
     "selectCredentialPlaceholder": "Choose a credential...",
     "credentialRequired": "Credential is required when using credential authentication",
     "credentialDescription": "Selecting a credential will overwrite the current username and use the credential's authentication details.",
+    "cannotChangeAuthAsSharedUser": "Cannot change authentication as shared user",
     "sshPrivateKey": "SSH Private Key",
     "keyPassword": "Key Password",
     "keyType": "Key Type",
@@ -2308,11 +2309,7 @@
     "sharing": "Sharing",
     "selectUserAndRole": "Please select both a user and a role",
     "view": "View Only",
-    "viewDesc": "Can view and connect to the host in read-only mode",
-    "use": "Use",
-    "useDesc": "Can use the host normally but cannot modify host configuration",
-    "manage": "Manage",
-    "manageDesc": "Full control including modifying host configuration and sharing settings"
+    "viewDesc": "Due to the Termix encryption system, other permission levels will come at a later date"
   },
   "commandPalette": {
     "searchPlaceholder": "Search for hosts or quick actions...",

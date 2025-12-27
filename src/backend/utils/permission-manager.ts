@@ -19,7 +19,7 @@ interface HostAccessInfo {
   hasAccess: boolean;
   isOwner: boolean;
   isShared: boolean;
-  permissionLevel?: string;
+  permissionLevel?: "view"; // Only "view" is supported for shared access
   expiresAt?: string | null;
 }
 
@@ -246,32 +246,28 @@ class PermissionManager {
       if (sharedAccess.length > 0) {
         const access = sharedAccess[0];
 
-        // Check permission level for write/delete actions
+        // All shared access is view-only - deny write/delete
         if (action === "write" || action === "delete") {
-          const level = access.permissionLevel;
-          if (level === "view" || level === "readonly") {
-            return {
-              hasAccess: false,
-              isOwner: false,
-              isShared: true,
-              permissionLevel: level,
-              expiresAt: access.expiresAt,
-            };
-          }
+          return {
+            hasAccess: false,
+            isOwner: false,
+            isShared: true,
+            permissionLevel: access.permissionLevel as "view",
+            expiresAt: access.expiresAt,
+          };
         }
 
         // Update last accessed time
         try {
-          db.update(hostAccess)
+          await db
+            .update(hostAccess)
             .set({
               lastAccessedAt: now,
-              accessCount: sql`${hostAccess.accessCount} + 1`,
             })
-            .where(eq(hostAccess.id, access.id))
-            .run();
+            .where(eq(hostAccess.id, access.id));
         } catch (error) {
-          databaseLogger.warn("Failed to update host access stats", {
-            operation: "update_host_access_stats",
+          databaseLogger.warn("Failed to update host access timestamp", {
+            operation: "update_host_access_timestamp",
             error,
           });
         }
@@ -280,7 +276,7 @@ class PermissionManager {
           hasAccess: true,
           isOwner: false,
           isShared: true,
-          permissionLevel: access.permissionLevel,
+          permissionLevel: access.permissionLevel as "view",
           expiresAt: access.expiresAt,
         };
       }

@@ -280,7 +280,11 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
     setTabs((prev) =>
-      prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)),
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, ...updates, _updateTimestamp: Date.now() }
+          : tab,
+      ),
     );
   };
 

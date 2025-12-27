@@ -790,7 +790,7 @@ export function Auth({
         }}
         {...props}
       >
-        <div className="w-[420px] max-w-full p-6 flex flex-col bg-elevated border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex items-center justify-center h-32">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -821,7 +821,7 @@ export function Auth({
         {...props}
       >
         <div
-          className="w-[420px] max-w-full p-6 flex flex-col bg-elevated border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300"
+          className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300"
           style={{ maxHeight: "calc(100vh - 1rem)" }}
         >
           <div className="mb-6 text-center">
