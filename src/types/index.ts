@@ -212,6 +212,14 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+
+  // Unique identifiers for collision prevention
+  sourceHostId: number;
+  tunnelIndex: number;
+
+  // User context for RBAC
+  requestingUserId?: string;
+
   hostName: string;
   sourceIP: string;
   sourceSSHPort: number;
@@ -226,6 +234,7 @@ export interface TunnelConfig {
   endpointIP: string;
   endpointSSHPort: number;
   endpointUsername: string;
+  endpointHost: string;
   endpointPassword?: string;
   endpointAuthMethod: string;
   endpointSSHKey?: string;

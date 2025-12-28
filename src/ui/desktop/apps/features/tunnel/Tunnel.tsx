@@ -126,26 +126,25 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
     tunnelIndex: number,
   ) => {
     const tunnel = host.tunnelConnections[tunnelIndex];
-    const tunnelName = `${host.name || `${host.username}@${host.ip}`}_${
-      tunnel.sourcePort
-    }_${tunnel.endpointHost}_${tunnel.endpointPort}`;
+    const tunnelName = `${host.id}::${tunnelIndex}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
 
     setTunnelActions((prev) => ({ ...prev, [tunnelName]: true }));
 
     try {
       if (action === "connect") {
+        // Try to find endpoint host in user's accessible hosts
         const endpointHost = allHosts.find(
           (h) =>
             h.name === tunnel.endpointHost ||
             `${h.username}@${h.ip}` === tunnel.endpointHost,
         );
 
-        if (!endpointHost) {
-          throw new Error(t("tunnels.endpointHostNotFound"));
-        }
-
+        // For shared users who don't have access to endpoint host,
+        // send a minimal config and let backend resolve endpoint details
         const tunnelConfig = {
           name: tunnelName,
+          sourceHostId: host.id,
+          tunnelIndex: tunnelIndex,
           hostName: host.name || `${host.username}@${host.ip}`,
           sourceIP: host.ip,
           sourceSSHPort: host.port,
@@ -159,24 +158,25 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
           sourceKeyType: host.authType === "key" ? host.keyType : undefined,
           sourceCredentialId: host.credentialId,
           sourceUserId: host.userId,
-          endpointIP: endpointHost.ip,
-          endpointSSHPort: endpointHost.port,
-          endpointUsername: endpointHost.username,
+          endpointHost: tunnel.endpointHost,
+          endpointIP: endpointHost?.ip,
+          endpointSSHPort: endpointHost?.port,
+          endpointUsername: endpointHost?.username,
           endpointPassword:
-            endpointHost.authType === "password"
+            endpointHost?.authType === "password"
               ? endpointHost.password
               : undefined,
-          endpointAuthMethod: endpointHost.authType,
+          endpointAuthMethod: endpointHost?.authType,
           endpointSSHKey:
-            endpointHost.authType === "key" ? endpointHost.key : undefined,
+            endpointHost?.authType === "key" ? endpointHost.key : undefined,
           endpointKeyPassword:
-            endpointHost.authType === "key"
+            endpointHost?.authType === "key"
               ? endpointHost.keyPassword
               : undefined,
           endpointKeyType:
-            endpointHost.authType === "key" ? endpointHost.keyType : undefined,
-          endpointCredentialId: endpointHost.credentialId,
-          endpointUserId: endpointHost.userId,
+            endpointHost?.authType === "key" ? endpointHost.keyType : undefined,
+          endpointCredentialId: endpointHost?.credentialId,
+          endpointUserId: endpointHost?.userId,
           sourcePort: tunnel.sourcePort,
           endpointPort: tunnel.endpointPort,
           maxRetries: tunnel.maxRetries,
@@ -191,6 +191,19 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
           socks5ProxyChain: host.socks5ProxyChain,
         };
 
+        console.log("Tunnel connect config:", {
+          tunnelName,
+          sourceHostId: tunnelConfig.sourceHostId,
+          sourceCredentialId: tunnelConfig.sourceCredentialId,
+          sourceUserId: tunnelConfig.sourceUserId,
+          hasSourcePassword: !!tunnelConfig.sourcePassword,
+          hasSourceKey: !!tunnelConfig.sourceSSHKey,
+          hasEndpointHost: !!endpointHost,
+          endpointHost: tunnel.endpointHost,
+          isShared: (host as any).isShared,
+          ownerId: (host as any).ownerId,
+        });
+
         await connectTunnel(tunnelConfig);
       } else if (action === "disconnect") {
         await disconnectTunnel(tunnelName);
@@ -199,7 +212,15 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
       }
 
       await fetchTunnelStatuses();
-    } catch {
+    } catch (error) {
+      console.error("Tunnel action failed:", {
+        action,
+        tunnelName,
+        hostId: host.id,
+        tunnelIndex,
+        error: error instanceof Error ? error.message : String(error),
+        fullError: error,
+      });
     } finally {
       setTunnelActions((prev) => ({ ...prev, [tunnelName]: false }));
     }
