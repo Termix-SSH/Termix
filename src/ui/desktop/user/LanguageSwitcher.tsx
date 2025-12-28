@@ -20,7 +20,7 @@ const languages = [
   },
   { code: "ru", name: "Russian", nativeName: "Русский" },
   { code: "fr", name: "French", nativeName: "Français" },
-  { code: "no", name: "Norwegian Bokmål", nativeName: "Norsk Bokmål" },
+  { code: "nb", name: "Norwegian Bokmål", nativeName: "Norsk Bokmål" },
 ];
 
 export function LanguageSwitcher() {
