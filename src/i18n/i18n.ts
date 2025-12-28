@@ -17,6 +17,16 @@ import jaTranslation from "../locales/ja.json";
 import viTranslation from "../locales/vi.json";
 import trTranslation from "../locales/tr.json";
 import heTranslation from "../locales/he.json";
+import arTranslation from "../locales/ar.json";
+import plTranslation from "../locales/pl.json";
+import nlTranslation from "../locales/nl.json";
+import svTranslation from "../locales/sv.json";
+import idTranslation from "../locales/id.json";
+import thTranslation from "../locales/th.json";
+import ukTranslation from "../locales/uk.json";
+import csTranslation from "../locales/cs.json";
+import roTranslation from "../locales/ro.json";
+import elTranslation from "../locales/el.json";
 
 i18n
   .use(LanguageDetector)
@@ -38,6 +48,16 @@ i18n
       "vi",
       "tr",
       "he",
+      "ar",
+      "pl",
+      "nl",
+      "sv",
+      "id",
+      "th",
+      "uk",
+      "cs",
+      "ro",
+      "el",
     ],
     fallbackLng: "en",
     debug: false,
@@ -95,6 +115,36 @@ i18n
       },
       he: {
         translation: heTranslation,
+      },
+      ar: {
+        translation: arTranslation,
+      },
+      pl: {
+        translation: plTranslation,
+      },
+      nl: {
+        translation: nlTranslation,
+      },
+      sv: {
+        translation: svTranslation,
+      },
+      id: {
+        translation: idTranslation,
+      },
+      th: {
+        translation: thTranslation,
+      },
+      uk: {
+        translation: ukTranslation,
+      },
+      cs: {
+        translation: csTranslation,
+      },
+      ro: {
+        translation: roTranslation,
+      },
+      el: {
+        translation: elTranslation,
       },
     },
 

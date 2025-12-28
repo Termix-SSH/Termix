@@ -204,8 +204,148 @@ jobs:
           path: src/locales/he.json
         continue-on-error: true
 
+  translate-ar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-ar
+          path: src/locales/ar.json
+        continue-on-error: true
+
+  translate-pl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-pl
+          path: src/locales/pl.json
+        continue-on-error: true
+
+  translate-nl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-nl
+          path: src/locales/nl.json
+        continue-on-error: true
+
+  translate-sv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t sv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-sv
+          path: src/locales/sv.json
+        continue-on-error: true
+
+  translate-id:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t id
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-id
+          path: src/locales/id.json
+        continue-on-error: true
+
+  translate-th:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t th
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-th
+          path: src/locales/th.json
+        continue-on-error: true
+
+  translate-uk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t uk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-uk
+          path: src/locales/uk.json
+        continue-on-error: true
+
+  translate-cs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t cs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-cs
+          path: src/locales/cs.json
+        continue-on-error: true
+
+  translate-ro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ro
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-ro
+          path: src/locales/ro.json
+        continue-on-error: true
+
+  translate-el:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t el
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-el
+          path: src/locales/el.json
+        continue-on-error: true
+
   create-pr:
-    needs: [translate-zh, translate-ru, translate-pt, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he]
+    needs: [translate-zh, translate-ru, translate-pt, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he, translate-ar, translate-pl, translate-nl, translate-sv, translate-id, translate-th, translate-uk, translate-cs, translate-ro, translate-el]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -233,6 +373,16 @@ jobs:
           cp translations-temp/translations-ko/ko.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-it/it.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-he/he.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-ar/ar.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-pl/pl.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-nl/nl.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-sv/sv.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-id/id.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-th/th.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-uk/uk.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-cs/cs.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-ro/ro.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-el/el.json src/locales/ 2>/dev/null || true
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
