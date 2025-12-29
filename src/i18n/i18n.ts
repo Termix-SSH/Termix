@@ -27,6 +27,7 @@ import ukTranslation from "../locales/uk.json";
 import csTranslation from "../locales/cs.json";
 import roTranslation from "../locales/ro.json";
 import elTranslation from "../locales/el.json";
+import nbTranslation from "../locales/nb.json";
 
 i18n
   .use(LanguageDetector)
@@ -58,6 +59,7 @@ i18n
       "cs",
       "ro",
       "el",
+      "nb",
     ],
     fallbackLng: "en",
     debug: false,
@@ -145,6 +147,9 @@ i18n
       },
       el: {
         translation: elTranslation,
+      },
+      nb: {
+        translation: nbTranslation,
       },
     },
 

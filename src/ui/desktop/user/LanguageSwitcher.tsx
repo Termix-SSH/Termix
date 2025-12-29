@@ -39,6 +39,7 @@ const languages = [
   { code: "tr", name: "Turkish", nativeName: "Türkçe" },
   { code: "uk", name: "Ukrainian", nativeName: "Українська" },
   { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt" },
+  { code: "nb", name: "Norwegian", nativeName: "Norsk" },
 ];
 
 export function LanguageSwitcher() {

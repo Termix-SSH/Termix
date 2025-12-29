@@ -344,6 +344,20 @@ jobs:
           path: src/locales/el.json
         continue-on-error: true
 
+  translate-nb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translations-nb
+          path: src/locales/nb.json
+        continue-on-error: true
+
   create-pr:
     needs:
       [
@@ -371,6 +385,7 @@ jobs:
         translate-cs,
         translate-ro,
         translate-el,
+        translate-nb,
       ]
     runs-on: ubuntu-latest
     steps:
@@ -409,6 +424,7 @@ jobs:
           cp translations-temp/translations-cs/cs.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-ro/ro.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-el/el.json src/locales/ 2>/dev/null || true
+          cp translations-temp/translations-nb/nb.json src/locales/ 2>/dev/null || true
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
