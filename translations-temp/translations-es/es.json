@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Selecciona la fuente que se usará en el terminal",
     "statusMonitoring": "Tamaño de fuente",
     "metricsMonitoring": "Tamaño de fuente: {{value}}px",
-    "terminalCustomizationNotice": "Ajustar el tamaño de fuente del terminal",
     "terminalCustomization": "Espaciado entre letras",
     "appearance": "Espaciado entre letras: {{value}}px",
     "behavior": "Ajustar el espaciado entre caracteres",

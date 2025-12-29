@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Uiterlijk",
     "statusMonitoring": "Gedrag",
     "metricsMonitoring": "Geavanceerd",
-    "terminalCustomizationNotice": "Themavoorbeeld",
     "terminalCustomization": "Thema",
     "appearance": "Thema selecteren",
     "behavior": "Kies een kleurenthema voor de terminal",
@@ -2368,7 +2367,15 @@
     "notConnected": "Console",
     "clickToConnect": "Start de container om toegang te krijgen tot de console",
     "connectingTo": "Schakelen naar licht",
-    "containerNotFound": "Schakelen naar donker"
+    "containerNotFound": "Schakelen naar donker",
+    "backToList": "Terug naar de lijst",
+    "logs": "Logboeken",
+    "stats": "Statistieken",
+    "consoleTab": "Console",
+    "startContainerToAccess": "Start de container om toegang te krijgen tot de console"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Schakelen naar Licht",
+    "switchToDark": "Schakelen naar Donker"
+  }
 }

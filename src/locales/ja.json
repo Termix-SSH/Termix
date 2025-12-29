@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "ホストマネージャー → 統計タブで監視を有効にしてください。",
     "statusMonitoring": "監視オフ",
     "metricsMonitoring": "ステータス",
-    "terminalCustomizationNotice": "メトリクス",
     "terminalCustomization": "注: ターミナルのカスタマイズはデスクトップ（ウェブサイトとElectronアプリ）でのみ機能します。モバイルアプリとモバイルウェブサイトでは、システムのデフォルトのターミナル設定が使用されます。",
     "appearance": "ターミナルのカスタマイズ",
     "behavior": "外観",

@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Tỷ lệ tương phản tối thiểu: {{value}}",
     "statusMonitoring": "Tự động điều chỉnh màu sắc để dễ đọc hơn",
     "metricsMonitoring": "Chuyển tiếp tác nhân SSH",
-    "terminalCustomizationNotice": "Chuyển tiếp tác nhân xác thực SSH đến máy chủ từ xa",
     "terminalCustomization": "Chế độ xóa lùi",
     "appearance": "Chọn chế độ xóa lùi",
     "behavior": "Bình thường (DEL)",
@@ -2376,6 +2375,7 @@
     "startContainerToAccess": "Chuyển sang Sáng"
   },
   "theme": {
-    "switchToLight": "Chuyển sang Tối"
+    "switchToLight": "Chuyển sang Tối",
+    "switchToDark": "Chuyển sang chế độ Tối"
   }
 }

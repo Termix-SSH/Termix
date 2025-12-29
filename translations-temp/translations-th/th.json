@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "การปรับแต่งเทอร์มินัล",
     "statusMonitoring": "ลักษณะที่ปรากฏ",
     "metricsMonitoring": "พฤติกรรม",
-    "terminalCustomizationNotice": "ขั้นสูง",
     "terminalCustomization": "ตัวอย่างธีม",
     "appearance": "ธีม",
     "behavior": "เลือกธีม",
@@ -2368,7 +2367,15 @@
     "notConnected": "คอนโซล",
     "clickToConnect": "เริ่มคอนเทนเนอร์เพื่อเข้าถึงคอนโซล",
     "connectingTo": "สลับเป็นโหมดสว่าง",
-    "containerNotFound": "สลับเป็นโหมดมืด"
+    "containerNotFound": "สลับเป็นโหมดมืด",
+    "backToList": "กลับสู่รายการ",
+    "logs": "บันทึก",
+    "stats": "สถิติ",
+    "consoleTab": "คอนโซล",
+    "startContainerToAccess": "เริ่มคอนเทนเนอร์เพื่อเข้าถึงคอนโซล"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "สลับเป็นโหมดสว่าง",
+    "switchToDark": "สลับเป็นโหมดมืด"
+  }
 }
