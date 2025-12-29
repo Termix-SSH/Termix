@@ -1,70 +1,28 @@
-import React, { useRef, useState, useEffect } from "react";
 import {
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
 } from "@/components/ui/form.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import type { Control, UseFormWatch } from "react-hook-form";
-
-interface CredentialGeneralTabProps {
-  control: Control<any>;
-  watch: UseFormWatch<any>;
-  folders: string[];
-  t: (key: string, params?: any) => string;
-}
+import React from "react";
+import { useTranslation } from "react-i18next";
+import type { CredentialGeneralTabProps } from "./shared/tab-types";
 
 export function CredentialGeneralTab({
-  control,
-  watch,
+  form,
   folders,
-  t,
+  tagInput,
+  setTagInput,
+  folderDropdownOpen,
+  setFolderDropdownOpen,
+  folderInputRef,
+  folderDropdownRef,
+  filteredFolders,
+  handleFolderClick,
 }: CredentialGeneralTabProps) {
-  const [tagInput, setTagInput] = useState("");
-  const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
-  const folderInputRef = useRef<HTMLInputElement>(null);
-  const folderDropdownRef = useRef<HTMLDivElement>(null);
-
-  const folderValue = watch("folder");
-  const filteredFolders = React.useMemo(() => {
-    if (!folderValue) return folders;
-    return folders.filter((f) =>
-      f.toLowerCase().includes(folderValue.toLowerCase()),
-    );
-  }, [folderValue, folders]);
-
-  const handleFolderClick = (
-    folder: string,
-    onChange: (value: string) => void,
-  ) => {
-    onChange(folder);
-    setFolderDropdownOpen(false);
-  };
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        folderDropdownRef.current &&
-        !folderDropdownRef.current.contains(event.target as Node) &&
-        folderInputRef.current &&
-        !folderInputRef.current.contains(event.target as Node)
-      ) {
-        setFolderDropdownOpen(false);
-      }
-    }
-
-    if (folderDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [folderDropdownOpen]);
+  const { t } = useTranslation();
 
   return (
     <>
@@ -73,7 +31,7 @@ export function CredentialGeneralTab({
       </FormLabel>
       <div className="grid grid-cols-12 gap-3">
         <FormField
-          control={control}
+          control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem className="col-span-6">
@@ -89,7 +47,7 @@ export function CredentialGeneralTab({
         />
 
         <FormField
-          control={control}
+          control={form.control}
           name="username"
           render={({ field }) => (
             <FormItem className="col-span-6">
@@ -106,7 +64,7 @@ export function CredentialGeneralTab({
       </FormLabel>
       <div className="grid grid-cols-26 gap-3">
         <FormField
-          control={control}
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem className="col-span-10">
@@ -119,7 +77,7 @@ export function CredentialGeneralTab({
         />
 
         <FormField
-          control={control}
+          control={form.control}
           name="folder"
           render={({ field }) => (
             <FormItem className="col-span-10 relative">
@@ -151,9 +109,7 @@ export function CredentialGeneralTab({
                         variant="ghost"
                         size="sm"
                         className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-white/15 focus:bg-white/20 focus:outline-none"
-                        onClick={() =>
-                          handleFolderClick(folder, field.onChange)
-                        }
+                        onClick={() => handleFolderClick(folder)}
                       >
                         {folder}
                       </Button>
@@ -166,7 +122,7 @@ export function CredentialGeneralTab({
         />
 
         <FormField
-          control={control}
+          control={form.control}
           name="tags"
           render={({ field }) => (
             <FormItem className="col-span-10 overflow-visible">

@@ -498,6 +498,8 @@ export interface HostManagerProps {
   _updateTimestamp?: number;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  currentTabId?: number;
+  updateTab?: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
 }
 
 export interface SSHManagerHostEditorProps {

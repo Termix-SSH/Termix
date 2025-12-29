@@ -21,6 +21,8 @@ export function HostManager({
   _updateTimestamp,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
+  currentTabId,
+  updateTab,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -75,6 +77,11 @@ export function HostManager({
     setEditingHost(host);
     setActiveTab("add_host");
     lastProcessedHostIdRef.current = host.id;
+
+    // Persist to tab context
+    if (updateTab && currentTabId !== undefined) {
+      updateTab(currentTabId, { initialTab: "add_host" });
+    }
   };
 
   const handleFormSubmit = () => {
@@ -93,6 +100,11 @@ export function HostManager({
   }) => {
     setEditingCredential(credential);
     setActiveTab("add_credential");
+
+    // Persist to tab context
+    if (updateTab && currentTabId !== undefined) {
+      updateTab(currentTabId, { initialTab: "add_credential" });
+    }
   };
 
   const handleCredentialFormSubmit = () => {
@@ -108,6 +120,11 @@ export function HostManager({
       setEditingCredential(null);
     }
     setActiveTab(value);
+
+    // Persist to tab context
+    if (updateTab && currentTabId !== undefined) {
+      updateTab(currentTabId, { initialTab: value });
+    }
   };
 
   const topMarginPx = isTopbarOpen ? 74 : 26;

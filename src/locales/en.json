@@ -975,7 +975,6 @@
     "monitoringDisabledBadge": "Monitoring Off",
     "statusMonitoring": "Status",
     "metricsMonitoring": "Metrics",
-    "terminalCustomizationNotice": "Note: Terminal customizations only work on desktop (website and Electron app). Mobile apps and mobile website use system default terminal settings.",
     "terminalCustomization": "Terminal Customization",
     "appearance": "Appearance",
     "behavior": "Behavior",

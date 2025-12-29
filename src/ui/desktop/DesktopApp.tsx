@@ -29,7 +29,7 @@ function AppContent() {
   const [transitionPhase, setTransitionPhase] = useState<
     "idle" | "fadeOut" | "fadeIn"
   >("idle");
-  const { currentTab, tabs } = useTabs();
+  const { currentTab, tabs, updateTab } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
@@ -280,6 +280,8 @@ function AppContent() {
                 _updateTimestamp={currentTabData?._updateTimestamp}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
+                currentTabId={currentTab}
+                updateTab={updateTab}
               />
             </div>
           )}

@@ -1,73 +1,44 @@
-import React from "react";
-import { Controller } from "react-hook-form";
 import {
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
 } from "@/components/ui/form.tsx";
-import { Button } from "@/components/ui/button.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
+import { Button } from "@/components/ui/button.tsx";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
+import { Controller } from "react-hook-form";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
+import React from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import type { Control, UseFormWatch, UseFormSetValue } from "react-hook-form";
-
-interface CredentialAuthenticationTabProps {
-  control: Control<any>;
-  watch: UseFormWatch<any>;
-  setValue: UseFormSetValue<any>;
-  authTab: "password" | "key";
-  setAuthTab: (tab: "password" | "key") => void;
-  editorTheme: any;
-  detectedKeyType: string | null;
-  keyDetectionLoading: boolean;
-  detectedPublicKeyType: string | null;
-  publicKeyDetectionLoading: boolean;
-  debouncedKeyDetection: (keyValue: string, keyPassword?: string) => void;
-  debouncedPublicKeyDetection: (publicKeyValue: string) => void;
-  generateKeyPair: (
-    type: string,
-    bits?: number,
-    passphrase?: string,
-  ) => Promise<{
-    success: boolean;
-    privateKey: string;
-    publicKey: string;
-    error?: string;
-  }>;
-  generatePublicKeyFromPrivate: (
-    privateKey: string,
-    passphrase?: string,
-  ) => Promise<{ success: boolean; publicKey?: string; error?: string }>;
-  getFriendlyKeyTypeName: (keyType: string) => string;
-  t: (key: string, params?: any) => string;
-}
-
-export function CredentialAuthenticationTab({
-  control,
-  watch,
-  setValue,
-  authTab,
-  setAuthTab,
-  editorTheme,
-  detectedKeyType,
-  keyDetectionLoading,
-  detectedPublicKeyType,
-  publicKeyDetectionLoading,
-  debouncedKeyDetection,
-  debouncedPublicKeyDetection,
+import {
   generateKeyPair,
   generatePublicKeyFromPrivate,
+} from "@/ui/main-axios.ts";
+import type { CredentialAuthenticationTabProps } from "./shared/tab-types";
+
+export function CredentialAuthenticationTab({
+  form,
+  authTab,
+  setAuthTab,
+  detectedKeyType,
+  detectedPublicKeyType,
+  keyDetectionLoading,
+  publicKeyDetectionLoading,
+  editorTheme,
+  debouncedKeyDetection,
+  debouncedPublicKeyDetection,
   getFriendlyKeyTypeName,
-  t,
 }: CredentialAuthenticationTabProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <FormLabel className="mb-2 font-bold">
@@ -78,12 +49,12 @@ export function CredentialAuthenticationTab({
         onValueChange={(value) => {
           const newAuthType = value as "password" | "key";
           setAuthTab(newAuthType);
-          setValue("authType", newAuthType);
+          form.setValue("authType", newAuthType);
 
-          setValue("password", "");
-          setValue("key", null);
-          setValue("keyPassword", "");
-          setValue("keyType", "auto");
+          form.setValue("password", "");
+          form.setValue("key", null);
+          form.setValue("keyPassword", "");
+          form.setValue("keyType", "auto");
         }}
         className="flex-1 flex flex-col h-full min-h-0"
       >
@@ -103,7 +74,7 @@ export function CredentialAuthenticationTab({
         </TabsList>
         <TabsContent value="password">
           <FormField
-            control={control}
+            control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
@@ -138,7 +109,7 @@ export function CredentialAuthenticationTab({
                   size="sm"
                   onClick={async () => {
                     try {
-                      const currentKeyPassword = watch("keyPassword");
+                      const currentKeyPassword = form.watch("keyPassword");
                       const result = await generateKeyPair(
                         "ssh-ed25519",
                         undefined,
@@ -146,8 +117,8 @@ export function CredentialAuthenticationTab({
                       );
 
                       if (result.success) {
-                        setValue("key", result.privateKey);
-                        setValue("publicKey", result.publicKey);
+                        form.setValue("key", result.privateKey);
+                        form.setValue("publicKey", result.publicKey);
                         debouncedKeyDetection(
                           result.privateKey,
                           currentKeyPassword,
@@ -181,7 +152,7 @@ export function CredentialAuthenticationTab({
                   size="sm"
                   onClick={async () => {
                     try {
-                      const currentKeyPassword = watch("keyPassword");
+                      const currentKeyPassword = form.watch("keyPassword");
                       const result = await generateKeyPair(
                         "ecdsa-sha2-nistp256",
                         undefined,
@@ -189,8 +160,8 @@ export function CredentialAuthenticationTab({
                       );
 
                       if (result.success) {
-                        setValue("key", result.privateKey);
-                        setValue("publicKey", result.publicKey);
+                        form.setValue("key", result.privateKey);
+                        form.setValue("publicKey", result.publicKey);
                         debouncedKeyDetection(
                           result.privateKey,
                           currentKeyPassword,
@@ -224,7 +195,7 @@ export function CredentialAuthenticationTab({
                   size="sm"
                   onClick={async () => {
                     try {
-                      const currentKeyPassword = watch("keyPassword");
+                      const currentKeyPassword = form.watch("keyPassword");
                       const result = await generateKeyPair(
                         "ssh-rsa",
                         2048,
@@ -232,8 +203,8 @@ export function CredentialAuthenticationTab({
                       );
 
                       if (result.success) {
-                        setValue("key", result.privateKey);
-                        setValue("publicKey", result.publicKey);
+                        form.setValue("key", result.privateKey);
+                        form.setValue("publicKey", result.publicKey);
                         debouncedKeyDetection(
                           result.privateKey,
                           currentKeyPassword,
@@ -262,7 +233,7 @@ export function CredentialAuthenticationTab({
             </div>
             <div className="grid grid-cols-2 gap-3 items-start">
               <Controller
-                control={control}
+                control={form.control}
                 name="key"
                 render={({ field }) => (
                   <FormItem className="mb-3 flex flex-col">
@@ -283,7 +254,7 @@ export function CredentialAuthenticationTab({
                                 field.onChange(fileContent);
                                 debouncedKeyDetection(
                                   fileContent,
-                                  watch("keyPassword"),
+                                  form.watch("keyPassword"),
                                 );
                               } catch (error) {
                                 console.error(
@@ -313,7 +284,10 @@ export function CredentialAuthenticationTab({
                         }
                         onChange={(value) => {
                           field.onChange(value);
-                          debouncedKeyDetection(value, watch("keyPassword"));
+                          debouncedKeyDetection(
+                            value,
+                            form.watch("keyPassword"),
+                          );
                         }}
                         placeholder={t("placeholders.pastePrivateKey")}
                         theme={editorTheme}
@@ -366,7 +340,7 @@ export function CredentialAuthenticationTab({
                 )}
               />
               <Controller
-                control={control}
+                control={form.control}
                 name="publicKey"
                 render={({ field }) => (
                   <FormItem className="mb-3 flex flex-col">
@@ -411,7 +385,7 @@ export function CredentialAuthenticationTab({
                         variant="outline"
                         className="flex-shrink-0"
                         onClick={async () => {
-                          const privateKey = watch("key");
+                          const privateKey = form.watch("key");
                           if (
                             !privateKey ||
                             typeof privateKey !== "string" ||
@@ -424,7 +398,7 @@ export function CredentialAuthenticationTab({
                           }
 
                           try {
-                            const keyPassword = watch("keyPassword");
+                            const keyPassword = form.watch("keyPassword");
                             const result = await generatePublicKeyFromPrivate(
                               privateKey,
                               keyPassword,
@@ -517,7 +491,7 @@ export function CredentialAuthenticationTab({
             </div>
             <div className="grid grid-cols-8 gap-3 mt-3">
               <FormField
-                control={control}
+                control={form.control}
                 name="keyPassword"
                 render={({ field }) => (
                   <FormItem className="col-span-8">
