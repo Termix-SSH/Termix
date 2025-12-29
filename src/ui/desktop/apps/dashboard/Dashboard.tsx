@@ -600,10 +600,8 @@ export function Dashboard({
                       ) : (
                         recentActivity
                           .filter((item, index, array) => {
-                            // Always show the first item
                             if (index === 0) return true;
 
-                            // Show if different from previous item (by hostId and type)
                             const prevItem = array[index - 1];
                             return !(
                               item.hostId === prevItem.hostId &&

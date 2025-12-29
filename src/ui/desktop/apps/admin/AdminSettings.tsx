@@ -72,7 +72,6 @@ export function AdminSettings({
   >([]);
   const [usersLoading, setUsersLoading] = React.useState(false);
 
-  // New dialog states
   const [createUserDialogOpen, setCreateUserDialogOpen] = React.useState(false);
   const [userEditDialogOpen, setUserEditDialogOpen] = React.useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = React.useState<{
@@ -216,7 +215,6 @@ export function AdminSettings({
     }
   };
 
-  // New dialog handlers
   const handleEditUser = (user: (typeof users)[0]) => {
     setSelectedUserForEdit(user);
     setUserEditDialogOpen(true);

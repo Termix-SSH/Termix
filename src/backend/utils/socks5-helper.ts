@@ -25,22 +25,25 @@ export async function createSocks5Connection(
   targetPort: number,
   socks5Config: SOCKS5Config,
 ): Promise<net.Socket | null> {
-  // If SOCKS5 is not enabled, return null
   if (!socks5Config.useSocks5) {
     return null;
   }
 
-  // If proxy chain is provided, use chain connection
-  if (socks5Config.socks5ProxyChain && socks5Config.socks5ProxyChain.length > 0) {
-    return createProxyChainConnection(targetHost, targetPort, socks5Config.socks5ProxyChain);
+  if (
+    socks5Config.socks5ProxyChain &&
+    socks5Config.socks5ProxyChain.length > 0
+  ) {
+    return createProxyChainConnection(
+      targetHost,
+      targetPort,
+      socks5Config.socks5ProxyChain,
+    );
   }
 
-  // If single proxy is configured, use single proxy connection
   if (socks5Config.socks5Host) {
     return createSingleProxyConnection(targetHost, targetPort, socks5Config);
   }
 
-  // No proxy configured
   return null;
 }
 
@@ -67,23 +70,8 @@ async function createSingleProxyConnection(
     },
   };
 
-  sshLogger.info("Creating SOCKS5 connection", {
-    operation: "socks5_connect",
-    proxyHost: socks5Config.socks5Host,
-    proxyPort: socks5Config.socks5Port || 1080,
-    targetHost,
-    targetPort,
-    hasAuth: !!(socks5Config.socks5Username && socks5Config.socks5Password),
-  });
-
   try {
     const info = await SocksClient.createConnection(socksOptions);
-
-    sshLogger.info("SOCKS5 connection established", {
-      operation: "socks5_connected",
-      targetHost,
-      targetPort,
-    });
 
     return info.socket;
   } catch (error) {
@@ -113,14 +101,6 @@ async function createProxyChainConnection(
   }
 
   const chainPath = proxyChain.map((p) => `${p.host}:${p.port}`).join(" → ");
-  sshLogger.info(`Creating SOCKS proxy chain: ${chainPath} → ${targetHost}:${targetPort}`, {
-    operation: "socks5_chain_connect",
-    chainLength: proxyChain.length,
-    targetHost,
-    targetPort,
-    proxies: proxyChain.map((p) => `${p.host}:${p.port}`),
-  });
-
   try {
     const info = await SocksClient.createConnectionChain({
       proxies: proxyChain.map((p) => ({
@@ -129,7 +109,7 @@ async function createProxyChainConnection(
         type: p.type,
         userId: p.username,
         password: p.password,
-        timeout: 10000, // 10-second timeout for each hop
+        timeout: 10000,
       })),
       command: "connect",
       destination: {
@@ -137,15 +117,6 @@ async function createProxyChainConnection(
         port: targetPort,
       },
     });
-
-    sshLogger.info(`✓ Proxy chain established: ${chainPath} → ${targetHost}:${targetPort}`, {
-      operation: "socks5_chain_connected",
-      chainLength: proxyChain.length,
-      targetHost,
-      targetPort,
-      fullPath: `${chainPath} → ${targetHost}:${targetPort}`,
-    });
-
     return info.socket;
   } catch (error) {
     sshLogger.error("SOCKS proxy chain connection failed", error, {

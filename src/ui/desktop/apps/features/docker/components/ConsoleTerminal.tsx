@@ -46,7 +46,6 @@ export function ConsoleTerminal({
   const getWebSocketBaseUrl = React.useCallback(() => {
     const isElectronApp = isElectron();
 
-    // Development mode check (similar to Terminal.tsx)
     const isDev =
       !isElectronApp &&
       process.env.NODE_ENV === "development" &&
@@ -55,28 +54,23 @@ export function ConsoleTerminal({
         window.location.port === "");
 
     if (isDev) {
-      // Development: connect directly to port 30008
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       return `${protocol}//localhost:30008`;
     }
 
     if (isElectronApp) {
-      // Electron: construct URL from configured server
       const baseUrl =
         (window as { configuredServerUrl?: string }).configuredServerUrl ||
         "http://127.0.0.1:30001";
       const wsProtocol = baseUrl.startsWith("https://") ? "wss://" : "ws://";
       const wsHost = baseUrl.replace(/^https?:\/\//, "");
-      // Use nginx path routing, not direct port
       return `${wsProtocol}${wsHost}/docker/console/`;
     }
 
-    // Production web: use nginx proxy path (same as Terminal uses /ssh/websocket/)
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${protocol}//${window.location.host}/docker/console/`;
   }, []);
 
-  // Initialize terminal
   React.useEffect(() => {
     if (!terminal) return;
 
@@ -94,7 +88,6 @@ export function ConsoleTerminal({
     terminal.options.fontSize = 14;
     terminal.options.fontFamily = "monospace";
 
-    // Get theme colors from CSS variables
     const backgroundColor = getComputedStyle(document.documentElement)
       .getPropertyValue("--bg-elevated")
       .trim();
@@ -132,13 +125,10 @@ export function ConsoleTerminal({
     return () => {
       window.removeEventListener("resize", resizeHandler);
 
-      // Clean up WebSocket before disposing terminal
       if (wsRef.current) {
         try {
           wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-        } catch (error) {
-          // Ignore errors during cleanup
-        }
+        } catch (error) {}
         wsRef.current.close();
         wsRef.current = null;
       }
@@ -151,9 +141,7 @@ export function ConsoleTerminal({
     if (wsRef.current) {
       try {
         wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-      } catch (error) {
-        // WebSocket might already be closed
-      }
+      } catch (error) {}
       wsRef.current.close();
       wsRef.current = null;
     }
@@ -161,9 +149,7 @@ export function ConsoleTerminal({
     if (terminal) {
       try {
         terminal.clear();
-      } catch (error) {
-        // Terminal might be disposed
-      }
+      } catch (error) {}
     }
   }, [terminal, t]);
 
@@ -185,7 +171,6 @@ export function ConsoleTerminal({
         return;
       }
 
-      // Ensure terminal is fitted before connecting
       if (fitAddonRef.current) {
         fitAddonRef.current.fit();
       }
@@ -194,7 +179,6 @@ export function ConsoleTerminal({
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        // Double-check terminal dimensions
         const cols = terminal.cols || 80;
         const rows = terminal.rows || 24;
 
@@ -225,7 +209,6 @@ export function ConsoleTerminal({
               setIsConnected(true);
               setIsConnecting(false);
 
-              // Check if shell was changed due to unavailability
               if (msg.data?.shellChanged) {
                 toast.warning(
                   `Shell "${msg.data.requestedShell}" not available. Using "${msg.data.shell}" instead.`,
@@ -234,13 +217,11 @@ export function ConsoleTerminal({
                 toast.success(t("docker.connectedTo", { containerName }));
               }
 
-              // Fit terminal and send resize to ensure correct dimensions
               setTimeout(() => {
                 if (fitAddonRef.current) {
                   fitAddonRef.current.fit();
                 }
 
-                // Send resize message with correct dimensions
                 if (ws.readyState === WebSocket.OPEN) {
                   ws.send(
                     JSON.stringify({
@@ -284,7 +265,6 @@ export function ConsoleTerminal({
         toast.error(t("docker.failedToConnect"));
       };
 
-      // Set up periodic ping to keep connection alive
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
       }
@@ -292,7 +272,7 @@ export function ConsoleTerminal({
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "ping" }));
         }
-      }, 30000); // Ping every 30 seconds
+      }, 30000);
 
       ws.onclose = () => {
         if (pingIntervalRef.current) {
@@ -308,7 +288,6 @@ export function ConsoleTerminal({
 
       wsRef.current = ws;
 
-      // Handle terminal input
       terminal.onData((data) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
@@ -335,7 +314,6 @@ export function ConsoleTerminal({
     containerName,
   ]);
 
-  // Cleanup WebSocket on unmount (terminal cleanup is handled in the terminal effect)
   React.useEffect(() => {
     return () => {
       if (pingIntervalRef.current) {
@@ -345,9 +323,7 @@ export function ConsoleTerminal({
       if (wsRef.current) {
         try {
           wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-        } catch (error) {
-          // Ignore errors during cleanup
-        }
+        } catch (error) {}
         wsRef.current.close();
         wsRef.current = null;
       }
@@ -373,7 +349,6 @@ export function ConsoleTerminal({
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Controls */}
       <Card className="py-3">
         <CardContent className="px-3">
           <div className="flex flex-col sm:flex-row gap-2 items-center sm:items-center">
@@ -431,17 +406,14 @@ export function ConsoleTerminal({
         </CardContent>
       </Card>
 
-      {/* Terminal */}
       <Card className="flex-1 overflow-hidden pt-1 pb-0">
         <CardContent className="p-0 h-full relative">
-          {/* Terminal container - always rendered */}
           <div
             ref={xtermRef}
             className="h-full w-full"
             style={{ display: isConnected ? "block" : "none" }}
           />
 
-          {/* Not connected message */}
           {!isConnected && !isConnecting && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center space-y-2">
@@ -456,7 +428,6 @@ export function ConsoleTerminal({
             </div>
           )}
 
-          {/* Connecting message */}
           {isConnecting && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">

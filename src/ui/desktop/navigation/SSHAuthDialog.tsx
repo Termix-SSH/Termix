@@ -233,7 +233,8 @@ export function SSHAuthDialog({
                         ".cm-scroller": {
                           overflow: "auto",
                           scrollbarWidth: "thin",
-                          scrollbarColor: "var(--scrollbar-thumb) var(--scrollbar-track)",
+                          scrollbarColor:
+                            "var(--scrollbar-thumb) var(--scrollbar-track)",
                         },
                       }),
                     ]}

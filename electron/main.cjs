@@ -11,10 +11,8 @@ const fs = require("fs");
 const os = require("os");
 
 if (process.platform === "linux") {
-  // Enable Ozone platform auto-detection for Wayland/X11 support
   app.commandLine.appendSwitch("--ozone-platform-hint=auto");
 
-  // Enable hardware video decoding if available
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 }
 

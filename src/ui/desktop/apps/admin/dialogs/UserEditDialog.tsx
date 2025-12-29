@@ -114,7 +114,6 @@ export function UserEditDialog({
       return;
     }
 
-    // Close dialog temporarily to show confirmation toast on top
     const userToUpdate = user;
     onOpenChange(false);
 
@@ -165,7 +164,6 @@ export function UserEditDialog({
   const handlePasswordReset = async () => {
     if (!user) return;
 
-    // Close dialog temporarily to show confirmation toast on top
     const userToReset = user;
     onOpenChange(false);
 
@@ -217,7 +215,6 @@ export function UserEditDialog({
   const handleRemoveRole = async (roleId: number) => {
     if (!user) return;
 
-    // Close dialog temporarily to show confirmation toast on top
     const userToUpdate = user;
     onOpenChange(false);
 
@@ -253,7 +250,6 @@ export function UserEditDialog({
 
     const isRevokingSelf = isCurrentUser;
 
-    // Close dialog temporarily to show confirmation toast on top
     const userToUpdate = user;
     onOpenChange(false);
 
@@ -302,7 +298,6 @@ export function UserEditDialog({
       return;
     }
 
-    // Close dialog temporarily to show confirmation toast on top
     const userToDelete = user;
     onOpenChange(false);
 
@@ -315,7 +310,6 @@ export function UserEditDialog({
     });
 
     if (!confirmed) {
-      // Reopen dialog if user cancels
       onOpenChange(true);
       return;
     }
@@ -366,7 +360,6 @@ export function UserEditDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto thin-scrollbar pr-2">
-          {/* READ-ONLY INFO SECTION */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-surface rounded-lg border border-edge">
             <div>
               <Label className="text-muted-foreground text-xs">
@@ -402,7 +395,6 @@ export function UserEditDialog({
 
           <Separator />
 
-          {/* ADMIN TOGGLE SECTION */}
           <div className="space-y-3">
             <Label className="text-base font-semibold flex items-center gap-2">
               <Shield className="h-4 w-4" />
@@ -430,7 +422,6 @@ export function UserEditDialog({
 
           <Separator />
 
-          {/* PASSWORD RESET SECTION */}
           {showPasswordReset && (
             <>
               <div className="space-y-3">
@@ -460,7 +451,6 @@ export function UserEditDialog({
             </>
           )}
 
-          {/* ROLE MANAGEMENT SECTION */}
           <div className="space-y-4">
             <Label className="text-base font-semibold flex items-center gap-2">
               <UserCog className="h-4 w-4" />
@@ -473,7 +463,6 @@ export function UserEditDialog({
               </div>
             ) : (
               <>
-                {/* Current Roles */}
                 <div className="space-y-2">
                   <Label className="text-sm text-muted-foreground">
                     {t("rbac.currentRoles")}
@@ -520,7 +509,6 @@ export function UserEditDialog({
                   )}
                 </div>
 
-                {/* Assign New Role */}
                 <div className="space-y-2">
                   <Label className="text-sm text-muted-foreground">
                     {t("rbac.assignNewRole")}
@@ -560,7 +548,6 @@ export function UserEditDialog({
 
           <Separator />
 
-          {/* SESSION MANAGEMENT SECTION */}
           <div className="space-y-3">
             <Label className="text-base font-semibold flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -588,7 +575,6 @@ export function UserEditDialog({
 
           <Separator />
 
-          {/* DANGER ZONE - DELETE USER */}
           <div className="space-y-3">
             <Label className="text-base font-semibold text-destructive flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />

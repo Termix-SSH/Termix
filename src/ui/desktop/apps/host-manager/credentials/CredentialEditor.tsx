@@ -42,7 +42,6 @@ export function CredentialEditor({
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
 
-  // Determine CodeMirror theme based on app theme
   const isDarkMode =
     appTheme === "dark" ||
     (appTheme === "system" &&

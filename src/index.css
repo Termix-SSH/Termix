@@ -48,19 +48,18 @@
   --sidebar-border: #e4e4e7;
   --sidebar-ring: #a1a1aa;
 
-  /* NEW SEMANTIC VARIABLES - Light Mode Backgrounds */
   --bg-base: #fcfcfc;
   --bg-elevated: #ffffff;
   --bg-surface: #f3f4f6;
-  --bg-surface-hover: #e5e7eb; /* Panel hover - replaces dark-bg-panel-hover */
+  --bg-surface-hover: #e5e7eb;
   --bg-input: #ffffff;
   --bg-deepest: #e5e7eb;
   --bg-header: #eeeeef;
   --bg-button: #f3f4f6;
   --bg-active: #e5e7eb;
-  --bg-light: #fafafa; /* Light background - replaces dark-bg-light */
-  --bg-subtle: #f5f5f5; /* Very light background - replaces dark-bg-very-light */
-  --bg-interact: #d1d5db; /* Interactive/active state - replaces dark-active */
+  --bg-light: #fafafa;
+  --bg-subtle: #f5f5f5;
+  --bg-interact: #d1d5db;
   --border-base: #e5e7eb;
   --border-panel: #d1d5db;
   --border-subtle: #f3f4f6;
@@ -71,16 +70,13 @@
   --border-hover: #d1d5db;
   --border-active: #9ca3af;
 
-  /* NEW SEMANTIC VARIABLES - Light Mode Text Colors */
   --foreground-secondary: #334155;
   --foreground-subtle: #94a3b8;
 
-  /* Scrollbar Colors - Light Mode */
   --scrollbar-thumb: #c1c1c3;
   --scrollbar-thumb-hover: #a1a1a3;
   --scrollbar-track: #f3f4f6;
 
-  /* Modal Overlay - Light Mode */
   --bg-overlay: rgba(0, 0, 0, 0.5);
 }
 
@@ -143,8 +139,6 @@
   --color-dark-border-panel: #222224;
   --color-dark-bg-panel-hover: #232327;
 
-  /* NEW SEMANTIC COLOR MAPPINGS - Creates Tailwind classes */
-  /* Backgrounds: bg-canvas, bg-elevated, bg-surface, etc. */
   --color-canvas: var(--bg-base);
   --color-elevated: var(--bg-elevated);
   --color-surface: var(--bg-surface);
@@ -160,7 +154,7 @@
   --color-hover: var(--bg-hover);
   --color-hover-alt: var(--bg-hover-alt);
   --color-pressed: var(--bg-pressed);
-  /* Borders: border-edge, border-edge-panel, etc. */
+
   --color-edge: var(--border-base);
   --color-edge-panel: var(--border-panel);
   --color-edge-subtle: var(--border-subtle);
@@ -168,11 +162,9 @@
   --color-edge-hover: var(--border-hover);
   --color-edge-active: var(--border-active);
 
-  /* NEW SEMANTIC TEXT COLOR MAPPINGS - Creates Tailwind text classes */
   --color-foreground-secondary: var(--foreground-secondary);
   --color-foreground-subtle: var(--foreground-subtle);
 
-  /* Modal Overlay Mapping - Creates Tailwind bg-overlay class */
   --color-overlay: var(--bg-overlay);
 }
 
@@ -231,16 +223,13 @@
   --border-hover: #434345;
   --border-active: #2d2d30;
 
-  /* NEW SEMANTIC VARIABLES - Dark Mode Text Color Overrides */
-  --foreground-secondary: #d1d5db; /* Matches text-gray-300 */
-  --foreground-subtle: #6b7280; /* Matches text-gray-500 */
+  --foreground-secondary: #d1d5db;
+  --foreground-subtle: #6b7280;
 
-  /* Scrollbar Colors - Dark Mode */
   --scrollbar-thumb: #434345;
   --scrollbar-thumb-hover: #5a5a5d;
   --scrollbar-track: #18181b;
 
-  /* Modal Overlay - Dark Mode */
   --bg-overlay: rgba(0, 0, 0, 0.7);
 }
 
@@ -259,7 +248,6 @@
   }
 }
 
-/* Thin Scrollbar - Theme Aware */
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
@@ -283,7 +271,6 @@
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Skinny scrollbar - even thinner variant */
 .skinny-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;

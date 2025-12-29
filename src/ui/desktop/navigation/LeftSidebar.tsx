@@ -366,11 +366,9 @@ export function LeftSidebar({
     const searchQuery = debouncedSearch.trim().toLowerCase();
 
     return hosts.filter((h) => {
-      // Check for field-specific search patterns
       const fieldMatches: Record<string, string> = {};
       let remainingQuery = searchQuery;
 
-      // Extract field-specific queries (e.g., "tag:production", "user:root", "ip:192.168")
       const fieldPattern = /(\w+):([^\s]+)/g;
       let match;
       while ((match = fieldPattern.exec(searchQuery)) !== null) {
@@ -379,7 +377,6 @@ export function LeftSidebar({
         remainingQuery = remainingQuery.replace(fullMatch, "").trim();
       }
 
-      // Handle field-specific searches
       for (const [field, value] of Object.entries(fieldMatches)) {
         switch (field) {
           case "tag":
@@ -418,7 +415,6 @@ export function LeftSidebar({
         }
       }
 
-      // If there's remaining query text (not field-specific), search across all fields
       if (remainingQuery) {
         const searchableText = [
           h.name || "",

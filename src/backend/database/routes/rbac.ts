@@ -27,10 +27,8 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-/**
- * Share a host with a user or role
- * POST /rbac/host/:id/share
- */
+//Share a host with a user or role
+//POST /rbac/host/:id/share
 router.post(
   "/host/:id/share",
   authenticateJWT,
@@ -44,21 +42,19 @@ router.post(
 
     try {
       const {
-        targetType = "user", // "user" or "role"
+        targetType = "user",
         targetUserId,
         targetRoleId,
         durationHours,
-        permissionLevel = "view", // Only "view" is supported
+        permissionLevel = "view",
       } = req.body;
 
-      // Validate target type
       if (!["user", "role"].includes(targetType)) {
         return res
           .status(400)
           .json({ error: "Invalid target type. Must be 'user' or 'role'" });
       }
 
-      // Validate required fields based on target type
       if (targetType === "user" && !isNonEmptyString(targetUserId)) {
         return res
           .status(400)
@@ -70,7 +66,6 @@ router.post(
           .json({ error: "Target role ID is required when sharing with role" });
       }
 
-      // Verify user owns the host
       const host = await db
         .select()
         .from(sshData)
@@ -86,7 +81,6 @@ router.post(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      // Check if host uses credentials (required for sharing)
       if (!host[0].credentialId) {
         return res.status(400).json({
           error:
@@ -95,7 +89,6 @@ router.post(
         });
       }
 
-      // Verify target exists (user or role)
       if (targetType === "user") {
         const targetUser = await db
           .select({ id: users.id, username: users.username })
@@ -118,7 +111,6 @@ router.post(
         }
       }
 
-      // Calculate expiry time
       let expiresAt: string | null = null;
       if (
         durationHours &&
@@ -130,7 +122,6 @@ router.post(
         expiresAt = expiryDate.toISOString();
       }
 
-      // Validate permission level (only "view" is supported)
       const validLevels = ["view"];
       if (!validLevels.includes(permissionLevel)) {
         return res.status(400).json({
@@ -139,7 +130,6 @@ router.post(
         });
       }
 
-      // Check if access already exists
       const whereConditions = [eq(hostAccess.hostId, hostId)];
       if (targetType === "user") {
         whereConditions.push(eq(hostAccess.userId, targetUserId));
@@ -154,7 +144,6 @@ router.post(
         .limit(1);
 
       if (existing.length > 0) {
-        // Update existing access
         await db
           .update(hostAccess)
           .set({
@@ -163,7 +152,6 @@ router.post(
           })
           .where(eq(hostAccess.id, existing[0].id));
 
-        // Re-create shared credential (delete old, create new)
         await db
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
@@ -187,16 +175,6 @@ router.post(
           );
         }
 
-        databaseLogger.info("Updated existing host access", {
-          operation: "share_host",
-          hostId,
-          targetType,
-          targetUserId: targetType === "user" ? targetUserId : undefined,
-          targetRoleId: targetType === "role" ? targetRoleId : undefined,
-          permissionLevel,
-          expiresAt,
-        });
-
         return res.json({
           success: true,
           message: "Host access updated",
@@ -204,7 +182,6 @@ router.post(
         });
       }
 
-      // Create new access
       const result = await db.insert(hostAccess).values({
         hostId,
         userId: targetType === "user" ? targetUserId : null,
@@ -214,7 +191,6 @@ router.post(
         expiresAt,
       });
 
-      // Create shared credential for the target
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
@@ -235,17 +211,6 @@ router.post(
         );
       }
 
-      databaseLogger.info("Created host access", {
-        operation: "share_host",
-        hostId,
-        hostName: host[0].name,
-        targetType,
-        targetUserId: targetType === "user" ? targetUserId : undefined,
-        targetRoleId: targetType === "role" ? targetRoleId : undefined,
-        permissionLevel,
-        expiresAt,
-      });
-
       res.json({
         success: true,
         message: `Host shared successfully with ${targetType}`,
@@ -262,10 +227,8 @@ router.post(
   },
 );
 
-/**
- * Revoke host access
- * DELETE /rbac/host/:id/access/:accessId
- */
+// Revoke host access
+// DELETE /rbac/host/:id/access/:accessId
 router.delete(
   "/host/:id/access/:accessId",
   authenticateJWT,
@@ -279,7 +242,6 @@ router.delete(
     }
 
     try {
-      // Verify user owns the host
       const host = await db
         .select()
         .from(sshData)
@@ -290,15 +252,7 @@ router.delete(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      // Delete the access
       await db.delete(hostAccess).where(eq(hostAccess.id, accessId));
-
-      databaseLogger.info("Revoked host access", {
-        operation: "revoke_host_access",
-        hostId,
-        accessId,
-        userId,
-      });
 
       res.json({ success: true, message: "Access revoked" });
     } catch (error) {
@@ -313,10 +267,8 @@ router.delete(
   },
 );
 
-/**
- * Get host access list
- * GET /rbac/host/:id/access
- */
+// Get host access list
+// GET /rbac/host/:id/access
 router.get(
   "/host/:id/access",
   authenticateJWT,
@@ -329,7 +281,6 @@ router.get(
     }
 
     try {
-      // Verify user owns the host
       const host = await db
         .select()
         .from(sshData)
@@ -340,7 +291,6 @@ router.get(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      // Get all access records (both user and role based)
       const rawAccessList = await db
         .select({
           id: hostAccess.id,
@@ -361,7 +311,6 @@ router.get(
         .where(eq(hostAccess.hostId, hostId))
         .orderBy(desc(hostAccess.createdAt));
 
-      // Format access list with type information
       const accessList = rawAccessList.map((access) => ({
         id: access.id,
         targetType: access.userId ? "user" : "role",
@@ -389,10 +338,8 @@ router.get(
   },
 );
 
-/**
- * Get user's shared hosts (hosts shared WITH this user)
- * GET /rbac/shared-hosts
- */
+// Get user's shared hosts (hosts shared WITH this user)
+// GET /rbac/shared-hosts
 router.get(
   "/shared-hosts",
   authenticateJWT,
@@ -438,10 +385,8 @@ router.get(
   },
 );
 
-/**
- * Get all roles
- * GET /rbac/roles
- */
+// Get all roles
+// GET /rbac/roles
 router.get(
   "/roles",
   authenticateJWT,
@@ -468,14 +413,8 @@ router.get(
   },
 );
 
-// ============================================================================
-// Role Management (CRUD)
-// ============================================================================
-
-/**
- * Get all roles
- * GET /rbac/roles
- */
+// Get all roles
+// GET /rbac/roles
 router.get(
   "/roles",
   authenticateJWT,
@@ -504,10 +443,8 @@ router.get(
   },
 );
 
-/**
- * Create new role
- * POST /rbac/roles
- */
+// Create new role
+// POST /rbac/roles
 router.post(
   "/roles",
   authenticateJWT,
@@ -515,14 +452,12 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
     const { name, displayName, description } = req.body;
 
-    // Validate required fields
     if (!isNonEmptyString(name) || !isNonEmptyString(displayName)) {
       return res.status(400).json({
         error: "Role name and display name are required",
       });
     }
 
-    // Validate name format (alphanumeric, underscore, hyphen only)
     if (!/^[a-z0-9_-]+$/.test(name)) {
       return res.status(400).json({
         error:
@@ -531,7 +466,6 @@ router.post(
     }
 
     try {
-      // Check if role name already exists
       const existing = await db
         .select({ id: roles.id })
         .from(roles)
@@ -544,22 +478,15 @@ router.post(
         });
       }
 
-      // Create new role
       const result = await db.insert(roles).values({
         name,
         displayName,
         description: description || null,
         isSystem: false,
-        permissions: null, // Roles are for grouping only
+        permissions: null,
       });
 
       const newRoleId = result.lastInsertRowid;
-
-      databaseLogger.info("Created new role", {
-        operation: "create_role",
-        roleId: newRoleId,
-        roleName: name,
-      });
 
       res.status(201).json({
         success: true,
@@ -576,10 +503,8 @@ router.post(
   },
 );
 
-/**
- * Update role
- * PUT /rbac/roles/:id
- */
+// Update role
+// PUT /rbac/roles/:id
 router.put(
   "/roles/:id",
   authenticateJWT,
@@ -592,7 +517,6 @@ router.put(
       return res.status(400).json({ error: "Invalid role ID" });
     }
 
-    // Validate at least one field to update
     if (!displayName && description === undefined) {
       return res.status(400).json({
         error: "At least one field (displayName or description) is required",
@@ -600,7 +524,6 @@ router.put(
     }
 
     try {
-      // Get existing role
       const existingRole = await db
         .select({
           id: roles.id,
@@ -615,7 +538,6 @@ router.put(
         return res.status(404).json({ error: "Role not found" });
       }
 
-      // Build update object
       const updates: {
         displayName?: string;
         description?: string | null;
@@ -632,14 +554,7 @@ router.put(
         updates.description = description || null;
       }
 
-      // Update role
       await db.update(roles).set(updates).where(eq(roles.id, roleId));
-
-      databaseLogger.info("Updated role", {
-        operation: "update_role",
-        roleId,
-        roleName: existingRole[0].name,
-      });
 
       res.json({
         success: true,
@@ -655,10 +570,8 @@ router.put(
   },
 );
 
-/**
- * Delete role
- * DELETE /rbac/roles/:id
- */
+// Delete role
+// DELETE /rbac/roles/:id
 router.delete(
   "/roles/:id",
   authenticateJWT,
@@ -671,7 +584,6 @@ router.delete(
     }
 
     try {
-      // Get role details
       const role = await db
         .select({
           id: roles.id,
@@ -686,40 +598,27 @@ router.delete(
         return res.status(404).json({ error: "Role not found" });
       }
 
-      // Cannot delete system roles
       if (role[0].isSystem) {
         return res.status(403).json({
           error: "Cannot delete system roles",
         });
       }
 
-      // Delete user-role assignments first
       const deletedUserRoles = await db
         .delete(userRoles)
         .where(eq(userRoles.roleId, roleId))
         .returning({ userId: userRoles.userId });
 
-      // Invalidate permission cache for affected users
       for (const { userId } of deletedUserRoles) {
         permissionManager.invalidateUserPermissionCache(userId);
       }
 
-      // Delete host_access entries for this role
       const deletedHostAccess = await db
         .delete(hostAccess)
         .where(eq(hostAccess.roleId, roleId))
         .returning({ id: hostAccess.id });
 
-      // Note: sharedCredentials will be auto-deleted by CASCADE
-
-      // Delete role
       await db.delete(roles).where(eq(roles.id, roleId));
-
-      databaseLogger.info("Deleted role", {
-        operation: "delete_role",
-        roleId,
-        roleName: role[0].name,
-      });
 
       res.json({
         success: true,
@@ -735,14 +634,8 @@ router.delete(
   },
 );
 
-// ============================================================================
-// User-Role Assignment
-// ============================================================================
-
-/**
- * Assign role to user
- * POST /rbac/users/:userId/roles
- */
+// Assign role to user
+// POST /rbac/users/:userId/roles
 router.post(
   "/users/:userId/roles",
   authenticateJWT,
@@ -758,7 +651,6 @@ router.post(
         return res.status(400).json({ error: "Role ID is required" });
       }
 
-      // Verify target user exists
       const targetUser = await db
         .select()
         .from(users)
@@ -769,7 +661,6 @@ router.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Verify role exists
       const role = await db
         .select()
         .from(roles)
@@ -780,7 +671,6 @@ router.post(
         return res.status(404).json({ error: "Role not found" });
       }
 
-      // Prevent manual assignment of system roles
       if (role[0].isSystem) {
         return res.status(403).json({
           error:
@@ -788,7 +678,6 @@ router.post(
         });
       }
 
-      // Check if already assigned
       const existing = await db
         .select()
         .from(userRoles)
@@ -801,14 +690,12 @@ router.post(
         return res.status(409).json({ error: "Role already assigned" });
       }
 
-      // Assign role
       await db.insert(userRoles).values({
         userId: targetUserId,
         roleId,
         grantedBy: currentUserId,
       });
 
-      // Create shared credentials for all hosts shared with this role
       const hostsSharedWithRole = await db
         .select()
         .from(hostAccess)
@@ -839,30 +726,11 @@ router.post(
                 hostId: ssh_data.id,
               },
             );
-            // Continue with other hosts even if one fails
           }
         }
       }
 
-      if (hostsSharedWithRole.length > 0) {
-        databaseLogger.info("Created shared credentials for new role member", {
-          operation: "assign_role_create_credentials",
-          targetUserId,
-          roleId,
-          hostCount: hostsSharedWithRole.length,
-        });
-      }
-
-      // Invalidate permission cache
       permissionManager.invalidateUserPermissionCache(targetUserId);
-
-      databaseLogger.info("Assigned role to user", {
-        operation: "assign_role",
-        targetUserId,
-        roleId,
-        roleName: role[0].name,
-        grantedBy: currentUserId,
-      });
 
       res.json({
         success: true,
@@ -878,10 +746,8 @@ router.post(
   },
 );
 
-/**
- * Remove role from user
- * DELETE /rbac/users/:userId/roles/:roleId
- */
+// Remove role from user
+// DELETE /rbac/users/:userId/roles/:roleId
 router.delete(
   "/users/:userId/roles/:roleId",
   authenticateJWT,
@@ -895,7 +761,6 @@ router.delete(
     }
 
     try {
-      // Verify role exists and get its details
       const role = await db
         .select({
           id: roles.id,
@@ -910,7 +775,6 @@ router.delete(
         return res.status(404).json({ error: "Role not found" });
       }
 
-      // Prevent removal of system roles
       if (role[0].isSystem) {
         return res.status(403).json({
           error:
@@ -918,21 +782,13 @@ router.delete(
         });
       }
 
-      // Delete the user-role assignment
       await db
         .delete(userRoles)
         .where(
           and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
         );
 
-      // Invalidate permission cache
       permissionManager.invalidateUserPermissionCache(targetUserId);
-
-      databaseLogger.info("Removed role from user", {
-        operation: "remove_role",
-        targetUserId,
-        roleId,
-      });
 
       res.json({
         success: true,
@@ -949,10 +805,8 @@ router.delete(
   },
 );
 
-/**
- * Get user's roles
- * GET /rbac/users/:userId/roles
- */
+// Get user's roles
+// GET /rbac/users/:userId/roles
 router.get(
   "/users/:userId/roles",
   authenticateJWT,
@@ -960,7 +814,6 @@ router.get(
     const targetUserId = req.params.userId;
     const currentUserId = req.userId!;
 
-    // Users can only see their own roles unless they're admin
     if (
       targetUserId !== currentUserId &&
       !(await permissionManager.isAdmin(currentUserId))

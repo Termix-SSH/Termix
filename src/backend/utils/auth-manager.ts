@@ -169,7 +169,6 @@ class AuthManager {
         await saveMemoryDatabaseToFile();
       }
 
-      // Migrate credentials to system encryption for offline sharing
       try {
         const { CredentialSystemEncryptionMigration } =
           await import("./credential-system-encryption-migration.js");
@@ -177,18 +176,9 @@ class AuthManager {
         const credResult = await credMigration.migrateUserCredentials(userId);
 
         if (credResult.migrated > 0) {
-          databaseLogger.info(
-            "Credentials migrated to system encryption on login",
-            {
-              operation: "login_credential_migration",
-              userId,
-              migrated: credResult.migrated,
-            },
-          );
           await saveMemoryDatabaseToFile();
         }
       } catch (error) {
-        // Log but don't fail login
         databaseLogger.warn("Credential migration failed during login", {
           operation: "login_credential_migration_failed",
           userId,

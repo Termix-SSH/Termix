@@ -1,4 +1,5 @@
 import React from "react";
+import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import {
@@ -14,7 +15,6 @@ import {
   CommandItem,
 } from "@/components/ui/command.tsx";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils.ts";
 import type { QuickActionItemProps } from "./tab-types";
 
 export function QuickActionItem({

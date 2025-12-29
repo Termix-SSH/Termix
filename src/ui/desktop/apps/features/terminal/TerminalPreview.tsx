@@ -26,7 +26,6 @@ export function TerminalPreview({
 }: TerminalPreviewProps) {
   const { theme: appTheme } = useTheme();
 
-  // Resolve "termix" to termixDark or termixLight based on app theme
   const resolvedTheme =
     theme === "termix"
       ? appTheme === "dark" ||

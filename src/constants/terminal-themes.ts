@@ -28,7 +28,6 @@ export interface TerminalTheme {
 }
 
 export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
-  // Legacy "termix" theme - auto-switches between termixDark and termixLight based on app theme
   termix: {
     name: "Termix Default",
     category: "dark",

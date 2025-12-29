@@ -68,7 +68,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_MS = 140;
 
-    // Auto-switch terminal theme based on app theme
     const isDarkMode =
       appTheme === "dark" ||
       (appTheme === "system" &&

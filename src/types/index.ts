@@ -60,7 +60,6 @@ export interface SSHHost {
   createdAt: string;
   updatedAt: string;
 
-  // Shared access metadata (view-only)
   isShared?: boolean;
   permissionLevel?: "view";
   sharedExpiresAt?: string;
@@ -78,7 +77,7 @@ export interface QuickActionData {
 export interface ProxyNode {
   host: string;
   port: number;
-  type: 4 | 5; // SOCKS4 or SOCKS5
+  type: 4 | 5;
   username?: string;
   password?: string;
 }
@@ -112,7 +111,6 @@ export interface SSHHostData {
   terminalConfig?: TerminalConfig;
   notes?: string;
 
-  // SOCKS5 Proxy configuration
   useSocks5?: boolean;
   socks5Host?: string;
   socks5Port?: number;
@@ -213,11 +211,9 @@ export interface TunnelConnection {
 export interface TunnelConfig {
   name: string;
 
-  // Unique identifiers for collision prevention
   sourceHostId: number;
   tunnelIndex: number;
 
-  // User context for RBAC
   requestingUserId?: string;
 
   hostName: string;
@@ -249,7 +245,6 @@ export interface TunnelConfig {
   autoStart: boolean;
   isPinned: boolean;
 
-  // SOCKS5 Proxy configuration
   useSocks5?: boolean;
   socks5Host?: string;
   socks5Port?: number;
@@ -418,7 +413,7 @@ export interface SplitLayoutOption {
   name: string;
   description: string;
   cellCount: number;
-  icon: string; // lucide icon name
+  icon: string;
 }
 
 // ============================================================================

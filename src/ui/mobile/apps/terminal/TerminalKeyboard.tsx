@@ -19,8 +19,10 @@ export function TerminalKeyboard({
   const [isAlt, setIsAlt] = useState(false);
   const { theme: appTheme } = useTheme();
 
-  const isDarkMode = appTheme === "dark" ||
-    (appTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDarkMode =
+    appTheme === "dark" ||
+    (appTheme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
     if (onLayoutChange) {

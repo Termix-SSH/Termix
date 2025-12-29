@@ -478,7 +478,6 @@ router.put(
         userId,
       );
 
-      // Update shared credentials if this credential is shared
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
@@ -541,8 +540,6 @@ router.delete(
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      // Update hosts using this credential to set credentialId to null
-      // This prevents orphaned references before deletion
       const hostsUsingCredential = await db
         .select()
         .from(sshData)
@@ -570,7 +567,6 @@ router.delete(
             ),
           );
 
-        // Revoke all shares for hosts that used this credential
         for (const host of hostsUsingCredential) {
           const revokedShares = await db
             .delete(hostAccess)
@@ -592,15 +588,10 @@ router.delete(
         }
       }
 
-      // Delete shared credentials for this original credential
-      // Note: This will also be handled by CASCADE, but we do it explicitly for logging
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
-
-      // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
-      // No need for manual deletion
 
       await db
         .delete(sshCredentials)

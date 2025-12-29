@@ -139,33 +139,12 @@ function isNonEmptyString(val: unknown): val is string {
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 
-/**
- * Comprehensive user deletion utility that ensures all related data is deleted
- * in proper order to avoid foreign key constraint errors.
- *
- * This function explicitly deletes all user-related data before deleting the user record.
- * It wraps everything in a transaction for atomicity.
- *
- * @param userId - The ID of the user to delete
- * @returns Promise<void>
- * @throws Error if deletion fails
- */
 async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
-    authLogger.info("Starting comprehensive user data deletion", {
-      operation: "delete_user_and_related_data_start",
-      userId,
-    });
-
-    // Delete all related data in proper order to avoid FK constraint errors
-    // Order matters due to foreign key relationships
-
-    // 1. Delete credential usage logs
     await db
       .delete(sshCredentialUsage)
       .where(eq(sshCredentialUsage.userId, userId));
 
-    // 2. Delete file manager data
     await db
       .delete(fileManagerRecent)
       .where(eq(fileManagerRecent.userId, userId));
@@ -176,32 +155,23 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
       .delete(fileManagerShortcuts)
       .where(eq(fileManagerShortcuts.userId, userId));
 
-    // 3. Delete activity and alerts
     await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
     await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
 
-    // 4. Delete snippets and snippet folders
     await db.delete(snippets).where(eq(snippets.userId, userId));
     await db.delete(snippetFolders).where(eq(snippetFolders.userId, userId));
 
-    // 5. Delete SSH folders
     await db.delete(sshFolders).where(eq(sshFolders.userId, userId));
 
-    // 6. Delete command history
     await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
 
-    // 7. Delete SSH data and credentials
     await db.delete(sshData).where(eq(sshData.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
-    // 8. Delete user-specific settings (encryption keys, etc.)
     db.$client
       .prepare("DELETE FROM settings WHERE key LIKE ?")
       .run(`user_%_${userId}`);
 
-    // 9. Finally, delete the user record
-    // Note: Sessions, user_roles, host_access, audit_logs, and session_recordings
-    // will be automatically deleted via CASCADE DELETE foreign key constraints
     await db.delete(users).where(eq(users.id, userId));
 
     authLogger.success("User and all related data deleted successfully", {
@@ -293,7 +263,6 @@ router.post("/create", async (req, res) => {
       totp_backup_codes: null,
     });
 
-    // Assign default role to new user
     try {
       const defaultRoleName = isFirstUser ? "admin" : "user";
       const defaultRole = await db
@@ -306,12 +275,7 @@ router.post("/create", async (req, res) => {
         await db.insert(userRoles).values({
           userId: id,
           roleId: defaultRole[0].id,
-          grantedBy: id, // Self-assigned during registration
-        });
-        authLogger.info("Assigned default role to new user", {
-          operation: "assign_default_role",
-          userId: id,
-          roleName: defaultRoleName,
+          grantedBy: id,
         });
       } else {
         authLogger.warn("Default role not found during user registration", {
@@ -325,7 +289,6 @@ router.post("/create", async (req, res) => {
         operation: "assign_default_role",
         userId: id,
       });
-      // Don't fail user creation if role assignment fails
     }
 
     try {
@@ -934,7 +897,6 @@ router.get("/oidc/callback", async (req, res) => {
         scopes: String(config.scopes),
       });
 
-      // Assign default role to new OIDC user
       try {
         const defaultRoleName = isFirstUser ? "admin" : "user";
         const defaultRole = await db
@@ -947,12 +909,7 @@ router.get("/oidc/callback", async (req, res) => {
           await db.insert(userRoles).values({
             userId: id,
             roleId: defaultRole[0].id,
-            grantedBy: id, // Self-assigned during registration
-          });
-          authLogger.info("Assigned default role to new OIDC user", {
-            operation: "assign_default_role_oidc",
-            userId: id,
-            roleName: defaultRoleName,
+            grantedBy: id,
           });
         } else {
           authLogger.warn(
@@ -973,7 +930,6 @@ router.get("/oidc/callback", async (req, res) => {
             userId: id,
           },
         );
-        // Don't fail user creation if role assignment fails
       }
 
       try {
@@ -1215,7 +1171,6 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // Re-encrypt any pending shared credentials for this user
     try {
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
@@ -1227,7 +1182,6 @@ router.post("/login", async (req, res) => {
         userId: userRecord.id,
         error,
       });
-      // Continue with login even if re-encryption fails
     }
 
     if (userRecord.totp_enabled) {
@@ -1303,15 +1257,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {
-          authLogger.debug(
-            "Token verification failed during logout (expected if token expired)",
-            {
-              operation: "logout_token_verify_failed",
-              userId,
-            },
-          );
-        }
+        } catch (error) {}
       }
 
       await authManager.logoutUser(userId, sessionId);
@@ -2840,11 +2786,9 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       });
     }
 
-    // Revoke all sessions and logout the OIDC user before deletion
     await authManager.revokeAllUserSessions(oidcUserId);
     authManager.logoutUser(oidcUserId);
 
-    // Use the comprehensive deletion utility to ensure all data is properly deleted
     await deleteUserAndRelatedData(oidcUserId);
 
     try {

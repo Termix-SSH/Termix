@@ -28,7 +28,6 @@ class SimpleDBOps {
       userDataKey,
     );
 
-    // Also encrypt with system key for ssh_credentials (offline sharing)
     if (tableName === "ssh_credentials") {
       const { SystemCrypto } = await import("./system-crypto.js");
       const systemCrypto = SystemCrypto.getInstance();
@@ -125,7 +124,6 @@ class SimpleDBOps {
       userDataKey,
     );
 
-    // Also encrypt with system key for ssh_credentials (offline sharing)
     if (tableName === "ssh_credentials") {
       const { SystemCrypto } = await import("./system-crypto.js");
       const systemCrypto = SystemCrypto.getInstance();

@@ -21,7 +21,6 @@ interface SSHSession {
 
 const activeSessions = new Map<string, SSHSession>();
 
-// WebSocket server on port 30008
 const wss = new WebSocketServer({
   port: 30008,
   verifyClient: async (info, callback) => {
@@ -49,13 +48,7 @@ const wss = new WebSocketServer({
         return callback(false, 401, "Invalid token");
       }
 
-      // Store userId in the request for later use
       (info.req as any).userId = decoded.userId;
-
-      dockerConsoleLogger.info("WebSocket connection verified", {
-        operation: "ws_verify",
-        userId: decoded.userId,
-      });
 
       callback(true);
     } catch (error) {
@@ -67,7 +60,6 @@ const wss = new WebSocketServer({
   },
 });
 
-// Helper function to detect available shell in container
 async function detectShell(
   session: SSHSession,
   containerId: string,
@@ -102,19 +94,15 @@ async function detectShell(
         );
       });
 
-      // If we get here, the shell was found
       return shell;
     } catch {
-      // Try next shell
       continue;
     }
   }
 
-  // Default to sh if nothing else works
   return "sh";
 }
 
-// Helper function to create jump host chain
 async function createJumpHostChain(
   jumpHosts: any[],
   userId: string,
@@ -128,7 +116,6 @@ async function createJumpHostChain(
   for (let i = 0; i < jumpHosts.length; i++) {
     const jumpHostId = jumpHosts[i].hostId;
 
-    // Fetch jump host from database
     const jumpHostData = await SimpleDBOps.select(
       getDb()
         .select()
@@ -154,7 +141,6 @@ async function createJumpHostChain(
       }
     }
 
-    // Resolve credentials for jump host
     let resolvedCredentials: any = {
       password: jumpHost.password,
       sshKey: jumpHost.key,
@@ -203,7 +189,6 @@ async function createJumpHostChain(
       tcpKeepAliveInitialDelay: 30000,
     };
 
-    // Set authentication
     if (
       resolvedCredentials.authType === "password" &&
       resolvedCredentials.password
@@ -223,7 +208,6 @@ async function createJumpHostChain(
       }
     }
 
-    // If we have a previous client, use it as the sock
     if (currentClient) {
       await new Promise<void>((resolve, reject) => {
         currentClient!.forwardOut(
@@ -252,16 +236,9 @@ async function createJumpHostChain(
   return currentClient;
 }
 
-// Handle WebSocket connections
 wss.on("connection", async (ws: WebSocket, req) => {
   const userId = (req as any).userId;
   const sessionId = `docker-console-${Date.now()}-${Math.random()}`;
-
-  dockerConsoleLogger.info("Docker console WebSocket connected", {
-    operation: "ws_connect",
-    sessionId,
-    userId,
-  });
 
   let sshSession: SSHSession | null = null;
 
@@ -304,7 +281,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             return;
           }
 
-          // Check if Docker is enabled for this host
           if (!hostConfig.enableDocker) {
             ws.send(
               JSON.stringify({
@@ -317,7 +293,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           try {
-            // Resolve credentials
             let resolvedCredentials: any = {
               password: hostConfig.password,
               sshKey: hostConfig.key,
@@ -355,7 +330,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }
             }
 
-            // Create SSH client
             const client = new SSHClient();
 
             const config: any = {
@@ -370,7 +344,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               tcpKeepAliveInitialDelay: 30000,
             };
 
-            // Set authentication
             if (
               resolvedCredentials.authType === "password" &&
               resolvedCredentials.password
@@ -390,7 +363,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }
             }
 
-            // Handle jump hosts if configured
             if (hostConfig.jumpHosts && hostConfig.jumpHosts.length > 0) {
               const jumpClient = await createJumpHostChain(
                 hostConfig.jumpHosts,
@@ -413,7 +385,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }
             }
 
-            // Connect to SSH
             await new Promise<void>((resolve, reject) => {
               client.on("ready", () => resolve());
               client.on("error", reject);
@@ -429,10 +400,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             activeSessions.set(sessionId, sshSession);
 
-            // Validate or detect shell
             let shellToUse = shell || "bash";
 
-            // If a shell is explicitly provided, verify it exists in the container
             if (shell) {
               try {
                 await new Promise<void>((resolve, reject) => {
@@ -461,7 +430,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   );
                 });
               } catch {
-                // Requested shell not found, detect available shell
                 dockerConsoleLogger.warn(
                   `Requested shell ${shell} not found, detecting available shell`,
                   {
@@ -474,13 +442,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 shellToUse = await detectShell(sshSession, containerId);
               }
             } else {
-              // No shell specified, detect available shell
               shellToUse = await detectShell(sshSession, containerId);
             }
 
             sshSession.shell = shellToUse;
 
-            // Create docker exec PTY
             const execCommand = `docker exec -it ${containerId} /bin/${shellToUse}`;
 
             client.exec(
@@ -515,7 +481,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
                 sshSession!.stream = stream;
 
-                // Forward stream output to WebSocket
                 stream.on("data", (data: Buffer) => {
                   if (ws.readyState === WebSocket.OPEN) {
                     ws.send(
@@ -527,15 +492,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   }
                 });
 
-                stream.stderr.on("data", (data: Buffer) => {
-                  // Log stderr but don't send to terminal to avoid duplicate error messages
-                  dockerConsoleLogger.debug("Docker exec stderr", {
-                    operation: "docker_exec_stderr",
-                    sessionId,
-                    containerId,
-                    data: data.toString("utf8"),
-                  });
-                });
+                stream.stderr.on("data", (data: Buffer) => {});
 
                 stream.on("close", () => {
                   if (ws.readyState === WebSocket.OPEN) {
@@ -547,7 +504,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
                     );
                   }
 
-                  // Cleanup
                   if (sshSession) {
                     sshSession.client.end();
                     activeSessions.delete(sessionId);
@@ -564,14 +520,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
                     },
                   }),
                 );
-
-                dockerConsoleLogger.info("Docker console session started", {
-                  operation: "console_start",
-                  sessionId,
-                  containerId,
-                  shell: shellToUse,
-                  requestedShell: shell,
-                });
               },
             );
           } catch (error) {
@@ -605,13 +553,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
           if (sshSession && sshSession.stream) {
             const { cols, rows } = message.data;
             sshSession.stream.setWindow(rows, cols);
-
-            dockerConsoleLogger.debug("Console resized", {
-              operation: "console_resize",
-              sessionId,
-              cols,
-              rows,
-            });
           }
           break;
         }
@@ -624,11 +565,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             sshSession.client.end();
             activeSessions.delete(sessionId);
 
-            dockerConsoleLogger.info("Docker console disconnected", {
-              operation: "console_disconnect",
-              sessionId,
-            });
-
             ws.send(
               JSON.stringify({
                 type: "disconnected",
@@ -640,7 +576,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         case "ping": {
-          // Respond with pong to acknowledge keepalive
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "pong" }));
           }
@@ -669,12 +604,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
-    dockerConsoleLogger.info("WebSocket connection closed", {
-      operation: "ws_close",
-      sessionId,
-    });
-
-    // Cleanup SSH session if still active
     if (sshSession) {
       if (sshSession.stream) {
         sshSession.stream.end();
@@ -690,7 +619,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sessionId,
     });
 
-    // Cleanup
     if (sshSession) {
       if (sshSession.stream) {
         sshSession.stream.end();
@@ -701,37 +629,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 });
 
-dockerConsoleLogger.info(
-  "Docker console WebSocket server started on port 30008",
-  {
-    operation: "startup",
-  },
-);
-
-// Graceful shutdown
 process.on("SIGTERM", () => {
-  dockerConsoleLogger.info("Shutting down Docker console server...", {
-    operation: "shutdown",
-  });
-
-  // Close all active sessions
   activeSessions.forEach((session, sessionId) => {
     if (session.stream) {
       session.stream.end();
     }
     session.client.end();
-    dockerConsoleLogger.info("Closed session during shutdown", {
-      operation: "shutdown",
-      sessionId,
-    });
   });
 
   activeSessions.clear();
 
   wss.close(() => {
-    dockerConsoleLogger.info("Docker console server closed", {
-      operation: "shutdown",
-    });
     process.exit(0);
   });
 });

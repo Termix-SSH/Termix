@@ -1,4 +1,5 @@
 import React from "react";
+import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import {
   Popover,
@@ -13,7 +14,6 @@ import {
   CommandItem,
 } from "@/components/ui/command.tsx";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils.ts";
 import type { JumpHostItemProps } from "./tab-types";
 
 export function JumpHostItem({

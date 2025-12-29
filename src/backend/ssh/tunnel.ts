@@ -594,11 +594,6 @@ async function connectSSHTunnel(
               keyType: sharedCred.keyType,
               authMethod: sharedCred.authType,
             };
-            tunnelLogger.info("Resolved shared credentials for tunnel source", {
-              operation: "tunnel_connect_shared_cred",
-              tunnelName,
-              userId: effectiveUserId,
-            });
           } else {
             const errorMessage = `Cannot connect tunnel '${tunnelName}': shared credentials not available`;
             tunnelLogger.error(errorMessage);
@@ -1126,7 +1121,6 @@ async function connectSSHTunnel(
     });
   }
 
-  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
   if (
     tunnelConfig.useSocks5 &&
     (tunnelConfig.socks5Host ||
@@ -1399,7 +1393,6 @@ async function killRemoteTunnelByMarker(
     callback(err);
   });
 
-  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
   if (
     tunnelConfig.useSocks5 &&
     (tunnelConfig.socks5Host ||
@@ -1517,12 +1510,6 @@ app.post(
 
         if (accessInfo.isShared && !accessInfo.isOwner) {
           tunnelConfig.requestingUserId = userId;
-          tunnelLogger.info("Shared host tunnel connect", {
-            operation: "tunnel_connect_shared",
-            userId,
-            hostId: tunnelConfig.sourceHostId,
-            tunnelName,
-          });
         }
       }
 
@@ -1552,14 +1539,7 @@ app.post(
           }
         }
 
-        // If endpoint details are missing, resolve them from database
         if (!tunnelConfig.endpointIP || !tunnelConfig.endpointUsername) {
-          tunnelLogger.info("Resolving endpoint host details from database", {
-            operation: "tunnel_connect_resolve_endpoint",
-            tunnelName,
-            endpointHost: tunnelConfig.endpointHost,
-          });
-
           try {
             const systemCrypto = SystemCrypto.getInstance();
             const internalAuthToken = await systemCrypto.getInternalAuthToken();
@@ -1587,7 +1567,6 @@ app.post(
               );
             }
 
-            // Populate endpoint fields
             tunnelConfig.endpointIP = endpointHost.ip;
             tunnelConfig.endpointSSHPort = endpointHost.port;
             tunnelConfig.endpointUsername = endpointHost.username;
@@ -1598,13 +1577,6 @@ app.post(
             tunnelConfig.endpointKeyType = endpointHost.keyType;
             tunnelConfig.endpointCredentialId = endpointHost.credentialId;
             tunnelConfig.endpointUserId = endpointHost.userId;
-
-            tunnelLogger.info("Endpoint host details resolved", {
-              operation: "tunnel_connect_endpoint_resolved",
-              tunnelName,
-              endpointIP: tunnelConfig.endpointIP,
-              endpointUsername: tunnelConfig.endpointUsername,
-            });
           } catch (resolveError) {
             tunnelLogger.error(
               "Failed to resolve endpoint host",

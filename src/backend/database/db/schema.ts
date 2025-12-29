@@ -101,7 +101,7 @@ export const sshData = sqliteTable("ssh_data", {
   socks5Port: integer("socks5_port"),
   socks5Username: text("socks5_username"),
   socks5Password: text("socks5_password"),
-  socks5ProxyChain: text("socks5_proxy_chain"), // JSON array for proxy chains
+  socks5ProxyChain: text("socks5_proxy_chain"),
 
   createdAt: text("created_at")
     .notNull()
@@ -186,7 +186,6 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
 
-  // System-encrypted fields for offline credential sharing
   systemPassword: text("system_password"),
   systemKey: text("system_key", { length: 16384 }),
   systemKeyPassword: text("system_key_password"),
@@ -296,32 +295,27 @@ export const commandHistory = sqliteTable("command_history", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// RBAC Phase 1: Host Sharing
 export const hostAccess = sqliteTable("host_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hostId: integer("host_id")
     .notNull()
     .references(() => sshData.id, { onDelete: "cascade" }),
 
-  // Share target: either userId OR roleId (at least one must be set)
   userId: text("user_id")
-    .references(() => users.id, { onDelete: "cascade" }), // Optional
+    .references(() => users.id, { onDelete: "cascade" }),
   roleId: integer("role_id")
-    .references(() => roles.id, { onDelete: "cascade" }), // Optional
+    .references(() => roles.id, { onDelete: "cascade" }),
 
   grantedBy: text("granted_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  // Permission level (view-only)
   permissionLevel: text("permission_level")
     .notNull()
-    .default("view"), // Only "view" is supported
+    .default("view"),
 
-  // Time-based access
-  expiresAt: text("expires_at"), // NULL = never expires
+  expiresAt: text("expires_at"),
 
-  // Metadata
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -329,26 +323,21 @@ export const hostAccess = sqliteTable("host_access", {
   accessCount: integer("access_count").notNull().default(0),
 });
 
-// RBAC: Shared Credentials (per-user encrypted credential copies)
 export const sharedCredentials = sqliteTable("shared_credentials", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
-  // Link to the host access grant (CASCADE delete when share revoked)
   hostAccessId: integer("host_access_id")
     .notNull()
     .references(() => hostAccess.id, { onDelete: "cascade" }),
 
-  // Link to the original credential (for tracking updates/CASCADE delete)
   originalCredentialId: integer("original_credential_id")
     .notNull()
     .references(() => sshCredentials.id, { onDelete: "cascade" }),
 
-  // Target user (recipient of the share) - CASCADE delete when user deleted
   targetUserId: text("target_user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  // Encrypted credential data (encrypted with targetUserId's DEK)
   encryptedUsername: text("encrypted_username").notNull(),
   encryptedAuthType: text("encrypted_auth_type").notNull(),
   encryptedPassword: text("encrypted_password"),
@@ -356,7 +345,6 @@ export const sharedCredentials = sqliteTable("shared_credentials", {
   encryptedKeyPassword: text("encrypted_key_password"),
   encryptedKeyType: text("encrypted_key_type"),
 
-  // Metadata
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -364,26 +352,22 @@ export const sharedCredentials = sqliteTable("shared_credentials", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 
-  // Track if needs re-encryption (when original credential updated but target user offline)
   needsReEncryption: integer("needs_re_encryption", { mode: "boolean" })
     .notNull()
     .default(false),
 });
 
-// RBAC Phase 2: Roles
 export const roles = sqliteTable("roles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
-  displayName: text("display_name").notNull(), // For i18n
+  displayName: text("display_name").notNull(),
   description: text("description"),
 
-  // System roles cannot be deleted
   isSystem: integer("is_system", { mode: "boolean" })
     .notNull()
     .default(false),
 
-  // Permissions stored as JSON array (optional - used for grouping only in current phase)
-  permissions: text("permissions"), // ["hosts.*", "credentials.read", ...] - optional
+  permissions: text("permissions"),
 
   createdAt: text("created_at")
     .notNull()
@@ -410,32 +394,26 @@ export const userRoles = sqliteTable("user_roles", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// RBAC Phase 3: Audit Logging
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
-  // Who
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  username: text("username").notNull(), // Snapshot in case user deleted
+  username: text("username").notNull(),
 
-  // What
-  action: text("action").notNull(), // "create", "read", "update", "delete", "share"
-  resourceType: text("resource_type").notNull(), // "host", "credential", "user", "session"
-  resourceId: text("resource_id"), // Can be text or number, store as text
-  resourceName: text("resource_name"), // Human-readable identifier
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceId: text("resource_id"),
+  resourceName: text("resource_name"),
 
-  // Context
-  details: text("details"), // JSON: { oldValue, newValue, reason, ... }
+  details: text("details"),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
 
-  // Result
   success: integer("success", { mode: "boolean" }).notNull(),
   errorMessage: text("error_message"),
 
-  // When
   timestamp: text("timestamp")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -454,21 +432,17 @@ export const sessionRecordings = sqliteTable("session_recordings", {
     onDelete: "set null",
   }),
 
-  // Session info
   startedAt: text("started_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   endedAt: text("ended_at"),
-  duration: integer("duration"), // seconds
+  duration: integer("duration"),
 
-  // Command log (lightweight)
-  commands: text("commands"), // JSON: [{ts, cmd, exitCode, blocked}]
-  dangerousActions: text("dangerous_actions"), // JSON: blocked commands
+  commands: text("commands"),
+  dangerousActions: text("dangerous_actions"),
 
-  // Full recording (optional, heavy)
-  recordingPath: text("recording_path"), // Path to .cast file
+  recordingPath: text("recording_path"),
 
-  // Metadata
   terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
     .default(false),
   terminationReason: text("termination_reason"),

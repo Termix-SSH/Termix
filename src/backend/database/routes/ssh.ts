@@ -604,7 +604,6 @@ router.put(
     }
 
     try {
-      // Check if user can update this host (owner or manage permission)
       const accessInfo = await permissionManager.canAccessHost(
         userId,
         Number(hostId),
@@ -620,7 +619,6 @@ router.put(
         return res.status(403).json({ error: "Access denied" });
       }
 
-      // Shared users cannot edit hosts (view-only)
       if (!accessInfo.isOwner) {
         sshLogger.warn("Shared user attempted to update host (view-only)", {
           operation: "host_update",
@@ -632,7 +630,6 @@ router.put(
         });
       }
 
-      // Get the actual owner ID for the update
       const hostRecord = await db
         .select({
           userId: sshData.userId,
@@ -654,7 +651,6 @@ router.put(
 
       const ownerId = hostRecord[0].userId;
 
-      // Only owner can change credentialId
       if (
         !accessInfo.isOwner &&
         sshDataObj.credentialId !== undefined &&
@@ -665,7 +661,6 @@ router.put(
         });
       }
 
-      // Only owner can change authType
       if (
         !accessInfo.isOwner &&
         sshDataObj.authType !== undefined &&
@@ -676,31 +671,15 @@ router.put(
         });
       }
 
-      // Check if credentialId is changing from non-null to null
-      // This happens when switching from "credential" auth to "password"/"key"/"none"
       if (sshDataObj.credentialId !== undefined) {
         if (
           hostRecord[0].credentialId !== null &&
           sshDataObj.credentialId === null
         ) {
-          // Auth type changed away from credential - revoke all shares
           const revokedShares = await db
             .delete(hostAccess)
             .where(eq(hostAccess.hostId, Number(hostId)))
             .returning({ id: hostAccess.id, userId: hostAccess.userId });
-
-          if (revokedShares.length > 0) {
-            sshLogger.info(
-              "Auto-revoked host shares due to auth type change from credential",
-              {
-                operation: "auto_revoke_shares",
-                hostId: Number(hostId),
-                revokedCount: revokedShares.length,
-                reason: "auth_type_changed_from_credential",
-              },
-            );
-            // Note: sharedCredentials will be auto-deleted by CASCADE
-          }
         }
       }
 
@@ -830,17 +809,14 @@ router.get(
     try {
       const now = new Date().toISOString();
 
-      // Get user's role IDs
       const userRoleIds = await db
         .select({ roleId: userRoles.roleId })
         .from(userRoles)
         .where(eq(userRoles.userId, userId));
       const roleIds = userRoleIds.map((r) => r.roleId);
 
-      // Query own hosts + shared hosts with access check
       const rawData = await db
         .select({
-          // All ssh_data fields
           id: sshData.id,
           userId: sshData.userId,
           name: sshData.name,
@@ -881,7 +857,6 @@ router.get(
           socks5Password: sshData.socks5Password,
           socks5ProxyChain: sshData.socks5ProxyChain,
 
-          // Shared access info
           ownerId: sshData.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
           permissionLevel: hostAccess.permissionLevel,
@@ -903,15 +878,13 @@ router.get(
         )
         .where(
           or(
-            eq(sshData.userId, userId), // Own hosts
+            eq(sshData.userId, userId),
             and(
-              // Shared to user directly (not expired)
               eq(hostAccess.userId, userId),
               or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
             ),
             roleIds.length > 0
               ? and(
-                  // Shared to user's role (not expired)
                   inArray(hostAccess.roleId, roleIds),
                   or(
                     isNull(hostAccess.expiresAt),
@@ -922,11 +895,9 @@ router.get(
           ),
         );
 
-      // Separate own hosts from shared hosts for proper decryption
       const ownHosts = rawData.filter((row) => row.userId === userId);
       const sharedHosts = rawData.filter((row) => row.userId !== userId);
 
-      // Decrypt own hosts with user's DEK
       let decryptedOwnHosts: any[] = [];
       try {
         decryptedOwnHosts = await SimpleDBOps.select(
@@ -934,37 +905,15 @@ router.get(
           "ssh_data",
           userId,
         );
-        sshLogger.debug("Own hosts decrypted successfully", {
-          operation: "host_fetch_own_decrypted",
-          userId,
-          count: decryptedOwnHosts.length,
-        });
       } catch (decryptError) {
         sshLogger.error("Failed to decrypt own hosts", decryptError, {
           operation: "host_fetch_own_decrypt_failed",
           userId,
         });
-        // Return empty array if decryption fails
         decryptedOwnHosts = [];
       }
 
-      // For shared hosts, DON'T try to decrypt them with user's DEK
-      // Just pass them through as plain objects without encrypted credential fields
-      // The credentials will be resolved via SharedCredentialManager later when resolveHostCredentials is called
-      sshLogger.info("Processing shared hosts", {
-        operation: "host_fetch_shared_process",
-        userId,
-        count: sharedHosts.length,
-      });
-
       const sanitizedSharedHosts = sharedHosts;
-
-      sshLogger.info("Combining hosts", {
-        operation: "host_fetch_combine",
-        userId,
-        ownCount: decryptedOwnHosts.length,
-        sharedCount: sanitizedSharedHosts.length,
-      });
 
       const data = [...decryptedOwnHosts, ...sanitizedSharedHosts];
 
@@ -1001,7 +950,6 @@ router.get(
               ? JSON.parse(row.socks5ProxyChain as string)
               : [],
 
-            // Add shared access metadata
             isShared: !!row.isShared,
             permissionLevel: row.permissionLevel || undefined,
             sharedExpiresAt: row.expiresAt || undefined,
@@ -1012,12 +960,6 @@ router.get(
           return resolved;
         }),
       );
-
-      sshLogger.info("Credential resolution complete, sending response", {
-        operation: "host_fetch_complete",
-        userId,
-        hostCount: result.length,
-      });
 
       res.json(result);
     } catch (err) {
@@ -1220,7 +1162,6 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      // Delete all related data in correct order (child tables first)
       await db
         .delete(fileManagerRecent)
         .where(eq(fileManagerRecent.hostId, numericHostId));
@@ -1245,15 +1186,12 @@ router.delete(
         .delete(recentActivity)
         .where(eq(recentActivity.hostId, numericHostId));
 
-      // Delete RBAC host access entries
       await db.delete(hostAccess).where(eq(hostAccess.hostId, numericHostId));
 
-      // Delete session recordings
       await db
         .delete(sessionRecordings)
         .where(eq(sessionRecordings.hostId, numericHostId));
 
-      // Finally delete the host itself
       await db
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
@@ -1762,21 +1700,11 @@ async function resolveHostCredentials(
   requestingUserId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    sshLogger.info("Resolving credentials for host", {
-      operation: "resolve_credentials_start",
-      hostId: host.id as number,
-      hasCredentialId: !!host.credentialId,
-      requestingUserId,
-      ownerId: (host.ownerId || host.userId) as string,
-    });
-
     if (host.credentialId && (host.userId || host.ownerId)) {
       const credentialId = host.credentialId as number;
       const ownerId = (host.ownerId || host.userId) as string;
 
-      // Check if this is a shared host access
       if (requestingUserId && requestingUserId !== ownerId) {
-        // User is accessing a shared host - use shared credential
         try {
           const { SharedCredentialManager } =
             await import("../../utils/shared-credential-manager.js");
@@ -1796,7 +1724,6 @@ async function resolveHostCredentials(
               keyType: sharedCred.keyType,
             };
 
-            // Only override username if overrideCredentialUsername is not enabled
             if (!host.overrideCredentialUsername) {
               resolvedHost.username = sharedCred.username;
             }
@@ -1816,11 +1743,9 @@ async function resolveHostCredentials(
                   : "Unknown error",
             },
           );
-          // Fall through to try owner's credential
         }
       }
 
-      // Original owner access - use original credential
       const credentials = await SimpleDBOps.select(
         db
           .select()
@@ -1846,7 +1771,6 @@ async function resolveHostCredentials(
           keyType: credential.key_type || credential.keyType,
         };
 
-        // Only override username if overrideCredentialUsername is not enabled
         if (!host.overrideCredentialUsername) {
           resolvedHost.username = credential.username;
         }
@@ -2053,7 +1977,6 @@ router.delete(
 
       const hostIds = hostsToDelete.map((host) => host.id);
 
-      // Delete all related data for all hosts in the folder (child tables first)
       if (hostIds.length > 0) {
         await db
           .delete(fileManagerRecent)
@@ -2079,21 +2002,17 @@ router.delete(
           .delete(recentActivity)
           .where(inArray(recentActivity.hostId, hostIds));
 
-        // Delete RBAC host access entries
         await db.delete(hostAccess).where(inArray(hostAccess.hostId, hostIds));
 
-        // Delete session recordings
         await db
           .delete(sessionRecordings)
           .where(inArray(sessionRecordings.hostId, hostIds));
       }
 
-      // Now delete the hosts themselves
       await db
         .delete(sshData)
         .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
 
-      // Finally delete the folder metadata
       await db
         .delete(sshFolders)
         .where(

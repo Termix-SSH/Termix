@@ -26,7 +26,6 @@ export async function collectCpuMetrics(client: Client): Promise<{
   let loadTriplet: [number, number, number] | null = null;
 
   try {
-    // Wrap Promise.all with timeout to prevent indefinite blocking
     const [stat1, loadAvgOut, coresOut] = await Promise.race([
       Promise.all([
         execCommand(client, "cat /proc/stat"),

@@ -100,7 +100,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
 
-    // Auto-switch terminal theme based on app theme when using "termix" (default)
     const isDarkMode =
       appTheme === "dark" ||
       (appTheme === "system" &&
@@ -108,7 +107,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     let themeColors;
     if (config.theme === "termix") {
-      // Auto-switch between termixDark and termixLight based on app theme
       themeColors = isDarkMode
         ? TERMINAL_THEMES.termixDark.colors
         : TERMINAL_THEMES.termixLight.colors;
@@ -679,7 +677,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           const msg = JSON.parse(event.data);
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
-              // Apply syntax highlighting if enabled (BETA - defaults to false/off)
               const syntaxHighlightingEnabled =
                 localStorage.getItem("terminalSyntaxHighlighting") === "true";
 
@@ -688,7 +685,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 : msg.data;
 
               terminal.write(outputData);
-              // Sudo password prompt detection
               const sudoPasswordPattern =
                 /(?:\[sudo\] password for \S+:|sudo: a password is required)/;
               const passwordToFill =
@@ -724,7 +720,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }, 15000);
               }
             } else {
-              // Apply syntax highlighting to non-string data as well (BETA - defaults to false/off)
               const syntaxHighlightingEnabled =
                 localStorage.getItem("terminalSyntaxHighlighting") === "true";
 
@@ -799,7 +794,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 ...hostConfig.terminalConfig,
               };
 
-              // Send all environment variables immediately without delays
               if (
                 terminalConfig.environmentVariables &&
                 terminalConfig.environmentVariables.length > 0
@@ -816,7 +810,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              // Send startup snippet immediately after env vars
               if (terminalConfig.startupSnippetId) {
                 try {
                   const snippets = await getSnippets();
@@ -837,7 +830,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }
               }
 
-              // Execute mosh command immediately if enabled
               if (terminalConfig.autoMosh && ws.readyState === 1) {
                 ws.send(
                   JSON.stringify({
@@ -1019,8 +1011,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         setTimeout(() => {
           terminal?.focus();
         }, 50);
-
-        console.log(`[Autocomplete] ${currentCmd} → ${selectedCommand}`);
       },
       [terminal, updateCurrentCommand],
     );
@@ -1043,8 +1033,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           autocompleteHistory.current = autocompleteHistory.current.filter(
             (cmd) => cmd !== command,
           );
-
-          console.log(`[Terminal] Command deleted from history: ${command}`);
         } catch (error) {
           console.error("Failed to delete command from history:", error);
         }
@@ -1064,7 +1052,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      // Auto-switch terminal theme based on app theme when using "termix" (default)
       let themeColors;
       if (config.theme === "termix") {
         themeColors = isDarkMode
@@ -1142,10 +1129,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
-      // Immediately fit to establish correct dimensions
       fitAddonRef.current?.fit();
       if (terminal.cols < 10 || terminal.rows < 3) {
-        // Terminal opened with invalid dimensions, retry fit in next frame
         requestAnimationFrame(() => {
           fitAddonRef.current?.fit();
         });
@@ -1448,14 +1433,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.attachCustomKeyEventHandler(handleCustomKey);
     }, [terminal]);
 
-    // Connection initialization effect
     useEffect(() => {
       if (!terminal || !hostConfig || !isVisible) return;
       if (isConnected || isConnecting) return;
 
-      // Ensure terminal has valid dimensions before connecting
       if (terminal.cols < 10 || terminal.rows < 3) {
-        // Wait for next frame when dimensions will be valid
         requestAnimationFrame(() => {
           if (terminal.cols > 0 && terminal.rows > 0) {
             setIsConnecting(true);
@@ -1475,7 +1457,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }, [terminal, hostConfig, isVisible, isConnected, isConnecting]);
 
-    // Consolidated fitting and focus effect
     useEffect(() => {
       if (!terminal || !fitAddonRef.current || !isVisible) return;
 

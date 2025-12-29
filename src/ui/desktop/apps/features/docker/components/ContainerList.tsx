@@ -70,7 +70,6 @@ export function ContainerList({
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -106,7 +105,6 @@ export function ContainerList({
         </div>
       </div>
 
-      {/* Container Grid */}
       {filteredContainers.length === 0 ? (
         <div className="flex items-center justify-center flex-1">
           <div className="text-center space-y-2">

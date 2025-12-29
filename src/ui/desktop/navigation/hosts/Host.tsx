@@ -84,7 +84,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
-  // Check if host has at least one tunnel connection
   const hasTunnelConnections = useMemo(() => {
     if (!host.tunnelConnections) return false;
     try {

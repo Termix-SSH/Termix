@@ -345,7 +345,33 @@ jobs:
         continue-on-error: true
 
   create-pr:
-    needs: [translate-zh, translate-ru, translate-pt, translate-fr, translate-es, translate-de, translate-hi, translate-bn, translate-ja, translate-vi, translate-tr, translate-ko, translate-it, translate-he, translate-ar, translate-pl, translate-nl, translate-sv, translate-id, translate-th, translate-uk, translate-cs, translate-ro, translate-el]
+    needs:
+      [
+        translate-zh,
+        translate-ru,
+        translate-pt,
+        translate-fr,
+        translate-es,
+        translate-de,
+        translate-hi,
+        translate-bn,
+        translate-ja,
+        translate-vi,
+        translate-tr,
+        translate-ko,
+        translate-it,
+        translate-he,
+        translate-ar,
+        translate-pl,
+        translate-nl,
+        translate-sv,
+        translate-id,
+        translate-th,
+        translate-uk,
+        translate-cs,
+        translate-ro,
+        translate-el,
+      ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -56,7 +56,6 @@ export function AppView({
   const { state: sidebarState } = useSidebar();
   const { theme: appTheme } = useTheme();
 
-  // Auto-switch terminal theme based on app theme
   const isDarkMode = useMemo(() => {
     if (appTheme === "dark") return true;
     if (appTheme === "light") return false;
@@ -698,7 +697,6 @@ export function AppView({
     ...DEFAULT_TERMINAL_CONFIG,
     ...(currentTabData?.hostConfig as any)?.terminalConfig,
   };
-  // Auto-switch between termixDark and termixLight based on app theme
   let containerThemeColors;
   if (terminalConfig.theme === "termix") {
     containerThemeColors = isDarkMode

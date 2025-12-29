@@ -578,7 +578,6 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("ssh_data", "notes", "TEXT");
 
-  // SOCKS5 Proxy columns
   addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");
   addColumnIfNotExists("ssh_data", "socks5_host", "TEXT");
   addColumnIfNotExists("ssh_data", "socks5_port", "INTEGER");
@@ -590,7 +589,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
 
-  // System-encrypted fields for offline credential sharing
   addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
@@ -655,7 +653,6 @@ const migrateSchema = () => {
     }
   }
 
-  // RBAC Phase 1: Host Access table
   try {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
@@ -678,9 +675,6 @@ const migrateSchema = () => {
           FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
-      databaseLogger.info("Created host_access table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create host_access table", {
         operation: "schema_migration",
@@ -689,15 +683,11 @@ const migrateSchema = () => {
     }
   }
 
-  // Migration: Add role_id column to existing host_access table
   try {
     sqlite.prepare("SELECT role_id FROM host_access LIMIT 1").get();
   } catch {
     try {
       sqlite.exec("ALTER TABLE host_access ADD COLUMN role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE");
-      databaseLogger.info("Added role_id column to host_access table", {
-        operation: "schema_migration",
-      });
     } catch (alterError) {
       databaseLogger.warn("Failed to add role_id column", {
         operation: "schema_migration",
@@ -706,15 +696,11 @@ const migrateSchema = () => {
     }
   }
 
-  // Migration: Add sudo_password column to ssh_data table
   try {
     sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
   } catch {
     try {
       sqlite.exec("ALTER TABLE ssh_data ADD COLUMN sudo_password TEXT");
-      databaseLogger.info("Added sudo_password column to ssh_data table", {
-        operation: "schema_migration",
-      });
     } catch (alterError) {
       databaseLogger.warn("Failed to add sudo_password column", {
         operation: "schema_migration",
@@ -723,7 +709,6 @@ const migrateSchema = () => {
     }
   }
 
-  // RBAC Phase 2: Roles tables
   try {
     sqlite.prepare("SELECT id FROM roles LIMIT 1").get();
   } catch {
@@ -740,9 +725,6 @@ const migrateSchema = () => {
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      databaseLogger.info("Created roles table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create roles table", {
         operation: "schema_migration",
@@ -768,9 +750,6 @@ const migrateSchema = () => {
           FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE SET NULL
         );
       `);
-      databaseLogger.info("Created user_roles table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create user_roles table", {
         operation: "schema_migration",
@@ -779,7 +758,6 @@ const migrateSchema = () => {
     }
   }
 
-  // RBAC Phase 3: Audit logging tables
   try {
     sqlite.prepare("SELECT id FROM audit_logs LIMIT 1").get();
   } catch {
@@ -802,9 +780,6 @@ const migrateSchema = () => {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
-      databaseLogger.info("Created audit_logs table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create audit_logs table", {
         operation: "schema_migration",
@@ -836,9 +811,6 @@ const migrateSchema = () => {
           FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
         );
       `);
-      databaseLogger.info("Created session_recordings table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create session_recordings table", {
         operation: "schema_migration",
@@ -847,7 +819,6 @@ const migrateSchema = () => {
     }
   }
 
-  // RBAC: Shared Credentials table
   try {
     sqlite.prepare("SELECT id FROM shared_credentials LIMIT 1").get();
   } catch {
@@ -872,9 +843,6 @@ const migrateSchema = () => {
           FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
-      databaseLogger.info("Created shared_credentials table", {
-        operation: "schema_migration",
-      });
     } catch (createError) {
       databaseLogger.warn("Failed to create shared_credentials table", {
         operation: "schema_migration",
@@ -883,51 +851,31 @@ const migrateSchema = () => {
     }
   }
 
-  // Clean up old system roles and seed correct ones
   try {
-    // First, check what roles exist
     const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
-    databaseLogger.info("Current roles in database", {
-      operation: "schema_migration",
-      roles: existingRoles,
-    });
 
-    // Migration: Remove ALL old unwanted roles (system or not) and keep only admin and user
     try {
       const validSystemRoles = ['admin', 'user'];
       const unwantedRoleNames = ['superAdmin', 'powerUser', 'readonly', 'member'];
       let deletedCount = 0;
 
-      // First delete known unwanted role names
       const deleteByName = sqlite.prepare("DELETE FROM roles WHERE name = ?");
       for (const roleName of unwantedRoleNames) {
         const result = deleteByName.run(roleName);
         if (result.changes > 0) {
           deletedCount += result.changes;
-          databaseLogger.info(`Deleted role by name: ${roleName}`, {
-            operation: "schema_migration",
-          });
         }
       }
 
-      // Then delete any system roles that are not admin or user
       const deleteOldSystemRole = sqlite.prepare("DELETE FROM roles WHERE name = ? AND is_system = 1");
       for (const role of existingRoles) {
         if (role.is_system === 1 && !validSystemRoles.includes(role.name) && !unwantedRoleNames.includes(role.name)) {
           const result = deleteOldSystemRole.run(role.name);
           if (result.changes > 0) {
             deletedCount += result.changes;
-            databaseLogger.info(`Deleted system role: ${role.name}`, {
-              operation: "schema_migration",
-            });
           }
         }
       }
-
-      databaseLogger.info("Cleanup completed", {
-        operation: "schema_migration",
-        deletedCount,
-      });
     } catch (cleanupError) {
       databaseLogger.warn("Failed to clean up old system roles", {
         operation: "schema_migration",
@@ -935,7 +883,6 @@ const migrateSchema = () => {
       });
     }
 
-    // Ensure only admin and user system roles exist
     const systemRoles = [
       {
         name: "admin",
@@ -954,7 +901,6 @@ const migrateSchema = () => {
     for (const role of systemRoles) {
       const existingRole = sqlite.prepare("SELECT id FROM roles WHERE name = ?").get(role.name);
       if (!existingRole) {
-        // Create if doesn't exist
         try {
           sqlite.prepare(`
             INSERT INTO roles (name, display_name, description, is_system, permissions)
@@ -969,11 +915,6 @@ const migrateSchema = () => {
       }
     }
 
-    databaseLogger.info("System roles migration completed", {
-      operation: "schema_migration",
-    });
-
-    // Migrate existing is_admin users to roles
     try {
       const adminUsers = sqlite.prepare("SELECT id FROM users WHERE is_admin = 1").all() as { id: string }[];
       const normalUsers = sqlite.prepare("SELECT id FROM users WHERE is_admin = 0").all() as { id: string }[];
@@ -994,11 +935,6 @@ const migrateSchema = () => {
             // Ignore duplicate errors
           }
         }
-
-        databaseLogger.info("Migrated admin users to admin role", {
-          operation: "schema_migration",
-          count: adminUsers.length,
-        });
       }
 
       if (userRole) {
@@ -1014,11 +950,6 @@ const migrateSchema = () => {
             // Ignore duplicate errors
           }
         }
-
-        databaseLogger.info("Migrated normal users to user role", {
-          operation: "schema_migration",
-          count: normalUsers.length,
-        });
       }
     } catch (migrationError) {
       databaseLogger.warn("Failed to migrate existing users to roles", {

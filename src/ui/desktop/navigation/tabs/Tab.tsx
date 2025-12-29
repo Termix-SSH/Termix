@@ -153,7 +153,8 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive || isSplit ? "2px solid var(--foreground)" : "none",
+          borderBottom:
+            isActive || isSplit ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">

@@ -363,7 +363,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
         ),
       );
 
-      // Wrap in hosts array for valid import format
       const exportFormat = {
         hosts: [cleanExportData],
       };

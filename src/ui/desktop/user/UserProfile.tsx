@@ -18,7 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { User, Shield, AlertCircle, Palette, Sun, Moon, Monitor } from "lucide-react";
+import {
+  User,
+  Shield,
+  AlertCircle,
+  Palette,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
 import {
@@ -154,7 +162,6 @@ export function UserProfile({
         totp_enabled: info.totp_enabled || false,
       });
 
-      // Fetch user roles
       try {
         const rolesResponse = await getUserRoles(info.userId);
         setUserRoles(rolesResponse.roles || []);
@@ -473,7 +480,10 @@ export function UserProfile({
                           {t("profile.theme", "Theme")}
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.appearanceDesc", "Choose your preferred theme")}
+                          {t(
+                            "profile.appearanceDesc",
+                            "Choose your preferred theme",
+                          )}
                         </p>
                       </div>
                       <Select value={theme} onValueChange={setTheme}>

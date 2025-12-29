@@ -329,7 +329,6 @@ export function CommandPalette({
                     ? host.name
                     : `${host.username}@${host.ip}:${host.port}`;
 
-                  // Parse statsConfig to determine if metrics should be shown
                   let shouldShowMetrics = true;
                   try {
                     const statsConfig = host.statsConfig
@@ -340,7 +339,6 @@ export function CommandPalette({
                     shouldShowMetrics = true;
                   }
 
-                  // Check if host has at least one tunnel connection
                   let hasTunnelConnections = false;
                   try {
                     const tunnelConnections = Array.isArray(

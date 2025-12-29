@@ -56,7 +56,6 @@ export function TabProvider({ children }: TabProviderProps) {
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const nextTabId = useRef(2);
 
-  // Update home tab title when translation changes
   React.useEffect(() => {
     setTabs((prev) =>
       prev.map((tab) =>
@@ -174,10 +173,8 @@ export function TabProvider({ children }: TabProviderProps) {
 
     setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
 
-    // Remove from split screen
     setAllSplitScreenTab((prev) => {
       const newSplits = prev.filter((id) => id !== tabId);
-      // Auto-clear split mode if only 1 or fewer tabs remain in split
       if (newSplits.length <= 1) {
         return [];
       }
@@ -187,7 +184,6 @@ export function TabProvider({ children }: TabProviderProps) {
     if (currentTab === tabId) {
       const remainingTabs = tabs.filter((tab) => tab.id !== tabId);
       if (remainingTabs.length > 0) {
-        // Try to set current tab to another split tab first, if any remain
         const remainingSplitTabs = allSplitScreenTab.filter(
           (id) => id !== tabId,
         );
@@ -197,7 +193,7 @@ export function TabProvider({ children }: TabProviderProps) {
           setCurrentTab(remainingTabs[0].id);
         }
       } else {
-        setCurrentTab(1); // Home tab
+        setCurrentTab(1);
       }
     }
   };

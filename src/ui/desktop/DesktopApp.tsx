@@ -43,8 +43,6 @@ function AppContent() {
 
   const lastShiftPressTime = useRef(0);
 
-  // DEBUG: Theme toggle - double-tap left Alt/Option to toggle light/dark mode
-  // Comment out the next line and the AltLeft handler below to disable
   const lastAltPressTime = useRef(0);
 
   useEffect(() => {
@@ -62,26 +60,20 @@ function AppContent() {
         }
       }
 
-      // DEBUG: Double-tap left Alt/Option to toggle light/dark theme
-      // Remove or comment out this block for production
-      /* DEBUG_THEME_TOGGLE_START */
       if (event.code === "AltLeft" && !event.repeat) {
         const now = Date.now();
         if (now - lastAltPressTime.current < 300) {
-          // Use setTheme to properly update React state (not just DOM class)
           const currentIsDark =
             theme === "dark" ||
             (theme === "system" &&
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           const newTheme = currentIsDark ? "light" : "dark";
           setTheme(newTheme);
-          console.log("[DEBUG] Theme toggled:", newTheme);
           lastAltPressTime.current = 0;
         } else {
           lastAltPressTime.current = now;
         }
       }
-      /* DEBUG_THEME_TOGGLE_END */
 
       if (event.key === "Escape") {
         setIsCommandPaletteOpen(false);

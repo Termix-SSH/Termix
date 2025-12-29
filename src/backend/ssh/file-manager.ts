@@ -815,34 +815,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   );
 
-  fileLogger.info("SFTP connection request received", {
-    operation: "sftp_connect_request",
-    sessionId,
-    hostId,
-    ip,
-    port,
-    useSocks5,
-    socks5Host,
-    socks5Port,
-    hasSocks5ProxyChain: !!(
-      socks5ProxyChain && (socks5ProxyChain as any).length > 0
-    ),
-    proxyChainLength: socks5ProxyChain ? (socks5ProxyChain as any).length : 0,
-  });
-
-  // Check if SOCKS5 proxy is enabled (either single proxy or chain)
   if (
     useSocks5 &&
     (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
   ) {
-    fileLogger.info("SOCKS5 enabled for SFTP, creating connection", {
-      operation: "sftp_socks5_enabled",
-      sessionId,
-      socks5Host,
-      socks5Port,
-      hasChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
-    });
-
     try {
       const socks5Socket = await createSocks5Connection(ip, port, {
         useSocks5,
@@ -854,10 +830,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
 
       if (socks5Socket) {
-        fileLogger.info("SOCKS5 socket created for SFTP", {
-          operation: "sftp_socks5_socket_ready",
-          sessionId,
-        });
         config.sock = socks5Socket;
         client.connect(config);
         return;
@@ -883,17 +855,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             : "Unknown error"),
       });
     }
-  } else {
-    fileLogger.info("SOCKS5 NOT enabled for SFTP connection", {
-      operation: "sftp_no_socks5",
-      sessionId,
-      useSocks5,
-      socks5Host,
-      hasChain: !!(socks5ProxyChain && (socks5ProxyChain as any).length > 0),
-    });
-  }
-
-  if (jumpHosts && jumpHosts.length > 0 && userId) {
+  } else if (jumpHosts && jumpHosts.length > 0 && userId) {
     try {
       const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
@@ -976,9 +938,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,
@@ -3055,21 +3015,10 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {
-      fileLogger.debug("Extract stdout", {
-        operation: "extract_archive",
-        sessionId,
-        output: data.toString(),
-      });
-    });
+    stream.on("data", (data: Buffer) => {});
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
-      fileLogger.debug("Extract stderr", {
-        operation: "extract_archive",
-        sessionId,
-        error: data.toString(),
-      });
     });
 
     stream.on("close", (code: number) => {
@@ -3247,21 +3196,10 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {
-      fileLogger.debug("Compress stdout", {
-        operation: "compress_files",
-        sessionId,
-        output: data.toString(),
-      });
-    });
+    stream.on("data", (data: Buffer) => {});
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
-      fileLogger.debug("Compress stderr", {
-        operation: "compress_files",
-        sessionId,
-        error: data.toString(),
-      });
     });
 
     stream.on("close", (code: number) => {

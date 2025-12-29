@@ -53,7 +53,6 @@ export function ContainerStats({
   React.useEffect(() => {
     fetchStats();
 
-    // Poll stats every 2 seconds
     const interval = setInterval(fetchStats, 2000);
 
     return () => clearInterval(interval);
@@ -114,7 +113,6 @@ export function ContainerStats({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full overflow-auto thin-scrollbar">
-      {/* CPU Usage */}
       <Card className="py-3">
         <CardHeader className="pb-2 px-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -137,7 +135,6 @@ export function ContainerStats({
         </CardContent>
       </Card>
 
-      {/* Memory Usage */}
       <Card className="py-3">
         <CardHeader className="pb-2 px-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -168,7 +165,6 @@ export function ContainerStats({
         </CardContent>
       </Card>
 
-      {/* Network I/O */}
       <Card className="py-3">
         <CardHeader className="pb-2 px-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -194,7 +190,6 @@ export function ContainerStats({
         </CardContent>
       </Card>
 
-      {/* Block I/O */}
       <Card className="py-3">
         <CardHeader className="pb-2 px-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -228,7 +223,6 @@ export function ContainerStats({
         </CardContent>
       </Card>
 
-      {/* Container Info */}
       <Card className="md:col-span-2 py-3">
         <CardHeader className="pb-2 px-4">
           <CardTitle className="text-base flex items-center gap-2">

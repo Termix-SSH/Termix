@@ -30,6 +30,8 @@ export function HostManager({
     hostConfig || null,
   );
 
+  useEffect(() => {}, [editingHost]);
+
   const [editingCredential, setEditingCredential] = useState<{
     id: number;
     name?: string;
@@ -39,30 +41,27 @@ export function HostManager({
   const ignoreNextHostConfigChangeRef = useRef<boolean>(false);
   const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
-  // Sync state when tab is updated externally (via updateTab or addTab)
   useEffect(() => {
-    // Always sync on timestamp changes
     if (_updateTimestamp !== undefined) {
-      // Update activeTab if initialTab has changed
       if (initialTab && initialTab !== activeTab) {
         setActiveTab(initialTab);
       }
 
-      // Update editingHost if hostConfig has changed
       if (hostConfig && hostConfig.id !== editingHost?.id) {
         setEditingHost(hostConfig);
         lastProcessedHostIdRef.current = hostConfig.id;
-      } else if (!hostConfig && editingHost) {
-        // Clear editingHost if hostConfig is now undefined
+      } else if (
+        !hostConfig &&
+        editingHost &&
+        editingHost.id !== lastProcessedHostIdRef.current
+      ) {
         setEditingHost(null);
       }
 
-      // Clear editingCredential if switching away from add_credential
       if (initialTab !== "add_credential" && editingCredential) {
         setEditingCredential(null);
       }
     } else {
-      // Initial mount - set state from props
       if (initialTab) {
         setActiveTab(initialTab);
       }
@@ -78,7 +77,6 @@ export function HostManager({
     setActiveTab("add_host");
     lastProcessedHostIdRef.current = host.id;
 
-    // Persist to tab context
     if (updateTab && currentTabId !== undefined) {
       updateTab(currentTabId, { initialTab: "add_host" });
     }
@@ -101,7 +99,6 @@ export function HostManager({
     setEditingCredential(credential);
     setActiveTab("add_credential");
 
-    // Persist to tab context
     if (updateTab && currentTabId !== undefined) {
       updateTab(currentTabId, { initialTab: "add_credential" });
     }
@@ -121,7 +118,6 @@ export function HostManager({
     }
     setActiveTab(value);
 
-    // Persist to tab context
     if (updateTab && currentTabId !== undefined) {
       updateTab(currentTabId, { initialTab: value });
     }

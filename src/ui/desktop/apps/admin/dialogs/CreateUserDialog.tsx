@@ -34,7 +34,6 @@ export function CreateUserDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       setUsername("");

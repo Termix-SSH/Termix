@@ -60,7 +60,6 @@ export function TerminalWindow({
 
   const handleMaximize = () => {
     maximizeWindow(windowId);
-    // Trigger resize after maximize/restore
     if (resizeTimeoutRef.current) {
       clearTimeout(resizeTimeoutRef.current);
     }

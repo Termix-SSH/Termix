@@ -213,10 +213,8 @@ export function ContainerCard({
   const isLoading =
     isStarting || isStopping || isRestarting || isPausing || isRemoving;
 
-  // Format the created date to be more readable
   const formatCreatedDate = (dateStr: string): string => {
     try {
-      // Remove the timezone suffix like "+0000 UTC"
       const cleanDate = dateStr.replace(/\s*\+\d{4}\s*UTC\s*$/, "").trim();
       return cleanDate;
     } catch {
@@ -224,11 +222,9 @@ export function ContainerCard({
     }
   };
 
-  // Parse ports into array of port mappings
   const parsePorts = (portsStr: string | undefined): string[] => {
     if (!portsStr || portsStr.trim() === "") return [];
 
-    // Split by comma and clean up
     return portsStr
       .split(",")
       .map((p) => p.trim())

@@ -33,7 +33,6 @@ export function LinkAccountDialog({
   const [linkTargetUsername, setLinkTargetUsername] = useState("");
   const [linkLoading, setLinkLoading] = useState(false);
 
-  // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       setLinkTargetUsername("");

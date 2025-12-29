@@ -39,14 +39,12 @@ export function RolesTab(): React.ReactElement {
   const [roles, setRoles] = React.useState<Role[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // Create/Edit Role Dialog
   const [roleDialogOpen, setRoleDialogOpen] = React.useState(false);
   const [editingRole, setEditingRole] = React.useState<Role | null>(null);
   const [roleName, setRoleName] = React.useState("");
   const [roleDisplayName, setRoleDisplayName] = React.useState("");
   const [roleDescription, setRoleDescription] = React.useState("");
 
-  // Load roles
   const loadRoles = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -65,7 +63,6 @@ export function RolesTab(): React.ReactElement {
     loadRoles();
   }, [loadRoles]);
 
-  // Create role
   const handleCreateRole = () => {
     setEditingRole(null);
     setRoleName("");
@@ -74,7 +71,6 @@ export function RolesTab(): React.ReactElement {
     setRoleDialogOpen(true);
   };
 
-  // Edit role
   const handleEditRole = (role: Role) => {
     setEditingRole(role);
     setRoleName(role.name);
@@ -83,7 +79,6 @@ export function RolesTab(): React.ReactElement {
     setRoleDialogOpen(true);
   };
 
-  // Save role
   const handleSaveRole = async () => {
     if (!roleDisplayName.trim()) {
       toast.error(t("rbac.roleDisplayNameRequired"));
@@ -97,14 +92,12 @@ export function RolesTab(): React.ReactElement {
 
     try {
       if (editingRole) {
-        // Update existing role
         await updateRole(editingRole.id, {
           displayName: roleDisplayName,
           description: roleDescription || null,
         });
         toast.success(t("rbac.roleUpdatedSuccessfully"));
       } else {
-        // Create new role
         await createRole({
           name: roleName,
           displayName: roleDisplayName,
@@ -120,7 +113,6 @@ export function RolesTab(): React.ReactElement {
     }
   };
 
-  // Delete role
   const handleDeleteRole = async (role: Role) => {
     const confirmed = await confirmWithToast({
       title: t("rbac.confirmDeleteRole"),

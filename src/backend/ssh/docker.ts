@@ -11,10 +11,8 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
 
-// Create dedicated logger for Docker operations
 const dockerLogger = logger;
 
-// SSH Session Management
 interface SSHSession {
   client: SSHClient;
   isConnected: boolean;
@@ -26,7 +24,6 @@ interface SSHSession {
 
 const sshSessions: Record<string, SSHSession> = {};
 
-// Session cleanup with 60-minute idle timeout
 const SESSION_IDLE_TIMEOUT = 60 * 60 * 1000;
 
 function cleanupSession(sessionId: string) {
@@ -47,9 +44,7 @@ function cleanupSession(sessionId: string) {
 
     try {
       session.client.end();
-    } catch (error) {
-      dockerLogger.debug("Error ending SSH client during cleanup", { error });
-    }
+    } catch (error) {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
     dockerLogger.info("Docker SSH session cleaned up", {
@@ -70,7 +65,6 @@ function scheduleSessionCleanup(sessionId: string) {
   }
 }
 
-// Helper function to resolve jump host
 async function resolveJumpHost(
   hostId: number,
   userId: string,
@@ -131,7 +125,6 @@ async function resolveJumpHost(
   }
 }
 
-// Helper function to create jump host chain
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
@@ -239,7 +232,6 @@ async function createJumpHostChain(
   }
 }
 
-// Helper function to execute Docker CLI commands
 async function executeDockerCommand(
   session: SSHSession,
   command: string,
@@ -290,7 +282,6 @@ async function executeDockerCommand(
   });
 }
 
-// Express app setup
 const app = express();
 
 app.use(
@@ -334,11 +325,8 @@ app.use(cookieParser());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
-// Initialize AuthManager and apply middleware
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
-
-// Session management endpoints
 
 // POST /docker/ssh/connect - Establish SSH session
 app.post("/docker/ssh/connect", async (req, res) => {
@@ -373,7 +361,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
   }
 
   try {
-    // Get host configuration - check both owned and shared hosts
     const hosts = await SimpleDBOps.select(
       getDb().select().from(sshData).where(eq(sshData.id, hostId)),
       "ssh_data",
@@ -386,7 +373,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     const host = hosts[0] as unknown as SSHHost;
 
-    // Verify user has access to this host (either owner or shared access)
     if (host.userId !== userId) {
       const { PermissionManager } =
         await import("../utils/permission-manager.js");
@@ -417,7 +403,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
     }
 
-    // Check if Docker is enabled for this host
     if (!host.enableDocker) {
       dockerLogger.warn("Docker not enabled for host", {
         operation: "docker_connect",
@@ -431,12 +416,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
       });
     }
 
-    // Clean up existing session if any
     if (sshSessions[sessionId]) {
       cleanupSession(sessionId);
     }
 
-    // Resolve credentials
     let resolvedCredentials: any = {
       password: host.password,
       sshKey: host.key,
@@ -447,9 +430,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     if (host.credentialId) {
       const ownerId = host.userId;
 
-      // Check if this is a shared host access
       if (userId !== ownerId) {
-        // User is accessing a shared host - use shared credential
         try {
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");
@@ -475,7 +456,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
           });
         }
       } else {
-        // Owner accessing their own host
         const credentials = await SimpleDBOps.select(
           getDb()
             .select()
@@ -503,7 +483,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
     }
 
-    // Create SSH client
     const client = new SSHClient();
 
     const config: any = {
@@ -518,7 +497,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
       tcpKeepAliveInitialDelay: 30000,
     };
 
-    // Set authentication
     if (
       resolvedCredentials.authType === "password" &&
       resolvedCredentials.password
@@ -554,13 +532,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       scheduleSessionCleanup(sessionId);
 
-      dockerLogger.info("Docker SSH session established", {
-        operation: "docker_connect",
-        sessionId,
-        hostId,
-        userId,
-      });
-
       res.json({ success: true, message: "SSH connection established" });
     });
 
@@ -588,7 +559,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
     });
 
-    // Handle jump hosts if configured
     if (host.jumpHosts && host.jumpHosts.length > 0) {
       const jumpClient = await createJumpHostChain(
         host.jumpHosts as Array<{ hostId: number }>,
@@ -653,11 +623,6 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
   }
 
   cleanupSession(sessionId);
-
-  dockerLogger.info("Docker SSH session disconnected", {
-    operation: "docker_disconnect",
-    sessionId,
-  });
 
   res.json({ success: true, message: "SSH session disconnected" });
 });
@@ -724,7 +689,6 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
   session.activeOperations++;
 
   try {
-    // Check if Docker is installed
     try {
       const versionOutput = await executeDockerCommand(
         session,
@@ -733,7 +697,6 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
       const versionMatch = versionOutput.match(/Docker version ([^\s,]+)/);
       const version = versionMatch ? versionMatch[1] : "unknown";
 
-      // Check if Docker daemon is running
       try {
         await executeDockerCommand(session, "docker ps >/dev/null 2>&1");
 
@@ -798,7 +761,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 // GET /docker/containers/:sessionId - List all containers
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
-  const all = req.query.all !== "false"; // Default to true
+  const all = req.query.all !== "false";
   const userId = (req as any).userId;
 
   if (!userId) {
@@ -942,13 +905,6 @@ app.post(
 
       session.activeOperations--;
 
-      dockerLogger.info("Container started", {
-        operation: "start_container",
-        sessionId,
-        containerId,
-        userId,
-      });
-
       res.json({
         success: true,
         message: "Container started successfully",
@@ -1006,13 +962,6 @@ app.post(
       await executeDockerCommand(session, `docker stop ${containerId}`);
 
       session.activeOperations--;
-
-      dockerLogger.info("Container stopped", {
-        operation: "stop_container",
-        sessionId,
-        containerId,
-        userId,
-      });
 
       res.json({
         success: true,
@@ -1072,13 +1021,6 @@ app.post(
 
       session.activeOperations--;
 
-      dockerLogger.info("Container restarted", {
-        operation: "restart_container",
-        sessionId,
-        containerId,
-        userId,
-      });
-
       res.json({
         success: true,
         message: "Container restarted successfully",
@@ -1137,13 +1079,6 @@ app.post(
 
       session.activeOperations--;
 
-      dockerLogger.info("Container paused", {
-        operation: "pause_container",
-        sessionId,
-        containerId,
-        userId,
-      });
-
       res.json({
         success: true,
         message: "Container paused successfully",
@@ -1201,13 +1136,6 @@ app.post(
       await executeDockerCommand(session, `docker unpause ${containerId}`);
 
       session.activeOperations--;
-
-      dockerLogger.info("Container unpaused", {
-        operation: "unpause_container",
-        sessionId,
-        containerId,
-        userId,
-      });
 
       res.json({
         success: true,
@@ -1271,14 +1199,6 @@ app.delete(
       );
 
       session.activeOperations--;
-
-      dockerLogger.info("Container removed", {
-        operation: "remove_container",
-        sessionId,
-        containerId,
-        force,
-        userId,
-      });
 
       res.json({
         success: true,
@@ -1425,17 +1345,14 @@ app.get(
       const output = await executeDockerCommand(session, command);
       const rawStats = JSON.parse(output.trim());
 
-      // Parse memory usage (e.g., "1.5GiB / 8GiB" -> { used: "1.5GiB", limit: "8GiB" })
       const memoryParts = rawStats.memory.split(" / ");
       const memoryUsed = memoryParts[0]?.trim() || "0B";
       const memoryLimit = memoryParts[1]?.trim() || "0B";
 
-      // Parse network I/O (e.g., "1.5MB / 2.3MB" -> { input: "1.5MB", output: "2.3MB" })
       const netIOParts = rawStats.netIO.split(" / ");
       const netInput = netIOParts[0]?.trim() || "0B";
       const netOutput = netIOParts[1]?.trim() || "0B";
 
-      // Parse block I/O (e.g., "10MB / 5MB" -> { read: "10MB", write: "5MB" })
       const blockIOParts = rawStats.blockIO.split(" / ");
       const blockRead = blockIOParts[0]?.trim() || "0B";
       const blockWrite = blockIOParts[1]?.trim() || "0B";
@@ -1482,13 +1399,11 @@ app.get(
   },
 );
 
-// Start server
 const PORT = 30007;
 
 app.listen(PORT, async () => {
   try {
     await authManager.initialize();
-    dockerLogger.info(`Docker backend server started on port ${PORT}`);
   } catch (err) {
     dockerLogger.error("Failed to initialize Docker backend", err, {
       operation: "startup",
@@ -1496,9 +1411,7 @@ app.listen(PORT, async () => {
   }
 });
 
-// Graceful shutdown
 process.on("SIGINT", () => {
-  dockerLogger.info("Shutting down Docker backend");
   Object.keys(sshSessions).forEach((sessionId) => {
     cleanupSession(sessionId);
   });
@@ -1506,7 +1419,6 @@ process.on("SIGINT", () => {
 });
 
 process.on("SIGTERM", () => {
-  dockerLogger.info("Shutting down Docker backend");
   Object.keys(sshSessions).forEach((sessionId) => {
     cleanupSession(sessionId);
   });

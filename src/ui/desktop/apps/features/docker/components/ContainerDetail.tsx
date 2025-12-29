@@ -52,7 +52,6 @@ export function ContainerDetail({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with back button */}
       <div className="flex items-center gap-4 px-4 pt-3 pb-3">
         <Button variant="ghost" onClick={onBack} size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -67,7 +66,6 @@ export function ContainerDetail({
       </div>
       <Separator className="p-0.25 w-full" />
 
-      {/* Tabs for Logs, Stats, Console */}
       <div className="flex-1 overflow-hidden min-h-0">
         <Tabs
           value={activeTab}

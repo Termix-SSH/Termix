@@ -39,13 +39,11 @@ export function useConfirmation() {
     opts: ConfirmationOptions | string,
     callback?: () => void,
   ): Promise<boolean> => {
-    // Legacy signature support
     if (typeof opts === "string" && callback) {
       callback();
       return Promise.resolve(true);
     }
 
-    // New Promise-based signature
     return Promise.resolve(true);
   };
 

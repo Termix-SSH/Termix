@@ -19,7 +19,7 @@ interface HostAccessInfo {
   hasAccess: boolean;
   isOwner: boolean;
   isShared: boolean;
-  permissionLevel?: "view"; // Only "view" is supported for shared access
+  permissionLevel?: "view";
   expiresAt?: string | null;
 }
 
@@ -34,12 +34,11 @@ class PermissionManager {
     string,
     { permissions: string[]; timestamp: number }
   >;
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_TTL = 5 * 60 * 1000;
 
   private constructor() {
     this.permissionCache = new Map();
 
-    // Auto-cleanup expired host access every 1 minute
     setInterval(() => {
       this.cleanupExpiredAccess().catch((error) => {
         databaseLogger.error(
@@ -52,7 +51,6 @@ class PermissionManager {
       });
     }, 60 * 1000);
 
-    // Clear permission cache every 5 minutes
     setInterval(() => {
       this.clearPermissionCache();
     }, this.CACHE_TTL);
@@ -80,13 +78,6 @@ class PermissionManager {
           ),
         )
         .returning({ id: hostAccess.id });
-
-      if (result.length > 0) {
-        databaseLogger.info("Cleaned up expired host access", {
-          operation: "host_access_cleanup",
-          count: result.length,
-        });
-      }
     } catch (error) {
       databaseLogger.error("Failed to cleanup expired host access", error, {
         operation: "host_access_cleanup_failed",
@@ -112,7 +103,6 @@ class PermissionManager {
    * Get user permissions from roles
    */
   async getUserPermissions(userId: string): Promise<string[]> {
-    // Check cache first
     const cached = this.permissionCache.get(userId);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
       return cached.permissions;
@@ -145,7 +135,6 @@ class PermissionManager {
 
       const permissionsArray = Array.from(allPermissions);
 
-      // Cache the result
       this.permissionCache.set(userId, {
         permissions: permissionsArray,
         timestamp: Date.now(),
@@ -168,17 +157,14 @@ class PermissionManager {
   async hasPermission(userId: string, permission: string): Promise<boolean> {
     const userPermissions = await this.getUserPermissions(userId);
 
-    // Check for wildcard "*" (god mode)
     if (userPermissions.includes("*")) {
       return true;
     }
 
-    // Check exact match
     if (userPermissions.includes(permission)) {
       return true;
     }
 
-    // Check wildcard matches
     const parts = permission.split(".");
     for (let i = parts.length; i > 0; i--) {
       const wildcardPermission = parts.slice(0, i).join(".") + ".*";
@@ -199,7 +185,6 @@ class PermissionManager {
     action: "read" | "write" | "execute" | "delete" | "share" = "read",
   ): Promise<HostAccessInfo> {
     try {
-      // Check if user is the owner
       const host = await db
         .select()
         .from(sshData)
@@ -214,14 +199,12 @@ class PermissionManager {
         };
       }
 
-      // Get user's role IDs
       const userRoleIds = await db
         .select({ roleId: userRoles.roleId })
         .from(userRoles)
         .where(eq(userRoles.userId, userId));
       const roleIds = userRoleIds.map((r) => r.roleId);
 
-      // Check if host is shared with user OR user's roles
       const now = new Date().toISOString();
       const sharedAccess = await db
         .select()
@@ -246,7 +229,6 @@ class PermissionManager {
       if (sharedAccess.length > 0) {
         const access = sharedAccess[0];
 
-        // All shared access is view-only - deny write/delete
         if (action === "write" || action === "delete") {
           return {
             hasAccess: false,
@@ -257,7 +239,6 @@ class PermissionManager {
           };
         }
 
-        // Update last accessed time
         try {
           await db
             .update(hostAccess)
@@ -306,7 +287,6 @@ class PermissionManager {
    */
   async isAdmin(userId: string): Promise<boolean> {
     try {
-      // Check old is_admin field
       const user = await db
         .select({ isAdmin: users.is_admin })
         .from(users)
@@ -317,7 +297,6 @@ class PermissionManager {
         return true;
       }
 
-      // Check if user has admin or super_admin role
       const adminRoles = await db
         .select({ roleName: roles.name })
         .from(userRoles)
@@ -415,7 +394,6 @@ class PermissionManager {
         });
       }
 
-      // Attach access info to request for use in route handlers
       (req as any).hostAccessInfo = accessInfo;
 
       next();

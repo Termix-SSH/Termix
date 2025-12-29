@@ -488,12 +488,10 @@ class DataCrypto {
     const systemEncrypted: Record<string, unknown> = {};
     const recordId = record.id || "temp-" + Date.now();
 
-    // Only encrypt for sshCredentials table
     if (tableName !== "ssh_credentials") {
       return systemEncrypted as Partial<T>;
     }
 
-    // Encrypt password field
     if (record.password && typeof record.password === "string") {
       systemEncrypted.systemPassword = FieldCrypto.encryptField(
         record.password as string,
@@ -503,7 +501,6 @@ class DataCrypto {
       );
     }
 
-    // Encrypt key field
     if (record.key && typeof record.key === "string") {
       systemEncrypted.systemKey = FieldCrypto.encryptField(
         record.key as string,
@@ -513,7 +510,6 @@ class DataCrypto {
       );
     }
 
-    // Encrypt key_password field
     if (record.key_password && typeof record.key_password === "string") {
       systemEncrypted.systemKeyPassword = FieldCrypto.encryptField(
         record.key_password as string,

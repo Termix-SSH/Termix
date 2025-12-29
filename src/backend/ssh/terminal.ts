@@ -137,12 +137,10 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
-    // Fetch all jump host configurations in parallel
     const jumpHostConfigs = await Promise.all(
       jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
     );
 
-    // Validate all configs resolved
     for (let i = 0; i < jumpHostConfigs.length; i++) {
       if (!jumpHostConfigs[i]) {
         sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
@@ -154,7 +152,6 @@ async function createJumpHostChain(
       }
     }
 
-    // Connect through jump hosts sequentially
     for (let i = 0; i < jumpHostConfigs.length; i++) {
       const jumpHostConfig = jumpHostConfigs[i];
 
@@ -1196,7 +1193,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    // Check if SOCKS5 proxy is enabled (either single proxy or chain)
     if (
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||

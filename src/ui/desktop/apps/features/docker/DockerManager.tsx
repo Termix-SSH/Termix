@@ -21,9 +21,6 @@ import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.ts
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { ContainerList } from "./components/ContainerList.tsx";
-import { LogViewer } from "./components/LogViewer.tsx";
-import { ContainerStats } from "./components/ContainerStats.tsx";
-import { ConsoleTerminal } from "./components/ConsoleTerminal.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 
 interface DockerManagerProps {
@@ -105,7 +102,6 @@ export function DockerManager({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [hostConfig?.id]);
 
-  // SSH session lifecycle
   React.useEffect(() => {
     const initSession = async () => {
       if (!currentHostConfig?.id || !currentHostConfig.enableDocker) {
@@ -119,7 +115,6 @@ export function DockerManager({
         await connectDockerSession(sid, currentHostConfig.id);
         setSessionId(sid);
 
-        // Validate Docker availability
         setIsValidating(true);
         const validation = await validateDockerAvailability(sid);
         setDockerValidation(validation);
@@ -152,7 +147,6 @@ export function DockerManager({
     };
   }, [currentHostConfig?.id, currentHostConfig?.enableDocker]);
 
-  // Keepalive interval
   React.useEffect(() => {
     if (!sessionId || !isVisible) return;
 
@@ -163,12 +157,11 @@ export function DockerManager({
         });
       },
       10 * 60 * 1000,
-    ); // Every 10 minutes
+    );
 
     return () => clearInterval(keepalive);
   }, [sessionId, isVisible]);
 
-  // Refresh containers function
   const refreshContainers = React.useCallback(async () => {
     if (!sessionId) return;
     try {
@@ -179,7 +172,6 @@ export function DockerManager({
     }
   }, [sessionId]);
 
-  // Poll containers
   React.useEffect(() => {
     if (!sessionId || !isVisible || !dockerValidation?.available) return;
 
@@ -196,8 +188,8 @@ export function DockerManager({
       }
     };
 
-    pollContainers(); // Initial fetch
-    const interval = setInterval(pollContainers, 5000); // Poll every 5 seconds
+    pollContainers();
+    const interval = setInterval(pollContainers, 5000);
 
     return () => {
       cancelled = true;
@@ -229,7 +221,6 @@ export function DockerManager({
     ? "h-full w-full text-foreground overflow-hidden bg-transparent"
     : "bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden";
 
-  // Check if Docker is enabled
   if (!currentHostConfig?.enableDocker) {
     return (
       <div style={wrapperStyle} className={containerClass}>
@@ -256,7 +247,6 @@ export function DockerManager({
     );
   }
 
-  // Loading state
   if (isConnecting || isValidating) {
     return (
       <div style={wrapperStyle} className={containerClass}>
@@ -287,7 +277,6 @@ export function DockerManager({
     );
   }
 
-  // Docker not available
   if (dockerValidation && !dockerValidation.available) {
     return (
       <div style={wrapperStyle} className={containerClass}>

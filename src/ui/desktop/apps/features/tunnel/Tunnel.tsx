@@ -132,15 +132,12 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
 
     try {
       if (action === "connect") {
-        // Try to find endpoint host in user's accessible hosts
         const endpointHost = allHosts.find(
           (h) =>
             h.name === tunnel.endpointHost ||
             `${h.username}@${h.ip}` === tunnel.endpointHost,
         );
 
-        // For shared users who don't have access to endpoint host,
-        // send a minimal config and let backend resolve endpoint details
         const tunnelConfig = {
           name: tunnelName,
           sourceHostId: host.id,
@@ -190,20 +187,6 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
           socks5Password: host.socks5Password,
           socks5ProxyChain: host.socks5ProxyChain,
         };
-
-        console.log("Tunnel connect config:", {
-          tunnelName,
-          sourceHostId: tunnelConfig.sourceHostId,
-          sourceCredentialId: tunnelConfig.sourceCredentialId,
-          sourceUserId: tunnelConfig.sourceUserId,
-          hasSourcePassword: !!tunnelConfig.sourcePassword,
-          hasSourceKey: !!tunnelConfig.sourceSSHKey,
-          hasEndpointHost: !!endpointHost,
-          endpointHost: tunnel.endpointHost,
-          isShared: (host as any).isShared,
-          ownerId: (host as any).ownerId,
-        });
-
         await connectTunnel(tunnelConfig);
       } else if (action === "disconnect") {
         await disconnectTunnel(tunnelName);

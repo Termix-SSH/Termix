@@ -30,14 +30,12 @@ const AppContent: FC = () => {
   useEffect(() => {
     const checkAuth = () => {
       setAuthLoading(true);
-      // Don't optimistically set isAuthenticated before checking
       getUserInfo()
         .then((meRes) => {
           if (typeof meRes === "string" || !meRes.username) {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            // Clear invalid token
             localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
@@ -50,7 +48,6 @@ const AppContent: FC = () => {
           setIsAdmin(false);
           setUsername(null);
 
-          // Clear invalid token on any auth error
           localStorage.removeItem("jwt");
 
           const errorCode = err?.response?.data?.code;

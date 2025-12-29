@@ -59,18 +59,16 @@ export function LogViewer({
     fetchLogs();
   }, [fetchLogs]);
 
-  // Auto-refresh
   React.useEffect(() => {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
       fetchLogs();
-    }, 3000); // Refresh every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [autoRefresh, fetchLogs]);
 
-  // Auto-scroll to bottom when new logs arrive
   React.useEffect(() => {
     if (autoRefresh && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -115,11 +113,9 @@ export function LogViewer({
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Controls */}
       <Card className="py-3">
         <CardContent className="px-3">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Tail Lines */}
             <div className="flex flex-col">
               <Label htmlFor="tail-lines" className="mb-1">
                 Lines to show
@@ -138,7 +134,6 @@ export function LogViewer({
               </Select>
             </div>
 
-            {/* Timestamps */}
             <div className="flex flex-col">
               <Label htmlFor="timestamps" className="mb-1">
                 Show Timestamps
@@ -155,7 +150,6 @@ export function LogViewer({
               </div>
             </div>
 
-            {/* Auto Refresh */}
             <div className="flex flex-col">
               <Label htmlFor="auto-refresh" className="mb-1">
                 Auto Refresh
@@ -172,7 +166,6 @@ export function LogViewer({
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex flex-col">
               <Label className="mb-1">Actions</Label>
               <div className="flex gap-2 h-10">
@@ -206,7 +199,6 @@ export function LogViewer({
             </div>
           </div>
 
-          {/* Search Filter */}
           <div className="mt-2">
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -222,7 +214,6 @@ export function LogViewer({
         </CardContent>
       </Card>
 
-      {/* Logs Display */}
       <Card className="flex-1 overflow-hidden py-0">
         <CardContent className="p-0 h-full">
           {isLoading && !logs ? (

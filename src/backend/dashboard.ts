@@ -15,7 +15,7 @@ const authManager = AuthManager.getInstance();
 const serverStartTime = Date.now();
 
 const activityRateLimiter = new Map<string, number>();
-const RATE_LIMIT_MS = 1000; // 1 second window
+const RATE_LIMIT_MS = 1000;
 
 app.use(
   cors({
