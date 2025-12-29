@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Мониторинг выключен",
     "statusMonitoring": "Статус",
     "metricsMonitoring": "Метрики",
-    "terminalCustomizationNotice": "Примечание: Настройки терминала работают только на настольных компьютерах (веб-сайт и приложение Electron). Мобильные приложения и мобильный веб-сайт используют системные настройки терминала по умолчанию.",
     "terminalCustomization": "Настройка терминала",
     "appearance": "Внешний вид",
     "behavior": "Поведение",

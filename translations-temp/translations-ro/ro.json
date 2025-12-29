@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Monitorizare dezactivată",
     "statusMonitoring": "Stare",
     "metricsMonitoring": "Indicatori",
-    "terminalCustomizationNotice": "Notă: Personalizările terminalului funcționează numai pe desktop (site web și aplicația Electron). Aplicațiile mobile și site-ul web mobil utilizează setările implicite ale terminalului de sistem.",
     "terminalCustomization": "Personalizare terminal",
     "appearance": "Aspect",
     "behavior": "Comportament",
@@ -2372,7 +2371,11 @@
     "backToList": "Consolă",
     "logs": "Porniți containerul pentru a accesa consola",
     "stats": "Comutați pe Luminos",
-    "consoleTab": "Comutați pe Întunecat"
+    "consoleTab": "Comutați pe Întunecat",
+    "startContainerToAccess": "Porniți containerul pentru a accesa consola"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Comutați la Luminos",
+    "switchToDark": "Comutați la Întunecat"
+  }
 }

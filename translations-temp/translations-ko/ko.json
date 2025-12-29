@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "메트릭",
     "statusMonitoring": "참고: 터미널 사용자 지정은 데스크톱(웹사이트 및 Electron 앱)에서만 작동합니다. 모바일 앱과 모바일 웹사이트는 시스템 기본 터미널 설정을 사용합니다.",
     "metricsMonitoring": "터미널 사용자 지정",
-    "terminalCustomizationNotice": "외관",
     "terminalCustomization": "동작",
     "appearance": "고급",
     "behavior": "테마 미리보기",

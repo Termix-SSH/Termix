@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Utseende",
     "statusMonitoring": "Beteende",
     "metricsMonitoring": "Avancerat",
-    "terminalCustomizationNotice": "Förhandsgranskning av tema",
     "terminalCustomization": "Tema",
     "appearance": "Välj tema",
     "behavior": "Välj ett färgtema för terminalen",
@@ -2368,7 +2367,15 @@
     "notConnected": "Konsol",
     "clickToConnect": "Starta behållaren för att komma åt konsolen",
     "connectingTo": "Växla till ljus",
-    "containerNotFound": "Växla till mörk"
+    "containerNotFound": "Växla till mörk",
+    "backToList": "Tillbaka till listan",
+    "logs": "Loggar",
+    "stats": "Statistik",
+    "consoleTab": "Konsol",
+    "startContainerToAccess": "Starta containern för att komma åt konsolen"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Växla till ljus",
+    "switchToDark": "Växla till mörk"
+  }
 }

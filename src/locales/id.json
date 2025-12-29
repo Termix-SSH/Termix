@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Catatan: Kustomisasi terminal hanya berfungsi di desktop (situs web dan aplikasi Electron). Aplikasi seluler dan situs web seluler menggunakan pengaturan terminal default sistem.",
     "statusMonitoring": "Kustomisasi Terminal",
     "metricsMonitoring": "Tampilan",
-    "terminalCustomizationNotice": "Perilaku",
     "terminalCustomization": "Lanjutan",
     "appearance": "Pratinjau Tema",
     "behavior": "Tema",
@@ -2366,7 +2365,17 @@
     "connect": "Konsol",
     "disconnect": "Mulai kontainer untuk mengakses konsol",
     "notConnected": "Beralih ke Terang",
-    "clickToConnect": "Beralih ke Gelap"
+    "clickToConnect": "Beralih ke Gelap",
+    "connectingTo": "Menghubungkan ke {{containerName}}...",
+    "containerNotFound": "Kontainer tidak ditemukan",
+    "backToList": "Kembali ke Daftar",
+    "logs": "Log",
+    "stats": "Statistik",
+    "consoleTab": "Konsol",
+    "startContainerToAccess": "Mulai kontainer untuk mengakses konsol"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Beralih ke Terang",
+    "switchToDark": "Beralih ke Gelap"
+  }
 }

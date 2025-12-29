@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Monitorování vypnuto",
     "statusMonitoring": "Stav",
     "metricsMonitoring": "Metriky",
-    "terminalCustomizationNotice": "Poznámka: Přizpůsobení terminálu funguje pouze na počítači (web a aplikace Electron). Mobilní aplikace a mobilní web používají výchozí nastavení terminálu systému.",
     "terminalCustomization": "Přizpůsobení terminálu",
     "appearance": "Vzhled",
     "behavior": "Chování",

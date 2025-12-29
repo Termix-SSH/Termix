@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Sh",
     "statusMonitoring": "Ash",
     "metricsMonitoring": "Verbindung wird hergestellt…",
-    "terminalCustomizationNotice": "Verbinden",
     "terminalCustomization": "Trennen",
     "appearance": "Nicht verbunden",
     "behavior": "Klicken Sie auf „Verbinden“, um eine interaktive Shell zu starten",
@@ -2357,7 +2356,25 @@
     "consoleError": "Statistiken",
     "errorMessage": "Konsole\n#__# Starten Sie den Container, um auf die Konsole zuzugreifen",
     "failedToConnect": "Auf Hell umschalten",
-    "console": "Auf Dunkel umschalten"
+    "console": "Auf Dunkel umschalten",
+    "selectShell": "Shell auswählen",
+    "bash": "Bash",
+    "sh": "sh",
+    "ash": "ash",
+    "connecting": "Verbinden...",
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "notConnected": "Nicht verbunden\n#__# Klicken Sie auf „Verbinden“, um eine Shell-Sitzung zu starten.",
+    "clickToConnect": "Verbinden mit {{containerName}}...",
+    "connectingTo": "Container nicht gefunden",
+    "containerNotFound": "Zurück zur Liste",
+    "backToList": "Protokolle",
+    "logs": "Statistiken",
+    "stats": "Konsole",
+    "consoleTab": "Container starten, um auf die Konsole zuzugreifen",
+    "startContainerToAccess": "Zu hellem Modus wechseln"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Zu dunklem Modus wechseln"
+  }
 }

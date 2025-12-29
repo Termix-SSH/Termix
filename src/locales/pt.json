@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Observação: as personalizações do terminal funcionam apenas em desktops (site e aplicativo Electron). Aplicativos móveis e sites móveis usam as configurações padrão do terminal do sistema.",
     "statusMonitoring": "Personalização do Terminal",
     "metricsMonitoring": "Aparência",
-    "terminalCustomizationNotice": "Comportamento",
     "terminalCustomization": "Avançado",
     "appearance": "Pré-visualização do Tema",
     "behavior": "Tema",

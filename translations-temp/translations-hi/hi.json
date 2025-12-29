@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "दायाँ क्लिक करने पर कर्सर के नीचे का शब्द चयनित हो जाता है",
     "statusMonitoring": "तेज़ स्क्रॉल मॉडिफ़ायर",
     "metricsMonitoring": "मॉडिफ़ायर चुनें",
-    "terminalCustomizationNotice": "Alt",
     "terminalCustomization": "Ctrl",
     "appearance": "Shift",
     "behavior": "तेज़ स्क्रॉलिंग के लिए मॉडिफ़ायर कुंजी",
@@ -2376,6 +2375,7 @@
     "startContainerToAccess": "लाइट मोड पर स्विच करें"
   },
   "theme": {
-    "switchToLight": "डार्क मोड पर स्विच करें"
+    "switchToLight": "डार्क मोड पर स्विच करें",
+    "switchToDark": "डार्क मोड पर स्विच करें"
   }
 }

@@ -965,7 +965,6 @@
     "monitoringDisabledBadge": "Altezza riga: {{value}}",
     "statusMonitoring": "Regola la spaziatura tra le righe",
     "metricsMonitoring": "Stile cursore",
-    "terminalCustomizationNotice": "Seleziona lo stile del cursore",
     "terminalCustomization": "Blocco",
     "appearance": "Sottolineato",
     "behavior": "Barra",
