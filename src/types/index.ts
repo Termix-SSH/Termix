@@ -552,6 +552,7 @@ export interface AlertManagerProps {
 
 export interface SSHTunnelObjectProps {
   host: SSHHost;
+  tunnelIndex?: number;
   tunnelStatuses: Record<string, TunnelStatus>;
   tunnelActions: Record<string, boolean>;
   onTunnelAction: (

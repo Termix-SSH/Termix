@@ -196,7 +196,7 @@ function AppContent() {
         style={{
           background: "var(--bg-elevated)",
           backgroundImage: `repeating-linear-gradient(
-            225deg,
+            45deg,
             transparent,
             transparent 35px,
             ${lineColor} 35px,

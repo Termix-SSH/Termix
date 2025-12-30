@@ -145,6 +145,7 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+<img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
@@ -152,7 +153,7 @@ channel, however, response times may be longer.
     Your browser does not support the video tag.
   </video>
 </p>
-Videos and images may be out of date.
+Some videos and images may be out of date or may not perfectly showcase features.
 
 # License
 

@@ -70,12 +70,7 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {
-    statsLogger.debug("Failed to collect recent login stats", {
-      operation: "recent_login_stats_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  } catch (e) {}
 
   try {
     const failedOut = await execCommand(
@@ -131,12 +126,7 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {
-    statsLogger.debug("Failed to collect failed login stats", {
-      operation: "failed_login_stats_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  } catch (e) {}
 
   return {
     recentLogins: recentLogins.slice(0, 10),

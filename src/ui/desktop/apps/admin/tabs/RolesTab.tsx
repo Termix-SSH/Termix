@@ -136,7 +136,6 @@ export function RolesTab(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      {/* Roles Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -148,6 +147,15 @@ export function RolesTab(): React.ReactElement {
             {t("rbac.createRole")}
           </Button>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs"
+          onClick={() => window.open("https://docs.termix.site/rbac", "_blank")}
+        >
+          {t("common.documentation")}
+        </Button>
 
         <Table>
           <TableHeader>

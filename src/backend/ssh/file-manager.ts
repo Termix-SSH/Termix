@@ -279,6 +279,7 @@ interface PendingTOTPSession {
   prompts?: Array<{ prompt: string; echo: boolean }>;
   totpPromptIndex?: number;
   resolvedPassword?: string;
+  totpAttempts: number;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -449,7 +450,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     host: ip,
     port,
     username,
-    tryKeyboard: true,
+    tryKeyboard:
+      resolvedCredentials.authType === "none" ||
+      forceKeyboardInteractive === true,
     keepaliveInterval: 30000,
     keepaliveCountMax: 3,
     readyTimeout: 60000,
@@ -681,29 +684,37 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
 
       if (totpPromptIndex !== -1) {
-        if (responseSent) {
-          const responses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-              return resolvedCredentials.password;
+        if (pendingTOTPSessions[sessionId]) {
+          const existingSession = pendingTOTPSessions[sessionId];
+          if (existingSession.totpAttempts >= 3) {
+            if (!responseSent) {
+              responseSent = true;
+              delete pendingTOTPSessions[sessionId];
+              client.end();
+              res.status(401).json({
+                error: "Maximum TOTP attempts reached",
+                code: "TOTP_MAX_ATTEMPTS",
+              });
             }
-            return "";
-          });
-          finish(responses);
+            return;
+          }
+          existingSession.totpAttempts++;
+          if (!responseSent) {
+            responseSent = true;
+            res.json({
+              requires_totp: true,
+              sessionId,
+              prompt: prompts[totpPromptIndex].prompt,
+              attempts_remaining: 3 - existingSession.totpAttempts,
+            });
+          }
+          return;
+        }
+
+        if (responseSent) {
           return;
         }
         responseSent = true;
-
-        if (pendingTOTPSessions[sessionId]) {
-          const responses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-              return resolvedCredentials.password;
-            }
-            return "";
-          });
-          finish(responses);
-          return;
-        }
-
         keyboardInteractiveResponded = true;
 
         pendingTOTPSessions[sessionId] = {
@@ -720,6 +731,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           prompts,
           totpPromptIndex,
           resolvedPassword: resolvedCredentials.password,
+          totpAttempts: 0,
         };
 
         res.json({
@@ -753,29 +765,38 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         }
 
         if (!hasStoredPassword && passwordPromptIndex !== -1) {
-          if (responseSent) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
+          if (pendingTOTPSessions[sessionId]) {
+            const existingSession = pendingTOTPSessions[sessionId];
+            if (existingSession.totpAttempts >= 3) {
+              if (!responseSent) {
+                responseSent = true;
+                delete pendingTOTPSessions[sessionId];
+                client.end();
+                res.status(401).json({
+                  error: "Maximum password attempts reached",
+                  code: "PASSWORD_MAX_ATTEMPTS",
+                });
               }
-              return "";
-            });
-            finish(responses);
+              return;
+            }
+            existingSession.totpAttempts++;
+            if (!responseSent) {
+              responseSent = true;
+              res.json({
+                requires_totp: true,
+                sessionId,
+                prompt: prompts[passwordPromptIndex].prompt,
+                isPassword: true,
+                attempts_remaining: 3 - existingSession.totpAttempts,
+              });
+            }
+            return;
+          }
+
+          if (responseSent) {
             return;
           }
           responseSent = true;
-
-          if (pendingTOTPSessions[sessionId]) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-            finish(responses);
-            return;
-          }
-
           keyboardInteractiveResponded = true;
 
           pendingTOTPSessions[sessionId] = {
@@ -792,6 +813,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             prompts,
             totpPromptIndex: passwordPromptIndex,
             resolvedPassword: resolvedCredentials.password,
+            totpAttempts: 0,
           };
 
           res.json({

@@ -144,6 +144,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
+    const connectionAttemptIdRef = useRef(0);
+    const totpAttemptsRef = useRef(0);
+    const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
     const keyHandlerAttachedRef = useRef(false);
@@ -372,6 +375,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     function handleTotpSubmit(code: string) {
       if (webSocketRef.current && code) {
+        if (totpTimeoutRef.current) {
+          clearTimeout(totpTimeoutRef.current);
+          totpTimeoutRef.current = null;
+        }
         webSocketRef.current.send(
           JSON.stringify({
             type: isPasswordPrompt ? "password_response" : "totp_response",
@@ -385,6 +392,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function handleTotpCancel() {
+      if (totpTimeoutRef.current) {
+        clearTimeout(totpTimeoutRef.current);
+        totpTimeoutRef.current = null;
+      }
       setTotpRequired(false);
       setTotpPrompt("");
       if (onClose) onClose();
@@ -461,6 +472,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearTimeout(connectionTimeoutRef.current);
             connectionTimeoutRef.current = null;
           }
+          if (totpTimeoutRef.current) {
+            clearTimeout(totpTimeoutRef.current);
+            totpTimeoutRef.current = null;
+          }
           webSocketRef.current?.close();
           setIsConnected(false);
           setIsConnecting(false);
@@ -530,6 +545,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }),
       );
 
+      const delay = Math.min(
+        2000 * Math.pow(2, reconnectAttempts.current - 1),
+        8000,
+      );
+
       reconnectTimeoutRef.current = setTimeout(() => {
         if (
           isUnmountingRef.current ||
@@ -561,7 +581,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         isReconnectingRef.current = false;
-      }, 2000 * reconnectAttempts.current);
+      }, delay);
     }
 
     function connectToHost(cols: number, rows: number) {
@@ -570,6 +590,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       isConnectingRef.current = true;
+      connectionAttemptIdRef.current++;
+
+      if (!isReconnectingRef.current) {
+        reconnectAttempts.current = 0;
+      }
 
       const isDev =
         !isElectron() &&
@@ -652,7 +677,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               attemptReconnection();
             }
           }
-        }, 15000);
+        }, 35000);
 
         ws.send(
           JSON.stringify({
@@ -852,6 +877,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               onClose();
             }
           } else if (msg.type === "totp_required") {
+            totpAttemptsRef.current = 0;
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
@@ -859,7 +885,25 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+            if (totpTimeoutRef.current) {
+              clearTimeout(totpTimeoutRef.current);
+            }
+            totpTimeoutRef.current = setTimeout(() => {
+              setTotpRequired(false);
+              toast.error(t("terminal.totpTimeout"));
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 180000);
+          } else if (msg.type === "totp_retry") {
+            totpAttemptsRef.current++;
+            const attemptsRemaining =
+              msg.attempts_remaining || 3 - totpAttemptsRef.current;
+            toast.error(
+              `Invalid code. ${attemptsRemaining} ${attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`,
+            );
           } else if (msg.type === "password_required") {
+            totpAttemptsRef.current = 0;
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("common.password"));
             setIsPasswordPrompt(true);
@@ -867,6 +911,16 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+            if (totpTimeoutRef.current) {
+              clearTimeout(totpTimeoutRef.current);
+            }
+            totpTimeoutRef.current = setTimeout(() => {
+              setTotpRequired(false);
+              toast.error(t("terminal.passwordTimeout"));
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 180000);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -888,11 +942,22 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       });
 
+      const currentAttemptId = connectionAttemptIdRef.current;
+
       ws.addEventListener("close", (event) => {
+        if (currentAttemptId !== connectionAttemptIdRef.current) {
+          return;
+        }
+
         setIsConnected(false);
         isConnectingRef.current = false;
         if (terminal) {
           terminal.clear();
+        }
+
+        if (totpTimeoutRef.current) {
+          clearTimeout(totpTimeoutRef.current);
+          totpTimeoutRef.current = null;
         }
 
         if (event.code === 1008) {
@@ -914,7 +979,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (
           !wasDisconnectedBySSH.current &&
           !isUnmountingRef.current &&
-          !shouldNotReconnectRef.current
+          !shouldNotReconnectRef.current &&
+          !isConnectingRef.current
         ) {
           wasDisconnectedBySSH.current = false;
           attemptReconnection();
@@ -922,6 +988,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       ws.addEventListener("error", () => {
+        if (currentAttemptId !== connectionAttemptIdRef.current) {
+          return;
+        }
+
         setIsConnected(false);
         isConnectingRef.current = false;
         setConnectionError(t("terminal.websocketError"));
@@ -929,7 +999,17 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           terminal.clear();
         }
         setIsConnecting(false);
-        if (!isUnmountingRef.current && !shouldNotReconnectRef.current) {
+
+        if (totpTimeoutRef.current) {
+          clearTimeout(totpTimeoutRef.current);
+          totpTimeoutRef.current = null;
+        }
+
+        if (
+          !isUnmountingRef.current &&
+          !shouldNotReconnectRef.current &&
+          !isConnectingRef.current
+        ) {
           wasDisconnectedBySSH.current = false;
           attemptReconnection();
         }
@@ -1245,6 +1325,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           clearTimeout(reconnectTimeoutRef.current);
         if (connectionTimeoutRef.current)
           clearTimeout(connectionTimeoutRef.current);
+        if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;

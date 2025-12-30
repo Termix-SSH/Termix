@@ -47,12 +47,12 @@ export function useConfirmation() {
         variantOrConfirmLabel === "destructive";
       const confirmLabel = isVariant ? "Confirm" : variantOrConfirmLabel;
 
-      if (typeof opts === "string" && callback) {
+      if (typeof opts === "string") {
         toast(opts, {
           action: {
             label: confirmLabel,
             onClick: () => {
-              callback();
+              if (callback) callback();
               resolve(true);
             },
           },
@@ -63,7 +63,7 @@ export function useConfirmation() {
             },
           },
         } as any);
-      } else if (typeof opts === "object" && callback) {
+      } else if (typeof opts === "object") {
         const actualConfirmLabel = opts.confirmText || confirmLabel;
         const actualCancelLabel = opts.cancelText || cancelLabel;
 
@@ -71,7 +71,7 @@ export function useConfirmation() {
           action: {
             label: actualConfirmLabel,
             onClick: () => {
-              callback();
+              if (callback) callback();
               resolve(true);
             },
           },

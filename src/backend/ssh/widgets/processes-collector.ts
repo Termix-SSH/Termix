@@ -54,12 +54,7 @@ export async function collectProcessesMetrics(client: Client): Promise<{
 
     const runningCount2 = Number(runningCount.stdout.trim());
     runningProcesses = Number.isFinite(runningCount2) ? runningCount2 : null;
-  } catch (e) {
-    statsLogger.debug("Failed to collect process stats", {
-      operation: "process_stats_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  } catch (e) {}
 
   return {
     total: totalProcesses,

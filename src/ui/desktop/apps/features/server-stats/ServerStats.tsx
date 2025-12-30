@@ -469,6 +469,27 @@ export function ServerStats({
                 {t("nav.fileManager")}
               </Button>
             )}
+
+            {currentHostConfig?.enableDocker && (
+              <Button
+                variant="outline"
+                className="font-semibold"
+                onClick={() => {
+                  const titleBase =
+                    currentHostConfig?.name &&
+                    currentHostConfig.name.trim() !== ""
+                      ? currentHostConfig.name.trim()
+                      : `${currentHostConfig.username}@${currentHostConfig.ip}`;
+                  addTab({
+                    type: "docker",
+                    title: titleBase,
+                    hostConfig: currentHostConfig,
+                  });
+                }}
+              >
+                {t("nav.docker")}
+              </Button>
+            )}
           </div>
         </div>
         <Separator className="p-0.25 w-full" />

@@ -16,12 +16,15 @@ import {
   listDockerContainers,
   validateDockerAvailability,
   keepaliveDockerSession,
+  verifyDockerTOTP,
 } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -53,6 +56,13 @@ export function DockerManager({
   const [isValidating, setIsValidating] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"list" | "detail">("list");
   const [isLoadingContainers, setIsLoadingContainers] = React.useState(false);
+  const [totpRequired, setTotpRequired] = React.useState(false);
+  const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
+  const [totpPrompt, setTotpPrompt] = React.useState<string>("");
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [authReason, setAuthReason] = React.useState<
+    "no_keyboard" | "auth_failed" | "timeout"
+  >("no_keyboard");
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
@@ -103,9 +113,19 @@ export function DockerManager({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [hostConfig?.id]);
 
+  const initializingRef = React.useRef(false);
+
   React.useEffect(() => {
     const initSession = async () => {
       if (!currentHostConfig?.id || !currentHostConfig.enableDocker) {
+        return;
+      }
+
+      if (initializingRef.current) return;
+      initializingRef.current = true;
+
+      if (sessionId) {
+        initializingRef.current = false;
         return;
       }
 
@@ -113,7 +133,32 @@ export function DockerManager({
       const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       try {
-        await connectDockerSession(sid, currentHostConfig.id);
+        const result = await connectDockerSession(sid, currentHostConfig.id, {
+          useSocks5: currentHostConfig.useSocks5,
+          socks5Host: currentHostConfig.socks5Host,
+          socks5Port: currentHostConfig.socks5Port,
+          socks5Username: currentHostConfig.socks5Username,
+          socks5Password: currentHostConfig.socks5Password,
+          socks5ProxyChain: currentHostConfig.socks5ProxyChain,
+        });
+
+        if (result?.requires_totp) {
+          setTotpRequired(true);
+          setTotpSessionId(sid);
+          setTotpPrompt(result.prompt || t("docker.verificationCodePrompt"));
+          setIsConnecting(false);
+          return;
+        }
+
+        if (result?.status === "auth_required") {
+          setShowAuthDialog(true);
+          setAuthReason(
+            result.reason === "no_keyboard" ? "no_keyboard" : "auth_failed",
+          );
+          setIsConnecting(false);
+          return;
+        }
+
         setSessionId(sid);
 
         setIsValidating(true);
@@ -140,6 +185,7 @@ export function DockerManager({
     initSession();
 
     return () => {
+      initializingRef.current = false;
       if (sessionId) {
         disconnectDockerSession(sessionId).catch(() => {
           // Silently handle disconnect errors
@@ -207,6 +253,109 @@ export function DockerManager({
     setViewMode("list");
     setSelectedContainer(null);
   }, []);
+
+  const handleTotpSubmit = async (code: string) => {
+    if (!totpSessionId || !code) return;
+
+    try {
+      setIsConnecting(true);
+      const result = await verifyDockerTOTP(totpSessionId, code);
+
+      if (result?.status === "success") {
+        setTotpRequired(false);
+        setTotpPrompt("");
+        setSessionId(totpSessionId);
+        setTotpSessionId(null);
+
+        setIsValidating(true);
+        const validation = await validateDockerAvailability(totpSessionId);
+        setDockerValidation(validation);
+        setIsValidating(false);
+
+        if (!validation.available) {
+          toast.error(
+            validation.error || "Docker is not available on this host",
+          );
+        }
+      }
+    } catch (error) {
+      console.error("TOTP verification failed:", error);
+      toast.error(t("docker.totpVerificationFailed"));
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleTotpCancel = () => {
+    setTotpRequired(false);
+    setTotpSessionId(null);
+    setTotpPrompt("");
+    setIsConnecting(false);
+  };
+
+  const handleAuthSubmit = async (credentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+  }) => {
+    if (!currentHostConfig?.id) return;
+
+    setShowAuthDialog(false);
+    setIsConnecting(true);
+
+    const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      const result = await connectDockerSession(sid, currentHostConfig.id, {
+        userProvidedPassword: credentials.password,
+        userProvidedSshKey: credentials.sshKey,
+        userProvidedKeyPassword: credentials.keyPassword,
+        useSocks5: currentHostConfig.useSocks5,
+        socks5Host: currentHostConfig.socks5Host,
+        socks5Port: currentHostConfig.socks5Port,
+        socks5Username: currentHostConfig.socks5Username,
+        socks5Password: currentHostConfig.socks5Password,
+        socks5ProxyChain: currentHostConfig.socks5ProxyChain,
+      });
+
+      if (result?.requires_totp) {
+        setTotpRequired(true);
+        setTotpSessionId(sid);
+        setTotpPrompt(result.prompt || t("docker.verificationCodePrompt"));
+        setIsConnecting(false);
+        return;
+      }
+
+      if (result?.status === "auth_required") {
+        setShowAuthDialog(true);
+        setAuthReason("auth_failed");
+        setIsConnecting(false);
+        return;
+      }
+
+      setSessionId(sid);
+
+      setIsValidating(true);
+      const validation = await validateDockerAvailability(sid);
+      setDockerValidation(validation);
+      setIsValidating(false);
+
+      if (!validation.available) {
+        toast.error(validation.error || "Docker is not available on this host");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to connect");
+      setIsConnecting(false);
+      setIsValidating(false);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleAuthCancel = () => {
+    setShowAuthDialog(false);
+    setIsConnecting(false);
+  };
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = sidebarState === "collapsed" ? 16 : 8;
@@ -384,6 +533,26 @@ export function DockerManager({
           )}
         </div>
       </div>
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTotpSubmit}
+        onCancel={handleTotpCancel}
+      />
+      {currentHostConfig && (
+        <SSHAuthDialog
+          isOpen={showAuthDialog}
+          reason={authReason}
+          onSubmit={handleAuthSubmit}
+          onCancel={handleAuthCancel}
+          hostInfo={{
+            ip: currentHostConfig.ip,
+            port: currentHostConfig.port,
+            username: currentHostConfig.username,
+            name: currentHostConfig.name,
+          }}
+        />
+      )}
     </div>
   );
 }

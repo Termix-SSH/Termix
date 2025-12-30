@@ -269,12 +269,6 @@ router.post(
       overrideCredentialUsername,
     } = hostData;
 
-    console.log("POST /db/ssh - Received SOCKS5 data:", {
-      useSocks5,
-      socks5Host,
-      socks5ProxyChain,
-    });
-
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||

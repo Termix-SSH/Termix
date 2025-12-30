@@ -47,16 +47,12 @@ export function TunnelViewer({
         <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full">
           {activeHost.tunnelConnections.map((t, idx) => (
             <TunnelObject
-              key={`tunnel-${activeHost.id}-${t.endpointHost}-${t.sourcePort}-${t.endpointPort}`}
-              host={{
-                ...activeHost,
-                tunnelConnections: [activeHost.tunnelConnections[idx]],
-              }}
+              key={`tunnel-${activeHost.id}-${idx}-${t.endpointHost}-${t.sourcePort}-${t.endpointPort}`}
+              host={activeHost}
+              tunnelIndex={idx}
               tunnelStatuses={tunnelStatuses}
               tunnelActions={tunnelActions}
-              onTunnelAction={(action) =>
-                onTunnelAction(action, activeHost, idx)
-              }
+              onTunnelAction={onTunnelAction}
               compact
               bare
             />

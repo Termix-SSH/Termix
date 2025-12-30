@@ -279,6 +279,17 @@ export function HostSharingTab({
               {t("rbac.shareHost")}
             </h3>
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() =>
+                window.open("https://docs.termix.site/rbac", "_blank")
+              }
+            >
+              {t("common.documentation")}
+            </Button>
+
             <Tabs
               value={shareType}
               onValueChange={(v) => setShareType(v as "user" | "role")}

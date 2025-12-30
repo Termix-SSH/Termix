@@ -3337,15 +3337,57 @@ export async function revokeHostAccess(
 export async function connectDockerSession(
   sessionId: string,
   hostId: number,
-): Promise<{ success: boolean; message: string }> {
+  config?: {
+    userProvidedPassword?: string;
+    userProvidedSshKey?: string;
+    userProvidedKeyPassword?: string;
+    forceKeyboardInteractive?: boolean;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
+  },
+): Promise<{
+  success?: boolean;
+  message?: string;
+  requires_totp?: boolean;
+  prompt?: string;
+  isPassword?: boolean;
+  status?: string;
+  reason?: string;
+}> {
   try {
     const response = await dockerApi.post("/ssh/connect", {
       sessionId,
       hostId,
+      ...config,
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.status === "auth_required") {
+      return error.response.data;
+    }
+    if (error.response?.data?.requires_totp) {
+      return error.response.data;
+    }
+    throw handleApiError(error, "connect to Docker SSH session");
+  }
+}
+
+export async function verifyDockerTOTP(
+  sessionId: string,
+  totpCode: string,
+): Promise<{ status: string; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/connect-totp", {
+      sessionId,
+      totpCode,
     });
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "connect to Docker SSH session");
+    throw handleApiError(error, "verify Docker TOTP");
   }
 }
 

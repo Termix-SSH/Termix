@@ -331,6 +331,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sshStream: ClientChannel | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
+  let totpAttempts = 0;
+  let totpTimeout: NodeJS.Timeout | null = null;
   let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
   let isConnecting = false;
@@ -447,9 +449,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "totp_response": {
         const totpData = data as TOTPResponseData;
         if (keyboardInteractiveFinish && totpData?.code) {
+          if (totpTimeout) {
+            clearTimeout(totpTimeout);
+            totpTimeout = null;
+          }
           const totpCode = totpData.code;
+          totpAttempts++;
           keyboardInteractiveFinish([totpCode]);
-          keyboardInteractiveFinish = null;
         } else {
           sshLogger.warn("TOTP response received but no callback available", {
             operation: "totp_response_error",
@@ -470,9 +476,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "password_response": {
         const passwordData = data as TOTPResponseData;
         if (keyboardInteractiveFinish && passwordData?.code) {
+          if (totpTimeout) {
+            clearTimeout(totpTimeout);
+            totpTimeout = null;
+          }
           const password = passwordData.code;
           keyboardInteractiveFinish([password]);
-          keyboardInteractiveFinish = null;
         } else {
           sshLogger.warn(
             "Password response received but no callback available",
@@ -609,6 +618,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         isConnecting,
         isConnected,
       });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Connection already in progress",
+          code: "DUPLICATE_CONNECTION",
+        }),
+      );
       return;
     }
 
@@ -972,11 +988,29 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         if (totpPromptIndex !== -1) {
           if (totpPromptSent) {
-            sshLogger.warn("TOTP prompt asked again - ignoring duplicate", {
-              operation: "ssh_keyboard_interactive_totp_duplicate",
-              hostId: id,
-              prompts: promptTexts,
-            });
+            if (totpAttempts >= 3) {
+              sshLogger.error("TOTP maximum attempts reached", {
+                operation: "ssh_keyboard_interactive_totp_max_attempts",
+                hostId: id,
+                attempts: totpAttempts,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Maximum TOTP attempts reached",
+                  code: "TOTP_MAX_ATTEMPTS",
+                }),
+              );
+              cleanupSSH();
+              return;
+            }
+            ws.send(
+              JSON.stringify({
+                type: "totp_retry",
+                attempts_remaining: 3 - totpAttempts,
+                prompt: prompts[totpPromptIndex].prompt,
+              }),
+            );
             return;
           }
           totpPromptSent = true;
@@ -997,6 +1031,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             finish(responses);
           };
+
+          totpTimeout = setTimeout(() => {
+            if (keyboardInteractiveFinish) {
+              keyboardInteractiveFinish = null;
+              totpPromptSent = false;
+              totpAttempts = 0;
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "TOTP verification timeout",
+                  code: "TOTP_TIMEOUT",
+                }),
+              );
+              cleanupSSH();
+            }
+          }, 180000);
+
           ws.send(
             JSON.stringify({
               type: "totp_required",
@@ -1056,7 +1107,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: true,
+      tryKeyboard:
+        resolvedCredentials.authType === "none" ||
+        hostConfig.forceKeyboardInteractive === true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 30000,
@@ -1356,16 +1409,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sshConn = null;
     }
 
+    if (totpTimeout) {
+      clearTimeout(totpTimeout);
+      totpTimeout = null;
+    }
+
     totpPromptSent = false;
+    totpAttempts = 0;
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
     isConnecting = false;
     isConnected = false;
-
-    setTimeout(() => {
-      isCleaningUp = false;
-    }, 100);
+    isCleaningUp = false;
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

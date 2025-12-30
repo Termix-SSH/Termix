@@ -24,6 +24,7 @@ import type {
 
 export function TunnelObject({
   host,
+  tunnelIndex,
   tunnelStatuses,
   tunnelActions,
   onTunnelAction,
@@ -32,9 +33,9 @@ export function TunnelObject({
 }: SSHTunnelObjectProps): React.ReactElement {
   const { t } = useTranslation();
 
-  const getTunnelStatus = (tunnelIndex: number): TunnelStatus | undefined => {
-    const tunnel = host.tunnelConnections[tunnelIndex];
-    const tunnelName = `${host.id}::${tunnelIndex}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
+  const getTunnelStatus = (idx: number): TunnelStatus | undefined => {
+    const tunnel = host.tunnelConnections[idx];
+    const tunnelName = `${host.id}::${idx}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
     return tunnelStatuses[tunnelName];
   };
 
@@ -116,10 +117,14 @@ export function TunnelObject({
         <div className="space-y-3">
           {host.tunnelConnections && host.tunnelConnections.length > 0 ? (
             <div className="space-y-3">
-              {host.tunnelConnections.map((tunnel, tunnelIndex) => {
-                const status = getTunnelStatus(tunnelIndex);
+              {(tunnelIndex !== undefined
+                ? [tunnelIndex]
+                : host.tunnelConnections.map((_, idx) => idx)
+              ).map((idx) => {
+                const tunnel = host.tunnelConnections[idx];
+                const status = getTunnelStatus(idx);
                 const statusDisplay = getTunnelStatusDisplay(status);
-                const tunnelName = `${host.id}::${tunnelIndex}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
+                const tunnelName = `${host.id}::${idx}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
                 const isActionLoading = tunnelActions[tunnelName];
                 const statusValue =
                   status?.status?.toUpperCase() || "DISCONNECTED";
@@ -131,7 +136,7 @@ export function TunnelObject({
 
                 return (
                   <div
-                    key={tunnelIndex}
+                    key={idx}
                     className={`border rounded-lg p-3 min-w-0 ${statusDisplay.bgColor} ${statusDisplay.borderColor}`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -162,11 +167,7 @@ export function TunnelObject({
                                   size="sm"
                                   variant="outline"
                                   onClick={() =>
-                                    onTunnelAction(
-                                      "disconnect",
-                                      host,
-                                      tunnelIndex,
-                                    )
+                                    onTunnelAction("disconnect", host, idx)
                                   }
                                   className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                 >
@@ -179,7 +180,7 @@ export function TunnelObject({
                                 size="sm"
                                 variant="outline"
                                 onClick={() =>
-                                  onTunnelAction("cancel", host, tunnelIndex)
+                                  onTunnelAction("cancel", host, idx)
                                 }
                                 className="h-7 px-2 text-orange-600 dark:text-orange-400 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/10 dark:hover:bg-orange-400/10 hover:border-orange-500/50 dark:hover:border-orange-400/50 text-xs"
                               >
@@ -191,7 +192,7 @@ export function TunnelObject({
                                 size="sm"
                                 variant="outline"
                                 onClick={() =>
-                                  onTunnelAction("connect", host, tunnelIndex)
+                                  onTunnelAction("connect", host, idx)
                                 }
                                 disabled={isConnecting || isDisconnecting}
                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"
@@ -344,15 +345,20 @@ export function TunnelObject({
           {!compact && (
             <h4 className="text-sm font-medium text-card-foreground flex items-center gap-2">
               <Network className="h-4 w-4" />
-              {t("tunnels.tunnelConnections")} ({host.tunnelConnections.length})
+              {t("tunnels.tunnelConnections")} (
+              {tunnelIndex !== undefined ? 1 : host.tunnelConnections.length})
             </h4>
           )}
           {host.tunnelConnections && host.tunnelConnections.length > 0 ? (
             <div className="space-y-3">
-              {host.tunnelConnections.map((tunnel, tunnelIndex) => {
-                const status = getTunnelStatus(tunnelIndex);
+              {(tunnelIndex !== undefined
+                ? [tunnelIndex]
+                : host.tunnelConnections.map((_, idx) => idx)
+              ).map((idx) => {
+                const tunnel = host.tunnelConnections[idx];
+                const status = getTunnelStatus(idx);
                 const statusDisplay = getTunnelStatusDisplay(status);
-                const tunnelName = `${host.id}::${tunnelIndex}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
+                const tunnelName = `${host.id}::${idx}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
                 const isActionLoading = tunnelActions[tunnelName];
                 const statusValue =
                   status?.status?.toUpperCase() || "DISCONNECTED";
@@ -364,7 +370,7 @@ export function TunnelObject({
 
                 return (
                   <div
-                    key={tunnelIndex}
+                    key={idx}
                     className={`border rounded-lg p-3 ${statusDisplay.bgColor} ${statusDisplay.borderColor}`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -395,11 +401,7 @@ export function TunnelObject({
                                   size="sm"
                                   variant="outline"
                                   onClick={() =>
-                                    onTunnelAction(
-                                      "disconnect",
-                                      host,
-                                      tunnelIndex,
-                                    )
+                                    onTunnelAction("disconnect", host, idx)
                                   }
                                   className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                 >
@@ -412,7 +414,7 @@ export function TunnelObject({
                                 size="sm"
                                 variant="outline"
                                 onClick={() =>
-                                  onTunnelAction("cancel", host, tunnelIndex)
+                                  onTunnelAction("cancel", host, idx)
                                 }
                                 className="h-7 px-2 text-orange-600 dark:text-orange-400 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/10 dark:hover:bg-orange-400/10 hover:border-orange-500/50 dark:hover:border-orange-400/50 text-xs"
                               >
@@ -424,7 +426,7 @@ export function TunnelObject({
                                 size="sm"
                                 variant="outline"
                                 onClick={() =>
-                                  onTunnelAction("connect", host, tunnelIndex)
+                                  onTunnelAction("connect", host, idx)
                                 }
                                 disabled={isConnecting || isDisconnecting}
                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"

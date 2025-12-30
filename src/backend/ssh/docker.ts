@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import type { ClientChannel } from "ssh2";
 import { getDb } from "../database/db/index.js";
@@ -9,6 +10,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
 
 const dockerLogger = logger;
@@ -22,9 +24,40 @@ interface SSHSession {
   hostId?: number;
 }
 
+interface PendingTOTPSession {
+  client: SSHClient;
+  finish: (responses: string[]) => void;
+  config: any;
+  createdAt: number;
+  sessionId: string;
+  hostId?: number;
+  ip?: string;
+  port?: number;
+  username?: string;
+  userId?: string;
+  prompts?: Array<{ prompt: string; echo: boolean }>;
+  totpPromptIndex?: number;
+  resolvedPassword?: string;
+  totpAttempts: number;
+}
+
 const sshSessions: Record<string, SSHSession> = {};
+const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 
 const SESSION_IDLE_TIMEOUT = 60 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(pendingTOTPSessions).forEach((sessionId) => {
+    const session = pendingTOTPSessions[sessionId];
+    if (now - session.createdAt > 180000) {
+      try {
+        session.client.end();
+      } catch {}
+      delete pendingTOTPSessions[sessionId];
+    }
+  });
+}, 60000);
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
@@ -336,7 +369,20 @@ app.use(authManager.createAuthMiddleware());
 
 // POST /docker/ssh/connect - Establish SSH session
 app.post("/docker/ssh/connect", async (req, res) => {
-  const { sessionId, hostId } = req.body;
+  const {
+    sessionId,
+    hostId,
+    userProvidedPassword,
+    userProvidedSshKey,
+    userProvidedKeyPassword,
+    forceKeyboardInteractive,
+    useSocks5,
+    socks5Host,
+    socks5Port,
+    socks5Username,
+    socks5Password,
+    socks5ProxyChain,
+  } = req.body;
   const userId = (req as any).userId;
 
   if (!userId) {
@@ -433,6 +479,17 @@ app.post("/docker/ssh/connect", async (req, res) => {
       authType: host.authType,
     };
 
+    if (userProvidedPassword) {
+      resolvedCredentials.password = userProvidedPassword;
+    }
+    if (userProvidedSshKey) {
+      resolvedCredentials.sshKey = userProvidedSshKey;
+      resolvedCredentials.authType = "key";
+    }
+    if (userProvidedKeyPassword) {
+      resolvedCredentials.keyPassword = userProvidedKeyPassword;
+    }
+
     if (host.credentialId) {
       const ownerId = host.userId;
 
@@ -495,7 +552,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
       host: host.ip,
       port: host.port || 22,
       username: host.username,
-      tryKeyboard: true,
+      tryKeyboard:
+        resolvedCredentials.authType === "none" ||
+        forceKeyboardInteractive === true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 60000,
@@ -503,26 +562,64 @@ app.post("/docker/ssh/connect", async (req, res) => {
       tcpKeepAliveInitialDelay: 30000,
     };
 
-    if (
-      resolvedCredentials.authType === "password" &&
-      resolvedCredentials.password
-    ) {
-      config.password = resolvedCredentials.password;
+    if (resolvedCredentials.authType === "none") {
+    } else if (resolvedCredentials.authType === "password") {
+      if (!forceKeyboardInteractive && resolvedCredentials.password) {
+        config.password = resolvedCredentials.password;
+      }
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.sshKey
     ) {
-      const cleanKey = resolvedCredentials.sshKey
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      config.privateKey = Buffer.from(cleanKey, "utf8");
-      if (resolvedCredentials.keyPassword) {
-        config.passphrase = resolvedCredentials.keyPassword;
+      try {
+        if (
+          !resolvedCredentials.sshKey.includes("-----BEGIN") ||
+          !resolvedCredentials.sshKey.includes("-----END")
+        ) {
+          dockerLogger.error("Invalid SSH key format", {
+            operation: "docker_connect",
+            sessionId,
+            hostId,
+          });
+          return res.status(400).json({
+            error: "Invalid private key format",
+          });
+        }
+
+        const cleanKey = resolvedCredentials.sshKey
+          .trim()
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n");
+        config.privateKey = Buffer.from(cleanKey, "utf8");
+        if (resolvedCredentials.keyPassword) {
+          config.passphrase = resolvedCredentials.keyPassword;
+        }
+      } catch (error) {
+        dockerLogger.error("SSH key processing error", error, {
+          operation: "docker_connect",
+          sessionId,
+          hostId,
+        });
+        return res.status(400).json({
+          error: "SSH key format error: Invalid private key format",
+        });
       }
+    } else if (resolvedCredentials.authType === "key") {
+      dockerLogger.error(
+        "SSH key authentication requested but no key provided",
+        {
+          operation: "docker_connect",
+          sessionId,
+          hostId,
+        },
+      );
+      return res.status(400).json({
+        error: "SSH key authentication requested but no key provided",
+      });
     }
 
     let responseSent = false;
+    let keyboardInteractiveResponded = false;
 
     client.on("ready", () => {
       if (responseSent) return;
@@ -552,10 +649,21 @@ app.post("/docker/ssh/connect", async (req, res) => {
         userId,
       });
 
-      res.status(500).json({
-        success: false,
-        message: err.message || "SSH connection failed",
-      });
+      if (
+        resolvedCredentials.authType === "none" &&
+        (err.message.includes("authentication") ||
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        res.json({
+          status: "auth_required",
+          reason: "no_keyboard",
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: err.message || "SSH connection failed",
+        });
+      }
     });
 
     client.on("close", () => {
@@ -565,7 +673,214 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
     });
 
-    if (host.jumpHosts && host.jumpHosts.length > 0) {
+    client.on(
+      "keyboard-interactive",
+      (
+        name: string,
+        instructions: string,
+        instructionsLang: string,
+        prompts: Array<{ prompt: string; echo: boolean }>,
+        finish: (responses: string[]) => void,
+      ) => {
+        const totpPromptIndex = prompts.findIndex((p) =>
+          /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+            p.prompt,
+          ),
+        );
+
+        if (totpPromptIndex !== -1) {
+          if (pendingTOTPSessions[sessionId]) {
+            const existingSession = pendingTOTPSessions[sessionId];
+            if (existingSession.totpAttempts >= 3) {
+              if (!responseSent) {
+                responseSent = true;
+                delete pendingTOTPSessions[sessionId];
+                client.end();
+                res.status(401).json({
+                  error: "Maximum TOTP attempts reached",
+                  code: "TOTP_MAX_ATTEMPTS",
+                });
+              }
+              return;
+            }
+            existingSession.totpAttempts++;
+            if (!responseSent) {
+              responseSent = true;
+              res.json({
+                requires_totp: true,
+                sessionId,
+                prompt: prompts[totpPromptIndex].prompt,
+                attempts_remaining: 3 - existingSession.totpAttempts,
+              });
+            }
+            return;
+          }
+
+          if (responseSent) {
+            return;
+          }
+          responseSent = true;
+          keyboardInteractiveResponded = true;
+
+          pendingTOTPSessions[sessionId] = {
+            client,
+            finish,
+            config,
+            createdAt: Date.now(),
+            sessionId,
+            hostId,
+            ip: host.ip,
+            port: host.port || 22,
+            username: host.username,
+            userId,
+            prompts,
+            totpPromptIndex,
+            resolvedPassword: resolvedCredentials.password,
+            totpAttempts: 0,
+          };
+
+          res.json({
+            requires_totp: true,
+            sessionId,
+            prompt: prompts[totpPromptIndex].prompt,
+          });
+        } else {
+          const passwordPromptIndex = prompts.findIndex((p) =>
+            /password/i.test(p.prompt),
+          );
+
+          if (
+            resolvedCredentials.authType === "none" &&
+            passwordPromptIndex !== -1
+          ) {
+            if (responseSent) return;
+            responseSent = true;
+            client.end();
+            res.json({
+              status: "auth_required",
+              reason: "no_keyboard",
+            });
+            return;
+          }
+
+          const hasStoredPassword =
+            resolvedCredentials.password &&
+            resolvedCredentials.authType !== "none";
+
+          if (!hasStoredPassword && passwordPromptIndex !== -1) {
+            if (pendingTOTPSessions[sessionId]) {
+              const existingSession = pendingTOTPSessions[sessionId];
+              if (existingSession.totpAttempts >= 3) {
+                if (!responseSent) {
+                  responseSent = true;
+                  delete pendingTOTPSessions[sessionId];
+                  client.end();
+                  res.status(401).json({
+                    error: "Maximum password attempts reached",
+                    code: "PASSWORD_MAX_ATTEMPTS",
+                  });
+                }
+                return;
+              }
+              existingSession.totpAttempts++;
+              if (!responseSent) {
+                responseSent = true;
+                res.json({
+                  requires_totp: true,
+                  sessionId,
+                  prompt: prompts[passwordPromptIndex].prompt,
+                  isPassword: true,
+                  attempts_remaining: 3 - existingSession.totpAttempts,
+                });
+              }
+              return;
+            }
+
+            if (responseSent) return;
+            responseSent = true;
+            keyboardInteractiveResponded = true;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId,
+              ip: host.ip,
+              port: host.port || 22,
+              username: host.username,
+              userId,
+              prompts,
+              totpPromptIndex: passwordPromptIndex,
+              resolvedPassword: resolvedCredentials.password,
+              totpAttempts: 0,
+            };
+
+            res.json({
+              requires_totp: true,
+              sessionId,
+              prompt: prompts[passwordPromptIndex].prompt,
+              isPassword: true,
+            });
+            return;
+          }
+
+          const responses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+              return resolvedCredentials.password;
+            }
+            return "";
+          });
+          finish(responses);
+        }
+      },
+    );
+
+    if (
+      useSocks5 &&
+      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
+    ) {
+      try {
+        const socks5Socket = await createSocks5Connection(
+          host.ip,
+          host.port || 22,
+          {
+            useSocks5,
+            socks5Host,
+            socks5Port,
+            socks5Username,
+            socks5Password,
+            socks5ProxyChain: socks5ProxyChain as any,
+          },
+        );
+
+        if (socks5Socket) {
+          config.sock = socks5Socket;
+          client.connect(config);
+          return;
+        }
+      } catch (socks5Error) {
+        dockerLogger.error("SOCKS5 connection failed", socks5Error, {
+          operation: "docker_socks5_connect",
+          sessionId,
+          hostId,
+          proxyHost: socks5Host,
+          proxyPort: socks5Port || 1080,
+        });
+        if (!responseSent) {
+          responseSent = true;
+          return res.status(500).json({
+            error:
+              "SOCKS5 proxy connection failed: " +
+              (socks5Error instanceof Error
+                ? socks5Error.message
+                : "Unknown error"),
+          });
+        }
+        return;
+      }
+    } else if (host.jumpHosts && host.jumpHosts.length > 0) {
       const jumpClient = await createJumpHostChain(
         host.jumpHosts as Array<{ hostId: number }>,
         userId,
@@ -631,6 +946,169 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
   cleanupSession(sessionId);
 
   res.json({ success: true, message: "SSH session disconnected" });
+});
+
+// POST /docker/ssh/connect-totp - Verify TOTP and complete connection
+app.post("/docker/ssh/connect-totp", async (req, res) => {
+  const { sessionId, totpCode } = req.body;
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    dockerLogger.error("TOTP verification rejected: no authenticated user", {
+      operation: "docker_totp_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId || !totpCode) {
+    return res.status(400).json({ error: "Session ID and TOTP code required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    dockerLogger.warn("TOTP session not found or expired", {
+      operation: "docker_totp_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "TOTP session expired. Please reconnect." });
+  }
+
+  if (Date.now() - session.createdAt > 180000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {}
+    dockerLogger.warn("TOTP session timeout before code submission", {
+      operation: "docker_totp_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "TOTP session timeout. Please reconnect." });
+  }
+
+  const responses = (session.prompts || []).map((p, index) => {
+    if (index === session.totpPromptIndex) {
+      return totpCode;
+    }
+    if (/password/i.test(p.prompt) && session.resolvedPassword) {
+      return session.resolvedPassword;
+    }
+    return "";
+  });
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+        activeOperations: 0,
+        hostId: session.hostId,
+      };
+      scheduleSessionCleanup(sessionId);
+
+      res.json({
+        status: "success",
+        message: "TOTP verified, SSH connection established",
+      });
+
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
+                ),
+              "ssh_data",
+              session.userId!,
+            );
+
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
+
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "docker",
+                hostId: session.hostId,
+                hostName,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            dockerLogger.warn("Failed to log Docker activity (TOTP)", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200);
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    dockerLogger.error("TOTP verification failed", {
+      operation: "docker_totp_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res.status(401).json({ status: "error", message: "Invalid TOTP code" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      dockerLogger.warn("TOTP verification timeout", {
+        operation: "docker_totp_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
+
+  session.finish(responses);
 });
 
 // POST /docker/ssh/keepalive - Keep session alive

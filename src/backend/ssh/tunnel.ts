@@ -349,11 +349,11 @@ function resetRetryState(tunnelName: string): void {
   });
 }
 
-function handleDisconnect(
+async function handleDisconnect(
   tunnelName: string,
   tunnelConfig: TunnelConfig | null,
   shouldRetry = true,
-): void {
+): Promise<void> {
   if (tunnelVerifications.has(tunnelName)) {
     try {
       const verification = tunnelVerifications.get(tunnelName);
@@ -363,7 +363,11 @@ function handleDisconnect(
     tunnelVerifications.delete(tunnelName);
   }
 
-  cleanupTunnelResources(tunnelName);
+  while (cleanupInProgress.has(tunnelName)) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  await cleanupTunnelResources(tunnelName);
 
   if (manualDisconnects.has(tunnelName)) {
     resetRetryState(tunnelName);

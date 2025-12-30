@@ -116,7 +116,7 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
 
   useEffect(() => {
     fetchTunnelStatuses();
-    const interval = setInterval(fetchTunnelStatuses, 5000);
+    const interval = setInterval(fetchTunnelStatuses, 1000);
     return () => clearInterval(interval);
   }, [fetchTunnelStatuses]);
 
