@@ -123,7 +123,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [isFitted, setIsFitted] = useState(true);
+    const [isFitted, setIsFitted] = useState(false);
     const [, setConnectionError] = useState<string | null>(null);
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
@@ -714,6 +714,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                       sudoPromptShownRef.current = false;
                     }, 3000);
                   },
+                  t("common.confirm"),
+                  t("common.cancel"),
                 );
                 setTimeout(() => {
                   sudoPromptShownRef.current = false;
@@ -1133,7 +1135,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (terminal.cols < 10 || terminal.rows < 3) {
         requestAnimationFrame(() => {
           fitAddonRef.current?.fit();
+          setIsFitted(true);
         });
+      } else {
+        setIsFitted(true);
       }
 
       const element = xtermRef.current;
@@ -1479,6 +1484,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           className="h-full w-full"
           style={{
             pointerEvents: isVisible ? "auto" : "none",
+            visibility: isConnecting || !isFitted ? "hidden" : "visible",
           }}
           onClick={() => {
             if (terminal && !splitScreen) {

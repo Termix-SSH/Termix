@@ -425,6 +425,7 @@ jobs:
           cp translations-temp/translations-ro/ro.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-el/el.json src/locales/ 2>/dev/null || true
           cp translations-temp/translations-nb/nb.json src/locales/ 2>/dev/null || true
+          rm -rf translations-temp
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6

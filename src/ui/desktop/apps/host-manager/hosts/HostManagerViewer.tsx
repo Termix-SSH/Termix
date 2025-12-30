@@ -532,6 +532,184 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     }
   };
 
+  const getSampleData = () => ({
+    hosts: [
+      {
+        name: t("interface.webServerProduction"),
+        ip: "192.168.1.100",
+        port: 22,
+        username: "admin",
+        authType: "password",
+        password: "your_secure_password_here",
+        folder: t("interface.productionFolder"),
+        tags: ["web", "production", "nginx"],
+        pin: true,
+        notes: "Main production web server running Nginx",
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: false,
+        defaultPath: "/var/www",
+      },
+      {
+        name: t("interface.databaseServer"),
+        ip: "192.168.1.101",
+        port: 22,
+        username: "dbadmin",
+        authType: "key",
+        key: "-----BEGIN OPENSSH PRIVATE KEY-----\\nYour SSH private key content here\\n-----END OPENSSH PRIVATE KEY-----",
+        keyPassword: "optional_key_passphrase",
+        keyType: "ssh-ed25519",
+        folder: t("interface.productionFolder"),
+        tags: ["database", "production", "postgresql"],
+        pin: false,
+        notes: "PostgreSQL production database",
+        enableTerminal: true,
+        enableTunnel: true,
+        enableFileManager: false,
+        enableDocker: false,
+        tunnelConnections: [
+          {
+            sourcePort: 5432,
+            endpointPort: 5432,
+            endpointHost: t("interface.webServerProduction"),
+            maxRetries: 3,
+            retryInterval: 10,
+            autoStart: true,
+          },
+        ],
+        statsConfig: {
+          enabledWidgets: ["cpu", "memory", "disk", "network", "uptime"],
+          statusCheckEnabled: true,
+          statusCheckInterval: 30,
+          metricsEnabled: true,
+          metricsInterval: 30,
+        },
+      },
+      {
+        name: t("interface.developmentServer"),
+        ip: "192.168.1.102",
+        port: 2222,
+        username: "developer",
+        authType: "credential",
+        credentialId: 1,
+        overrideCredentialUsername: false,
+        folder: t("interface.developmentFolder"),
+        tags: ["dev", "testing"],
+        pin: false,
+        notes: "Development environment for testing",
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: true,
+        defaultPath: "/home/developer",
+      },
+      {
+        name: "Jump Host Server",
+        ip: "10.0.0.50",
+        port: 22,
+        username: "sysadmin",
+        authType: "password",
+        password: "secure_password",
+        folder: "Infrastructure",
+        tags: ["bastion", "jump-host"],
+        notes: "Jump host for accessing internal network",
+        enableTerminal: true,
+        enableTunnel: true,
+        enableFileManager: true,
+        enableDocker: false,
+        jumpHosts: [
+          {
+            hostId: 1,
+          },
+        ],
+        quickActions: [
+          {
+            name: "System Update",
+            snippetId: 5,
+          },
+        ],
+      },
+      {
+        name: "Server with SOCKS5 Proxy",
+        ip: "10.10.10.100",
+        port: 22,
+        username: "proxyuser",
+        authType: "password",
+        password: "secure_password",
+        folder: "Proxied Hosts",
+        tags: ["proxy", "socks5"],
+        notes: "Accessible through SOCKS5 proxy",
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: false,
+        useSocks5: true,
+        socks5Host: "proxy.example.com",
+        socks5Port: 1080,
+        socks5Username: "proxyauth",
+        socks5Password: "proxypass",
+      },
+      {
+        name: "Customized Terminal Server",
+        ip: "192.168.1.150",
+        port: 22,
+        username: "devops",
+        authType: "password",
+        password: "terminal_password",
+        folder: t("interface.developmentFolder"),
+        tags: ["custom", "terminal"],
+        notes: "Server with custom terminal configuration",
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: false,
+        defaultPath: "/opt/apps",
+        terminalConfig: {
+          cursorBlink: true,
+          cursorStyle: "bar",
+          fontSize: 16,
+          fontFamily: "jetbrainsMono",
+          letterSpacing: 0.5,
+          lineHeight: 1.2,
+          theme: "monokai",
+          scrollback: 50000,
+          bellStyle: "visual",
+          rightClickSelectsWord: true,
+          fastScrollModifier: "ctrl",
+          fastScrollSensitivity: 7,
+          minimumContrastRatio: 4,
+          backspaceMode: "normal",
+          agentForwarding: true,
+          environmentVariables: [
+            {
+              key: "NODE_ENV",
+              value: "development",
+            },
+          ],
+          autoMosh: false,
+          sudoPasswordAutoFill: true,
+          sudoPassword: "sudo_password_here",
+        },
+      },
+    ],
+  });
+
+  const handleDownloadSample = () => {
+    const sampleData = getSampleData();
+    const blob = new Blob([JSON.stringify(sampleData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sample-ssh-hosts.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleJsonImport = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -706,84 +884,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
               </Tooltip>
             </TooltipProvider>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const sampleData = {
-                  hosts: [
-                    {
-                      name: t("interface.webServerProduction"),
-                      ip: "192.168.1.100",
-                      port: 22,
-                      username: "admin",
-                      authType: "password",
-                      password: "your_secure_password_here",
-                      folder: t("interface.productionFolder"),
-                      tags: ["web", "production", "nginx"],
-                      pin: true,
-                      enableTerminal: true,
-                      enableTunnel: false,
-                      enableFileManager: true,
-                      defaultPath: "/var/www",
-                    },
-                    {
-                      name: t("interface.databaseServer"),
-                      ip: "192.168.1.101",
-                      port: 22,
-                      username: "dbadmin",
-                      authType: "key",
-                      key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
-                      keyPassword: "optional_key_passphrase",
-                      keyType: "ssh-ed25519",
-                      folder: t("interface.productionFolder"),
-                      tags: ["database", "production", "postgresql"],
-                      pin: false,
-                      enableTerminal: true,
-                      enableTunnel: true,
-                      enableFileManager: false,
-                      tunnelConnections: [
-                        {
-                          sourcePort: 5432,
-                          endpointPort: 5432,
-                          endpointHost: t("interface.webServerProduction"),
-                          maxRetries: 3,
-                          retryInterval: 10,
-                          autoStart: true,
-                        },
-                      ],
-                    },
-                    {
-                      name: t("interface.developmentServer"),
-                      ip: "192.168.1.102",
-                      port: 2222,
-                      username: "developer",
-                      authType: "credential",
-                      credentialId: 1,
-                      folder: t("interface.developmentFolder"),
-                      tags: ["dev", "testing"],
-                      pin: false,
-                      enableTerminal: true,
-                      enableTunnel: false,
-                      enableFileManager: true,
-                      defaultPath: "/home/developer",
-                    },
-                  ],
-                };
-
-                const blob = new Blob([JSON.stringify(sampleData, null, 2)], {
-                  type: "application/json",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "sample-ssh-hosts.json";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={handleDownloadSample}>
               {t("hosts.downloadSample")}
             </Button>
 
@@ -867,84 +968,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
             </Tooltip>
           </TooltipProvider>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const sampleData = {
-                hosts: [
-                  {
-                    name: t("interface.webServerProduction"),
-                    ip: "192.168.1.100",
-                    port: 22,
-                    username: "admin",
-                    authType: "password",
-                    password: "your_secure_password_here",
-                    folder: t("interface.productionFolder"),
-                    tags: ["web", "production", "nginx"],
-                    pin: true,
-                    enableTerminal: true,
-                    enableTunnel: false,
-                    enableFileManager: true,
-                    defaultPath: "/var/www",
-                  },
-                  {
-                    name: t("interface.databaseServer"),
-                    ip: "192.168.1.101",
-                    port: 22,
-                    username: "dbadmin",
-                    authType: "key",
-                    key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
-                    keyPassword: "optional_key_passphrase",
-                    keyType: "ssh-ed25519",
-                    folder: t("interface.productionFolder"),
-                    tags: ["database", "production", "postgresql"],
-                    pin: false,
-                    enableTerminal: true,
-                    enableTunnel: true,
-                    enableFileManager: false,
-                    tunnelConnections: [
-                      {
-                        sourcePort: 5432,
-                        endpointPort: 5432,
-                        endpointHost: t("interface.webServerProduction"),
-                        maxRetries: 3,
-                        retryInterval: 10,
-                        autoStart: true,
-                      },
-                    ],
-                  },
-                  {
-                    name: t("interface.developmentServer"),
-                    ip: "192.168.1.102",
-                    port: 2222,
-                    username: "developer",
-                    authType: "credential",
-                    credentialId: 1,
-                    folder: t("interface.developmentFolder"),
-                    tags: ["dev", "testing"],
-                    pin: false,
-                    enableTerminal: true,
-                    enableTunnel: false,
-                    enableFileManager: true,
-                    defaultPath: "/home/developer",
-                  },
-                ],
-              };
-
-              const blob = new Blob([JSON.stringify(sampleData, null, 2)], {
-                type: "application/json",
-              });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "sample-ssh-hosts.json";
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }}
-          >
+          <Button variant="outline" size="sm" onClick={handleDownloadSample}>
             {t("hosts.downloadSample")}
           </Button>
 

@@ -52,6 +52,7 @@ export function DockerManager({
     React.useState<DockerValidation | null>(null);
   const [isValidating, setIsValidating] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"list" | "detail">("list");
+  const [isLoadingContainers, setIsLoadingContainers] = React.useState(false);
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
@@ -179,12 +180,17 @@ export function DockerManager({
 
     const pollContainers = async () => {
       try {
+        setIsLoadingContainers(true);
         const data = await listDockerContainers(sessionId, true);
         if (!cancelled) {
           setContainers(data);
         }
       } catch (error) {
         // Silently handle polling errors
+      } finally {
+        if (!cancelled) {
+          setIsLoadingContainers(false);
+        }
       }
     };
 
@@ -334,16 +340,27 @@ export function DockerManager({
           {viewMode === "list" ? (
             <div className="h-full px-4 py-4">
               {sessionId ? (
-                <ContainerList
-                  containers={containers}
-                  sessionId={sessionId}
-                  onSelectContainer={(id) => {
-                    setSelectedContainer(id);
-                    setViewMode("detail");
-                  }}
-                  selectedContainerId={selectedContainer}
-                  onRefresh={refreshContainers}
-                />
+                isLoadingContainers && containers.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <SimpleLoader size="lg" />
+                      <p className="text-muted-foreground mt-4">
+                        {t("docker.loadingContainers")}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <ContainerList
+                    containers={containers}
+                    sessionId={sessionId}
+                    onSelectContainer={(id) => {
+                      setSelectedContainer(id);
+                      setViewMode("detail");
+                    }}
+                    selectedContainerId={selectedContainer}
+                    onRefresh={refreshContainers}
+                  />
+                )
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No session available</p>

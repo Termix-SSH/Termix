@@ -38,13 +38,54 @@ export function useConfirmation() {
   const confirmWithToast = (
     opts: ConfirmationOptions | string,
     callback?: () => void,
+    variantOrConfirmLabel: "default" | "destructive" | string = "Confirm",
+    cancelLabel: string = "Cancel",
   ): Promise<boolean> => {
-    if (typeof opts === "string" && callback) {
-      callback();
-      return Promise.resolve(true);
-    }
+    return new Promise((resolve) => {
+      const isVariant =
+        variantOrConfirmLabel === "default" ||
+        variantOrConfirmLabel === "destructive";
+      const confirmLabel = isVariant ? "Confirm" : variantOrConfirmLabel;
 
-    return Promise.resolve(true);
+      if (typeof opts === "string" && callback) {
+        toast(opts, {
+          action: {
+            label: confirmLabel,
+            onClick: () => {
+              callback();
+              resolve(true);
+            },
+          },
+          cancel: {
+            label: cancelLabel,
+            onClick: () => {
+              resolve(false);
+            },
+          },
+        } as any);
+      } else if (typeof opts === "object" && callback) {
+        const actualConfirmLabel = opts.confirmText || confirmLabel;
+        const actualCancelLabel = opts.cancelText || cancelLabel;
+
+        toast(opts.description, {
+          action: {
+            label: actualConfirmLabel,
+            onClick: () => {
+              callback();
+              resolve(true);
+            },
+          },
+          cancel: {
+            label: actualCancelLabel,
+            onClick: () => {
+              resolve(false);
+            },
+          },
+        } as any);
+      } else {
+        resolve(false);
+      }
+    });
   };
 
   return {

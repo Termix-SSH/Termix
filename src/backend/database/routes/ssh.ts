@@ -2111,10 +2111,12 @@ router.post(
           continue;
         }
 
-        if (!["password", "key", "credential"].includes(hostData.authType)) {
+        if (
+          !["password", "key", "credential", "none"].includes(hostData.authType)
+        ) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', or 'credential'`,
+            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', or 'none'`,
           );
           continue;
         }

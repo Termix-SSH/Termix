@@ -639,7 +639,7 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
               control={form.control}
               name="terminalConfig.sudoPasswordAutoFill"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                   <div className="space-y-0.5">
                     <FormLabel>{t("hosts.sudoPasswordAutoFill")}</FormLabel>
                     <FormDescription>

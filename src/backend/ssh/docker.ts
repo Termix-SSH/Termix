@@ -137,10 +137,12 @@ async function createJumpHostChain(
   const clients: SSHClient[] = [];
 
   try {
-    for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+    const jumpHostConfigs = await Promise.all(
+      jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
+    );
 
-      if (!jumpHostConfig) {
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         dockerLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
@@ -148,6 +150,10 @@ async function createJumpHostChain(
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i];
 
       const jumpClient = new SSHClient();
       clients.push(jumpClient);

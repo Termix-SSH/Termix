@@ -2367,6 +2367,7 @@
     "confirmRemoveContainer": "Are you sure you want to remove the container '{{name}}'? This action cannot be undone.",
     "runningContainerWarning": "Warning: This container is currently running. Removing it will stop the container first.",
     "removing": "Removing...",
+    "loadingContainers": "Loading containers...",
     "noContainersFound": "No containers found",
     "noContainersFoundHint": "No Docker containers are available on this host",
     "searchPlaceholder": "Search containers...",
