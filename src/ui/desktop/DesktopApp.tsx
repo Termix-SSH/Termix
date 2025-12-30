@@ -292,8 +292,13 @@ function AppContent() {
           )}
 
           {showNetworkGraph && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden flex flex-col pt-16">
-              <NetworkGraphView />
+            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
+              <NetworkGraphView
+                isTopbarOpen={isTopbarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                rightSidebarWidth={rightSidebarWidth}
+                isStandalone={true}
+              />
             </div>
           )}
 

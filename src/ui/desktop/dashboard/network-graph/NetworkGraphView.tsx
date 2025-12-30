@@ -8,12 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Plus, Trash2, Move3D, ZoomIn, ZoomOut, RotateCw, Loader2, AlertCircle, 
+import {
+  Plus, Trash2, Move3D, ZoomIn, ZoomOut, RotateCw, Loader2, AlertCircle,
   Download, Upload, Link2, FolderPlus, Edit, FolderInput, FolderMinus, Settings2, ExternalLink, Terminal
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTabs } from '@/ui/desktop/navigation/tabs/TabContext';
+import { useSidebar } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
 // --- Helper for edge routing ---
 const getEndpoints = (edge: cytoscape.EdgeSingular): { sourceEndpoint: string; targetEndpoint: string } => {
@@ -48,9 +50,29 @@ interface ContextMenuState {
   type: 'node' | 'group' | 'edge' | null;
 }
 
-const NetworkGraphView: React.FC = () => {
+interface NetworkGraphViewProps {
+  isTopbarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+  rightSidebarWidth?: number;
+  isStandalone?: boolean;
+}
+
+const NetworkGraphView: React.FC<NetworkGraphViewProps> = ({
+  isTopbarOpen = true,
+  rightSidebarOpen = false,
+  rightSidebarWidth = 400,
+  isStandalone = false
+}) => {
   const { t } = useTranslation();
   const { addTab } = useTabs();
+
+  let sidebarState: "expanded" | "collapsed" = "expanded";
+  try {
+    const sidebar = useSidebar();
+    sidebarState = sidebar.state;
+  } catch (error) {
+    // Not in SidebarProvider context (e.g., during authentication)
+  }
   
   // --- State ---
   const [elements, setElements] = useState<any[]>([]);
@@ -99,6 +121,105 @@ const NetworkGraphView: React.FC = () => {
 
   // Sync refs
   useEffect(() => { hostMapRef.current = hostMap; }, [hostMap]);
+
+  // --- Pulsing Dot Overlay for Online Nodes Only ---
+  useEffect(() => {
+    if (!cyRef.current) return;
+
+    const canvas = document.createElement('canvas');
+    const container = cyRef.current.container();
+    if (!container) return;
+
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '999';
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrame: number;
+    let startTime = Date.now();
+
+    const animate = () => {
+      if (!cyRef.current || !ctx) return;
+
+      const canvasWidth = cyRef.current.width();
+      const canvasHeight = cyRef.current.height();
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      const elapsed = Date.now() - startTime;
+      const cycle = (elapsed % 2000) / 2000;
+      const zoom = cyRef.current.zoom();
+
+      // Scale pulse radius with zoom
+      const baseRadius = 4;
+      const pulseAmount = 3;
+      const pulseRadius = (baseRadius + Math.sin(cycle * Math.PI * 2) * pulseAmount) * zoom;
+      const pulseOpacity = 0.6 - Math.sin(cycle * Math.PI * 2) * 0.4;
+
+      // Draw pulsing green dot for ONLINE nodes only
+      cyRef.current.nodes('[status="online"]').forEach(node => {
+        if (node.isParent()) return;
+
+        // Use renderedPosition which accounts for zoom and pan
+        const pos = node.renderedPosition();
+        // Node dimensions at current zoom
+        const nodeWidth = 180 * zoom;
+        const nodeHeight = 90 * zoom;
+
+        // Position dot at top-right corner (same relative position as SVG)
+        const dotX = pos.x + (nodeWidth / 2) - (10 * zoom);
+        const dotY = pos.y - (nodeHeight / 2) + (10 * zoom);
+
+        // Draw pulsing ring
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, pulseRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(16, 185, 129, ${pulseOpacity})`;
+        ctx.fill();
+
+        // Draw solid center dot
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, baseRadius * zoom, 0, Math.PI * 2);
+        ctx.fillStyle = '#10b981';
+        ctx.fill();
+      });
+
+      // Draw static red dot for OFFLINE nodes (no pulsing)
+      cyRef.current.nodes('[status="offline"]').forEach(node => {
+        if (node.isParent()) return;
+
+        const pos = node.renderedPosition();
+        const nodeWidth = 180 * zoom;
+        const nodeHeight = 90 * zoom;
+
+        const dotX = pos.x + (nodeWidth / 2) - (10 * zoom);
+        const dotY = pos.y - (nodeHeight / 2) + (10 * zoom);
+
+        // Draw solid red dot (no animation)
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4 * zoom, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+      });
+
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      if (container && canvas.parentNode === container) {
+        container.removeChild(canvas);
+      }
+    };
+  }, [elements]);
 
   // --- Initialization ---
 
@@ -270,14 +391,16 @@ const NetworkGraphView: React.FC = () => {
           const name = host.label || '';
           const ip = host.ip || '';
           const tags = host.tags || [];
+          const isOnline = host.status === 'online';
+          const isOffline = host.status === 'offline';
           const statusColor =
-            host.status === 'online' ? '#22c55e' :
-            (host.status === 'offline' ? '#ef4444' : '#64748b');
+            isOnline ? '#10b981' :
+            isOffline ? '#ef4444' : '#64748b';
 
           const tagsHtml = tags.map(t => `
             <span style="
               background-color:#f97316;
-              color:#fff;
+              color:#ffffff;
               padding:2px 8px;
               border-radius:9999px;
               font-size:9px;
@@ -287,15 +410,17 @@ const NetworkGraphView: React.FC = () => {
               box-shadow:0 1px 2px rgba(0,0,0,0.3);
             ">${t}</span>`).join('');
 
+          // Changed rx from 8 to 6 to match Dashboard's rounded-md (0.375rem = 6px)
+          // Status indicator dot drawn on canvas overlay (see useEffect for pulsing animation)
           const svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="180" height="90" viewBox="0 0 180 90">
               <defs>
-                <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-                  <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.25"/>
+                <filter id="shadow-${ele.id()}" x="-10%" y="-10%" width="120%" height="120%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.25"/>
                 </filter>
               </defs>
-              <rect x="3" y="3" width="174" height="84" rx="8"
-                fill="#09090b" stroke="${statusColor}" stroke-width="2" filter="url(#shadow)"/>
+              <rect x="3" y="3" width="174" height="84" rx="6"
+                fill="#09090b" stroke="${statusColor}" stroke-width="2" filter="url(#shadow-${ele.id()})"/>
               <foreignObject x="8" y="8" width="164" height="74">
                 <div xmlns="http://www.w3.org/1999/xhtml"
                   style="color:#f1f5f9;text-align:center;font-family:sans-serif;
@@ -389,15 +514,7 @@ const NetworkGraphView: React.FC = () => {
       setContextMenu(prev => prev.visible ? { ...prev, visible: false } : prev);
       setSelectedEdgeId(null);
       setSelectedNodeId(node.id());
-      
-      if (!node.isParent()) {
-        const currentHostMap = hostMapRef.current;
-        const host = currentHostMap[node.id()];
-        if (host) {
-          setSelectedNodeForDetail(host);
-          setShowNodeDetail(true);
-        }
-      }
+      // Dialog only opens from right-click context menu, not left-click
     });
 
     cy.on('tap', 'edge', (evt) => {
@@ -609,8 +726,24 @@ const NetworkGraphView: React.FC = () => {
 
   // --- Render ---
 
-  return (
-    <div className="w-full h-full flex flex-col bg-dark-bg-darker">
+  // Calculate margins for standalone mode (like Admin Settings and User Profile)
+  const topMarginPx = isStandalone ? (isTopbarOpen ? 74 : 26) : 0;
+  const leftMarginPx = isStandalone ? (sidebarState === "collapsed" ? 26 : 8) : 0;
+  const bottomMarginPx = isStandalone ? 8 : 0;
+  const wrapperStyle: React.CSSProperties = isStandalone ? {
+    marginLeft: leftMarginPx,
+    marginRight: rightSidebarOpen
+      ? `calc(var(--right-sidebar-width, ${rightSidebarWidth}px) + 8px)`
+      : 17,
+    marginTop: topMarginPx,
+    marginBottom: bottomMarginPx,
+    height: `calc(100vh - ${topMarginPx + bottomMarginPx}px)`,
+    transition:
+      "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
+  } : {};
+
+  const content = (
+    <div className="w-full flex flex-col" style={{ height: '100%' }}>
       {error && (
         <div className="absolute top-16 right-4 z-50 flex items-center gap-2 p-3 text-red-100 text-sm rounded shadow-lg animate-in slide-in-from-top-2" style={{backgroundColor: 'rgba(127, 29, 29, 0.9)', border: '1px solid rgb(185, 28, 28)'}}>
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -620,50 +753,49 @@ const NetworkGraphView: React.FC = () => {
       )}
 
       {/* --- Toolbar --- */}
-      <div className="flex items-center justify-between p-2 border-b bg-dark-bg-panel backdrop-blur" style={{borderColor: 'var(--color-dark-border)'}}>
-        
+      <div className={`shrink-0 ${isStandalone ? 'mb-4' : 'p-2 mb-2 rounded-lg border-2 border-dark-border bg-dark-bg'}`}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center rounded-md border p-0.5" style={{backgroundColor: 'var(--color-dark-bg-button)', borderColor: 'var(--color-dark-border)'}}>
-            <Button variant="ghost" size="sm" onClick={handleAddNode} title="Add Host" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+          <div className="flex items-center rounded-md border p-0.5 bg-dark-bg-button border-dark-border">
+            <Button variant="ghost" size="sm" onClick={handleAddNode} title="Add Host" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <Plus className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { setNewGroupName(''); setNewGroupColor('#3b82f6'); setShowAddGroupDialog(true); }} title="Add Group" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => { setNewGroupName(''); setNewGroupColor('#3b82f6'); setShowAddGroupDialog(true); }} title="Add Group" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <FolderPlus className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowAddEdgeDialog(true)} title="Add Link" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => setShowAddEdgeDialog(true)} title="Add Link" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <Link2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleRemoveSelected} disabled={!selectedNodeId && !selectedEdgeId} title="Delete Selected" className="h-8 w-8 p-0 rounded text-red-400 hover:text-red-300 disabled:opacity-30" onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={handleRemoveSelected} disabled={!selectedNodeId && !selectedEdgeId} title="Delete Selected" className="h-8 w-8 p-0 rounded text-red-400 hover:text-red-300 hover:bg-dark-hover disabled:opacity-30">
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="flex items-center rounded-md border p-0.5" style={{backgroundColor: 'var(--color-dark-bg-button)', borderColor: 'var(--color-dark-border)'}}>
-            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.layout({name: 'cose', animate: true}).run()} title="Auto Layout" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+          <div className="flex items-center rounded-md border p-0.5 bg-dark-bg-button border-dark-border">
+            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.layout({name: 'cose', animate: true}).run()} title="Auto Layout" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <Move3D className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)} title="Zoom In" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)} title="Zoom In" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <ZoomIn className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.2)} title="Zoom Out" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.2)} title="Zoom Out" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <ZoomOut className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.fit()} title="Reset View" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => cyRef.current?.fit()} title="Reset View" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <RotateCw className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="flex items-center rounded-md border p-0.5" style={{backgroundColor: 'var(--color-dark-bg-button)', borderColor: 'var(--color-dark-border)'}}>
+          <div className="flex items-center rounded-md border p-0.5 bg-dark-bg-button border-dark-border">
             <Button variant="ghost" size="sm" onClick={() => {
                 if (!cyRef.current) return;
-                const json = JSON.stringify(cyRef.current.json().elements);
+                const json = JSON.stringify(cyRef.current.json().elements, null, 2);
                 const blob = new Blob([json], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = 'network.json'; a.click();
-            }} title="Export JSON" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            }} title="Export JSON" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <Download className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} title="Import JSON" className="h-8 w-8 p-0 rounded" style={{color: 'var(--color-dark-border-light)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} title="Import JSON" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <Upload className="w-4 h-4" />
             </Button>
             <input ref={fileInputRef} type="file" accept=".json" onChange={(e) => {
@@ -680,68 +812,63 @@ const NetworkGraphView: React.FC = () => {
             }} className="hidden" />
           </div>
 
-          <div className="flex items-center rounded-md border p-0.5" style={{backgroundColor: 'var(--color-dark-bg-button)', borderColor: 'var(--color-dark-border)'}}>
+          <div className="flex items-center rounded-md border p-0.5 bg-dark-bg-button border-dark-border">
             <Button variant="ghost" size="sm" onClick={() => {
               addTab({ type: 'network_graph', title: 'Network Graph' });
-            }} title="Open in new tab" className="h-8 w-8 p-0 rounded hover:bg-slate-800 text-slate-300">
+            }} title="Open in new tab" className="h-8 w-8 p-0 rounded text-white hover:bg-dark-hover">
               <ExternalLink className="w-4 h-4" />
             </Button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Badge className="bg-green-600 hover:bg-green-700 text-white border-0 px-2 py-0.5 h-6">Online</Badge>
-          <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 px-2 py-0.5 h-6">Offline</Badge>
-        </div>
       </div>
 
       {/* --- Graph Area --- */}
-      <div className="flex-1 relative overflow-hidden" style={{backgroundColor: 'var(--color-dark-bg-darkest)'}}>
+      <div className="flex-1 overflow-hidden relative rounded-lg border-2 border-dark-border bg-dark-bg-darkest">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
         )}
-        
+
         {/* Context Menu - Fixed Position with High Z-Index */}
         {contextMenu.visible && (
-          <div 
+          <div
             ref={contextMenuRef}
-            className="fixed z-[100] min-w-[180px] rounded-md shadow-2xl p-1 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
-            style={{ top: contextMenu.y, left: contextMenu.x, backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)', border: '1px solid var(--color-dark-border)', color: 'var(--color-dark-border-light)' }}
+            className="fixed z-[100] min-w-[180px] rounded-md shadow-2xl p-1 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 bg-dark-bg-panel border border-dark-border text-dark-border-light"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
           >
             {contextMenu.type === 'node' && (
               <>
-                <button onClick={() => handleContextAction('connect')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white" style={{color: '#ffffff'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <button onClick={() => handleContextAction('connect')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                   <Terminal className="w-3.5 h-3.5 text-green-400" /> Connect to Host
                 </button>
-                <button onClick={() => handleContextAction('details')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white" style={{color: '#ffffff'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <button onClick={() => handleContextAction('details')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                   <Settings2 className="w-3.5 h-3.5 text-blue-400" /> Host Details
                 </button>
-                <button onClick={() => handleContextAction('move')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white" style={{color: '#ffffff'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <button onClick={() => handleContextAction('move')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                   <FolderInput className="w-3.5 h-3.5 text-yellow-400" /> Move to Group...
                 </button>
                 {cyRef.current?.$id(contextMenu.targetId).parent().length ? (
-                  <button onClick={() => handleContextAction('removeFromGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white" style={{color: '#ffffff'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <button onClick={() => handleContextAction('removeFromGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                     <FolderMinus className="w-3.5 h-3.5 text-orange-400" /> Remove from Group
                   </button>
                 ) : null}
               </>
             )}
-            
+
             {contextMenu.type === 'group' && (
               <>
-                <button onClick={() => handleContextAction('addHostToGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded hover:bg-slate-800 text-left w-full transition-colors">
+                <button onClick={() => handleContextAction('addHostToGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                   <FolderPlus className="w-3.5 h-3.5 text-green-400" /> Add Host Here
                 </button>
-                <button onClick={() => handleContextAction('editGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded hover:bg-slate-800 text-left w-full transition-colors">
+                <button onClick={() => handleContextAction('editGroup')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors text-white hover:bg-dark-hover">
                   <Edit className="w-3.5 h-3.5 text-blue-400" /> Edit Group
                 </button>
               </>
             )}
 
-            <div className="h-px bg-slate-800 my-1" />
-            <button onClick={() => handleContextAction('delete')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded hover:bg-red-950 text-red-400 hover:text-red-300 text-left w-full transition-colors">
+            <div className="h-px my-1 bg-dark-border-medium" />
+            <button onClick={() => handleContextAction('delete')} className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-red-400 hover:text-red-300 text-left w-full transition-colors hover:bg-red-950/30">
               <Trash2 className="w-3.5 h-3.5" /> Delete
             </button>
           </div>
@@ -761,14 +888,14 @@ const NetworkGraphView: React.FC = () => {
       {/* --- Dialogs --- */}
       
       <Dialog open={showAddNodeDialog} onOpenChange={setShowAddNodeDialog}>
-        <DialogContent className="text-slate-200" style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}}>
+        <DialogContent className="text-slate-200 bg-dark-bg-panel border-dark-border">
           <DialogHeader><DialogTitle>Add Host</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Select Host</Label>
               <Select value={selectedHostForAddNode} onValueChange={setSelectedHostForAddNode}>
-                <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue placeholder="Choose a host..." /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                <SelectTrigger className="bg-dark-bg-input border-dark-border"><SelectValue placeholder="Choose a host..." /></SelectTrigger>
+                <SelectContent className="bg-dark-bg-panel border-dark-border text-slate-200">
                   {availableHostsForAdd.length > 0 ? availableHostsForAdd.map(h => (
                     <SelectItem key={h.id} value={String(h.id)}>{h.name || h.ip}</SelectItem>
                   )) : <SelectItem value="NONE" disabled>No available hosts</SelectItem>}
@@ -778,8 +905,8 @@ const NetworkGraphView: React.FC = () => {
             <div className="grid gap-2">
               <Label>Parent Group</Label>
               <Select value={selectedGroupForAddNode} onValueChange={setSelectedGroupForAddNode}>
-                <SelectTrigger className="bg-slate-800 border-slate-700"><SelectValue placeholder="No Group (Root)" /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                <SelectTrigger className="bg-dark-bg-input border-dark-border"><SelectValue placeholder="No Group (Root)" /></SelectTrigger>
+                <SelectContent className="bg-dark-bg-panel border-dark-border text-slate-200">
                   <SelectItem value="ROOT">No Group</SelectItem>
                   {availableGroups.map(g => (
                     <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>
@@ -789,7 +916,7 @@ const NetworkGraphView: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddNodeDialog(false)} className="border-slate-700 hover:bg-slate-800 hover:text-slate-200">Cancel</Button>
+            <Button variant="outline" onClick={() => setShowAddNodeDialog(false)} className="border-dark-border hover:bg-dark-hover hover:text-slate-200">Cancel</Button>
             <Button onClick={handleConfirmAddNode} disabled={!selectedHostForAddNode} className="bg-blue-600 hover:bg-blue-700 text-white">Add</Button>
           </DialogFooter>
         </DialogContent>
@@ -798,30 +925,30 @@ const NetworkGraphView: React.FC = () => {
       <Dialog open={showAddGroupDialog || showEditGroupDialog} onOpenChange={(open) => {
         if(!open) { setShowAddGroupDialog(false); setShowEditGroupDialog(false); }
       }}>
-        <DialogContent className="text-slate-200" style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}}>
+        <DialogContent className="text-slate-200 bg-dark-bg-panel border-dark-border">
           <DialogHeader>
             <DialogTitle>{showEditGroupDialog ? 'Edit Group' : 'Create Group'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Group Name</Label>
-              <Input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Cluster A" style={{backgroundColor: 'var(--color-dark-bg-input)', borderColor: 'var(--color-dark-border)'}} />
+              <Input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Cluster A" className="bg-dark-bg-input border-dark-border" />
             </div>
             <div className="grid gap-2">
               <Label>Color</Label>
-              <div className="flex gap-2 items-center p-2 rounded border" style={{backgroundColor: 'var(--color-dark-bg-input)', borderColor: 'var(--color-dark-border)'}}>
-                <input 
-                  type="color" 
-                  value={newGroupColor} 
+              <div className="flex gap-2 items-center p-2 rounded border bg-dark-bg-input border-dark-border">
+                <input
+                  type="color"
+                  value={newGroupColor}
                   onChange={(e) => setNewGroupColor(e.target.value)}
-                  className="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent" 
+                  className="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent"
                 />
                 <span className="text-sm text-muted-foreground uppercase">{newGroupColor}</span>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAddGroupDialog(false); setShowEditGroupDialog(false); }} style={{borderColor: 'var(--color-dark-border)', backgroundColor: 'var(--color-dark-bg-button)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-bg-button)'}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setShowAddGroupDialog(false); setShowEditGroupDialog(false); }} className="border-dark-border bg-dark-bg-button hover:bg-dark-hover">Cancel</Button>
             <Button onClick={showEditGroupDialog ? handleUpdateGroup : handleAddGroup} disabled={!newGroupName} className="bg-blue-600 hover:bg-blue-700 text-white">
               {showEditGroupDialog ? 'Update' : 'Create'}
             </Button>
@@ -830,14 +957,14 @@ const NetworkGraphView: React.FC = () => {
       </Dialog>
 
       <Dialog open={showMoveNodeDialog} onOpenChange={setShowMoveNodeDialog}>
-        <DialogContent className="text-slate-200" style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}}>
+        <DialogContent className="text-slate-200 bg-dark-bg-panel border-dark-border">
           <DialogHeader><DialogTitle>Move to Group</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Select Group</Label>
               <Select value={selectedGroupForMove} onValueChange={setSelectedGroupForMove}>
-                <SelectTrigger style={{backgroundColor: 'var(--color-dark-bg-input)', borderColor: 'var(--color-dark-border)'}}><SelectValue placeholder="Select group..." /></SelectTrigger>
-                <SelectContent style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}} className="text-slate-200">
+                <SelectTrigger className="bg-dark-bg-input border-dark-border"><SelectValue placeholder="Select group..." /></SelectTrigger>
+                <SelectContent className="bg-dark-bg-panel border-dark-border text-slate-200">
                   <SelectItem value="ROOT">(No Group)</SelectItem>
                   {availableGroups.map(g => (
                     <SelectItem key={g.id} value={g.id} disabled={g.id === selectedNodeId}>{g.label}</SelectItem>
@@ -847,21 +974,21 @@ const NetworkGraphView: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMoveNodeDialog(false)} style={{borderColor: 'var(--color-dark-border)', backgroundColor: 'var(--color-dark-bg-button)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-bg-button)'}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowMoveNodeDialog(false)} className="border-dark-border bg-dark-bg-button hover:bg-dark-hover">Cancel</Button>
             <Button onClick={handleMoveNodeToGroup} className="bg-blue-600 hover:bg-blue-700 text-white">Move</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showAddEdgeDialog} onOpenChange={setShowAddEdgeDialog}>
-        <DialogContent className="text-slate-200" style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}}>
+        <DialogContent className="text-slate-200 bg-dark-bg-panel border-dark-border">
           <DialogHeader><DialogTitle>Add Connection</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Source</Label>
               <Select value={selectedHostForEdge} onValueChange={setSelectedHostForEdge}>
-                <SelectTrigger style={{backgroundColor: 'var(--color-dark-bg-input)', borderColor: 'var(--color-dark-border)'}}><SelectValue placeholder="Select Source..." /></SelectTrigger>
-                <SelectContent style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}} className="text-slate-200">
+                <SelectTrigger className="bg-dark-bg-input border-dark-border"><SelectValue placeholder="Select Source..." /></SelectTrigger>
+                <SelectContent className="bg-dark-bg-panel border-dark-border text-slate-200">
                   {availableNodesForConnection.map(el => (
                     <SelectItem key={el.id} value={el.id}>{el.label}</SelectItem>
                   ))}
@@ -871,8 +998,8 @@ const NetworkGraphView: React.FC = () => {
             <div className="grid gap-2">
               <Label>Target</Label>
               <Select value={targetHostForEdge} onValueChange={setTargetHostForEdge}>
-                <SelectTrigger style={{backgroundColor: 'var(--color-dark-bg-input)', borderColor: 'var(--color-dark-border)'}}><SelectValue placeholder="Select Target..." /></SelectTrigger>
-                <SelectContent style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}} className="text-slate-200">
+                <SelectTrigger className="bg-dark-bg-input border-dark-border"><SelectValue placeholder="Select Target..." /></SelectTrigger>
+                <SelectContent className="bg-dark-bg-panel border-dark-border text-slate-200">
                   {availableNodesForConnection.map(el => (
                     <SelectItem key={el.id} value={el.id}>{el.label}</SelectItem>
                   ))}
@@ -881,42 +1008,65 @@ const NetworkGraphView: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddEdgeDialog(false)} style={{borderColor: 'var(--color-dark-border)', backgroundColor: 'var(--color-dark-bg-button)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-bg-button)'}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowAddEdgeDialog(false)} className="border-dark-border bg-dark-bg-button hover:bg-dark-hover">Cancel</Button>
             <Button onClick={handleAddEdge} className="bg-blue-600 hover:bg-blue-700 text-white">Connect</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showNodeDetail} onOpenChange={setShowNodeDetail}>
-        <DialogContent className="text-slate-200" style={{backgroundColor: 'var(--color-dark-bg-panel)', borderColor: 'var(--color-dark-border)'}}>
+        <DialogContent className="text-slate-200 bg-dark-bg-panel border-dark-border">
           <DialogHeader><DialogTitle>Host Details</DialogTitle></DialogHeader>
           {selectedNodeForDetail && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="font-semibold" style={{color: 'var(--color-dark-border-light)'}}>Name:</span> <span>{selectedNodeForDetail.name}</span>
-                <span className="font-semibold" style={{color: 'var(--color-dark-border-light)'}}>IP:</span> <span>{selectedNodeForDetail.ip}</span>
-                <span className="font-semibold" style={{color: 'var(--color-dark-border-light)'}}>Status:</span> 
+                <span className="font-semibold text-dark-border-light">Name:</span> <span>{selectedNodeForDetail.name}</span>
+                <span className="font-semibold text-dark-border-light">IP:</span> <span>{selectedNodeForDetail.ip}</span>
+                <span className="font-semibold text-dark-border-light">Status:</span>
                 <span className={selectedNodeForDetail.status === 'online' ? 'text-green-500' : 'text-red-500'}>
                   {selectedNodeForDetail.status}
                 </span>
-                <span className="font-semibold" style={{color: 'var(--color-dark-border-light)'}}>ID:</span> <span className="text-xs" style={{color: 'var(--color-dark-border-medium)'}}>{selectedNodeForDetail.id}</span>
+                <span className="font-semibold text-dark-border-light">ID:</span> <span className="text-xs text-dark-border-medium">{selectedNodeForDetail.id}</span>
               </div>
               {selectedNodeForDetail.tags && selectedNodeForDetail.tags.length > 0 && (
                  <div className="flex gap-1 flex-wrap">
                    {selectedNodeForDetail.tags.map(t => (
-                     <Badge key={t} variant="outline" className="text-xs" style={{borderColor: 'var(--color-dark-border-medium)', color: 'var(--color-dark-border-light)'}}>{t}</Badge>
+                     <Badge key={t} variant="outline" className="text-xs border-dark-border-medium text-dark-border-light">{t}</Badge>
                    ))}
                  </div>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNodeDetail(false)} style={{borderColor: 'var(--color-dark-border)', backgroundColor: 'var(--color-dark-bg-button)'}} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-dark-bg-button)'}>Close</Button>
+            <Button variant="outline" onClick={() => setShowNodeDetail(false)} className="border-dark-border bg-dark-bg-button hover:bg-dark-hover">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
+
+  // Wrap in standalone container if needed
+  if (isStandalone) {
+    return (
+      <div
+        style={wrapperStyle}
+        className="bg-dark-bg text-white rounded-lg border-2 border-dark-border overflow-hidden"
+      >
+        <div className="h-full w-full flex flex-col">
+          <div className="flex items-center justify-between px-3 pt-2 pb-2">
+            <h1 className="font-bold text-lg">Network Graph</h1>
+          </div>
+          <Separator className="p-0.25 w-full" />
+          <div className="px-6 py-4 overflow-auto flex-1">
+            {content}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 };
 
+export { NetworkGraphView };
 export default NetworkGraphView;

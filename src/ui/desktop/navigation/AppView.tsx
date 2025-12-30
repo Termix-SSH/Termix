@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
 import { Server as ServerView } from "@/ui/desktop/apps/server/Server.tsx";
 import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
+import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph/NetworkGraphView.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -58,7 +59,8 @@ export function AppView({
         (tab: TabData) =>
           tab.type === "terminal" ||
           tab.type === "server" ||
-          tab.type === "file_manager",
+          tab.type === "file_manager" ||
+          tab.type === "network_graph",
       ),
     [tabs],
   );
@@ -316,6 +318,13 @@ export function AppView({
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
+                  />
+                ) : t.type === "network_graph" ? (
+                  <NetworkGraphView
+                    isTopbarOpen={isTopbarOpen}
+                    rightSidebarOpen={rightSidebarOpen}
+                    rightSidebarWidth={rightSidebarWidth}
+                    isStandalone={true}
                   />
                 ) : (
                   <FileManager

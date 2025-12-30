@@ -89,7 +89,7 @@ export function Dashboard({
     Array<{ id: number; name: string; cpu: number | null; ram: number | null }>
   >([]);
   const [serverStatsLoading, setServerStatsLoading] = useState<boolean>(true);
-  const [showNetworkGraph, setShowNetworkGraph] = useState<boolean>(true);
+  const [showNetworkGraph, setShowNetworkGraph] = useState<boolean>(false);
 
   const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
 
