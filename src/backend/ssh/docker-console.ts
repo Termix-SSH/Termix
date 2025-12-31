@@ -23,7 +23,7 @@ const activeSessions = new Map<string, SSHSession>();
 
 const wss = new WebSocketServer({
   port: 30008,
-  verifyClient: async (info, callback) => {
+  verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url || "", true);
       const token = url.query.token as string;
@@ -32,7 +32,7 @@ const wss = new WebSocketServer({
         dockerConsoleLogger.warn("WebSocket connection rejected: No token", {
           operation: "ws_verify",
         });
-        return callback(false, 401, "Authentication required");
+        return false;
       }
 
       const authManager = AuthManager.getInstance();
@@ -45,17 +45,15 @@ const wss = new WebSocketServer({
             operation: "ws_verify",
           },
         );
-        return callback(false, 401, "Invalid token");
+        return false;
       }
 
-      (info.req as any).userId = decoded.userId;
-
-      callback(true);
+      return true;
     } catch (error) {
       dockerConsoleLogger.error("WebSocket verification error", error, {
         operation: "ws_verify",
       });
-      callback(false, 500, "Authentication failed");
+      return false;
     }
   },
 });
