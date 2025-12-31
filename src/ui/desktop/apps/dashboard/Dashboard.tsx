@@ -669,57 +669,109 @@ export function Dashboard({
                     <div className="grid gap-4 grid-cols-3 auto-rows-min overflow-y-auto overflow-x-hidden thin-scrollbar">
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
                         onClick={handleAddHost}
                       >
-                        <Server
-                          className="shrink-0"
-                          style={{ width: "40px", height: "40px" }}
-                        />
-                        <span className="font-semibold text-sm mt-2">
-                          {t("dashboard.addHost")}
-                        </span>
+                        <div className="flex flex-col items-center w-full max-w-full">
+                          <Server
+                            className="shrink-0"
+                            style={{ width: "40px", height: "40px" }}
+                          />
+                          <span
+                            className="font-semibold text-sm mt-2 text-center block"
+                            style={{
+                              wordWrap: "break-word",
+                              overflowWrap: "break-word",
+                              width: "100%",
+                              maxWidth: "100%",
+                              hyphens: "auto",
+                              display: "block",
+                              whiteSpace: "normal",
+                            }}
+                          >
+                            {t("dashboard.addHost")}
+                          </span>
+                        </div>
                       </Button>
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
                         onClick={handleAddCredential}
                       >
-                        <Key
-                          className="shrink-0"
-                          style={{ width: "40px", height: "40px" }}
-                        />
-                        <span className="font-semibold text-sm mt-2">
-                          {t("dashboard.addCredential")}
-                        </span>
+                        <div className="flex flex-col items-center w-full max-w-full">
+                          <Key
+                            className="shrink-0"
+                            style={{ width: "40px", height: "40px" }}
+                          />
+                          <span
+                            className="font-semibold text-sm mt-2 text-center block"
+                            style={{
+                              wordWrap: "break-word",
+                              overflowWrap: "break-word",
+                              width: "100%",
+                              maxWidth: "100%",
+                              hyphens: "auto",
+                              display: "block",
+                              whiteSpace: "normal",
+                            }}
+                          >
+                            {t("dashboard.addCredential")}
+                          </span>
+                        </div>
                       </Button>
                       {isAdmin && (
                         <Button
                           variant="outline"
-                          className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
+                          className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
                           onClick={handleOpenAdminSettings}
                         >
-                          <Settings
-                            className="shrink-0"
-                            style={{ width: "40px", height: "40px" }}
-                          />
-                          <span className="font-semibold text-sm mt-2">
-                            {t("dashboard.adminSettings")}
-                          </span>
+                          <div className="flex flex-col items-center w-full max-w-full">
+                            <Settings
+                              className="shrink-0"
+                              style={{ width: "40px", height: "40px" }}
+                            />
+                            <span
+                              className="font-semibold text-sm mt-2 text-center block"
+                              style={{
+                                wordWrap: "break-word",
+                                overflowWrap: "break-word",
+                                width: "100%",
+                                maxWidth: "100%",
+                                hyphens: "auto",
+                                display: "block",
+                                whiteSpace: "normal",
+                              }}
+                            >
+                              {t("dashboard.adminSettings")}
+                            </span>
+                          </div>
                         </Button>
                       )}
                       <Button
                         variant="outline"
-                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 min-w-0 !bg-canvas"
+                        className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
                         onClick={handleOpenUserProfile}
                       >
-                        <User
-                          className="shrink-0"
-                          style={{ width: "40px", height: "40px" }}
-                        />
-                        <span className="font-semibold text-sm mt-2">
-                          {t("dashboard.userProfile")}
-                        </span>
+                        <div className="flex flex-col items-center w-full max-w-full">
+                          <User
+                            className="shrink-0"
+                            style={{ width: "40px", height: "40px" }}
+                          />
+                          <span
+                            className="font-semibold text-sm mt-2 text-center block"
+                            style={{
+                              wordWrap: "break-word",
+                              overflowWrap: "break-word",
+                              width: "100%",
+                              maxWidth: "100%",
+                              hyphens: "auto",
+                              display: "block",
+                              whiteSpace: "normal",
+                            }}
+                          >
+                            {t("dashboard.userProfile")}
+                          </span>
+                        </div>
                       </Button>
                     </div>
                   </div>
