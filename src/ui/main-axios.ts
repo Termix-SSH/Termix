@@ -3085,7 +3085,7 @@ export interface UptimeInfo {
 export interface RecentActivityItem {
   id: number;
   userId: string;
-  type: "terminal" | "file_manager";
+  type: "terminal" | "file_manager" | "server_stats" | "tunnel" | "docker";
   hostId: number;
   hostName: string;
   timestamp: string;
@@ -3114,7 +3114,7 @@ export async function getRecentActivity(
 }
 
 export async function logActivity(
-  type: "terminal" | "file_manager",
+  type: "terminal" | "file_manager" | "server_stats" | "tunnel" | "docker",
   hostId: number,
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {

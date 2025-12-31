@@ -1696,6 +1696,7 @@
     "totpInvalidCode": "Invalid verification code",
     "totpCancelled": "Metrics collection cancelled",
     "authenticationFailed": "Authentication failed",
+    "noneAuthNotSupported": "Server Stats does not support 'none' authentication type.",
     "load": "Load",
     "editLayout": "Edit Layout",
     "cancelEdit": "Cancel",

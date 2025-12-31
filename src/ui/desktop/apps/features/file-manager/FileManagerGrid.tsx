@@ -1320,7 +1320,7 @@ export function FileManagerGrid({
           document.body,
         )}
 
-      <SimpleLoader visible={isLoading} message={t("common.loading")} />
+      <SimpleLoader visible={isLoading} message={t("common.connecting")} />
     </div>
   );
 }

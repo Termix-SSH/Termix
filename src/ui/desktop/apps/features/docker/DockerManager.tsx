@@ -17,6 +17,7 @@ import {
   validateDockerAvailability,
   keepaliveDockerSession,
   verifyDockerTOTP,
+  logActivity,
 } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { AlertCircle } from "lucide-react";
@@ -25,6 +26,7 @@ import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -33,6 +35,12 @@ interface DockerManagerProps {
   isTopbarOpen?: boolean;
   embedded?: boolean;
   onClose?: () => void;
+}
+
+interface TabData {
+  id: number;
+  type: string;
+  [key: string]: unknown;
 }
 
 export function DockerManager({
@@ -45,6 +53,10 @@ export function DockerManager({
 }: DockerManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
+  const { currentTab, removeTab } = useTabs() as {
+    currentTab: number | null;
+    removeTab: (tabId: number) => void;
+  };
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [containers, setContainers] = React.useState<DockerContainer[]>([]);
@@ -65,6 +77,34 @@ export function DockerManager({
   const [authReason, setAuthReason] = React.useState<
     "no_keyboard" | "auth_failed" | "timeout"
   >("no_keyboard");
+
+  const activityLoggedRef = React.useRef(false);
+  const activityLoggingRef = React.useRef(false);
+
+  const logDockerActivity = async () => {
+    if (
+      !currentHostConfig?.id ||
+      activityLoggedRef.current ||
+      activityLoggingRef.current
+    ) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName =
+        currentHostConfig.name ||
+        `${currentHostConfig.username}@${currentHostConfig.ip}`;
+      await logActivity("docker", currentHostConfig.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log docker activity:", err);
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  };
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
@@ -172,6 +212,8 @@ export function DockerManager({
           toast.error(
             validation.error || "Docker is not available on this host",
           );
+        } else {
+          logDockerActivity();
         }
       } catch (error) {
         toast.error(
@@ -279,6 +321,8 @@ export function DockerManager({
           toast.error(
             validation.error || "Docker is not available on this host",
           );
+        } else {
+          logDockerActivity();
         }
       }
     } catch (error) {
@@ -294,6 +338,9 @@ export function DockerManager({
     setTotpSessionId(null);
     setTotpPrompt("");
     setIsConnecting(false);
+    if (currentTab !== null) {
+      removeTab(currentTab);
+    }
   };
 
   const handleAuthSubmit = async (credentials: {
@@ -345,6 +392,8 @@ export function DockerManager({
 
       if (!validation.available) {
         toast.error(validation.error || "Docker is not available on this host");
+      } else {
+        logDockerActivity();
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to connect");
@@ -422,15 +471,13 @@ export function DockerManager({
           </div>
           <Separator className="p-0.25 w-full" />
 
-          <div className="flex-1 overflow-hidden min-h-0 p-4 flex items-center justify-center">
-            <div className="text-center">
-              <SimpleLoader size="lg" />
-              <p className="text-muted-foreground mt-4">
-                {isValidating
-                  ? t("docker.validating")
-                  : t("docker.connectingToHost")}
-              </p>
-            </div>
+          <div className="flex-1 overflow-hidden min-h-0 relative">
+            <SimpleLoader
+              visible={true}
+              message={
+                isValidating ? t("docker.validating") : t("docker.connecting")
+              }
+            />
           </div>
         </div>
       </div>
@@ -490,19 +537,15 @@ export function DockerManager({
         </div>
         <Separator className="p-0.25 w-full" />
 
-        <div className="flex-1 overflow-hidden min-h-0">
+        <div className="flex-1 overflow-hidden min-h-0 relative">
           {viewMode === "list" ? (
             <div className="h-full px-4 py-4">
               {sessionId ? (
                 isLoadingContainers && containers.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <SimpleLoader size="lg" />
-                      <p className="text-muted-foreground mt-4">
-                        {t("docker.loadingContainers")}
-                      </p>
-                    </div>
-                  </div>
+                  <SimpleLoader
+                    visible={true}
+                    message={t("docker.loadingContainers")}
+                  />
                 ) : (
                   <ContainerList
                     containers={containers}

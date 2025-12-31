@@ -36,6 +36,9 @@ import {
   Loader2,
   Terminal,
   FolderOpen,
+  Activity,
+  Container,
+  ArrowDownUp,
 } from "lucide-react";
 import { Status } from "@/components/ui/shadcn-io/status";
 import { BsLightning } from "react-icons/bs";
@@ -297,6 +300,24 @@ export function Dashboard({
           title: item.hostName,
           hostConfig: host,
         });
+      } else if (item.type === "server_stats") {
+        addTab({
+          type: "server_stats",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      } else if (item.type === "tunnel") {
+        addTab({
+          type: "tunnel",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      } else if (item.type === "docker") {
+        addTab({
+          type: "docker",
+          title: item.hostName,
+          hostConfig: host,
+        });
       }
     });
   };
@@ -307,7 +328,7 @@ export function Dashboard({
       if (!host) return;
 
       addTab({
-        type: "server",
+        type: "server_stats",
         title: serverName,
         hostConfig: host,
       });
@@ -544,7 +565,7 @@ export function Dashboard({
                       </div>
                       <div className="flex flex-row items-center justify-between bg-canvas w-full h-auto mt-3 border-2 border-edge rounded-md px-3 py-3 min-w-0 gap-2">
                         <div className="flex flex-row items-center min-w-0">
-                          <Network size={16} className="mr-3 shrink-0" />
+                          <ArrowDownUp size={16} className="mr-3 shrink-0" />
                           <p className="m-0 leading-none truncate">
                             {t("dashboard.totalTunnels")}
                           </p>
@@ -617,8 +638,16 @@ export function Dashboard({
                             >
                               {item.type === "terminal" ? (
                                 <Terminal size={20} className="shrink-0" />
-                              ) : (
+                              ) : item.type === "file_manager" ? (
                                 <FolderOpen size={20} className="shrink-0" />
+                              ) : item.type === "server_stats" ? (
+                                <Server size={20} className="shrink-0" />
+                              ) : item.type === "tunnel" ? (
+                                <ArrowDownUp size={20} className="shrink-0" />
+                              ) : item.type === "docker" ? (
+                                <Container size={20} className="shrink-0" />
+                              ) : (
+                                <Terminal size={20} className="shrink-0" />
                               )}
                               <p className="truncate ml-2 font-semibold">
                                 {item.hostName}

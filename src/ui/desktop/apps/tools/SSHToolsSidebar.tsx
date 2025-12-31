@@ -246,7 +246,7 @@ export function SSHToolsSidebar({
   const splittableTabs = tabs.filter(
     (tab: TabData) =>
       tab.type === "terminal" ||
-      tab.type === "server" ||
+      tab.type === "server_stats" ||
       tab.type === "file_manager" ||
       tab.type === "tunnel" ||
       tab.type === "docker",

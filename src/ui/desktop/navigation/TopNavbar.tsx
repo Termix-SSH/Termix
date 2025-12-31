@@ -367,7 +367,7 @@ export function TopNavbar({
               Array.isArray(allSplitScreenTab) &&
               allSplitScreenTab.includes(tab.id);
             const isTerminal = tab.type === "terminal";
-            const isServer = tab.type === "server";
+            const isServer = tab.type === "server_stats";
             const isFileManager = tab.type === "file_manager";
             const isTunnel = tab.type === "tunnel";
             const isDocker = tab.type === "docker";

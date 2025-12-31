@@ -186,7 +186,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               {shouldShowMetrics && (
                 <DropdownMenuItem
                   onClick={() =>
-                    addTab({ type: "server", title, hostConfig: host })
+                    addTab({ type: "server_stats", title, hostConfig: host })
                   }
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >

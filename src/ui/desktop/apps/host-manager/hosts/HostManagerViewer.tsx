@@ -1537,7 +1537,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                             ? host.name
                                             : `${host.username}@${host.ip}:${host.port}`;
                                           addTab({
-                                            type: "server",
+                                            type: "server_stats",
                                             title,
                                             hostConfig: host,
                                           });

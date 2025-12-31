@@ -180,7 +180,7 @@ function AppContent() {
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
   const showTerminalView =
     currentTabData?.type === "terminal" ||
-    currentTabData?.type === "server" ||
+    currentTabData?.type === "server_stats" ||
     currentTabData?.type === "file_manager" ||
     currentTabData?.type === "tunnel" ||
     currentTabData?.type === "docker";

@@ -7,6 +7,7 @@ import {
   connectTunnel,
   disconnectTunnel,
   cancelTunnel,
+  logActivity,
 } from "@/ui/main-axios.ts";
 import type {
   SSHHost,
@@ -27,6 +28,8 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
   );
 
   const prevVisibleHostRef = React.useRef<SSHHost | null>(null);
+  const activityLoggedRef = React.useRef(false);
+  const activityLoggingRef = React.useRef(false);
 
   const haveTunnelConnectionsChanged = (
     a: TunnelConnection[] = [],
@@ -88,6 +91,25 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
     }
   }, [filterHostKey]);
 
+  const logTunnelActivity = async (host: SSHHost) => {
+    if (!host?.id || activityLoggedRef.current || activityLoggingRef.current) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName = host.name || `${host.username}@${host.ip}`;
+      await logActivity("tunnel", host.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log tunnel activity:", err);
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  };
+
   const fetchTunnelStatuses = useCallback(async () => {
     const statusData = await getTunnelStatuses();
     setTunnelStatuses(statusData);
@@ -119,6 +141,12 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
     const interval = setInterval(fetchTunnelStatuses, 1000);
     return () => clearInterval(interval);
   }, [fetchTunnelStatuses]);
+
+  useEffect(() => {
+    if (visibleHosts.length > 0 && visibleHosts[0]) {
+      logTunnelActivity(visibleHosts[0]);
+    }
+  }, [visibleHosts.length > 0 ? visibleHosts[0]?.id : null]);
 
   const handleTunnelAction = async (
     action: "connect" | "disconnect" | "cancel",

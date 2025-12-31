@@ -126,7 +126,7 @@ If you need help or want to request a feature with Termix, visit the [Issues](ht
 Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
 channel, however, response times may be longer.
 
-# Show-off
+# Screenshots
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
@@ -145,7 +145,12 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
-<img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
+  <img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
+</p>
+
+<p align="center">
+  <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
 </p>
 
 <p align="center">

@@ -119,13 +119,13 @@ export function Tab({
 
   if (
     tabType === "terminal" ||
-    tabType === "server" ||
+    tabType === "server_stats" ||
     tabType === "file_manager" ||
     tabType === "tunnel" ||
     tabType === "docker" ||
     tabType === "user_profile"
   ) {
-    const isServer = tabType === "server";
+    const isServer = tabType === "server_stats";
     const isFileManager = tabType === "file_manager";
     const isTunnel = tabType === "tunnel";
     const isDocker = tabType === "docker";

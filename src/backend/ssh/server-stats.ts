@@ -242,11 +242,6 @@ function cleanupMetricsSession(sessionId: string) {
     } catch (error) {}
     clearTimeout(session.timeout);
     delete metricsSessions[sessionId];
-
-    statsLogger.info("Metrics session cleaned up", {
-      operation: "session_cleanup",
-      sessionId,
-    });
   }
 }
 
@@ -410,13 +405,6 @@ class SSHConnectionPool {
               resolvedPassword: host.password,
               totpAttempts: 0,
             };
-
-            statsLogger.info("TOTP required for metrics collection", {
-              operation: "metrics_totp_required",
-              hostId: host.id,
-              sessionId,
-              prompt: prompts[totpPromptIndex].prompt,
-            });
 
             return;
           } else if (host.password) {
@@ -728,7 +716,7 @@ interface AuthFailureRecord {
 class AuthFailureTracker {
   private failures = new Map<number, AuthFailureRecord>();
   private maxRetries = 3;
-  private backoffBase = 60000;
+  private backoffBase = 5000;
 
   recordFailure(
     hostId: number,
@@ -991,8 +979,12 @@ class PollingManager {
     return result;
   }
 
-  async startPollingForHost(host: SSHHostWithCredentials): Promise<void> {
+  async startPollingForHost(
+    host: SSHHostWithCredentials,
+    options?: { statusOnly?: boolean },
+  ): Promise<void> {
     const statsConfig = this.parseStatsConfig(host.statsConfig);
+    const statusOnly = options?.statusOnly ?? false;
 
     const existingConfig = this.pollingConfigs.get(host.id);
 
@@ -1034,10 +1026,10 @@ class PollingManager {
       this.statusStore.delete(host.id);
     }
 
-    if (statsConfig.metricsEnabled) {
+    if (!statusOnly && statsConfig.metricsEnabled) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
-      this.pollHostMetrics(host);
+      await this.pollHostMetrics(host);
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
@@ -1083,11 +1075,6 @@ class PollingManager {
   }
 
   private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
-    if (pollingBackoff.shouldSkip(host.id)) {
-      const backoffInfo = pollingBackoff.getBackoffInfo(host.id);
-      return;
-    }
-
     const refreshedHost = await fetchHostById(host.id, host.userId);
     if (!refreshedHost) {
       statsLogger.warn("Host not found during metrics polling", {
@@ -1099,6 +1086,13 @@ class PollingManager {
 
     const config = this.pollingConfigs.get(refreshedHost.id);
     if (!config || !config.statsConfig.metricsEnabled) {
+      return;
+    }
+
+    const hasExistingMetrics = this.metricsStore.has(refreshedHost.id);
+
+    if (hasExistingMetrics && pollingBackoff.shouldSkip(host.id)) {
+      const backoffInfo = pollingBackoff.getBackoffInfo(host.id);
       return;
     }
 
@@ -1118,7 +1112,7 @@ class PollingManager {
       const latestConfig = this.pollingConfigs.get(refreshedHost.id);
       if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         const backoffInfo = pollingBackoff.getBackoffInfo(refreshedHost.id);
-        statsLogger.warn("Failed to collect metrics for host", {
+        statsLogger.error("Failed to collect metrics for host", {
           operation: "metrics_poll_failed",
           hostId: refreshedHost.id,
           hostName: refreshedHost.name,
@@ -1176,7 +1170,7 @@ class PollingManager {
     const hosts = await fetchAllHosts(userId);
 
     for (const host of hosts) {
-      await this.startPollingForHost(host);
+      await this.startPollingForHost(host, { statusOnly: true });
     }
   }
 
@@ -1196,7 +1190,7 @@ class PollingManager {
     }
 
     for (const host of hosts) {
-      await this.startPollingForHost(host);
+      await this.startPollingForHost(host, { statusOnly: true });
     }
   }
 
@@ -1538,7 +1532,6 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
   } else if (host.authType === "none") {
-    // Allow "none" auth - SSH will handle via keyboard-interactive
   } else {
     throw new Error(
       `Unsupported authentication type '${host.authType}' for host ${host.ip}`,
@@ -1622,8 +1615,11 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   }
 
   return requestQueue.queueRequest(host.id, async () => {
+    const sessionKey = getSessionKey(host.id, host.userId!);
+    const existingSession = metricsSessions[sessionKey];
+
     try {
-      return await withSshConnection(host, async (client) => {
+      const collectFn = async (client: Client) => {
         const cpu = await collectCpuMetrics(client);
         const memory = await collectMemoryMetrics(client);
         const disk = await collectDiskMetrics(client);
@@ -1655,7 +1651,20 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
 
         metricsCache.set(host.id, result);
         return result;
-      });
+      };
+
+      if (existingSession && existingSession.isConnected) {
+        existingSession.activeOperations++;
+        try {
+          const result = await collectFn(existingSession.client);
+          existingSession.lastActive = Date.now();
+          return result;
+        } finally {
+          existingSession.activeOperations--;
+        }
+      } else {
+        return await withSshConnection(host, collectFn);
+      }
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes("TOTP authentication required")) {
@@ -1970,13 +1979,14 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
               });
             }
             return;
-          } else if (host.password) {
-            const responses = prompts.map((p) =>
-              /password/i.test(p.prompt) ? host.password || "" : "",
-            );
-            finish(responses);
           } else {
-            finish(prompts.map(() => ""));
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && host.password) {
+                return host.password;
+              }
+              return "";
+            });
+            finish(responses);
           }
         },
       );
@@ -2012,11 +2022,44 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         clearTimeout(timeout);
         if (!isResolved) {
           isResolved = true;
+          statsLogger.error("SSH connection error in metrics/start", {
+            operation: "metrics_start_ssh_error",
+            hostId: host.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
           reject(error);
         }
       });
 
-      client.connect(config);
+      if (
+        host.useSocks5 &&
+        (host.socks5Host ||
+          (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+      ) {
+        createSocks5Connection(host.ip, host.port, {
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
+        })
+          .then((socks5Socket) => {
+            if (socks5Socket) {
+              config.sock = socks5Socket;
+            }
+            client.connect(config);
+          })
+          .catch((error) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeout);
+              reject(error);
+            }
+          });
+      } else {
+        client.connect(config);
+      }
     });
 
     const result = await connectionPromise;
@@ -2129,6 +2172,25 @@ app.post("/metrics/connect-totp", async (req, res) => {
         reject(new Error("TOTP verification timeout"));
       }, 30000);
 
+      session.client.once(
+        "keyboard-interactive",
+        (name, instructions, instructionsLang, prompts, finish) => {
+          statsLogger.warn("Second keyboard-interactive received after TOTP", {
+            operation: "totp_second_keyboard_interactive",
+            hostId: session.hostId,
+            sessionId,
+            prompts: prompts.map((p) => p.prompt),
+          });
+          const secondResponses = prompts.map((p) => {
+            if (/password/i.test(p.prompt) && session.resolvedPassword) {
+              return session.resolvedPassword;
+            }
+            return "";
+          });
+          finish(secondResponses);
+        },
+      );
+
       session.client.once("ready", () => {
         clearTimeout(timeout);
         resolve();
@@ -2136,6 +2198,12 @@ app.post("/metrics/connect-totp", async (req, res) => {
 
       session.client.once("error", (error) => {
         clearTimeout(timeout);
+        statsLogger.error("SSH client error after TOTP", {
+          operation: "totp_client_error",
+          hostId: session.hostId,
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         reject(error);
       });
     });
@@ -2159,14 +2227,14 @@ app.post("/metrics/connect-totp", async (req, res) => {
 
     const host = await fetchHostById(session.hostId, userId);
     if (host) {
-      await pollingManager.startPollingForHost(host);
+      pollingManager.startPollingForHost(host).catch((error) => {
+        statsLogger.error("Failed to start polling after TOTP", {
+          operation: "totp_polling_start_error",
+          hostId: session.hostId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
-
-    statsLogger.info("TOTP verified, metrics collection started", {
-      operation: "totp_verified",
-      hostId: session.hostId,
-      sessionId,
-    });
 
     res.json({ success: true });
   } catch (error) {

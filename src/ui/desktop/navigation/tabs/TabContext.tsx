@@ -71,7 +71,7 @@ export function TabProvider({ children }: TabProviderProps) {
     desiredTitle: string | undefined,
   ): string {
     const defaultTitle =
-      tabType === "server"
+      tabType === "server_stats"
         ? t("nav.serverStats")
         : tabType === "file_manager"
           ? t("nav.fileManager")
@@ -139,7 +139,7 @@ export function TabProvider({ children }: TabProviderProps) {
     const id = nextTabId.current++;
     const needsUniqueTitle =
       tabData.type === "terminal" ||
-      tabData.type === "server" ||
+      tabData.type === "server_stats" ||
       tabData.type === "file_manager" ||
       tabData.type === "tunnel" ||
       tabData.type === "docker";

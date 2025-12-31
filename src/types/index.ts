@@ -389,7 +389,7 @@ export interface TabContextTab {
     | "home"
     | "terminal"
     | "ssh_manager"
-    | "server"
+    | "server_stats"
     | "admin"
     | "file_manager"
     | "user_profile"

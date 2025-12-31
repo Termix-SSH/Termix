@@ -31,7 +31,7 @@ export function TabDropdown(): React.ReactElement {
         return <Home className="h-4 w-4" />;
       case "terminal":
         return <TerminalIcon className="h-4 w-4" />;
-      case "server":
+      case "server_stats":
         return <ServerIcon className="h-4 w-4" />;
       case "file_manager":
         return <FolderIcon className="h-4 w-4" />;
@@ -54,7 +54,7 @@ export function TabDropdown(): React.ReactElement {
     switch (tab.type) {
       case "home":
         return t("nav.home");
-      case "server":
+      case "server_stats":
         return tab.title || t("nav.serverStats");
       case "file_manager":
         return tab.title || t("nav.fileManager");

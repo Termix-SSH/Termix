@@ -10,6 +10,7 @@ import {
   stopMetricsPolling,
   submitMetricsTOTP,
   executeSnippet,
+  logActivity,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
@@ -76,9 +77,11 @@ export function ServerStats({
 }: ServerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
-  const { addTab, tabs } = useTabs() as {
+  const { addTab, tabs, currentTab, removeTab } = useTabs() as {
     addTab: (tab: { type: string; [key: string]: unknown }) => number;
     tabs: TabData[];
+    currentTab: number | null;
+    removeTab: (tabId: number) => void;
   };
   const [serverStatus, setServerStatus] = React.useState<"online" | "offline">(
     "offline",
@@ -98,6 +101,10 @@ export function ServerStats({
   const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = React.useState<string>("");
   const [isPageVisible, setIsPageVisible] = React.useState(!document.hidden);
+  const [totpVerified, setTotpVerified] = React.useState(false);
+
+  const activityLoggedRef = React.useRef(false);
+  const activityLoggingRef = React.useRef(false);
 
   const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
@@ -140,6 +147,31 @@ export function ServerStats({
     setCurrentHostConfig(hostConfig);
   }, [hostConfig?.id]);
 
+  const logServerActivity = async () => {
+    if (
+      !currentHostConfig?.id ||
+      activityLoggedRef.current ||
+      activityLoggingRef.current
+    ) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName =
+        currentHostConfig.name ||
+        `${currentHostConfig.username}@${currentHostConfig.ip}`;
+      await logActivity("server_stats", currentHostConfig.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log server stats activity:", err);
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  };
+
   const handleTOTPSubmit = async (totpCode: string) => {
     if (!totpSessionId || !currentHostConfig) return;
 
@@ -147,10 +179,11 @@ export function ServerStats({
       const result = await submitMetricsTOTP(totpSessionId, totpCode);
       if (result.success) {
         setTotpRequired(false);
-        toast.success(t("serverStats.totpVerified"));
-        const data = await getServerMetricsById(currentHostConfig.id);
-        setMetrics(data);
+        setTotpSessionId(null);
         setShowStatsUI(true);
+        setTotpVerified(true);
+      } else {
+        toast.error(t("serverStats.totpFailed"));
       }
     } catch (error) {
       toast.error(t("serverStats.totpFailed"));
@@ -166,6 +199,9 @@ export function ServerStats({
       } catch (error) {
         console.error("Failed to stop metrics polling:", error);
       }
+    }
+    if (currentTab !== null) {
+      removeTab(currentTab);
     }
   };
 
@@ -301,7 +337,6 @@ export function ServerStats({
 
   React.useEffect(() => {
     if (!metricsEnabled || !currentHostConfig?.id) {
-      setShowStatsUI(false);
       return;
     }
 
@@ -309,29 +344,77 @@ export function ServerStats({
     let pollingIntervalId: number | undefined;
     let debounceTimeout: NodeJS.Timeout | undefined;
 
+    if (isActuallyVisible && !metrics) {
+      setIsLoadingMetrics(true);
+      setShowStatsUI(true);
+    } else if (!isActuallyVisible) {
+      setIsLoadingMetrics(false);
+    }
+
     const startMetrics = async () => {
       if (cancelled) return;
 
-      setIsLoadingMetrics(true);
+      if (currentHostConfig.authType === "none") {
+        toast.error(t("serverStats.noneAuthNotSupported"));
+        setIsLoadingMetrics(false);
+        if (currentTab !== null) {
+          removeTab(currentTab);
+        }
+        return;
+      }
+
+      const hasExistingMetrics = metrics !== null;
+
+      if (!hasExistingMetrics) {
+        setIsLoadingMetrics(true);
+      }
+      setShowStatsUI(true);
 
       try {
-        const result = await startMetricsPolling(currentHostConfig.id);
+        if (!totpVerified) {
+          const result = await startMetricsPolling(currentHostConfig.id);
+
+          if (cancelled) return;
+
+          if (result.requires_totp) {
+            setTotpRequired(true);
+            setTotpSessionId(result.sessionId || null);
+            setTotpPrompt(result.prompt || "Verification code");
+            setIsLoadingMetrics(false);
+            return;
+          }
+        }
+
+        let retryCount = 0;
+        let data = null;
+        const maxRetries = 15;
+        const initialDelay = totpVerified ? 3000 : 5000;
+        const retryDelay = 2000;
+
+        await new Promise((resolve) => setTimeout(resolve, initialDelay));
+
+        while (retryCount < maxRetries && !cancelled) {
+          try {
+            data = await getServerMetricsById(currentHostConfig.id);
+            break;
+          } catch (error: any) {
+            retryCount++;
+            if (retryCount < maxRetries && !cancelled) {
+              await new Promise((resolve) => setTimeout(resolve, retryDelay));
+            } else {
+              throw error;
+            }
+          }
+        }
 
         if (cancelled) return;
 
-        if (result.requires_totp) {
-          setTotpRequired(true);
-          setTotpSessionId(result.sessionId || null);
-          setTotpPrompt(result.prompt || "Verification code");
-          setIsLoadingMetrics(false);
-          return;
-        }
-
-        const data = await getServerMetricsById(currentHostConfig.id);
-        if (!cancelled) {
+        if (data) {
           setMetrics(data);
-          setShowStatsUI(true);
-          setIsLoadingMetrics(false);
+          if (!hasExistingMetrics) {
+            setIsLoadingMetrics(false);
+            logServerActivity();
+          }
         }
 
         pollingIntervalId = window.setInterval(async () => {
@@ -355,8 +438,10 @@ export function ServerStats({
         if (!cancelled) {
           console.error("Failed to start metrics polling:", error);
           setIsLoadingMetrics(false);
-          setShowStatsUI(false);
           toast.error(t("serverStats.failedToFetchMetrics"));
+          if (currentTab !== null) {
+            removeTab(currentTab);
+          }
         }
       }
     };
@@ -396,6 +481,7 @@ export function ServerStats({
     isActuallyVisible,
     metricsEnabled,
     statsConfig.metricsInterval,
+    totpVerified,
   ]);
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
@@ -427,155 +513,162 @@ export function ServerStats({
     : "bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden";
 
   return (
-    <div style={wrapperStyle} className={containerClass}>
+    <div style={wrapperStyle} className={`${containerClass} relative`}>
       <div className="h-full w-full flex flex-col">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="min-w-0">
-              <h1 className="font-bold text-lg truncate">
-                {currentHostConfig?.folder} / {title}
-              </h1>
-            </div>
-            {statusCheckEnabled && (
-              <Status
-                status={serverStatus}
-                className="!bg-transparent !p-0.75 flex-shrink-0"
-              >
-                <StatusIndicator />
-              </Status>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              disabled={isRefreshing}
-              className="font-semibold"
-              onClick={async () => {
-                if (currentHostConfig?.id) {
-                  try {
-                    setIsRefreshing(true);
-                    const res = await getServerStatusById(currentHostConfig.id);
-                    setServerStatus(
-                      res?.status === "online" ? "online" : "offline",
-                    );
-                    const data = await getServerMetricsById(
-                      currentHostConfig.id,
-                    );
-                    setMetrics(data);
-                    setShowStatsUI(true);
-                  } catch (error: unknown) {
-                    const err = error as {
-                      code?: string;
-                      status?: number;
-                      response?: { status?: number; data?: { error?: string } };
-                    };
-                    if (
-                      err?.code === "TOTP_REQUIRED" ||
-                      (err?.response?.status === 403 &&
-                        err?.response?.data?.error === "TOTP_REQUIRED")
-                    ) {
-                      toast.error(t("serverStats.totpUnavailable"));
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      err?.response?.status === 503 ||
-                      err?.status === 503
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      err?.response?.status === 504 ||
-                      err?.status === 504
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else if (
-                      err?.response?.status === 404 ||
-                      err?.status === 404
-                    ) {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    } else {
-                      setServerStatus("offline");
-                      setMetrics(null);
-                      setShowStatsUI(false);
-                    }
-                  } finally {
-                    setIsRefreshing(false);
-                  }
-                }
-              }}
-              title={t("serverStats.refreshStatusAndMetrics")}
-            >
-              {isRefreshing ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-foreground-secondary border-t-transparent rounded-full animate-spin"></div>
-                  {t("serverStats.refreshing")}
-                </div>
-              ) : (
-                t("serverStats.refreshStatus")
+        {!totpRequired && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="min-w-0">
+                <h1 className="font-bold text-lg truncate">
+                  {currentHostConfig?.folder} / {title}
+                </h1>
+              </div>
+              {statusCheckEnabled && (
+                <Status
+                  status={serverStatus}
+                  className="!bg-transparent !p-0.75 flex-shrink-0"
+                >
+                  <StatusIndicator />
+                </Status>
               )}
-            </Button>
-            {currentHostConfig?.enableFileManager && (
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
+                disabled={isRefreshing}
                 className="font-semibold"
-                disabled={isFileManagerAlreadyOpen}
-                title={
-                  isFileManagerAlreadyOpen
-                    ? t("serverStats.fileManagerAlreadyOpen")
-                    : t("serverStats.openFileManager")
-                }
-                onClick={() => {
-                  if (!currentHostConfig || isFileManagerAlreadyOpen) return;
-                  const titleBase =
-                    currentHostConfig?.name &&
-                    currentHostConfig.name.trim() !== ""
-                      ? currentHostConfig.name.trim()
-                      : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                  addTab({
-                    type: "file_manager",
-                    title: titleBase,
-                    hostConfig: currentHostConfig,
-                  });
+                onClick={async () => {
+                  if (currentHostConfig?.id) {
+                    try {
+                      setIsRefreshing(true);
+                      const res = await getServerStatusById(
+                        currentHostConfig.id,
+                      );
+                      setServerStatus(
+                        res?.status === "online" ? "online" : "offline",
+                      );
+                      const data = await getServerMetricsById(
+                        currentHostConfig.id,
+                      );
+                      setMetrics(data);
+                      setShowStatsUI(true);
+                    } catch (error: unknown) {
+                      const err = error as {
+                        code?: string;
+                        status?: number;
+                        response?: {
+                          status?: number;
+                          data?: { error?: string };
+                        };
+                      };
+                      if (
+                        err?.code === "TOTP_REQUIRED" ||
+                        (err?.response?.status === 403 &&
+                          err?.response?.data?.error === "TOTP_REQUIRED")
+                      ) {
+                        toast.error(t("serverStats.totpUnavailable"));
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        err?.response?.status === 503 ||
+                        err?.status === 503
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        err?.response?.status === 504 ||
+                        err?.status === 504
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else if (
+                        err?.response?.status === 404 ||
+                        err?.status === 404
+                      ) {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      } else {
+                        setServerStatus("offline");
+                        setMetrics(null);
+                        setShowStatsUI(false);
+                      }
+                    } finally {
+                      setIsRefreshing(false);
+                    }
+                  }
                 }}
+                title={t("serverStats.refreshStatusAndMetrics")}
               >
-                {t("nav.fileManager")}
+                {isRefreshing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-foreground-secondary border-t-transparent rounded-full animate-spin"></div>
+                    {t("serverStats.refreshing")}
+                  </div>
+                ) : (
+                  t("serverStats.refreshStatus")
+                )}
               </Button>
-            )}
+              {currentHostConfig?.enableFileManager && (
+                <Button
+                  variant="outline"
+                  className="font-semibold"
+                  disabled={isFileManagerAlreadyOpen}
+                  title={
+                    isFileManagerAlreadyOpen
+                      ? t("serverStats.fileManagerAlreadyOpen")
+                      : t("serverStats.openFileManager")
+                  }
+                  onClick={() => {
+                    if (!currentHostConfig || isFileManagerAlreadyOpen) return;
+                    const titleBase =
+                      currentHostConfig?.name &&
+                      currentHostConfig.name.trim() !== ""
+                        ? currentHostConfig.name.trim()
+                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
+                    addTab({
+                      type: "file_manager",
+                      title: titleBase,
+                      hostConfig: currentHostConfig,
+                    });
+                  }}
+                >
+                  {t("nav.fileManager")}
+                </Button>
+              )}
 
-            {currentHostConfig?.enableDocker && (
-              <Button
-                variant="outline"
-                className="font-semibold"
-                onClick={() => {
-                  const titleBase =
-                    currentHostConfig?.name &&
-                    currentHostConfig.name.trim() !== ""
-                      ? currentHostConfig.name.trim()
-                      : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                  addTab({
-                    type: "docker",
-                    title: titleBase,
-                    hostConfig: currentHostConfig,
-                  });
-                }}
-              >
-                {t("nav.docker")}
-              </Button>
-            )}
+              {currentHostConfig?.enableDocker && (
+                <Button
+                  variant="outline"
+                  className="font-semibold"
+                  onClick={() => {
+                    const titleBase =
+                      currentHostConfig?.name &&
+                      currentHostConfig.name.trim() !== ""
+                        ? currentHostConfig.name.trim()
+                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
+                    addTab({
+                      type: "docker",
+                      title: titleBase,
+                      hostConfig: currentHostConfig,
+                    });
+                  }}
+                >
+                  {t("nav.docker")}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-        <Separator className="p-0.25 w-full" />
+        )}
+        {!totpRequired && <Separator className="p-0.25 w-full" />}
 
-        <div className="flex-1 overflow-y-auto min-h-0 thin-scrollbar">
+        <div className="flex-1 overflow-y-auto min-h-0 thin-scrollbar relative">
           {(metricsEnabled && showStatsUI) ||
           (currentHostConfig?.quickActions &&
             currentHostConfig.quickActions.length > 0) ? (
-            <div className="border-edge m-1 p-2 overflow-y-auto thin-scrollbar relative flex-1 flex flex-col">
+            <div className="border-edge m-1 p-2 overflow-y-auto thin-scrollbar flex-1 flex flex-col">
               {currentHostConfig?.quickActions &&
                 currentHostConfig.quickActions.length > 0 && (
                   <div className={metricsEnabled && showStatsUI ? "mb-4" : ""}>
@@ -681,6 +774,7 @@ export function ServerStats({
                 )}
               {metricsEnabled &&
                 showStatsUI &&
+                !isLoadingMetrics &&
                 (!metrics && serverStatus === "offline" ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="text-center">
@@ -695,7 +789,7 @@ export function ServerStats({
                       </p>
                     </div>
                   </div>
-                ) : (
+                ) : metrics ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {enabledWidgets.map((widgetType) => (
                       <div key={widgetType} className="h-[280px]">
@@ -703,28 +797,26 @@ export function ServerStats({
                       </div>
                     ))}
                   </div>
-                ))}
-
-              {metricsEnabled && showStatsUI && (
-                <SimpleLoader
-                  visible={isLoadingMetrics && !metrics}
-                  message={t("serverStats.loadingMetrics")}
-                />
-              )}
+                ) : null)}
             </div>
           ) : null}
+
+          {metricsEnabled && (
+            <SimpleLoader
+              visible={isLoadingMetrics && !metrics}
+              message={t("serverStats.connecting")}
+            />
+          )}
         </div>
       </div>
 
-      {totpRequired && (
-        <TOTPDialog
-          isOpen={totpRequired}
-          prompt={totpPrompt}
-          onSubmit={handleTOTPSubmit}
-          onCancel={handleTOTPCancel}
-          backgroundColor="var(--bg-canvas)"
-        />
-      )}
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTOTPSubmit}
+        onCancel={handleTOTPCancel}
+        backgroundColor="var(--bg-canvas)"
+      />
     </div>
   );
 }

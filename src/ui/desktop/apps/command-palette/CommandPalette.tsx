@@ -223,7 +223,7 @@ export function CommandPalette({
     const title = host.name?.trim()
       ? host.name
       : `${host.username}@${host.ip}:${host.port}`;
-    addTab({ type: "server", title, hostConfig: host });
+    addTab({ type: "server_stats", title, hostConfig: host });
     setIsOpen(false);
   };
 
