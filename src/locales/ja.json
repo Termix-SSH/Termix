@@ -2390,5 +2390,8 @@
     "consoleTab": "ライトモードに切り替える",
     "startContainerToAccess": "ダークモードに切り替える"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "ライトに切り替える",
+    "switchToDark": "ダークに切り替える"
+  }
 }

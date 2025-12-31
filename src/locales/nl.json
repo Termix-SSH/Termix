@@ -2384,7 +2384,14 @@
     "clickToConnect": "Console",
     "connectingTo": "Start de container om toegang te krijgen tot de console",
     "containerNotFound": "Schakelen naar Licht",
-    "backToList": "Schakelen naar Donker"
+    "backToList": "Schakelen naar Donker",
+    "logs": "Logboeken",
+    "stats": "Statistieken",
+    "consoleTab": "Console",
+    "startContainerToAccess": "Start de container om toegang te krijgen tot de console"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Schakelen naar Licht",
+    "switchToDark": "Schakelen naar Donker"
+  }
 }

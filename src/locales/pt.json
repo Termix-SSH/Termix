@@ -2383,7 +2383,15 @@
     "notConnected": "Console",
     "clickToConnect": "Inicie o contêiner para acessar o console",
     "connectingTo": "Alternar para o modo claro",
-    "containerNotFound": "Alternar para o modo escuro"
+    "containerNotFound": "Alternar para o modo escuro",
+    "backToList": "Voltar à lista",
+    "logs": "Registros",
+    "stats": "Estatísticas",
+    "consoleTab": "Console",
+    "startContainerToAccess": "Inicie o contêiner para acessar o console"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Alternar para o modo claro",
+    "switchToDark": "Alternar para o modo escuro"
+  }
 }

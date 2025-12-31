@@ -2386,7 +2386,12 @@
     "containerNotFound": "Konsol",
     "backToList": "Starta containern för att komma åt konsolen",
     "logs": "Växla till ljus",
-    "stats": "Växla till mörk"
+    "stats": "Växla till mörk",
+    "consoleTab": "Konsol",
+    "startContainerToAccess": "Starta containern för att komma åt konsolen"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Växla till ljus",
+    "switchToDark": "Växla till mörk"
+  }
 }

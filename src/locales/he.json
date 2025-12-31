@@ -2383,7 +2383,15 @@
     "notConnected": "קונסולה",
     "clickToConnect": "הפעל את המכולה כדי לגשת למסוף",
     "connectingTo": "עבור לבהיר",
-    "containerNotFound": "עבור לכהה"
+    "containerNotFound": "עבור לכהה",
+    "backToList": "חזרה לרשימה",
+    "logs": "יומנים",
+    "stats": "סטטיסטיקות",
+    "consoleTab": "קונסולה",
+    "startContainerToAccess": "הפעל את המכולה כדי לגשת לקונסולה"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "עבור לבהיר",
+    "switchToDark": "עבור לכהה"
+  }
 }

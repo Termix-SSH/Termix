@@ -2363,7 +2363,35 @@
     "id": "Consola",
     "state": "Inicie el contenedor para acceder a la consola",
     "disconnectedFromContainer": "Cambiar a Claro",
-    "containerMustBeRunning": "Cambiar a Oscuro"
+    "containerMustBeRunning": "Cambiar a Oscuro",
+    "authenticationRequired": "Se requiere autenticación",
+    "verificationCodePrompt": "Introduzca el código de verificación",
+    "totpVerificationFailed": "Error en la verificación TOTP. Vuelva a intentarlo.",
+    "connectedTo": "Conectado a {{containerName}}",
+    "disconnected": "Desconectado",
+    "consoleError": "Error de consola",
+    "errorMessage": "Error: {{message}}",
+    "failedToConnect": "Error al conectar al contenedor",
+    "console": "Consola",
+    "selectShell": "Seleccionar shell",
+    "bash": "Bash",
+    "sh": "sh",
+    "ash": "ash",
+    "connecting": "Conectando...",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "notConnected": "No conectado",
+    "clickToConnect": "Haga clic en \"Conectar\" para iniciar una sesión de shell",
+    "connectingTo": "Conectando a {{containerName}}...",
+    "containerNotFound": "Contenedor no encontrado",
+    "backToList": "Volver a la lista",
+    "logs": "Registros",
+    "stats": "Estadísticas",
+    "consoleTab": "Consola",
+    "startContainerToAccess": "Inicie el contenedor para acceder a la consola"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Cambiar a claro",
+    "switchToDark": "Cambiar a oscuro"
+  }
 }

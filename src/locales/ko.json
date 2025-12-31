@@ -2384,7 +2384,14 @@
     "clickToConnect": "콘솔",
     "connectingTo": "콘솔에 액세스하려면 컨테이너를 시작하세요",
     "containerNotFound": "라이트 모드로 전환",
-    "backToList": "다크 모드로 전환"
+    "backToList": "다크 모드로 전환",
+    "logs": "로그",
+    "stats": "통계",
+    "consoleTab": "콘솔",
+    "startContainerToAccess": "콘솔에 액세스하려면 컨테이너를 시작하세요"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "밝은 모드로 전환",
+    "switchToDark": "어두운 모드로 전환"
+  }
 }

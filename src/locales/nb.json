@@ -2387,7 +2387,11 @@
     "backToList": "Konsoll",
     "logs": "Start containeren for å få tilgang til konsollen",
     "stats": "Bytt til lys",
-    "consoleTab": "Bytt til mørk"
+    "consoleTab": "Bytt til mørk",
+    "startContainerToAccess": "Start containeren for å få tilgang til konsollen"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Bytt til lys",
+    "switchToDark": "Bytt til mørk"
+  }
 }

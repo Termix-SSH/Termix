@@ -2367,7 +2367,31 @@
     "authenticationRequired": "Konsol",
     "verificationCodePrompt": "Mulai kontainer untuk mengakses konsol",
     "totpVerificationFailed": "Beralih ke Terang",
-    "connectedTo": "Beralih ke Gelap"
+    "connectedTo": "Beralih ke Gelap",
+    "disconnected": "Terputus",
+    "consoleError": "Kesalahan konsol",
+    "errorMessage": "Kesalahan: {{message}}",
+    "failedToConnect": "Gagal terhubung ke kontainer",
+    "console": "Konsol",
+    "selectShell": "Pilih shell",
+    "bash": "Bash",
+    "sh": "sh",
+    "ash": "ash",
+    "connecting": "Menghubungkan...",
+    "connect": "Terhubung",
+    "disconnect": "Putuskan koneksi",
+    "notConnected": "Tidak terhubung",
+    "clickToConnect": "Klik sambungkan untuk memulai sesi shell",
+    "connectingTo": "Menghubungkan ke {{containerName}}...",
+    "containerNotFound": "Kontainer tidak ditemukan",
+    "backToList": "Kembali ke Daftar",
+    "logs": "Log",
+    "stats": "Statistik",
+    "consoleTab": "Konsol",
+    "startContainerToAccess": "Mulai kontainer untuk mengakses konsol"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Beralih ke Terang",
+    "switchToDark": "Beralih ke Gelap"
+  }
 }

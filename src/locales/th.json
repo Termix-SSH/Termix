@@ -2384,7 +2384,14 @@
     "clickToConnect": "คอนโซล",
     "connectingTo": "เริ่มคอนเทนเนอร์เพื่อเข้าถึงคอนโซล",
     "containerNotFound": "เปลี่ยนเป็นโหมดสว่าง",
-    "backToList": "เปลี่ยนเป็นโหมดมืด"
+    "backToList": "เปลี่ยนเป็นโหมดมืด",
+    "logs": "บันทึก",
+    "stats": "สถิติ",
+    "consoleTab": "คอนโซล",
+    "startContainerToAccess": "เริ่มคอนเทนเนอร์เพื่อเข้าถึงคอนโซล"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "สลับเป็นโหมดสว่าง",
+    "switchToDark": "สลับเป็นโหมดมืด"
+  }
 }

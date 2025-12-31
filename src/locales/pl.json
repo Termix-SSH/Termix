@@ -2377,7 +2377,21 @@
     "bash": "Konsola",
     "sh": "Uruchom kontener, aby uzyskać dostęp do konsoli",
     "ash": "Przełącz na Jasny",
-    "connecting": "Przełącz na Ciemny"
+    "connecting": "Przełącz na Ciemny",
+    "connect": "Połącz",
+    "disconnect": "Rozłącz",
+    "notConnected": "Nie połączono",
+    "clickToConnect": "Kliknij Połącz, aby rozpocząć sesję powłoki",
+    "connectingTo": "Łączenie z {{containerName}}...",
+    "containerNotFound": "Nie znaleziono kontenera",
+    "backToList": "Powrót do listy",
+    "logs": "Logi",
+    "stats": "Statystyki",
+    "consoleTab": "Konsola",
+    "startContainerToAccess": "Uruchom kontener, aby uzyskać dostęp do konsoli"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Przełącz na Jasny",
+    "switchToDark": "Przełącz na Ciemny"
+  }
 }

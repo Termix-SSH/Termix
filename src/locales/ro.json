@@ -2386,7 +2386,12 @@
     "containerNotFound": "Consolă",
     "backToList": "Porniți containerul pentru a accesa consola",
     "logs": "Comutați la Luminos",
-    "stats": "Comutați la Întunecat"
+    "stats": "Comutați la Întunecat",
+    "consoleTab": "Consolă",
+    "startContainerToAccess": "Porniți containerul pentru a accesa consola"
   },
-  "theme": {}
+  "theme": {
+    "switchToLight": "Comutați la Luminos",
+    "switchToDark": "Comutați la Întunecat"
+  }
 }
