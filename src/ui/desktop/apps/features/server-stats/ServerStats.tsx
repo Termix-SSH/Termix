@@ -102,6 +102,9 @@ export function ServerStats({
   const [totpPrompt, setTotpPrompt] = React.useState<string>("");
   const [isPageVisible, setIsPageVisible] = React.useState(!document.hidden);
   const [totpVerified, setTotpVerified] = React.useState(false);
+  const [viewerSessionId, setViewerSessionId] = React.useState<string | null>(
+    null,
+  );
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
@@ -136,6 +139,21 @@ export function ServerStats({
   }, []);
 
   const isActuallyVisible = isVisible && isPageVisible;
+
+  React.useEffect(() => {
+    if (!viewerSessionId || !isActuallyVisible) return;
+
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const { sendMetricsHeartbeat } = await import("@/ui/main-axios.ts");
+        await sendMetricsHeartbeat(viewerSessionId);
+      } catch (error) {
+        console.error("Failed to send heartbeat:", error);
+      }
+    }, 30000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [viewerSessionId, isActuallyVisible]);
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
@@ -182,6 +200,9 @@ export function ServerStats({
         setTotpSessionId(null);
         setShowStatsUI(true);
         setTotpVerified(true);
+        if (result.viewerSessionId) {
+          setViewerSessionId(result.viewerSessionId);
+        }
       } else {
         toast.error(t("serverStats.totpFailed"));
       }
@@ -383,6 +404,10 @@ export function ServerStats({
             setIsLoadingMetrics(false);
             return;
           }
+
+          if (result.viewerSessionId) {
+            setViewerSessionId(result.viewerSessionId);
+          }
         }
 
         let retryCount = 0;
@@ -453,7 +478,10 @@ export function ServerStats({
       }
       if (currentHostConfig?.id) {
         try {
-          await stopMetricsPolling(currentHostConfig.id);
+          await stopMetricsPolling(
+            currentHostConfig.id,
+            viewerSessionId || undefined,
+          );
         } catch (error) {
           console.error("Failed to stop metrics polling:", error);
         }

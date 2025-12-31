@@ -32,16 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip.tsx";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog.tsx";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
 
 interface ContainerCardProps {
   container: DockerContainer;
@@ -59,12 +50,12 @@ export function ContainerCard({
   onRefresh,
 }: ContainerCardProps): React.ReactElement {
   const { t } = useTranslation();
+  const { confirmWithToast } = useConfirmation();
   const [isStarting, setIsStarting] = React.useState(false);
   const [isStopping, setIsStopping] = React.useState(false);
   const [isRestarting, setIsRestarting] = React.useState(false);
   const [isPausing, setIsPausing] = React.useState(false);
   const [isRemoving, setIsRemoving] = React.useState(false);
-  const [showRemoveDialog, setShowRemoveDialog] = React.useState(false);
 
   const statusColors = {
     running: {
@@ -191,23 +182,42 @@ export function ContainerCard({
     }
   };
 
-  const handleRemove = async () => {
-    setIsRemoving(true);
-    try {
-      const force = container.state === "running";
-      await removeDockerContainer(sessionId, container.id, force);
-      toast.success(t("docker.containerRemoved", { name: container.name }));
-      setShowRemoveDialog(false);
-      onRefresh?.();
-    } catch (error) {
-      toast.error(
-        t("docker.failedToRemoveContainer", {
-          error: error instanceof Error ? error.message : "Unknown error",
-        }),
-      );
-    } finally {
-      setIsRemoving(false);
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const containerName = container.name.startsWith("/")
+      ? container.name.slice(1)
+      : container.name;
+
+    let confirmMessage = t("docker.confirmRemoveContainer", {
+      name: containerName,
+    });
+
+    if (container.state === "running") {
+      confirmMessage += " " + t("docker.runningContainerWarning");
     }
+
+    confirmWithToast(
+      confirmMessage,
+      async () => {
+        setIsRemoving(true);
+        try {
+          const force = container.state === "running";
+          await removeDockerContainer(sessionId, container.id, force);
+          toast.success(t("docker.containerRemoved", { name: containerName }));
+          onRefresh?.();
+        } catch (error) {
+          toast.error(
+            t("docker.failedToRemoveContainer", {
+              error: error instanceof Error ? error.message : "Unknown error",
+            }),
+          );
+        } finally {
+          setIsRemoving(false);
+        }
+      },
+      t("common.remove"),
+      t("common.cancel"),
+    );
   };
 
   const isLoading =
@@ -405,56 +415,18 @@ export function ContainerCard({
                     size="sm"
                     variant="outline"
                     className="h-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowRemoveDialog(true);
-                    }}
+                    onClick={handleRemove}
                     disabled={isLoading}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t("docker.remove")}</TooltipContent>{" "}
+                <TooltipContent>{t("docker.remove")}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         </CardContent>
       </Card>
-
-      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("docker.removeContainer")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("docker.confirmRemoveContainer", {
-                name: container.name.startsWith("/")
-                  ? container.name.slice(1)
-                  : container.name,
-              })}
-              {container.state === "running" && (
-                <div className="mt-2 text-yellow-400">
-                  {t("docker.runningContainerWarning")}
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>
-              {t("common.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleRemove();
-              }}
-              disabled={isRemoving}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isRemoving ? t("docker.removing") : t("common.remove")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

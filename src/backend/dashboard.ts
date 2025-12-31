@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { getDb } from "./database/db/index.js";
-import { recentActivity, sshData } from "./database/db/schema.js";
-import { eq, and, desc } from "drizzle-orm";
+import { recentActivity, sshData, hostAccess } from "./database/db/schema.js";
+import { eq, and, desc, or } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -164,7 +164,7 @@ app.post("/activity/log", async (req, res) => {
       entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
     }
 
-    const hosts = await SimpleDBOps.select(
+    const ownedHosts = await SimpleDBOps.select(
       getDb()
         .select()
         .from(sshData)
@@ -173,8 +173,19 @@ app.post("/activity/log", async (req, res) => {
       userId,
     );
 
-    if (hosts.length === 0) {
-      return res.status(404).json({ error: "Host not found" });
+    if (ownedHosts.length === 0) {
+      const sharedHosts = await getDb()
+        .select()
+        .from(hostAccess)
+        .where(
+          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
+        );
+
+      if (sharedHosts.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Host not found or access denied" });
+      }
     }
 
     const result = (await SimpleDBOps.insert(

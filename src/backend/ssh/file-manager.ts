@@ -1440,7 +1440,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "utf8");
+            fileBuffer = Buffer.from(content, "base64");
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {
@@ -1649,7 +1649,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "utf8");
+            fileBuffer = Buffer.from(content, "base64");
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {

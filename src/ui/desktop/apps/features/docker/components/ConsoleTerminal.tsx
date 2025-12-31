@@ -43,34 +43,6 @@ export function ConsoleTerminal({
   const fitAddonRef = React.useRef<FitAddon | null>(null);
   const pingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const getWebSocketBaseUrl = React.useCallback(() => {
-    const isElectronApp = isElectron();
-
-    const isDev =
-      !isElectronApp &&
-      process.env.NODE_ENV === "development" &&
-      (window.location.port === "3000" ||
-        window.location.port === "5173" ||
-        window.location.port === "");
-
-    if (isDev) {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      return `${protocol}//localhost:30008`;
-    }
-
-    if (isElectronApp) {
-      const baseUrl =
-        (window as { configuredServerUrl?: string }).configuredServerUrl ||
-        "http://127.0.0.1:30001";
-      const wsProtocol = baseUrl.startsWith("https://") ? "wss://" : "ws://";
-      const wsHost = baseUrl.replace(/^https?:\/\//, "");
-      return `${wsProtocol}${wsHost}/docker/console/`;
-    }
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}/docker/console/`;
-  }, []);
-
   React.useEffect(() => {
     if (!terminal) return;
 
@@ -175,7 +147,31 @@ export function ConsoleTerminal({
         fitAddonRef.current.fit();
       }
 
-      const wsUrl = `${getWebSocketBaseUrl()}?token=${encodeURIComponent(token)}`;
+      const isElectronApp = isElectron();
+
+      const isDev =
+        !isElectronApp &&
+        process.env.NODE_ENV === "development" &&
+        (window.location.port === "3000" ||
+          window.location.port === "5173" ||
+          window.location.port === "");
+
+      const baseWsUrl = isDev
+        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30008`
+        : isElectronApp
+          ? (() => {
+              const baseUrl =
+                (window as { configuredServerUrl?: string })
+                  .configuredServerUrl || "http://127.0.0.1:30001";
+              const wsProtocol = baseUrl.startsWith("https://")
+                ? "wss://"
+                : "ws://";
+              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              return `${wsProtocol}${wsHost}/docker/console/`;
+            })()
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/docker/console/`;
+
+      const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {

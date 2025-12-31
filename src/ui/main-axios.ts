@@ -1983,6 +1983,7 @@ export async function startMetricsPolling(hostId: number): Promise<{
   requires_totp?: boolean;
   sessionId?: string;
   prompt?: string;
+  viewerSessionId?: string;
 }> {
   try {
     const response = await statsApi.post(`/metrics/start/${hostId}`);
@@ -1993,11 +1994,54 @@ export async function startMetricsPolling(hostId: number): Promise<{
   }
 }
 
-export async function stopMetricsPolling(hostId: number): Promise<void> {
+export async function stopMetricsPolling(
+  hostId: number,
+  viewerSessionId?: string,
+): Promise<void> {
   try {
-    await statsApi.post(`/metrics/stop/${hostId}`);
+    await statsApi.post(`/metrics/stop/${hostId}`, { viewerSessionId });
   } catch (error) {
     handleApiError(error, "stop metrics polling");
+    throw error;
+  }
+}
+
+export async function sendMetricsHeartbeat(
+  viewerSessionId: string,
+): Promise<void> {
+  try {
+    await statsApi.post("/metrics/heartbeat", { viewerSessionId });
+  } catch (error) {
+    handleApiError(error, "send metrics heartbeat");
+    throw error;
+  }
+}
+
+export async function registerMetricsViewer(
+  hostId: number,
+): Promise<{ success: boolean; viewerSessionId: string }> {
+  try {
+    const response = await statsApi.post("/metrics/register-viewer", {
+      hostId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "register metrics viewer");
+    throw error;
+  }
+}
+
+export async function unregisterMetricsViewer(
+  hostId: number,
+  viewerSessionId: string,
+): Promise<void> {
+  try {
+    await statsApi.post("/metrics/unregister-viewer", {
+      hostId,
+      viewerSessionId,
+    });
+  } catch (error) {
+    handleApiError(error, "unregister metrics viewer");
     throw error;
   }
 }
@@ -2007,6 +2051,7 @@ export async function submitMetricsTOTP(
   totpCode: string,
 ): Promise<{
   success: boolean;
+  viewerSessionId?: string;
 }> {
   try {
     const response = await statsApi.post("/metrics/connect-totp", {

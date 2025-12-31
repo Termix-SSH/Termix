@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { statsLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import { PermissionManager } from "../utils/permission-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
 import { collectCpuMetrics } from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
@@ -216,6 +217,13 @@ interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
+}
+
+interface MetricsViewer {
+  sessionId: string;
+  userId: string;
+  hostId: number;
+  lastHeartbeat: number;
 }
 
 const metricsSessions: Record<string, MetricsSession> = {};
@@ -868,6 +876,7 @@ const metricsCache = new MetricsCache();
 const authFailureTracker = new AuthFailureTracker();
 const pollingBackoff = new PollingBackoff();
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 
 type HostStatus = "online" | "offline";
 
@@ -931,6 +940,7 @@ interface HostPollingConfig {
   statsConfig: StatsConfig;
   statusTimer?: NodeJS.Timeout;
   metricsTimer?: NodeJS.Timeout;
+  viewerUserId?: string;
 }
 
 class PollingManager {
@@ -943,6 +953,15 @@ class PollingManager {
       timestamp: number;
     }
   >();
+  private activeViewers = new Map<number, Set<string>>();
+  private viewerDetails = new Map<string, MetricsViewer>();
+  private viewerCleanupInterval: NodeJS.Timeout;
+
+  constructor() {
+    this.viewerCleanupInterval = setInterval(() => {
+      this.cleanupInactiveViewers();
+    }, 60000);
+  }
 
   parseStatsConfig(statsConfigStr?: string | StatsConfig): StatsConfig {
     if (!statsConfigStr) {
@@ -981,10 +1000,11 @@ class PollingManager {
 
   async startPollingForHost(
     host: SSHHostWithCredentials,
-    options?: { statusOnly?: boolean },
+    options?: { statusOnly?: boolean; viewerUserId?: string },
   ): Promise<void> {
     const statsConfig = this.parseStatsConfig(host.statsConfig);
     const statusOnly = options?.statusOnly ?? false;
+    const viewerUserId = options?.viewerUserId;
 
     const existingConfig = this.pollingConfigs.get(host.id);
 
@@ -1009,17 +1029,18 @@ class PollingManager {
     const config: HostPollingConfig = {
       host,
       statsConfig,
+      viewerUserId,
     };
 
     if (statsConfig.statusCheckEnabled) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
-      this.pollHostStatus(host);
+      this.pollHostStatus(host, viewerUserId);
 
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && latestConfig.statsConfig.statusCheckEnabled) {
-          this.pollHostStatus(latestConfig.host);
+          this.pollHostStatus(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
     } else {
@@ -1029,12 +1050,12 @@ class PollingManager {
     if (!statusOnly && statsConfig.metricsEnabled) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
-      await this.pollHostMetrics(host);
+      await this.pollHostMetrics(host, viewerUserId);
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
-          this.pollHostMetrics(latestConfig.host);
+          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
     } else {
@@ -1044,13 +1065,13 @@ class PollingManager {
     this.pollingConfigs.set(host.id, config);
   }
 
-  private async pollHostStatus(host: SSHHostWithCredentials): Promise<void> {
-    const refreshedHost = await fetchHostById(host.id, host.userId);
+  private async pollHostStatus(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): Promise<void> {
+    const userId = viewerUserId || host.userId;
+    const refreshedHost = await fetchHostById(host.id, userId);
     if (!refreshedHost) {
-      statsLogger.warn("Host not found during status polling", {
-        operation: "poll_host_status",
-        hostId: host.id,
-      });
       return;
     }
 
@@ -1074,13 +1095,13 @@ class PollingManager {
     }
   }
 
-  private async pollHostMetrics(host: SSHHostWithCredentials): Promise<void> {
-    const refreshedHost = await fetchHostById(host.id, host.userId);
+  private async pollHostMetrics(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): Promise<void> {
+    const userId = viewerUserId || host.userId;
+    const refreshedHost = await fetchHostById(host.id, userId);
     if (!refreshedHost) {
-      statsLogger.warn("Host not found during metrics polling", {
-        operation: "poll_host_metrics",
-        hostId: host.id,
-      });
       return;
     }
 
@@ -1194,7 +1215,87 @@ class PollingManager {
     }
   }
 
+  registerViewer(hostId: number, sessionId: string, userId: string): void {
+    if (!this.activeViewers.has(hostId)) {
+      this.activeViewers.set(hostId, new Set());
+    }
+    this.activeViewers.get(hostId)!.add(sessionId);
+
+    this.viewerDetails.set(sessionId, {
+      sessionId,
+      userId,
+      hostId,
+      lastHeartbeat: Date.now(),
+    });
+
+    if (this.activeViewers.get(hostId)!.size === 1) {
+      this.startMetricsForHost(hostId, userId);
+    }
+  }
+
+  updateHeartbeat(sessionId: string): boolean {
+    const viewer = this.viewerDetails.get(sessionId);
+    if (viewer) {
+      viewer.lastHeartbeat = Date.now();
+      return true;
+    }
+    return false;
+  }
+
+  unregisterViewer(hostId: number, sessionId: string): void {
+    const viewers = this.activeViewers.get(hostId);
+    if (viewers) {
+      viewers.delete(sessionId);
+
+      if (viewers.size === 0) {
+        this.activeViewers.delete(hostId);
+        this.stopMetricsForHost(hostId);
+      }
+    }
+    this.viewerDetails.delete(sessionId);
+  }
+
+  private async startMetricsForHost(
+    hostId: number,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const host = await fetchHostById(hostId, userId);
+      if (host) {
+        await this.startPollingForHost(host, { viewerUserId: userId });
+      }
+    } catch (error) {
+      statsLogger.error("Failed to start metrics polling", {
+        operation: "start_metrics_error",
+        hostId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private stopMetricsForHost(hostId: number): void {
+    this.stopMetricsOnly(hostId);
+  }
+
+  private cleanupInactiveViewers(): void {
+    const now = Date.now();
+    const maxInactivity = 120000;
+
+    for (const [sessionId, viewer] of this.viewerDetails.entries()) {
+      if (now - viewer.lastHeartbeat > maxInactivity) {
+        statsLogger.warn("Cleaning up inactive viewer", {
+          operation: "cleanup_inactive_viewer",
+          sessionId,
+          hostId: viewer.hostId,
+          inactiveFor: Math.floor((now - viewer.lastHeartbeat) / 1000),
+        });
+        this.unregisterViewer(viewer.hostId, sessionId);
+      }
+    }
+  }
+
   destroy(): void {
+    clearInterval(this.viewerCleanupInterval);
     for (const hostId of this.pollingConfigs.keys()) {
       this.stopPollingForHost(hostId);
     }
@@ -1297,11 +1398,23 @@ async function fetchHostById(
       return undefined;
     }
 
+    const accessInfo = await permissionManager.canAccessHost(
+      userId,
+      id,
+      "read",
+    );
+
+    if (!accessInfo.hasAccess) {
+      statsLogger.warn(`User ${userId} cannot access host ${id}`, {
+        operation: "fetch_host_access_denied",
+        userId,
+        hostId: id,
+      });
+      return undefined;
+    }
+
     const hosts = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, id), eq(sshData.userId, userId))),
+      getDb().select().from(sshData).where(eq(sshData.id, id)),
       "ssh_data",
       userId,
     );
@@ -1362,41 +1475,72 @@ async function resolveHostCredentials(
 
     if (host.credentialId) {
       try {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, host.credentialId as number),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
-          userId,
-        );
+        const ownerId = host.userId;
+        const isSharedHost = userId !== ownerId;
 
-        if (credentials.length > 0) {
-          const credential = credentials[0];
-          baseHost.credentialId = credential.id;
-          baseHost.username = credential.username;
-          baseHost.authType = credential.auth_type || credential.authType;
+        if (isSharedHost) {
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            host.id as number,
+            userId,
+          );
 
-          if (credential.password) {
-            baseHost.password = credential.password;
+          baseHost.credentialId = host.credentialId;
+          baseHost.authType = sharedCred.authType;
+
+          if (!host.overrideCredentialUsername) {
+            baseHost.username = sharedCred.username;
           }
-          if (credential.key) {
-            baseHost.key = credential.key;
+
+          if (sharedCred.password) {
+            baseHost.password = sharedCred.password;
           }
-          if (credential.key_password || credential.keyPassword) {
-            baseHost.keyPassword =
-              credential.key_password || credential.keyPassword;
+          if (sharedCred.key) {
+            baseHost.key = sharedCred.key;
           }
-          if (credential.key_type || credential.keyType) {
-            baseHost.keyType = credential.key_type || credential.keyType;
+          if (sharedCred.keyPassword) {
+            baseHost.keyPassword = sharedCred.keyPassword;
+          }
+          if (sharedCred.keyType) {
+            baseHost.keyType = sharedCred.keyType;
           }
         } else {
-          addLegacyCredentials(baseHost, host);
+          const credentials = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshCredentials)
+              .where(eq(sshCredentials.id, host.credentialId as number)),
+            "ssh_credentials",
+            userId,
+          );
+
+          if (credentials.length > 0) {
+            const credential = credentials[0];
+            baseHost.credentialId = credential.id;
+            baseHost.authType = credential.auth_type || credential.authType;
+
+            if (!host.overrideCredentialUsername) {
+              baseHost.username = credential.username;
+            }
+
+            if (credential.password) {
+              baseHost.password = credential.password;
+            }
+            if (credential.key) {
+              baseHost.key = credential.key;
+            }
+            if (credential.key_password || credential.keyPassword) {
+              baseHost.keyPassword =
+                credential.key_password || credential.keyPassword;
+            }
+            if (credential.key_type || credential.keyType) {
+              baseHost.keyType = credential.key_type || credential.keyType;
+            }
+          } else {
+            addLegacyCredentials(baseHost, host);
+          }
         }
       } catch (error) {
         statsLogger.warn(
@@ -1928,6 +2072,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       requires_totp?: boolean;
       sessionId?: string;
       prompt?: string;
+      viewerSessionId?: string;
     }>((resolve, reject) => {
       let isResolved = false;
 
@@ -2006,15 +2151,10 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
           };
           scheduleMetricsSessionCleanup(sessionKey);
 
-          pollingManager.startPollingForHost(host).catch((error) => {
-            statsLogger.error("Failed to start polling after connection", {
-              operation: "start_polling_error",
-              hostId: host.id,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          });
+          const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          pollingManager.registerViewer(host.id, viewerSessionId, userId);
 
-          resolve({ success: true });
+          resolve({ success: true, viewerSessionId });
         }
       });
 
@@ -2082,6 +2222,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
+  const { viewerSessionId } = req.body;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
     return res.status(401).json({
@@ -2098,7 +2239,11 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
       cleanupMetricsSession(sessionKey);
     }
 
-    pollingManager.stopMetricsOnly(id);
+    if (viewerSessionId && typeof viewerSessionId === "string") {
+      pollingManager.unregisterViewer(id, viewerSessionId);
+    } else {
+      pollingManager.stopMetricsOnly(id);
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -2225,18 +2370,10 @@ app.post("/metrics/connect-totp", async (req, res) => {
 
     delete pendingTOTPSessions[sessionId];
 
-    const host = await fetchHostById(session.hostId, userId);
-    if (host) {
-      pollingManager.startPollingForHost(host).catch((error) => {
-        statsLogger.error("Failed to start polling after TOTP", {
-          operation: "totp_polling_start_error",
-          hostId: session.hostId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    }
+    const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    pollingManager.registerViewer(session.hostId, viewerSessionId, userId);
 
-    res.json({ success: true });
+    res.json({ success: true, viewerSessionId });
   } catch (error) {
     statsLogger.error("TOTP verification failed", {
       operation: "totp_verification_failed",
@@ -2256,6 +2393,101 @@ app.post("/metrics/connect-totp", async (req, res) => {
       error: "TOTP verification failed",
       attemptsRemaining: Math.max(0, 3 - session.totpAttempts),
     });
+  }
+});
+
+app.post("/metrics/heartbeat", async (req, res) => {
+  const { viewerSessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!viewerSessionId || typeof viewerSessionId !== "string") {
+    return res.status(400).json({ error: "Invalid viewerSessionId" });
+  }
+
+  try {
+    const success = pollingManager.updateHeartbeat(viewerSessionId);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Viewer session not found" });
+    }
+  } catch (error) {
+    statsLogger.error("Failed to update heartbeat", {
+      operation: "heartbeat_error",
+      viewerSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to update heartbeat" });
+  }
+});
+
+app.post("/metrics/register-viewer", async (req, res) => {
+  const { hostId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!hostId || typeof hostId !== "number") {
+    return res.status(400).json({ error: "Invalid hostId" });
+  }
+
+  try {
+    const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    pollingManager.registerViewer(hostId, viewerSessionId, userId);
+    res.json({ success: true, viewerSessionId });
+  } catch (error) {
+    statsLogger.error("Failed to register viewer", {
+      operation: "register_viewer_error",
+      hostId,
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to register viewer" });
+  }
+});
+
+app.post("/metrics/unregister-viewer", async (req, res) => {
+  const { hostId, viewerSessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!hostId || typeof hostId !== "number") {
+    return res.status(400).json({ error: "Invalid hostId" });
+  }
+
+  if (!viewerSessionId || typeof viewerSessionId !== "string") {
+    return res.status(400).json({ error: "Invalid viewerSessionId" });
+  }
+
+  try {
+    pollingManager.unregisterViewer(hostId, viewerSessionId);
+    res.json({ success: true });
+  } catch (error) {
+    statsLogger.error("Failed to unregister viewer", {
+      operation: "unregister_viewer_error",
+      hostId,
+      viewerSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to unregister viewer" });
   }
 });
 

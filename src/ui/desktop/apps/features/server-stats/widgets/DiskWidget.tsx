@@ -96,6 +96,11 @@ export function DiskWidget({ metrics, metricsHistory }: DiskWidgetProps) {
                   color: "#fff",
                 }}
                 formatter={(value: number) => [`${value.toFixed(1)}%`, "Disk"]}
+                cursor={{
+                  stroke: "#fb923c",
+                  strokeWidth: 1,
+                  strokeDasharray: "3 3",
+                }}
               />
               <Area
                 type="monotone"
@@ -104,6 +109,12 @@ export function DiskWidget({ metrics, metricsHistory }: DiskWidgetProps) {
                 strokeWidth={2}
                 fill="url(#diskGradient)"
                 animationDuration={300}
+                activeDot={{
+                  r: 4,
+                  fill: "#fb923c",
+                  stroke: "#fff",
+                  strokeWidth: 2,
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>

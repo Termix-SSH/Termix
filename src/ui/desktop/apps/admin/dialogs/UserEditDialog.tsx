@@ -422,35 +422,6 @@ export function UserEditDialog({
 
           <Separator />
 
-          {showPasswordReset && (
-            <>
-              <div className="space-y-3">
-                <Label className="text-base font-semibold flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  {t("admin.passwordManagement")}
-                </Label>
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>{t("common.warning")}</AlertTitle>
-                  <AlertDescription>
-                    {t("admin.passwordResetWarning")}
-                  </AlertDescription>
-                </Alert>
-                <Button
-                  variant="destructive"
-                  onClick={handlePasswordReset}
-                  disabled={passwordResetLoading}
-                  className="w-full"
-                >
-                  {passwordResetLoading
-                    ? t("admin.resettingPassword")
-                    : t("admin.resetUserPassword")}
-                </Button>
-              </div>
-              <Separator />
-            </>
-          )}
-
           <div className="space-y-4">
             <Label className="text-base font-semibold flex items-center gap-2">
               <UserCog className="h-4 w-4" />

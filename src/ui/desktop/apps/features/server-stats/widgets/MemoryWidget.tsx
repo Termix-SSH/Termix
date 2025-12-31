@@ -102,6 +102,11 @@ export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
                   `${value.toFixed(1)}%`,
                   "Memory",
                 ]}
+                cursor={{
+                  stroke: "#34d399",
+                  strokeWidth: 1,
+                  strokeDasharray: "3 3",
+                }}
               />
               <Area
                 type="monotone"
@@ -110,6 +115,12 @@ export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
                 strokeWidth={2}
                 fill="url(#memoryGradient)"
                 animationDuration={300}
+                activeDot={{
+                  r: 4,
+                  fill: "#34d399",
+                  stroke: "#fff",
+                  strokeWidth: 2,
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>

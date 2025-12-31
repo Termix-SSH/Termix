@@ -129,6 +129,7 @@ import { HostTunnelTab } from "./tabs/HostTunnelTab";
 import { HostFileManagerTab } from "./tabs/HostFileManagerTab";
 import { HostStatisticsTab } from "./tabs/HostStatisticsTab";
 import { HostSharingTab } from "./tabs/HostSharingTab";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface User {
   id: string;
@@ -168,7 +169,7 @@ export function HostManagerEditor({
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
   );
-  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -473,6 +474,7 @@ export function HostManagerEditor({
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema) as any,
+    mode: "all",
     defaultValues: {
       name: "",
       ip: "",
@@ -509,19 +511,69 @@ export function HostManagerEditor({
     },
   });
 
-  useEffect(() => {
-    if (authTab === "credential") {
-      const currentCredentialId = form.getValues("credentialId");
-      const overrideUsername = form.getValues("overrideCredentialUsername");
-      if (currentCredentialId && !overrideUsername) {
-        const selectedCredential = credentials.find(
-          (c) => c.id === currentCredentialId,
-        );
-        if (selectedCredential) {
-          form.setValue("username", selectedCredential.username);
-        }
-      }
+  const watchedFields = form.watch();
+  const formState = form.formState;
+
+  const isFormValid = React.useMemo(() => {
+    const values = form.getValues();
+
+    if (!values.ip || !values.username) return false;
+
+    if (authTab === "password") {
+      return !!(values.password && values.password.trim() !== "");
+    } else if (authTab === "key") {
+      return !!(values.key && values.keyType);
+    } else if (authTab === "credential") {
+      return !!values.credentialId;
+    } else if (authTab === "none") {
+      return true;
     }
+
+    return false;
+  }, [watchedFields, authTab]);
+
+  useEffect(() => {
+    const updateAuthFields = async () => {
+      form.setValue("authType", authTab, { shouldValidate: true });
+
+      if (authTab === "password") {
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+        form.setValue("credentialId", null, { shouldValidate: true });
+      } else if (authTab === "key") {
+        form.setValue("password", "", { shouldValidate: true });
+        form.setValue("credentialId", null, { shouldValidate: true });
+      } else if (authTab === "credential") {
+        form.setValue("password", "", { shouldValidate: true });
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+
+        const currentCredentialId = form.getValues("credentialId");
+        const overrideUsername = form.getValues("overrideCredentialUsername");
+        if (currentCredentialId && !overrideUsername) {
+          const selectedCredential = credentials.find(
+            (c) => c.id === currentCredentialId,
+          );
+          if (selectedCredential) {
+            form.setValue("username", selectedCredential.username, {
+              shouldValidate: true,
+            });
+          }
+        }
+      } else if (authTab === "none") {
+        form.setValue("password", "", { shouldValidate: true });
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+        form.setValue("credentialId", null, { shouldValidate: true });
+      }
+
+      await form.trigger();
+    };
+
+    updateAuthFields();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authTab, credentials]);
 
@@ -690,34 +742,12 @@ export function HostManagerEditor({
   }, [editingHost]);
 
   const onSubmit = async (data: FormData) => {
-    await form.trigger();
     try {
-      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
         data.name = `${data.username}@${data.ip}`;
-      }
-
-      if (data.statsConfig) {
-        const statusInterval = data.statsConfig.statusCheckInterval || 30;
-        const metricsInterval = data.statsConfig.metricsInterval || 30;
-
-        if (statusInterval < 5 || statusInterval > 3600) {
-          toast.error(t("hosts.intervalValidation"));
-          setActiveTab("statistics");
-          setFormError(t("hosts.intervalValidation"));
-          isSubmittingRef.current = false;
-          return;
-        }
-
-        if (metricsInterval < 5 || metricsInterval > 3600) {
-          toast.error(t("hosts.intervalValidation"));
-          setActiveTab("statistics");
-          setFormError(t("hosts.intervalValidation"));
-          isSubmittingRef.current = false;
-          return;
-        }
       }
 
       const submitData: Partial<SSHHost> = {
@@ -799,40 +829,72 @@ export function HostManagerEditor({
       toast.error(t("hosts.failedToSaveHost") + ": " + errorMessage);
       console.error("Failed to save host:", error);
     } finally {
-      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
-  const handleFormError = () => {
-    const errors = form.formState.errors;
+  const TAB_PRIORITY = [
+    "general",
+    "terminal",
+    "tunnel",
+    "file_manager",
+    "docker",
+    "statistics",
+  ] as const;
 
-    if (
-      errors.ip ||
-      errors.port ||
-      errors.username ||
-      errors.name ||
-      errors.folder ||
-      errors.tags ||
-      errors.pin ||
-      errors.password ||
-      errors.key ||
-      errors.keyPassword ||
-      errors.keyType ||
-      errors.credentialId ||
-      errors.forceKeyboardInteractive ||
-      errors.jumpHosts
-    ) {
-      setActiveTab("general");
-    } else if (errors.enableTerminal || errors.terminalConfig) {
-      setActiveTab("terminal");
-    } else if (errors.enableDocker) {
-      setActiveTab("docker");
-    } else if (errors.enableTunnel || errors.tunnelConnections) {
-      setActiveTab("tunnel");
-    } else if (errors.enableFileManager || errors.defaultPath) {
-      setActiveTab("file_manager");
-    } else if (errors.statsConfig) {
-      setActiveTab("statistics");
+  const FIELD_TO_TAB_MAP: Record<string, string> = {
+    ip: "general",
+    port: "general",
+    username: "general",
+    name: "general",
+    folder: "general",
+    tags: "general",
+    pin: "general",
+    password: "general",
+    key: "general",
+    keyPassword: "general",
+    keyType: "general",
+    credentialId: "general",
+    overrideCredentialUsername: "general",
+    forceKeyboardInteractive: "general",
+    jumpHosts: "general",
+    authType: "general",
+    notes: "general",
+    useSocks5: "general",
+    socks5Host: "general",
+    socks5Port: "general",
+    socks5Username: "general",
+    socks5Password: "general",
+    socks5ProxyChain: "general",
+    quickActions: "general",
+    enableTerminal: "terminal",
+    terminalConfig: "terminal",
+    enableDocker: "docker",
+    enableTunnel: "tunnel",
+    tunnelConnections: "tunnel",
+    enableFileManager: "file_manager",
+    defaultPath: "file_manager",
+    statsConfig: "statistics",
+  };
+
+  const handleFormError = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const errors = form.formState.errors;
+    const errorFields = Object.keys(errors);
+
+    if (errorFields.length === 0) return;
+
+    for (const tab of TAB_PRIORITY) {
+      const hasErrorInTab = errorFields.some((field) => {
+        const baseField = field.split(".")[0].split("[")[0];
+        return FIELD_TO_TAB_MAP[baseField] === tab;
+      });
+
+      if (hasErrorInTab) {
+        setActiveTab(tab);
+        return;
+      }
     }
   };
 
@@ -994,7 +1056,19 @@ export function HostManagerEditor({
   }, [sshConfigDropdownOpen]);
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 w-full">
+    <div className="flex-1 flex flex-col h-full min-h-0 w-full relative">
+      <SimpleLoader
+        visible={isSubmitting}
+        message={
+          editingHost?.id
+            ? t("hosts.updatingHost")
+            : editingHost
+              ? t("hosts.cloningHost")
+              : t("hosts.savingHost")
+        }
+        backgroundColor="var(--bg-base)"
+      />
+
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, handleFormError)}
@@ -1130,7 +1204,12 @@ export function HostManagerEditor({
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
             {!editingHost?.isShared && (
-              <Button className="translate-y-2" type="submit" variant="outline">
+              <Button
+                className="translate-y-2"
+                type="submit"
+                variant="outline"
+                disabled={!isFormValid || isSubmitting}
+              >
                 {editingHost
                   ? editingHost.id
                     ? t("hosts.updateHost")

@@ -329,6 +329,22 @@ export function FileViewer({
 
   const fileTypeInfo = getFileType(file.name);
 
+  const getImageDataUrl = (content: string, fileName: string): string => {
+    const ext = fileName.split(".").pop()?.toLowerCase() || "";
+
+    if (ext === "svg") {
+      try {
+        const base64 = btoa(unescape(encodeURIComponent(content)));
+        return `data:image/svg+xml;base64,${base64}`;
+      } catch (e) {
+        console.error("Failed to encode SVG:", e);
+        return "";
+      }
+    }
+
+    return `data:image/*;base64,${content}`;
+  };
+
   const WARNING_SIZE = 50 * 1024 * 1024;
   const MAX_SIZE = Number.MAX_SAFE_INTEGER;
 
@@ -352,15 +368,6 @@ export function FileViewer({
       setShowLargeFileWarning(true);
     } else {
       setShowLargeFileWarning(false);
-    }
-
-    if (
-      fileTypeInfo.type === "image" &&
-      file.name.toLowerCase().endsWith(".svg") &&
-      content
-    ) {
-      setImageLoading(false);
-      setImageLoadError(false);
     }
   }, [
     content,
@@ -716,21 +723,11 @@ export function FileViewer({
                   </Button>
                 )}
               </div>
-            ) : file.name.toLowerCase().endsWith(".svg") ? (
-              <div
-                className="max-w-full max-h-full flex items-center justify-center"
-                style={{ maxHeight: "calc(100vh - 200px)" }}
-                dangerouslySetInnerHTML={{ __html: content }}
-                onLoad={() => {
-                  setImageLoading(false);
-                  setImageLoadError(false);
-                }}
-              />
             ) : (
               <PhotoProvider maskOpacity={0.7}>
-                <PhotoView src={`data:image/*;base64,${content}`}>
+                <PhotoView src={getImageDataUrl(content, file.name)}>
                   <img
-                    src={`data:image/*;base64,${content}`}
+                    src={getImageDataUrl(content, file.name)}
                     alt={file.name}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-sm cursor-pointer hover:shadow-lg transition-shadow"
                     style={{ maxHeight: "calc(100vh - 200px)" }}
