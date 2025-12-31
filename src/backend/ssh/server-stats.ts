@@ -194,6 +194,80 @@ interface PooledConnection {
   hostKey: string;
 }
 
+interface MetricsSession {
+  client: Client;
+  isConnected: boolean;
+  lastActive: number;
+  timeout?: NodeJS.Timeout;
+  activeOperations: number;
+  hostId: number;
+  userId: string;
+}
+
+interface PendingTOTPSession {
+  client: Client;
+  finish: (responses: string[]) => void;
+  config: ConnectConfig;
+  createdAt: number;
+  sessionId: string;
+  hostId: number;
+  userId: string;
+  prompts?: Array<{ prompt: string; echo: boolean }>;
+  totpPromptIndex?: number;
+  resolvedPassword?: string;
+  totpAttempts: number;
+}
+
+const metricsSessions: Record<string, MetricsSession> = {};
+const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
+
+function cleanupMetricsSession(sessionId: string) {
+  const session = metricsSessions[sessionId];
+  if (session) {
+    if (session.activeOperations > 0) {
+      statsLogger.warn(
+        `Deferring metrics session cleanup - ${session.activeOperations} active operations`,
+        {
+          operation: "cleanup_deferred",
+          sessionId,
+          activeOperations: session.activeOperations,
+        },
+      );
+      scheduleMetricsSessionCleanup(sessionId);
+      return;
+    }
+
+    try {
+      session.client.end();
+    } catch (error) {}
+    clearTimeout(session.timeout);
+    delete metricsSessions[sessionId];
+
+    statsLogger.info("Metrics session cleaned up", {
+      operation: "session_cleanup",
+      sessionId,
+    });
+  }
+}
+
+function scheduleMetricsSessionCleanup(sessionId: string) {
+  const session = metricsSessions[sessionId];
+  if (session) {
+    if (session.timeout) clearTimeout(session.timeout);
+
+    session.timeout = setTimeout(
+      () => {
+        cleanupMetricsSession(sessionId);
+      },
+      30 * 60 * 1000,
+    );
+  }
+}
+
+function getSessionKey(hostId: number, userId: string): string {
+  return `${userId}:${hostId}`;
+}
+
 class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
   private maxConnectionsPerHost = 3;
@@ -310,20 +384,37 @@ class SSHConnectionPool {
           prompts: Array<{ prompt: string; echo: boolean }>,
           finish: (responses: string[]) => void,
         ) => {
-          const totpPrompt = prompts.find((p) =>
+          const totpPromptIndex = prompts.findIndex((p) =>
             /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
               p.prompt,
             ),
           );
 
-          if (totpPrompt) {
-            authFailureTracker.recordFailure(host.id, "TOTP", true);
-            client.end();
-            reject(
-              new Error(
-                "TOTP authentication required but not supported in Server Stats",
-              ),
-            );
+          if (totpPromptIndex !== -1) {
+            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId: host.id,
+              userId: host.userId!,
+              prompts,
+              totpPromptIndex,
+              resolvedPassword: host.password,
+              totpAttempts: 0,
+            };
+
+            statsLogger.info("TOTP required for metrics collection", {
+              operation: "metrics_totp_required",
+              hostId: host.id,
+              sessionId,
+              prompt: prompts[totpPromptIndex].prompt,
+            });
+
+            return;
           } else if (host.password) {
             const responses = prompts.map((p) => {
               if (/password/i.test(p.prompt)) {
@@ -1055,6 +1146,14 @@ class PollingManager {
     }
   }
 
+  stopMetricsOnly(hostId: number): void {
+    const config = this.pollingConfigs.get(hostId);
+    if (config?.metricsTimer) {
+      clearInterval(config.metricsTimer);
+      config.metricsTimer = undefined;
+    }
+  }
+
   getStatus(hostId: number): StatusEntry | undefined {
     return this.statusStore.get(hostId);
   }
@@ -1436,6 +1535,8 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
       );
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
+  } else if (host.authType === "none") {
+    // Allow "none" auth - SSH will handle via keyboard-interactive
   } else {
     throw new Error(
       `Unsupported authentication type '${host.authType}' for host ${host.ip}`,
@@ -1782,6 +1883,307 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
     ...metricsData.data,
     lastChecked: new Date(metricsData.timestamp).toISOString(),
   });
+});
+
+app.post("/metrics/start/:id", validateHostId, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  try {
+    const host = await fetchHostById(id, userId);
+    if (!host) {
+      return res.status(404).json({ error: "Host not found" });
+    }
+
+    const sessionKey = getSessionKey(host.id, userId);
+
+    const existingSession = metricsSessions[sessionKey];
+    if (existingSession && existingSession.isConnected) {
+      return res.json({ success: true });
+    }
+
+    const config = buildSshConfig(host);
+    const client = new Client();
+
+    const connectionPromise = new Promise<{
+      success: boolean;
+      requires_totp?: boolean;
+      sessionId?: string;
+      prompt?: string;
+    }>((resolve, reject) => {
+      let isResolved = false;
+
+      const timeout = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          client.end();
+          reject(new Error("Connection timeout"));
+        }
+      }, 60000);
+
+      client.on(
+        "keyboard-interactive",
+        (name, instructions, instructionsLang, prompts, finish) => {
+          const totpPromptIndex = prompts.findIndex((p) =>
+            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+              p.prompt,
+            ),
+          );
+
+          if (totpPromptIndex !== -1) {
+            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId: host.id,
+              userId: host.userId!,
+              prompts,
+              totpPromptIndex,
+              resolvedPassword: host.password,
+              totpAttempts: 0,
+            };
+
+            clearTimeout(timeout);
+            if (!isResolved) {
+              isResolved = true;
+              resolve({
+                success: false,
+                requires_totp: true,
+                sessionId,
+                prompt: prompts[totpPromptIndex].prompt,
+              });
+            }
+            return;
+          } else if (host.password) {
+            const responses = prompts.map((p) =>
+              /password/i.test(p.prompt) ? host.password || "" : "",
+            );
+            finish(responses);
+          } else {
+            finish(prompts.map(() => ""));
+          }
+        },
+      );
+
+      client.on("ready", () => {
+        clearTimeout(timeout);
+        if (!isResolved) {
+          isResolved = true;
+
+          metricsSessions[sessionKey] = {
+            client,
+            isConnected: true,
+            lastActive: Date.now(),
+            activeOperations: 0,
+            hostId: host.id,
+            userId,
+          };
+          scheduleMetricsSessionCleanup(sessionKey);
+
+          pollingManager.startPollingForHost(host).catch((error) => {
+            statsLogger.error("Failed to start polling after connection", {
+              operation: "start_polling_error",
+              hostId: host.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+
+          resolve({ success: true });
+        }
+      });
+
+      client.on("error", (error) => {
+        clearTimeout(timeout);
+        if (!isResolved) {
+          isResolved = true;
+          reject(error);
+        }
+      });
+
+      client.connect(config);
+    });
+
+    const result = await connectionPromise;
+    res.json(result);
+  } catch (error) {
+    statsLogger.error("Failed to start metrics collection", {
+      operation: "metrics_start_error",
+      hostId: id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to start metrics collection",
+    });
+  }
+});
+
+app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
+  const id = Number(req.params.id);
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  try {
+    const sessionKey = getSessionKey(id, userId);
+    const session = metricsSessions[sessionKey];
+
+    if (session) {
+      cleanupMetricsSession(sessionKey);
+    }
+
+    pollingManager.stopMetricsOnly(id);
+
+    res.json({ success: true });
+  } catch (error) {
+    statsLogger.error("Failed to stop metrics collection", {
+      operation: "metrics_stop_error",
+      hostId: id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to stop metrics collection",
+    });
+  }
+});
+
+app.post("/metrics/connect-totp", async (req, res) => {
+  const { sessionId, totpCode } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    return res.status(401).json({
+      error: "Session expired - please log in again",
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  if (!sessionId || !totpCode) {
+    return res.status(400).json({ error: "Missing sessionId or totpCode" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+  if (!session) {
+    return res.status(404).json({ error: "TOTP session not found or expired" });
+  }
+
+  if (Date.now() - session.createdAt > 180000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {}
+    return res.status(408).json({ error: "TOTP session timeout" });
+  }
+
+  if (session.userId !== userId) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  session.totpAttempts++;
+  if (session.totpAttempts > 3) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {}
+    return res.status(429).json({ error: "Too many TOTP attempts" });
+  }
+
+  try {
+    const responses = (session.prompts || []).map((p, idx) => {
+      if (idx === session.totpPromptIndex) {
+        return totpCode.trim();
+      } else if (/password/i.test(p.prompt) && session.resolvedPassword) {
+        return session.resolvedPassword;
+      }
+      return "";
+    });
+
+    const connectionPromise = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("TOTP verification timeout"));
+      }, 30000);
+
+      session.client.once("ready", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      session.client.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+
+    session.finish(responses);
+
+    await connectionPromise;
+
+    const sessionKey = getSessionKey(session.hostId, userId);
+    metricsSessions[sessionKey] = {
+      client: session.client,
+      isConnected: true,
+      lastActive: Date.now(),
+      activeOperations: 0,
+      hostId: session.hostId,
+      userId,
+    };
+    scheduleMetricsSessionCleanup(sessionKey);
+
+    delete pendingTOTPSessions[sessionId];
+
+    const host = await fetchHostById(session.hostId, userId);
+    if (host) {
+      await pollingManager.startPollingForHost(host);
+    }
+
+    statsLogger.info("TOTP verified, metrics collection started", {
+      operation: "totp_verified",
+      hostId: session.hostId,
+      sessionId,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    statsLogger.error("TOTP verification failed", {
+      operation: "totp_verification_failed",
+      hostId: session.hostId,
+      sessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (session.totpAttempts >= 3) {
+      delete pendingTOTPSessions[sessionId];
+      try {
+        session.client.end();
+      } catch {}
+    }
+
+    res.status(401).json({
+      error: "TOTP verification failed",
+      attemptsRemaining: Math.max(0, 3 - session.totpAttempts),
+    });
+  }
 });
 
 process.on("SIGINT", () => {

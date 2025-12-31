@@ -1978,6 +1978,48 @@ export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
   }
 }
 
+export async function startMetricsPolling(hostId: number): Promise<{
+  success: boolean;
+  requires_totp?: boolean;
+  sessionId?: string;
+  prompt?: string;
+}> {
+  try {
+    const response = await statsApi.post(`/metrics/start/${hostId}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "start metrics polling");
+    throw error;
+  }
+}
+
+export async function stopMetricsPolling(hostId: number): Promise<void> {
+  try {
+    await statsApi.post(`/metrics/stop/${hostId}`);
+  } catch (error) {
+    handleApiError(error, "stop metrics polling");
+    throw error;
+  }
+}
+
+export async function submitMetricsTOTP(
+  sessionId: string,
+  totpCode: string,
+): Promise<{
+  success: boolean;
+}> {
+  try {
+    const response = await statsApi.post("/metrics/connect-totp", {
+      sessionId,
+      totpCode,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "submit metrics TOTP");
+    throw error;
+  }
+}
+
 export async function refreshServerPolling(): Promise<void> {
   try {
     await statsApi.post("/refresh");

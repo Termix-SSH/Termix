@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button.tsx";
 import {
   getServerStatusById,
   getServerMetricsById,
+  startMetricsPolling,
+  stopMetricsPolling,
+  submitMetricsTOTP,
   executeSnippet,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
+import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -90,6 +94,10 @@ export function ServerStats({
   const [executingActions, setExecutingActions] = React.useState<Set<number>>(
     new Set(),
   );
+  const [totpRequired, setTotpRequired] = React.useState(false);
+  const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
+  const [totpPrompt, setTotpPrompt] = React.useState<string>("");
+  const [isPageVisible, setIsPageVisible] = React.useState(!document.hidden);
 
   const statsConfig = React.useMemo((): StatsConfig => {
     if (!currentHostConfig?.statsConfig) {
@@ -112,6 +120,17 @@ export function ServerStats({
   const metricsEnabled = statsConfig.metricsEnabled !== false;
 
   React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  const isActuallyVisible = isVisible && isPageVisible;
+
+  React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
       setServerStatus("offline");
       setMetrics(null);
@@ -120,6 +139,35 @@ export function ServerStats({
     }
     setCurrentHostConfig(hostConfig);
   }, [hostConfig?.id]);
+
+  const handleTOTPSubmit = async (totpCode: string) => {
+    if (!totpSessionId || !currentHostConfig) return;
+
+    try {
+      const result = await submitMetricsTOTP(totpSessionId, totpCode);
+      if (result.success) {
+        setTotpRequired(false);
+        toast.success(t("serverStats.totpVerified"));
+        const data = await getServerMetricsById(currentHostConfig.id);
+        setMetrics(data);
+        setShowStatsUI(true);
+      }
+    } catch (error) {
+      toast.error(t("serverStats.totpFailed"));
+      console.error("TOTP verification failed:", error);
+    }
+  };
+
+  const handleTOTPCancel = async () => {
+    setTotpRequired(false);
+    if (currentHostConfig?.id) {
+      try {
+        await stopMetricsPolling(currentHostConfig.id);
+      } catch (error) {
+        console.error("Failed to stop metrics polling:", error);
+      }
+    }
+  };
 
   const renderWidget = (widgetType: WidgetType) => {
     switch (widgetType) {
@@ -203,7 +251,7 @@ export function ServerStats({
   }, [hostConfig?.id]);
 
   React.useEffect(() => {
-    if (!statusCheckEnabled || !currentHostConfig?.id || !isVisible) {
+    if (!statusCheckEnabled || !currentHostConfig?.id) {
       setServerStatus("offline");
       return;
     }
@@ -247,76 +295,105 @@ export function ServerStats({
     };
   }, [
     currentHostConfig?.id,
-    isVisible,
     statusCheckEnabled,
     statsConfig.statusCheckInterval,
   ]);
 
   React.useEffect(() => {
-    if (!metricsEnabled || !currentHostConfig?.id || !isVisible) {
+    if (!metricsEnabled || !currentHostConfig?.id) {
       setShowStatsUI(false);
       return;
     }
 
     let cancelled = false;
-    let intervalId: number | undefined;
+    let pollingIntervalId: number | undefined;
+    let debounceTimeout: NodeJS.Timeout | undefined;
 
-    const fetchMetrics = async () => {
-      if (!currentHostConfig?.id) return;
+    const startMetrics = async () => {
+      if (cancelled) return;
+
+      setIsLoadingMetrics(true);
+
       try {
-        setIsLoadingMetrics(true);
+        const result = await startMetricsPolling(currentHostConfig.id);
+
+        if (cancelled) return;
+
+        if (result.requires_totp) {
+          setTotpRequired(true);
+          setTotpSessionId(result.sessionId || null);
+          setTotpPrompt(result.prompt || "Verification code");
+          setIsLoadingMetrics(false);
+          return;
+        }
+
         const data = await getServerMetricsById(currentHostConfig.id);
         if (!cancelled) {
           setMetrics(data);
-          setMetricsHistory((prev) => {
-            const newHistory = [...prev, data];
-            return newHistory.slice(-20);
-          });
           setShowStatsUI(true);
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          const err = error as {
-            code?: string;
-            response?: { status?: number; data?: { error?: string } };
-          };
-          if (err?.response?.status === 404) {
-            setMetrics(null);
-            setShowStatsUI(false);
-          } else if (
-            err?.code === "TOTP_REQUIRED" ||
-            (err?.response?.status === 403 &&
-              err?.response?.data?.error === "TOTP_REQUIRED")
-          ) {
-            setMetrics(null);
-            setShowStatsUI(false);
-            toast.error(t("serverStats.totpUnavailable"));
-          } else {
-            setMetrics(null);
-            setShowStatsUI(false);
-            toast.error(t("serverStats.failedToFetchMetrics"));
-          }
-        }
-      } finally {
-        if (!cancelled) {
           setIsLoadingMetrics(false);
+        }
+
+        pollingIntervalId = window.setInterval(async () => {
+          if (cancelled) return;
+          try {
+            const data = await getServerMetricsById(currentHostConfig.id);
+            if (!cancelled) {
+              setMetrics(data);
+              setMetricsHistory((prev) => {
+                const newHistory = [...prev, data];
+                return newHistory.slice(-20);
+              });
+            }
+          } catch (error) {
+            if (!cancelled) {
+              console.error("Failed to fetch metrics:", error);
+            }
+          }
+        }, statsConfig.metricsInterval * 1000);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to start metrics polling:", error);
+          setIsLoadingMetrics(false);
+          setShowStatsUI(false);
+          toast.error(t("serverStats.failedToFetchMetrics"));
         }
       }
     };
 
-    fetchMetrics();
-    intervalId = window.setInterval(
-      fetchMetrics,
-      statsConfig.metricsInterval * 1000,
-    );
+    const stopMetrics = async () => {
+      if (pollingIntervalId) {
+        window.clearInterval(pollingIntervalId);
+        pollingIntervalId = undefined;
+      }
+      if (currentHostConfig?.id) {
+        try {
+          await stopMetricsPolling(currentHostConfig.id);
+        } catch (error) {
+          console.error("Failed to stop metrics polling:", error);
+        }
+      }
+    };
+
+    debounceTimeout = setTimeout(() => {
+      if (isActuallyVisible) {
+        startMetrics();
+      } else {
+        stopMetrics();
+      }
+    }, 500);
 
     return () => {
       cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      if (pollingIntervalId) window.clearInterval(pollingIntervalId);
+      if (currentHostConfig?.id) {
+        stopMetricsPolling(currentHostConfig.id).catch(() => {});
+      }
     };
   }, [
     currentHostConfig?.id,
-    isVisible,
+    isActuallyVisible,
     metricsEnabled,
     statsConfig.metricsInterval,
   ]);
@@ -638,6 +715,16 @@ export function ServerStats({
           ) : null}
         </div>
       </div>
+
+      {totpRequired && (
+        <TOTPDialog
+          isOpen={totpRequired}
+          prompt={totpPrompt}
+          onSubmit={handleTOTPSubmit}
+          onCancel={handleTOTPCancel}
+          backgroundColor="var(--bg-canvas)"
+        />
+      )}
     </div>
   );
 }
