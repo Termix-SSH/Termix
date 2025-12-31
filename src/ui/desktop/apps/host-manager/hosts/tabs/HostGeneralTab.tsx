@@ -707,7 +707,7 @@ export function HostGeneralTab({
               control={form.control}
               name="useSocks5"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
                   <div className="space-y-0.5">
                     <FormLabel>{t("hosts.enableSocks5")}</FormLabel>
                     <FormDescription>
