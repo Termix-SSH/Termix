@@ -64,11 +64,11 @@ export function ConsoleTerminal({
         "http://127.0.0.1:30001";
       const wsProtocol = baseUrl.startsWith("https://") ? "wss://" : "ws://";
       const wsHost = baseUrl.replace(/^https?:\/\//, "");
-      return `${wsProtocol}${wsHost}/docker/console`;
+      return `${wsProtocol}${wsHost}/docker/console/`;
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.host}/docker/console`;
+    return `${protocol}//${window.location.host}/docker/console/`;
   }, []);
 
   React.useEffect(() => {

@@ -388,10 +388,7 @@ export function ServerStats({
         let retryCount = 0;
         let data = null;
         const maxRetries = 15;
-        const initialDelay = totpVerified ? 3000 : 5000;
         const retryDelay = 2000;
-
-        await new Promise((resolve) => setTimeout(resolve, initialDelay));
 
         while (retryCount < maxRetries && !cancelled) {
           try {
@@ -399,7 +396,10 @@ export function ServerStats({
             break;
           } catch (error: any) {
             retryCount++;
-            if (retryCount < maxRetries && !cancelled) {
+            if (retryCount === 1) {
+              const initialDelay = totpVerified ? 3000 : 5000;
+              await new Promise((resolve) => setTimeout(resolve, initialDelay));
+            } else if (retryCount < maxRetries && !cancelled) {
               await new Promise((resolve) => setTimeout(resolve, retryDelay));
             } else {
               throw error;

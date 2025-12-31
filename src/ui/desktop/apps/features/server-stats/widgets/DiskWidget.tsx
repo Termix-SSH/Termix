@@ -4,27 +4,30 @@ import { useTranslation } from "react-i18next";
 import type { ServerMetrics } from "@/ui/main-axios.ts";
 import { RechartsPrimitive } from "@/components/ui/chart.tsx";
 
-const { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } =
-  RechartsPrimitive;
+const {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} = RechartsPrimitive;
 
 interface DiskWidgetProps {
   metrics: ServerMetrics | null;
   metricsHistory: ServerMetrics[];
 }
 
-export function DiskWidget({ metrics }: DiskWidgetProps) {
+export function DiskWidget({ metrics, metricsHistory }: DiskWidgetProps) {
   const { t } = useTranslation();
 
-  const radialData = React.useMemo(() => {
-    const percent = metrics?.disk?.percent || 0;
-    return [
-      {
-        name: "Disk",
-        value: percent,
-        fill: "#fb923c",
-      },
-    ];
-  }, [metrics]);
+  const chartData = React.useMemo(() => {
+    return metricsHistory.map((m, index) => ({
+      index,
+      disk: m.disk?.percent || 0,
+    }));
+  }, [metricsHistory]);
 
   return (
     <div className="h-full w-full p-4 rounded-lg bg-elevated border border-edge/50 hover:bg-elevated/70 flex flex-col overflow-hidden">
@@ -35,45 +38,13 @@ export function DiskWidget({ metrics }: DiskWidgetProps) {
         </h3>
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart
-              cx="50%"
-              cy="50%"
-              innerRadius="60%"
-              outerRadius="90%"
-              data={radialData}
-              startAngle={90}
-              endAngle={-270}
-            >
-              <PolarAngleAxis
-                type="number"
-                domain={[0, 100]}
-                angleAxisId={0}
-                tick={false}
-              />
-              <RadialBar
-                background
-                dataKey="value"
-                cornerRadius={10}
-                fill="#fb923c"
-              />
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-2xl font-bold fill-orange-400"
-              >
-                {typeof metrics?.disk?.percent === "number"
-                  ? `${metrics.disk.percent}%`
-                  : "N/A"}
-              </text>
-            </RadialBarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex-shrink-0 space-y-1 text-center pb-2">
+      <div className="flex flex-col flex-1 min-h-0 gap-2">
+        <div className="flex items-baseline gap-3 flex-shrink-0">
+          <div className="text-2xl font-bold text-orange-400">
+            {typeof metrics?.disk?.percent === "number"
+              ? `${metrics.disk.percent}%`
+              : "N/A"}
+          </div>
           <div className="text-xs text-muted-foreground">
             {(() => {
               const used = metrics?.disk?.usedHuman;
@@ -84,14 +55,58 @@ export function DiskWidget({ metrics }: DiskWidgetProps) {
               return "N/A";
             })()}
           </div>
-          <div className="text-xs text-foreground-subtle">
-            {(() => {
-              const available = metrics?.disk?.availableHuman;
-              return available
-                ? `${t("serverStats.available")}: ${available}`
-                : `${t("serverStats.available")}: N/A`;
-            })()}
-          </div>
+        </div>
+        <div className="text-xs text-foreground-subtle flex-shrink-0">
+          {(() => {
+            const available = metrics?.disk?.availableHuman;
+            return available
+              ? `${t("serverStats.available")}: ${available}`
+              : `${t("serverStats.available")}: N/A`;
+          })()}
+        </div>
+        <div className="flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={chartData}
+              margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+            >
+              <defs>
+                <linearGradient id="diskGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#fb923c" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#fb923c" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="index"
+                stroke="#9ca3af"
+                tick={{ fill: "#9ca3af" }}
+                hide
+              />
+              <YAxis
+                domain={[0, 100]}
+                stroke="#9ca3af"
+                tick={{ fill: "#9ca3af" }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1f2937",
+                  border: "1px solid #374151",
+                  borderRadius: "6px",
+                  color: "#fff",
+                }}
+                formatter={(value: number) => [`${value.toFixed(1)}%`, "Disk"]}
+              />
+              <Area
+                type="monotone"
+                dataKey="disk"
+                stroke="#fb923c"
+                strokeWidth={2}
+                fill="url(#diskGradient)"
+                animationDuration={300}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

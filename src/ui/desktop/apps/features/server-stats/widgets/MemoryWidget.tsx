@@ -69,7 +69,10 @@ export function MemoryWidget({ metrics, metricsHistory }: MemoryWidgetProps) {
         </div>
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
+            <AreaChart
+              data={chartData}
+              margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+            >
               <defs>
                 <linearGradient id="memoryGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#34d399" stopOpacity={0.8} />

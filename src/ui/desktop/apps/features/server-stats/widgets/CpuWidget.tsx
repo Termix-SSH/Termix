@@ -62,7 +62,10 @@ export function CpuWidget({ metrics, metricsHistory }: CpuWidgetProps) {
         </div>
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis
                 dataKey="index"
