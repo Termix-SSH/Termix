@@ -359,6 +359,7 @@ class SSHConnectionPool {
     host: SSHHostWithCredentials,
   ): Promise<Client> {
     return new Promise(async (resolve, reject) => {
+      const config = buildSshConfig(host);
       const client = new Client();
       const timeout = setTimeout(() => {
         client.end();
@@ -401,7 +402,10 @@ class SSHConnectionPool {
               sessionId,
               hostId: host.id,
               userId: host.userId!,
-              prompts,
+              prompts: prompts.map((p) => ({
+                prompt: p.prompt,
+                echo: p.echo ?? false,
+              })),
               totpPromptIndex,
               resolvedPassword: host.password,
               totpAttempts: 0,
@@ -430,8 +434,6 @@ class SSHConnectionPool {
       );
 
       try {
-        const config = buildSshConfig(host);
-
         if (
           host.useSocks5 &&
           (host.socks5Host ||
@@ -1948,7 +1950,10 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
               sessionId,
               hostId: host.id,
               userId: host.userId!,
-              prompts,
+              prompts: prompts.map((p) => ({
+                prompt: p.prompt,
+                echo: p.echo ?? false,
+              })),
               totpPromptIndex,
               resolvedPassword: host.password,
               totpAttempts: 0,

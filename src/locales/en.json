@@ -1685,6 +1685,7 @@
     "failedToFetchMetrics": "Failed to fetch server metrics",
     "failedToFetchHomeData": "Failed to fetch home data",
     "loadingMetrics": "Loading metrics...",
+    "connecting": "Connecting...",
     "refreshing": "Refreshing...",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Cannot fetch metrics from offline server",
