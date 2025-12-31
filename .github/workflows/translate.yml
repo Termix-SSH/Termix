@@ -309,7 +309,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t cs --maxLinesPerRequest 10
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t cs --maxLinesPerRequest 1
       - uses: actions/upload-artifact@v4
         with:
           name: translations-cs
