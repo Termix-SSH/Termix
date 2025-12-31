@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t zh -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t zh --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-zh
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ru -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ru --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ru
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pt -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pt --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-pt
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t fr -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t fr --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-fr
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t es -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t es --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-es
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t de -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t de --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-de
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t hi -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t hi --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-hi
@@ -113,7 +113,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t bn -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t bn --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-bn
@@ -127,7 +127,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ja -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ja --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ja
@@ -141,7 +141,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t vi -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t vi --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-vi
@@ -155,7 +155,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t tr -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t tr --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-tr
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ko -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ko --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ko
@@ -183,7 +183,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t it -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t it --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-it
@@ -197,7 +197,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t he -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t he --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-he
@@ -211,7 +211,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ar -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ar --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ar
@@ -225,7 +225,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pl -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t pl --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-pl
@@ -239,7 +239,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nl -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nl --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-nl
@@ -253,7 +253,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t sv -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t sv --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-sv
@@ -267,7 +267,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t id -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t id --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-id
@@ -281,7 +281,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t th -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t th --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-th
@@ -295,7 +295,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t uk -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t uk --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-uk
@@ -309,7 +309,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t cs -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t cs --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-cs
@@ -323,7 +323,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ro -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t ro --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-ro
@@ -337,7 +337,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t el -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t el --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-el
@@ -351,7 +351,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nb -maxLinesPerRequest 25
+      - run: npx i18n-auto-translation -k ${{ secrets.GOOGLE_TRANSLATE_API_KEY }} -d "src/locales" -f en -t nb --maxLinesPerRequest 25
       - uses: actions/upload-artifact@v4
         with:
           name: translations-nb
