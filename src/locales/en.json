@@ -1044,7 +1044,7 @@
     "noneAuthDescription": "This authentication method will use keyboard-interactive authentication when connecting to the SSH server.",
     "noneAuthDetails": "Keyboard-interactive authentication allows the server to prompt you for credentials during connection. This is useful for servers that require multi-factor authentication or if you do not want to save credentials locally.",
     "forceKeyboardInteractive": "Force Keyboard-Interactive",
-    "forceKeyboardInteractiveDesc": "Forces the use of keyboard-interactive authentication. This is often required for servers that use Two-Factor Authentication (TOTP/2FA).",
+    "forceKeyboardInteractiveDesc": "Forces the use of keyboard-interactive authentication. This is sometimes required for servers that use Two-Factor Authentication (TOTP/2FA).",
     "overrideCredentialUsername": "Override Credential Username",
     "overrideCredentialUsernameDesc": "Use a different username than the one stored in the credential. This allows you to use the same credential with different usernames.",
     "jumpHosts": "Jump Hosts",
@@ -1923,7 +1923,13 @@
     "snippetsSettings": "Snippets",
     "currentPassword": "Current Password",
     "passwordChangedSuccess": "Password changed successfully! Please log in again.",
-    "failedToChangePassword": "Failed to change password. Please check your current password and try again."
+    "failedToChangePassword": "Failed to change password. Please check your current password and try again.",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "appearanceDesc": "Select the color theme for the application",
+    "terminalSyntaxHighlightingDesc": "Automatically highlight commands, paths, IPs, and log levels in terminal output"
   },
   "user": {
     "failedToLoadVersionInfo": "Failed to load version information"

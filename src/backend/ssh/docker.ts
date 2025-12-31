@@ -80,10 +80,6 @@ function cleanupSession(sessionId: string) {
     } catch (error) {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
-    dockerLogger.info("Docker SSH session cleaned up", {
-      operation: "session_cleanup",
-      sessionId,
-    });
   }
 }
 
@@ -472,7 +468,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
       cleanupSession(sessionId);
     }
 
-    // Clean up any stale pending TOTP sessions
     if (pendingTOTPSessions[sessionId]) {
       try {
         pendingTOTPSessions[sessionId].client.end();

@@ -1017,7 +1017,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             finish(responses);
           };
 
-          // Set timeout for TOTP response
           totpTimeout = setTimeout(() => {
             if (keyboardInteractiveFinish) {
               keyboardInteractiveFinish = null;
@@ -1070,7 +1069,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               finish(responses);
             };
 
-            // Set timeout for password response
             totpTimeout = setTimeout(() => {
               if (keyboardInteractiveFinish) {
                 keyboardInteractiveFinish = null;

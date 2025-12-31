@@ -430,10 +430,7 @@ export function UserProfile({
                           {t("leftSidebar.deleteAccount")}
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {t(
-                            "leftSidebar.deleteAccountWarningShort",
-                            "This action is not reversible and will permanently delete your account.",
-                          )}
+                          {t("leftSidebar.deleteAccountWarningShort")}
                         </p>
                       </div>
                       <Button
@@ -448,7 +445,6 @@ export function UserProfile({
               </TabsContent>
 
               <TabsContent value="appearance" className="space-y-4">
-                {/* Language & Localization Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t("profile.languageLocalization")}
@@ -468,22 +464,18 @@ export function UserProfile({
                   </div>
                 </div>
 
-                {/* Theme Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.appearance", "Appearance")}
+                    {t("profile.appearance")}
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-foreground-secondary">
-                          {t("profile.theme", "Theme")}
+                          {t("profile.theme")}
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {t(
-                            "profile.appearanceDesc",
-                            "Choose your preferred theme",
-                          )}
+                          {t("profile.appearanceDesc")}
                         </p>
                       </div>
                       <Select value={theme} onValueChange={setTheme}>
@@ -494,19 +486,19 @@ export function UserProfile({
                           <SelectItem value="light">
                             <div className="flex items-center gap-2">
                               <Sun className="w-4 h-4" />
-                              {t("profile.themeLight", "Light")}
+                              {t("profile.themeLight")}
                             </div>
                           </SelectItem>
                           <SelectItem value="dark">
                             <div className="flex items-center gap-2">
                               <Moon className="w-4 h-4" />
-                              {t("profile.themeDark", "Dark")}
+                              {t("profile.themeDark")}
                             </div>
                           </SelectItem>
                           <SelectItem value="system">
                             <div className="flex items-center gap-2">
                               <Monitor className="w-4 h-4" />
-                              {t("profile.themeSystem", "System")}
+                              {t("profile.themeSystem")}
                             </div>
                           </SelectItem>
                         </SelectContent>
@@ -515,7 +507,6 @@ export function UserProfile({
                   </div>
                 </div>
 
-                {/* File Manager Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t("profile.fileManagerSettings")}
@@ -538,7 +529,6 @@ export function UserProfile({
                   </div>
                 </div>
 
-                {/* Terminal Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t("profile.terminalSettings")}
@@ -567,8 +557,7 @@ export function UserProfile({
                           </span>
                         </Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Automatically highlight commands, paths, IPs, and log
-                          levels in terminal output
+                          {t("profile.terminalSyntaxHighlightingDesc")}
                         </p>
                       </div>
                       <Switch
@@ -579,7 +568,6 @@ export function UserProfile({
                   </div>
                 </div>
 
-                {/* Host & Sidebar Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t("profile.hostSidebarSettings")}
@@ -602,7 +590,6 @@ export function UserProfile({
                   </div>
                 </div>
 
-                {/* Snippets Section */}
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t("profile.snippetsSettings")}
