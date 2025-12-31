@@ -22,6 +22,7 @@ interface SSHSession {
 const activeSessions = new Map<string, SSHSession>();
 
 const wss = new WebSocketServer({
+  host: "0.0.0.0",
   port: 30008,
   verifyClient: async (info) => {
     try {
@@ -29,9 +30,6 @@ const wss = new WebSocketServer({
       const token = url.query.token as string;
 
       if (!token) {
-        dockerConsoleLogger.warn("WebSocket connection rejected: No token", {
-          operation: "ws_verify",
-        });
         return false;
       }
 
@@ -39,20 +37,11 @@ const wss = new WebSocketServer({
       const decoded = await authManager.verifyJWTToken(token);
 
       if (!decoded || !decoded.userId) {
-        dockerConsoleLogger.warn(
-          "WebSocket connection rejected: Invalid token",
-          {
-            operation: "ws_verify",
-          },
-        );
         return false;
       }
 
       return true;
     } catch (error) {
-      dockerConsoleLogger.error("WebSocket verification error", error, {
-        operation: "ws_verify",
-      });
       return false;
     }
   },

@@ -345,10 +345,6 @@ app.use(
         return callback(null, true);
       }
 
-      dockerLogger.warn("CORS rejected origin", {
-        operation: "cors_check",
-        origin,
-      });
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
