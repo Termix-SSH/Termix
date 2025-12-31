@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Kode verifikasi tidak valid",
     "totpCancelled": "Pengumpulan metrik dibatalkan",
     "authenticationFailed": "Autentikasi gagal",
+    "noneAuthNotSupported": "Statistik Server tidak mendukung tipe otentikasi 'none'.",
     "load": "Memuat",
     "editLayout": "Edit Tata Letak",
     "cancelEdit": "Membatalkan",

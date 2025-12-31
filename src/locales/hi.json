@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "अवैध सत्यापन संकेत",
     "totpCancelled": "मैट्रिक्स संग्रह रद्द कर दिया गया",
     "authenticationFailed": "प्रमाणीकरण विफल होना",
+    "noneAuthNotSupported": "सर्वर स्टैट्स 'none' प्रमाणीकरण प्रकार का समर्थन नहीं करता है।",
     "load": "भार",
     "editLayout": "लेआउट संपादित करें",
     "cancelEdit": "रद्द करना",

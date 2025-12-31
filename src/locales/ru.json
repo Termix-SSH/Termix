@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Неверный код подтверждения",
     "totpCancelled": "Сбор метрик отменен.",
     "authenticationFailed": "Аутентификация не удалась",
+    "noneAuthNotSupported": "Server Stats не поддерживает тип аутентификации \"none\".",
     "load": "Нагрузка",
     "editLayout": "Редактировать макет",
     "cancelEdit": "Отмена",

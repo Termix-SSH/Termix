@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Neplatný ověřovací kód",
     "totpCancelled": "Sběr metrik zrušen",
     "authenticationFailed": "Ověření se nezdařilo",
+    "noneAuthNotSupported": "Statistiky serveru nepodporují typ ověřování „žádné“.",
     "load": "Zatížení",
     "editLayout": "Upravit rozvržení",
     "cancelEdit": "Zrušit",

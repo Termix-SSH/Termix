@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Nieprawidłowy kod weryfikacyjny",
     "totpCancelled": "Anulowano zbieranie danych",
     "authenticationFailed": "Uwierzytelnianie nie powiodło się",
+    "noneAuthNotSupported": "Statystyki serwera nie obsługują typu uwierzytelniania „brak”.",
     "load": "Obciążenie",
     "editLayout": "Edytuj układ",
     "cancelEdit": "Anulować",

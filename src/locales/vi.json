@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Mã xác minh không hợp lệ",
     "totpCancelled": "Việc thu thập số liệu đã bị hủy bỏ.",
     "authenticationFailed": "Xác thực thất bại",
+    "noneAuthNotSupported": "Server Stats không hỗ trợ loại xác thực 'none'.",
     "load": "Trọng tải",
     "editLayout": "Chỉnh sửa bố cục",
     "cancelEdit": "Hủy bỏ",

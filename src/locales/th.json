@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "รหัสยืนยันไม่ถูกต้อง",
     "totpCancelled": "การเก็บรวบรวมข้อมูลตัวชี้วัดถูกยกเลิก",
     "authenticationFailed": "การตรวจสอบสิทธิ์ล้มเหลว",
+    "noneAuthNotSupported": "สถิติเซิร์ฟเวอร์ไม่รองรับประเภทการตรวจสอบสิทธิ์แบบ 'none'",
     "load": "โหลด",
     "editLayout": "แก้ไขเค้าโครง",
     "cancelEdit": "ยกเลิก",
