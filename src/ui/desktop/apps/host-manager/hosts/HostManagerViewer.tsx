@@ -1241,31 +1241,33 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                     </p>
                                   </div>
                                   <div className="flex gap-1 flex-shrink-0 ml-1">
-                                    {host.folder && host.folder !== "" && (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRemoveFromFolder(host);
-                                            }}
-                                            className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
-                                            disabled={operationLoading}
-                                          >
-                                            <FolderMinus className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>
-                                            {t("hosts.removeFromFolder", {
-                                              folder: host.folder,
-                                            })}
-                                          </p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
+                                    {!(host as any).isShared &&
+                                      host.folder &&
+                                      host.folder !== "" && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveFromFolder(host);
+                                              }}
+                                              className="h-5 w-5 p-0 text-orange-500 hover:text-orange-700 hover:bg-orange-500/10"
+                                              disabled={operationLoading}
+                                            >
+                                              <FolderMinus className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>
+                                              {t("hosts.removeFromFolder", {
+                                                folder: host.folder,
+                                              })}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
@@ -1284,64 +1286,72 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         <p>{t("hosts.editHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(
-                                              host.id,
-                                              host.name ||
-                                                `${host.username}@${host.ip}`,
-                                            );
-                                          }}
-                                          className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-500/10"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t("hosts.deleteHostTooltip")}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleExport(host);
-                                          }}
-                                          className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-500/10"
-                                        >
-                                          <Upload className="h-3 w-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t("hosts.exportHostTooltip")}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleClone(host);
-                                          }}
-                                          className="h-5 w-5 p-0 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-500/10"
-                                        >
-                                          <Copy className="h-3 w-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t("hosts.cloneHostTooltip")}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                    {!(host as any).isShared && (
+                                      <>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(
+                                                  host.id,
+                                                  host.name ||
+                                                    `${host.username}@${host.ip}`,
+                                                );
+                                              }}
+                                              className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-500/10"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>
+                                              {t("hosts.deleteHostTooltip")}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleExport(host);
+                                              }}
+                                              className="h-5 w-5 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-500/10"
+                                            >
+                                              <Upload className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>
+                                              {t("hosts.exportHostTooltip")}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleClone(host);
+                                              }}
+                                              className="h-5 w-5 p-0 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-500/10"
+                                            >
+                                              <Copy className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{t("hosts.cloneHostTooltip")}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 

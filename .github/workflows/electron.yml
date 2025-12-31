@@ -545,7 +545,7 @@ jobs:
           CHECKSUM=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
 
           mkdir -p homebrew-generated
-          cp homebrew/termix.rb homebrew-generated/termix.rb
+          cp Casks/termix.rb homebrew-generated/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-generated/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-generated/termix.rb
@@ -818,7 +818,7 @@ jobs:
 
           mkdir -p homebrew-submission/Casks/t
 
-          cp homebrew/termix.rb homebrew-submission/Casks/t/termix.rb
+          cp Casks/termix.rb homebrew-submission/Casks/t/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb
