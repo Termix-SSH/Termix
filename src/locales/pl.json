@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Nie udało się pobrać metryk serwera",
     "failedToFetchHomeData": "Nie udało się pobrać danych domowych",
     "loadingMetrics": "Ładowanie metryk...",
+    "connecting": "Złączony...",
     "refreshing": "Orzeźwiający...",
     "serverOffline": "Serwer offline",
     "cannotFetchMetrics": "Nie można pobrać metryk z serwera offline",

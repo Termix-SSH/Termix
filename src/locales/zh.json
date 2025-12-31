@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "获取服务器指标失败",
     "failedToFetchHomeData": "获取家庭数据失败",
     "loadingMetrics": "正在加载指标...",
+    "connecting": "正在连接...",
     "refreshing": "令人耳目一新……",
     "serverOffline": "服务器离线",
     "cannotFetchMetrics": "无法从离线服务器获取指标",

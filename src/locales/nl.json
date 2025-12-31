@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Het ophalen van serverstatistieken is mislukt.",
     "failedToFetchHomeData": "Het ophalen van de thuisgegevens is mislukt.",
     "loadingMetrics": "Statistieken worden geladen...",
+    "connecting": "Verbinden...",
     "refreshing": "Verfrissend...",
     "serverOffline": "Server offline",
     "cannotFetchMetrics": "Het is niet mogelijk om meetgegevens op te halen van een offline server.",

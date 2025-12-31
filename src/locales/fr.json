@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Impossible de récupérer les métriques du serveur.",
     "failedToFetchHomeData": "Impossible de récupérer les données du domicile",
     "loadingMetrics": "Chargement des données...",
+    "connecting": "De liaison...",
     "refreshing": "Rafraîchissant...",
     "serverOffline": "Serveur hors ligne",
     "cannotFetchMetrics": "Impossible de récupérer les métriques du serveur hors ligne",

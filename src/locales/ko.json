@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "서버 메트릭을 가져오는 데 실패했습니다.",
     "failedToFetchHomeData": "홈 데이터를 가져오는 데 실패했습니다.",
     "loadingMetrics": "지표를 불러오는 중...",
+    "connecting": "연결 중...",
     "refreshing": "상쾌한...",
     "serverOffline": "서버 오프라인",
     "cannotFetchMetrics": "오프라인 서버에서 메트릭을 가져올 수 없습니다.",

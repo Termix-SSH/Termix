@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "No se pudieron obtener las métricas del servidor",
     "failedToFetchHomeData": "No se pudieron obtener los datos de inicio",
     "loadingMetrics": "Cargando métricas...",
+    "connecting": "Conectando...",
     "refreshing": "Refrescante...",
     "serverOffline": "Servidor fuera de línea",
     "cannotFetchMetrics": "No se pueden obtener métricas del servidor sin conexión",

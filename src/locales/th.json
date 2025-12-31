@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "ไม่สามารถดึงข้อมูลเมตริกของเซิร์ฟเวอร์ได้",
     "failedToFetchHomeData": "ไม่สามารถดึงข้อมูลบ้านได้",
     "loadingMetrics": "กำลังโหลดข้อมูลสถิติ...",
+    "connecting": "กำลังเชื่อมต่อ...",
     "refreshing": "สดชื่น...",
     "serverOffline": "เซิร์ฟเวอร์ออฟไลน์",
     "cannotFetchMetrics": "ไม่สามารถดึงข้อมูลเมตริกจากเซิร์ฟเวอร์ออฟไลน์ได้",

@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Misslyckades med att hämta serverstatistik",
     "failedToFetchHomeData": "Misslyckades med att hämta hemdata",
     "loadingMetrics": "Laddar mätvärden...",
+    "connecting": "Ansluter...",
     "refreshing": "Uppfriskande...",
     "serverOffline": "Servern är offline",
     "cannotFetchMetrics": "Kan inte hämta mätvärden från offlineservern",

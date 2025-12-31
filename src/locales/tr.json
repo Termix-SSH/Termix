@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Sunucu metrikleri alınamadı.",
     "failedToFetchHomeData": "Ev verilerini alma başarısız oldu.",
     "loadingMetrics": "Ölçümler yükleniyor...",
+    "connecting": "Bağlanıyor...",
     "refreshing": "Ferahlatıcı...",
     "serverOffline": "Sunucu Çevrimdışı",
     "cannotFetchMetrics": "Çevrimdışı sunucudan ölçümler alınamıyor.",

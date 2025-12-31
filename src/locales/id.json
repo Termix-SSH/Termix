@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Gagal mengambil metrik server.",
     "failedToFetchHomeData": "Gagal mengambil data beranda",
     "loadingMetrics": "Sedang memuat metrik...",
+    "connecting": "Menghubungkan...",
     "refreshing": "Menyegarkan...",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Tidak dapat mengambil metrik dari server offline.",
