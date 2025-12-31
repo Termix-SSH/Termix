@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Geçersiz doğrulama kodu",
     "totpCancelled": "Ölçüm toplama işlemi iptal edildi",
     "authenticationFailed": "Kimlik doğrulama başarısız oldu",
+    "noneAuthNotSupported": "Sunucu İstatistikleri, 'none' kimlik doğrulama türünü desteklemiyor.",
     "load": "Yük",
     "editLayout": "Düzeni Düzenle",
     "cancelEdit": "İptal etmek",

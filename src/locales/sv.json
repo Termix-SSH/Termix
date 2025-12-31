@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Ogiltig verifieringskod",
     "totpCancelled": "Insamling av mätvärden avbruten",
     "authenticationFailed": "Autentiseringen misslyckades",
+    "noneAuthNotSupported": "Serverstatistik stöder inte autentiseringstypen 'ingen'.",
     "load": "Ladda",
     "editLayout": "Redigera layout",
     "cancelEdit": "Avboka",

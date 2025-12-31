@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Ongeldige verificatiecode",
     "totpCancelled": "Gegevensverzameling geannuleerd",
     "authenticationFailed": "Authenticatie mislukt",
+    "noneAuthNotSupported": "Serverstatistieken ondersteunen het authenticatietype 'none' niet.",
     "load": "Laden",
     "editLayout": "Lay-out bewerken",
     "cancelEdit": "Annuleren",

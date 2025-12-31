@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "잘못된 인증 코드입니다.",
     "totpCancelled": "데이터 수집이 취소되었습니다",
     "authenticationFailed": "인증 실패",
+    "noneAuthNotSupported": "서버 통계는 'none' 인증 유형을 지원하지 않습니다.",
     "load": "짐",
     "editLayout": "레이아웃 편집",
     "cancelEdit": "취소",

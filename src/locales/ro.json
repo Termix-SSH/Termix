@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Cod de verificare nevalid",
     "totpCancelled": "Colectarea valorilor metrice a fost anulată",
     "authenticationFailed": "Autentificarea a eșuat",
+    "noneAuthNotSupported": "Statisticile serverului nu acceptă tipul de autentificare „none”.",
     "load": "Încărca",
     "editLayout": "Editați aspectul",
     "cancelEdit": "Anula",

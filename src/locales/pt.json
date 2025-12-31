@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Código de verificação inválido",
     "totpCancelled": "Coleta de métricas cancelada",
     "authenticationFailed": "A autenticação falhou.",
+    "noneAuthNotSupported": "As Estatísticas do Servidor não suportam o tipo de autenticação \"nenhum\".",
     "load": "Carregar",
     "editLayout": "Editar layout",
     "cancelEdit": "Cancelar",

@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "验证码无效",
     "totpCancelled": "指标收集已取消",
     "authenticationFailed": "身份验证失败",
+    "noneAuthNotSupported": "服务器统计信息不支持“无”身份验证类型。",
     "load": "加载",
     "editLayout": "编辑布局",
     "cancelEdit": "取消",

@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Ugyldig bekreftelseskode",
     "totpCancelled": "Innsamling av målinger er avbrutt",
     "authenticationFailed": "Autentisering mislyktes",
+    "noneAuthNotSupported": "Serverstatistikk støtter ikke autentiseringstypen «ingen».",
     "load": "Laste",
     "editLayout": "Rediger oppsett",
     "cancelEdit": "Kansellere",

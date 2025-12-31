@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Code de vérification invalide",
     "totpCancelled": "Collecte des données annulée",
     "authenticationFailed": "L'authentification a échoué",
+    "noneAuthNotSupported": "Server Stats ne prend pas en charge le type d'authentification « aucun ».",
     "load": "Charger",
     "editLayout": "Modifier la mise en page",
     "cancelEdit": "Annuler",

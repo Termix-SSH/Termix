@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "Ungültiger Bestätigungscode",
     "totpCancelled": "Datenerfassung abgesagt",
     "authenticationFailed": "Authentifizierung fehlgeschlagen",
+    "noneAuthNotSupported": "Server Stats unterstützt den Authentifizierungstyp „none“ nicht.",
     "load": "Laden",
     "editLayout": "Layout bearbeiten",
     "cancelEdit": "Stornieren",

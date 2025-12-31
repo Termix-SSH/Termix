@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "رمز التحقق غير صالح",
     "totpCancelled": "تم إلغاء جمع البيانات الإحصائية",
     "authenticationFailed": "فشلت عملية المصادقة",
+    "noneAuthNotSupported": "لا يدعم Server Stats نوع المصادقة \"none\".",
     "load": "حمولة",
     "editLayout": "تعديل التخطيط",
     "cancelEdit": "يلغي",

@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "অবৈধ যাচাইকরণ কোড",
     "totpCancelled": "মেট্রিক্স সংগ্রহ বাতিল করা হয়েছে",
     "authenticationFailed": "প্রমাণীকরণ ব্যর্থ হয়েছে",
+    "noneAuthNotSupported": "সার্ভার পরিসংখ্যান 'কিছুই নয়' প্রমাণীকরণ প্রকার সমর্থন করে না।",
     "load": "লোড",
     "editLayout": "লেআউট সম্পাদনা করুন",
     "cancelEdit": "বাতিল করুন",

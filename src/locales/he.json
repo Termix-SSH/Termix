@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "קוד אימות לא תקין",
     "totpCancelled": "איסוף המדדים בוטל",
     "authenticationFailed": "האימות נכשל",
+    "noneAuthNotSupported": "סטטיסטיקות השרת אינן תומכות בסוג האימות 'ללא'.",
     "load": "לִטעוֹן",
     "editLayout": "עריכת פריסה",
     "cancelEdit": "לְבַטֵל",

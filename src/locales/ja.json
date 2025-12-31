@@ -1647,6 +1647,7 @@
     "totpInvalidCode": "無効な確認コード",
     "totpCancelled": "メトリック収集がキャンセルされました",
     "authenticationFailed": "認証に失敗しました",
+    "noneAuthNotSupported": "サーバー統計は「なし」認証タイプをサポートしていません。",
     "load": "負荷",
     "editLayout": "レイアウトの編集",
     "cancelEdit": "キャンセル",
