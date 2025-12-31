@@ -303,11 +303,11 @@ export function ConsoleTerminal({
   }, [
     terminal,
     containerState,
-    getWebSocketBaseUrl,
     hostConfig,
     containerId,
     selectedShell,
     containerName,
+    t,
   ]);
 
   React.useEffect(() => {
