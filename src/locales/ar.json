@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "فشل في جلب مقاييس الخادم",
     "failedToFetchHomeData": "فشل في جلب بيانات المنزل",
     "loadingMetrics": "جارٍ تحميل البيانات الإحصائية...",
+    "connecting": "جارٍ الاتصال...",
     "refreshing": "منعش...",
     "serverOffline": "الخادم غير متصل",
     "cannotFetchMetrics": "لا يمكن جلب المقاييس من الخادم غير المتصل بالإنترنت",

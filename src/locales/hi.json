@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "सर्वर मेट्रिक्स प्राप्त करने में विफल",
     "failedToFetchHomeData": "घर का डेटा प्राप्त करने में विफल",
     "loadingMetrics": "मैट्रिक्स लोड हो रहे हैं...",
+    "connecting": "कनेक्ट हो रहा है...",
     "refreshing": "ताज़गी भरा...",
     "serverOffline": "सर्वर ऑफ़लाइन",
     "cannotFetchMetrics": "ऑफ़लाइन सर्वर से मेट्रिक्स प्राप्त नहीं किए जा सकते",

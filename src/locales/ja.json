@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "サーバーメトリックの取得に失敗しました",
     "failedToFetchHomeData": "ホームデータの取得に失敗しました",
     "loadingMetrics": "メトリックを読み込んでいます...",
+    "connecting": "接続中...",
     "refreshing": "爽やか…",
     "serverOffline": "サーバーがオフライン",
     "cannotFetchMetrics": "オフライン サーバーからメトリックを取得できません",

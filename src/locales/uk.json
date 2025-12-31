@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Не вдалося отримати показники сервера",
     "failedToFetchHomeData": "Не вдалося отримати домашні дані",
     "loadingMetrics": "Завантаження показників...",
+    "connecting": "Підключення...",
     "refreshing": "Освіжає...",
     "serverOffline": "Сервер офлайн",
     "cannotFetchMetrics": "Не вдається отримати показники з офлайн-сервера",

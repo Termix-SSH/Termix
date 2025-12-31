@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Не удалось получить метрики сервера.",
     "failedToFetchHomeData": "Не удалось получить данные о домашнем хозяйстве.",
     "loadingMetrics": "Загрузка метрик...",
+    "connecting": "Подключение...",
     "refreshing": "Освежающе...",
     "serverOffline": "Сервер отключен",
     "cannotFetchMetrics": "Не удаётся получить метрики с недоступного сервера.",

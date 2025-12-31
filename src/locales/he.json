@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "נכשל באחזור מדדי השרת",
     "failedToFetchHomeData": "נכשל באחזור נתוני הבית",
     "loadingMetrics": "טוען מדדים...",
+    "connecting": "מְקַשֵׁר...",
     "refreshing": "מְרַעֲנֵן...",
     "serverOffline": "שרת לא מקוון",
     "cannotFetchMetrics": "לא ניתן לאחזר מדדים משרת לא מקוון",

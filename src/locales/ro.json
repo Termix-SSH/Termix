@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Nu s-au putut prelua valorile serverului",
     "failedToFetchHomeData": "Nu s-au putut prelua datele de acasă",
     "loadingMetrics": "Se încarcă valorile...",
+    "connecting": "Se conectează...",
     "refreshing": "Răcoritor...",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Nu se pot prelua valori de pe serverul offline",

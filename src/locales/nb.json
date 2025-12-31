@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Kunne ikke hente servermålinger",
     "failedToFetchHomeData": "Kunne ikke hente hjemmedata",
     "loadingMetrics": "Laster inn målinger ...",
+    "connecting": "Kobler til...",
     "refreshing": "Forfriskende...",
     "serverOffline": "Server frakoblet",
     "cannotFetchMetrics": "Kan ikke hente målinger fra frakoblet server",

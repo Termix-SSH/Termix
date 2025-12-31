@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Servermetriken konnten nicht abgerufen werden",
     "failedToFetchHomeData": "Fehler beim Abrufen der Startdaten",
     "loadingMetrics": "Metriken werden geladen...",
+    "connecting": "Verbindung wird hergestellt...",
     "refreshing": "Erfrischend...",
     "serverOffline": "Server offline",
     "cannotFetchMetrics": "Metriken können nicht vom Offline-Server abgerufen werden",

@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Impossibile recuperare le metriche del server",
     "failedToFetchHomeData": "Impossibile recuperare i dati di casa",
     "loadingMetrics": "Caricamento delle metriche...",
+    "connecting": "Connessione in corso...",
     "refreshing": "Rinfrescante...",
     "serverOffline": "Server offline",
     "cannotFetchMetrics": "Impossibile recuperare le metriche dal server offline",

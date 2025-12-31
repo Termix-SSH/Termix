@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "Không thể lấy số liệu thống kê máy chủ",
     "failedToFetchHomeData": "Không thể tải dữ liệu trang chủ.",
     "loadingMetrics": "Đang tải số liệu...",
+    "connecting": "Đang kết nối...",
     "refreshing": "Thật sảng khoái...",
     "serverOffline": "Máy chủ ngoại tuyến",
     "cannotFetchMetrics": "Không thể lấy số liệu từ máy chủ ngoại tuyến.",

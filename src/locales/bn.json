@@ -1636,6 +1636,7 @@
     "failedToFetchMetrics": "সার্ভার মেট্রিক্স আনা যায়নি",
     "failedToFetchHomeData": "হোম ডেটা আনা যায়নি",
     "loadingMetrics": "মেট্রিক্স লোড হচ্ছে...",
+    "connecting": "সংযোগ করা হচ্ছে...",
     "refreshing": "রিফ্রেশ হচ্ছে...",
     "serverOffline": "সার্ভার অফলাইন",
     "cannotFetchMetrics": "অফলাইন সার্ভার থেকে মেট্রিক্স আনা যাচ্ছে না",
