@@ -368,6 +368,7 @@ export function AppView({
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
+                    onClose={() => removeTab(t.id)}
                   />
                 ) : (
                   <FileManager

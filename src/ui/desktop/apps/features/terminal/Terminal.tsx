@@ -675,6 +675,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             if (reconnectAttempts.current > 0) {
               attemptReconnection();
+            } else {
+              shouldNotReconnectRef.current = true;
+              if (onClose) {
+                onClose();
+              }
             }
           }
         }, 35000);

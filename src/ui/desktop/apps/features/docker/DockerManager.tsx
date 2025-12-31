@@ -32,6 +32,7 @@ interface DockerManagerProps {
   isVisible?: boolean;
   isTopbarOpen?: boolean;
   embedded?: boolean;
+  onClose?: () => void;
 }
 
 export function DockerManager({
@@ -40,6 +41,7 @@ export function DockerManager({
   isVisible = true,
   isTopbarOpen = true,
   embedded = false,
+  onClose,
 }: DockerManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
@@ -177,6 +179,7 @@ export function DockerManager({
         );
         setIsConnecting(false);
         setIsValidating(false);
+        onClose?.();
       } finally {
         setIsConnecting(false);
       }
@@ -347,6 +350,7 @@ export function DockerManager({
       toast.error(error instanceof Error ? error.message : "Failed to connect");
       setIsConnecting(false);
       setIsValidating(false);
+      onClose?.();
     } finally {
       setIsConnecting(false);
     }
@@ -355,6 +359,7 @@ export function DockerManager({
   const handleAuthCancel = () => {
     setShowAuthDialog(false);
     setIsConnecting(false);
+    onClose?.();
   };
 
   const topMarginPx = isTopbarOpen ? 74 : 16;

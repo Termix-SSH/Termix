@@ -456,6 +456,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const totpCode = totpData.code;
           totpAttempts++;
           keyboardInteractiveFinish([totpCode]);
+          keyboardInteractiveFinish = null;
+          totpPromptSent = false;
         } else {
           sshLogger.warn("TOTP response received but no callback available", {
             operation: "totp_response_error",
@@ -482,6 +484,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
           const password = passwordData.code;
           keyboardInteractiveFinish([password]);
+          keyboardInteractiveFinish = null;
         } else {
           sshLogger.warn(
             "Password response received but no callback available",
@@ -988,29 +991,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         if (totpPromptIndex !== -1) {
           if (totpPromptSent) {
-            if (totpAttempts >= 3) {
-              sshLogger.error("TOTP maximum attempts reached", {
-                operation: "ssh_keyboard_interactive_totp_max_attempts",
-                hostId: id,
-                attempts: totpAttempts,
-              });
-              ws.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "Maximum TOTP attempts reached",
-                  code: "TOTP_MAX_ATTEMPTS",
-                }),
-              );
-              cleanupSSH();
-              return;
-            }
-            ws.send(
-              JSON.stringify({
-                type: "totp_retry",
-                attempts_remaining: 3 - totpAttempts,
-                prompt: prompts[totpPromptIndex].prompt,
-              }),
-            );
+            sshLogger.warn("TOTP prompt asked again - ignoring duplicate", {
+              operation: "ssh_keyboard_interactive_totp_duplicate",
+              hostId: id,
+              prompts: promptTexts,
+            });
             return;
           }
           totpPromptSent = true;
@@ -1032,19 +1017,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
             finish(responses);
           };
 
+          // Set timeout for TOTP response
           totpTimeout = setTimeout(() => {
             if (keyboardInteractiveFinish) {
               keyboardInteractiveFinish = null;
               totpPromptSent = false;
-              totpAttempts = 0;
+              sshLogger.warn("TOTP prompt timeout", {
+                operation: "totp_timeout",
+                hostId: id,
+              });
               ws.send(
                 JSON.stringify({
                   type: "error",
-                  message: "TOTP verification timeout",
-                  code: "TOTP_TIMEOUT",
+                  message: "TOTP verification timeout. Please reconnect.",
                 }),
               );
-              cleanupSSH();
+              cleanupSSH(connectionTimeout);
             }
           }, 180000);
 
@@ -1082,6 +1070,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
               finish(responses);
             };
 
+            // Set timeout for password response
+            totpTimeout = setTimeout(() => {
+              if (keyboardInteractiveFinish) {
+                keyboardInteractiveFinish = null;
+                keyboardInteractiveResponded = false;
+                sshLogger.warn("Password prompt timeout", {
+                  operation: "password_timeout",
+                  hostId: id,
+                });
+                ws.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "Password verification timeout. Please reconnect.",
+                  }),
+                );
+                cleanupSSH(connectionTimeout);
+              }
+            }, 180000);
+
             ws.send(
               JSON.stringify({
                 type: "password_required",
@@ -1107,9 +1114,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard:
-        resolvedCredentials.authType === "none" ||
-        hostConfig.forceKeyboardInteractive === true,
+      tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
       readyTimeout: 30000,
@@ -1191,9 +1196,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      if (!hostConfig.forceKeyboardInteractive) {
-        connectConfig.password = resolvedCredentials.password;
-      }
+      connectConfig.password = resolvedCredentials.password;
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
@@ -1385,6 +1388,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(timeoutId);
     }
 
+    if (totpTimeout) {
+      clearTimeout(totpTimeout);
+      totpTimeout = null;
+    }
+
     if (sshStream) {
       try {
         sshStream.end();
@@ -1407,11 +1415,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
       }
       sshConn = null;
-    }
-
-    if (totpTimeout) {
-      clearTimeout(totpTimeout);
-      totpTimeout = null;
     }
 
     totpPromptSent = false;

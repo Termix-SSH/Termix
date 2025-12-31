@@ -202,6 +202,7 @@ export function SSHToolsSidebar({
       localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
     return shouldCollapse ? new Set() : new Set();
   });
+  const [snippetSearchQuery, setSnippetSearchQuery] = useState("");
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingFolder, setEditingFolder] = useState<SnippetFolder | null>(
     null,
@@ -772,7 +773,22 @@ export function SSHToolsSidebar({
       }
     });
 
-    snippets.forEach((snippet) => {
+    const filteredSnippets = snippetSearchQuery
+      ? snippets.filter(
+          (snippet) =>
+            snippet.name
+              .toLowerCase()
+              .includes(snippetSearchQuery.toLowerCase()) ||
+            snippet.content
+              .toLowerCase()
+              .includes(snippetSearchQuery.toLowerCase()) ||
+            snippet.description
+              ?.toLowerCase()
+              .includes(snippetSearchQuery.toLowerCase()),
+        )
+      : snippets;
+
+    filteredSnippets.forEach((snippet) => {
       const folderName = snippet.folder || "";
       if (!grouped.has(folderName)) {
         grouped.set(folderName, []);
@@ -1279,6 +1295,28 @@ export function SSHToolsSidebar({
                           <Separator />
                         </>
                       )}
+
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder={t("snippets.searchSnippets")}
+                          value={snippetSearchQuery}
+                          onChange={(e) => {
+                            setSnippetSearchQuery(e.target.value);
+                          }}
+                          className="pl-10 pr-10"
+                        />
+                        {snippetSearchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                            onClick={() => setSnippetSearchQuery("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
 
                       <div className="flex gap-2">
                         <Button
