@@ -356,7 +356,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-    if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
+    if: (github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all') && github.event.inputs.artifact_destination != 'submit'
     needs: []
     permissions:
       contents: write
@@ -801,11 +801,20 @@ jobs:
           URL="https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$DMG_NAME"
 
           mkdir -p release_asset
-          PATH="release_asset/$DMG_NAME"
+          DOWNLOAD_PATH="release_asset/$DMG_NAME"
           echo "Downloading DMG from $URL"
-          curl -L -o "$PATH" "$URL"
 
-          CHECKSUM=$(shasum -a 256 "$PATH" | awk '{print $1}')
+          if command -v curl &> /dev/null; then
+            curl -L -o "$DOWNLOAD_PATH" "$URL"
+          elif command -v wget &> /dev/null; then
+            wget -O "$DOWNLOAD_PATH" "$URL"
+          else
+            echo "Neither curl nor wget is available, installing curl"
+            brew install curl
+            curl -L -o "$DOWNLOAD_PATH" "$URL"
+          fi
+
+          CHECKSUM=$(shasum -a 256 "$DOWNLOAD_PATH" | awk '{print $1}')
 
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
