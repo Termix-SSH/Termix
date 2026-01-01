@@ -18,6 +18,7 @@ import {
   keepaliveDockerSession,
   verifyDockerTOTP,
   logActivity,
+  getSSHHosts,
 } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { AlertCircle } from "lucide-react";
@@ -121,7 +122,6 @@ export function DockerManager({
     const fetchLatestHostConfig = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {
@@ -138,7 +138,6 @@ export function DockerManager({
     const handleHostsChanged = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {

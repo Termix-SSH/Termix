@@ -11,6 +11,8 @@ import {
   submitMetricsTOTP,
   executeSnippet,
   logActivity,
+  sendMetricsHeartbeat,
+  getSSHHosts,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
@@ -145,7 +147,6 @@ export function ServerStats({
 
     const heartbeatInterval = setInterval(async () => {
       try {
-        const { sendMetricsHeartbeat } = await import("@/ui/main-axios.ts");
         await sendMetricsHeartbeat(viewerSessionId);
       } catch (error) {
         console.error("Failed to send heartbeat:", error);
@@ -273,7 +274,6 @@ export function ServerStats({
     const fetchLatestHostConfig = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {
@@ -290,7 +290,6 @@ export function ServerStats({
     const handleHostsChanged = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {

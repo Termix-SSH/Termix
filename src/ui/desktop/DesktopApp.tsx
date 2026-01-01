@@ -13,7 +13,7 @@ import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 
 function AppContent() {
@@ -163,7 +163,6 @@ function AppContent() {
 
     setTimeout(async () => {
       try {
-        const { logoutUser, isElectron } = await import("@/ui/main-axios.ts");
         await logoutUser();
 
         if (isElectron()) {
