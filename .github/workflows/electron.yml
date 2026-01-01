@@ -986,7 +986,7 @@ jobs:
       - name: Deploy to App Store Connect (TestFlight)
         if: steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
-          PKG_FILE=$(find artifact-mas -name "*.pkg" -type f | head -n 1)
+          PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
             echo "PKG file not found, exiting."
             exit 1
