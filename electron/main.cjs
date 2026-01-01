@@ -11,13 +11,9 @@ const fs = require("fs");
 const os = require("os");
 
 if (process.platform === "linux") {
-  app.commandLine.appendSwitch("--no-sandbox");
-  app.commandLine.appendSwitch("--disable-setuid-sandbox");
-  app.commandLine.appendSwitch("--disable-dev-shm-usage");
+  app.commandLine.appendSwitch("--ozone-platform-hint=auto");
 
-  app.disableHardwareAcceleration();
-  app.commandLine.appendSwitch("--disable-gpu");
-  app.commandLine.appendSwitch("--disable-gpu-compositing");
+  app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 }
 
 app.commandLine.appendSwitch("--ignore-certificate-errors");

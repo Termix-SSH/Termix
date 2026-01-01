@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Termix
 Comment=Web-based server management platform with SSH terminal, tunneling, and file editing
-Exec=termix %U
+Exec=run.sh %U
 Icon=com.karmaa.termix
 Terminal=false
 Type=Application

@@ -11,13 +11,27 @@ import {
   sshFolders,
   commandHistory,
   recentActivity,
+  hostAccess,
+  userRoles,
+  sessionRecordings,
 } from "../db/schema.js";
-import { eq, and, desc, isNotNull, or } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  isNotNull,
+  or,
+  isNull,
+  gte,
+  sql,
+  inArray,
+} from "drizzle-orm";
 import type { Request, Response } from "express";
 import multer from "multer";
 import { sshLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
@@ -35,6 +49,7 @@ function isValidPort(port: unknown): port is number {
 }
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -231,10 +246,12 @@ router.post(
       key,
       keyPassword,
       keyType,
+      sudoPassword,
       pin,
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -242,7 +259,16 @@ router.post(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      useSocks5,
+      socks5Host,
+      socks5Port,
+      socks5Username,
+      socks5Password,
+      socks5ProxyChain,
+      overrideCredentialUsername,
     } = hostData;
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
@@ -269,6 +295,7 @@ router.post(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -280,10 +307,21 @@ router.post(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      sudoPassword: sudoPassword || null,
+      useSocks5: useSocks5 ? 1 : 0,
+      socks5Host: socks5Host || null,
+      socks5Port: socks5Port || null,
+      socks5Username: socks5Username || null,
+      socks5Password: socks5Password || null,
+      socks5ProxyChain: socks5ProxyChain
+        ? JSON.stringify(socks5ProxyChain)
+        : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -341,12 +379,14 @@ router.post(
           ? JSON.parse(createdHost.jumpHosts as string)
           : [],
         enableFileManager: !!createdHost.enableFileManager,
+        enableDocker: !!createdHost.enableDocker,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
           : undefined,
       };
 
-      const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
+      const resolvedHost =
+        (await resolveHostCredentials(baseHost, userId)) || baseHost;
 
       sshLogger.success(
         `SSH host created: ${name} (${ip}:${port}) by user ${userId}`,
@@ -453,10 +493,12 @@ router.put(
       key,
       keyPassword,
       keyType,
+      sudoPassword,
       pin,
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      enableDocker,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -464,7 +506,16 @@ router.put(
       statsConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      notes,
+      useSocks5,
+      socks5Host,
+      socks5Port,
+      socks5Username,
+      socks5Password,
+      socks5ProxyChain,
+      overrideCredentialUsername,
     } = hostData;
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
@@ -492,6 +543,7 @@ router.put(
       username,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
+      overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
@@ -503,10 +555,21 @@ router.put(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      enableDocker: enableDocker ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      notes: notes || null,
+      sudoPassword: sudoPassword || null,
+      useSocks5: useSocks5 ? 1 : 0,
+      socks5Host: socks5Host || null,
+      socks5Port: socks5Port || null,
+      socks5Username: socks5Username || null,
+      socks5Password: socks5Password || null,
+      socks5ProxyChain: socks5ProxyChain
+        ? JSON.stringify(socks5ProxyChain)
+        : null,
     };
 
     if (effectiveAuthType === "password") {
@@ -535,23 +598,100 @@ router.put(
     }
 
     try {
+      const accessInfo = await permissionManager.canAccessHost(
+        userId,
+        Number(hostId),
+        "write",
+      );
+
+      if (!accessInfo.hasAccess) {
+        sshLogger.warn("User does not have permission to update host", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (!accessInfo.isOwner) {
+        sshLogger.warn("Shared user attempted to update host (view-only)", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(403).json({
+          error: "Only the host owner can modify host configuration",
+        });
+      }
+
+      const hostRecord = await db
+        .select({
+          userId: sshData.userId,
+          credentialId: sshData.credentialId,
+          authType: sshData.authType,
+        })
+        .from(sshData)
+        .where(eq(sshData.id, Number(hostId)))
+        .limit(1);
+
+      if (hostRecord.length === 0) {
+        sshLogger.warn("Host not found for update", {
+          operation: "host_update",
+          hostId: parseInt(hostId),
+          userId,
+        });
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const ownerId = hostRecord[0].userId;
+
+      if (
+        !accessInfo.isOwner &&
+        sshDataObj.credentialId !== undefined &&
+        sshDataObj.credentialId !== hostRecord[0].credentialId
+      ) {
+        return res.status(403).json({
+          error: "Only the host owner can change the credential",
+        });
+      }
+
+      if (
+        !accessInfo.isOwner &&
+        sshDataObj.authType !== undefined &&
+        sshDataObj.authType !== hostRecord[0].authType
+      ) {
+        return res.status(403).json({
+          error: "Only the host owner can change the authentication type",
+        });
+      }
+
+      if (sshDataObj.credentialId !== undefined) {
+        if (
+          hostRecord[0].credentialId !== null &&
+          sshDataObj.credentialId === null
+        ) {
+          const revokedShares = await db
+            .delete(hostAccess)
+            .where(eq(hostAccess.hostId, Number(hostId)))
+            .returning({ id: hostAccess.id, userId: hostAccess.userId });
+        }
+      }
+
       await SimpleDBOps.update(
         sshData,
         "ssh_data",
-        and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
+        eq(sshData.id, Number(hostId)),
         sshDataObj,
-        userId,
+        ownerId,
       );
 
       const updatedHosts = await SimpleDBOps.select(
         db
           .select()
           .from(sshData)
-          .where(
-            and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
-          ),
+          .where(eq(sshData.id, Number(hostId))),
         "ssh_data",
-        userId,
+        ownerId,
       );
 
       if (updatedHosts.length === 0) {
@@ -582,12 +722,17 @@ router.put(
           ? JSON.parse(updatedHost.jumpHosts as string)
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
+        enableDocker: !!updatedHost.enableDocker,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
           : undefined,
+        dockerConfig: updatedHost.dockerConfig
+          ? JSON.parse(updatedHost.dockerConfig as string)
+          : undefined,
       };
 
-      const resolvedHost = (await resolveHostCredentials(baseHost)) || baseHost;
+      const resolvedHost =
+        (await resolveHostCredentials(baseHost, userId)) || baseHost;
 
       sshLogger.success(
         `SSH host updated: ${name} (${ip}:${port}) by user ${userId}`,
@@ -656,11 +801,115 @@ router.get(
       return res.status(400).json({ error: "Invalid userId" });
     }
     try {
-      const data = await SimpleDBOps.select(
-        db.select().from(sshData).where(eq(sshData.userId, userId)),
-        "ssh_data",
-        userId,
-      );
+      const now = new Date().toISOString();
+
+      const userRoleIds = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleIds.map((r) => r.roleId);
+
+      const rawData = await db
+        .select({
+          id: sshData.id,
+          userId: sshData.userId,
+          name: sshData.name,
+          ip: sshData.ip,
+          port: sshData.port,
+          username: sshData.username,
+          folder: sshData.folder,
+          tags: sshData.tags,
+          pin: sshData.pin,
+          authType: sshData.authType,
+          password: sshData.password,
+          key: sshData.key,
+          keyPassword: sshData.key_password,
+          keyType: sshData.keyType,
+          enableTerminal: sshData.enableTerminal,
+          enableTunnel: sshData.enableTunnel,
+          tunnelConnections: sshData.tunnelConnections,
+          jumpHosts: sshData.jumpHosts,
+          enableFileManager: sshData.enableFileManager,
+          defaultPath: sshData.defaultPath,
+          autostartPassword: sshData.autostartPassword,
+          autostartKey: sshData.autostartKey,
+          autostartKeyPassword: sshData.autostartKeyPassword,
+          forceKeyboardInteractive: sshData.forceKeyboardInteractive,
+          statsConfig: sshData.statsConfig,
+          terminalConfig: sshData.terminalConfig,
+          createdAt: sshData.createdAt,
+          updatedAt: sshData.updatedAt,
+          credentialId: sshData.credentialId,
+          overrideCredentialUsername: sshData.overrideCredentialUsername,
+          quickActions: sshData.quickActions,
+          notes: sshData.notes,
+          enableDocker: sshData.enableDocker,
+          useSocks5: sshData.useSocks5,
+          socks5Host: sshData.socks5Host,
+          socks5Port: sshData.socks5Port,
+          socks5Username: sshData.socks5Username,
+          socks5Password: sshData.socks5Password,
+          socks5ProxyChain: sshData.socks5ProxyChain,
+
+          ownerId: sshData.userId,
+          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
+          permissionLevel: hostAccess.permissionLevel,
+          expiresAt: hostAccess.expiresAt,
+        })
+        .from(sshData)
+        .leftJoin(
+          hostAccess,
+          and(
+            eq(hostAccess.hostId, sshData.id),
+            or(
+              eq(hostAccess.userId, userId),
+              roleIds.length > 0
+                ? inArray(hostAccess.roleId, roleIds)
+                : sql`false`,
+            ),
+            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+          ),
+        )
+        .where(
+          or(
+            eq(sshData.userId, userId),
+            and(
+              eq(hostAccess.userId, userId),
+              or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+            ),
+            roleIds.length > 0
+              ? and(
+                  inArray(hostAccess.roleId, roleIds),
+                  or(
+                    isNull(hostAccess.expiresAt),
+                    gte(hostAccess.expiresAt, now),
+                  ),
+                )
+              : sql`false`,
+          ),
+        );
+
+      const ownHosts = rawData.filter((row) => row.userId === userId);
+      const sharedHosts = rawData.filter((row) => row.userId !== userId);
+
+      let decryptedOwnHosts: any[] = [];
+      try {
+        decryptedOwnHosts = await SimpleDBOps.select(
+          Promise.resolve(ownHosts),
+          "ssh_data",
+          userId,
+        );
+      } catch (decryptError) {
+        sshLogger.error("Failed to decrypt own hosts", decryptError, {
+          operation: "host_fetch_own_decrypt_failed",
+          userId,
+        });
+        decryptedOwnHosts = [];
+      }
+
+      const sanitizedSharedHosts = sharedHosts;
+
+      const data = [...decryptedOwnHosts, ...sanitizedSharedHosts];
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
@@ -683,6 +932,7 @@ router.get(
               ? JSON.parse(row.quickActions as string)
               : [],
             enableFileManager: !!row.enableFileManager,
+            enableDocker: !!row.enableDocker,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
               : undefined,
@@ -690,9 +940,18 @@ router.get(
               ? JSON.parse(row.terminalConfig as string)
               : undefined,
             forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
+            socks5ProxyChain: row.socks5ProxyChain
+              ? JSON.parse(row.socks5ProxyChain as string)
+              : [],
+
+            isShared: !!row.isShared,
+            permissionLevel: row.permissionLevel || undefined,
+            sharedExpiresAt: row.expiresAt || undefined,
           };
 
-          return (await resolveHostCredentials(baseHost)) || baseHost;
+          const resolved =
+            (await resolveHostCredentials(baseHost, userId)) || baseHost;
+          return resolved;
         }),
       );
 
@@ -765,9 +1024,12 @@ router.get(
           ? JSON.parse(host.terminalConfig)
           : undefined,
         forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+        socks5ProxyChain: host.socks5ProxyChain
+          ? JSON.parse(host.socks5ProxyChain)
+          : [],
       };
 
-      res.json((await resolveHostCredentials(result)) || result);
+      res.json((await resolveHostCredentials(result, userId)) || result);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -811,7 +1073,7 @@ router.get(
 
       const host = hosts[0];
 
-      const resolvedHost = (await resolveHostCredentials(host)) || host;
+      const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
 
       const exportData = {
         name: resolvedHost.name,
@@ -835,6 +1097,9 @@ router.get(
         defaultPath: resolvedHost.defaultPath,
         tunnelConnections: resolvedHost.tunnelConnections
           ? JSON.parse(resolvedHost.tunnelConnections as string)
+          : [],
+        socks5ProxyChain: resolvedHost.socks5ProxyChain
+          ? JSON.parse(resolvedHost.socks5ProxyChain as string)
           : [],
       };
 
@@ -893,57 +1158,33 @@ router.delete(
 
       await db
         .delete(fileManagerRecent)
-        .where(
-          and(
-            eq(fileManagerRecent.hostId, numericHostId),
-            eq(fileManagerRecent.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerRecent.hostId, numericHostId));
 
       await db
         .delete(fileManagerPinned)
-        .where(
-          and(
-            eq(fileManagerPinned.hostId, numericHostId),
-            eq(fileManagerPinned.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerPinned.hostId, numericHostId));
 
       await db
         .delete(fileManagerShortcuts)
-        .where(
-          and(
-            eq(fileManagerShortcuts.hostId, numericHostId),
-            eq(fileManagerShortcuts.userId, userId),
-          ),
-        );
+        .where(eq(fileManagerShortcuts.hostId, numericHostId));
 
       await db
         .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.hostId, numericHostId),
-            eq(commandHistory.userId, userId),
-          ),
-        );
+        .where(eq(commandHistory.hostId, numericHostId));
 
       await db
         .delete(sshCredentialUsage)
-        .where(
-          and(
-            eq(sshCredentialUsage.hostId, numericHostId),
-            eq(sshCredentialUsage.userId, userId),
-          ),
-        );
+        .where(eq(sshCredentialUsage.hostId, numericHostId));
 
       await db
         .delete(recentActivity)
-        .where(
-          and(
-            eq(recentActivity.hostId, numericHostId),
-            eq(recentActivity.userId, userId),
-          ),
-        );
+        .where(eq(recentActivity.hostId, numericHostId));
+
+      await db.delete(hostAccess).where(eq(hostAccess.hostId, numericHostId));
+
+      await db
+        .delete(sessionRecordings)
+        .where(eq(sessionRecordings.hostId, numericHostId));
 
       await db
         .delete(sshData)
@@ -1450,11 +1691,54 @@ router.delete(
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
+  requestingUserId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    if (host.credentialId && host.userId) {
+    if (host.credentialId && (host.userId || host.ownerId)) {
       const credentialId = host.credentialId as number;
-      const userId = host.userId as string;
+      const ownerId = (host.ownerId || host.userId) as string;
+
+      if (requestingUserId && requestingUserId !== ownerId) {
+        try {
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            host.id as number,
+            requestingUserId,
+          );
+
+          if (sharedCred) {
+            const resolvedHost: Record<string, unknown> = {
+              ...host,
+              authType: sharedCred.authType,
+              password: sharedCred.password,
+              key: sharedCred.key,
+              keyPassword: sharedCred.keyPassword,
+              keyType: sharedCred.keyType,
+            };
+
+            if (!host.overrideCredentialUsername) {
+              resolvedHost.username = sharedCred.username;
+            }
+
+            return resolvedHost;
+          }
+        } catch (sharedCredError) {
+          sshLogger.warn(
+            "Failed to get shared credential, falling back to owner credential",
+            {
+              operation: "resolve_shared_credential_fallback",
+              hostId: host.id as number,
+              requestingUserId,
+              error:
+                sharedCredError instanceof Error
+                  ? sharedCredError.message
+                  : "Unknown error",
+            },
+          );
+        }
+      }
 
       const credentials = await SimpleDBOps.select(
         db
@@ -1463,24 +1747,29 @@ async function resolveHostCredentials(
           .where(
             and(
               eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, userId),
+              eq(sshCredentials.userId, ownerId),
             ),
           ),
         "ssh_credentials",
-        userId,
+        ownerId,
       );
 
       if (credentials.length > 0) {
         const credential = credentials[0];
-        return {
+        const resolvedHost: Record<string, unknown> = {
           ...host,
-          username: credential.username,
           authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
           keyPassword: credential.key_password || credential.keyPassword,
           keyType: credential.key_type || credential.keyType,
         };
+
+        if (!host.overrideCredentialUsername) {
+          resolvedHost.username = credential.username;
+        }
+
+        return resolvedHost;
       }
     }
 
@@ -1680,6 +1969,40 @@ router.delete(
         });
       }
 
+      const hostIds = hostsToDelete.map((host) => host.id);
+
+      if (hostIds.length > 0) {
+        await db
+          .delete(fileManagerRecent)
+          .where(inArray(fileManagerRecent.hostId, hostIds));
+
+        await db
+          .delete(fileManagerPinned)
+          .where(inArray(fileManagerPinned.hostId, hostIds));
+
+        await db
+          .delete(fileManagerShortcuts)
+          .where(inArray(fileManagerShortcuts.hostId, hostIds));
+
+        await db
+          .delete(commandHistory)
+          .where(inArray(commandHistory.hostId, hostIds));
+
+        await db
+          .delete(sshCredentialUsage)
+          .where(inArray(sshCredentialUsage.hostId, hostIds));
+
+        await db
+          .delete(recentActivity)
+          .where(inArray(recentActivity.hostId, hostIds));
+
+        await db.delete(hostAccess).where(inArray(hostAccess.hostId, hostIds));
+
+        await db
+          .delete(sessionRecordings)
+          .where(inArray(sessionRecordings.hostId, hostIds));
+      }
+
       await db
         .delete(sshData)
         .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
@@ -1782,10 +2105,12 @@ router.post(
           continue;
         }
 
-        if (!["password", "key", "credential"].includes(hostData.authType)) {
+        if (
+          !["password", "key", "credential", "none"].includes(hostData.authType)
+        ) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', or 'credential'`,
+            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', or 'none'`,
           );
           continue;
         }
@@ -1840,13 +2165,38 @@ router.post(
           enableTerminal: hostData.enableTerminal !== false,
           enableTunnel: hostData.enableTunnel !== false,
           enableFileManager: hostData.enableFileManager !== false,
+          enableDocker: hostData.enableDocker || false,
           defaultPath: hostData.defaultPath || "/",
           tunnelConnections: hostData.tunnelConnections
             ? JSON.stringify(hostData.tunnelConnections)
             : "[]",
+          jumpHosts: hostData.jumpHosts
+            ? JSON.stringify(hostData.jumpHosts)
+            : null,
+          quickActions: hostData.quickActions
+            ? JSON.stringify(hostData.quickActions)
+            : null,
           statsConfig: hostData.statsConfig
             ? JSON.stringify(hostData.statsConfig)
             : null,
+          terminalConfig: hostData.terminalConfig
+            ? JSON.stringify(hostData.terminalConfig)
+            : null,
+          forceKeyboardInteractive: hostData.forceKeyboardInteractive
+            ? "true"
+            : "false",
+          notes: hostData.notes || null,
+          useSocks5: hostData.useSocks5 ? 1 : 0,
+          socks5Host: hostData.socks5Host || null,
+          socks5Port: hostData.socks5Port || null,
+          socks5Username: hostData.socks5Username || null,
+          socks5Password: hostData.socks5Password || null,
+          socks5ProxyChain: hostData.socks5ProxyChain
+            ? JSON.stringify(hostData.socks5ProxyChain)
+            : null,
+          overrideCredentialUsername: hostData.overrideCredentialUsername
+            ? 1
+            : 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };

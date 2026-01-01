@@ -21,12 +21,7 @@ export async function collectUptimeMetrics(client: Client): Promise<{
         uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
       }
     }
-  } catch (e) {
-    statsLogger.debug("Failed to collect uptime", {
-      operation: "uptime_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  } catch (e) {}
 
   return {
     seconds: uptimeSeconds,

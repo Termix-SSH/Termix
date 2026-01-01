@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
-import { Server as ServerView } from "@/ui/desktop/apps/server/Server.tsx";
-import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
+import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
+import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
+import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
+import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
+import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -16,6 +18,7 @@ import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
+import { useTheme } from "@/components/theme-provider";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 
 interface TabData {
@@ -51,14 +54,23 @@ export function AppView({
     removeTab: (id: number) => void;
   };
   const { state: sidebarState } = useSidebar();
+  const { theme: appTheme } = useTheme();
+
+  const isDarkMode = useMemo(() => {
+    if (appTheme === "dark") return true;
+    if (appTheme === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }, [appTheme]);
 
   const terminalTabs = useMemo(
     () =>
       tabs.filter(
         (tab: TabData) =>
           tab.type === "terminal" ||
-          tab.type === "server" ||
-          tab.type === "file_manager",
+          tab.type === "server_stats" ||
+          tab.type === "file_manager" ||
+          tab.type === "tunnel" ||
+          tab.type === "docker",
       ),
     [tabs],
   );
@@ -88,13 +100,18 @@ export function AppView({
       const splitIds = allSplitScreenTab as number[];
       visibleIds.push(currentTab, ...splitIds.filter((i) => i !== currentTab));
     }
-    terminalTabs.forEach((t: TabData) => {
-      if (visibleIds.includes(t.id)) {
-        const ref = t.terminalRef?.current;
-        if (ref?.fit) ref.fit();
-        if (ref?.notifyResize) ref.notifyResize();
-        if (ref?.refresh) ref.refresh();
-      }
+
+    const operations = terminalTabs
+      .filter((t: TabData) => visibleIds.includes(t.id))
+      .map((t: TabData) => t.terminalRef?.current)
+      .filter((ref) => ref?.fit);
+
+    requestAnimationFrame(() => {
+      operations.forEach((ref) => {
+        ref.fit?.();
+        ref.notifyResize?.();
+        ref.refresh?.();
+      });
     });
   }, [allSplitScreenTab, currentTab, terminalTabs]);
 
@@ -104,18 +121,14 @@ export function AppView({
       cancelAnimationFrame(layoutScheduleRef.current);
     layoutScheduleRef.current = requestAnimationFrame(() => {
       updatePanelRects();
-      layoutScheduleRef.current = requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
   const hideThenFit = React.useCallback(() => {
     requestAnimationFrame(() => {
       updatePanelRects();
-      requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
@@ -210,7 +223,10 @@ export function AppView({
     const mainTab = terminalTabs.find((tab: TabData) => tab.id === currentTab);
 
     if (allSplitScreenTab.length === 0 && mainTab) {
-      const isFileManagerTab = mainTab.type === "file_manager";
+      const isFileManagerTab =
+        mainTab.type === "file_manager" ||
+        mainTab.type === "tunnel" ||
+        mainTab.type === "docker";
       const newStyle = {
         position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
@@ -221,7 +237,6 @@ export function AppView({
         display: "block" as const,
         pointerEvents: "auto" as const,
         opacity: 1,
-        transition: "opacity 150ms ease-in-out",
       };
       styles[mainTab.id] = newStyle;
       previousStylesRef.current[mainTab.id] = newStyle;
@@ -240,7 +255,6 @@ export function AppView({
             display: "block" as const,
             pointerEvents: "auto" as const,
             opacity: 1,
-            transition: "opacity 150ms ease-in-out",
           };
           styles[t.id] = newStyle;
           previousStylesRef.current[t.id] = newStyle;
@@ -257,9 +271,14 @@ export function AppView({
           const isVisible =
             hasStyle || (allSplitScreenTab.length === 0 && t.id === currentTab);
 
+          const effectiveVisible = isVisible;
+
           const previousStyle = previousStylesRef.current[t.id];
 
-          const isFileManagerTab = t.type === "file_manager";
+          const isFileManagerTab =
+            t.type === "file_manager" ||
+            t.type === "tunnel" ||
+            t.type === "docker";
           const standardStyle = {
             position: "absolute" as const,
             top: isFileManagerTab ? 0 : 4,
@@ -270,25 +289,40 @@ export function AppView({
 
           const finalStyle: React.CSSProperties = hasStyle
             ? { ...styles[t.id], overflow: "hidden" }
-            : ({
-                ...(previousStyle || standardStyle),
-                opacity: 0,
-                pointerEvents: "none",
-                zIndex: 0,
-                transition: "opacity 150ms ease-in-out",
-                overflow: "hidden",
-              } as React.CSSProperties);
-
-          const effectiveVisible = isVisible;
+            : effectiveVisible
+              ? {
+                  ...(previousStyle || standardStyle),
+                  opacity: 1,
+                  pointerEvents: "auto",
+                  zIndex: 20,
+                  display: "block",
+                  overflow: "hidden",
+                }
+              : ({
+                  ...(previousStyle || standardStyle),
+                  opacity: 0,
+                  pointerEvents: "none",
+                  zIndex: 0,
+                  display: "none",
+                  overflow: "hidden",
+                } as React.CSSProperties);
 
           const isTerminal = t.type === "terminal";
           const terminalConfig = {
             ...DEFAULT_TERMINAL_CONFIG,
             ...(t.hostConfig as any)?.terminalConfig,
           };
-          const themeColors =
-            TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-            TERMINAL_THEMES.termix.colors;
+          // Auto-switch between termixDark and termixLight based on app theme
+          let themeColors;
+          if (terminalConfig.theme === "termix") {
+            themeColors = isDarkMode
+              ? TERMINAL_THEMES.termixDark.colors
+              : TERMINAL_THEMES.termixLight.colors;
+          } else {
+            themeColors =
+              TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+              TERMINAL_THEMES.termixDark.colors;
+          }
           const backgroundColor = themeColors.background;
 
           return (
@@ -296,7 +330,9 @@ export function AppView({
               <div
                 className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
-                  backgroundColor: isTerminal ? backgroundColor : "#18181b",
+                  backgroundColor: isTerminal
+                    ? backgroundColor
+                    : "var(--bg-base)",
                 }}
               >
                 {t.type === "terminal" ? (
@@ -309,13 +345,30 @@ export function AppView({
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
                   />
-                ) : t.type === "server" ? (
+                ) : t.type === "server_stats" ? (
                   <ServerView
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
+                  />
+                ) : t.type === "tunnel" ? (
+                  <TunnelManager
+                    hostConfig={t.hostConfig}
+                    title={t.title}
+                    isVisible={effectiveVisible}
+                    isTopbarOpen={isTopbarOpen}
+                    embedded
+                  />
+                ) : t.type === "docker" ? (
+                  <DockerManager
+                    hostConfig={t.hostConfig}
+                    title={t.title}
+                    isVisible={effectiveVisible}
+                    isTopbarOpen={isTopbarOpen}
+                    embedded
+                    onClose={() => removeTab(t.id)}
                   />
                 ) : (
                   <FileManager
@@ -338,7 +391,7 @@ export function AppView({
       variant="ghost"
       onClick={onClick}
       aria-label="Reset split sizes"
-      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-dark-border-panel bg-dark-bg-panel hover:bg-dark-bg-panel-hover text-white flex items-center justify-center p-0"
+      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-edge-panel bg-surface hover:bg-surface-hover text-foreground flex items-center justify-center p-0"
     >
       <RefreshCcw className="h-4 w-4" />
     </Button>
@@ -358,7 +411,7 @@ export function AppView({
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
-      background: "var(--color-dark-border)",
+      background: "var(--border-base)",
     } as React.CSSProperties;
     const commonGroupProps: {
       onLayout: () => void;
@@ -391,7 +444,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col bg-transparent relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {a.title}
                 </div>
               </div>
@@ -410,7 +463,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col bg-transparent relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {b.title}
                   <ResetButton onClick={handleReset} />
                 </div>
@@ -458,7 +511,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {a.title}
                     </div>
                   </div>
@@ -477,7 +530,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {b.title}
                       <ResetButton onClick={handleReset} />
                     </div>
@@ -499,7 +552,7 @@ export function AppView({
                 }}
                 className="h-full w-full flex flex-col relative"
               >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                   {c.title}
                 </div>
               </div>
@@ -546,7 +599,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {a.title}
                     </div>
                   </div>
@@ -565,7 +618,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {b.title}
                       <ResetButton onClick={handleReset} />
                     </div>
@@ -601,7 +654,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {c.title}
                     </div>
                   </div>
@@ -620,7 +673,7 @@ export function AppView({
                     }}
                     className="h-full w-full flex flex-col relative"
                   >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
                       {d.title}
                     </div>
                   </div>
@@ -636,6 +689,8 @@ export function AppView({
 
   const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
   const isFileManager = currentTabData?.type === "file_manager";
+  const isTunnel = currentTabData?.type === "tunnel";
+  const isDocker = currentTabData?.type === "docker";
   const isTerminal = currentTabData?.type === "terminal";
   const isSplitScreen = allSplitScreenTab.length > 0;
 
@@ -643,18 +698,25 @@ export function AppView({
     ...DEFAULT_TERMINAL_CONFIG,
     ...(currentTabData?.hostConfig as any)?.terminalConfig,
   };
-  const themeColors =
-    TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-    TERMINAL_THEMES.termix.colors;
-  const terminalBackgroundColor = themeColors.background;
+  let containerThemeColors;
+  if (terminalConfig.theme === "termix") {
+    containerThemeColors = isDarkMode
+      ? TERMINAL_THEMES.termixDark.colors
+      : TERMINAL_THEMES.termixLight.colors;
+  } else {
+    containerThemeColors =
+      TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+      TERMINAL_THEMES.termixDark.colors;
+  }
+  const terminalBackgroundColor = containerThemeColors.background;
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
 
-  let containerBackground = "var(--color-dark-bg)";
-  if (isFileManager && !isSplitScreen) {
-    containerBackground = "var(--color-dark-bg-darkest)";
+  let containerBackground = "var(--color-canvas)";
+  if ((isFileManager || isTunnel || isDocker) && !isSplitScreen) {
+    containerBackground = "var(--color-deepest)";
   } else if (isTerminal) {
     containerBackground = terminalBackgroundColor;
   }
@@ -662,7 +724,7 @@ export function AppView({
   return (
     <div
       ref={containerRef}
-      className="border-2 border-dark-border rounded-lg overflow-hidden overflow-x-hidden relative"
+      className="border-2 border-edge rounded-lg overflow-hidden overflow-x-hidden relative"
       style={{
         background: containerBackground,
         marginLeft: leftMarginPx,

@@ -36,24 +36,55 @@ export function useConfirmation() {
   };
 
   const confirmWithToast = (
-    message: string,
-    callback: () => void,
-    variant: "default" | "destructive" = "default",
-  ) => {
-    const actionText = variant === "destructive" ? "Delete" : "Confirm";
-    const cancelText = "Cancel";
+    opts: ConfirmationOptions | string,
+    callback?: () => void,
+    variantOrConfirmLabel: "default" | "destructive" | string = "Confirm",
+    cancelLabel: string = "Cancel",
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const isVariant =
+        variantOrConfirmLabel === "default" ||
+        variantOrConfirmLabel === "destructive";
+      const confirmLabel = isVariant ? "Confirm" : variantOrConfirmLabel;
 
-    toast(message, {
-      action: {
-        label: actionText,
-        onClick: callback,
-      },
-      cancel: {
-        label: cancelText,
-        onClick: () => {},
-      },
-      duration: 10000,
-      className: variant === "destructive" ? "border-red-500" : "",
+      if (typeof opts === "string") {
+        toast(opts, {
+          action: {
+            label: confirmLabel,
+            onClick: () => {
+              if (callback) callback();
+              resolve(true);
+            },
+          },
+          cancel: {
+            label: cancelLabel,
+            onClick: () => {
+              resolve(false);
+            },
+          },
+        } as any);
+      } else if (typeof opts === "object") {
+        const actualConfirmLabel = opts.confirmText || confirmLabel;
+        const actualCancelLabel = opts.cancelText || cancelLabel;
+
+        toast(opts.description, {
+          action: {
+            label: actualConfirmLabel,
+            onClick: () => {
+              if (callback) callback();
+              resolve(true);
+            },
+          },
+          cancel: {
+            label: actualCancelLabel,
+            onClick: () => {
+              resolve(false);
+            },
+          },
+        } as any);
+      } else {
+        resolve(false);
+      }
     });
   };
 

@@ -23,10 +23,7 @@ export async function collectSystemMetrics(client: Client): Promise<{
     kernel = kernelOut.stdout.trim() || null;
     os = osOut.stdout.trim() || null;
   } catch (e) {
-    statsLogger.debug("Failed to collect system info", {
-      operation: "system_info_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
+    // No error log
   }
 
   return {

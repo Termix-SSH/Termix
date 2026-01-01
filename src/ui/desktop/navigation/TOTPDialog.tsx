@@ -27,17 +27,16 @@ export function TOTPDialog({
   return (
     <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
       <div
-        className="absolute inset-0 bg-dark-bg rounded-md"
+        className="absolute inset-0 bg-canvas rounded-md"
         style={{ backgroundColor: backgroundColor || undefined }}
       />
-      <div className="bg-dark-bg border-2 border-dark-border rounded-lg p-6 max-w-md w-full mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-elevated border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         <div className="mb-4 flex items-center gap-2">
           <Shield className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">
             {t("terminal.totpRequired")}
           </h3>
         </div>
-        <p className="text-muted-foreground text-sm mb-4">{prompt}</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();

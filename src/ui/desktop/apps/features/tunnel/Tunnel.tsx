@@ -1,0 +1,248 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { TunnelViewer } from "@/ui/desktop/apps/features/tunnel/TunnelViewer.tsx";
+import {
+  getSSHHosts,
+  getTunnelStatuses,
+  connectTunnel,
+  disconnectTunnel,
+  cancelTunnel,
+  logActivity,
+} from "@/ui/main-axios.ts";
+import type {
+  SSHHost,
+  TunnelConnection,
+  TunnelStatus,
+  SSHTunnelProps,
+} from "../../../types/index.js";
+
+export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
+  const { t } = useTranslation();
+  const [allHosts, setAllHosts] = useState<SSHHost[]>([]);
+  const [visibleHosts, setVisibleHosts] = useState<SSHHost[]>([]);
+  const [tunnelStatuses, setTunnelStatuses] = useState<
+    Record<string, TunnelStatus>
+  >({});
+  const [tunnelActions, setTunnelActions] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const prevVisibleHostRef = React.useRef<SSHHost | null>(null);
+  const activityLoggedRef = React.useRef(false);
+  const activityLoggingRef = React.useRef(false);
+
+  const haveTunnelConnectionsChanged = (
+    a: TunnelConnection[] = [],
+    b: TunnelConnection[] = [],
+  ): boolean => {
+    if (a.length !== b.length) return true;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i];
+      const y = b[i];
+      if (
+        x.sourcePort !== y.sourcePort ||
+        x.endpointPort !== y.endpointPort ||
+        x.endpointHost !== y.endpointHost ||
+        x.maxRetries !== y.maxRetries ||
+        x.retryInterval !== y.retryInterval ||
+        x.autoStart !== y.autoStart
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const fetchHosts = useCallback(async () => {
+    const hostsData = await getSSHHosts();
+    setAllHosts(hostsData);
+    const nextVisible = filterHostKey
+      ? hostsData.filter((h) => {
+          const key =
+            h.name && h.name.trim() !== "" ? h.name : `${h.username}@${h.ip}`;
+          return key === filterHostKey;
+        })
+      : hostsData;
+
+    const prev = prevVisibleHostRef.current;
+    const curr = nextVisible[0] ?? null;
+    let changed = false;
+    if (!prev && curr) changed = true;
+    else if (prev && !curr) changed = true;
+    else if (prev && curr) {
+      if (
+        prev.id !== curr.id ||
+        prev.name !== curr.name ||
+        prev.ip !== curr.ip ||
+        prev.port !== curr.port ||
+        prev.username !== curr.username ||
+        haveTunnelConnectionsChanged(
+          prev.tunnelConnections,
+          curr.tunnelConnections,
+        )
+      ) {
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setVisibleHosts(nextVisible);
+      prevVisibleHostRef.current = curr;
+    }
+  }, [filterHostKey]);
+
+  const logTunnelActivity = async (host: SSHHost) => {
+    if (!host?.id || activityLoggedRef.current || activityLoggingRef.current) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName = host.name || `${host.username}@${host.ip}`;
+      await logActivity("tunnel", host.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log tunnel activity:", err);
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  };
+
+  const fetchTunnelStatuses = useCallback(async () => {
+    const statusData = await getTunnelStatuses();
+    setTunnelStatuses(statusData);
+  }, []);
+
+  useEffect(() => {
+    fetchHosts();
+    const interval = setInterval(fetchHosts, 5000);
+
+    const handleHostsChanged = () => {
+      fetchHosts();
+    };
+    window.addEventListener(
+      "ssh-hosts:changed",
+      handleHostsChanged as EventListener,
+    );
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(
+        "ssh-hosts:changed",
+        handleHostsChanged as EventListener,
+      );
+    };
+  }, [fetchHosts]);
+
+  useEffect(() => {
+    fetchTunnelStatuses();
+    const interval = setInterval(fetchTunnelStatuses, 1000);
+    return () => clearInterval(interval);
+  }, [fetchTunnelStatuses]);
+
+  useEffect(() => {
+    if (visibleHosts.length > 0 && visibleHosts[0]) {
+      logTunnelActivity(visibleHosts[0]);
+    }
+  }, [visibleHosts.length > 0 ? visibleHosts[0]?.id : null]);
+
+  const handleTunnelAction = async (
+    action: "connect" | "disconnect" | "cancel",
+    host: SSHHost,
+    tunnelIndex: number,
+  ) => {
+    const tunnel = host.tunnelConnections[tunnelIndex];
+    const tunnelName = `${host.id}::${tunnelIndex}::${host.name || `${host.username}@${host.ip}`}::${tunnel.sourcePort}::${tunnel.endpointHost}::${tunnel.endpointPort}`;
+
+    setTunnelActions((prev) => ({ ...prev, [tunnelName]: true }));
+
+    try {
+      if (action === "connect") {
+        const endpointHost = allHosts.find(
+          (h) =>
+            h.name === tunnel.endpointHost ||
+            `${h.username}@${h.ip}` === tunnel.endpointHost,
+        );
+
+        const tunnelConfig = {
+          name: tunnelName,
+          sourceHostId: host.id,
+          tunnelIndex: tunnelIndex,
+          hostName: host.name || `${host.username}@${host.ip}`,
+          sourceIP: host.ip,
+          sourceSSHPort: host.port,
+          sourceUsername: host.username,
+          sourcePassword:
+            host.authType === "password" ? host.password : undefined,
+          sourceAuthMethod: host.authType,
+          sourceSSHKey: host.authType === "key" ? host.key : undefined,
+          sourceKeyPassword:
+            host.authType === "key" ? host.keyPassword : undefined,
+          sourceKeyType: host.authType === "key" ? host.keyType : undefined,
+          sourceCredentialId: host.credentialId,
+          sourceUserId: host.userId,
+          endpointHost: tunnel.endpointHost,
+          endpointIP: endpointHost?.ip,
+          endpointSSHPort: endpointHost?.port,
+          endpointUsername: endpointHost?.username,
+          endpointPassword:
+            endpointHost?.authType === "password"
+              ? endpointHost.password
+              : undefined,
+          endpointAuthMethod: endpointHost?.authType,
+          endpointSSHKey:
+            endpointHost?.authType === "key" ? endpointHost.key : undefined,
+          endpointKeyPassword:
+            endpointHost?.authType === "key"
+              ? endpointHost.keyPassword
+              : undefined,
+          endpointKeyType:
+            endpointHost?.authType === "key" ? endpointHost.keyType : undefined,
+          endpointCredentialId: endpointHost?.credentialId,
+          endpointUserId: endpointHost?.userId,
+          sourcePort: tunnel.sourcePort,
+          endpointPort: tunnel.endpointPort,
+          maxRetries: tunnel.maxRetries,
+          retryInterval: tunnel.retryInterval * 1000,
+          autoStart: tunnel.autoStart,
+          isPinned: host.pin,
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
+        };
+        await connectTunnel(tunnelConfig);
+      } else if (action === "disconnect") {
+        await disconnectTunnel(tunnelName);
+      } else if (action === "cancel") {
+        await cancelTunnel(tunnelName);
+      }
+
+      await fetchTunnelStatuses();
+    } catch (error) {
+      console.error("Tunnel action failed:", {
+        action,
+        tunnelName,
+        hostId: host.id,
+        tunnelIndex,
+        error: error instanceof Error ? error.message : String(error),
+        fullError: error,
+      });
+    } finally {
+      setTunnelActions((prev) => ({ ...prev, [tunnelName]: false }));
+    }
+  };
+
+  return (
+    <TunnelViewer
+      hosts={visibleHosts}
+      tunnelStatuses={tunnelStatuses}
+      tunnelActions={tunnelActions}
+      onTunnelAction={handleTunnelAction}
+    />
+  );
+}

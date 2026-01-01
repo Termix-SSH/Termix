@@ -10,6 +10,7 @@ import {
   type ServerConfig,
 } from "@/ui/main-axios.ts";
 import { Server } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 interface ServerConfigProps {
   onServerConfigured: (serverUrl: string) => void;
@@ -23,9 +24,16 @@ export function ElectronServerConfig({
   isFirstTime = false,
 }: ServerConfigProps) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [serverUrl, setServerUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
   useEffect(() => {
     loadServerConfig();
@@ -88,68 +96,84 @@ export function ElectronServerConfig({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-          <Server className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">{t("serverConfig.title")}</h2>
-        <p className="text-sm text-muted-foreground mt-2">
-          {t("serverConfig.description")}
-        </p>
-      </div>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
-          <Input
-            id="server-url"
-            type="text"
-            placeholder="http://localhost:30001 or https://your-server.com"
-            value={serverUrl}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            className="w-full h-10"
-            disabled={loading}
-          />
-        </div>
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{
+        background: "var(--bg-elevated)",
+        backgroundImage: `repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 35px,
+          ${lineColor} 35px,
+          ${lineColor} 37px
+        )`,
+      }}
+    >
+      <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <Server className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold">{t("serverConfig.title")}</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              {t("serverConfig.description")}
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
+              <Input
+                id="server-url"
+                type="text"
+                placeholder="http://localhost:30001 or https://your-server.com"
+                value={serverUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                className="w-full h-10"
+                disabled={loading}
+              />
+            </div>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>{t("common.error")}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="flex space-x-2">
-          {onCancel && !isFirstTime && (
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={onCancel}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-          )}
-          <Button
-            type="button"
-            className={onCancel && !isFirstTime ? "flex-1" : "w-full"}
-            onClick={handleSaveConfig}
-            disabled={loading || !serverUrl.trim()}
-          >
-            {loading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{t("serverConfig.saving")}</span>
-              </div>
-            ) : (
-              t("serverConfig.saveConfig")
+            {error && (
+              <Alert variant="destructive">
+                <AlertTitle>{t("common.error")}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
-          </Button>
-        </div>
 
-        <div className="text-xs text-muted-foreground text-center">
-          {t("serverConfig.helpText")}
+            <div className="flex space-x-2">
+              {onCancel && !isFirstTime && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={onCancel}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button
+                type="button"
+                className={onCancel && !isFirstTime ? "flex-1" : "w-full"}
+                onClick={handleSaveConfig}
+                disabled={loading || !serverUrl.trim()}
+              >
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{t("serverConfig.saving")}</span>
+                  </div>
+                ) : (
+                  t("serverConfig.saveConfig")
+                )}
+              </Button>
+            </div>
+
+            <div className="text-xs text-muted-foreground text-center">
+              {t("serverConfig.helpText")}
+            </div>
+          </div>
         </div>
       </div>
     </div>

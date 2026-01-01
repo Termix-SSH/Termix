@@ -56,7 +56,6 @@ export function TabProvider({ children }: TabProviderProps) {
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const nextTabId = useRef(2);
 
-  // Update home tab title when translation changes
   React.useEffect(() => {
     setTabs((prev) =>
       prev.map((tab) =>
@@ -72,11 +71,15 @@ export function TabProvider({ children }: TabProviderProps) {
     desiredTitle: string | undefined,
   ): string {
     const defaultTitle =
-      tabType === "server"
+      tabType === "server_stats"
         ? t("nav.serverStats")
         : tabType === "file_manager"
           ? t("nav.fileManager")
-          : t("nav.terminal");
+          : tabType === "tunnel"
+            ? t("nav.tunnels")
+            : tabType === "docker"
+              ? t("nav.docker")
+              : t("nav.terminal");
     const baseTitle = (desiredTitle || defaultTitle).trim();
     const match = baseTitle.match(/^(.*) \((\d+)\)$/);
     const root = match ? match[1] : baseTitle;
@@ -136,8 +139,10 @@ export function TabProvider({ children }: TabProviderProps) {
     const id = nextTabId.current++;
     const needsUniqueTitle =
       tabData.type === "terminal" ||
-      tabData.type === "server" ||
-      tabData.type === "file_manager";
+      tabData.type === "server_stats" ||
+      tabData.type === "file_manager" ||
+      tabData.type === "tunnel" ||
+      tabData.type === "docker";
     const effectiveTitle = needsUniqueTitle
       ? computeUniqueTitle(tabData.type, tabData.title)
       : tabData.title || "";
@@ -168,10 +173,8 @@ export function TabProvider({ children }: TabProviderProps) {
 
     setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
 
-    // Remove from split screen
     setAllSplitScreenTab((prev) => {
       const newSplits = prev.filter((id) => id !== tabId);
-      // Auto-clear split mode if only 1 or fewer tabs remain in split
       if (newSplits.length <= 1) {
         return [];
       }
@@ -181,7 +184,6 @@ export function TabProvider({ children }: TabProviderProps) {
     if (currentTab === tabId) {
       const remainingTabs = tabs.filter((tab) => tab.id !== tabId);
       if (remainingTabs.length > 0) {
-        // Try to set current tab to another split tab first, if any remain
         const remainingSplitTabs = allSplitScreenTab.filter(
           (id) => id !== tabId,
         );
@@ -191,7 +193,7 @@ export function TabProvider({ children }: TabProviderProps) {
           setCurrentTab(remainingTabs[0].id);
         }
       } else {
-        setCurrentTab(1); // Home tab
+        setCurrentTab(1);
       }
     }
   };
@@ -260,7 +262,11 @@ export function TabProvider({ children }: TabProviderProps) {
             hostConfig: newHostConfig,
             title: newHostConfig.name?.trim()
               ? newHostConfig.name
-              : `${newHostConfig.username}@${newHostConfig.ip}:${newHostConfig.port}`,
+              : t("nav.hostTabTitle", {
+                  username: newHostConfig.username,
+                  ip: newHostConfig.ip,
+                  port: newHostConfig.port,
+                }),
           };
         }
         return tab;
@@ -270,7 +276,11 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
     setTabs((prev) =>
-      prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)),
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, ...updates, _updateTimestamp: Date.now() }
+          : tab,
+      ),
     );
   };
 

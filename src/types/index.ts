@@ -28,6 +28,7 @@ export interface SSHHost {
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   forceKeyboardInteractive?: boolean;
 
   autostartPassword?: string;
@@ -40,14 +41,28 @@ export interface SSHHost {
   enableTerminal: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  enableDocker: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
-  statsConfig?: string;
+  statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
+
   createdAt: string;
   updatedAt: string;
+
+  isShared?: boolean;
+  permissionLevel?: "view";
+  sharedExpiresAt?: string;
 }
 
 export interface JumpHostData {
@@ -57,6 +72,14 @@ export interface JumpHostData {
 export interface QuickActionData {
   name: string;
   snippetId: number;
+}
+
+export interface ProxyNode {
+  host: string;
+  port: number;
+  type: 4 | 5;
+  username?: string;
+  password?: string;
 }
 
 export interface SSHHostData {
@@ -72,11 +95,13 @@ export interface SSHHostData {
   key?: File | null;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   credentialId?: number | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
+  enableDocker?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
@@ -84,6 +109,14 @@ export interface SSHHostData {
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
+  notes?: string;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 export interface SSHFolder {
@@ -115,6 +148,28 @@ export interface Credential {
   keyType?: string;
   usageCount: number;
   lastUsed?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CredentialBackend {
+  id: number;
+  userId: string;
+  name: string;
+  description: string | null;
+  folder: string | null;
+  tags: string;
+  authType: "password" | "key";
+  username: string;
+  password: string | null;
+  key: string;
+  private_key?: string;
+  public_key?: string;
+  key_password: string | null;
+  keyType?: string;
+  detectedKeyType: string;
+  usageCount: number;
+  lastUsed: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -155,6 +210,12 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+
+  sourceHostId: number;
+  tunnelIndex: number;
+
+  requestingUserId?: string;
+
   hostName: string;
   sourceIP: string;
   sourceSSHPort: number;
@@ -169,6 +230,7 @@ export interface TunnelConfig {
   endpointIP: string;
   endpointSSHPort: number;
   endpointUsername: string;
+  endpointHost: string;
   endpointPassword?: string;
   endpointAuthMethod: string;
   endpointSSHKey?: string;
@@ -182,6 +244,13 @@ export interface TunnelConfig {
   retryInterval: number;
   autoStart: boolean;
   isPinned: boolean;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 export interface TunnelStatus {
@@ -307,6 +376,7 @@ export interface TerminalConfig {
   startupSnippetId: number | null;
   autoMosh: boolean;
   moshCommand: string;
+  sudoPasswordAutoFill: boolean;
 }
 
 // ============================================================================
@@ -319,14 +389,16 @@ export interface TabContextTab {
     | "home"
     | "terminal"
     | "ssh_manager"
-    | "server"
+    | "server_stats"
     | "admin"
     | "file_manager"
-    | "user_profile";
+    | "user_profile"
+    | "docker";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
+  _updateTimestamp?: number;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
@@ -341,7 +413,7 @@ export interface SplitLayoutOption {
   name: string;
   description: string;
   cellCount: number;
-  icon: string; // lucide icon name
+  icon: string;
 }
 
 // ============================================================================
@@ -418,8 +490,11 @@ export interface HostManagerProps {
   isTopbarOpen?: boolean;
   initialTab?: string;
   hostConfig?: SSHHost;
+  _updateTimestamp?: number;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  currentTabId?: number;
+  updateTab?: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
 }
 
 export interface SSHManagerHostEditorProps {
@@ -477,6 +552,7 @@ export interface AlertManagerProps {
 
 export interface SSHTunnelObjectProps {
   host: SSHHost;
+  tunnelIndex?: number;
   tunnelStatuses: Record<string, TunnelStatus>;
   tunnelActions: Record<string, boolean>;
   onTunnelAction: (
@@ -647,4 +723,56 @@ export interface ExportPreviewBody {
 export interface RestoreRequestBody {
   backupPath: string;
   targetPath?: string;
+}
+
+// ============================================================================
+// DOCKER TYPES
+// ============================================================================
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  state:
+    | "created"
+    | "running"
+    | "paused"
+    | "restarting"
+    | "removing"
+    | "exited"
+    | "dead";
+  ports: string;
+  created: string;
+  command?: string;
+  labels?: Record<string, string>;
+  networks?: string[];
+  mounts?: string[];
+}
+
+export interface DockerStats {
+  cpu: string;
+  memoryUsed: string;
+  memoryLimit: string;
+  memoryPercent: string;
+  netInput: string;
+  netOutput: string;
+  blockRead: string;
+  blockWrite: string;
+  pids?: string;
+}
+
+export interface DockerLogOptions {
+  tail?: number;
+  timestamps?: boolean;
+  since?: string;
+  until?: string;
+  follow?: boolean;
+}
+
+export interface DockerValidation {
+  available: boolean;
+  version?: string;
+  error?: string;
+  code?: string;
 }
