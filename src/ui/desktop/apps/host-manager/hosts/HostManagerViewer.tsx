@@ -26,6 +26,7 @@ import {
   updateFolderMetadata,
   deleteAllHostsInFolder,
   getServerStatusById,
+  refreshServerPolling,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -313,7 +314,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-          const { refreshServerPolling } = await import("@/ui/main-axios.ts");
           refreshServerPolling();
         } catch {
           toast.error(t("hosts.failedToDeleteHost"));

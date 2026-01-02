@@ -52,6 +52,7 @@ import {
   getHostAccess,
   revokeHostAccess,
   getSSHHostById,
+  notifyHostCreatedOrUpdated,
   type Role,
   type AccessRecord,
 } from "@/ui/main-axios.ts";
@@ -819,8 +820,6 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       if (savedHost?.id) {
-        const { notifyHostCreatedOrUpdated } =
-          await import("@/ui/main-axios.ts");
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
