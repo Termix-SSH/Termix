@@ -18,6 +18,8 @@ import {
   isElectron,
   logActivity,
   getSnippets,
+  deleteCommandFromHistory,
+  getCommandHistory,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
@@ -212,8 +214,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (showHistoryDialog && hostConfig.id) {
         setIsLoadingHistory(true);
         setIsLoadingRef.current(true);
-        import("@/ui/main-axios.ts")
-          .then((module) => module.getCommandHistory(hostConfig.id!))
+        getCommandHistory(hostConfig.id!)
           .then((history) => {
             setCommandHistory(history);
             setCommandHistoryContextRef.current(history);
@@ -235,8 +236,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         localStorage.getItem("commandAutocomplete") === "true";
 
       if (hostConfig.id && autocompleteEnabled) {
-        import("@/ui/main-axios.ts")
-          .then((module) => module.getCommandHistory(hostConfig.id!))
+        getCommandHistory(hostConfig.id!)
           .then((history) => {
             autocompleteHistory.current = history;
           })
@@ -1107,8 +1107,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (!hostConfig.id) return;
 
         try {
-          const { deleteCommandFromHistory } =
-            await import("@/ui/main-axios.ts");
           await deleteCommandFromHistory(hostConfig.id, command);
 
           setCommandHistory((prev) => {

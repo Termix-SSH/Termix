@@ -42,6 +42,7 @@ import { PasswordReset } from "@/ui/desktop/user/PasswordReset.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
+import { toast } from "sonner";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
@@ -144,7 +145,6 @@ export function UserProfile({
       const info = await getVersionInfo();
       setVersionInfo({ version: info.localVersion });
     } catch {
-      const { toast } = await import("sonner");
       toast.error(t("user.failedToLoadVersionInfo"));
     }
   };
