@@ -5,6 +5,7 @@ import { FormControl, FormItem, FormLabel } from "@/components/ui/form.tsx";
 import { getCredentials } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import type { Credential } from "../../../../../types";
+import { toast } from "sonner";
 
 interface CredentialSelectorProps {
   value?: number | null;
@@ -36,7 +37,6 @@ export function CredentialSelector({
           : data.credentials || data.data || [];
         setCredentials(credentialsArray);
       } catch {
-        const { toast } = await import("sonner");
         toast.error(t("credentials.failedToFetchCredentials"));
         setCredentials([]);
       } finally {

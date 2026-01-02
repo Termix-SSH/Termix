@@ -3,6 +3,7 @@ import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Tunnel } from "@/ui/desktop/apps/features/tunnel/Tunnel.tsx";
 import { useTranslation } from "react-i18next";
+import { getSSHHosts } from "@/ui/main-axios.ts";
 
 interface HostConfig {
   id: number;
@@ -44,7 +45,6 @@ export function TunnelManager({
     const fetchLatestHostConfig = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {
@@ -61,7 +61,6 @@ export function TunnelManager({
     const handleHostsChanged = async () => {
       if (hostConfig?.id) {
         try {
-          const { getSSHHosts } = await import("@/ui/main-axios.ts");
           const hosts = await getSSHHosts();
           const updatedHost = hosts.find((h) => h.id === hostConfig.id);
           if (updatedHost) {

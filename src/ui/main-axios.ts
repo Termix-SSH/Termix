@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
+import { toast } from "sonner";
 import type {
   SSHHost,
   SSHHostData,
@@ -446,9 +447,7 @@ function createApiInstance(
 
           if (isSessionExpired && typeof window !== "undefined") {
             console.warn("Session expired - please log in again");
-            import("sonner").then(({ toast }) => {
-              toast.warning("Session expired. Please log in again.");
-            });
+            toast.warning("Session expired. Please log in again.");
           }
         }
       }
@@ -1421,7 +1420,11 @@ export async function identifySSHSymlink(
 export async function readSSHFile(
   sessionId: string,
   path: string,
-): Promise<{ content: string; path: string }> {
+): Promise<{
+  content: string;
+  path: string;
+  encoding?: "base64" | "utf8";
+}> {
   try {
     const response = await fileManagerApi.get("/ssh/readFile", {
       params: { sessionId, path },

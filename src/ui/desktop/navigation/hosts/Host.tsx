@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getServerStatusById } from "@/ui/main-axios";
+import { getServerStatusById, getSSHHosts } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
@@ -47,7 +47,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
 
   useEffect(() => {
     const handleHostsChanged = async () => {
-      const { getSSHHosts } = await import("@/ui/main-axios.ts");
       const hosts = await getSSHHosts();
       const updatedHost = hosts.find((h) => h.id === host.id);
       if (updatedHost) {

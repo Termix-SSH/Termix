@@ -356,7 +356,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-    if: github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all'
+    if: (github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all') && github.event.inputs.artifact_destination != 'submit'
     needs: []
     permissions:
       contents: write
@@ -584,7 +584,7 @@ jobs:
 
   submit-to-chocolatey:
     runs-on: windows-latest
-    if: github.event.inputs.artifact_destination == 'submit'
+    if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == '')
     permissions:
       contents: read
 
@@ -689,7 +689,7 @@ jobs:
 
   submit-to-flatpak:
     runs-on: ubuntu-latest
-    if: github.event.inputs.artifact_destination == 'submit'
+    if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '')
     needs: []
     permissions:
       contents: read
@@ -776,7 +776,7 @@ jobs:
 
   submit-to-homebrew:
     runs-on: macos-latest
-    if: github.event.inputs.artifact_destination == 'submit'
+    if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
       contents: read
@@ -801,11 +801,20 @@ jobs:
           URL="https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$DMG_NAME"
 
           mkdir -p release_asset
-          PATH="release_asset/$DMG_NAME"
+          DOWNLOAD_PATH="release_asset/$DMG_NAME"
           echo "Downloading DMG from $URL"
-          curl -L -o "$PATH" "$URL"
 
-          CHECKSUM=$(shasum -a 256 "$PATH" | awk '{print $1}')
+          if command -v curl &> /dev/null; then
+            curl -L -o "$DOWNLOAD_PATH" "$URL"
+          elif command -v wget &> /dev/null; then
+            wget -O "$DOWNLOAD_PATH" "$URL"
+          else
+            echo "Neither curl nor wget is available, installing curl"
+            brew install curl
+            curl -L -o "$DOWNLOAD_PATH" "$URL"
+          fi
+
+          CHECKSUM=$(shasum -a 256 "$DOWNLOAD_PATH" | awk '{print $1}')
 
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
@@ -872,7 +881,7 @@ jobs:
 
   submit-to-testflight:
     runs-on: macos-latest
-    if: github.event.inputs.artifact_destination == 'submit'
+    if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
       contents: write
@@ -977,7 +986,7 @@ jobs:
       - name: Deploy to App Store Connect (TestFlight)
         if: steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
-          PKG_FILE=$(find artifact-mas -name "*.pkg" -type f | head -n 1)
+          PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
             echo "PKG file not found, exiting."
             exit 1

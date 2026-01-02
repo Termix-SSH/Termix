@@ -333,13 +333,7 @@ export function FileViewer({
     const ext = fileName.split(".").pop()?.toLowerCase() || "";
 
     if (ext === "svg") {
-      try {
-        const base64 = btoa(unescape(encodeURIComponent(content)));
-        return `data:image/svg+xml;base64,${base64}`;
-      } catch (e) {
-        console.error("Failed to encode SVG:", e);
-        return "";
-      }
+      return `data:image/svg+xml;base64,${content}`;
     }
 
     return `data:image/*;base64,${content}`;
