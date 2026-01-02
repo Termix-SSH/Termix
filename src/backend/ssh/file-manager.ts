@@ -343,6 +343,27 @@ function getMimeType(fileName: string): string {
   return mimeTypes[ext || ""] || "application/octet-stream";
 }
 
+function detectBinary(buffer: Buffer): boolean {
+  if (buffer.length === 0) return false;
+
+  const sampleSize = Math.min(buffer.length, 8192);
+  let nullBytes = 0;
+
+  for (let i = 0; i < sampleSize; i++) {
+    const byte = buffer[i];
+
+    if (byte === 0) {
+      nullBytes++;
+    }
+
+    if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
+      if (++nullBytes > 1) return true;
+    }
+  }
+
+  return nullBytes / sampleSize > 0.01;
+}
+
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -1368,11 +1389,11 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
             return res.status(500).json({ error: err.message });
           }
 
-          let data = "";
+          let binaryData = Buffer.alloc(0);
           let errorData = "";
 
           stream.on("data", (chunk: Buffer) => {
-            data += chunk.toString();
+            binaryData = Buffer.concat([binaryData, chunk]);
           });
 
           stream.stderr.on("data", (chunk: Buffer) => {
@@ -1396,7 +1417,23 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
               });
             }
 
-            res.json({ content: data, path: filePath });
+            const isBinary = detectBinary(binaryData);
+
+            if (isBinary) {
+              const base64Content = binaryData.toString("base64");
+              res.json({
+                content: base64Content,
+                path: filePath,
+                encoding: "base64",
+              });
+            } else {
+              const textContent = binaryData.toString("utf8");
+              res.json({
+                content: textContent,
+                path: filePath,
+                encoding: "utf8",
+              });
+            }
           });
         });
       });
@@ -1440,7 +1477,16 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "base64");
+            try {
+              const testBuffer = Buffer.from(content, "base64");
+              if (testBuffer.toString("base64") === content) {
+                fileBuffer = testBuffer;
+              } else {
+                fileBuffer = Buffer.from(content, "utf8");
+              }
+            } catch {
+              fileBuffer = Buffer.from(content, "utf8");
+            }
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {

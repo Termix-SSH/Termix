@@ -1421,7 +1421,11 @@ export async function identifySSHSymlink(
 export async function readSSHFile(
   sessionId: string,
   path: string,
-): Promise<{ content: string; path: string }> {
+): Promise<{
+  content: string;
+  path: string;
+  encoding?: "base64" | "utf8";
+}> {
   try {
     const response = await fileManagerApi.get("/ssh/readFile", {
       params: { sessionId, path },

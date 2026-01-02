@@ -47,6 +47,22 @@ interface FileWindowProps {
   onFileNotFound?: (file: FileItem) => void;
 }
 
+function isDisplayableText(str: string): boolean {
+  let printable = 0;
+  for (let i = 0; i < Math.min(str.length, 1000); i++) {
+    const code = str.charCodeAt(i);
+    if (
+      (code >= 32 && code <= 126) ||
+      code === 9 ||
+      code === 10 ||
+      code === 13
+    ) {
+      printable++;
+    }
+  }
+  return printable / Math.min(str.length, 1000) > 0.85;
+}
+
 export function FileWindow({
   windowId,
   file,
@@ -106,7 +122,19 @@ export function FileWindow({
         await ensureSSHConnection();
 
         const response = await readSSHFile(sshSessionId, file.path);
-        const fileContent = response.content || "";
+        let fileContent = response.content || "";
+
+        if (response.encoding === "base64") {
+          try {
+            const decoded = atob(fileContent);
+            if (isDisplayableText(decoded)) {
+              fileContent = decoded;
+            }
+          } catch (err) {
+            console.error("Failed to decode base64 content:", err);
+          }
+        }
+
         setContent(fileContent);
         setPendingContent(fileContent);
 
