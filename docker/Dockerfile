@@ -19,7 +19,7 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    npm run build
+    NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 # Stage 3: Build backend
 FROM deps AS backend-builder
