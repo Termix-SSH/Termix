@@ -19,7 +19,6 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    NODE_OPTIONS="--max-old-space-size=2048" npm run build
     NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # Stage 3: Build backend
@@ -30,7 +29,6 @@ COPY . .
 
 RUN npm rebuild better-sqlite3 --force
 
-RUN npm run build:backend
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:backend
 
 # Stage 4: Production dependencies only
@@ -82,4 +80,3 @@ RUN chmod +x /entrypoint.sh
 USER node
 
 CMD ["/entrypoint.sh"]
-
