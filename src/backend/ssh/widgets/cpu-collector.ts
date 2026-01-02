@@ -26,12 +26,20 @@ export async function collectCpuMetrics(client: Client): Promise<{
   let loadTriplet: [number, number, number] | null = null;
 
   try {
-    const [stat1, loadAvgOut, coresOut] = await Promise.all([
-      execCommand(client, "cat /proc/stat"),
-      execCommand(client, "cat /proc/loadavg"),
-      execCommand(
-        client,
-        "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
+    const [stat1, loadAvgOut, coresOut] = await Promise.race([
+      Promise.all([
+        execCommand(client, "cat /proc/stat"),
+        execCommand(client, "cat /proc/loadavg"),
+        execCommand(
+          client,
+          "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo",
+        ),
+      ]),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("CPU metrics collection timeout")),
+          25000,
+        ),
       ),
     ]);
 

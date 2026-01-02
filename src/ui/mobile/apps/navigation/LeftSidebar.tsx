@@ -181,7 +181,7 @@ export function LeftSidebar({
       <SidebarProvider open={isSidebarOpen}>
         <Sidebar>
           <SidebarHeader>
-            <SidebarGroupLabel className="text-lg font-bold text-white">
+            <SidebarGroupLabel className="text-lg font-bold text-foreground">
               Termix
               <Button
                 variant="outline"
@@ -194,12 +194,12 @@ export function LeftSidebar({
           </SidebarHeader>
           <Separator />
           <SidebarContent className="px-2 py-2">
-            <div className="!bg-dark-bg-input rounded-lg mb-2">
+            <div className="!bg-field rounded-lg mb-2">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("placeholders.searchHostsAny")}
-                className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
+                className="w-full h-8 text-sm border-2 !bg-field border-edge rounded-md"
                 autoComplete="off"
               />
             </div>

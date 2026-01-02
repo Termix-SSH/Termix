@@ -14,6 +14,7 @@ import { sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -32,6 +33,12 @@ interface ConnectToHostData {
     userId?: string;
     forceKeyboardInteractive?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
+    useSocks5?: boolean;
+    socks5Host?: string;
+    socks5Port?: number;
+    socks5Username?: string;
+    socks5Password?: string;
+    socks5ProxyChain?: unknown;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -130,10 +137,12 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
-    for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+    const jumpHostConfigs = await Promise.all(
+      jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
+    );
 
-      if (!jumpHostConfig) {
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
@@ -141,6 +150,10 @@ async function createJumpHostChain(
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i];
 
       const jumpClient = new Client();
       clients.push(jumpClient);
@@ -316,9 +329,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
-  let pingInterval: NodeJS.Timeout | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
+  let totpAttempts = 0;
+  let totpTimeout: NodeJS.Timeout | null = null;
   let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
   let isConnecting = false;
@@ -435,9 +449,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "totp_response": {
         const totpData = data as TOTPResponseData;
         if (keyboardInteractiveFinish && totpData?.code) {
+          if (totpTimeout) {
+            clearTimeout(totpTimeout);
+            totpTimeout = null;
+          }
           const totpCode = totpData.code;
+          totpAttempts++;
           keyboardInteractiveFinish([totpCode]);
           keyboardInteractiveFinish = null;
+          totpPromptSent = false;
         } else {
           sshLogger.warn("TOTP response received but no callback available", {
             operation: "totp_response_error",
@@ -458,6 +478,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "password_response": {
         const passwordData = data as TOTPResponseData;
         if (keyboardInteractiveFinish && passwordData?.code) {
+          if (totpTimeout) {
+            clearTimeout(totpTimeout);
+            totpTimeout = null;
+          }
           const password = passwordData.code;
           keyboardInteractiveFinish([password]);
           keyboardInteractiveFinish = null;
@@ -597,6 +621,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         isConnecting,
         isConnected,
       });
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Connection already in progress",
+          code: "DUPLICATE_CONNECTION",
+        }),
+      );
       return;
     }
 
@@ -617,7 +648,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         cleanupSSH(connectionTimeout);
       }
-    }, 120000);
+    }, 30000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
@@ -802,8 +833,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
           });
 
-          setupPingInterval();
-
           if (initialPath && initialPath.trim() !== "") {
             const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
             stream.write(cdCommand);
@@ -987,6 +1016,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             finish(responses);
           };
+
+          totpTimeout = setTimeout(() => {
+            if (keyboardInteractiveFinish) {
+              keyboardInteractiveFinish = null;
+              totpPromptSent = false;
+              sshLogger.warn("TOTP prompt timeout", {
+                operation: "totp_timeout",
+                hostId: id,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "TOTP verification timeout. Please reconnect.",
+                }),
+              );
+              cleanupSSH(connectionTimeout);
+            }
+          }, 180000);
+
           ws.send(
             JSON.stringify({
               type: "totp_required",
@@ -1021,6 +1069,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
               finish(responses);
             };
 
+            totpTimeout = setTimeout(() => {
+              if (keyboardInteractiveFinish) {
+                keyboardInteractiveFinish = null;
+                keyboardInteractiveResponded = false;
+                sshLogger.warn("Password prompt timeout", {
+                  operation: "password_timeout",
+                  hostId: id,
+                });
+                ws.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: "Password verification timeout. Please reconnect.",
+                  }),
+                );
+                cleanupSSH(connectionTimeout);
+              }
+            }, 180000);
+
             ws.send(
               JSON.stringify({
                 type: "password_required",
@@ -1049,10 +1115,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
-      readyTimeout: 120000,
+      readyTimeout: 30000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-      timeout: 120000,
+      timeout: 30000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -1128,9 +1194,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      if (!hostConfig.forceKeyboardInteractive) {
-        connectConfig.password = resolvedCredentials.password;
-      }
+      connectConfig.password = resolvedCredentials.password;
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
@@ -1181,6 +1245,49 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    if (
+      hostConfig.useSocks5 &&
+      (hostConfig.socks5Host ||
+        (hostConfig.socks5ProxyChain &&
+          (hostConfig.socks5ProxyChain as any).length > 0))
+    ) {
+      try {
+        const socks5Socket = await createSocks5Connection(ip, port, {
+          useSocks5: hostConfig.useSocks5,
+          socks5Host: hostConfig.socks5Host,
+          socks5Port: hostConfig.socks5Port,
+          socks5Username: hostConfig.socks5Username,
+          socks5Password: hostConfig.socks5Password,
+          socks5ProxyChain: hostConfig.socks5ProxyChain as any,
+        });
+
+        if (socks5Socket) {
+          connectConfig.sock = socks5Socket;
+          sshConn.connect(connectConfig);
+          return;
+        }
+      } catch (socks5Error) {
+        sshLogger.error("SOCKS5 connection failed", socks5Error, {
+          operation: "socks5_connect",
+          hostId: id,
+          proxyHost: hostConfig.socks5Host,
+          proxyPort: hostConfig.socks5Port || 1080,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "SOCKS5 proxy connection failed: " +
+              (socks5Error instanceof Error
+                ? socks5Error.message
+                : "Unknown error"),
+          }),
+        );
+        cleanupSSH(connectionTimeout);
+        return;
+      }
     }
 
     if (
@@ -1279,9 +1386,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearTimeout(timeoutId);
     }
 
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
+    if (totpTimeout) {
+      clearTimeout(totpTimeout);
+      totpTimeout = null;
     }
 
     if (sshStream) {
@@ -1309,35 +1416,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     totpPromptSent = false;
+    totpAttempts = 0;
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
     isConnecting = false;
     isConnected = false;
-
-    setTimeout(() => {
-      isCleaningUp = false;
-    }, 100);
+    isCleaningUp = false;
   }
 
-  function setupPingInterval() {
-    pingInterval = setInterval(() => {
-      if (sshConn && sshStream) {
-        try {
-          sshStream.write("\x00");
-        } catch (e: unknown) {
-          sshLogger.error(
-            "SSH keepalive failed: " +
-              (e instanceof Error ? e.message : "Unknown error"),
-          );
-          cleanupSSH();
-        }
-      } else if (!sshConn || !sshStream) {
-        if (pingInterval) {
-          clearInterval(pingInterval);
-          pingInterval = null;
-        }
-      }
-    }, 30000);
-  }
+  // Note: PTY-level keepalive (writing \x00 to the stream) was removed.
+  // It was causing ^@ characters to appear in terminals with echoctl enabled.
+  // SSH-level keepalive is configured via connectConfig (keepaliveInterval,
+  // keepaliveCountMax, tcpKeepAlive), which handles connection health monitoring
+  // without producing visible output on the terminal.
+  //
+  // See: https://github.com/Termix-SSH/Support/issues/232
+  // See: https://github.com/Termix-SSH/Support/issues/309
 });

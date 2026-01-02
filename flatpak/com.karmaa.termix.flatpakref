@@ -1,0 +1,12 @@
+[Flatpak Ref]
+Name=Termix
+Branch=stable
+Title=Termix - SSH Server Management Platform
+IsRuntime=false
+Url=https://github.com/Termix-SSH/Termix/releases/download/VERSION_PLACEHOLDER/termix_linux_flatpak.flatpak
+GPGKey=
+RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+Comment=Web-based server management platform with SSH terminal, tunneling, and file editing
+Description=Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides SSH terminal access, tunneling capabilities, and remote file management.
+Icon=https://raw.githubusercontent.com/Termix-SSH/Termix/main/public/icon.png
+Homepage=https://github.com/Termix-SSH/Termix

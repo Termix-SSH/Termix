@@ -10,6 +10,7 @@ import { fileLogger, sshLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -278,6 +279,7 @@ interface PendingTOTPSession {
   prompts?: Array<{ prompt: string; echo: boolean }>;
   totpPromptIndex?: number;
   resolvedPassword?: string;
+  totpAttempts: number;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -341,6 +343,27 @@ function getMimeType(fileName: string): string {
   return mimeTypes[ext || ""] || "application/octet-stream";
 }
 
+function detectBinary(buffer: Buffer): boolean {
+  if (buffer.length === 0) return false;
+
+  const sampleSize = Math.min(buffer.length, 8192);
+  let nullBytes = 0;
+
+  for (let i = 0; i < sampleSize; i++) {
+    const byte = buffer[i];
+
+    if (byte === 0) {
+      nullBytes++;
+    }
+
+    if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
+      if (++nullBytes > 1) return true;
+    }
+  }
+
+  return nullBytes / sampleSize > 0.01;
+}
+
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -356,6 +379,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     userProvidedPassword,
     forceKeyboardInteractive,
     jumpHosts,
+    useSocks5,
+    socks5Host,
+    socks5Port,
+    socks5Username,
+    socks5Password,
+    socks5ProxyChain,
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
@@ -382,6 +411,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   if (sshSessions[sessionId]?.isConnected) {
     cleanupSession(sessionId);
   }
+
+  // Clean up any stale pending TOTP sessions
+  if (pendingTOTPSessions[sessionId]) {
+    try {
+      pendingTOTPSessions[sessionId].client.end();
+    } catch {}
+    delete pendingTOTPSessions[sessionId];
+  }
+
   const client = new SSHClient();
 
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
@@ -545,9 +583,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         .json({ error: "Password required for password authentication" });
     }
 
-    if (!forceKeyboardInteractive) {
-      config.password = resolvedCredentials.password;
-    }
+    config.password = resolvedCredentials.password;
   } else if (resolvedCredentials.authType === "none") {
   } else {
     fileLogger.warn(
@@ -713,6 +749,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           prompts,
           totpPromptIndex,
           resolvedPassword: resolvedCredentials.password,
+          totpAttempts: 0,
         };
 
         res.json({
@@ -785,6 +822,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             prompts,
             totpPromptIndex: passwordPromptIndex,
             resolvedPassword: resolvedCredentials.password,
+            totpAttempts: 0,
           };
 
           res.json({
@@ -808,7 +846,47 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   );
 
-  if (jumpHosts && jumpHosts.length > 0 && userId) {
+  if (
+    useSocks5 &&
+    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
+  ) {
+    try {
+      const socks5Socket = await createSocks5Connection(ip, port, {
+        useSocks5,
+        socks5Host,
+        socks5Port,
+        socks5Username,
+        socks5Password,
+        socks5ProxyChain: socks5ProxyChain as any,
+      });
+
+      if (socks5Socket) {
+        config.sock = socks5Socket;
+        client.connect(config);
+        return;
+      } else {
+        fileLogger.error("SOCKS5 socket is null for SFTP", undefined, {
+          operation: "sftp_socks5_socket_null",
+          sessionId,
+        });
+      }
+    } catch (socks5Error) {
+      fileLogger.error("SOCKS5 connection failed", socks5Error, {
+        operation: "socks5_connect",
+        sessionId,
+        hostId,
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      });
+      return res.status(500).json({
+        error:
+          "SOCKS5 proxy connection failed: " +
+          (socks5Error instanceof Error
+            ? socks5Error.message
+            : "Unknown error"),
+      });
+    }
+  } else if (jumpHosts && jumpHosts.length > 0 && userId) {
     try {
       const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
@@ -891,9 +969,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch (error) {
-      sshLogger.debug("Operation failed, continuing", { error });
-    }
+    } catch (error) {}
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,
@@ -1313,11 +1389,11 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
             return res.status(500).json({ error: err.message });
           }
 
-          let data = "";
+          let binaryData = Buffer.alloc(0);
           let errorData = "";
 
           stream.on("data", (chunk: Buffer) => {
-            data += chunk.toString();
+            binaryData = Buffer.concat([binaryData, chunk]);
           });
 
           stream.stderr.on("data", (chunk: Buffer) => {
@@ -1341,7 +1417,23 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
               });
             }
 
-            res.json({ content: data, path: filePath });
+            const isBinary = detectBinary(binaryData);
+
+            if (isBinary) {
+              const base64Content = binaryData.toString("base64");
+              res.json({
+                content: base64Content,
+                path: filePath,
+                encoding: "base64",
+              });
+            } else {
+              const textContent = binaryData.toString("utf8");
+              res.json({
+                content: textContent,
+                path: filePath,
+                encoding: "utf8",
+              });
+            }
           });
         });
       });
@@ -1385,7 +1477,16 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "utf8");
+            try {
+              const testBuffer = Buffer.from(content, "base64");
+              if (testBuffer.toString("base64") === content) {
+                fileBuffer = testBuffer;
+              } else {
+                fileBuffer = Buffer.from(content, "utf8");
+              }
+            } catch {
+              fileBuffer = Buffer.from(content, "utf8");
+            }
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {
@@ -1461,7 +1562,22 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     try {
-      const base64Content = Buffer.from(content, "utf8").toString("base64");
+      let contentBuffer: Buffer;
+      if (typeof content === "string") {
+        try {
+          contentBuffer = Buffer.from(content, "base64");
+          if (contentBuffer.toString("base64") !== content) {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } catch {
+          contentBuffer = Buffer.from(content, "utf8");
+        }
+      } else if (Buffer.isBuffer(content)) {
+        contentBuffer = content;
+      } else {
+        contentBuffer = Buffer.from(content);
+      }
+      const base64Content = contentBuffer.toString("base64");
       const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
       const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
@@ -1579,7 +1695,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "utf8");
+            fileBuffer = Buffer.from(content, "base64");
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {
@@ -1662,7 +1778,22 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     try {
-      const base64Content = Buffer.from(content, "utf8").toString("base64");
+      let contentBuffer: Buffer;
+      if (typeof content === "string") {
+        try {
+          contentBuffer = Buffer.from(content, "base64");
+          if (contentBuffer.toString("base64") !== content) {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } catch {
+          contentBuffer = Buffer.from(content, "utf8");
+        }
+      } else if (Buffer.isBuffer(content)) {
+        contentBuffer = content;
+      } else {
+        contentBuffer = Buffer.from(content);
+      }
+      const base64Content = contentBuffer.toString("base64");
       const chunkSize = 1000000;
       const chunks = [];
 
@@ -2940,21 +3071,10 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {
-      fileLogger.debug("Extract stdout", {
-        operation: "extract_archive",
-        sessionId,
-        output: data.toString(),
-      });
-    });
+    stream.on("data", (data: Buffer) => {});
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
-      fileLogger.debug("Extract stderr", {
-        operation: "extract_archive",
-        sessionId,
-        error: data.toString(),
-      });
     });
 
     stream.on("close", (code: number) => {
@@ -3132,21 +3252,10 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {
-      fileLogger.debug("Compress stdout", {
-        operation: "compress_files",
-        sessionId,
-        output: data.toString(),
-      });
-    });
+    stream.on("data", (data: Buffer) => {});
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
-      fileLogger.debug("Compress stderr", {
-        operation: "compress_files",
-        sessionId,
-        error: data.toString(),
-      });
     });
 
     stream.on("close", (code: number) => {

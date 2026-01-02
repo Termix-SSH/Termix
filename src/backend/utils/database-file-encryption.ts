@@ -327,11 +327,7 @@ class DatabaseFileEncryption {
             fs.accessSync(envPath, fs.constants.R_OK);
             envFileReadable = true;
           }
-        } catch (error) {
-          databaseLogger.debug("Operation failed, continuing", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        } catch (error) {}
 
         databaseLogger.error(
           "Database decryption authentication failed - possible causes: wrong DATABASE_KEY, corrupted files, or interrupted write",

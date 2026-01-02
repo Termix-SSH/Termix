@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { getDb } from "./database/db/index.js";
-import { recentActivity, sshData } from "./database/db/schema.js";
-import { eq, and, desc } from "drizzle-orm";
+import { recentActivity, sshData, hostAccess } from "./database/db/schema.js";
+import { eq, and, desc, or } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -15,7 +15,7 @@ const authManager = AuthManager.getInstance();
 const serverStartTime = Date.now();
 
 const activityRateLimiter = new Map<string, number>();
-const RATE_LIMIT_MS = 1000; // 1 second window
+const RATE_LIMIT_MS = 1000;
 
 app.use(
   cors({
@@ -127,9 +127,18 @@ app.post("/activity/log", async (req, res) => {
       });
     }
 
-    if (type !== "terminal" && type !== "file_manager") {
+    if (
+      ![
+        "terminal",
+        "file_manager",
+        "server_stats",
+        "tunnel",
+        "docker",
+      ].includes(type)
+    ) {
       return res.status(400).json({
-        error: "Invalid activity type. Must be 'terminal' or 'file_manager'",
+        error:
+          "Invalid activity type. Must be 'terminal', 'file_manager', 'server_stats', 'tunnel', or 'docker'",
       });
     }
 
@@ -155,7 +164,7 @@ app.post("/activity/log", async (req, res) => {
       entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
     }
 
-    const hosts = await SimpleDBOps.select(
+    const ownedHosts = await SimpleDBOps.select(
       getDb()
         .select()
         .from(sshData)
@@ -164,8 +173,19 @@ app.post("/activity/log", async (req, res) => {
       userId,
     );
 
-    if (hosts.length === 0) {
-      return res.status(404).json({ error: "Host not found" });
+    if (ownedHosts.length === 0) {
+      const sharedHosts = await getDb()
+        .select()
+        .from(hostAccess)
+        .where(
+          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
+        );
+
+      if (sharedHosts.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Host not found or access denied" });
+      }
     }
 
     const result = (await SimpleDBOps.insert(

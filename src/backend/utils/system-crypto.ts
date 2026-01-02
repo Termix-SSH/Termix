@@ -8,6 +8,7 @@ class SystemCrypto {
   private jwtSecret: string | null = null;
   private databaseKey: Buffer | null = null;
   private internalAuthToken: string | null = null;
+  private credentialSharingKey: Buffer | null = null;
 
   private constructor() {}
 
@@ -158,6 +159,48 @@ class SystemCrypto {
     return this.internalAuthToken!;
   }
 
+  async initializeCredentialSharingKey(): Promise<void> {
+    try {
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+
+      const envKey = process.env.CREDENTIAL_SHARING_KEY;
+      if (envKey && envKey.length >= 64) {
+        this.credentialSharingKey = Buffer.from(envKey, "hex");
+        return;
+      }
+
+      try {
+        const envContent = await fs.readFile(envPath, "utf8");
+        const csKeyMatch = envContent.match(/^CREDENTIAL_SHARING_KEY=(.+)$/m);
+        if (csKeyMatch && csKeyMatch[1] && csKeyMatch[1].length >= 64) {
+          this.credentialSharingKey = Buffer.from(csKeyMatch[1], "hex");
+          process.env.CREDENTIAL_SHARING_KEY = csKeyMatch[1];
+          return;
+        }
+      } catch (fileError) {}
+
+      await this.generateAndGuideCredentialSharingKey();
+    } catch (error) {
+      databaseLogger.error(
+        "Failed to initialize credential sharing key",
+        error,
+        {
+          operation: "cred_sharing_key_init_failed",
+          dataDir: process.env.DATA_DIR || "./db/data",
+        },
+      );
+      throw new Error("Credential sharing key initialization failed");
+    }
+  }
+
+  async getCredentialSharingKey(): Promise<Buffer> {
+    if (!this.credentialSharingKey) {
+      await this.initializeCredentialSharingKey();
+    }
+    return this.credentialSharingKey!;
+  }
+
   private async generateAndGuideUser(): Promise<void> {
     const newSecret = crypto.randomBytes(32).toString("hex");
     const instanceId = crypto.randomBytes(8).toString("hex");
@@ -206,6 +249,26 @@ class SystemCrypto {
         instanceId,
         envVarName: "INTERNAL_AUTH_TOKEN",
         note: "Ready for use - no restart required",
+      },
+    );
+  }
+
+  private async generateAndGuideCredentialSharingKey(): Promise<void> {
+    const newKey = crypto.randomBytes(32);
+    const newKeyHex = newKey.toString("hex");
+    const instanceId = crypto.randomBytes(8).toString("hex");
+
+    this.credentialSharingKey = newKey;
+
+    await this.updateEnvFile("CREDENTIAL_SHARING_KEY", newKeyHex);
+
+    databaseLogger.success(
+      "Credential sharing key auto-generated and saved to .env",
+      {
+        operation: "cred_sharing_key_auto_generated",
+        instanceId,
+        envVarName: "CREDENTIAL_SHARING_KEY",
+        note: "Used for offline credential sharing - no restart required",
       },
     );
   }

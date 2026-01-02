@@ -201,13 +201,21 @@ async function initializeCompleteDatabase(): Promise<void> {
         enable_tunnel INTEGER NOT NULL DEFAULT 1,
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
+        enable_docker INTEGER NOT NULL DEFAULT 0,
         default_path TEXT,
         autostart_password TEXT,
         autostart_key TEXT,
         autostart_key_password TEXT,
         force_keyboard_interactive TEXT,
         stats_config TEXT,
+        docker_config TEXT,
         terminal_config TEXT,
+        notes TEXT,
+        use_socks5 INTEGER,
+        socks5_host TEXT,
+        socks5_port INTEGER,
+        socks5_username TEXT,
+        socks5_password TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -326,6 +334,81 @@ async function initializeCompleteDatabase(): Promise<void> {
         executed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS host_access (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host_id INTEGER NOT NULL,
+        user_id TEXT,
+        role_id INTEGER,
+        granted_by TEXT NOT NULL,
+        permission_level TEXT NOT NULL DEFAULT 'use',
+        expires_at TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_accessed_at TEXT,
+        access_count INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        description TEXT,
+        is_system INTEGER NOT NULL DEFAULT 0,
+        permissions TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS user_roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        role_id INTEGER NOT NULL,
+        granted_by TEXT,
+        granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, role_id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        action TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT,
+        resource_name TEXT,
+        details TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        success INTEGER NOT NULL,
+        error_message TEXT,
+        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS session_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        access_id INTEGER,
+        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ended_at TEXT,
+        duration INTEGER,
+        commands TEXT,
+        dangerous_actions TEXT,
+        recording_path TEXT,
+        terminated_by_owner INTEGER DEFAULT 0,
+        termination_reason TEXT,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
     );
 
 `);
@@ -486,10 +569,29 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
   addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_docker",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+
+  addColumnIfNotExists("ssh_data", "notes", "TEXT");
+
+  addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");
+  addColumnIfNotExists("ssh_data", "socks5_host", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_port", "INTEGER");
+  addColumnIfNotExists("ssh_data", "socks5_username", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
+  addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
+
+  addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
 
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
@@ -549,6 +651,317 @@ const migrateSchema = () => {
         error: createError,
       });
     }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS host_access (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL,
+          user_id TEXT,
+          role_id INTEGER,
+          granted_by TEXT NOT NULL,
+          permission_level TEXT NOT NULL DEFAULT 'use',
+          expires_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          last_accessed_at TEXT,
+          access_count INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create host_access table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT role_id FROM host_access LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE host_access ADD COLUMN role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add role_id column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE ssh_data ADD COLUMN sudo_password TEXT");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add sudo_password column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM roles LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS roles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          display_name TEXT NOT NULL,
+          description TEXT,
+          is_system INTEGER NOT NULL DEFAULT 0,
+          permissions TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create roles table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM user_roles LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS user_roles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          role_id INTEGER NOT NULL,
+          granted_by TEXT,
+          granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, role_id),
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE SET NULL
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create user_roles table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM audit_logs LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          username TEXT NOT NULL,
+          action TEXT NOT NULL,
+          resource_type TEXT NOT NULL,
+          resource_id TEXT,
+          resource_name TEXT,
+          details TEXT,
+          ip_address TEXT,
+          user_agent TEXT,
+          success INTEGER NOT NULL,
+          error_message TEXT,
+          timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create audit_logs table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM session_recordings LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS session_recordings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          access_id INTEGER,
+          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          ended_at TEXT,
+          duration INTEGER,
+          commands TEXT,
+          dangerous_actions TEXT,
+          recording_path TEXT,
+          terminated_by_owner INTEGER DEFAULT 0,
+          termination_reason TEXT,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create session_recordings table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM shared_credentials LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS shared_credentials (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_access_id INTEGER NOT NULL,
+          original_credential_id INTEGER NOT NULL,
+          target_user_id TEXT NOT NULL,
+          encrypted_username TEXT NOT NULL,
+          encrypted_auth_type TEXT NOT NULL,
+          encrypted_password TEXT,
+          encrypted_key TEXT,
+          encrypted_key_password TEXT,
+          encrypted_key_type TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          needs_re_encryption INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (host_access_id) REFERENCES host_access (id) ON DELETE CASCADE,
+          FOREIGN KEY (original_credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
+          FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create shared_credentials table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
+
+    try {
+      const validSystemRoles = ['admin', 'user'];
+      const unwantedRoleNames = ['superAdmin', 'powerUser', 'readonly', 'member'];
+      let deletedCount = 0;
+
+      const deleteByName = sqlite.prepare("DELETE FROM roles WHERE name = ?");
+      for (const roleName of unwantedRoleNames) {
+        const result = deleteByName.run(roleName);
+        if (result.changes > 0) {
+          deletedCount += result.changes;
+        }
+      }
+
+      const deleteOldSystemRole = sqlite.prepare("DELETE FROM roles WHERE name = ? AND is_system = 1");
+      for (const role of existingRoles) {
+        if (role.is_system === 1 && !validSystemRoles.includes(role.name) && !unwantedRoleNames.includes(role.name)) {
+          const result = deleteOldSystemRole.run(role.name);
+          if (result.changes > 0) {
+            deletedCount += result.changes;
+          }
+        }
+      }
+    } catch (cleanupError) {
+      databaseLogger.warn("Failed to clean up old system roles", {
+        operation: "schema_migration",
+        error: cleanupError,
+      });
+    }
+
+    const systemRoles = [
+      {
+        name: "admin",
+        displayName: "rbac.roles.admin",
+        description: "Administrator with full access",
+        permissions: null,
+      },
+      {
+        name: "user",
+        displayName: "rbac.roles.user",
+        description: "Regular user",
+        permissions: null,
+      },
+    ];
+
+    for (const role of systemRoles) {
+      const existingRole = sqlite.prepare("SELECT id FROM roles WHERE name = ?").get(role.name);
+      if (!existingRole) {
+        try {
+          sqlite.prepare(`
+            INSERT INTO roles (name, display_name, description, is_system, permissions)
+            VALUES (?, ?, ?, 1, ?)
+          `).run(role.name, role.displayName, role.description, role.permissions);
+        } catch (insertError) {
+          databaseLogger.warn(`Failed to create system role: ${role.name}`, {
+            operation: "schema_migration",
+            error: insertError,
+          });
+        }
+      }
+    }
+
+    try {
+      const adminUsers = sqlite.prepare("SELECT id FROM users WHERE is_admin = 1").all() as { id: string }[];
+      const normalUsers = sqlite.prepare("SELECT id FROM users WHERE is_admin = 0").all() as { id: string }[];
+
+      const adminRole = sqlite.prepare("SELECT id FROM roles WHERE name = 'admin'").get() as { id: number } | undefined;
+      const userRole = sqlite.prepare("SELECT id FROM roles WHERE name = 'user'").get() as { id: number } | undefined;
+
+      if (adminRole) {
+        const insertUserRole = sqlite.prepare(`
+          INSERT OR IGNORE INTO user_roles (user_id, role_id, granted_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+        `);
+
+        for (const admin of adminUsers) {
+          try {
+            insertUserRole.run(admin.id, adminRole.id);
+          } catch (error) {
+            // Ignore duplicate errors
+          }
+        }
+      }
+
+      if (userRole) {
+        const insertUserRole = sqlite.prepare(`
+          INSERT OR IGNORE INTO user_roles (user_id, role_id, granted_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+        `);
+
+        for (const user of normalUsers) {
+          try {
+            insertUserRole.run(user.id, userRole.id);
+          } catch (error) {
+            // Ignore duplicate errors
+          }
+        }
+      }
+    } catch (migrationError) {
+      databaseLogger.warn("Failed to migrate existing users to roles", {
+        operation: "schema_migration",
+        error: migrationError,
+      });
+    }
+  } catch (seedError) {
+    databaseLogger.warn("Failed to seed system roles", {
+      operation: "schema_migration",
+      error: seedError,
+    });
   }
 
   databaseLogger.success("Schema migration completed", {

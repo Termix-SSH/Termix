@@ -12,6 +12,8 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { isElectron, getCookie } from "@/ui/main-axios.ts";
+import { useTheme } from "@/components/theme-provider";
+import { TERMINAL_THEMES } from "@/constants/terminal-themes";
 
 interface HostConfig {
   id?: number;
@@ -45,6 +47,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal({ hostConfig, isVisible }, ref) {
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
+    const { theme: appTheme } = useTheme();
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -64,6 +67,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_MS = 140;
+
+    const isDarkMode =
+      appTheme === "dark" ||
+      (appTheme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const themeColors = {
+      background: isDarkMode ? "#0e0e10" : "#ffffff",
+      foreground: isDarkMode ? "#f7f7f7" : "#18181b",
+    };
 
     useEffect(() => {
       isVisibleRef.current = isVisible;
@@ -270,7 +282,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontSize: 14,
         fontFamily:
           '"Caskaydia Cove Nerd Font Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-        theme: { background: "#09090b", foreground: "#f7f7f7" },
+        theme: themeColors,
         allowTransparency: true,
         convertEol: true,
         windowsMode: false,
@@ -419,7 +431,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         setIsReady(false);
         isFittingRef.current = false;
       };
-    }, [xtermRef, terminal, hostConfig, isAuthenticated]);
+    }, [xtermRef, terminal, hostConfig, isAuthenticated, isDarkMode]);
 
     useEffect(() => {
       if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {
@@ -477,20 +489,32 @@ style.innerHTML = `
   font-display: swap;
 }
 
+/* Light theme scrollbars */
 .xterm .xterm-viewport::-webkit-scrollbar {
   width: 8px;
   background: transparent;
 }
 .xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(180,180,180,0.7);
+  background: rgba(0,0,0,0.3);
   border-radius: 4px;
 }
 .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(120,120,120,0.9);
+  background: rgba(0,0,0,0.5);
 }
 .xterm .xterm-viewport {
   scrollbar-width: thin;
-  scrollbar-color: rgba(180,180,180,0.7) transparent;
+  scrollbar-color: rgba(0,0,0,0.3) transparent;
+}
+
+/* Dark theme scrollbars */
+.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+}
+.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
+}
+.dark .xterm .xterm-viewport {
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
 }
 
 .xterm {
