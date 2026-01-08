@@ -20,6 +20,10 @@ import {
   commandHistory,
   roles,
   userRoles,
+  hostAccess,
+  sharedCredentials,
+  auditLogs,
+  sessionRecordings,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -141,6 +145,29 @@ const requireAdmin = authManager.createAdminMiddleware();
 
 async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
+    // Delete shared credentials first (depends on hostAccess)
+    await db
+      .delete(sharedCredentials)
+      .where(eq(sharedCredentials.targetUserId, userId));
+
+    // Delete session recordings (depends on hostAccess)
+    await db
+      .delete(sessionRecordings)
+      .where(eq(sessionRecordings.userId, userId));
+
+    // Delete host access records (both granted by and granted to this user)
+    await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
+    await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
+
+    // Delete sessions
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+
+    // Delete user roles
+    await db.delete(userRoles).where(eq(userRoles.userId, userId));
+
+    // Delete audit logs
+    await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+
     await db
       .delete(sshCredentialUsage)
       .where(eq(sshCredentialUsage.userId, userId));
