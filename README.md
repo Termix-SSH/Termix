@@ -16,17 +16,6 @@
   <small style="color: #666;">Achieved on September 1st, 2025</small>
 </p>
 
-#### Top Technologies
-
-[![React Badge](https://img.shields.io/badge/-React-61DBFB?style=flat-square&labelColor=black&logo=react&logoColor=61DBFB)](#)
-[![TypeScript Badge](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&labelColor=black&logo=typescript&logoColor=3178C6)](#)
-[![Node.js Badge](https://img.shields.io/badge/-Node.js-3C873A?style=flat-square&labelColor=black&logo=node.js&logoColor=3C873A)](#)
-[![Vite Badge](https://img.shields.io/badge/-Vite-646CFF?style=flat-square&labelColor=black&logo=vite&logoColor=646CFF)](#)
-[![Tailwind CSS Badge](https://img.shields.io/badge/-TailwindCSS-38B2AC?style=flat-square&labelColor=black&logo=tailwindcss&logoColor=38B2AC)](#)
-[![Docker Badge](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&labelColor=black&logo=docker&logoColor=2496ED)](#)
-[![SQLite Badge](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&labelColor=black&logo=sqlite&logoColor=003B57)](#)
-[![Radix UI Badge](https://img.shields.io/badge/-Radix%20UI-161618?style=flat-square&labelColor=black&logo=radixui&logoColor=161618)](#)
-
 <br />
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
@@ -134,7 +123,7 @@ Supported Devices:
   - MSI Installer
   - Chocolatey Package Manager (coming soon)
 - Linux (x64/ia32)
-  - Portable
+  - Portable [(AUR available)](https://aur.archlinux.org/packages/termix-bin)
   - AppImage
   - Deb
   - Flatpak (coming soon)
@@ -169,6 +158,12 @@ volumes:
   termix-data:
     driver: local
 ```
+
+# Sponsors
+
+Thank you to [Digital Ocean](https://www.digitalocean.com/) for sponsoring Termix and covering our documentation server costs!
+
+<img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/PoweredByDO/DO_Powered_by_Badge_blue.svg" alt="Powered by DigitalOcean" width="300" height="200">
 
 # Support
 

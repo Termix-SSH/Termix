@@ -15,6 +15,15 @@ import {
   sshCredentialUsage,
   recentActivity,
   snippets,
+  snippetFolders,
+  sshFolders,
+  commandHistory,
+  roles,
+  userRoles,
+  hostAccess,
+  sharedCredentials,
+  auditLogs,
+  sessionRecordings,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -134,6 +143,77 @@ function isNonEmptyString(val: unknown): val is string {
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 
+async function deleteUserAndRelatedData(userId: string): Promise<void> {
+  try {
+    // Delete shared credentials first (depends on hostAccess)
+    await db
+      .delete(sharedCredentials)
+      .where(eq(sharedCredentials.targetUserId, userId));
+
+    // Delete session recordings (depends on hostAccess)
+    await db
+      .delete(sessionRecordings)
+      .where(eq(sessionRecordings.userId, userId));
+
+    // Delete host access records (both granted by and granted to this user)
+    await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
+    await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
+
+    // Delete sessions
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+
+    // Delete user roles
+    await db.delete(userRoles).where(eq(userRoles.userId, userId));
+
+    // Delete audit logs
+    await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+
+    await db
+      .delete(sshCredentialUsage)
+      .where(eq(sshCredentialUsage.userId, userId));
+
+    await db
+      .delete(fileManagerRecent)
+      .where(eq(fileManagerRecent.userId, userId));
+    await db
+      .delete(fileManagerPinned)
+      .where(eq(fileManagerPinned.userId, userId));
+    await db
+      .delete(fileManagerShortcuts)
+      .where(eq(fileManagerShortcuts.userId, userId));
+
+    await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
+    await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
+
+    await db.delete(snippets).where(eq(snippets.userId, userId));
+    await db.delete(snippetFolders).where(eq(snippetFolders.userId, userId));
+
+    await db.delete(sshFolders).where(eq(sshFolders.userId, userId));
+
+    await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
+
+    await db.delete(sshData).where(eq(sshData.userId, userId));
+    await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
+
+    db.$client
+      .prepare("DELETE FROM settings WHERE key LIKE ?")
+      .run(`user_%_${userId}`);
+
+    await db.delete(users).where(eq(users.id, userId));
+
+    authLogger.success("User and all related data deleted successfully", {
+      operation: "delete_user_and_related_data_complete",
+      userId,
+    });
+  } catch (error) {
+    authLogger.error("Failed to delete user and related data", error, {
+      operation: "delete_user_and_related_data_failed",
+      userId,
+    });
+    throw error;
+  }
+}
+
 // Route: Create traditional user (username/password)
 // POST /users/create
 router.post("/create", async (req, res) => {
@@ -209,6 +289,34 @@ router.post("/create", async (req, res) => {
       totp_enabled: false,
       totp_backup_codes: null,
     });
+
+    try {
+      const defaultRoleName = isFirstUser ? "admin" : "user";
+      const defaultRole = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(eq(roles.name, defaultRoleName))
+        .limit(1);
+
+      if (defaultRole.length > 0) {
+        await db.insert(userRoles).values({
+          userId: id,
+          roleId: defaultRole[0].id,
+          grantedBy: id,
+        });
+      } else {
+        authLogger.warn("Default role not found during user registration", {
+          operation: "assign_default_role",
+          userId: id,
+          roleName: defaultRoleName,
+        });
+      }
+    } catch (roleError) {
+      authLogger.error("Failed to assign default role", roleError, {
+        operation: "assign_default_role",
+        userId: id,
+      });
+    }
 
     try {
       await authManager.registerUser(id, password);
@@ -817,6 +925,41 @@ router.get("/oidc/callback", async (req, res) => {
       });
 
       try {
+        const defaultRoleName = isFirstUser ? "admin" : "user";
+        const defaultRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, defaultRoleName))
+          .limit(1);
+
+        if (defaultRole.length > 0) {
+          await db.insert(userRoles).values({
+            userId: id,
+            roleId: defaultRole[0].id,
+            grantedBy: id,
+          });
+        } else {
+          authLogger.warn(
+            "Default role not found during OIDC user registration",
+            {
+              operation: "assign_default_role_oidc",
+              userId: id,
+              roleName: defaultRoleName,
+            },
+          );
+        }
+      } catch (roleError) {
+        authLogger.error(
+          "Failed to assign default role to OIDC user",
+          roleError,
+          {
+            operation: "assign_default_role_oidc",
+            userId: id,
+          },
+        );
+      }
+
+      try {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
@@ -1055,6 +1198,19 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
+    try {
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
+    } catch (error) {
+      authLogger.warn("Failed to re-encrypt pending shared credentials", {
+        operation: "reencrypt_pending_credentials",
+        userId: userRecord.id,
+        error,
+      });
+    }
+
     if (userRecord.totp_enabled) {
       const tempToken = await authManager.generateJWTToken(userRecord.id, {
         pendingTOTP: true,
@@ -1128,15 +1284,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {
-          authLogger.debug(
-            "Token verification failed during logout (expected if token expired)",
-            {
-              operation: "logout_token_verify_failed",
-              userId,
-            },
-          );
-        }
+        } catch (error) {}
       }
 
       await authManager.logoutUser(userId, sessionId);
@@ -2252,36 +2400,8 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
     const targetUserId = targetUser[0].id;
 
-    try {
-      await db
-        .delete(sshCredentialUsage)
-        .where(eq(sshCredentialUsage.userId, targetUserId));
-      await db
-        .delete(fileManagerRecent)
-        .where(eq(fileManagerRecent.userId, targetUserId));
-      await db
-        .delete(fileManagerPinned)
-        .where(eq(fileManagerPinned.userId, targetUserId));
-      await db
-        .delete(fileManagerShortcuts)
-        .where(eq(fileManagerShortcuts.userId, targetUserId));
-      await db
-        .delete(recentActivity)
-        .where(eq(recentActivity.userId, targetUserId));
-      await db
-        .delete(dismissedAlerts)
-        .where(eq(dismissedAlerts.userId, targetUserId));
-      await db.delete(snippets).where(eq(snippets.userId, targetUserId));
-      await db.delete(sshData).where(eq(sshData.userId, targetUserId));
-      await db
-        .delete(sshCredentials)
-        .where(eq(sshCredentials.userId, targetUserId));
-    } catch (cleanupError) {
-      authLogger.error(`Cleanup failed for user ${username}:`, cleanupError);
-      throw cleanupError;
-    }
-
-    await db.delete(users).where(eq(users.id, targetUserId));
+    // Use the comprehensive deletion utility
+    await deleteUserAndRelatedData(targetUserId);
 
     authLogger.success(
       `User ${username} deleted by admin ${adminUser[0].username}`,
@@ -2696,15 +2816,7 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
     await authManager.revokeAllUserSessions(oidcUserId);
     authManager.logoutUser(oidcUserId);
 
-    await db
-      .delete(recentActivity)
-      .where(eq(recentActivity.userId, oidcUserId));
-
-    await db.delete(users).where(eq(users.id, oidcUserId));
-
-    db.$client
-      .prepare("DELETE FROM settings WHERE key LIKE ?")
-      .run(`user_%_${oidcUserId}`);
+    await deleteUserAndRelatedData(oidcUserId);
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");

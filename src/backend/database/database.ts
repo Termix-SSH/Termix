@@ -9,6 +9,7 @@ import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
 import terminalRoutes from "./routes/terminal.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
+import rbacRoutes from "./routes/rbac.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -1438,6 +1439,7 @@ app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/network-topology", networkTopologyRoutes);
+app.use("/rbac", rbacRoutes);
 
 app.use(
   (

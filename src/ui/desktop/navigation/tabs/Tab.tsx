@@ -11,6 +11,8 @@ import {
   Folder as FolderIcon,
   User as UserIcon,
   Network,
+  ArrowDownUp as TunnelIcon,
+  Container as DockerIcon,
 } from "lucide-react";
 
 interface TabProps {
@@ -108,7 +110,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <Home className="h-4 w-4" />
@@ -118,12 +120,16 @@ export function Tab({
 
   if (
     tabType === "terminal" ||
-    tabType === "server" ||
+    tabType === "server_stats" ||
     tabType === "file_manager" ||
+    tabType === "tunnel" ||
+    tabType === "docker" ||
     tabType === "user_profile"
   ) {
-    const isServer = tabType === "server";
+    const isServer = tabType === "server_stats";
     const isFileManager = tabType === "file_manager";
+    const isTunnel = tabType === "tunnel";
+    const isDocker = tabType === "docker";
     const isUserProfile = tabType === "user_profile";
 
     const displayTitle =
@@ -132,9 +138,13 @@ export function Tab({
         ? t("nav.serverStats")
         : isFileManager
           ? t("nav.fileManager")
-          : isUserProfile
-            ? t("nav.userProfile")
-            : t("nav.terminal"));
+          : isTunnel
+            ? t("nav.tunnels")
+            : isDocker
+              ? t("nav.docker")
+              : isUserProfile
+                ? t("nav.userProfile")
+                : t("nav.terminal"));
 
     const { base, suffix } = splitTitle(displayTitle);
 
@@ -144,7 +154,8 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive || isSplit ? "2px solid white" : "none",
+          borderBottom:
+            isActive || isSplit ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -152,6 +163,10 @@ export function Tab({
             <ServerIcon className="h-4 w-4 flex-shrink-0" />
           ) : isFileManager ? (
             <FolderIcon className="h-4 w-4 flex-shrink-0" />
+          ) : isTunnel ? (
+            <TunnelIcon className="h-4 w-4 flex-shrink-0" />
+          ) : isDocker ? (
+            <DockerIcon className="h-4 w-4 flex-shrink-0" />
           ) : isUserProfile ? (
             <UserIcon className="h-4 w-4 flex-shrink-0" />
           ) : (
@@ -178,7 +193,7 @@ export function Tab({
             <SeparatorVertical
               className={cn(
                 "h-4 w-4",
-                isSplit ? "text-white" : "text-muted-foreground",
+                isSplit ? "text-foreground" : "text-muted-foreground",
               )}
             />
           </Button>
@@ -212,7 +227,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -248,7 +263,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">

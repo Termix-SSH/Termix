@@ -68,12 +68,7 @@ export async function collectNetworkMetrics(client: Client): Promise<{
         txBytes: null,
       });
     }
-  } catch (e) {
-    statsLogger.debug("Failed to collect network interface stats", {
-      operation: "network_stats_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  } catch (e) {}
 
   return { interfaces };
 }

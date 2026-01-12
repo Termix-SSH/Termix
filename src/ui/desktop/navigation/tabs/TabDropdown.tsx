@@ -12,6 +12,8 @@ import {
   Terminal as TerminalIcon,
   Server as ServerIcon,
   Folder as FolderIcon,
+  ArrowDownUp as TunnelIcon,
+  Container as DockerIcon,
   Shield as AdminIcon,
   Network as SshManagerIcon,
   User as UserIcon,
@@ -30,10 +32,14 @@ export function TabDropdown(): React.ReactElement {
         return <Home className="h-4 w-4" />;
       case "terminal":
         return <TerminalIcon className="h-4 w-4" />;
-      case "server":
+      case "server_stats":
         return <ServerIcon className="h-4 w-4" />;
       case "file_manager":
         return <FolderIcon className="h-4 w-4" />;
+      case "tunnel":
+        return <TunnelIcon className="h-4 w-4" />;
+      case "docker":
+        return <DockerIcon className="h-4 w-4" />;
       case "user_profile":
         return <UserIcon className="h-4 w-4" />;
       case "ssh_manager":
@@ -51,10 +57,14 @@ export function TabDropdown(): React.ReactElement {
     switch (tab.type) {
       case "home":
         return t("nav.home");
-      case "server":
+      case "server_stats":
         return tab.title || t("nav.serverStats");
       case "file_manager":
         return tab.title || t("nav.fileManager");
+      case "tunnel":
+        return tab.title || t("nav.tunnels");
+      case "docker":
+        return tab.title || t("nav.docker");
       case "user_profile":
         return tab.title || t("nav.userProfile");
       case "ssh_manager":
@@ -78,7 +88,7 @@ export function TabDropdown(): React.ReactElement {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="w-[30px] h-[30px] border-dark-border"
+          className="w-[30px] h-[30px] border-edge"
           title={t("nav.tabNavigation", { defaultValue: "Tab Navigation" })}
         >
           <ChevronDown className="h-4 w-4" />
@@ -86,7 +96,7 @@ export function TabDropdown(): React.ReactElement {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 bg-dark-bg border-dark-border text-white"
+        className="w-56 bg-canvas border-edge text-foreground"
       >
         {tabs.map((tab) => {
           const isActive = tab.id === currentTab;
@@ -96,8 +106,8 @@ export function TabDropdown(): React.ReactElement {
               onClick={() => handleTabSwitch(tab.id)}
               className={`flex items-center gap-2 cursor-pointer px-3 py-2 ${
                 isActive
-                  ? "bg-dark-bg-active text-white"
-                  : "hover:bg-dark-hover text-gray-300"
+                  ? "bg-active text-foreground"
+                  : "hover:bg-hover text-foreground-secondary"
               }`}
             >
               {getTabIcon(tab.type)}

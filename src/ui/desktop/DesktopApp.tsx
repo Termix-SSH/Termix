@@ -2,19 +2,20 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host-manager/HostManager.tsx";
+import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
-import { CommandHistoryProvider } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
-import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
+import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
+import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
+import { useTheme } from "@/components/theme-provider";
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,12 +30,21 @@ function AppContent() {
   const [transitionPhase, setTransitionPhase] = useState<
     "idle" | "fadeOut" | "fadeIn"
   >("idle");
-  const { currentTab, tabs, addTab } = useTabs();
+  const { currentTab, tabs, updateTab, addTab } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
 
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
+
   const lastShiftPressTime = useRef(0);
+
+  const lastAltPressTime = useRef(0);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -50,6 +60,22 @@ function AppContent() {
           lastShiftPressTime.current = now;
         }
       }
+
+      if (event.code === "AltLeft" && !event.repeat) {
+        const now = Date.now();
+        if (now - lastAltPressTime.current < 300) {
+          const currentIsDark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          const newTheme = currentIsDark ? "light" : "dark";
+          setTheme(newTheme);
+          lastAltPressTime.current = 0;
+        } else {
+          lastAltPressTime.current = now;
+        }
+      }
+
       if (event.key === "Escape") {
         setIsCommandPaletteOpen(false);
       }
@@ -59,7 +85,7 @@ function AppContent() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [theme, setTheme]);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -165,7 +191,6 @@ function AppContent() {
 
     setTimeout(async () => {
       try {
-        const { logoutUser, isElectron } = await import("@/ui/main-axios.ts");
         await logoutUser();
 
         if (isElectron()) {
@@ -182,8 +207,10 @@ function AppContent() {
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
   const showTerminalView =
     currentTabData?.type === "terminal" ||
-    currentTabData?.type === "server" ||
-    currentTabData?.type === "file_manager";
+    currentTabData?.type === "server_stats" ||
+    currentTabData?.type === "file_manager" ||
+    currentTabData?.type === "tunnel" ||
+    currentTabData?.type === "docker";
   const showHome = currentTabData?.type === "home";
   const showSshManager = currentTabData?.type === "ssh_manager";
   const showAdmin = currentTabData?.type === "admin";
@@ -193,14 +220,15 @@ function AppContent() {
   if (authLoading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest"
+        className="h-screen w-screen flex items-center justify-center"
         style={{
+          background: "var(--bg-elevated)",
           backgroundImage: `repeating-linear-gradient(
-            225deg,
+            45deg,
             transparent,
             transparent 35px,
-            rgba(255, 255, 255, 0.03) 35px,
-            rgba(255, 255, 255, 0.03) 37px
+            ${lineColor} 35px,
+            ${lineColor} 37px
           )`,
         }}
       >
@@ -265,8 +293,11 @@ function AppContent() {
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
                 hostConfig={currentTabData?.hostConfig}
+                _updateTimestamp={currentTabData?._updateTimestamp}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
+                currentTabId={currentTab}
+                updateTab={updateTab}
               />
             </div>
           )}
@@ -282,7 +313,7 @@ function AppContent() {
           )}
 
           {showProfile && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
               <UserProfile
                 isTopbarOpen={isTopbarOpen}
                 rightSidebarOpen={rightSidebarOpen}
@@ -316,9 +347,19 @@ function AppContent() {
 
       {isTransitioning && (
         <div
-          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-700 ${
+          className={`fixed inset-0 z-[20000] transition-opacity duration-700 ${
             transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
           }`}
+          style={{
+            background: "var(--bg-elevated)",
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 35px,
+              ${lineColor} 35px,
+              ${lineColor} 37px
+            )`,
+          }}
         >
           {transitionPhase === "fadeOut" && (
             <>

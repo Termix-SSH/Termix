@@ -24,6 +24,7 @@ const FullscreenApp: React.FC = () => {
       return <DesktopApp />; 
   }
 };
+import { useServiceWorker } from "@/hooks/use-service-worker";
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -74,6 +75,9 @@ function RootApp() {
   const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
+  // PWA Service Worker registration (production web only)
+  useServiceWorker();
+
   const userAgent =
     navigator.userAgent || navigator.vendor || (window as any).opera || "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
@@ -102,13 +106,13 @@ function RootApp() {
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
-          backgroundColor: "#09090b",
+          backgroundColor: "var(--bg-base)",
           backgroundImage: `linear-gradient(
             135deg,
             transparent 0%,
             transparent 49%,
-            rgba(255, 255, 255, 0.03) 49%,
-            rgba(255, 255, 255, 0.03) 51%,
+            rgba(128, 128, 128, 0.03) 49%,
+            rgba(128, 128, 128, 0.03) 51%,
             transparent 51%,
             transparent 100%
           )`,
@@ -137,3 +141,4 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </StrictMode>,
 );
+

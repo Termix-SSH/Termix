@@ -120,7 +120,7 @@ export function LeftSidebar({
       setCurrentTab(sshManagerTab.id);
       return;
     }
-    const id = addTab({ type: "ssh_manager", title: "Host Manager" });
+    const id = addTab({ type: "ssh_manager", title: t("nav.hostManager") });
     setCurrentTab(id);
   };
   const adminTab = tabList.find((t) => t.type === "admin");
@@ -363,20 +363,74 @@ export function LeftSidebar({
 
   const filteredHosts = React.useMemo(() => {
     if (!debouncedSearch.trim()) return hosts;
-    const q = debouncedSearch.trim().toLowerCase();
+    const searchQuery = debouncedSearch.trim().toLowerCase();
+
     return hosts.filter((h) => {
-      const searchableText = [
-        h.name || "",
-        h.username,
-        h.ip,
-        h.folder || "",
-        ...(h.tags || []),
-        h.authType,
-        h.defaultPath || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return searchableText.includes(q);
+      const fieldMatches: Record<string, string> = {};
+      let remainingQuery = searchQuery;
+
+      const fieldPattern = /(\w+):([^\s]+)/g;
+      let match;
+      while ((match = fieldPattern.exec(searchQuery)) !== null) {
+        const [fullMatch, field, value] = match;
+        fieldMatches[field] = value;
+        remainingQuery = remainingQuery.replace(fullMatch, "").trim();
+      }
+
+      for (const [field, value] of Object.entries(fieldMatches)) {
+        switch (field) {
+          case "tag":
+          case "tags":
+            const tags = Array.isArray(h.tags) ? h.tags : [];
+            const hasMatchingTag = tags.some((tag) =>
+              tag.toLowerCase().includes(value),
+            );
+            if (!hasMatchingTag) return false;
+            break;
+          case "name":
+            if (!(h.name || "").toLowerCase().includes(value)) return false;
+            break;
+          case "user":
+          case "username":
+            if (!h.username.toLowerCase().includes(value)) return false;
+            break;
+          case "ip":
+          case "host":
+            if (!h.ip.toLowerCase().includes(value)) return false;
+            break;
+          case "port":
+            if (!String(h.port).includes(value)) return false;
+            break;
+          case "folder":
+            if (!(h.folder || "").toLowerCase().includes(value)) return false;
+            break;
+          case "auth":
+          case "authtype":
+            if (!h.authType.toLowerCase().includes(value)) return false;
+            break;
+          case "path":
+            if (!(h.defaultPath || "").toLowerCase().includes(value))
+              return false;
+            break;
+        }
+      }
+
+      if (remainingQuery) {
+        const searchableText = [
+          h.name || "",
+          h.username,
+          h.ip,
+          h.folder || "",
+          ...(h.tags || []),
+          h.authType,
+          h.defaultPath || "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!searchableText.includes(remainingQuery)) return false;
+      }
+
+      return true;
     });
   }, [hosts, debouncedSearch]);
 
@@ -422,14 +476,14 @@ export function LeftSidebar({
         <div className="flex h-screen w-screen overflow-hidden">
           <Sidebar variant="floating">
             <SidebarHeader>
-              <SidebarGroupLabel className="text-lg font-bold text-white">
-                Termix
+              <SidebarGroupLabel className="text-lg font-bold text-foreground">
+                {t("common.appName")}
                 <div className="absolute right-5 flex gap-1">
                   <Button
                     variant="outline"
                     onClick={() => setSidebarWidth(250)}
                     className="w-[28px] h-[28px]"
-                    title="Reset sidebar width"
+                    title={t("common.resetSidebarWidth")}
                   >
                     <RotateCcw className="h-4 w-4" />
                   </Button>
@@ -448,7 +502,7 @@ export function LeftSidebar({
             <SidebarContent>
               <SidebarGroup className="!m-0 !p-0 !-mb-2">
                 <Button
-                  className="m-2 flex flex-row font-semibold border-2 !border-dark-border"
+                  className="m-2 flex flex-row font-semibold border-2 !border-edge"
                   variant="outline"
                   onClick={openSshManagerTab}
                   disabled={isSplitScreenActive}
@@ -464,19 +518,19 @@ export function LeftSidebar({
               </SidebarGroup>
               <Separator className="p-0.25" />
               <SidebarGroup className="flex flex-col gap-y-2 !-mt-2">
-                <div className="!bg-dark-bg-input rounded-lg">
+                <div className="!bg-field rounded-lg">
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t("placeholders.searchHostsAny")}
-                    className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md"
+                    className="w-full h-8 text-sm border-2 !bg-field border-edge rounded-md"
                     autoComplete="off"
                   />
                 </div>
 
                 {hostsError && (
-                  <div className="!bg-dark-bg-input rounded-lg">
-                    <div className="w-full h-8 text-sm border-2 !bg-dark-bg-input border-dark-border rounded-md px-3 py-1.5 flex items-center text-red-500">
+                  <div className="!bg-field rounded-lg">
+                    <div className="w-full h-8 text-sm border-2 !bg-field border-edge rounded-md px-3 py-1.5 flex items-center text-red-500">
                       {t("leftSidebar.failedToLoadHosts")}
                     </div>
                   </div>
@@ -527,7 +581,7 @@ export function LeftSidebar({
                       className="min-w-[var(--radix-popper-anchor-width)] bg-sidebar-accent text-sidebar-accent-foreground border border-border rounded-md shadow-2xl p-1"
                     >
                       <DropdownMenuItem
-                        className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                        className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                         onClick={() => {
                           openUserProfileTab();
                         }}
@@ -536,7 +590,7 @@ export function LeftSidebar({
                       </DropdownMenuItem>
                       {isAdmin && (
                         <DropdownMenuItem
-                          className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                          className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                           onClick={() => {
                             if (isAdmin) openAdminTab();
                           }}
@@ -545,7 +599,7 @@ export function LeftSidebar({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        className="rounded px-2 py-1.5 hover:bg-white/15 hover:text-accent-foreground focus:bg-white/20 focus:text-accent-foreground cursor-pointer focus:outline-none"
+                        className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                         onClick={onLogout || handleLogout}
                       >
                         <span>{t("common.logout")}</span>
@@ -560,16 +614,16 @@ export function LeftSidebar({
                 className="absolute top-0 h-full cursor-col-resize z-[60]"
                 onMouseDown={handleMouseDown}
                 style={{
-                  right: "-8px",
-                  width: "18px",
+                  right: "-4px",
+                  width: "8px",
                   backgroundColor: isResizing
-                    ? "var(--dark-active)"
+                    ? "var(--bg-interact)"
                     : "transparent",
                 }}
                 onMouseEnter={(e) => {
                   if (!isResizing) {
                     e.currentTarget.style.backgroundColor =
-                      "var(--dark-border-hover)";
+                      "var(--border-hover)";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -577,7 +631,7 @@ export function LeftSidebar({
                     e.currentTarget.style.backgroundColor = "transparent";
                   }
                 }}
-                title="Drag to resize sidebar"
+                title={t("common.dragToResizeSidebar")}
               />
             )}
           </Sidebar>
@@ -592,8 +646,8 @@ export function LeftSidebar({
           className="fixed top-0 left-0 w-[10px] h-full cursor-pointer flex items-center justify-center rounded-tr-md rounded-br-md"
           style={{
             zIndex: 9999,
-            backgroundColor: "#18181b",
-            border: "2px solid #27272a",
+            backgroundColor: "var(--bg-base)",
+            border: "2px solid var(--border-base)",
             borderLeft: "none",
           }}
         >

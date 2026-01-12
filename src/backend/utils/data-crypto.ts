@@ -475,6 +475,52 @@ class DataCrypto {
       return false;
     }
   }
+
+  /**
+   * Encrypt sensitive credential fields with system key for offline sharing
+   * Returns an object with systemPassword, systemKey, systemKeyPassword fields
+   */
+  static async encryptRecordWithSystemKey<T extends Record<string, unknown>>(
+    tableName: string,
+    record: T,
+    systemKey: Buffer,
+  ): Promise<Partial<T>> {
+    const systemEncrypted: Record<string, unknown> = {};
+    const recordId = record.id || "temp-" + Date.now();
+
+    if (tableName !== "ssh_credentials") {
+      return systemEncrypted as Partial<T>;
+    }
+
+    if (record.password && typeof record.password === "string") {
+      systemEncrypted.systemPassword = FieldCrypto.encryptField(
+        record.password as string,
+        systemKey,
+        recordId as string,
+        "password",
+      );
+    }
+
+    if (record.key && typeof record.key === "string") {
+      systemEncrypted.systemKey = FieldCrypto.encryptField(
+        record.key as string,
+        systemKey,
+        recordId as string,
+        "key",
+      );
+    }
+
+    if (record.key_password && typeof record.key_password === "string") {
+      systemEncrypted.systemKeyPassword = FieldCrypto.encryptField(
+        record.key_password as string,
+        systemKey,
+        recordId as string,
+        "key_password",
+      );
+    }
+
+    return systemEncrypted as Partial<T>;
+  }
 }
 
 export { DataCrypto };

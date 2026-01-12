@@ -1,7 +1,15 @@
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type {
+  AuthenticatedRequest,
+  CredentialBackend,
+} from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
+import {
+  sshCredentials,
+  sshCredentialUsage,
+  sshData,
+  hostAccess,
+} from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -470,6 +478,14 @@ router.put(
         userId,
       );
 
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.updateSharedCredentialsForOriginal(
+        parseInt(id),
+        userId,
+      );
+
       const credential = updated[0];
       authLogger.success(
         `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
@@ -524,8 +540,6 @@ router.delete(
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      // Update hosts using this credential to set credentialId to null
-      // This prevents orphaned references before deletion
       const hostsUsingCredential = await db
         .select()
         .from(sshData)
@@ -552,10 +566,32 @@ router.delete(
               eq(sshData.userId, userId),
             ),
           );
+
+        for (const host of hostsUsingCredential) {
+          const revokedShares = await db
+            .delete(hostAccess)
+            .where(eq(hostAccess.hostId, host.id))
+            .returning({ id: hostAccess.id });
+
+          if (revokedShares.length > 0) {
+            authLogger.info(
+              "Auto-revoked host shares due to credential deletion",
+              {
+                operation: "auto_revoke_shares",
+                hostId: host.id,
+                credentialId: parseInt(id),
+                revokedCount: revokedShares.length,
+                reason: "credential_deleted",
+              },
+            );
+          }
+        }
       }
 
-      // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
-      // No need for manual deletion
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 
       await db
         .delete(sshCredentials)
@@ -1124,10 +1160,9 @@ router.post(
 
 async function deploySSHKeyToHost(
   hostConfig: Record<string, unknown>,
-  publicKey: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _credentialData: Record<string, unknown>,
+  credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
+  const publicKey = credData.public_key as string;
   return new Promise((resolve) => {
     const conn = new Client();
 
@@ -1248,7 +1283,7 @@ async function deploySSHKeyToHost(
             .replace(/'/g, "'\\''");
 
           conn.exec(
-            `printf '%s\\n' '${escapedKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
               if (err) {
                 clearTimeout(addTimeout);
@@ -1510,7 +1545,7 @@ router.post(
         });
       }
 
-      const credData = credential[0];
+      const credData = credential[0] as unknown as CredentialBackend;
 
       if (credData.authType !== "key") {
         return res.status(400).json({
@@ -1519,7 +1554,7 @@ router.post(
         });
       }
 
-      const publicKey = credData.public_key || credData.publicKey;
+      const publicKey = credData.public_key;
       if (!publicKey) {
         return res.status(400).json({
           success: false,
@@ -1599,11 +1634,7 @@ router.post(
         }
       }
 
-      const deployResult = await deploySSHKeyToHost(
-        hostConfig,
-        publicKey as string,
-        credData,
-      );
+      const deployResult = await deploySSHKeyToHost(hostConfig, credData);
 
       if (deployResult.success) {
         res.json({

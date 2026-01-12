@@ -102,6 +102,8 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");
     await import("./ssh/server-stats.js");
+    await import("./ssh/docker.js");
+    await import("./ssh/docker-console.js");
     await import("./dashboard.js");
 
     process.on("SIGINT", () => {
