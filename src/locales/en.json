@@ -1732,6 +1732,14 @@
     "quickActionSuccess": "{{name}} completed successfully",
     "quickActionFailed": "{{name}} failed",
     "quickActionError": "Failed to execute {{name}}",
+    "ports": {
+      "title": "Listening Ports",
+      "protocol": "Protocol",
+      "port": "Port",
+      "address": "Address",
+      "state": "State",
+      "process": "Process",
+      "noData": "No listening ports data"
     "firewall": {
       "title": "Firewall",
       "active": "Active",

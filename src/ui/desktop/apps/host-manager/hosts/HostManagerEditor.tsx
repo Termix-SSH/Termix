@@ -317,6 +317,7 @@ export function HostManagerEditor({
                 "processes",
                 "system",
                 "login_stats",
+                "ports",
                 "firewall",
               ]),
             )
@@ -328,6 +329,7 @@ export function HostManagerEditor({
               "uptime",
               "system",
               "login_stats",
+              "ports",
               "firewall",
             ]),
           statusCheckEnabled: z.boolean().default(true),
@@ -344,6 +346,7 @@ export function HostManagerEditor({
             "uptime",
             "system",
             "login_stats",
+            "ports",
             "firewall",
           ],
           statusCheckEnabled: true,

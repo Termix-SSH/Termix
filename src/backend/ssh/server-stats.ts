@@ -19,6 +19,7 @@ import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
+import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 
@@ -1783,6 +1784,25 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           login_stats = await collectLoginStats(client);
         } catch (e) {}
 
+        let ports: {
+          source: "ss" | "netstat" | "none";
+          ports: Array<{
+            protocol: "tcp" | "udp";
+            localAddress: string;
+            localPort: number;
+            state?: string;
+            pid?: number;
+            process?: string;
+          }>;
+        } = {
+          source: "none",
+          ports: [],
+        };
+        try {
+          ports = await collectPortsMetrics(client);
+        } catch (e) {
+          statsLogger.debug("Failed to collect ports metrics", {
+            operation: "ports_metrics_failed",
         let firewall: {
           type: "iptables" | "nftables" | "none";
           status: "active" | "inactive" | "unknown";
@@ -1825,6 +1845,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           processes,
           system,
           login_stats,
+          ports,
           firewall,
         };
 
