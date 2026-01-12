@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
+import { useServiceWorker } from "@/hooks/use-service-worker";
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -57,6 +58,9 @@ function RootApp() {
   const width = useWindowWidth();
   const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
+
+  // PWA Service Worker registration (production web only)
+  useServiceWorker();
 
   const userAgent =
     navigator.userAgent || navigator.vendor || (window as any).opera || "";
@@ -114,3 +118,4 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </StrictMode>,
 );
+
