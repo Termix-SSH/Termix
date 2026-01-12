@@ -648,7 +648,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         cleanupSSH(connectionTimeout);
       }
-    }, 30000);
+    }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
@@ -1115,10 +1115,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
-      readyTimeout: 30000,
+      readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-      timeout: 30000,
+      timeout: 120000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
