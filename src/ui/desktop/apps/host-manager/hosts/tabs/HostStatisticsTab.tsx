@@ -240,6 +240,7 @@ export function HostStatisticsTab({
                       "system",
                       "login_stats",
                       "ports",
+                      "firewall",
                     ] as const
                   ).map((widget) => (
                     <div key={widget} className="flex items-center space-x-2">
@@ -269,6 +270,8 @@ export function HostStatisticsTab({
                           t("serverStats.loginStats")}
                         {widget === "ports" &&
                           t("serverStats.ports.title")}
+                        {widget === "firewall" &&
+                          t("serverStats.firewall.title")}
                       </label>
                     </div>
                   ))}

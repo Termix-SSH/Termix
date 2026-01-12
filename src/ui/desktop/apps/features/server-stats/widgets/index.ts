@@ -7,3 +7,4 @@ export { ProcessesWidget } from "./ProcessesWidget.tsx";
 export { SystemWidget } from "./SystemWidget.tsx";
 export { LoginStatsWidget } from "./LoginStatsWidget.tsx";
 export { PortsWidget } from "./PortsWidget.tsx";
+export { FirewallWidget } from "./FirewallWidget.tsx";

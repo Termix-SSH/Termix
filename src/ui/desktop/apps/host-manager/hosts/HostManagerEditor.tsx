@@ -318,6 +318,7 @@ export function HostManagerEditor({
                 "system",
                 "login_stats",
                 "ports",
+                "firewall",
               ]),
             )
             .default([
@@ -329,6 +330,7 @@ export function HostManagerEditor({
               "system",
               "login_stats",
               "ports",
+              "firewall",
             ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
@@ -345,6 +347,7 @@ export function HostManagerEditor({
             "system",
             "login_stats",
             "ports",
+            "firewall",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,

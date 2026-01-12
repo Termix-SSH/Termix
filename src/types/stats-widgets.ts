@@ -21,6 +21,31 @@ export interface ListeningPort {
 export interface PortsMetrics {
   source: "ss" | "netstat" | "none";
   ports: ListeningPort[];
+  | "firewall";
+
+export interface FirewallRule {
+  chain: string;
+  target: string;
+  protocol: string;
+  source: string;
+  destination: string;
+  dport?: string;
+  sport?: string;
+  state?: string;
+  interface?: string;
+  extra?: string;
+}
+
+export interface FirewallChain {
+  name: string;
+  policy: string;
+  rules: FirewallRule[];
+}
+
+export interface FirewallMetrics {
+  type: "iptables" | "nftables" | "none";
+  status: "active" | "inactive" | "unknown";
+  chains: FirewallChain[];
 }
 
 export interface StatsConfig {

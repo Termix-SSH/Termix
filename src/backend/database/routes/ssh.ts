@@ -852,7 +852,7 @@ router.get(
           socks5ProxyChain: sshData.socks5ProxyChain,
 
           ownerId: sshData.userId,
-          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
+          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${sshData.userId} != ${userId}`,
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
         })
@@ -1700,8 +1700,9 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,

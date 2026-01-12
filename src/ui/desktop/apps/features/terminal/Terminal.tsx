@@ -618,15 +618,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-            const baseUrl =
-              (window as { configuredServerUrl?: string })
-                .configuredServerUrl || "http://127.0.0.1:30001";
-            const wsProtocol = baseUrl.startsWith("https://")
-              ? "wss://"
-              : "ws://";
-            const wsHost = baseUrl.replace(/^https?:\/\//, "");
-            return `${wsProtocol}${wsHost}/ssh/websocket/`;
-          })()
+              const baseUrl =
+                (window as { configuredServerUrl?: string })
+                  .configuredServerUrl || "http://127.0.0.1:30001";
+              const wsProtocol = baseUrl.startsWith("https://")
+                ? "wss://"
+                : "ws://";
+              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              return `${wsProtocol}${wsHost}/ssh/websocket/`;
+            })()
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
 
       if (
@@ -1387,7 +1387,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
             const selectedCommand =
               autocompleteSuggestionsRef.current[
-              autocompleteSelectedIndexRef.current
+                autocompleteSelectedIndexRef.current
               ];
             const currentCmd = currentAutocompleteCommand.current;
             const completion = selectedCommand.substring(currentCmd.length);
@@ -1548,7 +1548,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         scheduleNotify(terminal.cols, terminal.rows);
         connectToHost(terminal.cols, terminal.rows);
       }
-    }, [terminal, hostConfig, isVisible, isConnected, isConnecting]);
+      // Note: Using hostConfig.id instead of hostConfig object to prevent
+      // unnecessary reconnections when host properties are updated.
+      // Only reconnect when switching to a different host.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {
       if (!terminal || !fitAddonRef.current || !isVisible) return;

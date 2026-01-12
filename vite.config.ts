@@ -20,6 +20,7 @@ export default defineConfig({
   base: "./",
   build: {
     sourcemap: false,
+    assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -35,9 +36,9 @@ export default defineConfig({
   server: {
     https: useHTTPS
       ? {
-          cert: fs.readFileSync(sslCertPath),
-          key: fs.readFileSync(sslKeyPath),
-        }
+        cert: fs.readFileSync(sslCertPath),
+        key: fs.readFileSync(sslKeyPath),
+      }
       : false,
     port: 5173,
     host: "localhost",
