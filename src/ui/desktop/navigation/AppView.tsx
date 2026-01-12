@@ -4,6 +4,7 @@ import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-sta
 import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
+import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph/NetworkGraphView.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -70,7 +71,8 @@ export function AppView({
           tab.type === "server_stats" ||
           tab.type === "file_manager" ||
           tab.type === "tunnel" ||
-          tab.type === "docker",
+          tab.type === "docker" ||
+          tab.type === "network_graph",
       ),
     [tabs],
   );
@@ -353,6 +355,12 @@ export function AppView({
                     isTopbarOpen={isTopbarOpen}
                     embedded
                   />
+                ) : t.type === "network_graph" ? (
+                  <NetworkGraphView
+                    isTopbarOpen={isTopbarOpen}
+                    rightSidebarOpen={rightSidebarOpen}
+                    rightSidebarWidth={rightSidebarWidth}
+                    isStandalone={true}
                 ) : t.type === "tunnel" ? (
                   <TunnelManager
                     hostConfig={t.hostConfig}

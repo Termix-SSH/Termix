@@ -17,6 +17,7 @@ import {
   Shield as AdminIcon,
   Network as SshManagerIcon,
   User as UserIcon,
+  Network,
 } from "lucide-react";
 import { useTabs, type Tab } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,8 @@ export function TabDropdown(): React.ReactElement {
         return <SshManagerIcon className="h-4 w-4" />;
       case "admin":
         return <AdminIcon className="h-4 w-4" />;
+      case "network_graph":
+        return <Network className="h-4 w-4" />;
       default:
         return <TerminalIcon className="h-4 w-4" />;
     }
@@ -68,6 +71,8 @@ export function TabDropdown(): React.ReactElement {
         return tab.title || t("nav.sshManager");
       case "admin":
         return tab.title || t("nav.admin");
+      case "network_graph":
+        return tab.title || "Network Graph";
       case "terminal":
       default:
         return tab.title || t("nav.terminal");

@@ -654,6 +654,23 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite
+      .prepare("SELECT id FROM network_topology LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS network_topology (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          topology TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create network_topology table", {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
     try {

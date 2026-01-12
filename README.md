@@ -56,10 +56,62 @@ free and self-hosted alternative to Termius available for all platforms.
 - **Command History** - Auto-complete and view previously ran SSH commands
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
 - **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, etc.
+- **Network Graph View** - Visualize your SSH hosts and their connections in an interactive graph. Drag nodes, pan, zoom, and manage your network topology. Export/import topology as JSON for backup and sharing.
 
 # Planned Features
 
 See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+
+# Network Graph View
+
+The Network Graph View is a powerful visualization tool available on the Dashboard that helps you manage and understand your SSH network topology.
+
+## Features
+
+- **Interactive Graph Visualization** - Visualize your SSH hosts and connections using Cytoscape.js with a force-directed layout algorithm
+- **Host Management** - Add or remove hosts from the topology. All your SSH hosts are available for selection
+- **Connection Management** - Create bidirectional connections (edges) between hosts to represent your network topology
+- **Node Interactions** - 
+  - Click nodes to view host details (name, address, status, tags)
+  - Drag nodes to reposition them manually
+  - Pan and zoom the graph for better visibility
+- **Layout Options** - 
+  - Automatic force-directed layout with a button to reset
+  - Manual node positioning with automatic position persistence
+- **Status Indicators** - Nodes display color-coded status:
+  - **Green** - Host is online and reachable
+  - **Red** - Host is offline or unreachable
+  - **Gray** - Status unknown
+- **Export/Import** - 
+  - Export your topology as a JSON file for backup or sharing
+  - Import previously saved topology files
+- **Graph Controls** -
+  - Add Host to Topology
+  - Add Connection between hosts
+  - Remove Node or Connection
+  - Auto-layout to reorganize graph
+  - Zoom In/Out for detail work
+  - Fit to Screen to see entire topology
+
+## How to Use
+
+1. Navigate to the Dashboard in Termix
+2. Click the "Network Graph View" toggle to activate the graph view
+3. Use the "+" button to add hosts from your SSH Host Manager
+4. Use the connection button to add relationships between hosts
+5. Drag nodes to position them as needed
+6. Click any node to view detailed information about that host
+7. Use Export to download your topology as JSON
+8. Use Import to restore a previously saved topology
+
+## Limitations & Notes
+
+- The graph view only displays hosts that you've explicitly added to the topology. It does not automatically include all SSH hosts
+- Connections are directional (from source to target host)
+- Manual node positions are saved automatically when you drag nodes
+- The graph updates host status every 30 seconds based on your SSH Host Manager data
+- For best performance on mobile devices, limit the topology to 20-30 nodes
+- The topology data is stored securely in your encrypted database alongside other SSH configurations
 
 # Installation
 
@@ -69,16 +121,16 @@ Supported Devices:
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
-  - Chocolatey Package Manager
+  - Chocolatey Package Manager (coming soon)
 - Linux (x64/ia32)
   - Portable [(AUR available)](https://aur.archlinux.org/packages/termix-bin)
   - AppImage
   - Deb
-  - Flatpak
+  - Flatpak (coming soon)
 - macOS (x64/ia32 on v12.0+)
-  - Apple App Store
+  - Apple App Store (coming soon)
   - DMG
-  - Homebrew
+  - Homebrew (coming soon)
 - iOS/iPadOS (v15.1+)
   - Apple App Store
   - ISO

@@ -1,5 +1,4 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
-import { toast } from "sonner";
+import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
 import type {
   SSHHost,
   SSHHostData,
@@ -78,6 +77,10 @@ export type ServerStatus = {
   lastChecked: string;
 };
 
+export type SSHHostWithStatus = SSHHost & {
+  status: "online" | "offline" | "unknown";
+};
+
 interface CpuMetrics {
   percent: number | null;
   cores: number | null;
@@ -113,6 +116,8 @@ interface AuthResponse {
   is_oidc?: boolean;
   totp_enabled?: boolean;
   data_unlocked?: boolean;
+  requires_totp?: boolean;
+  temp_token?: string;
 }
 
 interface UserInfo {
@@ -279,12 +284,12 @@ function createApiInstance(
     withCredentials: true,
   });
 
-  instance.interceptors.request.use((config) => {
+  instance.interceptors.request.use((config: AxiosRequestConfig) => {
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    (config as Record<string, unknown>).startTime = startTime;
-    (config as Record<string, unknown>).requestId = requestId;
+    (config as any).startTime = startTime;
+    (config as any).requestId = requestId;
 
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
@@ -332,11 +337,11 @@ function createApiInstance(
   });
 
   instance.interceptors.response.use(
-    (response) => {
+    (response: AxiosResponse) => {
       const endTime = performance.now();
-      const startTime = (response.config as Record<string, unknown>).startTime;
-      const requestId = (response.config as Record<string, unknown>).requestId;
-      const responseTime = Math.round(endTime - startTime);
+      const startTime = (response.config as any).startTime;
+      const requestId = (response.config as any).requestId;
+      const responseTime = Math.round(endTime - (startTime || endTime));
 
       const method = response.config.method?.toUpperCase() || "UNKNOWN";
       const url = response.config.url || "UNKNOWN";
@@ -370,26 +375,22 @@ function createApiInstance(
 
       return response;
     },
-    (error: AxiosError) => {
+    (error: AxiosErrorExtended) => {
       const endTime = performance.now();
-      const startTime = (error.config as Record<string, unknown> | undefined)
-        ?.startTime;
-      const requestId = (error.config as Record<string, unknown> | undefined)
-        ?.requestId;
-      const responseTime = startTime
-        ? Math.round(endTime - startTime)
-        : undefined;
+      const startTime = error.config?.startTime;
+      const requestId = error.config?.requestId;
+      const responseTime = startTime ? Math.round(endTime - startTime) : undefined;
 
       const method = error.config?.method?.toUpperCase() || "UNKNOWN";
       const url = error.config?.url || "UNKNOWN";
       const fullUrl = error.config ? `${error.config.baseURL}${url}` : url;
       const status = error.response?.status;
       const message =
-        (error.response?.data as Record<string, unknown>)?.error ||
+        (error.response?.data as { error?: string })?.error ||
         (error as Error).message ||
         "Unknown error";
       const errorCode =
-        (error.response?.data as Record<string, unknown>)?.code || error.code;
+        (error.response?.data as { code?: string })?.code || error.code;
 
       const context: LogContext = {
         requestId,
@@ -486,6 +487,19 @@ export interface ServerConfig {
   lastUpdated: string;
 }
 
+interface AxiosRequestConfigExtended extends AxiosRequestConfig {
+  startTime?: number;
+  requestId?: string;
+}
+
+interface AxiosResponseExtended extends AxiosResponse {
+  config: AxiosRequestConfigExtended;
+}
+
+interface AxiosErrorExtended extends AxiosError {
+  config?: AxiosRequestConfigExtended;
+}
+
 export async function getServerConfig(): Promise<ServerConfig | null> {
   if (!isElectron()) return null;
 
@@ -535,6 +549,19 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
     console.error("Failed to save server config:", error);
     return false;
   }
+}
+
+interface AxiosRequestConfigExtended extends AxiosRequestConfig {
+  startTime?: number;
+  requestId?: string;
+}
+
+interface AxiosResponseExtended extends AxiosResponse {
+  config: AxiosRequestConfigExtended;
+}
+
+interface AxiosErrorExtended extends AxiosError {
+  config?: AxiosRequestConfigExtended;
 }
 
 export async function testServerConnection(
@@ -881,12 +908,20 @@ function handleApiError(error: unknown, operation: string): never {
 // SSH HOST MANAGEMENT
 // ============================================================================
 
-export async function getSSHHosts(): Promise<SSHHost[]> {
+export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
-    const response = await sshHostApi.get("/db/host");
-    return response.data;
+    const hostsResponse = await sshHostApi.get("/db/host");
+    const hosts: SSHHost[] = hostsResponse.data;
+
+    const statusesResponse = await getAllServerStatuses();
+    const statuses = statusesResponse || {};
+
+    return hosts.map((host) => ({
+      ...host,
+      status: statuses[host.id]?.status || "unknown",
+    }));
   } catch (error) {
-    handleApiError(error, "fetch SSH hosts");
+    throw handleApiError(error, "fetch SSH hosts");
   }
 }
 
@@ -2147,9 +2182,12 @@ export async function loginUser(
       username: response.data.username,
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
+      is_oidc: response.data.is_oidc,
+      totp_enabled: response.data.totp_enabled,
+      data_unlocked: response.data.data_unlocked,
     };
   } catch (error) {
-    handleApiError(error, "login user");
+    throw handleApiError(error, "login user");
   }
 }
 
@@ -3044,14 +3082,32 @@ export async function executeSnippet(
   }
 }
 
-export async function reorderSnippets(
-  snippets: Array<{ id: number; order: number; folder?: string }>,
-): Promise<{ success: boolean; updated: number }> {
+// ============================================================================
+// MISCELLANEOUS API CALLS
+// ============================================================================
+
+export interface NetworkTopologyData {
+  nodes: any[];
+  edges: any[];
+}
+
+export async function getNetworkTopology(): Promise<NetworkTopologyData | null> {
   try {
-    const response = await authApi.put("/snippets/reorder", { snippets });
+    const response = await authApi.get("/network-topology/");
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "reorder snippets");
+    throw handleApiError(error, "fetch network topology");
+  }
+}
+
+export async function saveNetworkTopology(
+  topology: NetworkTopologyData,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/network-topology/", { topology });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "save network topology");
   }
 }
 
@@ -3117,6 +3173,17 @@ export async function deleteSnippetFolder(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete snippet folder");
+  }
+}
+
+export async function reorderSnippets(
+  updates: Array<{ id: number; order: number; folder?: string }>,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/snippets/reorder", { updates });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "reorder snippets");
   }
 }
 

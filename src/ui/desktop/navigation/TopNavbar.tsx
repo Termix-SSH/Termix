@@ -382,7 +382,8 @@ export function TopNavbar({
               ((tab.type === "home" ||
                 tab.type === "ssh_manager" ||
                 tab.type === "admin" ||
-                tab.type === "user_profile") &&
+                tab.type === "user_profile" ||
+                tab.type === "network_graph") &&
                 isSplitScreenActive);
             const isHome = tab.type === "home";
             const disableClose = isHome;
@@ -491,7 +492,8 @@ export function TopNavbar({
                     isDocker ||
                     isSshManager ||
                     isAdmin ||
-                    isUserProfile
+                    isUserProfile ||
+                    tab.type === "network_graph"
                       ? () => handleTabClose(tab.id)
                       : undefined
                   }
@@ -507,7 +509,8 @@ export function TopNavbar({
                     isDocker ||
                     isSshManager ||
                     isAdmin ||
-                    isUserProfile
+                    isUserProfile ||
+                    tab.type === "network_graph"
                   }
                   disableActivate={disableActivate}
                   disableSplit={disableSplit}

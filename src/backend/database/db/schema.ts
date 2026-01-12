@@ -295,6 +295,12 @@ export const commandHistory = sqliteTable("command_history", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const networkTopology = sqliteTable("network_topology", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  topology: text("topology"),
 export const hostAccess = sqliteTable("host_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hostId: integer("host_id")

@@ -8,6 +8,22 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
+import HostManagerApp from "./ui/desktop/apps/HostManagerApp.tsx";
+import NetworkGraphApp from "./ui/desktop/apps/NetworkGraphApp.tsx";
+
+const FullscreenApp: React.FC = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const view = searchParams.get('view');
+
+  switch (view) {
+    case 'host-manager':
+      return <HostManagerApp />;
+    case 'network-graph':
+      return <NetworkGraphApp />;
+    default:
+      return <DesktopApp />; 
+  }
+};
 import { useServiceWorker } from "@/hooks/use-service-worker";
 
 function useWindowWidth() {
@@ -65,8 +81,15 @@ function RootApp() {
   const userAgent =
     navigator.userAgent || navigator.vendor || (window as any).opera || "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
+  
+  const searchParams = new URLSearchParams(window.location.search);
+  const isFullscreen = searchParams.has('view');
 
   const renderApp = () => {
+    if (isFullscreen) {
+      return <FullscreenApp />;
+    }
+
     if (isElectron()) {
       return <DesktopApp />;
     }
@@ -98,7 +121,7 @@ function RootApp() {
         }}
       />
       <div className="relative min-h-screen" style={{ zIndex: 1 }}>
-        {isElectron() && showVersionCheck ? (
+        {isElectron() && showVersionCheck && !isFullscreen ? (
           <ElectronVersionCheck
             onContinue={() => setShowVersionCheck(false)}
             isAuthenticated={false}
