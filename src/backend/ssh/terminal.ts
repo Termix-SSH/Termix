@@ -761,6 +761,36 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
+      sshLogger.info("Creating shell", {
+        operation: "ssh_shell_start",
+        hostId: id,
+        ip,
+        port,
+        username,
+      });
+
+      let shellCallbackReceived = false;
+      const shellTimeout = setTimeout(() => {
+        if (!shellCallbackReceived && isShellInitializing) {
+          sshLogger.error("Shell creation timeout - no response from server", {
+            operation: "ssh_shell_timeout",
+            hostId: id,
+            ip,
+            port,
+            username,
+          });
+          isShellInitializing = false;
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Shell creation timeout. The server may not support interactive shells or the connection was interrupted.",
+            }),
+          );
+          cleanupSSH(connectionTimeout);
+        }
+      }, 15000);
+
       conn.shell(
         {
           rows: data.rows,
@@ -768,6 +798,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           term: "xterm-256color",
         } as PseudoTtyOptions,
         (err, stream) => {
+          shellCallbackReceived = true;
+          clearTimeout(shellTimeout);
           isShellInitializing = false;
 
           if (err) {
@@ -784,6 +816,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 message: "Shell error: " + err.message,
               }),
             );
+            cleanupSSH(connectionTimeout);
             return;
           }
 
@@ -969,6 +1002,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("close", () => {
       clearTimeout(connectionTimeout);
+      if (isShellInitializing || (isConnected && !sshStream)) {
+        sshLogger.warn("SSH connection closed during shell initialization", {
+          operation: "ssh_close_during_init",
+          hostId: id,
+          ip,
+          port,
+          username,
+          isShellInitializing,
+          hasStream: !!sshStream,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Connection closed during shell initialization. The server may have rejected the shell request.",
+          }),
+        );
+      } else if (!sshStream) {
+        ws.send(
+          JSON.stringify({
+            type: "disconnected",
+            message: "Connection closed",
+          }),
+        );
+      }
       cleanupSSH(connectionTimeout);
     });
 
