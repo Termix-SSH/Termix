@@ -7,7 +7,8 @@ export type WidgetType =
   | "processes"
   | "system"
   | "login_stats"
-  | "ports";
+  | "ports"
+  | "firewall";
 
 export interface ListeningPort {
   protocol: "tcp" | "udp";
@@ -21,7 +22,7 @@ export interface ListeningPort {
 export interface PortsMetrics {
   source: "ss" | "netstat" | "none";
   ports: ListeningPort[];
-  | "firewall";
+}
 
 export interface FirewallRule {
   chain: string;

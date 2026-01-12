@@ -1803,6 +1803,10 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         } catch (e) {
           statsLogger.debug("Failed to collect ports metrics", {
             operation: "ports_metrics_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+
         let firewall: {
           type: "iptables" | "nftables" | "none";
           status: "active" | "inactive" | "unknown";

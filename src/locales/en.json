@@ -1740,6 +1740,7 @@
       "state": "State",
       "process": "Process",
       "noData": "No listening ports data"
+    },
     "firewall": {
       "title": "Firewall",
       "active": "Active",
