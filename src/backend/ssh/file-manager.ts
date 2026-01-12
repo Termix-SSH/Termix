@@ -44,6 +44,58 @@ function isExecutableFile(permissions: string, fileName: string): boolean {
   );
 }
 
+function modeToPermissions(mode: number): string {
+  const S_IFDIR = 0o040000;
+  const S_IFLNK = 0o120000;
+  const S_IFMT = 0o170000;
+
+  const type = mode & S_IFMT;
+  const prefix = type === S_IFDIR ? "d" : type === S_IFLNK ? "l" : "-";
+
+  const perms = [
+    mode & 0o400 ? "r" : "-",
+    mode & 0o200 ? "w" : "-",
+    mode & 0o100 ? "x" : "-",
+    mode & 0o040 ? "r" : "-",
+    mode & 0o020 ? "w" : "-",
+    mode & 0o010 ? "x" : "-",
+    mode & 0o004 ? "r" : "-",
+    mode & 0o002 ? "w" : "-",
+    mode & 0o001 ? "x" : "-",
+  ].join("");
+
+  return prefix + perms;
+}
+
+function formatMtime(mtime: number): string {
+  const date = new Date(mtime * 1000);
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const month = months[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, " ");
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+
+  if (date > sixMonthsAgo) {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${month} ${day} ${hours}:${minutes}`;
+  }
+  return `${month} ${day}  ${date.getFullYear()}`;
+}
+
 const app = express();
 
 app.use(
@@ -1152,88 +1204,187 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
 
-  const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-  sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
-    if (err) {
-      sshConn.activeOperations--;
-      fileLogger.error("SSH listFiles error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-
-    let data = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      data += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-    });
-
-    stream.on("close", (code) => {
-      sshConn.activeOperations--;
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        return res.status(500).json({ error: `Command failed: ${errorData}` });
-      }
-
-      const lines = data.split("\n").filter((line) => line.trim());
-      const files = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        const parts = line.split(/\s+/);
-        if (parts.length >= 9) {
-          const permissions = parts[0];
-          const owner = parts[2];
-          const group = parts[3];
-          const size = parseInt(parts[4], 10);
-
-          let dateStr = "";
-          const nameStartIndex = 8;
-
-          if (parts[5] && parts[6] && parts[7]) {
-            dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
-          }
-
-          const name = parts.slice(nameStartIndex).join(" ");
-          const isDirectory = permissions.startsWith("d");
-          const isLink = permissions.startsWith("l");
-
-          if (name === "." || name === "..") continue;
-
-          let actualName = name;
-          let linkTarget = undefined;
-          if (isLink && name.includes(" -> ")) {
-            const linkParts = name.split(" -> ");
-            actualName = linkParts[0];
-            linkTarget = linkParts[1];
-          }
-
-          files.push({
-            name: actualName,
-            type: isDirectory ? "directory" : isLink ? "link" : "file",
-            size: isDirectory ? undefined : size,
-            modified: dateStr,
-            permissions,
-            owner,
-            group,
-            linkTarget,
-            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
-            executable:
-              !isDirectory && !isLink
-                ? isExecutableFile(permissions, actualName)
-                : false,
-          });
+  const trySFTP = () => {
+    try {
+      sshConn.client.sftp((err, sftp) => {
+        if (err) {
+          fileLogger.warn(
+            `SFTP failed for listFiles, trying fallback: ${err.message}`,
+          );
+          tryFallbackMethod();
+          return;
         }
+
+        sftp.readdir(sshPath, (readdirErr, list) => {
+          if (readdirErr) {
+            fileLogger.warn(
+              `SFTP readdir failed, trying fallback: ${readdirErr.message}`,
+            );
+            tryFallbackMethod();
+            return;
+          }
+
+          const symlinks: Array<{ index: number; path: string }> = [];
+          const files: Array<{
+            name: string;
+            type: string;
+            size: number | undefined;
+            modified: string;
+            permissions: string;
+            owner: string;
+            group: string;
+            linkTarget: string | undefined;
+            path: string;
+            executable: boolean;
+          }> = [];
+
+          for (const entry of list) {
+            if (entry.filename === "." || entry.filename === "..") continue;
+
+            const attrs = entry.attrs;
+            const permissions = modeToPermissions(attrs.mode);
+            const isDirectory = attrs.isDirectory();
+            const isLink = attrs.isSymbolicLink();
+
+            const fileEntry = {
+              name: entry.filename,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : attrs.size,
+              modified: formatMtime(attrs.mtime),
+              permissions,
+              owner: String(attrs.uid),
+              group: String(attrs.gid),
+              linkTarget: undefined as string | undefined,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${entry.filename}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, entry.filename)
+                  : false,
+            };
+
+            if (isLink) {
+              symlinks.push({ index: files.length, path: fileEntry.path });
+            }
+
+            files.push(fileEntry);
+          }
+
+          if (symlinks.length === 0) {
+            sshConn.activeOperations--;
+            return res.json({ files, path: sshPath });
+          }
+
+          let resolved = 0;
+          for (const link of symlinks) {
+            sftp.readlink(link.path, (linkErr, target) => {
+              resolved++;
+              if (!linkErr && target) {
+                files[link.index].linkTarget = target;
+              }
+              if (resolved === symlinks.length) {
+                sshConn.activeOperations--;
+                res.json({ files, path: sshPath });
+              }
+            });
+          }
+        });
+      });
+    } catch (sftpErr: unknown) {
+      const errMsg =
+        sftpErr instanceof Error ? sftpErr.message : "Unknown error";
+      fileLogger.warn(`SFTP connection error, trying fallback: ${errMsg}`);
+      tryFallbackMethod();
+    }
+  };
+
+  const tryFallbackMethod = () => {
+    const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
+    sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
+      if (err) {
+        sshConn.activeOperations--;
+        fileLogger.error("SSH listFiles error:", err);
+        return res.status(500).json({ error: err.message });
       }
 
-      res.json({ files, path: sshPath });
+      let data = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        sshConn.activeOperations--;
+        if (code !== 0) {
+          fileLogger.error(
+            `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res
+            .status(500)
+            .json({ error: `Command failed: ${errorData}` });
+        }
+
+        const lines = data.split("\n").filter((line) => line.trim());
+        const files = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const parts = line.split(/\s+/);
+          if (parts.length >= 9) {
+            const permissions = parts[0];
+            const owner = parts[2];
+            const group = parts[3];
+            const size = parseInt(parts[4], 10);
+
+            let dateStr = "";
+            const nameStartIndex = 8;
+
+            if (parts[5] && parts[6] && parts[7]) {
+              dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+            }
+
+            const name = parts.slice(nameStartIndex).join(" ");
+            const isDirectory = permissions.startsWith("d");
+            const isLink = permissions.startsWith("l");
+
+            if (name === "." || name === "..") continue;
+
+            let actualName = name;
+            let linkTarget = undefined;
+            if (isLink && name.includes(" -> ")) {
+              const linkParts = name.split(" -> ");
+              actualName = linkParts[0];
+              linkTarget = linkParts[1];
+            }
+
+            files.push({
+              name: actualName,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : size,
+              modified: dateStr,
+              permissions,
+              owner,
+              group,
+              linkTarget,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, actualName)
+                  : false,
+            });
+          }
+        }
+
+        res.json({ files, path: sshPath });
+      });
     });
-  });
+  };
+
+  trySFTP();
 });
 
 app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
