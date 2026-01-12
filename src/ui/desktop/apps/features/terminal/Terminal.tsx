@@ -1349,6 +1349,24 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
+        // Ctrl+Alt+<key> → Ctrl+<key> remapping for browser-blocked shortcuts
+        // Browsers intercept Ctrl+W/T/N/Q, so we use Ctrl+Alt as an alternative
+        if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
+          const key = e.key.toLowerCase();
+          const blockedKeys = ["w", "t", "n", "q"];
+          if (blockedKeys.includes(key)) {
+            e.preventDefault();
+            e.stopPropagation();
+            const ctrlCode = key.charCodeAt(0) - 96;
+            if (webSocketRef.current?.readyState === 1) {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: String.fromCharCode(ctrlCode) }),
+              );
+            }
+            return false;
+          }
+        }
+
         if (showAutocompleteRef.current) {
           if (e.key === "Escape") {
             e.preventDefault();
