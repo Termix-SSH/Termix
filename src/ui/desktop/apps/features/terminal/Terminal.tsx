@@ -618,15 +618,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
-                ? "wss://"
-                : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
-              return `${wsProtocol}${wsHost}/ssh/websocket/`;
-            })()
+            const baseUrl =
+              (window as { configuredServerUrl?: string })
+                .configuredServerUrl || "http://127.0.0.1:30001";
+            const wsProtocol = baseUrl.startsWith("https://")
+              ? "wss://"
+              : "ws://";
+            const wsHost = baseUrl.replace(/^https?:\/\//, "");
+            return `${wsProtocol}${wsHost}/ssh/websocket/`;
+          })()
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
 
       if (
@@ -715,8 +715,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 : msg.data;
 
               terminal.write(outputData);
+              // Universal regex pattern for sudo password prompt
+              // Matches "[sudo]" prefix + any text + ":" suffix, works for all languages
+              // Also matches "sudo: a password is required" for some systems
               const sudoPasswordPattern =
-                /(?:\[sudo\] password for \S+:|sudo: a password is required)/;
+                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
               const passwordToFill =
                 hostConfig.terminalConfig?.sudoPassword || hostConfig.password;
               if (
@@ -746,6 +749,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   },
                   t("common.confirm"),
                   t("common.cancel"),
+                  { confirmOnEnter: true },
                 );
                 setTimeout(() => {
                   sudoPromptShownRef.current = false;
@@ -1383,7 +1387,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
             const selectedCommand =
               autocompleteSuggestionsRef.current[
-                autocompleteSelectedIndexRef.current
+              autocompleteSelectedIndexRef.current
               ];
             const currentCmd = currentAutocompleteCommand.current;
             const completion = selectedCommand.substring(currentCmd.length);
