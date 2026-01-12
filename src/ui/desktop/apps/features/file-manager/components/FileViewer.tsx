@@ -332,11 +332,21 @@ export function FileViewer({
   const getImageDataUrl = (content: string, fileName: string): string => {
     const ext = fileName.split(".").pop()?.toLowerCase() || "";
 
-    if (ext === "svg") {
-      return `data:image/svg+xml;base64,${content}`;
-    }
+    const mimeTypes: Record<string, string> = {
+      svg: "image/svg+xml",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      bmp: "image/bmp",
+      ico: "image/x-icon",
+      tiff: "image/tiff",
+      tif: "image/tiff",
+    };
 
-    return `data:image/*;base64,${content}`;
+    const mimeType = mimeTypes[ext] || "image/png";
+    return `data:${mimeType};base64,${content}`;
   };
 
   const WARNING_SIZE = 50 * 1024 * 1024;
