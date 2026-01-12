@@ -255,7 +255,7 @@ export function ContainerCard({
       >
         <CardHeader className="pb-2 px-4">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base font-semibold truncate flex-1">
+            <CardTitle className="text-base font-semibold truncate flex-1 min-w-0">
               {container.name.startsWith("/")
                 ? container.name.slice(1)
                 : container.name}
