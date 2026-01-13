@@ -28,7 +28,7 @@
     "failedToFetchCredentials": "Fout bij het ophalen van inloggegevens",
     "credentialDeletedSuccessfully": "Toegangsgegevens met succes verwijderd",
     "failedToDeleteCredential": "Kan aanmeldgegevens niet verwijderen",
-    "confirmDeleteCredential": "Are you sure you want to delete credential \"{{name}}\"?",
+    "confirmDeleteCredential": "Weet je zeker dat je de inloggegevens \"{{name}}\" wilt verwijderen?",
     "credentialCreatedSuccessfully": "Toegangsgegevens met succes aangemaakt",
     "credentialUpdatedSuccessfully": "Toegangsgegevens zijn succesvol bijgewerkt",
     "failedToSaveCredential": "Kan referenties niet opslaan",
