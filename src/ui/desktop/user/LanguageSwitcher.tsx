@@ -11,20 +11,27 @@ import { Globe } from "lucide-react";
 
 const languages = [
   { code: "en", name: "English", nativeName: "English" },
+  { code: "af", name: "Afrikaans", nativeName: "Afrikaans" },
   { code: "ar", name: "Arabic", nativeName: "العربية" },
   { code: "bn", name: "Bengali", nativeName: "বাংলা" },
+  { code: "bg", name: "Bulgarian", nativeName: "Български" },
+  { code: "ca", name: "Catalan", nativeName: "Català" },
   { code: "zh", name: "Chinese", nativeName: "中文" },
   { code: "cs", name: "Czech", nativeName: "Čeština" },
+  { code: "da", name: "Danish", nativeName: "Dansk" },
   { code: "nl", name: "Dutch", nativeName: "Nederlands" },
+  { code: "fi", name: "Finnish", nativeName: "Suomi" },
   { code: "fr", name: "French", nativeName: "Français" },
   { code: "de", name: "German", nativeName: "Deutsch" },
   { code: "el", name: "Greek", nativeName: "Ελληνικά" },
   { code: "he", name: "Hebrew", nativeName: "עברית" },
   { code: "hi", name: "Hindi", nativeName: "हिन्दी" },
+  { code: "hu", name: "Hungarian", nativeName: "Magyar" },
   { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia" },
   { code: "it", name: "Italian", nativeName: "Italiano" },
   { code: "ja", name: "Japanese", nativeName: "日本語" },
   { code: "ko", name: "Korean", nativeName: "한국어" },
+  { code: "no", name: "Norwegian", nativeName: "Norsk" },
   { code: "pl", name: "Polish", nativeName: "Polski" },
   {
     code: "pt",
@@ -33,13 +40,13 @@ const languages = [
   },
   { code: "ro", name: "Romanian", nativeName: "Română" },
   { code: "ru", name: "Russian", nativeName: "Русский" },
+  { code: "sr", name: "Serbian", nativeName: "Српски" },
   { code: "es", name: "Spanish", nativeName: "Español" },
   { code: "sv", name: "Swedish", nativeName: "Svenska" },
   { code: "th", name: "Thai", nativeName: "ไทย" },
   { code: "tr", name: "Turkish", nativeName: "Türkçe" },
   { code: "uk", name: "Ukrainian", nativeName: "Українська" },
   { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt" },
-  { code: "nb", name: "Norwegian", nativeName: "Norsk" },
 ];
 
 export function LanguageSwitcher() {

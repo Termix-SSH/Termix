@@ -2,32 +2,39 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
-import enTranslation from "../locales/en.json";
-import zhTranslation from "../locales/zh.json";
-import deTranslation from "../locales/de.json";
-import ptTranslation from "../locales/pt.json";
-import ruTranslation from "../locales/ru.json";
-import frTranslation from "../locales/fr.json";
-import koTranslation from "../locales/ko.json";
-import itTranslation from "../locales/it.json";
-import esTranslation from "../locales/es.json";
-import hiTranslation from "../locales/hi.json";
-import bnTranslation from "../locales/bn.json";
-import jaTranslation from "../locales/ja.json";
-import viTranslation from "../locales/vi.json";
-import trTranslation from "../locales/tr.json";
-import heTranslation from "../locales/he.json";
-import arTranslation from "../locales/ar.json";
-import plTranslation from "../locales/pl.json";
-import nlTranslation from "../locales/nl.json";
-import svTranslation from "../locales/sv.json";
-import idTranslation from "../locales/id.json";
-import thTranslation from "../locales/th.json";
-import ukTranslation from "../locales/uk.json";
-import csTranslation from "../locales/cs.json";
-import roTranslation from "../locales/ro.json";
-import elTranslation from "../locales/el.json";
-import nbTranslation from "../locales/nb.json";
+import enTranslation from "../locales/translated/en.json";
+import afTranslation from "../locales/translated/af.json";
+import arTranslation from "../locales/translated/ar.json";
+import bnTranslation from "../locales/translated/bn.json";
+import bgTranslation from "../locales/translated/bg.json";
+import caTranslation from "../locales/translated/ca.json";
+import csTranslation from "../locales/translated/cs.json";
+import daTranslation from "../locales/translated/da.json";
+import deTranslation from "../locales/translated/de.json";
+import elTranslation from "../locales/translated/el.json";
+import esTranslation from "../locales/translated/es.json";
+import fiTranslation from "../locales/translated/fi.json";
+import frTranslation from "../locales/translated/fr.json";
+import heTranslation from "../locales/translated/he.json";
+import hiTranslation from "../locales/translated/hi.json";
+import huTranslation from "../locales/translated/hu.json";
+import idTranslation from "../locales/translated/id.json";
+import itTranslation from "../locales/translated/it.json";
+import jaTranslation from "../locales/translated/ja.json";
+import koTranslation from "../locales/translated/ko.json";
+import nlTranslation from "../locales/translated/nl.json";
+import noTranslation from "../locales/translated/no.json";
+import plTranslation from "../locales/translated/pl.json";
+import ptTranslation from "../locales/translated/pt.json";
+import roTranslation from "../locales/translated/ro.json";
+import ruTranslation from "../locales/translated/ru.json";
+import srTranslation from "../locales/translated/sr.json";
+import svTranslation from "../locales/translated/sv.json";
+import thTranslation from "../locales/translated/th.json";
+import trTranslation from "../locales/translated/tr.json";
+import ukTranslation from "../locales/translated/uk.json";
+import viTranslation from "../locales/translated/vi.json";
+import zhTranslation from "../locales/translated/zh.json";
 
 i18n
   .use(LanguageDetector)
@@ -35,31 +42,38 @@ i18n
   .init({
     supportedLngs: [
       "en",
-      "zh",
-      "de",
-      "pt",
-      "ru",
-      "fr",
-      "ko",
-      "it",
-      "es",
-      "hi",
-      "bn",
-      "ja",
-      "vi",
-      "tr",
-      "he",
+      "af",
       "ar",
-      "pl",
-      "nl",
-      "sv",
-      "id",
-      "th",
-      "uk",
+      "bn",
+      "bg",
+      "ca",
       "cs",
-      "ro",
+      "da",
+      "de",
       "el",
-      "nb",
+      "es",
+      "fi",
+      "fr",
+      "he",
+      "hi",
+      "hu",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "nl",
+      "no",
+      "pl",
+      "pt",
+      "ro",
+      "ru",
+      "sr",
+      "sv",
+      "th",
+      "tr",
+      "uk",
+      "vi",
+      "zh",
     ],
     fallbackLng: "en",
     debug: false,
@@ -76,80 +90,101 @@ i18n
       en: {
         translation: enTranslation,
       },
-      zh: {
-        translation: zhTranslation,
-      },
-      de: {
-        translation: deTranslation,
-      },
-      pt: {
-        translation: ptTranslation,
-      },
-      ru: {
-        translation: ruTranslation,
-      },
-      fr: {
-        translation: frTranslation,
-      },
-      ko: {
-        translation: koTranslation,
-      },
-      it: {
-        translation: itTranslation,
-      },
-      es: {
-        translation: esTranslation,
-      },
-      hi: {
-        translation: hiTranslation,
-      },
-      bn: {
-        translation: bnTranslation,
-      },
-      ja: {
-        translation: jaTranslation,
-      },
-      vi: {
-        translation: viTranslation,
-      },
-      tr: {
-        translation: trTranslation,
-      },
-      he: {
-        translation: heTranslation,
+      af: {
+        translation: afTranslation,
       },
       ar: {
         translation: arTranslation,
       },
-      pl: {
-        translation: plTranslation,
+      bn: {
+        translation: bnTranslation,
       },
-      nl: {
-        translation: nlTranslation,
+      bg: {
+        translation: bgTranslation,
       },
-      sv: {
-        translation: svTranslation,
-      },
-      id: {
-        translation: idTranslation,
-      },
-      th: {
-        translation: thTranslation,
-      },
-      uk: {
-        translation: ukTranslation,
+      ca: {
+        translation: caTranslation,
       },
       cs: {
         translation: csTranslation,
       },
-      ro: {
-        translation: roTranslation,
+      da: {
+        translation: daTranslation,
+      },
+      de: {
+        translation: deTranslation,
       },
       el: {
         translation: elTranslation,
       },
-      nb: {
-        translation: nbTranslation,
+      es: {
+        translation: esTranslation,
+      },
+      fi: {
+        translation: fiTranslation,
+      },
+      fr: {
+        translation: frTranslation,
+      },
+      he: {
+        translation: heTranslation,
+      },
+      hi: {
+        translation: hiTranslation,
+      },
+      hu: {
+        translation: huTranslation,
+      },
+      id: {
+        translation: idTranslation,
+      },
+      it: {
+        translation: itTranslation,
+      },
+      ja: {
+        translation: jaTranslation,
+      },
+      ko: {
+        translation: koTranslation,
+      },
+      nl: {
+        translation: nlTranslation,
+      },
+      no: {
+        translation: noTranslation,
+      },
+      pl: {
+        translation: plTranslation,
+      },
+      pt: {
+        translation: ptTranslation,
+      },
+      ro: {
+        translation: roTranslation,
+      },
+      ru: {
+        translation: ruTranslation,
+      },
+      sr: {
+        translation: srTranslation,
+      },
+      sv: {
+        translation: svTranslation,
+      },
+      th: {
+        translation: thTranslation,
+      },
+      tr: {
+        translation: trTranslation,
+      },
+      uk: {
+        translation: ukTranslation,
+      },
+      vi: {
+        translation: viTranslation,
+      },
+      zh: {
+        translation: zhTranslation,
       },
     },
 
