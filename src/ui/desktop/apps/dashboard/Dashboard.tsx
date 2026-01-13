@@ -160,13 +160,16 @@ export function Dashboard({
         const uptimeInfo = await getUptime();
         setUptime(uptimeInfo.formatted);
 
-        const versionInfo = await getVersionInfo();
-        setVersionText(`v${versionInfo.localVersion}`);
-        if (
-          versionInfo.status === "up_to_date" ||
-          versionInfo.status === "requires_update"
-        ) {
-          setVersionStatus(versionInfo.status);
+        const updateCheckDisabled = localStorage.getItem("disableUpdateCheck") === "true";
+        if (!updateCheckDisabled) {
+          const versionInfo = await getVersionInfo();
+          setVersionText(`v${versionInfo.localVersion}`);
+          if (
+            versionInfo.status === "up_to_date" ||
+            versionInfo.status === "requires_update"
+          ) {
+            setVersionStatus(versionInfo.status);
+          }
         }
 
         try {

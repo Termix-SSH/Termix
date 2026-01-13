@@ -133,6 +133,9 @@ export function UserProfile({
     const saved = localStorage.getItem("showHostTags");
     return saved !== null ? saved === "true" : true;
   });
+  const [disableUpdateCheck, setDisableUpdateCheck] = useState<boolean>(
+    localStorage.getItem("disableUpdateCheck") === "true",
+  );
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -210,6 +213,11 @@ export function UserProfile({
     setShowHostTags(enabled);
     localStorage.setItem("showHostTags", enabled.toString());
     window.dispatchEvent(new Event("showHostTagsChanged"));
+  };
+
+  const handleDisableUpdateCheckToggle = (enabled: boolean) => {
+    setDisableUpdateCheck(enabled);
+    localStorage.setItem("disableUpdateCheck", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -609,6 +617,28 @@ export function UserProfile({
                         onCheckedChange={
                           handleDefaultSnippetFoldersCollapsedToggle
                         }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.updateSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.disableUpdateCheck")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.disableUpdateCheckDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={disableUpdateCheck}
+                        onCheckedChange={handleDisableUpdateCheckToggle}
                       />
                     </div>
                   </div>
