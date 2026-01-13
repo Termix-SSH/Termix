@@ -365,7 +365,34 @@ app.use(express.urlencoded({ limit: "100mb", extended: true }));
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
-// POST /docker/ssh/connect - Establish SSH session
+/**
+ * @openapi
+ * /docker/ssh/connect:
+ *   post:
+ *     summary: Establish SSH session for Docker
+ *     description: Establishes an SSH session to a host for Docker operations.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: SSH connection established.
+ *       400:
+ *         description: Missing sessionId or hostId.
+ *       401:
+ *         description: Authentication required.
+ *       403:
+ *         description: Docker is not enabled for this host.
+ *       404:
+ *         description: Host not found.
+ *       500:
+ *         description: SSH connection failed.
+ */
 app.post("/docker/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -929,7 +956,29 @@ app.post("/docker/ssh/connect", async (req, res) => {
   }
 });
 
-// POST /docker/ssh/disconnect - Close SSH session
+/**
+ * @openapi
+ * /docker/ssh/disconnect:
+ *   post:
+ *     summary: Disconnect SSH session
+ *     description: Closes an active SSH session for Docker operations.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: SSH session disconnected.
+ *       400:
+ *         description: Session ID is required.
+ */
 app.post("/docker/ssh/disconnect", async (req, res) => {
   const { sessionId } = req.body;
 
@@ -942,7 +991,35 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
   res.json({ success: true, message: "SSH session disconnected" });
 });
 
-// POST /docker/ssh/connect-totp - Verify TOTP and complete connection
+/**
+ * @openapi
+ * /docker/ssh/connect-totp:
+ *   post:
+ *     summary: Verify TOTP and complete connection
+ *     description: Verifies the TOTP code and completes the SSH connection.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               totpCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP verified, SSH connection established.
+ *       400:
+ *         description: Session ID and TOTP code required.
+ *       401:
+ *         description: Invalid TOTP code.
+ *       404:
+ *         description: TOTP session expired.
+ */
 app.post("/docker/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
   const userId = (req as any).userId;
@@ -1105,7 +1182,29 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   session.finish(responses);
 });
 
-// POST /docker/ssh/keepalive - Keep session alive
+/**
+ * @openapi
+ * /docker/ssh/keepalive:
+ *   post:
+ *     summary: Keep SSH session alive
+ *     description: Keeps an active SSH session alive.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session keepalive successful.
+ *       400:
+ *         description: Session ID is required or session not found.
+ */
 app.post("/docker/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
 
@@ -1133,7 +1232,26 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
   });
 });
 
-// GET /docker/ssh/status - Check session status
+/**
+ * @openapi
+ * /docker/ssh/status:
+ *   get:
+ *     summary: Check SSH session status
+ *     description: Checks the status of an active SSH session.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session status.
+ *       400:
+ *         description: Session ID is required.
+ */
 app.get("/docker/ssh/status", async (req, res) => {
   const sessionId = req.query.sessionId as string;
 
@@ -1146,7 +1264,28 @@ app.get("/docker/ssh/status", async (req, res) => {
   res.json({ success: true, connected: isConnected });
 });
 
-// GET /docker/validate/:sessionId - Validate Docker availability
+/**
+ * @openapi
+ * /docker/validate/{sessionId}:
+ *   get:
+ *     summary: Validate Docker availability
+ *     description: Validates if Docker is available on the host.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Docker availability status.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       500:
+ *         description: Validation failed.
+ */
 app.get("/docker/validate/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const userId = (req as any).userId;
@@ -1236,7 +1375,32 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId - List all containers
+/**
+ * @openapi
+ * /docker/containers/{sessionId}:
+ *   get:
+ *     summary: List all containers
+ *     description: Lists all Docker containers on the host.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: all
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: A list of containers.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       500:
+ *         description: Failed to list containers.
+ */
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const all = req.query.all !== "false";
@@ -1297,7 +1461,35 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId/:containerId - Get container details
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}:
+ *   get:
+ *     summary: Get container details
+ *     description: Retrieves detailed information about a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container details.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container details.
+ */
 app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   const { sessionId, containerId } = req.params;
   const userId = (req as any).userId;
@@ -1356,7 +1548,35 @@ app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   }
 });
 
-// POST /docker/containers/:sessionId/:containerId/start - Start container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/start:
+ *   post:
+ *     summary: Start container
+ *     description: Starts a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container started successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to start container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/start",
   async (req, res) => {
@@ -1414,7 +1634,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/stop - Stop container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/stop:
+ *   post:
+ *     summary: Stop container
+ *     description: Stops a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container stopped successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to stop container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/stop",
   async (req, res) => {
@@ -1472,7 +1720,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/restart - Restart container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/restart:
+ *   post:
+ *     summary: Restart container
+ *     description: Restarts a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container restarted successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to restart container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/restart",
   async (req, res) => {
@@ -1530,7 +1806,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/pause - Pause container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/pause:
+ *   post:
+ *     summary: Pause container
+ *     description: Pauses a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container paused successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to pause container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/pause",
   async (req, res) => {
@@ -1588,7 +1892,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/unpause - Unpause container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/unpause:
+ *   post:
+ *     summary: Unpause container
+ *     description: Unpauses a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container unpaused successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to unpause container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/unpause",
   async (req, res) => {
@@ -1646,7 +1978,39 @@ app.post(
   },
 );
 
-// DELETE /docker/containers/:sessionId/:containerId/remove - Remove container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/remove:
+ *   delete:
+ *     summary: Remove container
+ *     description: Removes a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: force
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Container removed successfully.
+ *       400:
+ *         description: SSH session not found or not connected, or cannot remove a running container.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to remove container.
+ */
 app.delete(
   "/docker/containers/:sessionId/:containerId/remove",
   async (req, res) => {
@@ -1718,7 +2082,51 @@ app.delete(
   },
 );
 
-// GET /docker/containers/:sessionId/:containerId/logs - Get container logs
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/logs:
+ *   get:
+ *     summary: Get container logs
+ *     description: Retrieves logs for a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: tail
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: timestamps
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: since
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: until
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container logs.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container logs.
+ */
 app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const { sessionId, containerId } = req.params;
   const tail = req.query.tail ? parseInt(req.query.tail as string) : 100;
@@ -1795,7 +2203,35 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId/:containerId/stats - Get container stats
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/stats:
+ *   get:
+ *     summary: Get container stats
+ *     description: Retrieves stats for a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container stats.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container stats.
+ */
 app.get(
   "/docker/containers/:sessionId/:containerId/stats",
   async (req, res) => {

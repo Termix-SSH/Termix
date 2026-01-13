@@ -301,6 +301,14 @@ export const networkTopology = sqliteTable("network_topology", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   topology: text("topology"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const hostAccess = sqliteTable("host_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hostId: integer("host_id")

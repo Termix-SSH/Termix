@@ -671,6 +671,13 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create network_topology table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
     try {

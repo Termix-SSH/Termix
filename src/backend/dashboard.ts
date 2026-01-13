@@ -58,6 +58,31 @@ app.use(express.json({ limit: "1mb" }));
 
 app.use(authManager.createAuthMiddleware());
 
+/**
+ * @openapi
+ * /uptime:
+ *   get:
+ *     summary: Get server uptime
+ *     description: Returns the uptime of the server in various formats.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Server uptime information.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uptimeMs:
+ *                   type: number
+ *                 uptimeSeconds:
+ *                   type: number
+ *                 formatted:
+ *                   type: string
+ *       500:
+ *         description: Failed to get uptime.
+ */
 app.get("/uptime", async (req, res) => {
   try {
     const uptimeMs = Date.now() - serverStartTime;
@@ -77,6 +102,28 @@ app.get("/uptime", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/recent:
+ *   get:
+ *     summary: Get recent activity
+ *     description: Fetches the most recent activities for the authenticated user.
+ *     tags:
+ *       - Dashboard
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The maximum number of activities to return.
+ *     responses:
+ *       200:
+ *         description: A list of recent activities.
+ *       401:
+ *         description: Session expired.
+ *       500:
+ *         description: Failed to get recent activity.
+ */
 app.get("/activity/recent", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -108,6 +155,40 @@ app.get("/activity/recent", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/log:
+ *   post:
+ *     summary: Log a new activity
+ *     description: Logs a new user activity, such as accessing a terminal or file manager. This endpoint is rate-limited.
+ *     tags:
+ *       - Dashboard
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [terminal, file_manager, server_stats, tunnel, docker]
+ *               hostId:
+ *                 type: integer
+ *               hostName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Activity logged successfully or rate-limited.
+ *       400:
+ *         description: Invalid request body.
+ *       401:
+ *         description: Session expired.
+ *       404:
+ *         description: Host not found or access denied.
+ *       500:
+ *         description: Failed to log activity.
+ */
 app.post("/activity/log", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -224,6 +305,22 @@ app.post("/activity/log", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/reset:
+ *   delete:
+ *     summary: Reset recent activity
+ *     description: Clears all recent activity for the authenticated user.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Recent activity cleared.
+ *       401:
+ *         description: Session expired.
+ *       500:
+ *         description: Failed to reset activity.
+ */
 app.delete("/activity/reset", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;

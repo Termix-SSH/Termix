@@ -416,6 +416,24 @@ function detectBinary(buffer: Buffer): boolean {
   return nullBytes / sampleSize > 0.01;
 }
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect:
+ *   post:
+ *     summary: Connect to SSH for file manager
+ *     description: Establishes an SSH connection for file manager operations.
+ *     tags:
+ *       - File Manager
+ *     responses:
+ *       200:
+ *         description: SSH connection established.
+ *       400:
+ *         description: Missing SSH connection parameters.
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: SSH connection failed.
+ */
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -986,6 +1004,26 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect-totp:
+ *   post:
+ *     summary: Verify TOTP and complete connection
+ *     description: Verifies the TOTP code and completes the SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     responses:
+ *       200:
+ *         description: TOTP verified, SSH connection established.
+ *       400:
+ *         description: Session ID and TOTP code required.
+ *       401:
+ *         description: Invalid TOTP code or authentication required.
+ *       404:
+ *         description: TOTP session expired.
+ *       408:
+ *         description: TOTP session timeout.
+ */
 app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
 
@@ -1149,18 +1187,71 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   session.finish(responses);
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/disconnect:
+ *   post:
+ *     summary: Disconnect from SSH
+ *     description: Closes an active SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     responses:
+ *       200:
+ *         description: SSH connection disconnected.
+ */
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
   cleanupSession(sessionId);
   res.json({ status: "success", message: "SSH connection disconnected" });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/status:
+ *   get:
+ *     summary: Get SSH connection status
+ *     description: Checks the status of an SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: SSH connection status.
+ */
 app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const isConnected = !!sshSessions[sessionId]?.isConnected;
   res.json({ status: "success", connected: isConnected });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/keepalive:
+ *   post:
+ *     summary: Keep SSH session alive
+ *     description: Keeps an active SSH session for file manager alive.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session keepalive successful.
+ *       400:
+ *         description: Session ID is required or session not found.
+ */
 app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   const { sessionId } = req.body;
 
@@ -1188,6 +1279,33 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/listFiles:
+ *   get:
+ *     summary: List files in a directory
+ *     description: Lists the files and directories in a given path on the remote host.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of files and directories.
+ *       400:
+ *         description: Session ID is required or SSH connection not established.
+ *       500:
+ *         description: Failed to list files.
+ */
 app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1387,6 +1505,33 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/identifySymlink:
+ *   get:
+ *     summary: Identify symbolic link
+ *     description: Identifies the target of a symbolic link.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Symbolic link information.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to identify symbolic link.
+ */
 app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1454,6 +1599,35 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/readFile:
+ *   get:
+ *     summary: Read a file
+ *     description: Reads the content of a file from the remote host.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The content of the file.
+ *       400:
+ *         description: Missing required parameters or file too large.
+ *       404:
+ *         description: File not found.
+ *       500:
+ *         description: Failed to read file.
+ */
 app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1592,6 +1766,35 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   );
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/writeFile:
+ *   post:
+ *     summary: Write to a file
+ *     description: Writes content to a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File written successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to write file.
+ */
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -1737,10 +1940,15 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         if (err) {
           fileLogger.error("Fallback write command failed:", err);
           if (!res.headersSent) {
-            return res.status(500).json({
-              error: `Write failed: ${err.message}`,
-              toast: { type: "error", message: `Write failed: ${err.message}` },
-            });
+            return res
+              .status(500)
+              .json({
+                error: `Write failed: ${err.message}`,
+                toast: {
+                  type: "error",
+                  message: `Write failed: ${err.message}`,
+                },
+              });
           }
           return;
         }
@@ -1803,6 +2011,37 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/uploadFile:
+ *   post:
+ *     summary: Upload a file
+ *     description: Uploads a file to the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               fileName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to upload file.
+ */
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2103,6 +2342,37 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/createFile:
+ *   post:
+ *     summary: Create a file
+ *     description: Creates an empty file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               fileName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File created successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to create file.
+ */
 app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
   const { sessionId, path: filePath, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2204,6 +2474,37 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/createFolder:
+ *   post:
+ *     summary: Create a folder
+ *     description: Creates a new folder on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               folderName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder created successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to create folder.
+ */
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2305,6 +2606,37 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/deleteItem:
+ *   delete:
+ *     summary: Delete a file or directory
+ *     description: Deletes a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               isDirectory:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Item deleted successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to delete item.
+ */
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2407,6 +2739,37 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/renameItem:
+ *   put:
+ *     summary: Rename a file or directory
+ *     description: Renames a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               oldPath:
+ *                 type: string
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item renamed successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to rename item.
+ */
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2515,6 +2878,39 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/moveItem:
+ *   put:
+ *     summary: Move a file or directory
+ *     description: Moves a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               oldPath:
+ *                 type: string
+ *               newPath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item moved successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       408:
+ *         description: Move operation timed out.
+ *       500:
+ *         description: Failed to move item.
+ */
 app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
   const { sessionId, oldPath, newPath } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2640,6 +3036,37 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/downloadFile:
+ *   post:
+ *     summary: Download a file
+ *     description: Downloads a file from the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               hostId:
+ *                 type: integer
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The file content.
+ *       400:
+ *         description: Missing required parameters or file too large.
+ *       500:
+ *         description: Failed to download file.
+ */
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   const { sessionId, path: filePath, hostId, userId } = req.body;
 
@@ -2741,6 +3168,39 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/copyItem:
+ *   post:
+ *     summary: Copy a file or directory
+ *     description: Copies a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               sourcePath:
+ *                 type: string
+ *               targetDir:
+ *                 type: string
+ *               hostId:
+ *                 type: integer
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item copied successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to copy item.
+ */
 app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
   const { sessionId, sourcePath, targetDir, hostId, userId } = req.body;
 
@@ -2904,6 +3364,33 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/executeFile:
+ *   post:
+ *     summary: Execute a file
+ *     description: Executes a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               filePath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File execution result.
+ *       400:
+ *         description: Missing required parameters or SSH connection not available.
+ *       500:
+ *         description: Failed to execute file.
+ */
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   const { sessionId, filePath } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -3002,6 +3489,37 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/changePermissions:
+ *   post:
+ *     summary: Change file permissions
+ *     description: Changes the permissions of a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               permissions:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Permissions changed successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not available.
+ *       408:
+ *         description: Permission change timed out.
+ *       500:
+ *         description: Failed to change permissions.
+ */
 app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   const { sessionId, path, permissions } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -3319,8 +3837,39 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   });
 });
 
-// Route: Compress files/folders (requires JWT)
-// POST /ssh/file_manager/ssh/compressFiles
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/compressFiles:
+ *   post:
+ *     summary: Compress files
+ *     description: Compresses files and/or directories on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               paths:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               archiveName:
+ *                 type: string
+ *               format:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Files compressed successfully.
+ *       400:
+ *         description: Missing required parameters or unsupported compression format.
+ *       500:
+ *         description: Failed to compress files.
+ */
 app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const { sessionId, paths, archiveName, format } = req.body;
 

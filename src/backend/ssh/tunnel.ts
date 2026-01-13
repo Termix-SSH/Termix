@@ -1450,10 +1450,42 @@ async function killRemoteTunnelByMarker(
   }
 }
 
+/**
+ * @openapi
+ * /ssh/tunnel/status:
+ *   get:
+ *     summary: Get all tunnel statuses
+ *     description: Retrieves the status of all SSH tunnels.
+ *     tags:
+ *       - SSH Tunnels
+ *     responses:
+ *       200:
+ *         description: A list of all tunnel statuses.
+ */
 app.get("/ssh/tunnel/status", (req, res) => {
   res.json(getAllTunnelStatus());
 });
 
+/**
+ * @openapi
+ * /ssh/tunnel/status/{tunnelName}:
+ *   get:
+ *     summary: Get tunnel status by name
+ *     description: Retrieves the status of a specific SSH tunnel by its name.
+ *     tags:
+ *       - SSH Tunnels
+ *     parameters:
+ *       - in: path
+ *         name: tunnelName
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Tunnel status.
+ *       404:
+ *         description: Tunnel not found.
+ */
 app.get("/ssh/tunnel/status/:tunnelName", (req, res) => {
   const { tunnelName } = req.params;
   const status = connectionStatus.get(tunnelName);
@@ -1465,6 +1497,39 @@ app.get("/ssh/tunnel/status/:tunnelName", (req, res) => {
   res.json({ name: tunnelName, status });
 });
 
+/**
+ * @openapi
+ * /ssh/tunnel/connect:
+ *   post:
+ *     summary: Connect SSH tunnel
+ *     description: Establishes an SSH tunnel connection with the specified configuration.
+ *     tags:
+ *       - SSH Tunnels
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               sourceHostId:
+ *                 type: integer
+ *               tunnelIndex:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Connection request received.
+ *       400:
+ *         description: Invalid tunnel configuration.
+ *       401:
+ *         description: Authentication required.
+ *       403:
+ *         description: Access denied to this host.
+ *       500:
+ *         description: Failed to connect tunnel.
+ */
 app.post(
   "/ssh/tunnel/connect",
   authenticateJWT,
@@ -1619,6 +1684,35 @@ app.post(
   },
 );
 
+/**
+ * @openapi
+ * /ssh/tunnel/disconnect:
+ *   post:
+ *     summary: Disconnect SSH tunnel
+ *     description: Disconnects an active SSH tunnel.
+ *     tags:
+ *       - SSH Tunnels
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tunnelName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Disconnect request received.
+ *       400:
+ *         description: Tunnel name required.
+ *       401:
+ *         description: Authentication required.
+ *       403:
+ *         description: Access denied.
+ *       500:
+ *         description: Failed to disconnect tunnel.
+ */
 app.post(
   "/ssh/tunnel/disconnect",
   authenticateJWT,
@@ -1683,6 +1777,35 @@ app.post(
   },
 );
 
+/**
+ * @openapi
+ * /ssh/tunnel/cancel:
+ *   post:
+ *     summary: Cancel tunnel retry
+ *     description: Cancels the retry mechanism for a failed SSH tunnel connection.
+ *     tags:
+ *       - SSH Tunnels
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tunnelName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Cancel request received.
+ *       400:
+ *         description: Tunnel name required.
+ *       401:
+ *         description: Authentication required.
+ *       403:
+ *         description: Access denied.
+ *       500:
+ *         description: Failed to cancel tunnel retry.
+ */
 app.post(
   "/ssh/tunnel/cancel",
   authenticateJWT,

@@ -27,8 +27,51 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-//Share a host with a user or role
-//POST /rbac/host/:id/share
+/**
+ * @openapi
+ * /rbac/host/{id}/share:
+ *   post:
+ *     summary: Share a host
+ *     description: Shares a host with a user or a role.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetType:
+ *                 type: string
+ *                 enum: [user, role]
+ *               targetUserId:
+ *                 type: string
+ *               targetRoleId:
+ *                 type: integer
+ *               durationHours:
+ *                 type: number
+ *               permissionLevel:
+ *                 type: string
+ *                 enum: [view]
+ *     responses:
+ *       200:
+ *         description: Host shared successfully.
+ *       400:
+ *         description: Invalid request body.
+ *       403:
+ *         description: Not host owner.
+ *       404:
+ *         description: Target user or role not found.
+ *       500:
+ *         description: Failed to share host.
+ */
 router.post(
   "/host/:id/share",
   authenticateJWT,
@@ -227,8 +270,35 @@ router.post(
   },
 );
 
-// Revoke host access
-// DELETE /rbac/host/:id/access/:accessId
+/**
+ * @openapi
+ * /rbac/host/{id}/access/{accessId}:
+ *   delete:
+ *     summary: Revoke host access
+ *     description: Revokes a user's or role's access to a host.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: accessId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Access revoked successfully.
+ *       400:
+ *         description: Invalid ID.
+ *       403:
+ *         description: Not host owner.
+ *       500:
+ *         description: Failed to revoke access.
+ */
 router.delete(
   "/host/:id/access/:accessId",
   authenticateJWT,
@@ -267,8 +337,30 @@ router.delete(
   },
 );
 
-// Get host access list
-// GET /rbac/host/:id/access
+/**
+ * @openapi
+ * /rbac/host/{id}/access:
+ *   get:
+ *     summary: Get host access list
+ *     description: Retrieves the list of users and roles that have access to a host.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The access list for the host.
+ *       400:
+ *         description: Invalid host ID.
+ *       403:
+ *         description: Not host owner.
+ *       500:
+ *         description: Failed to get access list.
+ */
 router.get(
   "/host/:id/access",
   authenticateJWT,
@@ -338,8 +430,20 @@ router.get(
   },
 );
 
-// Get user's shared hosts (hosts shared WITH this user)
-// GET /rbac/shared-hosts
+/**
+ * @openapi
+ * /rbac/shared-hosts:
+ *   get:
+ *     summary: Get shared hosts
+ *     description: Retrieves the list of hosts that have been shared with the authenticated user.
+ *     tags:
+ *       - RBAC
+ *     responses:
+ *       200:
+ *         description: A list of shared hosts.
+ *       500:
+ *         description: Failed to get shared hosts.
+ */
 router.get(
   "/shared-hosts",
   authenticateJWT,
@@ -385,8 +489,20 @@ router.get(
   },
 );
 
-// Get all roles
-// GET /rbac/roles
+/**
+ * @openapi
+ * /rbac/roles:
+ *   get:
+ *     summary: Get all roles
+ *     description: Retrieves a list of all roles.
+ *     tags:
+ *       - RBAC
+ *     responses:
+ *       200:
+ *         description: A list of roles.
+ *       500:
+ *         description: Failed to get roles.
+ */
 router.get(
   "/roles",
   authenticateJWT,
@@ -413,8 +529,20 @@ router.get(
   },
 );
 
-// Get all roles
-// GET /rbac/roles
+/**
+ * @openapi
+ * /rbac/roles:
+ *   get:
+ *     summary: Get all roles
+ *     description: Retrieves a list of all roles.
+ *     tags:
+ *       - RBAC
+ *     responses:
+ *       200:
+ *         description: A list of roles.
+ *       500:
+ *         description: Failed to get roles.
+ */
 router.get(
   "/roles",
   authenticateJWT,
@@ -443,8 +571,37 @@ router.get(
   },
 );
 
-// Create new role
-// POST /rbac/roles
+/**
+ * @openapi
+ * /rbac/roles:
+ *   post:
+ *     summary: Create a new role
+ *     description: Creates a new role.
+ *     tags:
+ *       - RBAC
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               displayName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Role created successfully.
+ *       400:
+ *         description: Invalid request body.
+ *       409:
+ *         description: A role with this name already exists.
+ *       500:
+ *         description: Failed to create role.
+ */
 router.post(
   "/roles",
   authenticateJWT,
@@ -503,8 +660,41 @@ router.post(
   },
 );
 
-// Update role
-// PUT /rbac/roles/:id
+/**
+ * @openapi
+ * /rbac/roles/{id}:
+ *   put:
+ *     summary: Update a role
+ *     description: Updates a role by its ID.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               displayName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Role updated successfully.
+ *       400:
+ *         description: Invalid request body or role ID.
+ *       404:
+ *         description: Role not found.
+ *       500:
+ *         description: Failed to update role.
+ */
 router.put(
   "/roles/:id",
   authenticateJWT,
@@ -570,8 +760,32 @@ router.put(
   },
 );
 
-// Delete role
-// DELETE /rbac/roles/:id
+/**
+ * @openapi
+ * /rbac/roles/{id}:
+ *   delete:
+ *     summary: Delete a role
+ *     description: Deletes a role by its ID.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Role deleted successfully.
+ *       400:
+ *         description: Invalid role ID.
+ *       403:
+ *         description: Cannot delete system roles.
+ *       404:
+ *         description: Role not found.
+ *       500:
+ *         description: Failed to delete role.
+ */
 router.delete(
   "/roles/:id",
   authenticateJWT,
@@ -634,8 +848,43 @@ router.delete(
   },
 );
 
-// Assign role to user
-// POST /rbac/users/:userId/roles
+/**
+ * @openapi
+ * /rbac/users/{userId}/roles:
+ *   post:
+ *     summary: Assign a role to a user
+ *     description: Assigns a role to a user.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               roleId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Role assigned successfully.
+ *       400:
+ *         description: Role ID is required.
+ *       403:
+ *         description: System roles cannot be manually assigned.
+ *       404:
+ *         description: User or role not found.
+ *       409:
+ *         description: Role already assigned.
+ *       500:
+ *         description: Failed to assign role.
+ */
 router.post(
   "/users/:userId/roles",
   authenticateJWT,
@@ -746,8 +995,37 @@ router.post(
   },
 );
 
-// Remove role from user
-// DELETE /rbac/users/:userId/roles/:roleId
+/**
+ * @openapi
+ * /rbac/users/{userId}/roles/{roleId}:
+ *   delete:
+ *     summary: Remove a role from a user
+ *     description: Removes a role from a user.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Role removed successfully.
+ *       400:
+ *         description: Invalid role ID.
+ *       403:
+ *         description: System roles cannot be removed.
+ *       404:
+ *         description: Role not found.
+ *       500:
+ *         description: Failed to remove role.
+ */
 router.delete(
   "/users/:userId/roles/:roleId",
   authenticateJWT,
@@ -805,8 +1083,28 @@ router.delete(
   },
 );
 
-// Get user's roles
-// GET /rbac/users/:userId/roles
+/**
+ * @openapi
+ * /rbac/users/{userId}/roles:
+ *   get:
+ *     summary: Get user's roles
+ *     description: Retrieves a list of roles for a specific user.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of roles.
+ *       403:
+ *         description: Access denied.
+ *       500:
+ *         description: Failed to get user roles.
+ */
 router.get(
   "/users/:userId/roles",
   authenticateJWT,
