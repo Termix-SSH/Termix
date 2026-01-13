@@ -13,6 +13,7 @@ import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
@@ -89,30 +90,44 @@ function AppContent() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    const match = path.match(/^\/hosts\/([a-zA-Z0-9_-]+)\/terminal$/);
-    if (match) {
-      const hostId = match[1];
-      
-      const openTerminalForHost = async () => {
+    // New format: /terminal/{hostNameOrId}
+    const terminalMatch = path.match(/^\/terminal\/([a-zA-Z0-9_-]+)$/);
+    // Legacy format: /hosts/{id}/terminal (backward compatible)
+    const legacyMatch = path.match(/^\/hosts\/([a-zA-Z0-9_-]+)\/terminal$/);
+    const hostIdentifier = terminalMatch?.[1] || legacyMatch?.[1];
+
+    if (hostIdentifier) {
+      const openTerminal = async () => {
         try {
-          const { getSSHHostById } = await import("@/ui/main-axios.ts");
-          const host = await getSSHHostById(parseInt(hostId, 10));
+          const { getSSHHostById, getSSHHosts } = await import("@/ui/main-axios.ts");
+          let host = null;
+
+          // Pure numeric → lookup by ID
+          if (/^\d+$/.test(hostIdentifier)) {
+            host = await getSSHHostById(parseInt(hostIdentifier, 10));
+          } else {
+            // Non-numeric → lookup by name (first match)
+            const hosts = await getSSHHosts();
+            host = hosts.find((h: { name?: string }) => h.name === hostIdentifier) || null;
+          }
+
           if (host) {
             addTab({
               type: "terminal",
               title: host.name || host.ip,
-              data: {
-                host,
-                initialCommand: "",
-              },
+              data: { host, initialCommand: "" },
             });
+            // Clean URL to prevent re-opening on refresh
+            window.history.replaceState({}, "", "/");
+          } else {
+            toast.error(`Host "${hostIdentifier}" not found`);
           }
         } catch (error) {
-          console.error("Failed to open terminal for host:", error);
+          console.error("Failed to open terminal:", error);
+          toast.error("Failed to open terminal for host");
         }
       };
-
-      openTerminalForHost();
+      openTerminal();
     }
   }, [addTab]);
 
