@@ -73,7 +73,8 @@ Supported Devices:
   - MSI Installer
   - Chocolatey Package Manager
 - Linux (x64/ia32)
-  - Portable [(AUR available)](https://aur.archlinux.org/packages/termix-bin)
+  - Portable
+    - AUR
   - AppImage
   - Deb
   - Flatpak
