@@ -211,7 +211,7 @@ class UserDataImport {
             newHostData,
             targetUserId,
             options.userDataKey,
-          );
+          ) as Record<string, unknown>;
         }
 
         delete processedHostData.id;
@@ -294,7 +294,7 @@ class UserDataImport {
             newCredentialData,
             targetUserId,
             options.userDataKey,
-          );
+          ) as Record<string, unknown>;
         }
 
         delete processedCredentialData.id;
