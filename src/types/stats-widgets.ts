@@ -21,7 +21,7 @@ export interface ListeningPort {
 export interface PortsMetrics {
   source: "ss" | "netstat" | "none";
   ports: ListeningPort[];
-  | "firewall";
+}
 
 export interface FirewallRule {
   chain: string;

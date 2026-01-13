@@ -361,6 +361,7 @@ export function AppView({
                     rightSidebarOpen={rightSidebarOpen}
                     rightSidebarWidth={rightSidebarWidth}
                     isStandalone={true}
+                  />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager
                     hostConfig={t.hostConfig}

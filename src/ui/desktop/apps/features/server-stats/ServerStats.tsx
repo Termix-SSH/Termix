@@ -270,7 +270,8 @@ export function ServerStats({
       case "ports":
         return (
           <PortsWidget metrics={metrics} metricsHistory={metricsHistory} />
-          
+        );
+
       case "firewall":
         return (
           <FirewallWidget metrics={metrics} metricsHistory={metricsHistory} />
