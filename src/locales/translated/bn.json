@@ -1183,7 +1183,7 @@
     "pause": "বিরতি",
     "restart": "পুনরারম্ভ করুন",
     "removeContainer": "কন্টেইনার সরান",
-    "confirmRemoveContainer": "Are you sure you want to remove container \"{{name}}\"?",
+    "confirmRemoveContainer": "আপনি কি নিশ্চিত যে আপনি পাত্রে অপসারণ করতে চান {{name}}?",
     "runningContainerWarning": "সতর্কতা: এই কন্টেইনারটি বর্তমানে চলছে এবং জোর করে সরিয়ে ফেলা হবে।",
     "removing": "অপসারণ:",
     "containerNotFound": "কন্টেইনারটি পাওয়া যায়নি",
