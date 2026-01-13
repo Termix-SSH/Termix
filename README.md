@@ -34,7 +34,7 @@ If you would like, you can support the project here!\
 
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform
 solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal
-access, SSH tunneling capabilities, and remote file management, with many more tools to come. Termix is the perfect
+access, SSH tunneling capabilities, remote file management, and many other tools. Termix is the perfect
 free and self-hosted alternative to Termius available for all platforms.
 
 # Features
@@ -42,76 +42,26 @@ free and self-hosted alternative to Termius available for all platforms.
 - **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components
 - **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring
 - **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly
+- **Docker Management** - Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
 - **Server Stats** - View CPU, memory, and disk usage along with network, uptime, and system information on any SSH server
 - **Dashboard** - View server information at a glance on your dashboard
+- **RBAC** - Create roles and share hosts across users/roles
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 - **Database Encryption** - Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
-- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn
-- **Languages** - Built-in support for English, Chinese, German, and Portuguese
+- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn. Choose between dark or light mode based UI.
+- **Languages** - Built-in support ~30 languages (bulk translated via Google Translate, results may vary ofc)
 - **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), and dedicated mobile/tablet app for iOS and Android.
 - **SSH Tools** - Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 - **Command History** - Auto-complete and view previously ran SSH commands
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
-- **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, etc.
-- **Network Graph View** - Visualize your SSH hosts and their connections in an interactive graph. Drag nodes, pan, zoom, and manage your network topology. Export/import topology as JSON for backup and sharing.
+- **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, SOCKS5, password autofill, etc.
 
 # Planned Features
 
 See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
-
-# Network Graph View
-
-The Network Graph View is a powerful visualization tool available on the Dashboard that helps you manage and understand your SSH network topology.
-
-## Features
-
-- **Interactive Graph Visualization** - Visualize your SSH hosts and connections using Cytoscape.js with a force-directed layout algorithm
-- **Host Management** - Add or remove hosts from the topology. All your SSH hosts are available for selection
-- **Connection Management** - Create bidirectional connections (edges) between hosts to represent your network topology
-- **Node Interactions** - 
-  - Click nodes to view host details (name, address, status, tags)
-  - Drag nodes to reposition them manually
-  - Pan and zoom the graph for better visibility
-- **Layout Options** - 
-  - Automatic force-directed layout with a button to reset
-  - Manual node positioning with automatic position persistence
-- **Status Indicators** - Nodes display color-coded status:
-  - **Green** - Host is online and reachable
-  - **Red** - Host is offline or unreachable
-  - **Gray** - Status unknown
-- **Export/Import** - 
-  - Export your topology as a JSON file for backup or sharing
-  - Import previously saved topology files
-- **Graph Controls** -
-  - Add Host to Topology
-  - Add Connection between hosts
-  - Remove Node or Connection
-  - Auto-layout to reorganize graph
-  - Zoom In/Out for detail work
-  - Fit to Screen to see entire topology
-
-## How to Use
-
-1. Navigate to the Dashboard in Termix
-2. Click the "Network Graph View" toggle to activate the graph view
-3. Use the "+" button to add hosts from your SSH Host Manager
-4. Use the connection button to add relationships between hosts
-5. Drag nodes to position them as needed
-6. Click any node to view detailed information about that host
-7. Use Export to download your topology as JSON
-8. Use Import to restore a previously saved topology
-
-## Limitations & Notes
-
-- The graph view only displays hosts that you've explicitly added to the topology. It does not automatically include all SSH hosts
-- Connections are directional (from source to target host)
-- Manual node positions are saved automatically when you drag nodes
-- The graph updates host status every 30 seconds based on your SSH Host Manager data
-- For best performance on mobile devices, limit the topology to 20-30 nodes
-- The topology data is stored securely in your encrypted database alongside other SSH configurations
 
 # Installation
 
@@ -121,16 +71,16 @@ Supported Devices:
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
-  - Chocolatey Package Manager (coming soon)
+  - Chocolatey Package Manager
 - Linux (x64/ia32)
   - Portable [(AUR available)](https://aur.archlinux.org/packages/termix-bin)
   - AppImage
   - Deb
-  - Flatpak (coming soon)
+  - Flatpak
 - macOS (x64/ia32 on v12.0+)
-  - Apple App Store (coming soon)
+  - Apple App Store
   - DMG
-  - Homebrew (coming soon)
+  - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
   - ISO
@@ -161,9 +111,15 @@ volumes:
 
 # Sponsors
 
-Thank you to [Digital Ocean](https://www.digitalocean.com/) for sponsoring Termix and covering our documentation server costs!
-
-<img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/PoweredByDO/DO_Powered_by_Badge_blue.svg" alt="Powered by DigitalOcean" width="300" height="200">
+<p align="left">
+  <a href="https://www.digitalocean.com/">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://crowdin.com/">
+    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
+  </a>
+</p>
 
 # Support
 
@@ -171,7 +127,7 @@ If you need help or want to request a feature with Termix, visit the [Issues](ht
 Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
 channel, however, response times may be longer.
 
-# Show-off
+# Screenshots
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
@@ -190,6 +146,12 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+  <img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
+</p>
+
+<p align="center">
+  <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
 </p>
 
 <p align="center">
@@ -197,7 +159,7 @@ channel, however, response times may be longer.
     Your browser does not support the video tag.
   </video>
 </p>
-Videos and images may be out of date.
+Some videos and images may be out of date or may not perfectly showcase features.
 
 # License
 
