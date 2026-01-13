@@ -2656,3 +2656,5 @@ router.post("/totp/verify-login", async (req, res) => {
     return res.status(500).json({ error: "TOTP verification failed" });
   }
 });
+
+export default router;
