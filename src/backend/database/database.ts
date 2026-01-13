@@ -206,10 +206,46 @@ app.use(bodyParser.urlencoded({ limit: "1gb", extended: true }));
 app.use(bodyParser.raw({ limit: "5gb", type: "application/octet-stream" }));
 app.use(cookieParser());
 
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Returns the health status of the server.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Server is healthy.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ */
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+/**
+ * @openapi
+ * /version:
+ *   get:
+ *     summary: Get version information
+ *     description: Returns the local and remote version of the application.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Version information.
+ *       404:
+ *         description: Local version not set.
+ *       500:
+ *         description: Fetch error.
+ */
 app.get("/version", authenticateJWT, async (req, res) => {
   let localVersion = process.env.VERSION;
 
@@ -308,6 +344,31 @@ app.get("/version", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /releases/rss:
+ *   get:
+ *     summary: Get releases in RSS format
+ *     description: Returns the latest releases from the GitHub repository in an RSS-like JSON format.
+ *     tags:
+ *       - General
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number of the releases to fetch.
+ *       - in: query
+ *         name: per_page
+ *         schema:
+ *           type: integer
+ *         description: The number of releases to fetch per page.
+ *     responses:
+ *       200:
+ *         description: Releases in RSS format.
+ *       500:
+ *         description: Failed to generate RSS format.
+ */
 app.get("/releases/rss", authenticateJWT, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -364,6 +425,20 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/status:
+ *   get:
+ *     summary: Get encryption status
+ *     description: Returns the security status of the application.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: Security status.
+ *       500:
+ *         description: Failed to get security status.
+ */
 app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
     const securityStatus = {
@@ -385,6 +460,20 @@ app.get("/encryption/status", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/initialize:
+ *   post:
+ *     summary: Initialize security system
+ *     description: Initializes the security system for the application.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: Security system initialized successfully.
+ *       500:
+ *         description: Failed to initialize security system.
+ */
 app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
@@ -408,6 +497,20 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/regenerate:
+ *   post:
+ *     summary: Regenerate JWT secret
+ *     description: Regenerates the system JWT secret. This will invalidate all existing JWT tokens.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: System JWT secret regenerated.
+ *       500:
+ *         description: Failed to regenerate JWT secret.
+ */
 app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   try {
     apiLogger.warn("System JWT secret regenerated via API", {
@@ -429,6 +532,20 @@ app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/regenerate-jwt:
+ *   post:
+ *     summary: Regenerate JWT secret
+ *     description: Regenerates the JWT secret. This will invalidate all existing JWT tokens.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: New JWT secret generated.
+ *       500:
+ *         description: Failed to regenerate JWT secret.
+ */
 app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   try {
     apiLogger.warn("JWT secret regenerated via API", {
@@ -449,6 +566,33 @@ app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/export:
+ *   post:
+ *     summary: Export user data
+ *     description: Exports the user's data as a SQLite database file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User data exported successfully.
+ *       400:
+ *         description: Password required for export.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to export user data.
+ */
 app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -899,6 +1043,36 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/import:
+ *   post:
+ *     summary: Import user data
+ *     description: Imports user data from a SQLite database file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Incremental import completed successfully.
+ *       400:
+ *         description: No file uploaded or password required for import.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to import SQLite data.
+ */
 app.post(
   "/database/import",
   authenticateJWT,
@@ -1363,6 +1537,31 @@ app.post(
   },
 );
 
+/**
+ * @openapi
+ * /database/export/preview:
+ *   post:
+ *     summary: Preview user data export
+ *     description: Generates a preview of the user data export, including statistics about the data.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scope:
+ *                 type: string
+ *               includeCredentials:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Export preview generated successfully.
+ *       500:
+ *         description: Failed to generate export preview.
+ */
 app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1398,6 +1597,33 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/restore:
+ *   post:
+ *     summary: Restore database from backup
+ *     description: Restores the database from an encrypted backup file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               backupPath:
+ *                 type: string
+ *               targetPath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Database restored successfully.
+ *       400:
+ *         description: Backup path is required or invalid encrypted backup file.
+ *       500:
+ *         description: Database restore failed.
+ */
 app.post("/database/restore", requireAdmin, async (req, res) => {
   try {
     const { backupPath, targetPath } = req.body;
@@ -1479,6 +1705,20 @@ async function initializeSecurity() {
   }
 }
 
+/**
+ * @openapi
+ * /database/migration/status:
+ *   get:
+ *     summary: Get database migration status
+ *     description: Returns the status of the database migration.
+ *     tags:
+ *       - Database
+ *     responses:
+ *       200:
+ *         description: Migration status.
+ *       500:
+ *         description: Failed to get migration status.
+ */
 app.get(
   "/database/migration/status",
   authenticateJWT,
@@ -1532,6 +1772,20 @@ app.get(
   },
 );
 
+/**
+ * @openapi
+ * /database/migration/history:
+ *   get:
+ *     summary: Get database migration history
+ *     description: Returns the history of database migrations.
+ *     tags:
+ *       - Database
+ *     responses:
+ *       200:
+ *         description: Migration history.
+ *       500:
+ *         description: Failed to get migration history.
+ */
 app.get(
   "/database/migration/history",
   authenticateJWT,

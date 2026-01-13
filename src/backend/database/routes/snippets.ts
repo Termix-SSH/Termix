@@ -17,8 +17,22 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-// Get all snippet folders
-// GET /snippets/folders
+/**
+ * @openapi
+ * /snippets/folders:
+ *   get:
+ *     summary: Get all snippet folders
+ *     description: Retrieves all snippet folders for the authenticated user.
+ *     tags:
+ *       - Snippets
+ *     responses:
+ *       200:
+ *         description: A list of snippet folders.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to fetch snippet folders.
+ */
 router.get(
   "/folders",
   authenticateJWT,
@@ -46,8 +60,37 @@ router.get(
   },
 );
 
-// Create a new snippet folder
-// POST /snippets/folders
+/**
+ * @openapi
+ * /snippets/folders:
+ *   post:
+ *     summary: Create a new snippet folder
+ *     description: Creates a new snippet folder for the authenticated user.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               color:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Snippet folder created successfully.
+ *       400:
+ *         description: Folder name is required.
+ *       409:
+ *         description: Folder with this name already exists.
+ *       500:
+ *         description: Failed to create snippet folder.
+ */
 router.post(
   "/folders",
   authenticateJWT,
@@ -110,8 +153,41 @@ router.post(
   },
 );
 
-// Update snippet folder metadata (color, icon)
-// PUT /snippets/folders/:name/metadata
+/**
+ * @openapi
+ * /snippets/folders/{name}/metadata:
+ *   put:
+ *     summary: Update snippet folder metadata
+ *     description: Updates the metadata (color, icon) of a snippet folder.
+ *     tags:
+ *       - Snippets
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               color:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Snippet folder metadata updated successfully.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Folder not found.
+ *       500:
+ *         description: Failed to update snippet folder metadata.
+ */
 router.put(
   "/folders/:name/metadata",
   authenticateJWT,
@@ -194,8 +270,37 @@ router.put(
   },
 );
 
-// Rename snippet folder
-// PUT /snippets/folders/rename
+/**
+ * @openapi
+ * /snippets/folders/rename:
+ *   put:
+ *     summary: Rename a snippet folder
+ *     description: Renames a snippet folder for the authenticated user.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldName:
+ *                 type: string
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder renamed successfully.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Folder not found.
+ *       409:
+ *         description: Folder with new name already exists.
+ *       500:
+ *         description: Failed to rename snippet folder.
+ */
 router.put(
   "/folders/rename",
   authenticateJWT,
@@ -282,8 +387,28 @@ router.put(
   },
 );
 
-// Delete snippet folder
-// DELETE /snippets/folders/:name
+/**
+ * @openapi
+ * /snippets/folders/{name}:
+ *   delete:
+ *     summary: Delete a snippet folder
+ *     description: Deletes a snippet folder and moves its snippets to the root.
+ *     tags:
+ *       - Snippets
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Snippet folder deleted successfully.
+ *       400:
+ *         description: Invalid request.
+ *       500:
+ *         description: Failed to delete snippet folder.
+ */
 router.delete(
   "/folders/:name",
   authenticateJWT,
@@ -338,8 +463,40 @@ router.delete(
   },
 );
 
-// Reorder snippets (bulk update)
-// PUT /snippets/reorder
+/**
+ * @openapi
+ * /snippets/reorder:
+ *   put:
+ *     summary: Reorder snippets
+ *     description: Bulk updates the order and folder of snippets.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               snippets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     order:
+ *                       type: integer
+ *                     folder:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Snippets reordered successfully.
+ *       400:
+ *         description: Invalid request.
+ *       500:
+ *         description: Failed to reorder snippets.
+ */
 router.put(
   "/reorder",
   authenticateJWT,
@@ -405,8 +562,35 @@ router.put(
   },
 );
 
-// Execute a snippet on a host
-// POST /snippets/execute
+/**
+ * @openapi
+ * /snippets/execute:
+ *   post:
+ *     summary: Execute a snippet on a host
+ *     description: Executes a snippet on a specified host.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               snippetId:
+ *                 type: integer
+ *               hostId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Snippet executed successfully.
+ *       400:
+ *         description: Snippet ID and Host ID are required.
+ *       404:
+ *         description: Snippet or host not found.
+ *       500:
+ *         description: Failed to execute snippet.
+ */
 router.post(
   "/execute",
   authenticateJWT,
@@ -662,8 +846,22 @@ router.post(
   },
 );
 
-// Get all snippets for the authenticated user
-// GET /snippets
+/**
+ * @openapi
+ * /snippets:
+ *   get:
+ *     summary: Get all snippets
+ *     description: Retrieves all snippets for the authenticated user.
+ *     tags:
+ *       - Snippets
+ *     responses:
+ *       200:
+ *         description: A list of snippets.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to fetch snippets.
+ */
 router.get(
   "/",
   authenticateJWT,
@@ -696,8 +894,30 @@ router.get(
   },
 );
 
-// Get a specific snippet by ID
-// GET /snippets/:id
+/**
+ * @openapi
+ * /snippets/{id}:
+ *   get:
+ *     summary: Get a specific snippet
+ *     description: Retrieves a specific snippet by its ID.
+ *     tags:
+ *       - Snippets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The requested snippet.
+ *       400:
+ *         description: Invalid request parameters.
+ *       404:
+ *         description: Snippet not found.
+ *       500:
+ *         description: Failed to fetch snippet.
+ */
 router.get(
   "/:id",
   authenticateJWT,
@@ -735,8 +955,39 @@ router.get(
   },
 );
 
-// Create a new snippet
-// POST /snippets
+/**
+ * @openapi
+ * /snippets:
+ *   post:
+ *     summary: Create a new snippet
+ *     description: Creates a new snippet for the authenticated user.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *               order:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Snippet created successfully.
+ *       400:
+ *         description: Name and content are required.
+ *       500:
+ *         description: Failed to create snippet.
+ */
 router.post(
   "/",
   authenticateJWT,
@@ -806,8 +1057,47 @@ router.post(
   },
 );
 
-// Update a snippet
-// PUT /snippets/:id
+/**
+ * @openapi
+ * /snippets/{id}:
+ *   put:
+ *     summary: Update a snippet
+ *     description: Updates a specific snippet by its ID.
+ *     tags:
+ *       - Snippets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *               order:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: The updated snippet.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Snippet not found.
+ *       500:
+ *         description: Failed to update snippet.
+ */
 router.put(
   "/:id",
   authenticateJWT,
@@ -883,8 +1173,30 @@ router.put(
   },
 );
 
-// Delete a snippet
-// DELETE /snippets/:id
+/**
+ * @openapi
+ * /snippets/{id}:
+ *   delete:
+ *     summary: Delete a snippet
+ *     description: Deletes a specific snippet by its ID.
+ *     tags:
+ *       - Snippets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Snippet deleted successfully.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Snippet not found.
+ *       500:
+ *         description: Failed to delete snippet.
+ */
 router.delete(
   "/:id",
   authenticateJWT,

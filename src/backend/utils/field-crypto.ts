@@ -32,7 +32,6 @@ class FieldCrypto {
       "key",
       "key_password",
       "keyPassword",
-      "keyType",
       "autostartPassword",
       "autostartKey",
       "autostartKeyPassword",
@@ -46,7 +45,6 @@ class FieldCrypto {
       "key",
       "public_key",
       "publicKey",
-      "keyType",
     ]),
   };
 

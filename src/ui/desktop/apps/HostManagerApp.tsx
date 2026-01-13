@@ -1,4 +1,4 @@
-import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
+import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager";
 import React from "react";
 
 const HostManagerApp: React.FC = () => {

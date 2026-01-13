@@ -194,7 +194,7 @@ class UserDataImport {
           continue;
         }
 
-        const newHostData: Record<string, unknown> = {
+        const newHostData: any = {
           ...host,
           userId: targetUserId,
           updatedAt: new Date().toISOString(),
@@ -204,7 +204,7 @@ class UserDataImport {
           newHostData.createdAt = new Date().toISOString();
         }
 
-        let processedHostData: Record<string, unknown> = newHostData;
+        let processedHostData: any = newHostData;
         if (options.userDataKey) {
           processedHostData = DataCrypto.encryptRecord(
             "ssh_data",
@@ -275,7 +275,7 @@ class UserDataImport {
           continue;
         }
 
-        const newCredentialData: Record<string, unknown> = {
+        const newCredentialData: any = {
           ...credential,
           userId: targetUserId,
           updatedAt: new Date().toISOString(),
@@ -287,7 +287,7 @@ class UserDataImport {
           newCredentialData.createdAt = new Date().toISOString();
         }
 
-        let processedCredentialData: Record<string, unknown> = newCredentialData;
+        let processedCredentialData: any = newCredentialData;
         if (options.userDataKey) {
           processedCredentialData = DataCrypto.encryptRecord(
             "ssh_credentials",

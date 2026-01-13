@@ -7,7 +7,8 @@ export type WidgetType =
   | "processes"
   | "system"
   | "login_stats"
-  | "ports";
+  | "ports"
+  | "firewall";
 
 export interface ListeningPort {
   protocol: "tcp" | "udp";

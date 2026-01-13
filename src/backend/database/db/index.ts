@@ -671,7 +671,8 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create network_topology table", {
-        error: createError instanceof Error ? createError.message : String(createError),
+        operation: "schema_migration",
+        error: createError,
       });
     }
   }
