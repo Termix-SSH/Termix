@@ -1748,6 +1748,84 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
 
 /**
  * @openapi
+ * /users/password-reset-allowed:
+ *   get:
+ *     summary: Get password reset status
+ *     description: Checks if password reset is currently allowed.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Password reset status.
+ *       500:
+ *         description: Failed to get password reset allowed status.
+ */
+router.get("/password-reset-allowed", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
+      .get();
+    res.json({
+      allowed: row ? (row as { value: string }).value === "true" : true,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get password reset allowed", err);
+    res.status(500).json({ error: "Failed to get password reset allowed" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/password-reset-allowed:
+ *   patch:
+ *     summary: Set password reset status
+ *     description: Enables or disables password reset.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               allowed:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Password reset status updated.
+ *       400:
+ *         description: Invalid value for allowed.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set password reset allowed status.
+ */
+router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].is_admin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { allowed } = req.body;
+    if (typeof allowed !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for allowed" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_reset', ?)",
+      )
+      .run(allowed ? "true" : "false");
+    res.json({ allowed });
+  } catch (err) {
+    authLogger.error("Failed to set password reset allowed", err);
+    res.status(500).json({ error: "Failed to set password reset allowed" });
+  }
+});
+
+/**
+ * @openapi
  * /users/delete-account:
  *   delete:
  *     summary: Delete user account
@@ -1861,6 +1939,22 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
  *         description: Failed to initiate password reset.
  */
 router.post("/initiate-reset", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
+      .get();
+    if (row && (row as { value: string }).value !== "true") {
+      return res
+        .status(403)
+        .json({ error: "Password reset is currently disabled" });
+    }
+  } catch (e) {
+    authLogger.warn("Failed to check password reset status", {
+      operation: "password_reset_check",
+      error: e,
+    });
+  }
+
   const { username } = req.body;
 
   if (!isNonEmptyString(username)) {

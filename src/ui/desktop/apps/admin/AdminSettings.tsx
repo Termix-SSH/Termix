@@ -15,6 +15,7 @@ import {
   getAdminOIDCConfig,
   getRegistrationAllowed,
   getPasswordLoginAllowed,
+  getPasswordResetAllowed,
   getUserList,
   getUserInfo,
   isElectron,
@@ -48,6 +49,7 @@ export function AdminSettings({
 
   const [allowRegistration, setAllowRegistration] = React.useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(true);
+  const [allowPasswordReset, setAllowPasswordReset] = React.useState(true);
 
   const [oidcConfig, setOidcConfig] = React.useState({
     client_id: "",
@@ -189,6 +191,28 @@ export function AdminSettings({
       .catch((err) => {
         if (err.code !== "NO_SERVER_CONFIGURED") {
           toast.error(t("admin.failedToFetchPasswordLoginStatus"));
+        }
+      });
+  }, []);
+
+  React.useEffect(() => {
+    if (isElectron()) {
+      const serverUrl = (window as { configuredServerUrl?: string })
+        .configuredServerUrl;
+      if (!serverUrl) {
+        return;
+      }
+    }
+
+    getPasswordResetAllowed()
+      .then((res) => {
+        if (typeof res === "boolean") {
+          setAllowPasswordReset(res);
+        }
+      })
+      .catch((err) => {
+        if (err.code !== "NO_SERVER_CONFIGURED") {
+          console.warn("Failed to fetch password reset status", err);
         }
       });
   }, []);
@@ -367,6 +391,8 @@ export function AdminSettings({
                 setAllowRegistration={setAllowRegistration}
                 allowPasswordLogin={allowPasswordLogin}
                 setAllowPasswordLogin={setAllowPasswordLogin}
+                allowPasswordReset={allowPasswordReset}
+                setAllowPasswordReset={setAllowPasswordReset}
                 oidcConfig={oidcConfig}
               />
             </TabsContent>
