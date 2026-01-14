@@ -25,7 +25,8 @@
     "build:linux-portable": "npm run build && electron-builder --linux --dir",
     "build:linux-appimage": "npm run build && electron-builder --linux AppImage",
     "build:linux-targz": "npm run build && electron-builder --linux tar.gz",
-    "build:mac": "npm run build && electron-builder --mac --universal"
+    "build:mac": "npm run build && electron-builder --mac --universal",
+    "sbom:generate": "npx @cyclonedx/cyclonedx-npm --output-file sbom.json --output-format JSON && npx @cyclonedx/cyclonedx-npm --output-file sbom.xml --output-format XML"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.7",

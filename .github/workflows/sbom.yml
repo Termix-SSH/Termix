@@ -1,0 +1,59 @@
+name: Generate SBOM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          npx @cyclonedx/cyclonedx-npm --output-file termix_sbom.json --output-format JSON
+          npx @cyclonedx/cyclonedx-npm --output-file termix_sbom.xml --output-format XML
+
+      - name: Upload SBOM JSON as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termix_sbom_json
+          path: termix_sbom.json
+          retention-days: 90
+
+      - name: Upload SBOM XML as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termix_sbom_xml
+          path: termix_sbom.xml
+          retention-days: 90
+
+      - name: Upload SBOM to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" termix_sbom.json termix_sbom.xml --clobber
