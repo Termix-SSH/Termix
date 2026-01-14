@@ -44,6 +44,8 @@
     "passwordRequired": "Password is required",
     "sshKeyRequired": "SSH key is required",
     "credentialAddedSuccessfully": "Credential \"{{name}}\" added successfully",
+    "savingCredential": "Saving credential...",
+    "updatingCredential": "Updating credential...",
     "general": "General",
     "description": "Description",
     "folder": "Folder",

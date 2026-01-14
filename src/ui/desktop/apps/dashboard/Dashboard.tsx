@@ -57,6 +57,7 @@ interface DashboardProps {
   isTopbarOpen: boolean;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  initialDbError?: string | null;
 }
 
 export function Dashboard({
@@ -66,13 +67,14 @@ export function Dashboard({
   isTopbarOpen,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
+  initialDbError = null,
 }: DashboardProps): React.ReactElement {
   const { t } = useTranslation();
   const [loggedIn, setLoggedIn] = useState(isAuthenticated);
   const [isAdmin, setIsAdmin] = useState(false);
   const [, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [dbError, setDbError] = useState<string | null>(null);
+  const [dbError, setDbError] = useState<string | null>(initialDbError);
 
   const [uptime, setUptime] = useState<string>("0d 0h 0m");
   const [versionStatus, setVersionStatus] = useState<
@@ -160,7 +162,8 @@ export function Dashboard({
         const uptimeInfo = await getUptime();
         setUptime(uptimeInfo.formatted);
 
-        const updateCheckDisabled = localStorage.getItem("disableUpdateCheck") === "true";
+        const updateCheckDisabled =
+          localStorage.getItem("disableUpdateCheck") === "true";
         if (!updateCheckDisabled) {
           const versionInfo = await getVersionInfo();
           setVersionText(`v${versionInfo.localVersion}`);
@@ -606,7 +609,9 @@ export function Dashboard({
                         {showNetworkGraph ? (
                           <>
                             <Network className="mr-3" />
-                            {t("dashboard.networkGraph", { defaultValue: "Network Graph" })}
+                            {t("dashboard.networkGraph", {
+                              defaultValue: "Network Graph",
+                            })}
                           </>
                         ) : (
                           <>
@@ -700,10 +705,7 @@ export function Dashboard({
                       >
                         {recentActivityLoading ? (
                           <div className="flex flex-row items-center text-muted-foreground text-sm animate-pulse">
-                            <Loader2
-                              className="animate-spin mr-2"
-                              size={16}
-                            />
+                            <Loader2 className="animate-spin mr-2" size={16} />
                             <span>{t("dashboard.loadingRecentActivity")}</span>
                           </div>
                         ) : recentActivity.length === 0 ? (

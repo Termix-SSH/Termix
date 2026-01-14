@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
+import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,6 +37,7 @@ function AppContent() {
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
+  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
 
   const isDarkMode =
     theme === "dark" ||
@@ -46,6 +48,38 @@ function AppContent() {
   const lastShiftPressTime = useRef(0);
 
   const lastAltPressTime = useRef(0);
+
+  useEffect(() => {
+    const handleDatabaseConnectionLost = () => {
+      setDbConnectionFailed(true);
+      setIsAuthenticated(false);
+    };
+
+    const handleDatabaseConnectionRestored = () => {
+      setDbConnectionFailed(false);
+      window.location.reload();
+    };
+
+    dbHealthMonitor.on(
+      "database-connection-lost",
+      handleDatabaseConnectionLost,
+    );
+    dbHealthMonitor.on(
+      "database-connection-restored",
+      handleDatabaseConnectionRestored,
+    );
+
+    return () => {
+      dbHealthMonitor.off(
+        "database-connection-lost",
+        handleDatabaseConnectionLost,
+      );
+      dbHealthMonitor.off(
+        "database-connection-restored",
+        handleDatabaseConnectionRestored,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -99,7 +133,8 @@ function AppContent() {
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } = await import("@/ui/main-axios.ts");
+          const { getSSHHostById, getSSHHosts } =
+            await import("@/ui/main-axios.ts");
           let host = null;
 
           // Pure numeric → lookup by ID
@@ -108,7 +143,9 @@ function AppContent() {
           } else {
             // Non-numeric → lookup by name (first match)
             const hosts = await getSSHHosts();
-            host = hosts.find((h: { name?: string }) => h.name === hostIdentifier) || null;
+            host =
+              hosts.find((h: { name?: string }) => h.name === hostIdentifier) ||
+              null;
           }
 
           if (host) {
@@ -232,10 +269,10 @@ function AppContent() {
   const showProfile = currentTabData?.type === "user_profile";
   const showNetworkGraph = currentTabData?.type === "network_graph";
 
-  if (authLoading) {
+  if (authLoading && !dbConnectionFailed) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center"
+        className="fixed inset-0 flex items-center justify-center"
         style={{
           background: "var(--bg-elevated)",
           backgroundImage: `repeating-linear-gradient(
@@ -247,9 +284,35 @@ function AppContent() {
           )`,
         }}
       >
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-center h-32">
+            <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (dbConnectionFailed) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-background">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
+          <Dashboard
+            isAuthenticated={false}
+            authLoading={false}
+            onAuthSuccess={handleAuthSuccess}
+            isTopbarOpen={isTopbarOpen}
+            onSelectView={() => {}}
+            initialDbError="Database connection failed"
+          />
+        </div>
+        <Toaster
+          position="bottom-right"
+          richColors={false}
+          closeButton
+          duration={5000}
+          offset={20}
+        />
       </div>
     );
   }

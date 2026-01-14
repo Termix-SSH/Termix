@@ -1,4 +1,9 @@
-import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+} from "axios";
 import type {
   SSHHost,
   SSHHostData,
@@ -63,6 +68,7 @@ import {
   dashboardLogger,
   type LogContext,
 } from "../lib/frontend-logger.js";
+import { dbHealthMonitor } from "../lib/db-health-monitor.js";
 
 interface FileManagerOperation {
   name: string;
@@ -373,13 +379,17 @@ function createApiInstance(
         logger.warn(`🐌 Slow request: ${responseTime}ms`, context);
       }
 
+      dbHealthMonitor.reportDatabaseSuccess();
+
       return response;
     },
     (error: AxiosErrorExtended) => {
       const endTime = performance.now();
       const startTime = error.config?.startTime;
       const requestId = error.config?.requestId;
-      const responseTime = startTime ? Math.round(endTime - startTime) : undefined;
+      const responseTime = startTime
+        ? Math.round(endTime - startTime)
+        : undefined;
 
       const method = error.config?.method?.toUpperCase() || "UNKNOWN";
       const url = error.config?.url || "UNKNOWN";
@@ -421,6 +431,8 @@ function createApiInstance(
           );
         }
       }
+
+      dbHealthMonitor.reportDatabaseError(error);
 
       if (status === 401) {
         const errorCode = (error.response?.data as Record<string, unknown>)
