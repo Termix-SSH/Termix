@@ -21,6 +21,7 @@ import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
 import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
 import { CompressDialog } from "./components/CompressDialog.tsx";
+import { SudoPasswordDialog } from "./SudoPasswordDialog.tsx";
 import {
   Upload,
   FolderPlus,
@@ -57,6 +58,7 @@ import {
   changeSSHPermissions,
   extractSSHArchive,
   compressSSHFiles,
+  setSudoPassword,
 } from "@/ui/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar.tsx";
 
@@ -162,6 +164,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>(
     [],
   );
+
+  const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
+  const [pendingSudoOperation, setPendingSudoOperation] = useState<{
+    type: "delete";
+    files: FileItem[];
+  } | null>(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -720,9 +728,18 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           handleRefreshDirectory();
           clearSelection();
         } catch (error: unknown) {
+          const axiosError = error as {
+            response?: { data?: { needsSudo?: boolean; error?: string } };
+            message?: string;
+          };
+          if (axiosError.response?.data?.needsSudo) {
+            setPendingSudoOperation({ type: "delete", files });
+            setSudoDialogOpen(true);
+            return;
+          }
           if (
-            error.message?.includes("connection") ||
-            error.message?.includes("established")
+            axiosError.message?.includes("connection") ||
+            axiosError.message?.includes("established")
           ) {
             toast.error(
               `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
@@ -735,6 +752,41 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       },
       "destructive",
     );
+  }
+
+  async function handleSudoPasswordSubmit(password: string) {
+    if (!sshSessionId || !pendingSudoOperation) return;
+
+    try {
+      await setSudoPassword(sshSessionId, password);
+      setSudoDialogOpen(false);
+
+      if (pendingSudoOperation.type === "delete") {
+        for (const file of pendingSudoOperation.files) {
+          await deleteSSHItem(
+            sshSessionId,
+            file.path,
+            file.type === "directory",
+            currentHost?.id,
+            currentHost?.userId?.toString(),
+          );
+        }
+        toast.success(
+          t("fileManager.itemsDeletedSuccessfully", {
+            count: pendingSudoOperation.files.length,
+          }),
+        );
+        handleRefreshDirectory();
+        clearSelection();
+      }
+
+      setPendingSudoOperation(null);
+    } catch (error: unknown) {
+      const axiosError = error as { message?: string };
+      toast.error(
+        axiosError.message || t("fileManager.sudoOperationFailed"),
+      );
+    }
   }
 
   function handleCreateNewFolder() {
@@ -2172,6 +2224,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           if (!open) setPermissionsDialogFile(null);
         }}
         onSave={handleSavePermissions}
+      />
+
+      <SudoPasswordDialog
+        open={sudoDialogOpen}
+        onOpenChange={(open) => {
+          setSudoDialogOpen(open);
+          if (!open) setPendingSudoOperation(null);
+        }}
+        onSubmit={handleSudoPasswordSubmit}
+        operation={
+          pendingSudoOperation?.type === "delete"
+            ? t("fileManager.deleteOperation")
+            : undefined
+        }
       />
     </div>
   );

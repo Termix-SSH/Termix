@@ -1641,6 +1641,20 @@ export async function deleteSSHItem(
   }
 }
 
+export async function setSudoPassword(
+  sessionId: string,
+  password: string,
+): Promise<void> {
+  try {
+    await fileManagerApi.post("/sudo-password", {
+      sessionId,
+      password,
+    });
+  } catch (error) {
+    handleApiError(error, "set sudo password");
+  }
+}
+
 export async function copySSHItem(
   sessionId: string,
   sourcePath: string,

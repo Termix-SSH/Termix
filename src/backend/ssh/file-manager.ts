@@ -315,6 +315,7 @@ interface SSHSession {
   lastActive: number;
   timeout?: NodeJS.Timeout;
   activeOperations: number;
+  sudoPassword?: string;
 }
 
 interface PendingTOTPSession {
@@ -336,6 +337,45 @@ interface PendingTOTPSession {
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
+
+function execWithSudo(
+  client: SSHClient,
+  command: string,
+  sudoPassword: string,
+): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve) => {
+    const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
+    const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
+
+    client.exec(sudoCommand, (err, stream) => {
+      if (err) {
+        resolve({ stdout: "", stderr: err.message, code: 1 });
+        return;
+      }
+
+      let stdout = "";
+      let stderr = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+
+      stream.on("close", (code: number) => {
+        // Filter out sudo password prompt from output
+        stdout = stdout.replace(/\[sudo\] password for .+?:\s*/g, "");
+        resolve({ stdout, stderr, code: code || 0 });
+      });
+
+      stream.on("error", (streamErr: Error) => {
+        resolve({ stdout, stderr: streamErr.message, code: 1 });
+      });
+    });
+  });
+}
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
@@ -1203,6 +1243,42 @@ app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
   cleanupSession(sessionId);
   res.json({ status: "success", message: "SSH connection disconnected" });
+});
+
+/**
+ * @openapi
+ * /ssh/file_manager/sudo-password:
+ *   post:
+ *     summary: Set sudo password for session
+ *     description: Stores sudo password temporarily in session for elevated operations.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Sudo password set successfully.
+ *       400:
+ *         description: Invalid session.
+ */
+app.post("/ssh/file_manager/sudo-password", (req, res) => {
+  const { sessionId, password } = req.body;
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "Invalid or disconnected session" });
+  }
+  session.sudoPassword = password;
+  session.lastActive = Date.now();
+  res.json({ status: "success", message: "Sudo password set" });
 });
 
 /**
@@ -2657,86 +2733,106 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
 
   const deleteCommand = isDirectory
-    ? `rm -rf '${escapedPath}' && echo "SUCCESS" && exit 0`
-    : `rm -f '${escapedPath}' && echo "SUCCESS" && exit 0`;
+    ? `rm -rf '${escapedPath}'`
+    : `rm -f '${escapedPath}'`;
 
-  sshConn.client.exec(deleteCommand, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH deleteItem error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied deleting: ${itemPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot delete ${itemPath}. Check file permissions.`,
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      if (outputData.includes("SUCCESS")) {
-        if (!res.headersSent) {
-          res.json({
-            message: "Item deleted successfully",
-            path: itemPath,
-            toast: {
-              type: "success",
-              message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
-            },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: { type: "error", message: `Delete failed: ${errorData}` },
-          });
-        }
-        return;
-      }
-
-      if (!res.headersSent) {
-        res.json({
-          message: "Item deleted successfully",
-          path: itemPath,
-          toast: {
-            type: "success",
-            message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+  const executeDelete = (useSudo: boolean): Promise<void> => {
+    return new Promise((resolve) => {
+      if (useSudo && sshConn.sudoPassword) {
+        execWithSudo(sshConn.client, deleteCommand, sshConn.sudoPassword).then(
+          (result) => {
+            if (
+              result.code === 0 ||
+              (!result.stderr.includes("Permission denied") &&
+                !result.stdout.includes("Permission denied"))
+            ) {
+              res.json({
+                message: "Item deleted successfully",
+                path: itemPath,
+                toast: {
+                  type: "success",
+                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+                },
+              });
+            } else {
+              res.status(500).json({
+                error: `Delete failed: ${result.stderr || result.stdout}`,
+              });
+            }
+            resolve();
           },
-        });
+        );
+        return;
       }
-    });
 
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH deleteItem stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
+      sshConn.client.exec(
+        `${deleteCommand} && echo "SUCCESS"`,
+        (err, stream) => {
+          if (err) {
+            fileLogger.error("SSH deleteItem error:", err);
+            res.status(500).json({ error: err.message });
+            resolve();
+            return;
+          }
+
+          let outputData = "";
+          let errorData = "";
+          let permissionDenied = false;
+
+          stream.on("data", (chunk: Buffer) => {
+            outputData += chunk.toString();
+          });
+
+          stream.stderr.on("data", (chunk: Buffer) => {
+            errorData += chunk.toString();
+            if (chunk.toString().includes("Permission denied")) {
+              permissionDenied = true;
+            }
+          });
+
+          stream.on("close", (code) => {
+            if (permissionDenied) {
+              if (sshConn.sudoPassword) {
+                executeDelete(true).then(resolve);
+                return;
+              }
+              fileLogger.error(`Permission denied deleting: ${itemPath}`);
+              res.status(403).json({
+                error: `Permission denied: Cannot delete ${itemPath}.`,
+                needsSudo: true,
+              });
+              resolve();
+              return;
+            }
+
+            if (outputData.includes("SUCCESS") || code === 0) {
+              res.json({
+                message: "Item deleted successfully",
+                path: itemPath,
+                toast: {
+                  type: "success",
+                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+                },
+              });
+            } else {
+              res.status(500).json({
+                error: `Command failed: ${errorData}`,
+              });
+            }
+            resolve();
+          });
+
+          stream.on("error", (streamErr) => {
+            fileLogger.error("SSH deleteItem stream error:", streamErr);
+            res.status(500).json({ error: `Stream error: ${streamErr.message}` });
+            resolve();
+          });
+        },
+      );
     });
-  });
+  };
+
+  await executeDelete(false);
 });
 
 /**
