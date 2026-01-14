@@ -2492,6 +2492,321 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
 
 /**
  * @openapi
+ * /users/totp/setup:
+ *   post:
+ *     summary: Setup TOTP
+ *     description: Initiates TOTP setup by generating a secret and QR code.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: TOTP setup initiated with secret and QR code.
+ *       400:
+ *         description: TOTP is already enabled.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to setup TOTP.
+ */
+router.post("/totp/setup", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is already enabled" });
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Termix (${userRecord.username})`,
+      length: 32,
+    });
+
+    await db
+      .update(users)
+      .set({ totp_secret: secret.base32 })
+      .where(eq(users.id, userId));
+
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
+
+    res.json({
+      secret: secret.base32,
+      qr_code: qrCodeUrl,
+    });
+  } catch (err) {
+    authLogger.error("Failed to setup TOTP", err);
+    res.status(500).json({ error: "Failed to setup TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/enable:
+ *   post:
+ *     summary: Enable TOTP
+ *     description: Enables TOTP after verifying the initial code.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP enabled successfully with backup codes.
+ *       400:
+ *         description: TOTP code is required or TOTP already enabled.
+ *       401:
+ *         description: Invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to enable TOTP.
+ */
+router.post("/totp/enable", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { totp_code } = req.body;
+
+  if (!totp_code) {
+    return res.status(400).json({ error: "TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is already enabled" });
+    }
+
+    if (!userRecord.totp_secret) {
+      return res.status(400).json({ error: "TOTP setup not initiated" });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: userRecord.totp_secret,
+      encoding: "base32",
+      token: totp_code,
+      window: 2,
+    });
+
+    if (!verified) {
+      return res.status(401).json({ error: "Invalid TOTP code" });
+    }
+
+    const backupCodes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 10).toUpperCase(),
+    );
+
+    await db
+      .update(users)
+      .set({
+        totp_enabled: true,
+        totp_backup_codes: JSON.stringify(backupCodes),
+      })
+      .where(eq(users.id, userId));
+
+    res.json({
+      message: "TOTP enabled successfully",
+      backup_codes: backupCodes,
+    });
+  } catch (err) {
+    authLogger.error("Failed to enable TOTP", err);
+    res.status(500).json({ error: "Failed to enable TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/disable:
+ *   post:
+ *     summary: Disable TOTP
+ *     description: Disables TOTP for a user.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP disabled successfully.
+ *       400:
+ *         description: Password or TOTP code is required.
+ *       401:
+ *         description: Incorrect password or invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to disable TOTP.
+ */
+router.post("/totp/disable", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { password, totp_code } = req.body;
+
+  if (!password && !totp_code) {
+    return res.status(400).json({ error: "Password or TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (!userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is not enabled" });
+    }
+
+    if (password && !userRecord.is_oidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+    } else if (totp_code) {
+      const verified = speakeasy.totp.verify({
+        secret: userRecord.totp_secret!,
+        encoding: "base32",
+        token: totp_code,
+        window: 2,
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: "Invalid TOTP code" });
+      }
+    } else {
+      return res.status(400).json({ error: "Authentication required" });
+    }
+
+    await db
+      .update(users)
+      .set({
+        totp_enabled: false,
+        totp_secret: null,
+        totp_backup_codes: null,
+      })
+      .where(eq(users.id, userId));
+
+    res.json({ message: "TOTP disabled successfully" });
+  } catch (err) {
+    authLogger.error("Failed to disable TOTP", err);
+    res.status(500).json({ error: "Failed to disable TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/backup-codes:
+ *   post:
+ *     summary: Generate new backup codes
+ *     description: Generates new TOTP backup codes.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New backup codes generated.
+ *       400:
+ *         description: Password or TOTP code is required.
+ *       401:
+ *         description: Incorrect password or invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to generate backup codes.
+ */
+router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { password, totp_code } = req.body;
+
+  if (!password && !totp_code) {
+    return res.status(400).json({ error: "Password or TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (!userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is not enabled" });
+    }
+
+    if (password && !userRecord.is_oidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+    } else if (totp_code) {
+      const verified = speakeasy.totp.verify({
+        secret: userRecord.totp_secret!,
+        encoding: "base32",
+        token: totp_code,
+        window: 2,
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: "Invalid TOTP code" });
+      }
+    } else {
+      return res.status(400).json({ error: "Authentication required" });
+    }
+
+    const backupCodes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 10).toUpperCase(),
+    );
+
+    await db
+      .update(users)
+      .set({ totp_backup_codes: JSON.stringify(backupCodes) })
+      .where(eq(users.id, userId));
+
+    res.json({ backup_codes: backupCodes });
+  } catch (err) {
+    authLogger.error("Failed to generate backup codes", err);
+    res.status(500).json({ error: "Failed to generate backup codes" });
+  }
+});
+
+/**
+ * @openapi
  * /users/totp/verify-login:
  *   post:
  *     summary: Verify TOTP during login
@@ -2654,6 +2969,746 @@ router.post("/totp/verify-login", async (req, res) => {
   } catch (err) {
     authLogger.error("TOTP verification failed", err);
     return res.status(500).json({ error: "TOTP verification failed" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/delete-user:
+ *   delete:
+ *     summary: Delete user (admin only)
+ *     description: Allows an admin to delete another user and all related data.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User deleted successfully.
+ *       400:
+ *         description: Username is required or cannot delete yourself.
+ *       403:
+ *         description: Not authorized or cannot delete last admin.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to delete user.
+ */
+router.delete("/delete-user", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { username } = req.body;
+
+  if (!isNonEmptyString(username)) {
+    return res.status(400).json({ error: "Username is required" });
+  }
+
+  try {
+    const adminUser = await db.select().from(users).where(eq(users.id, userId));
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (adminUser[0].username === username) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const targetUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    if (!targetUser || targetUser.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (targetUser[0].is_admin) {
+      const adminCount = db.$client
+        .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
+        .get();
+      if (((adminCount as { count?: number })?.count || 0) <= 1) {
+        return res
+          .status(403)
+          .json({ error: "Cannot delete the last admin user" });
+      }
+    }
+
+    const targetUserId = targetUser[0].id;
+
+    await deleteUserAndRelatedData(targetUserId);
+
+    authLogger.success(
+      `User ${username} deleted by admin ${adminUser[0].username}`,
+    );
+    res.json({ message: `User ${username} deleted successfully` });
+  } catch (err) {
+    authLogger.error("Failed to delete user", err);
+
+    if (err && typeof err === "object" && "code" in err) {
+      if (err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        res.status(400).json({
+          error:
+            "Cannot delete user: User has associated data that cannot be removed",
+        });
+      } else {
+        res.status(500).json({ error: `Database error: ${err.code}` });
+      }
+    } else {
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  }
+});
+
+/**
+ * @openapi
+ * /users/unlock-data:
+ *   post:
+ *     summary: Unlock user data
+ *     description: Re-authenticates user with password to unlock encrypted data.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Data unlocked successfully.
+ *       400:
+ *         description: Password is required.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to unlock data.
+ */
+router.post("/unlock-data", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
+  }
+
+  try {
+    const unlocked = await authManager.authenticateUser(userId, password);
+    if (unlocked) {
+      res.json({
+        success: true,
+        message: "Data unlocked successfully",
+      });
+    } else {
+      authLogger.warn("Failed to unlock user data - invalid password", {
+        operation: "user_data_unlock_failed",
+        userId,
+      });
+      res.status(401).json({ error: "Invalid password" });
+    }
+  } catch (err) {
+    authLogger.error("Data unlock failed", err, {
+      operation: "user_data_unlock_error",
+      userId,
+    });
+    res.status(500).json({ error: "Failed to unlock data" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/data-status:
+ *   get:
+ *     summary: Check user data unlock status
+ *     description: Checks if user data is currently unlocked.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Data status returned.
+ *       500:
+ *         description: Failed to check data status.
+ */
+router.get("/data-status", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  try {
+    res.json({
+      unlocked: true,
+      message: "Data is unlocked",
+    });
+  } catch (err) {
+    authLogger.error("Failed to check data status", err, {
+      operation: "data_status_check_failed",
+      userId,
+    });
+    res.status(500).json({ error: "Failed to check data status" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/sessions:
+ *   get:
+ *     summary: Get sessions
+ *     description: Retrieves all sessions for authenticated user (or all sessions for admins).
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Sessions list returned.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to get sessions.
+ */
+router.get("/sessions", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+    let sessionList;
+
+    if (userRecord.is_admin) {
+      sessionList = await authManager.getAllSessions();
+
+      const enrichedSessions = await Promise.all(
+        sessionList.map(async (session) => {
+          const sessionUser = await db
+            .select({ username: users.username })
+            .from(users)
+            .where(eq(users.id, session.userId))
+            .limit(1);
+
+          return {
+            ...session,
+            username: sessionUser[0]?.username || "Unknown",
+          };
+        }),
+      );
+
+      return res.json({ sessions: enrichedSessions });
+    } else {
+      sessionList = await authManager.getUserSessions(userId);
+      return res.json({ sessions: sessionList });
+    }
+  } catch (err) {
+    authLogger.error("Failed to get sessions", err);
+    res.status(500).json({ error: "Failed to get sessions" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/sessions/{sessionId}:
+ *   delete:
+ *     summary: Revoke a specific session
+ *     description: Revokes a specific session by ID.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID to revoke
+ *     responses:
+ *       200:
+ *         description: Session revoked successfully.
+ *       400:
+ *         description: Session ID is required.
+ *       403:
+ *         description: Not authorized to revoke this session.
+ *       404:
+ *         description: Session not found.
+ *       500:
+ *         description: Failed to revoke session.
+ */
+router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { sessionId } = req.params;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    const sessionRecords = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (sessionRecords.length === 0) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    const session = sessionRecords[0];
+
+    if (!userRecord.is_admin && session.userId !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to revoke this session" });
+    }
+
+    const success = await authManager.revokeSession(sessionId);
+
+    if (success) {
+      authLogger.success("Session revoked", {
+        operation: "session_revoke",
+        sessionId,
+        revokedBy: userId,
+        sessionUserId: session.userId,
+      });
+      res.json({ success: true, message: "Session revoked successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to revoke session" });
+    }
+  } catch (err) {
+    authLogger.error("Failed to revoke session", err);
+    res.status(500).json({ error: "Failed to revoke session" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/sessions/revoke-all:
+ *   post:
+ *     summary: Revoke all sessions for a user
+ *     description: Revokes all sessions with option to exclude current session.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetUserId:
+ *                 type: string
+ *               exceptCurrent:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Sessions revoked successfully.
+ *       403:
+ *         description: Not authorized to revoke sessions for other users.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to revoke sessions.
+ */
+router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { targetUserId, exceptCurrent } = req.body;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    let revokeUserId = userId;
+    if (targetUserId && userRecord.is_admin) {
+      revokeUserId = targetUserId;
+    } else if (targetUserId && targetUserId !== userId) {
+      return res.status(403).json({
+        error: "Not authorized to revoke sessions for other users",
+      });
+    }
+
+    let currentSessionId: string | undefined;
+    if (exceptCurrent) {
+      const token =
+        req.cookies?.jwt || req.headers?.authorization?.split(" ")[1];
+      if (token) {
+        const payload = await authManager.verifyJWTToken(token);
+        currentSessionId = payload?.sessionId;
+      }
+    }
+
+    const revokedCount = await authManager.revokeAllUserSessions(
+      revokeUserId,
+      currentSessionId,
+    );
+
+    authLogger.success("User sessions revoked", {
+      operation: "user_sessions_revoke_all",
+      revokeUserId,
+      revokedBy: userId,
+      exceptCurrent,
+      revokedCount,
+    });
+
+    res.json({
+      message: `${revokedCount} session(s) revoked successfully`,
+      count: revokedCount,
+    });
+  } catch (err) {
+    authLogger.error("Failed to revoke user sessions", err);
+    res.status(500).json({ error: "Failed to revoke sessions" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/link-oidc-to-password:
+ *   post:
+ *     summary: Link OIDC user to password account
+ *     description: Merges an OIDC-only account into a password-based account (admin only).
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oidcUserId:
+ *                 type: string
+ *               targetUsername:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Accounts linked successfully.
+ *       400:
+ *         description: Invalid request or incompatible accounts.
+ *       403:
+ *         description: Admin access required.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to link accounts.
+ */
+router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
+  const adminUserId = (req as AuthenticatedRequest).userId;
+  const { oidcUserId, targetUsername } = req.body;
+
+  if (!isNonEmptyString(oidcUserId) || !isNonEmptyString(targetUsername)) {
+    return res.status(400).json({
+      error: "OIDC user ID and target username are required",
+    });
+  }
+
+  try {
+    const adminUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, adminUserId));
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const oidcUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, oidcUserId));
+    if (!oidcUserRecords || oidcUserRecords.length === 0) {
+      return res.status(404).json({ error: "OIDC user not found" });
+    }
+
+    const oidcUser = oidcUserRecords[0];
+
+    if (!oidcUser.is_oidc) {
+      return res.status(400).json({
+        error: "Source user is not an OIDC user",
+      });
+    }
+
+    const targetUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, targetUsername));
+    if (!targetUserRecords || targetUserRecords.length === 0) {
+      return res.status(404).json({ error: "Target password user not found" });
+    }
+
+    const targetUser = targetUserRecords[0];
+
+    if (targetUser.is_oidc || !targetUser.password_hash) {
+      return res.status(400).json({
+        error: "Target user must be a password-based account",
+      });
+    }
+
+    if (targetUser.client_id && targetUser.oidc_identifier) {
+      return res.status(400).json({
+        error: "Target user already has OIDC authentication configured",
+      });
+    }
+
+    authLogger.info("Linking OIDC user to password account", {
+      operation: "link_oidc_to_password",
+      oidcUserId,
+      oidcUsername: oidcUser.username,
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    await db
+      .update(users)
+      .set({
+        is_oidc: true,
+        oidc_identifier: oidcUser.oidc_identifier,
+        client_id: oidcUser.client_id,
+        client_secret: oidcUser.client_secret,
+        issuer_url: oidcUser.issuer_url,
+        authorization_url: oidcUser.authorization_url,
+        token_url: oidcUser.token_url,
+        identifier_path: oidcUser.identifier_path,
+        name_path: oidcUser.name_path,
+        scopes: oidcUser.scopes || "openid email profile",
+      })
+      .where(eq(users.id, targetUser.id));
+
+    try {
+      await authManager.convertToOIDCEncryption(targetUser.id);
+    } catch (encryptionError) {
+      authLogger.error(
+        "Failed to convert encryption to OIDC during linking",
+        encryptionError,
+        {
+          operation: "link_convert_encryption_failed",
+          userId: targetUser.id,
+        },
+      );
+      await db
+        .update(users)
+        .set({
+          is_oidc: false,
+          oidc_identifier: null,
+          client_id: "",
+          client_secret: "",
+          issuer_url: "",
+          authorization_url: "",
+          token_url: "",
+          identifier_path: "",
+          name_path: "",
+          scopes: "openid email profile",
+        })
+        .where(eq(users.id, targetUser.id));
+
+      return res.status(500).json({
+        error:
+          "Failed to convert encryption for dual-auth. Please ensure the password account has encryption setup.",
+        details:
+          encryptionError instanceof Error
+            ? encryptionError.message
+            : "Unknown error",
+      });
+    }
+
+    await authManager.revokeAllUserSessions(oidcUserId);
+    authManager.logoutUser(oidcUserId);
+
+    await deleteUserAndRelatedData(oidcUserId);
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist account linking to disk", saveError, {
+        operation: "link_oidc_save_failed",
+        oidcUserId,
+        targetUserId: targetUser.id,
+      });
+    }
+
+    authLogger.success(
+      `OIDC user ${oidcUser.username} linked to password account ${targetUser.username}`,
+      {
+        operation: "link_oidc_to_password_success",
+        oidcUserId,
+        oidcUsername: oidcUser.username,
+        targetUserId: targetUser.id,
+        targetUsername: targetUser.username,
+        adminUserId,
+      },
+    );
+
+    res.json({
+      success: true,
+      message: `OIDC user ${oidcUser.username} has been linked to ${targetUser.username}. The password account can now use both password and OIDC login.`,
+    });
+  } catch (err) {
+    authLogger.error("Failed to link OIDC user to password account", err, {
+      operation: "link_oidc_to_password_failed",
+      oidcUserId,
+      targetUsername,
+      adminUserId,
+    });
+    res.status(500).json({
+      error: "Failed to link accounts",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /users/unlink-oidc-from-password:
+ *   post:
+ *     summary: Unlink OIDC from password account
+ *     description: Removes OIDC authentication from a dual-auth account (admin only).
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OIDC unlinked successfully.
+ *       400:
+ *         description: Invalid request or user doesn't have OIDC.
+ *       403:
+ *         description: Admin privileges required.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to unlink OIDC.
+ */
+router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
+  const adminUserId = (req as AuthenticatedRequest).userId;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({
+      error: "User ID is required",
+    });
+  }
+
+  try {
+    const adminUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, adminUserId));
+
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+      authLogger.warn("Non-admin attempted to unlink OIDC from password", {
+        operation: "unlink_oidc_unauthorized",
+        adminUserId,
+        targetUserId: userId,
+      });
+      return res.status(403).json({
+        error: "Admin privileges required",
+      });
+    }
+
+    const targetUserRecords = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!targetUserRecords || targetUserRecords.length === 0) {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
+    const targetUser = targetUserRecords[0];
+
+    if (!targetUser.is_oidc) {
+      return res.status(400).json({
+        error: "User does not have OIDC authentication enabled",
+      });
+    }
+
+    if (!targetUser.password_hash || targetUser.password_hash === "") {
+      return res.status(400).json({
+        error:
+          "Cannot unlink OIDC from a user without password authentication. This would leave the user unable to login.",
+      });
+    }
+
+    authLogger.info("Unlinking OIDC from password account", {
+      operation: "unlink_oidc_from_password_start",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    await db
+      .update(users)
+      .set({
+        is_oidc: false,
+        oidc_identifier: null,
+        client_id: "",
+        client_secret: "",
+        issuer_url: "",
+        authorization_url: "",
+        token_url: "",
+        identifier_path: "",
+        name_path: "",
+        scopes: "openid email profile",
+      })
+      .where(eq(users.id, targetUser.id));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error(
+        "Failed to save database after unlinking OIDC",
+        saveError,
+        {
+          operation: "unlink_oidc_save_failed",
+          targetUserId: targetUser.id,
+        },
+      );
+    }
+
+    authLogger.success("OIDC unlinked from password account successfully", {
+      operation: "unlink_oidc_from_password_success",
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      adminUserId,
+    });
+
+    res.json({
+      success: true,
+      message: `OIDC authentication has been removed from ${targetUser.username}. User can now only login with password.`,
+    });
+  } catch (err) {
+    authLogger.error("Failed to unlink OIDC from password account", err, {
+      operation: "unlink_oidc_from_password_failed",
+      targetUserId: userId,
+      adminUserId,
+    });
+    res.status(500).json({
+      error: "Failed to unlink OIDC",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
   }
 });
 
