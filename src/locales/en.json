@@ -539,6 +539,7 @@
     "userRegistration": "User Registration",
     "allowNewAccountRegistration": "Allow new account registration",
     "allowPasswordLogin": "Allow username/password login",
+    "allowPasswordReset": "Allow password reset via reset code",
     "missingRequiredFields": "Missing required fields: {{fields}}",
     "oidcConfigurationUpdated": "OIDC configuration updated successfully!",
     "failedToFetchOidcConfig": "Failed to fetch OIDC configuration",

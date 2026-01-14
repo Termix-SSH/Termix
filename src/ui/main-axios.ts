@@ -2515,6 +2515,28 @@ export async function updatePasswordLoginAllowed(
   }
 }
 
+export async function getPasswordResetAllowed(): Promise<boolean> {
+  try {
+    const response = await authApi.get("/users/password-reset-allowed");
+    return response.data.allowed;
+  } catch (error) {
+    handleApiError(error, "get password reset allowed");
+  }
+}
+
+export async function updatePasswordResetAllowed(
+  allowed: boolean,
+): Promise<{ allowed: boolean }> {
+  try {
+    const response = await authApi.patch("/users/password-reset-allowed", {
+      allowed,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update password reset allowed");
+  }
+}
+
 export async function updateOIDCConfig(
   config: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

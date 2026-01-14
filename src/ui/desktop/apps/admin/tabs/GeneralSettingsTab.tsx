@@ -6,6 +6,7 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   updateRegistrationAllowed,
   updatePasswordLoginAllowed,
+  updatePasswordResetAllowed,
 } from "@/ui/main-axios.ts";
 
 interface GeneralSettingsTabProps {
@@ -13,6 +14,8 @@ interface GeneralSettingsTabProps {
   setAllowRegistration: (value: boolean) => void;
   allowPasswordLogin: boolean;
   setAllowPasswordLogin: (value: boolean) => void;
+  allowPasswordReset: boolean;
+  setAllowPasswordReset: (value: boolean) => void;
   oidcConfig: {
     client_id: string;
     client_secret: string;
@@ -27,6 +30,8 @@ export function GeneralSettingsTab({
   setAllowRegistration,
   allowPasswordLogin,
   setAllowPasswordLogin,
+  allowPasswordReset,
+  setAllowPasswordReset,
   oidcConfig,
 }: GeneralSettingsTabProps): React.ReactElement {
   const { t } = useTranslation();
@@ -34,6 +39,7 @@ export function GeneralSettingsTab({
 
   const [regLoading, setRegLoading] = React.useState(false);
   const [passwordLoginLoading, setPasswordLoginLoading] = React.useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = React.useState(false);
 
   const handleToggleRegistration = async (checked: boolean) => {
     setRegLoading(true);
@@ -96,6 +102,16 @@ export function GeneralSettingsTab({
     }
   };
 
+  const handleTogglePasswordReset = async (checked: boolean) => {
+    setPasswordResetLoading(true);
+    try {
+      await updatePasswordResetAllowed(checked);
+      setAllowPasswordReset(checked);
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
   return (
     <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
       <h3 className="text-lg font-semibold">{t("admin.userRegistration")}</h3>
@@ -119,6 +135,19 @@ export function GeneralSettingsTab({
           disabled={passwordLoginLoading}
         />
         {t("admin.allowPasswordLogin")}
+      </label>
+      <label className="flex items-center gap-2">
+        <Checkbox
+          checked={allowPasswordReset}
+          onCheckedChange={handleTogglePasswordReset}
+          disabled={passwordResetLoading || !allowPasswordLogin}
+        />
+        {t("admin.allowPasswordReset")}
+        {!allowPasswordLogin && (
+          <span className="text-xs text-muted-foreground">
+            ({t("admin.requiresPasswordLogin")})
+          </span>
+        )}
       </label>
     </div>
   );
