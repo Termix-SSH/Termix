@@ -166,10 +166,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   );
 
   const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
-  const [pendingSudoOperation, setPendingSudoOperation] = useState<{
-    type: "delete";
-    files: FileItem[];
-  } | null>(null);
+  const [pendingSudoOperation, setPendingSudoOperation] = useState<
+    | { type: "delete"; files: FileItem[] }
+    | { type: "navigate"; path: string }
+    | null
+  >(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -400,14 +401,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   }
 
   const loadDirectory = useCallback(
-    async (path: string) => {
+    async (path: string): Promise<boolean> => {
       if (!sshSessionId) {
         console.error("Cannot load directory: no SSH session ID");
-        return;
+        return false;
       }
 
       if (isLoading && currentLoadingPathRef.current !== path) {
-        return;
+        return false;
       }
 
       currentLoadingPathRef.current = path;
@@ -419,7 +420,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         const response = await listSSHFiles(sshSessionId, path);
 
         if (currentLoadingPathRef.current !== path) {
-          return;
+          return false;
         }
 
         const files = Array.isArray(response)
@@ -428,29 +429,55 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
         setFiles(files);
         clearSelection();
+        return true;
       } catch (error: unknown) {
         if (currentLoadingPathRef.current === path) {
+          const axiosError = error as {
+            response?: {
+              status?: number;
+              data?: { needsSudo?: boolean; error?: string; sudoFailed?: boolean };
+            };
+            message?: string;
+          };
+
+          // Check if this is a permission denied error that needs sudo
+          if (axiosError.response?.data?.needsSudo) {
+            console.log("Permission denied, sudo required for:", path);
+
+            // Only show dialog if not already in a sudo retry flow
+            if (!sudoDialogOpen) {
+              setPendingSudoOperation({ type: "navigate", path });
+              setSudoDialogOpen(true);
+            }
+
+            if (axiosError.response.data.sudoFailed) {
+              toast.error(t("fileManager.sudoAuthFailed"));
+            } else {
+              toast.error(t("fileManager.permissionDenied"));
+            }
+            return false;
+          }
+
           console.error("Failed to load directory:", error);
 
+          // Show more specific error message
+          const errorMessage =
+            axiosError.response?.data?.error || axiosError.message || String(error);
+
           if (initialLoadDoneRef.current) {
-            toast.error(
-              t("fileManager.failedToLoadDirectory") +
-                ": " +
-                (error.message || error),
-            );
+            toast.error(t("fileManager.failedToLoadDirectory") + ": " + errorMessage);
           }
 
           if (
-            error.message?.includes("connection") ||
-            error.message?.includes("SSH")
+            errorMessage?.includes("connection") ||
+            errorMessage?.includes("SSH")
           ) {
             handleCloseWithError(
-              t("fileManager.failedToLoadDirectory") +
-                ": " +
-                (error.message || error),
+              t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
             );
           }
         }
+        return false;
       } finally {
         if (currentLoadingPathRef.current === path) {
           setIsLoading(false);
@@ -458,7 +485,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         }
       }
     },
-    [sshSessionId, isLoading, clearSelection, t],
+    [sshSessionId, isLoading, clearSelection, t, sudoDialogOpen],
   );
 
   const debouncedLoadDirectory = useCallback(
@@ -778,14 +805,35 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         );
         handleRefreshDirectory();
         clearSelection();
+      } else if (pendingSudoOperation.type === "navigate") {
+        // Retry navigation with sudo password now set
+        const success = await loadDirectory(pendingSudoOperation.path);
+        if (success) {
+          setCurrentPath(pendingSudoOperation.path);
+          setPendingSudoOperation(null);
+        }
+        // If failed, loadDirectory already handles showing the error/dialog
+        return;
       }
 
       setPendingSudoOperation(null);
     } catch (error: unknown) {
-      const axiosError = error as { message?: string };
+      const axiosError = error as {
+        response?: { data?: { needsSudo?: boolean; sudoFailed?: boolean } };
+        message?: string;
+      };
+
+      // If sudo auth failed, keep dialog open for retry
+      if (axiosError.response?.data?.sudoFailed) {
+        toast.error(t("fileManager.sudoAuthFailed"));
+        setSudoDialogOpen(true);
+        return;
+      }
+
       toast.error(
         axiosError.message || t("fileManager.sudoOperationFailed"),
       );
+      setPendingSudoOperation(null);
     }
   }
 
@@ -2236,7 +2284,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         operation={
           pendingSudoOperation?.type === "delete"
             ? t("fileManager.deleteOperation")
-            : undefined
+            : pendingSudoOperation?.type === "navigate"
+              ? t("fileManager.accessDirectory")
+              : undefined
         }
       />
     </div>

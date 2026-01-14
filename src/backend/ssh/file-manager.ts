@@ -1512,8 +1512,34 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
       });
 
       stream.on("close", (code) => {
-        sshConn.activeOperations--;
         if (code !== 0) {
+          const isPermissionDenied =
+            errorData.toLowerCase().includes("permission denied") ||
+            errorData.toLowerCase().includes("access denied");
+
+          if (isPermissionDenied) {
+            // If we have sudo password, retry with sudo
+            if (sshConn.sudoPassword) {
+              fileLogger.info(
+                `Permission denied for listFiles, retrying with sudo: ${sshPath}`,
+              );
+              tryWithSudo();
+              return;
+            }
+
+            // No sudo password - tell frontend to request one
+            sshConn.activeOperations--;
+            fileLogger.warn(
+              `Permission denied for listFiles, sudo required: ${sshPath}`,
+            );
+            return res.status(403).json({
+              error: `Permission denied: Cannot access ${sshPath}`,
+              needsSudo: true,
+              path: sshPath,
+            });
+          }
+
+          sshConn.activeOperations--;
           fileLogger.error(
             `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
           );
@@ -1521,9 +1547,131 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
             .status(500)
             .json({ error: `Command failed: ${errorData}` });
         }
+        sshConn.activeOperations--;
 
         const lines = data.split("\n").filter((line) => line.trim());
         const files = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const parts = line.split(/\s+/);
+          if (parts.length >= 9) {
+            const permissions = parts[0];
+            const owner = parts[2];
+            const group = parts[3];
+            const size = parseInt(parts[4], 10);
+
+            let dateStr = "";
+            const nameStartIndex = 8;
+
+            if (parts[5] && parts[6] && parts[7]) {
+              dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+            }
+
+            const name = parts.slice(nameStartIndex).join(" ");
+            const isDirectory = permissions.startsWith("d");
+            const isLink = permissions.startsWith("l");
+
+            if (name === "." || name === "..") continue;
+
+            let actualName = name;
+            let linkTarget = undefined;
+            if (isLink && name.includes(" -> ")) {
+              const linkParts = name.split(" -> ");
+              actualName = linkParts[0];
+              linkTarget = linkParts[1];
+            }
+
+            files.push({
+              name: actualName,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : size,
+              modified: dateStr,
+              permissions,
+              owner,
+              group,
+              linkTarget,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, actualName)
+                  : false,
+            });
+          }
+        }
+
+        res.json({ files, path: sshPath });
+      });
+    });
+  };
+
+  const tryWithSudo = () => {
+    const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
+    const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
+    const sudoCommand = `echo '${escapedPassword}' | sudo -S ls -la '${escapedPath}' 2>&1`;
+
+    sshConn.client.exec(sudoCommand, (err, stream) => {
+      if (err) {
+        sshConn.activeOperations--;
+        fileLogger.error("SSH sudo listFiles error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      let data = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        sshConn.activeOperations--;
+
+        // Filter out sudo password prompt from output
+        data = data.replace(/\[sudo\] password for .+?:\s*/g, "");
+
+        // Check for sudo authentication failure
+        if (
+          data.toLowerCase().includes("sorry, try again") ||
+          data.toLowerCase().includes("incorrect password") ||
+          errorData.toLowerCase().includes("sorry, try again")
+        ) {
+          // Clear invalid sudo password
+          sshConn.sudoPassword = undefined;
+          return res.status(403).json({
+            error: "Sudo authentication failed. Please try again.",
+            needsSudo: true,
+            sudoFailed: true,
+            path: sshPath,
+          });
+        }
+
+        if (code !== 0 && !data.trim()) {
+          fileLogger.error(
+            `SSH sudo listFiles failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res
+            .status(500)
+            .json({ error: `Sudo command failed: ${errorData || data}` });
+        }
+
+        const lines = data.split("\n").filter((line) => line.trim());
+        const files: Array<{
+          name: string;
+          type: string;
+          size: number | undefined;
+          modified: string;
+          permissions: string;
+          owner: string;
+          group: string;
+          linkTarget: string | undefined;
+          path: string;
+          executable: boolean;
+        }> = [];
 
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
