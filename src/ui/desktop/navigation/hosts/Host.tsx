@@ -155,7 +155,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
         </p>
 
         <ButtonGroup className="flex-shrink-0">
-          {host.enableTerminal && (
+          {host.enableTerminal && (host.showTerminalInSidebar ?? true) && (
             <Button
               variant="outline"
               className="!px-2 border-1 border-edge"
@@ -165,13 +165,62 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             </Button>
           )}
 
+          {host.enableFileManager &&
+            (host.showFileManagerInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "file_manager", title, hostConfig: host })
+                }
+              >
+                <FolderOpen />
+              </Button>
+            )}
+
+          {host.enableTunnel &&
+            hasTunnelConnections &&
+            (host.showTunnelInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "tunnel", title, hostConfig: host })
+                }
+              >
+                <ArrowDownUp />
+              </Button>
+            )}
+
+          {host.enableDocker && (host.showDockerInSidebar ?? false) && (
+            <Button
+              variant="outline"
+              className="!px-2 border-1 border-edge"
+              onClick={() =>
+                addTab({ type: "docker", title, hostConfig: host })
+              }
+            >
+              <Container />
+            </Button>
+          )}
+
+          {shouldShowMetrics && (host.showServerStatsInSidebar ?? false) && (
+            <Button
+              variant="outline"
+              className="!px-2 border-1 border-edge"
+              onClick={() =>
+                addTab({ type: "server_stats", title, hostConfig: host })
+              }
+            >
+              <Server />
+            </Button>
+          )}
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className={`!px-2 border-1 border-edge ${
-                  host.enableTerminal ? "rounded-tl-none rounded-bl-none" : ""
-                }`}
+                className="!px-2 border-1 border-edge rounded-l-none border-l-0"
               >
                 <EllipsisVertical />
               </Button>
@@ -182,40 +231,53 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               side="right"
               className="w-56 bg-canvas border-edge text-foreground"
             >
-              {shouldShowMetrics && (
+              {host.enableTerminal && !(host.showTerminalInSidebar ?? true) && (
                 <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "server_stats", title, hostConfig: host })
-                  }
+                  onClick={handleTerminalClick}
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
-                  <Server className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openServerStats")}</span>
+                  <Terminal className="h-4 w-4" />
+                  <span className="flex-1">{t("hosts.openTerminal")}</span>
                 </DropdownMenuItem>
               )}
-              {host.enableFileManager && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "file_manager", title, hostConfig: host })
-                  }
-                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openFileManager")}</span>
-                </DropdownMenuItem>
-              )}
-              {host.enableTunnel && hasTunnelConnections && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "tunnel", title, hostConfig: host })
-                  }
-                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                >
-                  <ArrowDownUp className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openTunnels")}</span>
-                </DropdownMenuItem>
-              )}
-              {host.enableDocker && (
+              {shouldShowMetrics &&
+                !(host.showServerStatsInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "server_stats", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <Server className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openServerStats")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableFileManager &&
+                !(host.showFileManagerInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "file_manager", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openFileManager")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableTunnel &&
+                hasTunnelConnections &&
+                !(host.showTunnelInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "tunnel", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openTunnels")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableDocker && !(host.showDockerInSidebar ?? false) && (
                 <DropdownMenuItem
                   onClick={() =>
                     addTab({ type: "docker", title, hostConfig: host })

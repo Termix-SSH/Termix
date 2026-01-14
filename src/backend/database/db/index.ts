@@ -585,6 +585,32 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
   addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_terminal_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_file_manager_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_tunnel_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_docker_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_server_stats_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");

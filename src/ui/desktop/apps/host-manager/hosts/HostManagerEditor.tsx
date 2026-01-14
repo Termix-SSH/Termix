@@ -418,6 +418,11 @@ export function HostManagerEditor({
         )
         .optional(),
       enableDocker: z.boolean().default(false),
+      showTerminalInSidebar: z.boolean().default(true),
+      showFileManagerInSidebar: z.boolean().default(false),
+      showTunnelInSidebar: z.boolean().default(false),
+      showDockerInSidebar: z.boolean().default(false),
+      showServerStatsInSidebar: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -475,6 +480,21 @@ export function HostManagerEditor({
           });
         }
       });
+
+      const hasAtLeastOneSidebarAction =
+        (data.enableTerminal && data.showTerminalInSidebar) ||
+        (data.enableFileManager && data.showFileManagerInSidebar) ||
+        (data.enableTunnel && data.showTunnelInSidebar) ||
+        (data.enableDocker && data.showDockerInSidebar) ||
+        data.showServerStatsInSidebar;
+
+      if (!hasAtLeastOneSidebarAction) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("hosts.atLeastOneActionRequired"),
+          path: ["showTerminalInSidebar"],
+        });
+      }
     });
 
   type FormData = z.infer<typeof formSchema>;
@@ -500,6 +520,11 @@ export function HostManagerEditor({
       enableTerminal: true,
       enableTunnel: true,
       enableFileManager: true,
+      showTerminalInSidebar: true,
+      showFileManagerInSidebar: false,
+      showTunnelInSidebar: false,
+      showDockerInSidebar: false,
+      showServerStatsInSidebar: false,
       defaultPath: "/",
       tunnelConnections: [],
       jumpHosts: [],
@@ -671,6 +696,11 @@ export function HostManagerEditor({
           ? cleanedHost.socks5ProxyChain
           : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
+        showTerminalInSidebar: cleanedHost.showTerminalInSidebar ?? true,
+        showFileManagerInSidebar: cleanedHost.showFileManagerInSidebar ?? false,
+        showTunnelInSidebar: cleanedHost.showTunnelInSidebar ?? false,
+        showDockerInSidebar: cleanedHost.showDockerInSidebar ?? false,
+        showServerStatsInSidebar: cleanedHost.showServerStatsInSidebar ?? false,
       };
 
       if (
@@ -731,6 +761,11 @@ export function HostManagerEditor({
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
         enableDocker: false,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: false,
+        showTunnelInSidebar: false,
+        showDockerInSidebar: false,
+        showServerStatsInSidebar: false,
       };
 
       form.reset(defaultFormData as FormData);
@@ -1073,7 +1108,6 @@ export function HostManagerEditor({
         }
         backgroundColor="var(--bg-base)"
       />
-
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, handleFormError)}

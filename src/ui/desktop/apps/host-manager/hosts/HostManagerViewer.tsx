@@ -868,10 +868,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                     {importing ? t("hosts.importing") : t("hosts.importJson")}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg"
-                >
+                <TooltipContent side="bottom" className="max-w-sm">
                   <div className="space-y-2">
                     <p className="font-semibold text-sm">
                       {t("hosts.importJsonTitle")}
@@ -952,10 +949,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                   {importing ? t("hosts.importing") : t("hosts.importJson")}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent
-                side="bottom"
-                className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg"
-              >
+              <TooltipContent side="bottom" className="max-w-sm">
                 <div className="space-y-2">
                   <p className="font-semibold text-sm">
                     {t("hosts.importJsonTitle")}

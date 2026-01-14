@@ -42,6 +42,11 @@ export interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
+  showTerminalInSidebar: boolean;
+  showFileManagerInSidebar: boolean;
+  showTunnelInSidebar: boolean;
+  showDockerInSidebar: boolean;
+  showServerStatsInSidebar: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
@@ -102,6 +107,11 @@ export interface SSHHostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
+  showTerminalInSidebar?: boolean;
+  showFileManagerInSidebar?: boolean;
+  showTunnelInSidebar?: boolean;
+  showDockerInSidebar?: boolean;
+  showServerStatsInSidebar?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];

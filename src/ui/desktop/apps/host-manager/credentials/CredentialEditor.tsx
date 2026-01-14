@@ -514,7 +514,6 @@ export function CredentialEditor({
         }
         backgroundColor="var(--bg-base)"
       />
-
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, handleFormError)}

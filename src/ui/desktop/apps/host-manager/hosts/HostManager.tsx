@@ -112,6 +112,7 @@ export function HostManager({
   const handleTabChange = (value: string) => {
     if (activeTab === "add_host" && value !== "add_host") {
       setEditingHost(null);
+      lastProcessedHostIdRef.current = undefined;
     }
     if (activeTab === "add_credential" && value !== "add_credential") {
       setEditingCredential(null);

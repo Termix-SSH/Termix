@@ -178,17 +178,6 @@ export function CredentialSelector({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5">
-                    {value && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-left rounded-lg px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors duration-200"
-                        onClick={handleClear}
-                      >
-                        {t("common.clear")}
-                      </Button>
-                    )}
                     {filteredCredentials.map((credential) => (
                       <Button
                         key={credential.id}

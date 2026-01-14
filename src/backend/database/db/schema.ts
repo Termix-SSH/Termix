@@ -90,6 +90,21 @@ export const sshData = sqliteTable("ssh_data", {
   enableDocker: integer("enable_docker", { mode: "boolean" })
     .notNull()
     .default(false),
+  showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
