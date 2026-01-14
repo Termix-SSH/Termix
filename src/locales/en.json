@@ -1971,7 +1971,9 @@
     "themeDark": "Dark",
     "themeSystem": "System",
     "appearanceDesc": "Select the color theme for the application",
-    "terminalSyntaxHighlightingDesc": "Automatically highlight commands, paths, IPs, and log levels in terminal output"
+    "terminalSyntaxHighlightingDesc": "Automatically highlight commands, paths, IPs, and log levels in terminal output",
+    "enableCommandPaletteShortcut": "Enable Command Palette Shortcut",
+    "enableCommandPaletteShortcutDesc": "Double-tap left Shift to open the Command Palette for quick access to hosts"
   },
   "user": {
     "failedToLoadVersionInfo": "Failed to load version information"

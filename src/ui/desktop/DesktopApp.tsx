@@ -87,6 +87,11 @@ function AppContent() {
         if (event.repeat) {
           return;
         }
+        const shortcutEnabled =
+          localStorage.getItem("commandPaletteShortcutEnabled") !== "false";
+        if (!shortcutEnabled) {
+          return;
+        }
         const now = Date.now();
         if (now - lastShiftPressTime.current < 300) {
           setIsCommandPaletteOpen((isOpen) => !isOpen);

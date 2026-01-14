@@ -136,6 +136,11 @@ export function UserProfile({
   const [disableUpdateCheck, setDisableUpdateCheck] = useState<boolean>(
     localStorage.getItem("disableUpdateCheck") === "true",
   );
+  const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
+    useState<boolean>(() => {
+      const saved = localStorage.getItem("commandPaletteShortcutEnabled");
+      return saved !== null ? saved === "true" : true;
+    });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -218,6 +223,11 @@ export function UserProfile({
   const handleDisableUpdateCheckToggle = (enabled: boolean) => {
     setDisableUpdateCheck(enabled);
     localStorage.setItem("disableUpdateCheck", enabled.toString());
+  };
+
+  const handleCommandPaletteShortcutToggle = (enabled: boolean) => {
+    setCommandPaletteShortcutEnabled(enabled);
+    localStorage.setItem("commandPaletteShortcutEnabled", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -571,6 +581,20 @@ export function UserProfile({
                       <Switch
                         checked={terminalSyntaxHighlighting}
                         onCheckedChange={handleTerminalSyntaxHighlightingToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.enableCommandPaletteShortcut")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.enableCommandPaletteShortcutDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandPaletteShortcutEnabled}
+                        onCheckedChange={handleCommandPaletteShortcutToggle}
                       />
                     </div>
                   </div>
