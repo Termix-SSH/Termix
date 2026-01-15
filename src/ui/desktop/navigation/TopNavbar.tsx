@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { flushSync } from "react-dom";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer, Zap } from "lucide-react";
 import { Tab } from "@/ui/desktop/navigation/tabs/Tab.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
+import { QuickConnectDialog } from "@/ui/desktop/navigation/QuickConnectDialog.tsx";
 
 interface TabData {
   id: number;
@@ -61,6 +62,7 @@ export function TopNavbar({
   const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
   const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
   const [splitScreenTabActive, setSplitScreenTabActive] = useState(false);
+  const [quickConnectOpen, setQuickConnectOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("rightSidebarWidth");
     const defaultWidth = 400;
@@ -538,6 +540,15 @@ export function TopNavbar({
 
           <Button
             variant="outline"
+            onClick={() => setQuickConnectOpen(true)}
+            className="w-[30px] h-[30px] border-edge"
+            title={t("quickConnect.title")}
+          >
+            <Zap className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={() => setIsTopbarOpen(false)}
             className="w-[30px] h-[30px]"
           >
@@ -581,6 +592,11 @@ export function TopNavbar({
           setCommandHistoryTabActive(false);
           setSplitScreenTabActive(false);
         }}
+      />
+
+      <QuickConnectDialog
+        open={quickConnectOpen}
+        onOpenChange={setQuickConnectOpen}
       />
     </div>
   );

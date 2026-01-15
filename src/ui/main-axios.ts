@@ -1439,6 +1439,83 @@ export async function verifySSHTOTP(
   }
 }
 
+/**
+ * @openapi
+ * /ssh/quick-connect:
+ *   post:
+ *     summary: Create a temporary SSH connection without saving to database
+ *     description: Returns a temporary host configuration for immediate use
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ip
+ *               - port
+ *               - username
+ *               - authType
+ *             properties:
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP or hostname
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, credential]
+ *                 description: Authentication method
+ *               password:
+ *                 type: string
+ *                 description: Password (required if authType is password)
+ *               key:
+ *                 type: string
+ *                 description: SSH private key (required if authType is key)
+ *               keyPassword:
+ *                 type: string
+ *                 description: SSH key password (optional)
+ *               keyType:
+ *                 type: string
+ *                 description: SSH key type
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID (required if authType is credential)
+ *               overrideCredentialUsername:
+ *                 type: boolean
+ *                 description: Use provided username instead of credential username
+ *     responses:
+ *       200:
+ *         description: Temporary host configuration created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description: SSHHost object
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+export async function quickConnect(
+  data: Record<string, unknown>,
+): Promise<SSHHost> {
+  try {
+    const response = await authApi.post("/ssh/quick-connect", data);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "quick connect");
+  }
+}
+
 export async function getSSHStatus(
   sessionId: string,
 ): Promise<{ connected: boolean }> {

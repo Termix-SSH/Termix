@@ -545,6 +545,195 @@ router.post(
 
 /**
  * @openapi
+ * /ssh/quick-connect:
+ *   post:
+ *     summary: Create a temporary SSH connection without saving to database
+ *     description: Returns a temporary host configuration for immediate use
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ip
+ *               - port
+ *               - username
+ *               - authType
+ *             properties:
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP or hostname
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, credential]
+ *                 description: Authentication method
+ *               password:
+ *                 type: string
+ *                 description: Password (required if authType is password)
+ *               key:
+ *                 type: string
+ *                 description: SSH private key (required if authType is key)
+ *               keyPassword:
+ *                 type: string
+ *                 description: SSH key password (optional)
+ *               keyType:
+ *                 type: string
+ *                 description: SSH key type
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID (required if authType is credential)
+ *               overrideCredentialUsername:
+ *                 type: boolean
+ *                 description: Use provided username instead of credential username
+ *     responses:
+ *       200:
+ *         description: Temporary host configuration created successfully
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Credential not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  "/quick-connect",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const {
+      ip,
+      port,
+      username,
+      authType,
+      password,
+      key,
+      keyPassword,
+      keyType,
+      credentialId,
+      overrideCredentialUsername,
+    } = req.body;
+
+    if (
+      !isNonEmptyString(ip) ||
+      !isValidPort(port) ||
+      !isNonEmptyString(username) ||
+      !authType
+    ) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+      let resolvedPassword = password;
+      let resolvedKey = key;
+      let resolvedKeyPassword = keyPassword;
+      let resolvedKeyType = keyType;
+      let resolvedAuthType = authType;
+      let resolvedUsername = username;
+
+      if (authType === "credential" && credentialId) {
+        const credentials = await SimpleDBOps.select(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            ),
+          "ssh_credentials",
+          userId,
+        );
+
+        if (!credentials || credentials.length === 0) {
+          return res.status(404).json({ error: "Credential not found" });
+        }
+
+        const cred = credentials[0];
+
+        resolvedPassword = cred.password as string | undefined;
+        resolvedKey = (cred.private_key || cred.privateKey || cred.key) as
+          | string
+          | undefined;
+        resolvedKeyPassword = (cred.key_password || cred.keyPassword) as
+          | string
+          | undefined;
+        resolvedKeyType = (cred.key_type || cred.keyType) as string | undefined;
+        resolvedAuthType = (cred.auth_type || cred.authType) as
+          | string
+          | undefined;
+
+        if (!overrideCredentialUsername) {
+          resolvedUsername = cred.username as string;
+        }
+      }
+
+      const tempHost: Record<string, unknown> = {
+        id: -Date.now(),
+        userId: userId,
+        name: `${resolvedUsername}@${ip}:${port}`,
+        ip,
+        port: Number(port),
+        username: resolvedUsername,
+        folder: "",
+        tags: [],
+        pin: false,
+        authType: resolvedAuthType || authType,
+        password: resolvedPassword,
+        key: resolvedKey,
+        keyPassword: resolvedKeyPassword,
+        keyType: resolvedKeyType,
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: false,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: false,
+        showTunnelInSidebar: false,
+        showDockerInSidebar: false,
+        showServerStatsInSidebar: false,
+        defaultPath: "/",
+        tunnelConnections: [],
+        jumpHosts: [],
+        quickActions: [],
+        statsConfig: {},
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      return res.status(200).json(tempHost);
+    } catch (error) {
+      sshLogger.error("Quick connect failed", error, {
+        operation: "quick_connect",
+        userId,
+        ip,
+        port,
+        authType,
+      });
+      return res
+        .status(500)
+        .json({ error: "Failed to create quick connection" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /ssh/db/host/{id}:
  *   put:
  *     summary: Update SSH host
