@@ -828,15 +828,22 @@ async function connectSSHTunnel(
       return;
     }
 
+    const tunnelType = tunnelConfig.tunnelType || "remote";
+    const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
+    const portMapping =
+      tunnelType === "local"
+        ? `${tunnelConfig.sourcePort}:${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`
+        : `${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}`;
+
     let tunnelCmd: string;
     if (
       resolvedEndpointCredentials.authMethod === "key" &&
       resolvedEndpointCredentials.sshKey
     ) {
       const keyFilePath = `/tmp/tunnel_key_${tunnelName.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && exec -a "${tunnelMarker}" ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} && rm -f ${keyFilePath}`;
+      tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && exec -a "${tunnelMarker}" ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes ${tunnelFlag} ${portMapping} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} && rm -f ${keyFilePath}`;
     } else {
-      tunnelCmd = `exec -a "${tunnelMarker}" sshpass -p '${resolvedEndpointCredentials.password || ""}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes -R ${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}`;
+      tunnelCmd = `exec -a "${tunnelMarker}" sshpass -p '${resolvedEndpointCredentials.password || ""}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes ${tunnelFlag} ${portMapping} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}`;
     }
 
     conn.exec(tunnelCmd, (err, stream) => {
@@ -1302,7 +1309,9 @@ async function killRemoteTunnelByMarker(
   }
 
   conn.on("ready", () => {
-    const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*-R.*${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*-R.*${tunnelConfig.endpointPort})' | grep -v grep`;
+    const tunnelType = tunnelConfig.tunnelType || "remote";
+    const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
+    const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*${tunnelFlag})' | grep -v grep`;
 
     conn.exec(checkCmd, (_err, stream) => {
       let foundProcesses = false;
@@ -1323,8 +1332,8 @@ async function killRemoteTunnelByMarker(
 
         const killCmds = [
           `pkill -TERM -f '${tunnelMarker}'`,
-          `sleep 1 && pkill -f 'ssh.*-R.*${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}'`,
-          `sleep 1 && pkill -f 'sshpass.*ssh.*-R.*${tunnelConfig.endpointPort}'`,
+          `sleep 1 && pkill -f 'ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}'`,
+          `sleep 1 && pkill -f 'sshpass.*ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}'`,
           `sleep 2 && pkill -9 -f '${tunnelMarker}'`,
         ];
 
@@ -1929,6 +1938,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
                   tunnelConnection.endpointHost,
                   tunnelConnection.endpointPort,
                 ),
+                tunnelType: tunnelConnection.tunnelType || "remote",
                 sourceHostId: host.id,
                 tunnelIndex: tunnelIndex,
                 hostName: host.name || `${host.username}@${host.ip}`,

@@ -293,9 +293,18 @@ export function HostManagerEditor({
       tunnelConnections: z
         .array(
           z.object({
+            tunnelType: z
+              .enum(["local", "remote"])
+              .default("remote")
+              .optional(),
             sourcePort: z.coerce.number().min(1).max(65535),
             endpointPort: z.coerce.number().min(1).max(65535),
             endpointHost: z.string().min(1),
+            endpointPassword: z.string().optional(),
+            endpointKey: z.string().optional(),
+            endpointKeyPassword: z.string().optional(),
+            endpointAuthType: z.string().optional(),
+            endpointKeyType: z.string().optional(),
             maxRetries: z.coerce.number().min(0).max(100).default(3),
             retryInterval: z.coerce.number().min(1).max(3600).default(10),
             autoStart: z.boolean().default(false),
@@ -667,7 +676,10 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
-          ? cleanedHost.tunnelConnections
+          ? cleanedHost.tunnelConnections.map((conn: any) => ({
+              ...conn,
+              tunnelType: conn.tunnelType || "remote",
+            }))
           : [],
         jumpHosts: Array.isArray(cleanedHost.jumpHosts)
           ? cleanedHost.jumpHosts

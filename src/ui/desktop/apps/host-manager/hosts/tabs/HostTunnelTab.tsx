@@ -142,6 +142,57 @@ export function HostTunnelTab({
                             {t("hosts.remove")}
                           </Button>
                         </div>
+                        <div className="mb-4">
+                          <FormField
+                            control={form.control}
+                            name={`tunnelConnections.${index}.tunnelType`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("hosts.tunnelType")}</FormLabel>
+                                <FormControl>
+                                  <div className="flex gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        value="local"
+                                        checked={field.value === "local"}
+                                        onChange={() => field.onChange("local")}
+                                        className="w-4 h-4 text-primary border-input focus:ring-ring"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-medium">
+                                          {t("hosts.tunnelTypeLocal")}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {t("hosts.tunnelTypeLocalDesc")}
+                                        </span>
+                                      </div>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        value="remote"
+                                        checked={field.value === "remote"}
+                                        onChange={() =>
+                                          field.onChange("remote")
+                                        }
+                                        className="w-4 h-4 text-primary border-input focus:ring-ring"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-medium">
+                                          {t("hosts.tunnelTypeRemote")}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {t("hosts.tunnelTypeRemoteDesc")}
+                                        </span>
+                                      </div>
+                                    </label>
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                         <div className="grid grid-cols-12 gap-4">
                           <FormField
                             control={form.control}
@@ -254,16 +305,29 @@ export function HostTunnelTab({
                         </div>
 
                         <p className="text-sm text-muted-foreground mt-2">
-                          {t("hosts.tunnelForwardDescription", {
-                            sourcePort:
-                              form.watch(
-                                `tunnelConnections.${index}.sourcePort`,
-                              ) || "22",
-                            endpointPort:
-                              form.watch(
-                                `tunnelConnections.${index}.endpointPort`,
-                              ) || "224",
-                          })}
+                          {form.watch(
+                            `tunnelConnections.${index}.tunnelType`,
+                          ) === "local"
+                            ? t("hosts.tunnelForwardDescriptionLocal", {
+                                sourcePort:
+                                  form.watch(
+                                    `tunnelConnections.${index}.sourcePort`,
+                                  ) || "22",
+                                endpointPort:
+                                  form.watch(
+                                    `tunnelConnections.${index}.endpointPort`,
+                                  ) || "224",
+                              })
+                            : t("hosts.tunnelForwardDescriptionRemote", {
+                                sourcePort:
+                                  form.watch(
+                                    `tunnelConnections.${index}.sourcePort`,
+                                  ) || "22",
+                                endpointPort:
+                                  form.watch(
+                                    `tunnelConnections.${index}.endpointPort`,
+                                  ) || "224",
+                              })}
                         </p>
 
                         <div className="grid grid-cols-12 gap-4 mt-4">
@@ -337,6 +401,7 @@ export function HostTunnelTab({
                         field.onChange([
                           ...field.value,
                           {
+                            tunnelType: "remote",
                             sourcePort: 22,
                             endpointPort: 224,
                             endpointHost: "",

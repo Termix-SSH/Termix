@@ -203,6 +203,7 @@ export interface CredentialData {
 // ============================================================================
 
 export interface TunnelConnection {
+  tunnelType?: "local" | "remote";
   sourcePort: number;
   endpointPort: number;
   endpointHost: string;
@@ -220,6 +221,7 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+  tunnelType?: "local" | "remote";
 
   sourceHostId: number;
   tunnelIndex: number;
