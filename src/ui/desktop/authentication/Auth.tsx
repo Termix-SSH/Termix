@@ -376,8 +376,8 @@ export function Auth({
       };
       toast.error(
         error?.response?.data?.error ||
-          error?.message ||
-          t("errors.failedPasswordReset"),
+        error?.message ||
+        t("errors.failedPasswordReset"),
       );
     } finally {
       setResetLoading(false);
@@ -936,8 +936,8 @@ export function Auth({
                 }}
               >
                 {theme === "dark" ||
-                (theme === "system" &&
-                  window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
+                  (theme === "system" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
                   <Moon className="w-4 h-4" />
                 ) : (
                   <Sun className="w-4 h-4" />
@@ -1031,7 +1031,13 @@ export function Auth({
               </div>
             )}
             {!webviewAuthSuccess && totpRequired && (
-              <div className="flex flex-col gap-5">
+              <form
+                className="flex flex-col gap-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleTOTPVerification();
+                }}
+              >
                 <div className="mb-6 text-center">
                   <h2 className="text-xl font-bold mb-1">
                     {t("auth.twoFactorAuth")}
@@ -1061,10 +1067,9 @@ export function Auth({
                 </div>
 
                 <Button
-                  type="button"
+                  type="submit"
                   className="w-full h-11 text-base font-semibold"
                   disabled={totpLoading || totpCode.length < 6}
-                  onClick={handleTOTPVerification}
                 >
                   {totpLoading ? Spinner : t("auth.verifyCode")}
                 </Button>
@@ -1082,7 +1087,7 @@ export function Auth({
                 >
                   {t("common.cancel")}
                 </Button>
-              </div>
+              </form>
             )}
 
             {!webviewAuthSuccess &&
@@ -1492,10 +1497,10 @@ export function Auth({
                               }}
                             >
                               {theme === "dark" ||
-                              (theme === "system" &&
-                                window.matchMedia(
-                                  "(prefers-color-scheme: dark)",
-                                ).matches) ? (
+                                (theme === "system" &&
+                                  window.matchMedia(
+                                    "(prefers-color-scheme: dark)",
+                                  ).matches) ? (
                                 <Moon className="w-4 h-4" />
                               ) : (
                                 <Sun className="w-4 h-4" />
