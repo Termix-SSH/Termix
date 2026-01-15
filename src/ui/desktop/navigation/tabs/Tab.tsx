@@ -13,7 +13,9 @@ import {
   Network,
   ArrowDownUp as TunnelIcon,
   Container as DockerIcon,
+  Key,
 } from "lucide-react";
+import type { SSHHost } from "@/types";
 
 interface TabProps {
   tabType: string;
@@ -32,6 +34,7 @@ interface TabProps {
   isDragOver?: boolean;
   isValidDropTarget?: boolean;
   isHoveredDropTarget?: boolean;
+  hostConfig?: SSHHost;
 }
 
 export function Tab({
@@ -51,8 +54,57 @@ export function Tab({
   isDragOver = false,
   isValidDropTarget = false,
   isHoveredDropTarget = false,
+  hostConfig,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
+
+  const handleCopyPassword = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!hostConfig) return;
+
+    const hasSshPassword =
+      hostConfig.authType === "password" && hostConfig.password;
+    const hasSudoPassword = hostConfig.sudoPassword;
+
+    if (!hasSshPassword && !hasSudoPassword) {
+      return;
+    }
+
+    try {
+      let passwordToCopy = "";
+
+      if (hasSshPassword) {
+        passwordToCopy = hostConfig.password || "";
+      } else if (hasSudoPassword) {
+        passwordToCopy = hostConfig.sudoPassword;
+      }
+
+      await navigator.clipboard.writeText(passwordToCopy);
+    } catch {
+      // Silent fail - clipboard copy errors are not critical
+    }
+  };
+
+  const hasPassword =
+    hostConfig &&
+    ((hostConfig.authType === "password" && hostConfig.password) ||
+      hostConfig.sudoPassword);
+
+  const getPasswordButtonTitle = () => {
+    if (!hostConfig) return "";
+
+    const hasSshPassword =
+      hostConfig.authType === "password" && hostConfig.password;
+    const hasSudoPassword = hostConfig.sudoPassword;
+
+    if (hasSshPassword) {
+      return t("nav.copyPassword");
+    } else if (hasSudoPassword) {
+      return t("nav.copySudoPassword");
+    }
+    return t("nav.noPasswordAvailable");
+  };
 
   const tabBaseClasses = cn(
     "relative flex items-center gap-1.5 px-3 w-full min-w-0",
@@ -175,6 +227,18 @@ export function Tab({
           <span className="truncate text-sm flex-1 min-w-0">{base}</span>
           {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
+
+        {hasPassword && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleCopyPassword}
+            title={getPasswordButtonTitle()}
+          >
+            <Key className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
 
         {canSplit && (
           <Button

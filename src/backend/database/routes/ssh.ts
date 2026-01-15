@@ -35,6 +35,7 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
+import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 
 const router = express.Router();
 
@@ -396,6 +397,39 @@ router.post(
       sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
+      if (key && typeof key === "string") {
+        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+          sshLogger.warn("Invalid SSH key format provided", {
+            operation: "host_create",
+            userId,
+            name,
+            ip,
+            port,
+          });
+          return res.status(400).json({
+            error: "Invalid SSH key format. Key must be in PEM format.",
+          });
+        }
+
+        const keyValidation = parseSSHKey(
+          key,
+          typeof keyPassword === "string" ? keyPassword : undefined,
+        );
+        if (!keyValidation.success) {
+          sshLogger.warn("SSH key validation failed", {
+            operation: "host_create",
+            userId,
+            name,
+            ip,
+            port,
+            error: keyValidation.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyValidation.error || "Unable to parse key"}`,
+          });
+        }
+      }
+
       sshDataObj.key = key || null;
       sshDataObj.key_password = keyPassword || null;
       sshDataObj.keyType = keyType;
@@ -685,7 +719,40 @@ router.put(
       sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
-      if (key) {
+      if (key && typeof key === "string") {
+        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+          sshLogger.warn("Invalid SSH key format provided", {
+            operation: "host_update",
+            hostId: parseInt(hostId),
+            userId,
+            name,
+            ip,
+            port,
+          });
+          return res.status(400).json({
+            error: "Invalid SSH key format. Key must be in PEM format.",
+          });
+        }
+
+        const keyValidation = parseSSHKey(
+          key,
+          typeof keyPassword === "string" ? keyPassword : undefined,
+        );
+        if (!keyValidation.success) {
+          sshLogger.warn("SSH key validation failed", {
+            operation: "host_update",
+            hostId: parseInt(hostId),
+            userId,
+            name,
+            ip,
+            port,
+            error: keyValidation.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyValidation.error || "Unable to parse key"}`,
+          });
+        }
+
         sshDataObj.key = key;
       }
       if (keyPassword !== undefined) {

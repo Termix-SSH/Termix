@@ -517,6 +517,7 @@ export function TopNavbar({
                   disableClose={disableClose}
                   isDragging={isDraggingThisTab}
                   isDragOver={false}
+                  hostConfig={tab.hostConfig}
                 />
               </div>
             );

@@ -1164,7 +1164,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontSize: config.fontSize,
         fontFamily,
         allowTransparency: true,
-        convertEol: true,
+        convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
@@ -1360,7 +1360,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             const ctrlCode = key.charCodeAt(0) - 96;
             if (webSocketRef.current?.readyState === 1) {
               webSocketRef.current.send(
-                JSON.stringify({ type: "input", data: String.fromCharCode(ctrlCode) }),
+                JSON.stringify({
+                  type: "input",
+                  data: String.fromCharCode(ctrlCode),
+                }),
               );
             }
             return false;

@@ -492,7 +492,12 @@
     "hostManager": "Host Manager",
     "cannotSplitTab": "Cannot split this tab",
     "tabNavigation": "Tab Navigation",
-    "hostTabTitle": "{{username}}@{{ip}}:{{port}}"
+    "hostTabTitle": "{{username}}@{{ip}}:{{port}}",
+    "copyPassword": "Copy Password",
+    "copySudoPassword": "Copy Sudo Password",
+    "passwordCopied": "Password copied to clipboard",
+    "sudoPasswordCopied": "Sudo password copied to clipboard",
+    "noPasswordAvailable": "No password available"
   },
   "admin": {
     "title": "Admin Settings",
@@ -1381,6 +1386,7 @@
     "enterSudoPassword": "Enter sudo password to continue this operation",
     "sudoPassword": "Sudo password",
     "sudoOperationFailed": "Sudo operation failed",
+    "sudoAuthFailed": "Sudo authentication failed",
     "deleteOperation": "Delete files/folders",
     "dragFilesToUpload": "Drop files here to upload",
     "emptyFolder": "This folder is empty",

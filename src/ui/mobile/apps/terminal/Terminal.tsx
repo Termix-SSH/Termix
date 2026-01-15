@@ -284,7 +284,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           '"Caskaydia Cove Nerd Font Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         theme: themeColors,
         allowTransparency: true,
-        convertEol: true,
+        convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,

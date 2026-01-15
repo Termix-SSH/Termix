@@ -113,10 +113,22 @@ export function HostManager({
     if (activeTab === "add_host" && value !== "add_host") {
       setEditingHost(null);
       lastProcessedHostIdRef.current = undefined;
+
+      // Clear hostConfig from tab data when leaving add_host tab
+      if (updateTab && currentTabId !== undefined) {
+        updateTab(currentTabId, { hostConfig: null });
+      }
     }
     if (activeTab === "add_credential" && value !== "add_credential") {
       setEditingCredential(null);
     }
+
+    // Clear editing state when switching TO add_host tab (to ensure fresh state)
+    if (value === "add_host" && activeTab !== "add_host") {
+      setEditingHost(null);
+      lastProcessedHostIdRef.current = undefined;
+    }
+
     setActiveTab(value);
 
     if (updateTab && currentTabId !== undefined) {
