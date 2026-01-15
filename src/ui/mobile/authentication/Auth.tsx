@@ -333,9 +333,40 @@ export function Auth({
       setResetStep("newPassword");
       toast.success(t("messages.codeVerified"));
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      const errorMessage =
+      const error = err as {
+        response?: {
+          data?: {
+            error?: string;
+            code?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
+      };
+      const errorCode = error?.response?.data?.code;
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
         error?.response?.data?.error || t("errors.failedVerifyCode");
+
+      if (errorCode === "RESET_CODE_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.resetCodeRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.resetCodeRateLimited");
+        }
+        toast.error(errorMessage);
+      } else if (
+        remainingAttempts !== undefined &&
+        remainingAttempts <= 2 &&
+        remainingAttempts > 0
+      ) {
+        errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+      }
+
       setError(errorMessage);
     } finally {
       setResetLoading(false);
@@ -448,10 +479,20 @@ export function Auth({
     } catch (err: unknown) {
       const error = err as {
         message?: string;
-        response?: { data?: { code?: string; error?: string } };
+        response?: {
+          data?: {
+            code?: string;
+            error?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
       };
       const errorCode = error?.response?.data?.code;
-      const errorMessage =
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
         error?.response?.data?.error ||
         error?.message ||
         t("errors.invalidTotpCode");
@@ -462,7 +503,24 @@ export function Auth({
         setTotpTempToken("");
         setTab("login");
         toast.error(t("errors.sessionExpired"));
+      } else if (errorCode === "TOTP_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.totpRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.totpRateLimited");
+        }
+        setError(errorMessage);
+        toast.error(errorMessage);
       } else {
+        if (
+          remainingAttempts !== undefined &&
+          remainingAttempts <= 2 &&
+          remainingAttempts > 0
+        ) {
+          errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+        }
         setError(errorMessage);
       }
     } finally {

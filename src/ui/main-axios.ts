@@ -279,6 +279,8 @@ export function getCookie(name: string): string | undefined {
   }
 }
 
+let userWasAuthenticated = false;
+
 function createApiInstance(
   baseURL: string,
   serviceName: string = "API",
@@ -320,6 +322,7 @@ function createApiInstance(
       const token = localStorage.getItem("jwt");
       if (token) {
         config.headers["Authorization"] = `Bearer ${token}`;
+        userWasAuthenticated = true;
       }
     }
 
@@ -337,6 +340,15 @@ function createApiInstance(
         }
       }
       config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
+    }
+
+    if (!isElectron()) {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("jwt="));
+      if (token) {
+        userWasAuthenticated = true;
+      }
     }
 
     return config;
@@ -432,8 +444,6 @@ function createApiInstance(
         }
       }
 
-      dbHealthMonitor.reportDatabaseError(error);
-
       if (status === 401) {
         const errorCode = (error.response?.data as Record<string, unknown>)
           ?.code;
@@ -444,9 +454,12 @@ function createApiInstance(
         const isInvalidToken =
           errorCode === "AUTH_REQUIRED" ||
           errorMessage === "Invalid token" ||
-          errorMessage === "Authentication required";
+          errorMessage === "Authentication required" ||
+          errorMessage === "Missing authentication token";
 
         if (isSessionExpired || isSessionNotFound || isInvalidToken) {
+          const wasAuthenticated = userWasAuthenticated;
+
           localStorage.removeItem("jwt");
 
           if (isElectron()) {
@@ -462,7 +475,14 @@ function createApiInstance(
             console.warn("Session expired - please log in again");
             toast.warning("Session expired. Please log in again.");
           }
+
+          dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
+
+          userWasAuthenticated = false;
         }
+      } else {
+        const wasAuthenticated = !!localStorage.getItem("jwt");
+        dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
       }
 
       return Promise.reject(error);

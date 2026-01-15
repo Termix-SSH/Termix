@@ -2041,13 +2041,37 @@ router.post("/verify-reset-code", async (req, res) => {
   }
 
   try {
+    const lockStatus = loginRateLimiter.isResetCodeLocked(username);
+    if (lockStatus.locked) {
+      authLogger.warn("Reset code verification blocked due to rate limiting", {
+        operation: "reset_code_verify_blocked",
+        username,
+        remainingTime: lockStatus.remainingTime,
+      });
+      return res.status(429).json({
+        error: `Rate limited: Too many verification attempts. Please wait ${lockStatus.remainingTime} seconds before trying again.`,
+        remainingTime: lockStatus.remainingTime,
+        code: "RESET_CODE_RATE_LIMITED",
+      });
+    }
+
+    loginRateLimiter.recordResetCodeAttempt(username);
+
     const resetDataRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = ?")
       .get(`reset_code_${username}`);
     if (!resetDataRow) {
-      return res
-        .status(400)
-        .json({ error: "No reset code found for this user" });
+      authLogger.warn("Reset code verification failed - no code found", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "No reset code found for this user",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
 
     const resetData = JSON.parse(
@@ -2060,12 +2084,34 @@ router.post("/verify-reset-code", async (req, res) => {
       db.$client
         .prepare("DELETE FROM settings WHERE key = ?")
         .run(`reset_code_${username}`);
-      return res.status(400).json({ error: "Reset code has expired" });
+      authLogger.warn("Reset code verification failed - code expired", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "Reset code has expired",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
 
     if (resetData.code !== resetCode) {
-      return res.status(400).json({ error: "Invalid reset code" });
+      authLogger.warn("Reset code verification failed - invalid code", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "Invalid reset code",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
+
+    loginRateLimiter.resetResetCodeAttempts(username);
 
     const tempToken = nanoid();
     const tempTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -2953,6 +2999,22 @@ router.post("/totp/verify-login", async (req, res) => {
 
     const userRecord = user[0];
 
+    const lockStatus = loginRateLimiter.isTOTPLocked(userRecord.id);
+    if (lockStatus.locked) {
+      authLogger.warn("TOTP verification blocked due to rate limiting", {
+        operation: "totp_verify_blocked",
+        userId: userRecord.id,
+        remainingTime: lockStatus.remainingTime,
+      });
+      return res.status(429).json({
+        error: `Rate limited: Too many TOTP verification attempts. Please wait ${lockStatus.remainingTime} seconds before trying again.`,
+        remainingTime: lockStatus.remainingTime,
+        code: "TOTP_RATE_LIMITED",
+      });
+    }
+
+    loginRateLimiter.recordFailedTOTPAttempt(userRecord.id);
+
     if (!userRecord.totp_enabled || !userRecord.totp_secret) {
       return res.status(400).json({ error: "TOTP not enabled for this user" });
     }
@@ -3012,7 +3074,19 @@ router.post("/totp/verify-login", async (req, res) => {
       const backupIndex = backupCodes.indexOf(totp_code);
 
       if (backupIndex === -1) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
+        authLogger.warn("TOTP verification failed - invalid code", {
+          operation: "totp_verify_failed",
+          userId: userRecord.id,
+          remainingAttempts: loginRateLimiter.getRemainingTOTPAttempts(
+            userRecord.id,
+          ),
+        });
+        return res.status(401).json({
+          error: "Invalid TOTP code",
+          remainingAttempts: loginRateLimiter.getRemainingTOTPAttempts(
+            userRecord.id,
+          ),
+        });
       }
 
       backupCodes.splice(backupIndex, 1);
@@ -3021,6 +3095,8 @@ router.post("/totp/verify-login", async (req, res) => {
         .set({ totp_backup_codes: JSON.stringify(backupCodes) })
         .where(eq(users.id, userRecord.id));
     }
+
+    loginRateLimiter.resetTOTPAttempts(userRecord.id);
 
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {

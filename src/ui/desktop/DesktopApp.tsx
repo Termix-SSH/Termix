@@ -18,8 +18,10 @@ import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette
 import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
+import { useTranslation } from "react-i18next";
 
 function AppContent() {
+  const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -291,7 +293,12 @@ function AppContent() {
       >
         <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex items-center justify-center h-32">
-            <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {t("common.checkingAuthentication")}
+              </p>
+            </div>
           </div>
         </div>
       </div>

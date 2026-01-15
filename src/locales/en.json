@@ -466,6 +466,7 @@
     "retry": "Retry",
     "checking": "Checking...",
     "checkingDatabase": "Checking database connection...",
+    "checkingAuthentication": "Checking authentication...",
     "actions": "Actions",
     "remove": "Remove",
     "revoke": "Revoke",
@@ -1889,7 +1890,8 @@
     "authenticationDisabled": "Authentication Disabled",
     "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator.",
     "passwordResetSuccess": "Password Reset Successful",
-    "passwordResetSuccessDesc": "Your password has been reset successfully. You can now log in with your new password."
+    "passwordResetSuccessDesc": "Your password has been reset successfully. You can now log in with your new password.",
+    "attemptsRemaining": "attempts remaining"
   },
   "errors": {
     "notFound": "Page not found",
@@ -1921,7 +1923,11 @@
     "emailExists": "Email already exists",
     "loadFailed": "Failed to load data",
     "saveError": "Failed to save",
-    "sessionExpired": "Session expired - please log in again"
+    "sessionExpired": "Session expired - please log in again",
+    "totpRateLimited": "Rate limited: Too many TOTP verification attempts. Please try again later.",
+    "totpRateLimitedWithTime": "Rate limited: Too many TOTP verification attempts. Please wait {{time}} seconds before trying again.",
+    "resetCodeRateLimited": "Rate limited: Too many verification attempts. Please try again later.",
+    "resetCodeRateLimitedWithTime": "Rate limited: Too many verification attempts. Please wait {{time}} seconds before trying again."
   },
   "messages": {
     "saveSuccess": "Saved successfully",

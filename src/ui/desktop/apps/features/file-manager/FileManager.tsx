@@ -435,7 +435,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           const axiosError = error as {
             response?: {
               status?: number;
-              data?: { needsSudo?: boolean; error?: string; sudoFailed?: boolean };
+              data?: {
+                needsSudo?: boolean;
+                error?: string;
+                sudoFailed?: boolean;
+              };
             };
             message?: string;
           };
@@ -462,10 +466,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
           // Show more specific error message
           const errorMessage =
-            axiosError.response?.data?.error || axiosError.message || String(error);
+            axiosError.response?.data?.error ||
+            axiosError.message ||
+            String(error);
 
           if (initialLoadDoneRef.current) {
-            toast.error(t("fileManager.failedToLoadDirectory") + ": " + errorMessage);
+            toast.error(
+              t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
+            );
           }
 
           if (
@@ -830,9 +838,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return;
       }
 
-      toast.error(
-        axiosError.message || t("fileManager.sudoOperationFailed"),
-      );
+      toast.error(axiosError.message || t("fileManager.sudoOperationFailed"));
       setPendingSudoOperation(null);
     }
   }
@@ -2281,13 +2287,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           if (!open) setPendingSudoOperation(null);
         }}
         onSubmit={handleSudoPasswordSubmit}
-        operation={
-          pendingSudoOperation?.type === "delete"
-            ? t("fileManager.deleteOperation")
-            : pendingSudoOperation?.type === "navigate"
-              ? t("fileManager.accessDirectory")
-              : undefined
-        }
       />
     </div>
   );

@@ -392,8 +392,40 @@ export function Auth({
       setResetStep("newPassword");
       toast.success(t("messages.codeVerified"));
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      toast.error(error?.response?.data?.error || t("errors.failedVerifyCode"));
+      const error = err as {
+        response?: {
+          data?: {
+            error?: string;
+            code?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
+      };
+      const errorCode = error?.response?.data?.code;
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
+        error?.response?.data?.error || t("errors.failedVerifyCode");
+
+      if (errorCode === "RESET_CODE_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.resetCodeRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.resetCodeRateLimited");
+        }
+      } else if (
+        remainingAttempts !== undefined &&
+        remainingAttempts <= 2 &&
+        remainingAttempts > 0
+      ) {
+        errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setResetLoading(false);
     }
@@ -514,10 +546,20 @@ export function Auth({
     } catch (err: unknown) {
       const error = err as {
         message?: string;
-        response?: { data?: { code?: string; error?: string } };
+        response?: {
+          data?: {
+            code?: string;
+            error?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
       };
       const errorCode = error?.response?.data?.code;
-      const errorMessage =
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
         error?.response?.data?.error ||
         error?.message ||
         t("errors.invalidTotpCode");
@@ -528,7 +570,23 @@ export function Auth({
         setTotpTempToken("");
         setTab("login");
         toast.error(t("errors.sessionExpired"));
+      } else if (errorCode === "TOTP_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.totpRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.totpRateLimited");
+        }
+        toast.error(errorMessage);
       } else {
+        if (
+          remainingAttempts !== undefined &&
+          remainingAttempts <= 2 &&
+          remainingAttempts > 0
+        ) {
+          errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+        }
         toast.error(errorMessage);
       }
     } finally {
@@ -744,12 +802,28 @@ export function Auth({
   ) {
     return (
       <div
-        className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
-        style={{ maxHeight: "calc(100vh - 1rem)" }}
+        className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
+        style={{
+          background: "var(--bg-elevated)",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            ${lineColor} 35px,
+            ${lineColor} 37px
+          )`,
+        }}
         {...props}
       >
-        <div className="flex items-center justify-center h-32">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {t("common.checkingAuthentication")}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );

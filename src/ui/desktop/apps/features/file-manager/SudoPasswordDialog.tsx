@@ -16,14 +16,12 @@ interface SudoPasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (password: string) => void;
-  operation?: string;
 }
 
 export function SudoPasswordDialog({
   open,
   onOpenChange,
   onSubmit,
-  operation,
 }: SudoPasswordDialogProps) {
   const { t } = useTranslation();
   const [password, setPassword] = useState("");
@@ -51,31 +49,25 @@ export function SudoPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-yellow-500" />
-              {t("fileManager.sudoPasswordRequired")}
-            </DialogTitle>
-            <DialogDescription>
+            <DialogTitle>{t("fileManager.sudoPasswordRequired")}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               {t("fileManager.enterSudoPassword")}
-              {operation && (
-                <span className="block mt-1 text-muted-foreground">
-                  {operation}
-                </span>
-              )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <PasswordInput
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={t("fileManager.sudoPassword")}
-              autoFocus
-              disabled={loading}
-            />
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("fileManager.sudoPassword")}
+                autoFocus
+                disabled={loading}
+              />
+            </div>
           </div>
 
           <DialogFooter>
