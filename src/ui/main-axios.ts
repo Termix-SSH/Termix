@@ -3919,3 +3919,20 @@ export async function getContainerStats(
     throw handleApiError(error, "get container stats");
   }
 }
+
+export interface DashboardLayout {
+  cards: Array<{ id: string; enabled: boolean; order: number }>;
+  gridColumns: number;
+}
+
+export async function getDashboardPreferences(): Promise<DashboardLayout> {
+  const response = await dashboardAxios.get("/dashboard/preferences");
+  return response.data;
+}
+
+export async function saveDashboardPreferences(
+  layout: DashboardLayout,
+): Promise<{ success: boolean }> {
+  const response = await dashboardAxios.post("/dashboard/preferences", layout);
+  return response.data;
+}

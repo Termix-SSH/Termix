@@ -1,10 +1,10 @@
-import NetworkGraphView from "@/ui/desktop/dashboard/network-graph/NetworkGraphView";
+import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import React from "react";
 
 const NetworkGraphApp: React.FC = () => {
   return (
-    <div className="w-full h-screen">
-      <NetworkGraphView />
+    <div className="w-full h-screen flex flex-col">
+      <NetworkGraphCard />
     </div>
   );
 };

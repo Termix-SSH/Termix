@@ -704,6 +704,30 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite
+      .prepare("SELECT id FROM dashboard_preferences LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS dashboard_preferences (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL UNIQUE,
+          layout TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create dashboard_preferences table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
     try {

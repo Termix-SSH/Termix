@@ -2261,7 +2261,20 @@
     "noServerData": "No server data available",
     "cpu": "CPU",
     "ram": "RAM",
-    "notAvailable": "N/A"
+    "notAvailable": "N/A",
+    "customizeLayout": "Customize Dashboard",
+    "dashboardSettings": "Dashboard Settings",
+    "enableDisableCards": "Enable/Disable Cards",
+    "gridColumns": "Grid Columns",
+    "column": "Column",
+    "columns": "Columns",
+    "resetLayout": "Reset to Default",
+    "serverOverviewCard": "Server Overview",
+    "recentActivityCard": "Recent Activity",
+    "networkGraphCard": "Network Graph",
+    "quickActionsCard": "Quick Actions",
+    "serverStatsCard": "Server Stats",
+    "networkGraph": "Network Graph"
   },
   "rbac": {
     "shareHost": "Share Host",

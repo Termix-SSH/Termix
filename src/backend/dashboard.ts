@@ -1,9 +1,14 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { getDb } from "./database/db/index.js";
-import { recentActivity, sshData, hostAccess } from "./database/db/schema.js";
-import { eq, and, desc, or } from "drizzle-orm";
+import { getDb, DatabaseSaveTrigger } from "./database/db/index.js";
+import {
+  recentActivity,
+  sshData,
+  hostAccess,
+  dashboardPreferences,
+} from "./database/db/schema.js";
+import { eq, and, desc, or, sql } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -347,6 +352,166 @@ app.delete("/activity/reset", async (req, res) => {
   } catch (err) {
     dashboardLogger.error("Failed to reset activity", err);
     res.status(500).json({ error: "Failed to reset activity" });
+  }
+});
+
+/**
+ * @openapi
+ * /dashboard/preferences:
+ *   get:
+ *     summary: Get dashboard layout preferences
+ *     description: Returns the user's customized dashboard layout settings. If no preferences exist, returns default layout.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Dashboard preferences retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       enabled:
+ *                         type: boolean
+ *                       order:
+ *                         type: integer
+ *                 gridColumns:
+ *                   type: integer
+ *       401:
+ *         description: Session expired
+ *       500:
+ *         description: Failed to get preferences
+ */
+app.get("/dashboard/preferences", async (req, res) => {
+  try {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const preferences = await getDb()
+      .select()
+      .from(dashboardPreferences)
+      .where(eq(dashboardPreferences.userId, userId));
+
+    if (preferences.length === 0) {
+      const defaultLayout = {
+        cards: [
+          { id: "server_overview", enabled: true, order: 1 },
+          { id: "recent_activity", enabled: true, order: 2 },
+          { id: "network_graph", enabled: false, order: 3 },
+          { id: "quick_actions", enabled: true, order: 4 },
+          { id: "server_stats", enabled: true, order: 5 },
+        ],
+        gridColumns: 2,
+      };
+      return res.json(defaultLayout);
+    }
+
+    const layout = JSON.parse(preferences[0].layout as string);
+    res.json(layout);
+  } catch (err) {
+    dashboardLogger.error("Failed to get dashboard preferences", err);
+    res.status(500).json({ error: "Failed to get dashboard preferences" });
+  }
+});
+
+/**
+ * @openapi
+ * /dashboard/preferences:
+ *   post:
+ *     summary: Save dashboard layout preferences
+ *     description: Saves or updates the user's customized dashboard layout settings.
+ *     tags:
+ *       - Dashboard
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cards:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     enabled:
+ *                       type: boolean
+ *                     order:
+ *                       type: integer
+ *               gridColumns:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Preferences saved successfully
+ *       400:
+ *         description: Invalid request body
+ *       401:
+ *         description: Session expired
+ *       500:
+ *         description: Failed to save preferences
+ */
+app.post("/dashboard/preferences", async (req, res) => {
+  try {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const { cards, gridColumns } = req.body;
+
+    if (!cards || !Array.isArray(cards) || typeof gridColumns !== "number") {
+      return res.status(400).json({
+        error:
+          "Invalid request body. Expected { cards: Array, gridColumns: number }",
+      });
+    }
+
+    const layout = JSON.stringify({ cards, gridColumns });
+
+    const existing = await getDb()
+      .select()
+      .from(dashboardPreferences)
+      .where(eq(dashboardPreferences.userId, userId));
+
+    if (existing.length > 0) {
+      await getDb()
+        .update(dashboardPreferences)
+        .set({ layout, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(dashboardPreferences.userId, userId));
+    } else {
+      await getDb().insert(dashboardPreferences).values({ userId, layout });
+    }
+
+    await DatabaseSaveTrigger.triggerSave("dashboard_preferences_updated");
+
+    dashboardLogger.success("Dashboard preferences saved", {
+      operation: "save_dashboard_preferences",
+      userId,
+    });
+
+    res.json({ success: true, message: "Dashboard preferences saved" });
+  } catch (err) {
+    dashboardLogger.error("Failed to save dashboard preferences", err);
+    res.status(500).json({ error: "Failed to save dashboard preferences" });
   }
 });
 

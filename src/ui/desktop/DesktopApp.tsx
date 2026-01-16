@@ -11,7 +11,7 @@ import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
-import { NetworkGraphView } from "@/ui/desktop/dashboard/network-graph";
+import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
@@ -414,11 +414,10 @@ function AppContent() {
 
           {showNetworkGraph && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <NetworkGraphView
+              <NetworkGraphCard
                 isTopbarOpen={isTopbarOpen}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
-                isStandalone={true}
               />
             </div>
           )}
