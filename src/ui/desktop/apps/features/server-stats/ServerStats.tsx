@@ -37,6 +37,7 @@ import {
   FirewallWidget,
 } from "./widgets";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+import { RefreshCcw, RefreshCw, RefreshCwOff } from "lucide-react";
 
 interface QuickAction {
   name: string;
@@ -643,61 +644,12 @@ export function ServerStats({
               >
                 {isRefreshing ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-foreground-secondary border-t-transparent rounded-full animate-spin"></div>
-                    {t("serverStats.refreshing")}
+                    <RefreshCw className="animate-spin" />
                   </div>
                 ) : (
-                  t("serverStats.refreshStatus")
+                  <RefreshCw />
                 )}
               </Button>
-              {currentHostConfig?.enableFileManager && (
-                <Button
-                  variant="outline"
-                  className="font-semibold"
-                  disabled={isFileManagerAlreadyOpen}
-                  title={
-                    isFileManagerAlreadyOpen
-                      ? t("serverStats.fileManagerAlreadyOpen")
-                      : t("serverStats.openFileManager")
-                  }
-                  onClick={() => {
-                    if (!currentHostConfig || isFileManagerAlreadyOpen) return;
-                    const titleBase =
-                      currentHostConfig?.name &&
-                      currentHostConfig.name.trim() !== ""
-                        ? currentHostConfig.name.trim()
-                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                    addTab({
-                      type: "file_manager",
-                      title: titleBase,
-                      hostConfig: currentHostConfig,
-                    });
-                  }}
-                >
-                  {t("nav.fileManager")}
-                </Button>
-              )}
-
-              {currentHostConfig?.enableDocker && (
-                <Button
-                  variant="outline"
-                  className="font-semibold"
-                  onClick={() => {
-                    const titleBase =
-                      currentHostConfig?.name &&
-                      currentHostConfig.name.trim() !== ""
-                        ? currentHostConfig.name.trim()
-                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                    addTab({
-                      type: "docker",
-                      title: titleBase,
-                      hostConfig: currentHostConfig,
-                    });
-                  }}
-                >
-                  {t("nav.docker")}
-                </Button>
-              )}
             </div>
           </div>
         )}
