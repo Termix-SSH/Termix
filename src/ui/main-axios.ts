@@ -694,8 +694,8 @@ function initializeApiInstances() {
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
 
-  // Homepage API (port 30006)
-  homepageApi = createApiInstance(getApiUrl("", 30006), "HOMEPAGE");
+  // Dashboard API (port 30006)
+  dashboardApi = createApiInstance(getApiUrl("", 30006), "DASHBOARD");
 
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
@@ -719,8 +719,8 @@ export let statsApi: AxiosInstance;
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
-// Homepage API (port 30006)
-export let homepageApi: AxiosInstance;
+// Dashboard API (port 30006)
+export let dashboardApi: AxiosInstance;
 
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
@@ -3343,7 +3343,7 @@ export async function reorderSnippets(
 }
 
 // ============================================================================
-// HOMEPAGE API
+// DASHBOARD API
 // ============================================================================
 
 export interface UptimeInfo {
@@ -3363,7 +3363,7 @@ export interface RecentActivityItem {
 
 export async function getUptime(): Promise<UptimeInfo> {
   try {
-    const response = await homepageApi.get("/uptime");
+    const response = await dashboardApi.get("/uptime");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch uptime");
@@ -3374,7 +3374,7 @@ export async function getRecentActivity(
   limit?: number,
 ): Promise<RecentActivityItem[]> {
   try {
-    const response = await homepageApi.get("/activity/recent", {
+    const response = await dashboardApi.get("/activity/recent", {
       params: { limit },
     });
     return response.data;
@@ -3389,7 +3389,7 @@ export async function logActivity(
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {
   try {
-    const response = await homepageApi.post("/activity/log", {
+    const response = await dashboardApi.post("/activity/log", {
       type,
       hostId,
       hostName,
@@ -3402,7 +3402,7 @@ export async function logActivity(
 
 export async function resetRecentActivity(): Promise<{ message: string }> {
   try {
-    const response = await homepageApi.delete("/activity/reset");
+    const response = await dashboardApi.delete("/activity/reset");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
@@ -3922,17 +3922,16 @@ export async function getContainerStats(
 
 export interface DashboardLayout {
   cards: Array<{ id: string; enabled: boolean; order: number }>;
-  gridColumns: number;
 }
 
 export async function getDashboardPreferences(): Promise<DashboardLayout> {
-  const response = await dashboardAxios.get("/dashboard/preferences");
+  const response = await dashboardApi.get("/dashboard/preferences");
   return response.data;
 }
 
 export async function saveDashboardPreferences(
   layout: DashboardLayout,
 ): Promise<{ success: boolean }> {
-  const response = await dashboardAxios.post("/dashboard/preferences", layout);
+  const response = await dashboardApi.post("/dashboard/preferences", layout);
   return response.data;
 }

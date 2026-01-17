@@ -10,13 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import type { DashboardLayout } from "@/ui/main-axios";
 
@@ -48,13 +41,6 @@ export function DashboardSettingsDialog({
       cards: prev.cards.map((card) =>
         card.id === cardId ? { ...card, enabled } : card,
       ),
-    }));
-  };
-
-  const handleGridColumnsChange = (value: string) => {
-    setLayout((prev) => ({
-      ...prev,
-      gridColumns: parseInt(value, 10),
     }));
   };
 
@@ -113,31 +99,6 @@ export function DashboardSettingsDialog({
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">
-              {t("dashboard.gridColumns")}
-            </Label>
-            <Select
-              value={layout.gridColumns.toString()}
-              onValueChange={handleGridColumnsChange}
-            >
-              <SelectTrigger className="w-full border-2 border-edge">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">
-                  1 {t("dashboard.column", { count: 1 })}
-                </SelectItem>
-                <SelectItem value="2">
-                  2 {t("dashboard.columns", { count: 2 })}
-                </SelectItem>
-                <SelectItem value="3">
-                  3 {t("dashboard.columns", { count: 3 })}
-                </SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

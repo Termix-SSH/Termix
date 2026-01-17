@@ -16,6 +16,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip.tsx";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
+import {
   getSSHHosts,
   deleteSSHHost,
   bulkImportSSHHosts,
@@ -64,6 +70,7 @@ import {
   Users,
   ArrowDownUp,
   Container,
+  Link,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -401,6 +408,13 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       delete clonedHost.id;
       onEditHost(clonedHost);
     }
+  };
+
+  const copyFullScreenUrl = (host: SSHHost, appType: string) => {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}?view=${appType}&hostId=${host.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success(t("hosts.fullScreenUrlCopied"));
   };
 
   const handleRemoveFromFolder = async (host: SSHHost) => {
@@ -1344,6 +1358,99 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                             <p>{t("hosts.cloneHostTooltip")}</p>
                                           </TooltipContent>
                                         </Tooltip>
+                                        <DropdownMenu>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                  }}
+                                                  className="h-5 w-5 p-0 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-500/10"
+                                                >
+                                                  <Link className="h-3 w-3" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>
+                                                {t("hosts.copyFullScreenUrl")}
+                                              </p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <DropdownMenuContent align="end">
+                                            {host.enableTerminal && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "terminal",
+                                                  );
+                                                }}
+                                              >
+                                                <Terminal className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyTerminalUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            {host.enableFileManager && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "file-manager",
+                                                  );
+                                                }}
+                                              >
+                                                <FolderOpen className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyFileManagerUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            {host.enableTunnel && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "tunnel",
+                                                  );
+                                                }}
+                                              >
+                                                <ArrowDownUp className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyTunnelUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyFullScreenUrl(
+                                                  host,
+                                                  "server-stats",
+                                                );
+                                              }}
+                                            >
+                                              <Server className="h-4 w-4 mr-2" />
+                                              {t("hosts.copyServerStatsUrl")}
+                                            </DropdownMenuItem>
+                                            {host.enableDocker && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "docker",
+                                                  );
+                                                }}
+                                              >
+                                                <Container className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyDockerUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </>
                                     )}
                                   </div>

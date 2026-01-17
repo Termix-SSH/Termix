@@ -13,6 +13,8 @@ import {
   getRecentActivity,
   resetRecentActivity,
   getServerMetricsById,
+  registerMetricsViewer,
+  sendMetricsHeartbeat,
   type RecentActivityItem,
 } from "@/ui/main-axios.ts";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
@@ -79,6 +81,9 @@ export function Dashboard({
   >([]);
   const [serverStatsLoading, setServerStatsLoading] = useState<boolean>(true);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [viewerSessions, setViewerSessions] = useState<Map<number, string>>(
+    new Map(),
+  );
 
   const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
   const {
@@ -208,6 +213,7 @@ export function Dashboard({
         setRecentActivityLoading(false);
 
         setServerStatsLoading(true);
+        const newViewerSessions = new Map<number, string>();
         const serversWithStats = await Promise.all(
           hosts
             .slice(0, 50)
@@ -215,6 +221,7 @@ export function Dashboard({
               async (host: {
                 id: number;
                 name: string;
+                authType?: string;
                 statsConfig?: string | { metricsEnabled?: boolean };
               }) => {
                 try {
@@ -231,6 +238,33 @@ export function Dashboard({
 
                   if (statsConfig.metricsEnabled === false) {
                     return null;
+                  }
+
+                  if (host.authType === "none") {
+                    return null;
+                  }
+
+                  const existingSession = viewerSessions.get(host.id);
+                  let sessionId = existingSession;
+
+                  if (!existingSession) {
+                    try {
+                      const viewerResult = await registerMetricsViewer(host.id);
+                      if (
+                        viewerResult.success &&
+                        viewerResult.viewerSessionId
+                      ) {
+                        sessionId = viewerResult.viewerSessionId;
+                        newViewerSessions.set(host.id, sessionId);
+                      }
+                    } catch (error) {
+                      console.error(
+                        `Failed to register viewer for host ${host.id}:`,
+                        error,
+                      );
+                    }
+                  } else {
+                    newViewerSessions.set(host.id, existingSession);
                   }
 
                   const metrics = await getServerMetricsById(host.id);
@@ -251,6 +285,7 @@ export function Dashboard({
               },
             ),
         );
+        setViewerSessions(newViewerSessions);
         const validServerStats = serversWithStats.filter(
           (
             server,
@@ -275,6 +310,22 @@ export function Dashboard({
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, [loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn || viewerSessions.size === 0) return;
+
+    const heartbeatInterval = setInterval(async () => {
+      for (const [, sessionId] of viewerSessions) {
+        try {
+          await sendMetricsHeartbeat(sessionId);
+        } catch (error) {
+          console.error("Failed to send heartbeat:", error);
+        }
+      }
+    }, 30000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [loggedIn, viewerSessions]);
 
   const handleResetActivity = async () => {
     try {
@@ -430,14 +481,6 @@ export function Dashboard({
                 <div className="text-2xl text-foreground font-semibold shrink-0">
                   {t("dashboard.title")}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="font-semibold shrink-0 !bg-canvas"
-                  onClick={() => setSettingsDialogOpen(true)}
-                >
-                  {t("dashboard.customizeLayout")}
-                </Button>
               </div>
               <div className="flex flex-row gap-3 flex-wrap min-w-0">
                 <div className="flex flex-col items-center gap-4 justify-center mr-5 min-w-0 shrink">
@@ -490,17 +533,26 @@ export function Dashboard({
                 >
                   {t("dashboard.donate")}
                 </Button>
+                <Button
+                  className="font-semibold shrink-0 !bg-canvas"
+                  variant="outline"
+                  onClick={() => setSettingsDialogOpen(true)}
+                >
+                  <SettingsIcon />
+                </Button>
               </div>
             </div>
 
             <Separator className="mt-3 p-0.25" />
 
-            <div className="flex flex-col flex-1 my-5 mx-5 gap-4 min-h-0 min-w-0">
+            <div className="flex flex-col flex-1 my-5 mx-5 gap-4 min-h-0 min-w-0 overflow-auto">
               {!preferencesLoading && layout && (
                 <div
-                  className="grid gap-4 flex-1 min-h-0 auto-rows-fr"
+                  className="grid gap-4"
                   style={{
-                    gridTemplateColumns: `repeat(${layout.gridColumns}, minmax(0, 1fr))`,
+                    gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
+                    gridAutoRows: "minmax(300px, 1fr)",
+                    minHeight: "100%",
                   }}
                 >
                   {layout.cards

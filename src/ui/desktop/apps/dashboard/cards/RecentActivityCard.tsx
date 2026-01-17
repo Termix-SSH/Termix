@@ -28,7 +28,7 @@ export function RecentActivityCard({
   const { t } = useTranslation();
 
   return (
-    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20 !bg-elevated">
       <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
         <div className="flex flex-row items-center justify-between mb-3 mt-1">
           <p className="text-xl font-semibold flex flex-row items-center">
@@ -70,7 +70,7 @@ export function RecentActivityCard({
                 <Button
                   key={item.id}
                   variant="outline"
-                  className="border-2 !border-edge min-w-0"
+                  className="border-2 !border-edge min-w-0 !bg-canvas"
                   onClick={() => onActivityClick(item)}
                 >
                   {item.type === "terminal" ? (

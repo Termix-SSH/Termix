@@ -22,16 +22,18 @@ function PortRow({ port }: { port: ListeningPort }) {
       <div className="font-mono text-foreground-subtle">
         {port.protocol.toUpperCase()}
       </div>
-      <div className="font-mono text-foreground">
-        {port.localPort}
-      </div>
-      <div className="font-mono text-foreground-subtle truncate" title={formatAddress(port.localAddress)}>
+      <div className="font-mono text-foreground">{port.localPort}</div>
+      <div
+        className="font-mono text-foreground-subtle truncate"
+        title={formatAddress(port.localAddress)}
+      >
         {formatAddress(port.localAddress)}
       </div>
-      <div className="text-foreground-subtle">
-        {port.state || "-"}
-      </div>
-      <div className="text-foreground-subtle truncate" title={port.process || "-"}>
+      <div className="text-foreground-subtle">{port.state || "-"}</div>
+      <div
+        className="text-foreground-subtle truncate"
+        title={port.process || "-"}
+      >
         {port.process || (port.pid ? `PID:${port.pid}` : "-")}
       </div>
     </div>
@@ -41,33 +43,38 @@ function PortRow({ port }: { port: ListeningPort }) {
 export function PortsWidget({ metrics }: PortsWidgetProps) {
   const { t } = useTranslation();
 
-  const portsData = (
-    metrics as ServerMetrics & { ports?: PortsMetrics }
-  )?.ports;
+  const portsData = (metrics as ServerMetrics & { ports?: PortsMetrics })
+    ?.ports;
 
-  const tcpPorts = portsData?.ports.filter(p => p.protocol === "tcp") || [];
-  const udpPorts = portsData?.ports.filter(p => p.protocol === "udp") || [];
+  const tcpPorts = portsData?.ports.filter((p) => p.protocol === "tcp") || [];
+  const udpPorts = portsData?.ports.filter((p) => p.protocol === "udp") || [];
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
+    <div className="h-full w-full p-4 rounded-lg bg-elevated border border-edge/50 hover:bg-elevated/70 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         <Network className="h-5 w-5 text-cyan-400" />
         <h3 className="font-semibold text-lg text-foreground">
           {t("serverStats.ports.title")}
         </h3>
         {portsData && portsData.source !== "none" && (
-          <span className="text-xs text-muted-foreground ml-auto bg-canvas/50 px-2 py-0.5 rounded">
-            {portsData.source}
+          <span className="text-xs text-muted-foreground ml-auto bg-elevated/50 px-2 py-0.5 rounded">
+            {portsData.source === "ss"
+              ? "Socket Stats"
+              : portsData.source === "netstat"
+                ? "Netstat"
+                : portsData.source}
           </span>
         )}
       </div>
 
       <div className="flex items-center gap-4 mb-3 flex-shrink-0 text-sm">
         <span className="text-foreground-subtle">
-          TCP: <span className="text-cyan-400 font-medium">{tcpPorts.length}</span>
+          TCP:{" "}
+          <span className="text-cyan-400 font-medium">{tcpPorts.length}</span>
         </span>
         <span className="text-foreground-subtle">
-          UDP: <span className="text-cyan-400 font-medium">{udpPorts.length}</span>
+          UDP:{" "}
+          <span className="text-cyan-400 font-medium">{udpPorts.length}</span>
         </span>
       </div>
 
@@ -82,7 +89,10 @@ export function PortsWidget({ metrics }: PortsWidgetProps) {
           </div>
           <div className="flex-1 overflow-y-auto thin-scrollbar">
             {portsData.ports.map((port, idx) => (
-              <PortRow key={`${port.protocol}-${port.localPort}-${idx}`} port={port} />
+              <PortRow
+                key={`${port.protocol}-${port.localPort}-${idx}`}
+                port={port}
+              />
             ))}
           </div>
         </div>

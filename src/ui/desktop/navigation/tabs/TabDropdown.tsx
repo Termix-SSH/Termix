@@ -73,7 +73,7 @@ export function TabDropdown(): React.ReactElement {
       case "admin":
         return tab.title || t("nav.admin");
       case "network_graph":
-        return tab.title || "Network Graph";
+        return tab.title || t("dashboard.networkGraph");
       case "terminal":
       default:
         return tab.title || t("nav.terminal");

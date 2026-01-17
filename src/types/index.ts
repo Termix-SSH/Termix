@@ -405,7 +405,8 @@ export interface TabContextTab {
     | "admin"
     | "file_manager"
     | "user_profile"
-    | "docker";
+    | "docker"
+    | "network_graph";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;

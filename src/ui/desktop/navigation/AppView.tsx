@@ -228,7 +228,8 @@ export function AppView({
       const isFileManagerTab =
         mainTab.type === "file_manager" ||
         mainTab.type === "tunnel" ||
-        mainTab.type === "docker";
+        mainTab.type === "docker" ||
+        mainTab.type === "network_graph";
       const newStyle = {
         position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
@@ -280,7 +281,8 @@ export function AppView({
           const isFileManagerTab =
             t.type === "file_manager" ||
             t.type === "tunnel" ||
-            t.type === "docker";
+            t.type === "docker" ||
+            t.type === "network_graph";
           const standardStyle = {
             position: "absolute" as const,
             top: isFileManagerTab ? 0 : 4,
@@ -360,6 +362,7 @@ export function AppView({
                     isTopbarOpen={isTopbarOpen}
                     rightSidebarOpen={rightSidebarOpen}
                     rightSidebarWidth={rightSidebarWidth}
+                    embedded={false}
                   />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager

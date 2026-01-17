@@ -382,8 +382,6 @@ app.delete("/activity/reset", async (req, res) => {
  *                         type: boolean
  *                       order:
  *                         type: integer
- *                 gridColumns:
- *                   type: integer
  *       401:
  *         description: Session expired
  *       500:
@@ -414,7 +412,6 @@ app.get("/dashboard/preferences", async (req, res) => {
           { id: "quick_actions", enabled: true, order: 4 },
           { id: "server_stats", enabled: true, order: 5 },
         ],
-        gridColumns: 2,
       };
       return res.json(defaultLayout);
     }
@@ -453,8 +450,6 @@ app.get("/dashboard/preferences", async (req, res) => {
  *                       type: boolean
  *                     order:
  *                       type: integer
- *               gridColumns:
- *                 type: integer
  *     responses:
  *       200:
  *         description: Preferences saved successfully
@@ -476,16 +471,15 @@ app.post("/dashboard/preferences", async (req, res) => {
       });
     }
 
-    const { cards, gridColumns } = req.body;
+    const { cards } = req.body;
 
-    if (!cards || !Array.isArray(cards) || typeof gridColumns !== "number") {
+    if (!cards || !Array.isArray(cards)) {
       return res.status(400).json({
-        error:
-          "Invalid request body. Expected { cards: Array, gridColumns: number }",
+        error: "Invalid request body. Expected { cards: Array }",
       });
     }
 
-    const layout = JSON.stringify({ cards, gridColumns });
+    const layout = JSON.stringify({ cards });
 
     const existing = await getDb()
       .select()

@@ -13,7 +13,6 @@ const DEFAULT_LAYOUT: DashboardLayout = {
     { id: "quick_actions", enabled: true, order: 4 },
     { id: "server_stats", enabled: true, order: 5 },
   ],
-  gridColumns: 2,
 };
 
 export function useDashboardPreferences() {

@@ -24,7 +24,7 @@ export function ServerStatsCard({
   const { t } = useTranslation();
 
   return (
-    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20 !bg-elevated">
       <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
         <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
           <ChartLine className="mr-3" />
@@ -47,7 +47,7 @@ export function ServerStatsCard({
               <Button
                 key={server.id}
                 variant="outline"
-                className="border-2 !border-edge h-auto p-3 min-w-0"
+                className="border-2 !border-edge h-auto p-3 min-w-0 !bg-canvas"
                 onClick={() => onServerClick(server.id, server.name)}
               >
                 <div className="flex flex-col w-full">

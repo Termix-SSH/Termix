@@ -49,6 +49,8 @@ import {
   FolderMinus,
   Settings2,
   Terminal,
+  ArrowUp,
+  NetworkIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
@@ -69,9 +71,12 @@ interface NetworkGraphCardProps {
   isTopbarOpen?: boolean;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  embedded?: boolean;
 }
 
-export function NetworkGraphCard({}: NetworkGraphCardProps): React.ReactElement {
+export function NetworkGraphCard({
+  embedded = true,
+}: NetworkGraphCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { addTab } = useTabs();
 
@@ -717,12 +722,19 @@ export function NetworkGraphCard({}: NetworkGraphCardProps): React.ReactElement 
     return hosts.filter((h) => !existingIds.has(String(h.id)));
   }, [hosts, elements]);
 
-  return (
-    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
-      <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
-        <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
-          {t("dashboard.networkGraph")}
-        </p>
+  const handleOpenInNewTab = () => {
+    addTab({
+      type: "network_graph",
+      title: t("dashboard.networkGraph"),
+    });
+  };
+
+  if (!embedded) {
+    return (
+      <div className="h-full w-full flex flex-col bg-canvas p-4">
+        <div className="flex flex-row items-center justify-between mb-3">
+          <p className="text-xl font-semibold">{t("dashboard.networkGraph")}</p>
+        </div>
 
         {error && (
           <div className="mb-2 flex items-center gap-2 p-3 text-red-100 text-sm rounded border-2 border-red-600 bg-red-950/50">
@@ -737,7 +749,7 @@ export function NetworkGraphCard({}: NetworkGraphCardProps): React.ReactElement 
           </div>
         )}
 
-        <div className="mb-2 flex items-center gap-2 flex-wrap">
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -965,7 +977,7 @@ export function NetworkGraphCard({}: NetworkGraphCardProps): React.ReactElement 
             style={{ width: "100%", height: "100%" }}
             layout={{ name: "preset" }}
             cy={handleNodeInit}
-            wheelSensitivity={0.1}
+            wheelSensitivity={2.0}
             minZoom={0.2}
             maxZoom={3}
           />
@@ -1255,6 +1267,59 @@ export function NetworkGraphCard({}: NetworkGraphCardProps): React.ReactElement 
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20 !bg-elevated">
+      <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
+        <div className="flex flex-row items-center justify-between mb-3 mt-1">
+          <p className="text-xl font-semibold flex flex-row items-center">
+            <NetworkIcon className="mr-3" />
+            {t("dashboard.networkGraph")}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleOpenInNewTab}
+            className="flex items-center gap-2 h-8"
+            title={t("common.openInNewTab")}
+          >
+            <ArrowUp className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {error && (
+          <div className="mb-2 flex items-center gap-2 p-3 text-red-100 text-sm rounded border-2 border-red-600 bg-red-950/50">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-hidden relative rounded-md border-2 border-edge">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          )}
+
+          <CytoscapeComponent
+            elements={elements}
+            style={{ width: "100%", height: "100%" }}
+            layout={{ name: "preset" }}
+            cy={handleNodeInit}
+            wheelSensitivity={2.0}
+            minZoom={0.2}
+            maxZoom={3}
+          />
+        </div>
       </div>
     </div>
   );

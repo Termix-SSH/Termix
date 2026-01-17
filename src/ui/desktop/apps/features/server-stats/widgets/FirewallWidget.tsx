@@ -95,7 +95,7 @@ function ChainSection({ chain }: { chain: FirewallChain }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 w-full py-1.5 hover:bg-canvas/30 rounded px-1 -mx-1 text-left"
+        className="flex items-center gap-2 w-full py-1.5 hover:bg-elevated/30 rounded px-1 -mx-1 text-left"
       >
         <ChevronDown
           className={`h-3 w-3 text-muted-foreground transition-transform ${
@@ -143,9 +143,8 @@ function ChainSection({ chain }: { chain: FirewallChain }) {
 export function FirewallWidget({ metrics }: FirewallWidgetProps) {
   const { t } = useTranslation();
 
-  const firewall = (
-    metrics as ServerMetrics & { firewall?: FirewallMetrics }
-  )?.firewall;
+  const firewall = (metrics as ServerMetrics & { firewall?: FirewallMetrics })
+    ?.firewall;
 
   const getStatusIcon = () => {
     if (!firewall || firewall.type === "none") {
@@ -168,14 +167,14 @@ export function FirewallWidget({ metrics }: FirewallWidgetProps) {
   };
 
   return (
-    <div className="h-full w-full p-4 rounded-lg bg-canvas/50 border border-edge/50 hover:bg-canvas/70 transition-colors duration-200 flex flex-col overflow-hidden">
+    <div className="h-full w-full p-4 rounded-lg bg-elevated border border-edge/50 hover:bg-elevated/70 flex flex-col overflow-hidden">
       <div className="flex items-center gap-2 flex-shrink-0 mb-3">
         {getStatusIcon()}
         <h3 className="font-semibold text-lg text-foreground">
           {t("serverStats.firewall.title")}
         </h3>
         {firewall && firewall.type !== "none" && (
-          <span className="text-xs text-muted-foreground ml-auto bg-canvas/50 px-2 py-0.5 rounded">
+          <span className="text-xs text-muted-foreground ml-auto bg-elevated/50 px-2 py-0.5 rounded capitalize">
             {firewall.type}
           </span>
         )}

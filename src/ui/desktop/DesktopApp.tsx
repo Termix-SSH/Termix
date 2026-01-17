@@ -269,12 +269,12 @@ function AppContent() {
     currentTabData?.type === "server_stats" ||
     currentTabData?.type === "file_manager" ||
     currentTabData?.type === "tunnel" ||
-    currentTabData?.type === "docker";
+    currentTabData?.type === "docker" ||
+    currentTabData?.type === "network_graph";
   const showHome = currentTabData?.type === "home";
   const showSshManager = currentTabData?.type === "ssh_manager";
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
-  const showNetworkGraph = currentTabData?.type === "network_graph";
 
   if (authLoading && !dbConnectionFailed) {
     return (
@@ -405,16 +405,6 @@ function AppContent() {
           {showProfile && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
               <UserProfile
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
-            </div>
-          )}
-
-          {showNetworkGraph && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <NetworkGraphCard
                 isTopbarOpen={isTopbarOpen}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}

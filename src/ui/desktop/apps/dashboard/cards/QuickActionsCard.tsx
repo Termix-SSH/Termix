@@ -21,7 +21,7 @@ export function QuickActionsCard({
   const { t } = useTranslation();
 
   return (
-    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20">
+    <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20 !bg-elevated">
       <div className="flex flex-col mx-3 my-2 overflow-y-auto overflow-x-hidden thin-scrollbar">
         <p className="text-xl font-semibold mb-3 mt-1 flex flex-row items-center">
           <FastForward className="mr-3" />
@@ -30,7 +30,7 @@ export function QuickActionsCard({
         <div className="grid gap-4 grid-cols-3 auto-rows-min overflow-y-auto overflow-x-hidden thin-scrollbar">
           <Button
             variant="outline"
-            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3"
+            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
             onClick={onAddHost}
           >
             <div className="flex flex-col items-center w-full max-w-full">
@@ -56,7 +56,7 @@ export function QuickActionsCard({
           </Button>
           <Button
             variant="outline"
-            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3"
+            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
             onClick={onAddCredential}
           >
             <div className="flex flex-col items-center w-full max-w-full">
@@ -83,7 +83,7 @@ export function QuickActionsCard({
           {isAdmin && (
             <Button
               variant="outline"
-              className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3"
+              className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
               onClick={onOpenAdminSettings}
             >
               <div className="flex flex-col items-center w-full max-w-full">
@@ -110,7 +110,7 @@ export function QuickActionsCard({
           )}
           <Button
             variant="outline"
-            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3"
+            className="border-2 !border-edge flex flex-col items-center justify-center h-auto p-3 !bg-canvas"
             onClick={onOpenUserProfile}
           >
             <div className="flex flex-col items-center w-full max-w-full">

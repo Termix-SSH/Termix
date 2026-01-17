@@ -1285,12 +1285,6 @@ class PollingManager {
 
     for (const [sessionId, viewer] of this.viewerDetails.entries()) {
       if (now - viewer.lastHeartbeat > maxInactivity) {
-        statsLogger.warn("Cleaning up inactive viewer", {
-          operation: "cleanup_inactive_viewer",
-          sessionId,
-          hostId: viewer.hostId,
-          inactiveFor: Math.floor((now - viewer.lastHeartbeat) / 1000),
-        });
         this.unregisterViewer(viewer.hostId, sessionId);
       }
     }

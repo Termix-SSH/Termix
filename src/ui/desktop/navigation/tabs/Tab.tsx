@@ -354,7 +354,7 @@ export function Tab({
   }
 
   if (tabType === "network_graph") {
-    const displayTitle = title || "Network Graph";
+    const displayTitle = title || t("dashboard.networkGraph");
     const { base, suffix } = splitTitle(displayTitle);
 
     return (
@@ -363,7 +363,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
