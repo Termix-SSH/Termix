@@ -13,17 +13,51 @@ const authenticateJWT = authManager.createAuthMiddleware();
  * @openapi
  * /network-topology:
  *   get:
- *     summary: Get network topology
- *     description: Retrieves the network topology for the authenticated user.
+ *     summary: Get network topology for authenticated user
+ *     description: Retrieves the saved network topology graph (nodes and edges) for the current user. Returns null if no topology exists.
  *     tags:
  *       - Network Topology
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: The network topology.
+ *         description: Network topology retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               nullable: true
+ *               properties:
+ *                 nodes:
+ *                   type: array
+ *                   description: Array of graph nodes (hosts and groups)
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       data:
+ *                         type: object
+ *                         description: Node data including id, label, type, etc.
+ *                       position:
+ *                         type: object
+ *                         description: Node position coordinates
+ *                         properties:
+ *                           x:
+ *                             type: number
+ *                           y:
+ *                             type: number
+ *                 edges:
+ *                   type: array
+ *                   description: Array of graph edges (connections)
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       data:
+ *                         type: object
+ *                         description: Edge data including source and target node ids
  *       401:
- *         description: User not authenticated.
+ *         description: User not authenticated
  *       500:
- *         description: Failed to fetch network topology.
+ *         description: Server error
  */
 router.get(
   "/",
@@ -50,12 +84,10 @@ router.get(
       }
     } catch (error) {
       console.error("Error fetching network topology:", error);
-      return res
-        .status(500)
-        .json({
-          error: "Failed to fetch network topology",
-          details: (error as Error).message,
-        });
+      return res.status(500).json({
+        error: "Failed to fetch network topology",
+        details: (error as Error).message,
+      });
     }
   },
 );
@@ -64,28 +96,47 @@ router.get(
  * @openapi
  * /network-topology:
  *   post:
- *     summary: Save network topology
- *     description: Saves the network topology for the authenticated user.
+ *     summary: Save network topology for authenticated user
+ *     description: Saves or updates the network topology graph. Uses upsert logic - creates new record if none exists, updates existing record otherwise.
  *     tags:
  *       - Network Topology
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - topology
  *             properties:
  *               topology:
  *                 type: object
+ *                 description: Network topology data containing nodes and edges
+ *                 properties:
+ *                   nodes:
+ *                     type: array
+ *                     description: Array of graph nodes (hosts and groups)
+ *                   edges:
+ *                     type: array
+ *                     description: Array of graph edges (connections)
  *     responses:
  *       200:
- *         description: Network topology saved successfully.
+ *         description: Topology saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
  *       400:
- *         description: Topology data is required.
+ *         description: Invalid topology data
  *       401:
- *         description: User not authenticated.
+ *         description: User not authenticated
  *       500:
- *         description: Failed to save network topology.
+ *         description: Server error
  */
 router.post(
   "/",
@@ -129,12 +180,10 @@ router.post(
       return res.json({ success: true });
     } catch (error) {
       console.error("Error saving network topology:", error);
-      return res
-        .status(500)
-        .json({
-          error: "Failed to save network topology",
-          details: (error as Error).message,
-        });
+      return res.status(500).json({
+        error: "Failed to save network topology",
+        details: (error as Error).message,
+      });
     }
   },
 );
