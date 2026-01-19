@@ -1439,6 +1439,19 @@ export async function verifySSHTOTP(
   }
 }
 
+export async function verifySSHWarpgate(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await fileManagerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "verify SSH Warpgate");
+  }
+}
+
 /**
  * @openapi
  * /ssh/quick-connect:
@@ -3700,6 +3713,19 @@ export async function verifyDockerTOTP(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "verify Docker TOTP");
+  }
+}
+
+export async function verifyDockerWarpgate(
+  sessionId: string,
+): Promise<{ status: string; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "verify Docker Warpgate");
   }
 }
 

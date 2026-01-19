@@ -17,6 +17,7 @@ import {
   validateDockerAvailability,
   keepaliveDockerSession,
   verifyDockerTOTP,
+  verifyDockerWarpgate,
   logActivity,
   getSSHHosts,
 } from "@/ui/main-axios.ts";
@@ -27,6 +28,7 @@ import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/WarpgateDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 interface DockerManagerProps {
@@ -74,6 +76,13 @@ export function DockerManager({
   const [totpRequired, setTotpRequired] = React.useState(false);
   const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = React.useState<string>("");
+  const [warpgateRequired, setWarpgateRequired] = React.useState(false);
+  const [warpgateSessionId, setWarpgateSessionId] = React.useState<
+    string | null
+  >(null);
+  const [warpgateUrl, setWarpgateUrl] = React.useState<string>("");
+  const [warpgateSecurityKey, setWarpgateSecurityKey] =
+    React.useState<string>("");
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authReason, setAuthReason] = React.useState<
     "no_keyboard" | "auth_failed" | "timeout"
@@ -342,6 +351,58 @@ export function DockerManager({
     }
   };
 
+  const handleWarpgateContinue = async () => {
+    if (!warpgateSessionId) return;
+
+    try {
+      setIsConnecting(true);
+      const result = await verifyDockerWarpgate(warpgateSessionId);
+
+      if (result?.status === "success") {
+        setWarpgateRequired(false);
+        setWarpgateUrl("");
+        setWarpgateSecurityKey("");
+        setSessionId(warpgateSessionId);
+        setWarpgateSessionId(null);
+
+        setIsValidating(true);
+        const validation = await validateDockerAvailability(warpgateSessionId);
+        setDockerValidation(validation);
+        setIsValidating(false);
+
+        if (!validation.available) {
+          toast.error(
+            validation.error || "Docker is not available on this host",
+          );
+        } else {
+          logDockerActivity();
+        }
+      }
+    } catch (error) {
+      console.error("Warpgate verification failed:", error);
+      toast.error(t("docker.warpgateVerificationFailed"));
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleWarpgateCancel = () => {
+    setWarpgateRequired(false);
+    setWarpgateSessionId(null);
+    setWarpgateUrl("");
+    setWarpgateSecurityKey("");
+    setIsConnecting(false);
+    if (currentTab !== null) {
+      removeTab(currentTab);
+    }
+  };
+
+  const handleWarpgateOpenUrl = () => {
+    if (warpgateUrl) {
+      window.open(warpgateUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
   const handleAuthSubmit = async (credentials: {
     password?: string;
     sshKey?: string;
@@ -366,6 +427,15 @@ export function DockerManager({
         socks5Password: currentHostConfig.socks5Password,
         socks5ProxyChain: currentHostConfig.socks5ProxyChain,
       });
+
+      if (result?.requires_warpgate) {
+        setWarpgateRequired(true);
+        setWarpgateSessionId(sid);
+        setWarpgateUrl(result.url || "");
+        setWarpgateSecurityKey(result.securityKey || "N/A");
+        setIsConnecting(false);
+        return;
+      }
 
       if (result?.requires_totp) {
         setTotpRequired(true);
@@ -585,6 +655,14 @@ export function DockerManager({
         prompt={totpPrompt}
         onSubmit={handleTotpSubmit}
         onCancel={handleTotpCancel}
+      />
+      <WarpgateDialog
+        isOpen={warpgateRequired}
+        url={warpgateUrl}
+        securityKey={warpgateSecurityKey}
+        onContinue={handleWarpgateContinue}
+        onCancel={handleWarpgateCancel}
+        onOpenUrl={handleWarpgateOpenUrl}
       />
       {currentHostConfig && (
         <SSHAuthDialog

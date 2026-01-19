@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/WarpgateDialog.tsx";
 import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
 import { CompressDialog } from "./components/CompressDialog.tsx";
 import { SudoPasswordDialog } from "./SudoPasswordDialog.tsx";
@@ -45,6 +46,7 @@ import {
   moveSSHItem,
   connectSSH,
   verifySSHTOTP,
+  verifySSHWarpgate,
   getSSHStatus,
   keepSSHAlive,
   identifySSHSymlink,
@@ -114,6 +116,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = useState<string>("");
+  const [warpgateRequired, setWarpgateRequired] = useState(false);
+  const [warpgateSessionId, setWarpgateSessionId] = useState<string | null>(
+    null,
+  );
+  const [warpgateUrl, setWarpgateUrl] = useState<string>("");
+  const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authDialogReason, setAuthDialogReason] = useState<
     "no_keyboard" | "auth_failed" | "timeout"
@@ -356,6 +364,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         socks5Password: currentHost.socks5Password,
         socks5ProxyChain: currentHost.socks5ProxyChain,
       });
+
+      if (result?.requires_warpgate) {
+        setWarpgateRequired(true);
+        setWarpgateSessionId(sessionId);
+        setWarpgateUrl(result.url || "");
+        setWarpgateSecurityKey(result.securityKey || "N/A");
+        setIsLoading(false);
+        return;
+      }
 
       if (result?.requires_totp) {
         setTotpRequired(true);
@@ -1578,6 +1595,57 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     if (onClose) onClose();
   }
 
+  async function handleWarpgateContinue() {
+    if (!warpgateSessionId) return;
+
+    try {
+      setIsLoading(true);
+      const result = await verifySSHWarpgate(warpgateSessionId);
+
+      if (result?.status === "success") {
+        setWarpgateRequired(false);
+        setWarpgateUrl("");
+        setWarpgateSecurityKey("");
+        setSshSessionId(warpgateSessionId);
+        setWarpgateSessionId(null);
+
+        try {
+          const response = await listSSHFiles(warpgateSessionId, currentPath);
+          const files = Array.isArray(response)
+            ? response
+            : response?.files || [];
+          setFiles(files);
+          clearSelection();
+          initialLoadDoneRef.current = true;
+          toast.success(t("fileManager.connectedSuccessfully"));
+
+          logFileManagerActivity();
+        } catch (dirError: unknown) {
+          console.error("Failed to load initial directory:", dirError);
+        }
+      }
+    } catch (error: unknown) {
+      console.error("Warpgate verification failed:", error);
+      toast.error(t("fileManager.warpgateVerificationFailed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleWarpgateCancel() {
+    setWarpgateRequired(false);
+    setWarpgateUrl("");
+    setWarpgateSecurityKey("");
+    setWarpgateSessionId(null);
+    if (onClose) onClose();
+  }
+
+  function handleWarpgateOpenUrl() {
+    if (warpgateUrl) {
+      window.open(warpgateUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
   async function handleAuthDialogSubmit(credentials: {
     password?: string;
     sshKey?: string;
@@ -1610,6 +1678,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         socks5Password: currentHost.socks5Password,
         socks5ProxyChain: currentHost.socks5ProxyChain,
       });
+
+      if (result?.requires_warpgate) {
+        setWarpgateRequired(true);
+        setWarpgateSessionId(sessionId);
+        setWarpgateUrl(result.url || "");
+        setWarpgateSecurityKey(result.securityKey || "N/A");
+        setIsLoading(false);
+        return;
+      }
 
       if (result?.requires_totp) {
         setTotpRequired(true);
@@ -2254,6 +2331,15 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         prompt={totpPrompt}
         onSubmit={handleTotpSubmit}
         onCancel={handleTotpCancel}
+      />
+
+      <WarpgateDialog
+        isOpen={warpgateRequired}
+        url={warpgateUrl}
+        securityKey={warpgateSecurityKey}
+        onContinue={handleWarpgateContinue}
+        onCancel={handleWarpgateCancel}
+        onOpenUrl={handleWarpgateOpenUrl}
       />
 
       {currentHost && (
