@@ -341,6 +341,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isShellInitializing = false;
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
+  let isAwaitingAuthCredentials = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -540,6 +541,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           credentialsData.hostConfig.authType = "key";
         }
 
+        isAwaitingAuthCredentials = false;
         cleanupSSH();
 
         const reconnectData: ConnectToHostData = {
@@ -959,13 +961,25 @@ wss.on("connection", async (ws: WebSocket, req) => {
         authType: resolvedCredentials.authType,
         warpgateAuthPromptSent,
         isKeyboardInteractive,
+        hasKeyboardInteractiveFinish: !!keyboardInteractiveFinish,
+        keyboardInteractiveResponded,
       });
 
       if (
-        (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
-        (resolvedCredentials.authType === "none" &&
-          err.message.includes("All configured authentication methods failed"))
+        authMethodNotAvailable &&
+        resolvedCredentials.authType === "none" &&
+        !isKeyboardInteractive
       ) {
+        clearTimeout(connectionTimeout);
+        isAwaitingAuthCredentials = true;
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        isConnecting = false;
+        isConnected = false;
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -973,9 +987,56 @@ wss.on("connection", async (ws: WebSocket, req) => {
               "The server does not support keyboard-interactive authentication. Please provide credentials.",
           }),
         );
-        cleanupSSH(connectionTimeout);
         return;
       }
+
+      if (
+        resolvedCredentials.authType === "none" &&
+        err.message.includes("All configured authentication methods failed") &&
+        !isKeyboardInteractive &&
+        !keyboardInteractiveResponded
+      ) {
+        clearTimeout(connectionTimeout);
+        isAwaitingAuthCredentials = true;
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        isConnecting = false;
+        isConnected = false;
+        ws.send(
+          JSON.stringify({
+            type: "auth_method_not_available",
+            message:
+              "The server does not support keyboard-interactive authentication. Please provide credentials.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        isKeyboardInteractive &&
+        keyboardInteractiveFinish &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn(
+          "Authentication error during keyboard-interactive - SKIPPING cleanup, waiting for user response",
+          {
+            operation: "ssh_error_during_keyboard_interactive_skip_cleanup",
+            hostId: id,
+            error: err.message,
+          },
+        );
+        return;
+      }
+
+      sshLogger.error("Proceeding with cleanup after error", {
+        operation: "ssh_error_cleanup",
+        hostId: id,
+        error: err.message,
+      });
 
       let errorMessage = "SSH error: " + err.message;
       if (err.message.includes("No matching key exchange algorithm")) {
@@ -1019,6 +1080,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("close", () => {
       clearTimeout(connectionTimeout);
+
+      if (isAwaitingAuthCredentials) {
+        cleanupSSH(connectionTimeout);
+        return;
+      }
+
       if (isShellInitializing || (isConnected && !sshStream)) {
         sshLogger.warn("SSH connection closed during shell initialization", {
           operation: "ssh_close_during_init",
@@ -1066,14 +1133,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
           promptTexts.some((p) => warpgatePattern.test(p));
 
         if (isWarpgate) {
-          sshLogger.info("Warpgate detected in keyboard-interactive", {
-            operation: "warpgate_pattern_detected",
-            hostId: id,
-            inName: warpgatePattern.test(name),
-            inInstructions: warpgatePattern.test(instructions),
-            inPrompts: promptTexts.some((p) => warpgatePattern.test(p)),
-          });
-
           const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
 
           const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
@@ -1122,11 +1181,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             return;
           } else {
-            sshLogger.warn("Warpgate detected but URL not found in text", {
-              operation: "warpgate_url_not_found",
-              hostId: id,
-              fullTextLength: fullText.length,
-            });
           }
         }
 
@@ -1576,6 +1630,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = false;
     isConnected = false;
     isCleaningUp = false;
+    isAwaitingAuthCredentials = false;
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

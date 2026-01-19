@@ -192,6 +192,15 @@ export function DockerManager({
           socks5ProxyChain: currentHostConfig.socks5ProxyChain,
         });
 
+        if (result?.requires_warpgate) {
+          setWarpgateRequired(true);
+          setWarpgateSessionId(sid);
+          setWarpgateUrl(result.url || "");
+          setWarpgateSecurityKey(result.securityKey || "");
+          setIsConnecting(false);
+          return;
+        }
+
         if (result?.requires_totp) {
           setTotpRequired(true);
           setTotpSessionId(sid);

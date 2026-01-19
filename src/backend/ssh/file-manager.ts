@@ -822,11 +822,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         promptTexts.some((p) => warpgatePattern.test(p));
 
       if (isWarpgate) {
-        sshLogger.info("Warpgate detected in file manager", {
-          operation: "warpgate_pattern_detected",
-          hostId,
-        });
-
         const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
         const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
         const keyMatch = fullText.match(

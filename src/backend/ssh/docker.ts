@@ -670,7 +670,23 @@ app.post("/docker/ssh/connect", async (req, res) => {
     });
 
     client.on("error", (err) => {
-      if (responseSent) return;
+      if (responseSent) {
+        dockerLogger.error(
+          "Docker SSH connection error after response sent",
+          err,
+          {
+            operation: "docker_connect_after_response",
+            sessionId,
+            hostId,
+            userId,
+          },
+        );
+
+        if (pendingTOTPSessions[sessionId]) {
+          delete pendingTOTPSessions[sessionId];
+        }
+        return;
+      }
       responseSent = true;
 
       dockerLogger.error("Docker SSH connection failed", err, {
@@ -702,6 +718,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
         sshSessions[sessionId].isConnected = false;
         cleanupSession(sessionId);
       }
+
+      if (pendingTOTPSessions[sessionId]) {
+        delete pendingTOTPSessions[sessionId];
+      }
     });
 
     client.on(
@@ -722,11 +742,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
           promptTexts.some((p) => warpgatePattern.test(p));
 
         if (isWarpgate) {
-          dockerLogger.info("Warpgate detected in docker", {
-            operation: "warpgate_pattern_detected",
-            hostId,
-          });
-
           const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
           const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
           const keyMatch = fullText.match(
@@ -1538,6 +1553,13 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
+  }
+
   const session = sshSessions[sessionId];
 
   if (!session || !session.isConnected) {
@@ -1652,6 +1674,13 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
   }
 
   const session = sshSessions[sessionId];
