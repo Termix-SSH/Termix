@@ -456,24 +456,6 @@ function detectBinary(buffer: Buffer): boolean {
   return nullBytes / sampleSize > 0.01;
 }
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/connect:
- *   post:
- *     summary: Connect to SSH for file manager
- *     description: Establishes an SSH connection for file manager operations.
- *     tags:
- *       - File Manager
- *     responses:
- *       200:
- *         description: SSH connection established.
- *       400:
- *         description: Missing SSH connection parameters.
- *       401:
- *         description: Authentication required.
- *       500:
- *         description: SSH connection failed.
- */
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,

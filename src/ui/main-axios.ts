@@ -1,9 +1,5 @@
-import axios, {
-  AxiosError,
-  type AxiosInstance,
-  type AxiosRequestConfig,
-  type AxiosResponse,
-} from "axios";
+import axios, { AxiosError, type AxiosInstance } from "axios";
+import { toast } from "sonner";
 import type {
   SSHHost,
   SSHHostData,
