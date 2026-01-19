@@ -20,7 +20,6 @@ export default defineConfig({
   base: "./",
   build: {
     sourcemap: false,
-    assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         manualChunks: {
