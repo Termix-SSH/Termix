@@ -1318,16 +1318,26 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       resizeObserver.observe(xtermRef.current);
 
       return () => {
-        isUnmountingRef.current = true;
-        shouldNotReconnectRef.current = true;
-        isReconnectingRef.current = false;
-        setIsConnecting(false);
+        // Only clean up UI-related resources here.
+        // WebSocket cleanup is handled in a separate unmount-only effect
+        // to prevent session loss when hostConfig object reference changes.
         isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleMacKeyboard, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+      };
+    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+
+    // Separate effect for WebSocket cleanup on true component unmount only.
+    // This prevents session loss when hostConfig properties are updated.
+    useEffect(() => {
+      return () => {
+        isUnmountingRef.current = true;
+        shouldNotReconnectRef.current = true;
+        isReconnectingRef.current = false;
+        setIsConnecting(false);
         if (reconnectTimeoutRef.current)
           clearTimeout(reconnectTimeoutRef.current);
         if (connectionTimeoutRef.current)
@@ -1339,7 +1349,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         webSocketRef.current?.close();
       };
-    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+    }, []);
 
     useEffect(() => {
       if (!terminal) return;
