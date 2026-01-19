@@ -583,16 +583,18 @@ export function CredentialEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            <Button
-              className="translate-y-2"
-              type="submit"
-              variant="outline"
-              disabled={!isFormValid || isSubmitting}
-            >
-              {editingCredential
-                ? t("credentials.updateCredential")
-                : t("credentials.addCredential")}
-            </Button>
+            {!isSubmitting && (
+              <Button
+                className="translate-y-2"
+                type="submit"
+                variant="outline"
+                disabled={!isFormValid}
+              >
+                {editingCredential
+                  ? t("credentials.updateCredential")
+                  : t("credentials.addCredential")}
+              </Button>
+            )}
           </footer>
         </form>
       </Form>
