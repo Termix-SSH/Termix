@@ -339,6 +339,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnected = false;
   let isCleaningUp = false;
   let isShellInitializing = false;
+  let warpgateAuthPromptSent = false;
+  let warpgateAuthTimeout: NodeJS.Timeout | null = null;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -501,6 +503,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
               message: "Password authentication state lost. Please reconnect.",
             }),
           );
+        }
+        break;
+      }
+
+      case "warpgate_auth_continue": {
+        if (keyboardInteractiveFinish) {
+          if (warpgateAuthTimeout) {
+            clearTimeout(warpgateAuthTimeout);
+            warpgateAuthTimeout = null;
+          }
+          keyboardInteractiveFinish([""]);
+          keyboardInteractiveFinish = null;
+          warpgateAuthPromptSent = false;
         }
         break;
       }
@@ -935,6 +950,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("error", (err: Error) => {
       clearTimeout(connectionTimeout);
 
+      sshLogger.error("SSH connection error", err, {
+        operation: "ssh_connect",
+        hostId: id,
+        ip,
+        port,
+        username,
+        authType: resolvedCredentials.authType,
+        warpgateAuthPromptSent,
+        isKeyboardInteractive,
+      });
+
       if (
         (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
         (resolvedCredentials.authType === "none" &&
@@ -950,15 +976,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         cleanupSSH(connectionTimeout);
         return;
       }
-
-      sshLogger.error("SSH connection error", err, {
-        operation: "ssh_connect",
-        hostId: id,
-        ip,
-        port,
-        username,
-        authType: resolvedCredentials.authType,
-      });
 
       let errorMessage = "SSH error: " + err.message;
       if (err.message.includes("No matching key exchange algorithm")) {
@@ -1041,6 +1058,78 @@ wss.on("connection", async (ws: WebSocket, req) => {
       ) => {
         isKeyboardInteractive = true;
         const promptTexts = prompts.map((p) => p.prompt);
+
+        const warpgatePattern = /warpgate\s+authentication/i;
+        const isWarpgate =
+          warpgatePattern.test(name) ||
+          warpgatePattern.test(instructions) ||
+          promptTexts.some((p) => warpgatePattern.test(p));
+
+        if (isWarpgate) {
+          sshLogger.info("Warpgate detected in keyboard-interactive", {
+            operation: "warpgate_pattern_detected",
+            hostId: id,
+            inName: warpgatePattern.test(name),
+            inInstructions: warpgatePattern.test(instructions),
+            inPrompts: promptTexts.some((p) => warpgatePattern.test(p)),
+          });
+
+          const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
+
+          const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
+          const keyMatch = fullText.match(
+            /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
+          );
+
+          if (urlMatch) {
+            keyboardInteractiveFinish = (responses: string[]) => {
+              finish([""]);
+            };
+
+            warpgateAuthPromptSent = true;
+
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+            }
+
+            ws.send(
+              JSON.stringify({
+                type: "warpgate_auth_required",
+                url: urlMatch[0],
+                securityKey: keyMatch ? keyMatch[1] : "N/A",
+                instructions: instructions,
+              }),
+            );
+
+            warpgateAuthTimeout = setTimeout(() => {
+              if (keyboardInteractiveFinish) {
+                keyboardInteractiveFinish = null;
+                warpgateAuthPromptSent = false;
+                sshLogger.warn("Warpgate authentication timeout", {
+                  operation: "warpgate_timeout",
+                  hostId: id,
+                });
+                ws.send(
+                  JSON.stringify({
+                    type: "error",
+                    message:
+                      "Warpgate authentication timeout. Please reconnect.",
+                  }),
+                );
+                cleanupSSH(connectionTimeout);
+              }
+            }, 300000);
+
+            return;
+          } else {
+            sshLogger.warn("Warpgate detected but URL not found in text", {
+              operation: "warpgate_url_not_found",
+              hostId: id,
+              fullTextLength: fullText.length,
+            });
+          }
+        }
+
         const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
             p.prompt,
@@ -1449,6 +1538,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       totpTimeout = null;
     }
 
+    if (warpgateAuthTimeout) {
+      clearTimeout(warpgateAuthTimeout);
+      warpgateAuthTimeout = null;
+    }
+
     if (sshStream) {
       try {
         sshStream.end();
@@ -1475,6 +1569,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     totpPromptSent = false;
     totpAttempts = 0;
+    warpgateAuthPromptSent = false;
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;

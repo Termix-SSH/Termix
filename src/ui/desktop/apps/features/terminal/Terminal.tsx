@@ -23,6 +23,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/WarpgateDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -137,6 +138,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     >("no_keyboard");
     const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
       useState(false);
+    const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
+    const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
+    const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
+    const warpgateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -401,6 +406,41 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (onClose) onClose();
     }
 
+    function handleWarpgateContinue() {
+      if (webSocketRef.current) {
+        if (warpgateTimeoutRef.current) {
+          clearTimeout(warpgateTimeoutRef.current);
+          warpgateTimeoutRef.current = null;
+        }
+        webSocketRef.current.send(
+          JSON.stringify({
+            type: "warpgate_auth_continue",
+            data: {},
+          }),
+        );
+        setWarpgateAuthRequired(false);
+        setWarpgateAuthUrl("");
+        setWarpgateSecurityKey("");
+      }
+    }
+
+    function handleWarpgateCancel() {
+      if (warpgateTimeoutRef.current) {
+        clearTimeout(warpgateTimeoutRef.current);
+        warpgateTimeoutRef.current = null;
+      }
+      setWarpgateAuthRequired(false);
+      setWarpgateAuthUrl("");
+      setWarpgateSecurityKey("");
+      if (onClose) onClose();
+    }
+
+    function handleWarpgateOpenUrl() {
+      if (warpgateAuthUrl) {
+        window.open(warpgateAuthUrl, "_blank", "noopener,noreferrer");
+      }
+    }
+
     function handleAuthDialogSubmit(credentials: {
       password?: string;
       sshKey?: string;
@@ -475,6 +515,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (totpTimeoutRef.current) {
             clearTimeout(totpTimeoutRef.current);
             totpTimeoutRef.current = null;
+          }
+          if (warpgateTimeoutRef.current) {
+            clearTimeout(warpgateTimeoutRef.current);
+            warpgateTimeoutRef.current = null;
           }
           webSocketRef.current?.close();
           setIsConnected(false);
@@ -930,6 +974,28 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                 webSocketRef.current.close();
               }
             }, 180000);
+          } else if (msg.type === "warpgate_auth_required") {
+            console.log("[Warpgate] Auth required:", {
+              url: msg.url,
+              securityKey: msg.securityKey,
+            });
+            setWarpgateAuthRequired(true);
+            setWarpgateAuthUrl(msg.url || "");
+            setWarpgateSecurityKey(msg.securityKey || "N/A");
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+            if (warpgateTimeoutRef.current) {
+              clearTimeout(warpgateTimeoutRef.current);
+            }
+            warpgateTimeoutRef.current = setTimeout(() => {
+              setWarpgateAuthRequired(false);
+              toast.error(t("terminal.warpgateTimeout"));
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 300000);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -1625,6 +1691,16 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             username: hostConfig.username,
             name: hostConfig.name,
           }}
+          backgroundColor={backgroundColor}
+        />
+
+        <WarpgateDialog
+          isOpen={warpgateAuthRequired}
+          url={warpgateAuthUrl}
+          securityKey={warpgateSecurityKey}
+          onContinue={handleWarpgateContinue}
+          onCancel={handleWarpgateCancel}
+          onOpenUrl={handleWarpgateOpenUrl}
           backgroundColor={backgroundColor}
         />
 
