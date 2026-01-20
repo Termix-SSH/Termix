@@ -4,6 +4,7 @@ import React, {
   useRef,
   useCallback,
   useMemo,
+  useReducer,
 } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
@@ -16,6 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -25,20 +32,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Plus,
   Trash2,
   Move3D,
   ZoomIn,
   ZoomOut,
   RotateCw,
-  Loader2,
   AlertCircle,
   Download,
   Upload,
@@ -51,9 +50,40 @@ import {
   Terminal,
   ArrowUp,
   NetworkIcon,
+  FolderOpen,
+  Container,
+  Server,
+  Check,
+  ChevronsUpDown,
+  ArrowDownUp,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader";
+
+const AVAILABLE_COLORS = [
+  { value: "#ef4444", label: "Red" },
+  { value: "#f97316", label: "Orange" },
+  { value: "#eab308", label: "Yellow" },
+  { value: "#22c55e", label: "Green" },
+  { value: "#3b82f6", label: "Blue" },
+  { value: "#a855f7", label: "Purple" },
+  { value: "#ec4899", label: "Pink" },
+  { value: "#6b7280", label: "Gray" },
+];
 
 interface HostMap {
   [key: string]: SSHHostWithStatus;
@@ -119,6 +149,13 @@ export function NetworkGraphCard({
     type: null,
   });
 
+  const [hostComboOpen, setHostComboOpen] = useState(false);
+  const [groupComboOpen, setGroupComboOpen] = useState(false);
+  const [moveGroupComboOpen, setMoveGroupComboOpen] = useState(false);
+  const [sourceComboOpen, setSourceComboOpen] = useState(false);
+  const [targetComboOpen, setTargetComboOpen] = useState(false);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+
   const cyRef = useRef<cytoscape.Core | null>(null);
   const statusCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -128,96 +165,6 @@ export function NetworkGraphCard({
   useEffect(() => {
     hostMapRef.current = hostMap;
   }, [hostMap]);
-
-  useEffect(() => {
-    if (!cyRef.current) return;
-
-    const canvas = document.createElement("canvas");
-    const container = cyRef.current.container();
-    if (!container) return;
-
-    canvas.style.position = "absolute";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
-    canvas.style.pointerEvents = "none";
-    canvas.style.zIndex = "999";
-    container.appendChild(canvas);
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animationFrame: number;
-    let startTime = Date.now();
-
-    const animate = () => {
-      if (!cyRef.current || !ctx) return;
-
-      const canvasWidth = cyRef.current.width();
-      const canvasHeight = cyRef.current.height();
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-      const elapsed = Date.now() - startTime;
-      const cycle = (elapsed % 2000) / 2000;
-      const zoom = cyRef.current.zoom();
-
-      const baseRadius = 4;
-      const pulseAmount = 3;
-      const pulseRadius =
-        (baseRadius + Math.sin(cycle * Math.PI * 2) * pulseAmount) * zoom;
-      const pulseOpacity = 0.6 - Math.sin(cycle * Math.PI * 2) * 0.4;
-
-      cyRef.current.nodes('[status="online"]').forEach((node) => {
-        if (node.isParent()) return;
-
-        const pos = node.renderedPosition();
-        const nodeWidth = 180 * zoom;
-        const nodeHeight = 90 * zoom;
-
-        const dotX = pos.x + nodeWidth / 2 - 10 * zoom;
-        const dotY = pos.y - nodeHeight / 2 + 10 * zoom;
-
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, pulseRadius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(16, 185, 129, ${pulseOpacity})`;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, baseRadius * zoom, 0, Math.PI * 2);
-        ctx.fillStyle = "#10b981";
-        ctx.fill();
-      });
-
-      cyRef.current.nodes('[status="offline"]').forEach((node) => {
-        if (node.isParent()) return;
-
-        const pos = node.renderedPosition();
-        const nodeWidth = 180 * zoom;
-        const nodeHeight = 90 * zoom;
-
-        const dotX = pos.x + nodeWidth / 2 - 10 * zoom;
-        const dotY = pos.y - nodeHeight / 2 + 10 * zoom;
-
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 4 * zoom, 0, Math.PI * 2);
-        ctx.fillStyle = "#ef4444";
-        ctx.fill();
-      });
-
-      animationFrame = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-      if (container && canvas.parentNode === container) {
-        container.removeChild(canvas);
-      }
-    };
-  }, [elements]);
 
   useEffect(() => {
     loadData();
@@ -289,10 +236,19 @@ export function NetworkGraphCard({
         console.warn("Starting with empty topology");
       }
 
-      setElements([...nodes, ...edges]);
+      // Validate edges - remove edges that reference non-existent nodes
+      const nodeIds = new Set(nodes.map((n: any) => n.data.id));
+      const validEdges = edges.filter((edge: any) => {
+        const sourceExists = nodeIds.has(edge.data.source);
+        const targetExists = nodeIds.has(edge.data.target);
+        return sourceExists && targetExists;
+      });
+
+      // Add nodes first, then edges to ensure proper order
+      setElements([...nodes, ...validEdges]);
     } catch (err) {
       console.error("Failed to load topology:", err);
-      setError("Failed to load data");
+      setError(t("networkGraph.failedToLoadData"));
     } finally {
       setLoading(false);
     }
@@ -383,6 +339,17 @@ export function NetworkGraphCard({
   const handleNodeInit = useCallback(
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
+
+      if (!embedded) {
+        cy.nodes().forEach((node) => {
+          node.grabify();
+        });
+      } else {
+        cy.nodes().forEach((node) => {
+          node.ungrabify();
+        });
+      }
+
       cy.style()
         .selector("node")
         .style({
@@ -399,11 +366,18 @@ export function NetworkGraphCard({
             const tags = host.tags || [];
             const isOnline = host.status === "online";
             const isOffline = host.status === "offline";
+
             const statusColor = isOnline
-              ? "#10b981"
+              ? `rgb(16, 185, 129)`
               : isOffline
-                ? "#ef4444"
-                : "#64748b";
+                ? `rgb(239, 68, 68)`
+                : `rgb(100, 116, 139)`;
+
+            const isDarkMode =
+              document.documentElement.classList.contains("dark");
+            const bgColor = isDarkMode ? "#09090b" : "#f9fafb";
+            const textColor = isDarkMode ? "#f1f5f9" : "#18181b";
+            const secondaryTextColor = isDarkMode ? "#94a3b8" : "#64748b";
 
             const tagsHtml = tags
               .map(
@@ -430,15 +404,15 @@ export function NetworkGraphCard({
                 </filter>
               </defs>
               <rect x="3" y="3" width="174" height="84" rx="6"
-                fill="#09090b" stroke="${statusColor}" stroke-width="2" filter="url(#shadow-${ele.id()})"/>
+                fill="${bgColor}" stroke="${statusColor}" stroke-width="2" filter="url(#shadow-${ele.id()})"/>
               <foreignObject x="8" y="8" width="164" height="74">
                 <div xmlns="http://www.w3.org/1999/xhtml"
-                  style="color:#f1f5f9;text-align:center;font-family:sans-serif;
+                  style="color:${textColor};text-align:center;font-family:sans-serif;
                   height:100%;display:flex;flex-direction:column;justify-content:center;
                   align-items:center;line-height:1.2;">
                   <div style="font-weight:700;font-size:14px;margin-bottom:2px;
                     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;">${name}</div>
-                  <div style="font-weight:600;font-size:11px;color:#94a3b8;margin-bottom:6px;
+                  <div style="font-weight:600;font-size:11px;color:${secondaryTextColor};margin-bottom:6px;
                     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;">${ip}</div>
                   <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;">
                     ${tagsHtml}
@@ -462,7 +436,7 @@ export function NetworkGraphCard({
           label: "data(label)",
           "text-valign": "top",
           "text-halign": "center",
-          "text-margin-y": -20,
+          "text-margin-y": -5,
           color: "#94a3b8",
           "font-size": "16px",
           "font-weight": "bold",
@@ -523,6 +497,15 @@ export function NetworkGraphCard({
         evt.stopPropagation();
         const node = evt.target;
 
+        // Check if it's a group by ID prefix or if it's a parent node
+        const nodeId = node.id();
+        const isGroup = node.isParent() || String(nodeId).startsWith("group-");
+
+        // Don't show context menu for groups in embedded mode
+        if (isGroup && embedded) {
+          return;
+        }
+
         const x = evt.originalEvent.clientX;
         const y = evt.originalEvent.clientY;
 
@@ -530,8 +513,8 @@ export function NetworkGraphCard({
           visible: true,
           x,
           y,
-          targetId: node.id(),
-          type: node.isParent() ? "group" : "node",
+          targetId: nodeId,
+          type: isGroup ? "group" : "node",
         });
       });
 
@@ -541,14 +524,14 @@ export function NetworkGraphCard({
         );
       });
 
-      cy.on("free", "node", () => debouncedSave());
+      cy.on("free", "node", () => !embedded && debouncedSave());
 
       cy.on("boxselect", "node", () => {
         const selected = cy.$("node:selected");
         if (selected.length === 1) setSelectedNodeId(selected[0].id());
       });
     },
-    [debouncedSave],
+    [debouncedSave, embedded],
   );
 
   const handleContextAction = (action: string) => {
@@ -596,6 +579,30 @@ export function NetworkGraphCard({
     }
   };
 
+  const handleConnectAction = (appType: string) => {
+    setContextMenu((prev) => ({ ...prev, visible: false }));
+    const host = hostMap[contextMenu.targetId];
+    if (!host) return;
+
+    const title = host.name?.trim()
+      ? host.name
+      : `${host.username}@${host.ip}:${host.port}`;
+
+    addTab({ type: appType, title, hostConfig: host });
+  };
+
+  const hasTunnelConnections = (host: SSHHostWithStatus | undefined) => {
+    if (!host?.tunnelConnections) return false;
+    try {
+      const tunnelConnections = Array.isArray(host.tunnelConnections)
+        ? host.tunnelConnections
+        : JSON.parse(host.tunnelConnections);
+      return Array.isArray(tunnelConnections) && tunnelConnections.length > 0;
+    } catch {
+      return false;
+    }
+  };
+
   const handleAddNode = () => {
     setSelectedHostForAddNode("");
     setSelectedGroupForAddNode("ROOT");
@@ -606,7 +613,7 @@ export function NetworkGraphCard({
     if (!cyRef.current || !selectedHostForAddNode) return;
     try {
       if (cyRef.current.$id(selectedHostForAddNode).length > 0) {
-        setError("Host is already in the topology");
+        setError(t("networkGraph.hostAlreadyExists"));
         return;
       }
       const host = hostMap[selectedHostForAddNode];
@@ -628,9 +635,11 @@ export function NetworkGraphCard({
       };
       cyRef.current.add(newNode);
       await saveCurrentLayout();
+      setElements([...cyRef.current.elements().jsons()]);
+      forceUpdate();
       setShowAddNodeDialog(false);
     } catch (err) {
-      setError("Failed to add node");
+      setError(t("networkGraph.failedToAddNode"));
     }
   };
 
@@ -641,6 +650,8 @@ export function NetworkGraphCard({
       data: { id: groupId, label: newGroupName, color: newGroupColor },
     });
     await saveCurrentLayout();
+    setElements([...cyRef.current.elements().jsons()]);
+    forceUpdate();
     setShowAddGroupDialog(false);
     setNewGroupName("");
   };
@@ -668,11 +679,11 @@ export function NetworkGraphCard({
   const handleAddEdge = async () => {
     if (!cyRef.current || !selectedHostForEdge || !targetHostForEdge) return;
     if (selectedHostForEdge === targetHostForEdge)
-      return setError("Source and target must be different");
+      return setError(t("networkGraph.sourceDifferentFromTarget"));
 
     const edgeId = `${selectedHostForEdge}-${targetHostForEdge}`;
     if (cyRef.current.$id(edgeId).length > 0)
-      return setError("Connection exists");
+      return setError(t("networkGraph.connectionExists"));
 
     cyRef.current.add({
       data: {
@@ -736,18 +747,21 @@ export function NetworkGraphCard({
           <p className="text-xl font-semibold">{t("dashboard.networkGraph")}</p>
         </div>
 
-        {error && (
-          <div className="mb-2 flex items-center gap-2 p-3 text-red-100 text-sm rounded border-2 border-red-600 bg-red-950/50">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <AlertDialog open={!!error} onOpenChange={() => setError(null)}>
+          <AlertDialogContent className="bg-canvas border-2 border-edge">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertDialogDescription className="text-foreground flex-1">
+                {error}
+              </AlertDialogDescription>
+            </div>
+            <div className="flex justify-end">
+              <AlertDialogAction onClick={() => setError(null)}>
+                OK
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1">
@@ -755,11 +769,11 @@ export function NetworkGraphCard({
               variant="ghost"
               size="sm"
               onClick={handleAddNode}
-              title="Add Host"
+              title={t("networkGraph.addHost")}
               className="h-8 px-2"
             >
               <Plus className="w-4 h-4 mr-1" />
-              Host
+              {t("networkGraph.addHost")}
             </Button>
             <Button
               variant="ghost"
@@ -769,51 +783,42 @@ export function NetworkGraphCard({
                 setNewGroupColor("#3b82f6");
                 setShowAddGroupDialog(true);
               }}
-              title="Add Group"
+              title={t("networkGraph.addGroup")}
               className="h-8 px-2"
             >
               <FolderPlus className="w-4 h-4 mr-1" />
-              Group
+              {t("networkGraph.addGroup")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowAddEdgeDialog(true)}
-              title="Add Link"
+              title={t("networkGraph.addLink")}
               className="h-8 px-2"
             >
               <Link2 className="w-4 h-4 mr-1" />
-              Link
+              {t("networkGraph.addLink")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleRemoveSelected}
               disabled={!selectedNodeId && !selectedEdgeId}
-              title="Delete Selected"
+              title={t("networkGraph.deleteSelected")}
               className="h-8 px-2 text-red-400 hover:text-red-300 disabled:opacity-30"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
+          <div className="w-px h-6 bg-border" />
+
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() =>
-                cyRef.current?.layout({ name: "cose", animate: true }).run()
-              }
-              title="Auto Layout"
-              className="h-8 w-8 p-0"
-            >
-              <Move3D className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)}
-              title="Zoom In"
+              title={t("networkGraph.zoomIn")}
               className="h-8 w-8 p-0"
             >
               <ZoomIn className="w-4 h-4" />
@@ -822,7 +827,7 @@ export function NetworkGraphCard({
               variant="ghost"
               size="sm"
               onClick={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.2)}
-              title="Zoom Out"
+              title={t("networkGraph.zoomOut")}
               className="h-8 w-8 p-0"
             >
               <ZoomOut className="w-4 h-4" />
@@ -831,12 +836,14 @@ export function NetworkGraphCard({
               variant="ghost"
               size="sm"
               onClick={() => cyRef.current?.fit()}
-              title="Reset View"
+              title={t("networkGraph.resetView")}
               className="h-8 w-8 p-0"
             >
               <RotateCw className="w-4 h-4" />
             </Button>
           </div>
+
+          <div className="w-px h-6 bg-border" />
 
           <div className="flex items-center gap-1">
             <Button
@@ -856,7 +863,7 @@ export function NetworkGraphCard({
                 a.download = "network.json";
                 a.click();
               }}
-              title="Export JSON"
+              title={t("networkGraph.exportJSON")}
               className="h-8 w-8 p-0"
             >
               <Download className="w-4 h-4" />
@@ -865,7 +872,7 @@ export function NetworkGraphCard({
               variant="ghost"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              title="Import JSON"
+              title={t("networkGraph.importJSON")}
               className="h-8 w-8 p-0"
             >
               <Upload className="w-4 h-4" />
@@ -874,19 +881,23 @@ export function NetworkGraphCard({
               ref={fileInputRef}
               type="file"
               accept=".json"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (evt) => {
+                reader.onload = async (evt) => {
                   try {
                     const json = JSON.parse(evt.target?.result as string);
-                    saveNetworkTopology({
+                    await saveNetworkTopology({
                       nodes: json.nodes,
                       edges: json.edges,
-                    }).then(() => loadData());
+                    });
+                    await loadData();
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
                   } catch (err) {
-                    setError("Invalid File");
+                    setError(t("networkGraph.invalidFile"));
                   }
                 };
                 reader.readAsText(file);
@@ -897,78 +908,124 @@ export function NetworkGraphCard({
         </div>
 
         <div className="flex-1 overflow-hidden relative rounded-md border-2 border-edge">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-          )}
+          <SimpleLoader
+            visible={loading}
+            backgroundColor="rgba(0, 0, 0, 0.5)"
+            className="z-10"
+          />
 
           {contextMenu.visible && (
             <div
               ref={contextMenuRef}
-              className="fixed z-[100] min-w-[180px] rounded-md shadow-2xl p-1 flex flex-col gap-0.5 bg-canvas border-2 border-edge"
+              className="fixed z-[200] min-w-[180px] rounded-md shadow-2xl p-1 flex flex-col gap-0.5 bg-canvas border-2 border-edge"
               style={{ top: contextMenu.y, left: contextMenu.x }}
             >
               {contextMenu.type === "node" && (
                 <>
-                  <button
-                    onClick={() => handleContextAction("connect")}
-                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-green-400" /> Connect
-                    to Host
-                  </button>
-                  <button
-                    onClick={() => handleContextAction("details")}
-                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
-                  >
-                    <Settings2 className="w-3.5 h-3.5 text-blue-400" /> Host
-                    Details
-                  </button>
-                  <button
-                    onClick={() => handleContextAction("move")}
-                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
-                  >
-                    <FolderInput className="w-3.5 h-3.5 text-yellow-400" /> Move
-                    to Group...
-                  </button>
-                  {cyRef.current?.$id(contextMenu.targetId).parent().length ? (
+                  {hostMap[contextMenu.targetId]?.enableTerminal && (
                     <button
-                      onClick={() => handleContextAction("removeFromGroup")}
+                      onClick={() => handleConnectAction("terminal")}
                       className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
                     >
-                      <FolderMinus className="w-3.5 h-3.5 text-orange-400" />{" "}
-                      Remove from Group
+                      <Terminal className="w-3.5 h-3.5" />
+                      {t("networkGraph.terminal")}
                     </button>
-                  ) : null}
+                  )}
+                  {hostMap[contextMenu.targetId]?.enableFileManager && (
+                    <button
+                      onClick={() => handleConnectAction("file_manager")}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      {t("networkGraph.fileManager")}
+                    </button>
+                  )}
+                  {hostMap[contextMenu.targetId]?.enableTunnel &&
+                    hasTunnelConnections(hostMap[contextMenu.targetId]) && (
+                      <button
+                        onClick={() => handleConnectAction("tunnel")}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                      >
+                        <ArrowDownUp className="w-3.5 h-3.5" />
+                        {t("networkGraph.tunnel")}
+                      </button>
+                    )}
+                  {hostMap[contextMenu.targetId]?.enableDocker && (
+                    <button
+                      onClick={() => handleConnectAction("docker")}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                    >
+                      <Container className="w-3.5 h-3.5" />
+                      {t("networkGraph.docker")}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleConnectAction("server_stats")}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    {t("networkGraph.serverStats")}
+                  </button>
+
+                  {!embedded && (
+                    <>
+                      <div className="h-px my-1 bg-border" />
+                      <button
+                        onClick={() => handleContextAction("move")}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                      >
+                        <FolderInput className="w-3.5 h-3.5" />
+                        {t("networkGraph.moveToGroup")}
+                      </button>
+                      {cyRef.current?.$id(contextMenu.targetId).parent()
+                        .length ? (
+                        <button
+                          onClick={() => handleContextAction("removeFromGroup")}
+                          className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                        >
+                          <FolderMinus className="w-3.5 h-3.5" />
+                          {t("networkGraph.removeFromGroup")}
+                        </button>
+                      ) : null}
+                      <div className="h-px my-1 bg-border" />
+                      <button
+                        onClick={() => handleContextAction("delete")}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-red-400 hover:text-red-300 text-left w-full transition-colors hover:bg-red-950/30"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {t("networkGraph.delete")}
+                      </button>
+                    </>
+                  )}
                 </>
               )}
 
-              {contextMenu.type === "group" && (
+              {contextMenu.type === "group" && !embedded && (
                 <>
                   <button
                     onClick={() => handleContextAction("addHostToGroup")}
                     className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
                   >
-                    <FolderPlus className="w-3.5 h-3.5 text-green-400" /> Add
-                    Host Here
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    {t("networkGraph.addHostHere")}
                   </button>
                   <button
                     onClick={() => handleContextAction("editGroup")}
                     className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
                   >
-                    <Edit className="w-3.5 h-3.5 text-blue-400" /> Edit Group
+                    <Edit className="w-3.5 h-3.5" />
+                    {t("networkGraph.editGroup")}
+                  </button>
+                  <div className="h-px my-1 bg-border" />
+                  <button
+                    onClick={() => handleContextAction("delete")}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-red-400 hover:text-red-300 text-left w-full transition-colors hover:bg-red-950/30"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {t("networkGraph.delete")}
                   </button>
                 </>
               )}
-
-              <div className="h-px my-1 bg-border" />
-              <button
-                onClick={() => handleContextAction("delete")}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-red-400 hover:text-red-300 text-left w-full transition-colors hover:bg-red-950/30"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
             </div>
           )}
 
@@ -986,51 +1043,168 @@ export function NetworkGraphCard({
         <Dialog open={showAddNodeDialog} onOpenChange={setShowAddNodeDialog}>
           <DialogContent className="bg-canvas border-2 border-edge">
             <DialogHeader>
-              <DialogTitle>Add Host</DialogTitle>
+              <DialogTitle>{t("networkGraph.addHost")}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Select Host</Label>
-                <Select
-                  value={selectedHostForAddNode}
-                  onValueChange={setSelectedHostForAddNode}
-                >
-                  <SelectTrigger className="border-2 border-edge">
-                    <SelectValue placeholder="Choose a host..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-canvas border-2 border-edge">
-                    {availableHostsForAdd.length > 0 ? (
-                      availableHostsForAdd.map((h) => (
-                        <SelectItem key={h.id} value={String(h.id)}>
-                          {h.name || h.ip}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="NONE" disabled>
-                        No available hosts
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Label>{t("networkGraph.selectHost")}</Label>
+                <Popover open={hostComboOpen} onOpenChange={setHostComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={hostComboOpen}
+                      className="justify-between border-2 border-edge"
+                    >
+                      {selectedHostForAddNode ? (
+                        <div className="flex flex-col items-start">
+                          <span>
+                            {availableHostsForAdd.find(
+                              (h) => String(h.id) === selectedHostForAddNode,
+                            )?.name ||
+                              availableHostsForAdd.find(
+                                (h) => String(h.id) === selectedHostForAddNode,
+                              )?.ip}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {
+                              availableHostsForAdd.find(
+                                (h) => String(h.id) === selectedHostForAddNode,
+                              )?.username
+                            }
+                            @
+                            {
+                              availableHostsForAdd.find(
+                                (h) => String(h.id) === selectedHostForAddNode,
+                              )?.ip
+                            }
+                            :
+                            {
+                              availableHostsForAdd.find(
+                                (h) => String(h.id) === selectedHostForAddNode,
+                              )?.port
+                            }
+                          </span>
+                        </div>
+                      ) : (
+                        t("networkGraph.chooseHost")
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0 w-full bg-canvas border-2 border-edge"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("networkGraph.searchHost")}
+                      />
+                      <CommandEmpty>
+                        {t("networkGraph.noHostFound")}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {availableHostsForAdd.map((h) => (
+                          <CommandItem
+                            key={h.id}
+                            value={String(h.id)}
+                            onSelect={() => {
+                              setSelectedHostForAddNode(String(h.id));
+                              setHostComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedHostForAddNode === String(h.id)
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{h.name || h.ip}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {h.username}@{h.ip}:{h.port}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="grid gap-2">
-                <Label>Parent Group</Label>
-                <Select
-                  value={selectedGroupForAddNode}
-                  onValueChange={setSelectedGroupForAddNode}
-                >
-                  <SelectTrigger className="border-2 border-edge">
-                    <SelectValue placeholder="No Group (Root)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-canvas border-2 border-edge">
-                    <SelectItem value="ROOT">No Group</SelectItem>
-                    {availableGroups.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {g.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>{t("networkGraph.parentGroup")}</Label>
+                <Popover open={groupComboOpen} onOpenChange={setGroupComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={groupComboOpen}
+                      className="justify-between border-2 border-edge"
+                    >
+                      {selectedGroupForAddNode === "ROOT"
+                        ? t("networkGraph.noGroup")
+                        : availableGroups.find(
+                            (g) => g.id === selectedGroupForAddNode,
+                          )?.label}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0 w-full bg-canvas border-2 border-edge"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("networkGraph.searchGroup")}
+                      />
+                      <CommandEmpty>
+                        {t("networkGraph.noGroupFound")}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="ROOT"
+                          onSelect={() => {
+                            setSelectedGroupForAddNode("ROOT");
+                            setGroupComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedGroupForAddNode === "ROOT"
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {t("networkGraph.noGroup")}
+                        </CommandItem>
+                        {availableGroups.map((g) => (
+                          <CommandItem
+                            key={g.id}
+                            value={g.id}
+                            onSelect={() => {
+                              setSelectedGroupForAddNode(g.id);
+                              setGroupComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedGroupForAddNode === g.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {g.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>
@@ -1039,13 +1213,13 @@ export function NetworkGraphCard({
                 onClick={() => setShowAddNodeDialog(false)}
                 className="border-2 border-edge"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleConfirmAddNode}
                 disabled={!selectedHostForAddNode}
               >
-                Add
+                {t("common.add")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1063,31 +1237,39 @@ export function NetworkGraphCard({
           <DialogContent className="bg-canvas border-2 border-edge">
             <DialogHeader>
               <DialogTitle>
-                {showEditGroupDialog ? "Edit Group" : "Create Group"}
+                {showEditGroupDialog
+                  ? t("networkGraph.editGroup")
+                  : t("networkGraph.createGroup")}
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Group Name</Label>
+                <Label>{t("networkGraph.groupName")}</Label>
                 <Input
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="e.g. Cluster A"
+                  placeholder={t("networkGraph.groupName")}
                   className="border-2 border-edge"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Color</Label>
-                <div className="flex gap-2 items-center p-2 rounded border-2 border-edge">
-                  <input
-                    type="color"
-                    value={newGroupColor}
-                    onChange={(e) => setNewGroupColor(e.target.value)}
-                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent"
-                  />
-                  <span className="text-sm text-muted-foreground uppercase">
-                    {newGroupColor}
-                  </span>
+                <Label>{t("networkGraph.color")}</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {AVAILABLE_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setNewGroupColor(color.value)}
+                      className={cn(
+                        "h-10 rounded border-2 transition-all",
+                        newGroupColor === color.value
+                          ? "border-primary ring-2 ring-primary"
+                          : "border-edge hover:border-muted",
+                      )}
+                      style={{ backgroundColor: color.value }}
+                      title={color.label}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -1100,7 +1282,7 @@ export function NetworkGraphCard({
                 }}
                 className="border-2 border-edge"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={
@@ -1108,7 +1290,7 @@ export function NetworkGraphCard({
                 }
                 disabled={!newGroupName}
               >
-                {showEditGroupDialog ? "Update" : "Create"}
+                {showEditGroupDialog ? t("common.update") : t("common.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1117,31 +1299,86 @@ export function NetworkGraphCard({
         <Dialog open={showMoveNodeDialog} onOpenChange={setShowMoveNodeDialog}>
           <DialogContent className="bg-canvas border-2 border-edge">
             <DialogHeader>
-              <DialogTitle>Move to Group</DialogTitle>
+              <DialogTitle>{t("networkGraph.moveToGroup")}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Select Group</Label>
-                <Select
-                  value={selectedGroupForMove}
-                  onValueChange={setSelectedGroupForMove}
+                <Label>{t("networkGraph.selectGroup")}</Label>
+                <Popover
+                  open={moveGroupComboOpen}
+                  onOpenChange={setMoveGroupComboOpen}
                 >
-                  <SelectTrigger className="border-2 border-edge">
-                    <SelectValue placeholder="Select group..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-canvas border-2 border-edge">
-                    <SelectItem value="ROOT">(No Group)</SelectItem>
-                    {availableGroups.map((g) => (
-                      <SelectItem
-                        key={g.id}
-                        value={g.id}
-                        disabled={g.id === selectedNodeId}
-                      >
-                        {g.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={moveGroupComboOpen}
+                      className="justify-between border-2 border-edge"
+                    >
+                      {selectedGroupForMove === "ROOT"
+                        ? t("networkGraph.noGroup")
+                        : availableGroups.find(
+                            (g) => g.id === selectedGroupForMove,
+                          )?.label}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0 w-full bg-canvas border-2 border-edge"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("networkGraph.searchGroup")}
+                      />
+                      <CommandEmpty>
+                        {t("networkGraph.noGroupFound")}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="ROOT"
+                          onSelect={() => {
+                            setSelectedGroupForMove("ROOT");
+                            setMoveGroupComboOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedGroupForMove === "ROOT"
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {t("networkGraph.noGroup")}
+                        </CommandItem>
+                        {availableGroups.map((g) => (
+                          <CommandItem
+                            key={g.id}
+                            value={g.id}
+                            disabled={g.id === selectedNodeId}
+                            onSelect={() => {
+                              if (g.id !== selectedNodeId) {
+                                setSelectedGroupForMove(g.id);
+                                setMoveGroupComboOpen(false);
+                              }
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedGroupForMove === g.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {g.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>
@@ -1150,9 +1387,11 @@ export function NetworkGraphCard({
                 onClick={() => setShowMoveNodeDialog(false)}
                 className="border-2 border-edge"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
-              <Button onClick={handleMoveNodeToGroup}>Move</Button>
+              <Button onClick={handleMoveNodeToGroup}>
+                {t("networkGraph.move")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1160,44 +1399,124 @@ export function NetworkGraphCard({
         <Dialog open={showAddEdgeDialog} onOpenChange={setShowAddEdgeDialog}>
           <DialogContent className="bg-canvas border-2 border-edge">
             <DialogHeader>
-              <DialogTitle>Add Connection</DialogTitle>
+              <DialogTitle>{t("networkGraph.addConnection")}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Source</Label>
-                <Select
-                  value={selectedHostForEdge}
-                  onValueChange={setSelectedHostForEdge}
+                <Label>{t("networkGraph.source")}</Label>
+                <Popover
+                  open={sourceComboOpen}
+                  onOpenChange={setSourceComboOpen}
                 >
-                  <SelectTrigger className="border-2 border-edge">
-                    <SelectValue placeholder="Select Source..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-canvas border-2 border-edge">
-                    {availableNodesForConnection.map((el) => (
-                      <SelectItem key={el.id} value={el.id}>
-                        {el.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={sourceComboOpen}
+                      className="justify-between border-2 border-edge"
+                    >
+                      {selectedHostForEdge
+                        ? availableNodesForConnection.find(
+                            (el) => el.id === selectedHostForEdge,
+                          )?.label
+                        : t("networkGraph.selectSourcePlaceholder")}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0 w-full bg-canvas border-2 border-edge"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("networkGraph.searchNode")}
+                      />
+                      <CommandEmpty>
+                        {t("networkGraph.noNodeFound")}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {availableNodesForConnection.map((el) => (
+                          <CommandItem
+                            key={el.id}
+                            value={el.id}
+                            onSelect={() => {
+                              setSelectedHostForEdge(el.id);
+                              setSourceComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedHostForEdge === el.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {el.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="grid gap-2">
-                <Label>Target</Label>
-                <Select
-                  value={targetHostForEdge}
-                  onValueChange={setTargetHostForEdge}
+                <Label>{t("networkGraph.target")}</Label>
+                <Popover
+                  open={targetComboOpen}
+                  onOpenChange={setTargetComboOpen}
                 >
-                  <SelectTrigger className="border-2 border-edge">
-                    <SelectValue placeholder="Select Target..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-canvas border-2 border-edge">
-                    {availableNodesForConnection.map((el) => (
-                      <SelectItem key={el.id} value={el.id}>
-                        {el.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={targetComboOpen}
+                      className="justify-between border-2 border-edge"
+                    >
+                      {targetHostForEdge
+                        ? availableNodesForConnection.find(
+                            (el) => el.id === targetHostForEdge,
+                          )?.label
+                        : t("networkGraph.selectTargetPlaceholder")}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="p-0 w-full bg-canvas border-2 border-edge"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={t("networkGraph.searchNode")}
+                      />
+                      <CommandEmpty>
+                        {t("networkGraph.noNodeFound")}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {availableNodesForConnection.map((el) => (
+                          <CommandItem
+                            key={el.id}
+                            value={el.id}
+                            onSelect={() => {
+                              setTargetHostForEdge(el.id);
+                              setTargetComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                targetHostForEdge === el.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {el.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>
@@ -1206,9 +1525,11 @@ export function NetworkGraphCard({
                 onClick={() => setShowAddEdgeDialog(false)}
                 className="border-2 border-edge"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
-              <Button onClick={handleAddEdge}>Connect</Button>
+              <Button onClick={handleAddEdge}>
+                {t("networkGraph.connect")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1216,26 +1537,24 @@ export function NetworkGraphCard({
         <Dialog open={showNodeDetail} onOpenChange={setShowNodeDetail}>
           <DialogContent className="bg-canvas border-2 border-edge">
             <DialogHeader>
-              <DialogTitle>Host Details</DialogTitle>
+              <DialogTitle>{t("networkGraph.hostDetails")}</DialogTitle>
             </DialogHeader>
             {selectedNodeForDetail && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="font-semibold">Name:</span>
-                  <span>{selectedNodeForDetail.name}</span>
-                  <span className="font-semibold">IP:</span>
-                  <span>{selectedNodeForDetail.ip}</span>
-                  <span className="font-semibold">Status:</span>
-                  <span
-                    className={
-                      selectedNodeForDetail.status === "online"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }
-                  >
-                    {selectedNodeForDetail.status}
+                  <span className="font-semibold">
+                    {t("networkGraph.name")}:
                   </span>
-                  <span className="font-semibold">ID:</span>
+                  <span>{selectedNodeForDetail.name}</span>
+                  <span className="font-semibold">{t("networkGraph.ip")}:</span>
+                  <span>{selectedNodeForDetail.ip}</span>
+                  <span className="font-semibold">
+                    {t("networkGraph.status")}:
+                  </span>
+                  <span className="text-sm capitalize">
+                    {selectedNodeForDetail.status || t("networkGraph.unknown")}
+                  </span>
+                  <span className="font-semibold">{t("networkGraph.id")}:</span>
                   <span className="text-xs text-muted-foreground">
                     {selectedNodeForDetail.id}
                   </span>
@@ -1262,7 +1581,7 @@ export function NetworkGraphCard({
                 onClick={() => setShowNodeDetail(false)}
                 className="border-2 border-edge"
               >
-                Close
+                {t("common.close")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1290,23 +1609,83 @@ export function NetworkGraphCard({
           </Button>
         </div>
 
-        {error && (
-          <div className="mb-2 flex items-center gap-2 p-3 text-red-100 text-sm rounded border-2 border-red-600 bg-red-950/50">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <AlertDialog open={!!error} onOpenChange={() => setError(null)}>
+          <AlertDialogContent className="bg-canvas border-2 border-edge">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertDialogDescription className="text-foreground flex-1">
+                {error}
+              </AlertDialogDescription>
+            </div>
+            <div className="flex justify-end">
+              <AlertDialogAction onClick={() => setError(null)}>
+                OK
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="flex-1 overflow-hidden relative rounded-md border-2 border-edge">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <SimpleLoader
+            visible={loading}
+            backgroundColor="rgba(0, 0, 0, 0.5)"
+            className="z-10"
+          />
+
+          {contextMenu.visible && (
+            <div
+              ref={contextMenuRef}
+              className="fixed z-[200] min-w-[180px] rounded-md shadow-2xl p-1 flex flex-col gap-0.5 bg-canvas border-2 border-edge"
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+            >
+              {contextMenu.type === "node" && (
+                <>
+                  {hostMap[contextMenu.targetId]?.enableTerminal && (
+                    <button
+                      onClick={() => handleConnectAction("terminal")}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      {t("networkGraph.terminal")}
+                    </button>
+                  )}
+                  {hostMap[contextMenu.targetId]?.enableFileManager && (
+                    <button
+                      onClick={() => handleConnectAction("file_manager")}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      {t("networkGraph.fileManager")}
+                    </button>
+                  )}
+                  {hostMap[contextMenu.targetId]?.enableTunnel &&
+                    hasTunnelConnections(hostMap[contextMenu.targetId]) && (
+                      <button
+                        onClick={() => handleConnectAction("tunnel")}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                      >
+                        <ArrowDownUp className="w-3.5 h-3.5" />
+                        {t("networkGraph.tunnel")}
+                      </button>
+                    )}
+                  {hostMap[contextMenu.targetId]?.enableDocker && (
+                    <button
+                      onClick={() => handleConnectAction("docker")}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                    >
+                      <Container className="w-3.5 h-3.5" />
+                      {t("networkGraph.docker")}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleConnectAction("server_stats")}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded text-left w-full transition-colors hover:bg-muted"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    {t("networkGraph.serverStats")}
+                  </button>
+                </>
+              )}
             </div>
           )}
 

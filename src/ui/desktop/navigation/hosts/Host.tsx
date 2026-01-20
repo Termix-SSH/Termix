@@ -23,6 +23,7 @@ import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
 import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
+import { cn } from "@/lib/utils.ts";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
@@ -99,6 +100,16 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const handleTerminalClick = () => {
     addTab({ type: "terminal", title, hostConfig: host });
   };
+
+  const visibleButtons = [
+    host.enableTerminal && (host.showTerminalInSidebar ?? true),
+    host.enableFileManager && (host.showFileManagerInSidebar ?? false),
+    host.enableTunnel &&
+      hasTunnelConnections &&
+      (host.showTunnelInSidebar ?? false),
+    host.enableDocker && (host.showDockerInSidebar ?? false),
+    shouldShowMetrics && (host.showServerStatsInSidebar ?? false),
+  ].filter(Boolean).length;
 
   return (
     <div>
@@ -182,7 +193,10 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="!px-2 border-1 border-edge rounded-l-none border-l-0"
+                className={cn(
+                  "!px-2 border-1 border-edge",
+                  visibleButtons > 0 && "rounded-l-none border-l-0",
+                )}
               >
                 <EllipsisVertical />
               </Button>

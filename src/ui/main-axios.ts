@@ -1,9 +1,5 @@
-import axios, {
-  AxiosError,
-  type AxiosInstance,
-  type AxiosRequestConfig,
-  type AxiosResponse,
-} from "axios";
+import axios, { AxiosError, type AxiosInstance } from "axios";
+import { toast } from "sonner";
 import type {
   SSHHost,
   SSHHostData,
@@ -1436,6 +1432,19 @@ export async function verifySSHTOTP(
     return response.data;
   } catch (error) {
     handleApiError(error, "verify SSH TOTP");
+  }
+}
+
+export async function verifySSHWarpgate(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await fileManagerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "verify SSH Warpgate");
   }
 }
 
@@ -3700,6 +3709,19 @@ export async function verifyDockerTOTP(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "verify Docker TOTP");
+  }
+}
+
+export async function verifyDockerWarpgate(
+  sessionId: string,
+): Promise<{ status: string; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "verify Docker Warpgate");
   }
 }
 
