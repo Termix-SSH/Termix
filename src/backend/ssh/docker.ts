@@ -507,7 +507,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     let resolvedCredentials: any = {
       password: host.password,
       sshKey: host.key,
-      keyPassword: host.keyPassword,
+      keyPassword: host.key_password || host.keyPassword,
       authType: host.authType,
     };
 
