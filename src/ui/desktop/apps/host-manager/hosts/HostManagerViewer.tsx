@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
@@ -31,9 +31,9 @@ import {
   getSSHFolders,
   updateFolderMetadata,
   deleteAllHostsInFolder,
-  getServerStatusById,
   refreshServerPolling,
 } from "@/ui/main-axios.ts";
+import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -81,6 +81,9 @@ import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
 import { FolderEditDialog } from "@/ui/desktop/apps/host-manager/dialogs/FolderEditDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
+// Pagination: initial number of hosts visible per folder
+const INITIAL_HOSTS_PER_FOLDER = 12;
+
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -101,9 +104,12 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const [editingFolderAppearance, setEditingFolderAppearance] = useState<
     string | null
   >(null);
-  const [serverStatuses, setServerStatuses] = useState<
-    Map<number, "online" | "offline" | "degraded">
-  >(new Map());
+  // Track expanded folders (for "Show More" functionality)
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set()
+  );
+  // Use shared status context instead of individual state
+  const { getStatus } = useServerStatus();
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -218,73 +224,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     );
   };
 
-  useEffect(() => {
-    if (hosts.length === 0) return;
-
-    const statusIntervals: NodeJS.Timeout[] = [];
-    const statusCancelled: boolean[] = [];
-
-    hosts.forEach((host, index) => {
-      const statsConfig = (() => {
-        try {
-          return host.statsConfig
-            ? JSON.parse(host.statsConfig)
-            : DEFAULT_STATS_CONFIG;
-        } catch {
-          return DEFAULT_STATS_CONFIG;
-        }
-      })();
-
-      const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
-
-      if (!shouldShowStatus) {
-        setServerStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(host.id, "offline");
-          return next;
-        });
-        return;
-      }
-
-      const fetchStatus = async () => {
-        try {
-          const res = await getServerStatusById(host.id);
-          if (!statusCancelled[index]) {
-            setServerStatuses((prev) => {
-              const next = new Map(prev);
-              next.set(
-                host.id,
-                res?.status === "online" ? "online" : "offline",
-              );
-              return next;
-            });
-          }
-        } catch (error: unknown) {
-          if (!statusCancelled[index]) {
-            const err = error as { response?: { status?: number } };
-            let status: "online" | "offline" | "degraded" = "offline";
-            if (err?.response?.status === 504) {
-              status = "degraded";
-            }
-            setServerStatuses((prev) => {
-              const next = new Map(prev);
-              next.set(host.id, status);
-              return next;
-            });
-          }
-        }
-      };
-
-      fetchStatus();
-      const intervalId = setInterval(fetchStatus, 10000);
-      statusIntervals.push(intervalId);
-    });
-
-    return () => {
-      statusCancelled.fill(true);
-      statusIntervals.forEach((interval) => clearInterval(interval));
-    };
-  }, [hosts]);
+  // Status polling removed - now using ServerStatusContext for shared status
 
   const getFolderIcon = (folderName: string) => {
     const metadata = folderMetadata.get(folderName);
@@ -832,6 +772,30 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     return sortedGrouped;
   }, [filteredAndSortedHosts]);
 
+  // Toggle folder expansion for "Show More" functionality
+  const toggleFolderExpansion = useCallback((folderName: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderName)) {
+        next.delete(folderName);
+      } else {
+        next.add(folderName);
+      }
+      return next;
+    });
+  }, []);
+
+  // Get visible hosts for a folder (limited unless expanded)
+  const getVisibleHosts = useCallback(
+    (folderName: string, allHosts: SSHHost[]) => {
+      if (expandedFolders.has(folderName) || allHosts.length <= INITIAL_HOSTS_PER_FOLDER) {
+        return allHosts;
+      }
+      return allHosts.slice(0, INITIAL_HOSTS_PER_FOLDER);
+    },
+    [expandedFolders]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -858,16 +822,16 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
 
   if (hosts.length === 0) {
     return (
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
-            <p className="text-muted-foreground">
-              {t("hosts.hostsCount", { count: 0 })}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
+      <TooltipProvider>
+        <div className="flex flex-col h-full min-h-0">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
+              <p className="text-muted-foreground">
+                {t("hosts.hostsCount", { count: 0 })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -893,62 +857,62 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                   </div>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
 
-            <Button variant="outline" size="sm" onClick={handleDownloadSample}>
-              {t("hosts.downloadSample")}
-            </Button>
+              <Button variant="outline" size="sm" onClick={handleDownloadSample}>
+                {t("hosts.downloadSample")}
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                window.open("https://docs.termix.site/json-import", "_blank");
-              }}
-            >
-              {t("hosts.formatGuide")}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.open("https://docs.termix.site/json-import", "_blank");
+                }}
+              >
+                {t("hosts.formatGuide")}
+              </Button>
 
-            <div className="w-px h-6 bg-border mx-2" />
+              <div className="w-px h-6 bg-border mx-2" />
 
-            <Button onClick={fetchHosts} variant="outline" size="sm">
-              {t("hosts.refresh")}
-            </Button>
+              <Button onClick={fetchHosts} variant="outline" size="sm">
+                {t("hosts.refresh")}
+              </Button>
+            </div>
+          </div>
+
+          <input
+            id="json-import-input"
+            type="file"
+            accept=".json"
+            onChange={handleJsonImport}
+            className="hidden"
+          />
+
+          <div className="flex items-center justify-center flex-1">
+            <div className="text-center">
+              <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">{t("hosts.noHosts")}</h3>
+              <p className="text-muted-foreground mb-4">
+                {t("hosts.noHostsMessage")}
+              </p>
+            </div>
           </div>
         </div>
-
-        <input
-          id="json-import-input"
-          type="file"
-          accept=".json"
-          onChange={handleJsonImport}
-          className="hidden"
-        />
-
-        <div className="flex items-center justify-center flex-1">
-          <div className="text-center">
-            <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t("hosts.noHosts")}</h3>
-            <p className="text-muted-foreground mb-4">
-              {t("hosts.noHostsMessage")}
-            </p>
-          </div>
-        </div>
-      </div>
+      </TooltipProvider>
     );
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
-          <p className="text-muted-foreground">
-            {t("hosts.hostsCount", { count: filteredAndSortedHosts.length })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
+    <TooltipProvider>
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
+            <p className="text-muted-foreground">
+              {t("hosts.hostsCount", { count: filteredAndSortedHosts.length })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -974,7 +938,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                 </div>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
 
           <Button variant="outline" size="sm" onClick={handleDownloadSample}>
             {t("hosts.downloadSample")}
@@ -1132,56 +1095,51 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                       </Badge>
                       {folder !== t("hosts.uncategorized") && (
                         <div className="flex items-center gap-1 ml-auto">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingFolderAppearance(folder);
-                                  }}
-                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100 transition-opacity"
-                                >
-                                  <Palette className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t("hosts.editFolderAppearance")}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAllHostsInFolder(folder);
-                                  }}
-                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100 hover:text-red-400 transition-all"
-                                >
-                                  <Trash className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {t("hosts.deleteAllHostsInFolder")}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingFolderAppearance(folder);
+                                }}
+                                className="h-6 w-6 p-0 opacity-50 hover:opacity-100 transition-opacity"
+                              >
+                                <Palette className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("hosts.editFolderAppearance")}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAllHostsInFolder(folder);
+                                }}
+                                className="h-6 w-6 p-0 opacity-50 hover:opacity-100 hover:text-red-400 transition-all"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("hosts.deleteAllHostsInFolder")}
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {folderHosts.map((host) => (
-                        <TooltipProvider key={host.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                      {getVisibleHosts(folder, folderHosts).map((host) => (
+                        <Tooltip key={host.id}>
+                          <TooltipTrigger asChild>
                               <div
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, host)}
@@ -1209,9 +1167,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         const shouldShowStatus =
                                           statsConfig.statusCheckEnabled !==
                                           false;
-                                        const serverStatus =
-                                          serverStatuses.get(host.id) ||
-                                          "degraded";
+                                        const serverStatus = getStatus(host.id);
 
                                         return shouldShowStatus ? (
                                           <Status
@@ -1675,10 +1631,26 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 </p>
                               </div>
                             </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        </Tooltip>
                       ))}
                     </div>
+                    {/* Show More / Show Less button for pagination */}
+                    {folderHosts.length > INITIAL_HOSTS_PER_FOLDER && (
+                      <div className="flex justify-center mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleFolderExpansion(folder)}
+                          className="text-xs"
+                        >
+                          {expandedFolders.has(folder)
+                            ? t("common.showLess")
+                            : t("common.showMore", {
+                                count: folderHosts.length - INITIAL_HOSTS_PER_FOLDER,
+                              })}
+                        </Button>
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -1687,25 +1659,26 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
         </div>
       </ScrollArea>
 
-      {editingFolderAppearance && (
-        <FolderEditDialog
-          folderName={editingFolderAppearance}
-          currentColor={getFolderColor(editingFolderAppearance)}
-          currentIcon={folderMetadata.get(editingFolderAppearance)?.icon}
-          open={editingFolderAppearance !== null}
-          onOpenChange={(open) => {
-            if (!open) setEditingFolderAppearance(null);
-          }}
-          onSave={async (color, icon) => {
-            await handleSaveFolderAppearance(
-              editingFolderAppearance,
-              color,
-              icon,
-            );
-            setEditingFolderAppearance(null);
-          }}
-        />
-      )}
-    </div>
+        {editingFolderAppearance && (
+          <FolderEditDialog
+            folderName={editingFolderAppearance}
+            currentColor={getFolderColor(editingFolderAppearance)}
+            currentIcon={folderMetadata.get(editingFolderAppearance)?.icon}
+            open={editingFolderAppearance !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditingFolderAppearance(null);
+            }}
+            onSave={async (color, icon) => {
+              await handleSaveFolderAppearance(
+                editingFolderAppearance,
+                color,
+                icon,
+              );
+              setEditingFolderAppearance(null);
+            }}
+          />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

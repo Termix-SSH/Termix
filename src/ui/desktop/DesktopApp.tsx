@@ -9,6 +9,7 @@ import {
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
+import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
 import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
@@ -614,9 +615,11 @@ function AppContent() {
 function DesktopApp() {
   return (
     <TabProvider>
-      <CommandHistoryProvider>
-        <AppContent />
-      </CommandHistoryProvider>
+      <ServerStatusProvider>
+        <CommandHistoryProvider>
+          <AppContent />
+        </CommandHistoryProvider>
+      </ServerStatusProvider>
     </TabProvider>
   );
 }

@@ -18,19 +18,17 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getServerStatusById, getSSHHosts } from "@/ui/main-axios";
+import { getSSHHosts } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
+import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
 import { cn } from "@/lib/utils.ts";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
   const [host, setHost] = useState(initialHost);
   const { t } = useTranslation();
-  const [serverStatus, setServerStatus] = useState<
-    "online" | "offline" | "degraded"
-  >("degraded");
   const [showTags, setShowTags] = useState<boolean>(() => {
     const saved = localStorage.getItem("showHostTags");
     return saved !== null ? saved === "true" : true;
@@ -84,6 +82,9 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
+  // Use shared status context instead of individual polling
+  const serverStatus = useHostStatus(host.id, shouldShowStatus);
+
   const hasTunnelConnections = useMemo(() => {
     if (!host.tunnelConnections) return false;
     try {
@@ -95,45 +96,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
       return false;
     }
   }, [host.tunnelConnections]);
-
-  useEffect(() => {
-    if (!shouldShowStatus) {
-      setServerStatus("offline");
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchStatus = async () => {
-      try {
-        const res = await getServerStatusById(host.id);
-        if (!cancelled) {
-          setServerStatus(res?.status === "online" ? "online" : "offline");
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          const err = error as { response?: { status?: number } };
-          if (err?.response?.status === 503) {
-            setServerStatus("offline");
-          } else if (err?.response?.status === 504) {
-            setServerStatus("degraded");
-          } else if (err?.response?.status === 404) {
-            setServerStatus("offline");
-          } else {
-            setServerStatus("offline");
-          }
-        }
-      }
-    };
-
-    fetchStatus();
-    const intervalId = window.setInterval(fetchStatus, 10000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
-    };
-  }, [host.id, shouldShowStatus]);
 
   const handleTerminalClick = () => {
     addTab({ type: "terminal", title, hostConfig: host });
