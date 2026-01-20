@@ -354,6 +354,18 @@ export function CommandPalette({
                     hasTunnelConnections = false;
                   }
 
+                  const visibleButtons = [
+                    host.enableTerminal && (host.showTerminalInSidebar ?? true),
+                    host.enableFileManager &&
+                      (host.showFileManagerInSidebar ?? false),
+                    host.enableTunnel &&
+                      hasTunnelConnections &&
+                      (host.showTunnelInSidebar ?? false),
+                    host.enableDocker && (host.showDockerInSidebar ?? false),
+                    shouldShowMetrics &&
+                      (host.showServerStatsInSidebar ?? false),
+                  ].filter(Boolean).length;
+
                   return (
                     <CommandItem
                       key={`host-${index}-${host.id}`}
@@ -448,7 +460,11 @@ export function CommandPalette({
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
-                              className="!px-2 h-7 border-1 border-edge rounded-l-none border-l-0"
+                              className={cn(
+                                "!px-2 h-7 border-1 border-edge",
+                                visibleButtons > 0 &&
+                                  "rounded-l-none border-l-0",
+                              )}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-3 w-3" />

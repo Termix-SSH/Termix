@@ -333,6 +333,7 @@ interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
+  isWarpgate?: boolean;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -456,24 +457,6 @@ function detectBinary(buffer: Buffer): boolean {
   return nullBytes / sampleSize > 0.01;
 }
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/connect:
- *   post:
- *     summary: Connect to SSH for file manager
- *     description: Establishes an SSH connection for file manager operations.
- *     tags:
- *       - File Manager
- *     responses:
- *       200:
- *         description: SSH connection established.
- *       400:
- *         description: Missing SSH connection parameters.
- *       401:
- *         description: Authentication required.
- *       500:
- *         description: SSH connection failed.
- */
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -813,6 +796,54 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       finish: (responses: string[]) => void,
     ) => {
       const promptTexts = prompts.map((p) => p.prompt);
+
+      const warpgatePattern = /warpgate\s+authentication/i;
+      const isWarpgate =
+        warpgatePattern.test(name) ||
+        warpgatePattern.test(instructions) ||
+        promptTexts.some((p) => warpgatePattern.test(p));
+
+      if (isWarpgate) {
+        const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
+        const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
+        const keyMatch = fullText.match(
+          /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
+        );
+
+        if (urlMatch) {
+          if (responseSent) return;
+          responseSent = true;
+
+          keyboardInteractiveResponded = true;
+
+          pendingTOTPSessions[sessionId] = {
+            client,
+            finish,
+            config,
+            createdAt: Date.now(),
+            sessionId,
+            hostId,
+            ip,
+            port,
+            username,
+            userId,
+            prompts,
+            totpPromptIndex: -1,
+            resolvedPassword: resolvedCredentials.password,
+            totpAttempts: 0,
+            isWarpgate: true,
+          };
+
+          res.json({
+            requires_warpgate: true,
+            sessionId,
+            url: urlMatch[0],
+            securityKey: keyMatch ? keyMatch[1] : "N/A",
+          });
+          return;
+        }
+      }
+
       const totpPromptIndex = prompts.findIndex((p) =>
         /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
           p.prompt,
@@ -1225,6 +1256,194 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   }, 60000);
 
   session.finish(responses);
+});
+
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect-warpgate:
+ *   post:
+ *     summary: Complete Warpgate authentication
+ *     description: Submits empty response to complete Warpgate authentication after user completes browser auth.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID from initial connection attempt
+ *     responses:
+ *       200:
+ *         description: Warpgate authentication completed successfully.
+ *       401:
+ *         description: Authentication failed or unauthorized.
+ *       404:
+ *         description: Warpgate session expired.
+ *       408:
+ *         description: Warpgate session timeout.
+ */
+app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
+  const { sessionId } = req.body;
+
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!userId) {
+    fileLogger.error("Warpgate verification rejected: no authenticated user", {
+      operation: "file_warpgate_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    fileLogger.warn("Warpgate session not found or expired", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "Warpgate session expired. Please reconnect." });
+  }
+
+  if (!session.isWarpgate) {
+    return res.status(400).json({ error: "Session is not a Warpgate session" });
+  }
+
+  if (Date.now() - session.createdAt > 300000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch (error) {}
+    fileLogger.warn("Warpgate session timeout before completion", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "Warpgate session timeout. Please reconnect." });
+  }
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+        activeOperations: 0,
+      };
+      scheduleSessionCleanup(sessionId);
+
+      res.json({
+        status: "success",
+        message: "Warpgate verified, SSH connection established",
+      });
+
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
+                ),
+              "ssh_data",
+              session.userId!,
+            );
+
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
+
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "file_manager",
+                hostId: session.hostId,
+                hostName,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            fileLogger.warn("Failed to log file manager activity", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200);
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    fileLogger.error("Warpgate verification failed", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res
+      .status(401)
+      .json({ status: "error", message: "Warpgate authentication failed" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      fileLogger.warn("Warpgate verification timeout", {
+        operation: "file_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
+
+  session.finish([""]);
 });
 
 /**
@@ -2164,15 +2383,13 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         if (err) {
           fileLogger.error("Fallback write command failed:", err);
           if (!res.headersSent) {
-            return res
-              .status(500)
-              .json({
-                error: `Write failed: ${err.message}`,
-                toast: {
-                  type: "error",
-                  message: `Write failed: ${err.message}`,
-                },
-              });
+            return res.status(500).json({
+              error: `Write failed: ${err.message}`,
+              toast: {
+                type: "error",
+                message: `Write failed: ${err.message}`,
+              },
+            });
           }
           return;
         }
@@ -2972,7 +3189,9 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 
           stream.on("error", (streamErr) => {
             fileLogger.error("SSH deleteItem stream error:", streamErr);
-            res.status(500).json({ error: `Stream error: ${streamErr.message}` });
+            res
+              .status(500)
+              .json({ error: `Stream error: ${streamErr.message}` });
             resolve();
           });
         },

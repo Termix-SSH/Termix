@@ -229,6 +229,22 @@ class PermissionManager {
       if (sharedAccess.length > 0) {
         const access = sharedAccess[0];
 
+        // Double-check ownership: user might have shared the host to their own role
+        // In this case, they should retain full owner permissions
+        const hostOwnerCheck = await db
+          .select({ ownerId: sshData.userId })
+          .from(sshData)
+          .where(eq(sshData.id, hostId))
+          .limit(1);
+
+        if (hostOwnerCheck.length > 0 && hostOwnerCheck[0].ownerId === userId) {
+          return {
+            hasAccess: true,
+            isOwner: true,
+            isShared: false,
+          };
+        }
+
         if (action === "write" || action === "delete") {
           return {
             hasAccess: false,

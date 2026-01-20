@@ -489,21 +489,6 @@ export function HostManagerEditor({
           });
         }
       });
-
-      const hasAtLeastOneSidebarAction =
-        (data.enableTerminal && data.showTerminalInSidebar) ||
-        (data.enableFileManager && data.showFileManagerInSidebar) ||
-        (data.enableTunnel && data.showTunnelInSidebar) ||
-        (data.enableDocker && data.showDockerInSidebar) ||
-        data.showServerStatsInSidebar;
-
-      if (!hasAtLeastOneSidebarAction) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: t("hosts.atLeastOneActionRequired"),
-          path: ["showTerminalInSidebar"],
-        });
-      }
     });
 
   type FormData = z.infer<typeof formSchema>;
@@ -1254,12 +1239,12 @@ export function HostManagerEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            {!editingHost?.isShared && (
+            {!editingHost?.isShared && !isSubmitting && (
               <Button
                 className="translate-y-2"
                 type="submit"
                 variant="outline"
-                disabled={!isFormValid || isSubmitting}
+                disabled={!isFormValid}
               >
                 {editingHost
                   ? editingHost.id

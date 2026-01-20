@@ -39,6 +39,7 @@ interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
+  isWarpgate?: boolean;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -507,7 +508,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     let resolvedCredentials: any = {
       password: host.password,
       sshKey: host.key,
-      keyPassword: host.keyPassword,
+      keyPassword: host.key_password || host.keyPassword,
       authType: host.authType,
     };
 
@@ -669,7 +670,23 @@ app.post("/docker/ssh/connect", async (req, res) => {
     });
 
     client.on("error", (err) => {
-      if (responseSent) return;
+      if (responseSent) {
+        dockerLogger.error(
+          "Docker SSH connection error after response sent",
+          err,
+          {
+            operation: "docker_connect_after_response",
+            sessionId,
+            hostId,
+            userId,
+          },
+        );
+
+        if (pendingTOTPSessions[sessionId]) {
+          delete pendingTOTPSessions[sessionId];
+        }
+        return;
+      }
       responseSent = true;
 
       dockerLogger.error("Docker SSH connection failed", err, {
@@ -701,6 +718,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
         sshSessions[sessionId].isConnected = false;
         cleanupSession(sessionId);
       }
+
+      if (pendingTOTPSessions[sessionId]) {
+        delete pendingTOTPSessions[sessionId];
+      }
     });
 
     client.on(
@@ -712,6 +733,55 @@ app.post("/docker/ssh/connect", async (req, res) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
+        const promptTexts = prompts.map((p) => p.prompt);
+
+        const warpgatePattern = /warpgate\s+authentication/i;
+        const isWarpgate =
+          warpgatePattern.test(name) ||
+          warpgatePattern.test(instructions) ||
+          promptTexts.some((p) => warpgatePattern.test(p));
+
+        if (isWarpgate) {
+          const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
+          const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
+          const keyMatch = fullText.match(
+            /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
+          );
+
+          if (urlMatch) {
+            if (responseSent) return;
+            responseSent = true;
+
+            keyboardInteractiveResponded = true;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId,
+              ip: host.ip,
+              port: host.port || 22,
+              username: host.username,
+              userId,
+              prompts,
+              totpPromptIndex: -1,
+              resolvedPassword: resolvedCredentials.password,
+              totpAttempts: 0,
+              isWarpgate: true,
+            };
+
+            res.json({
+              requires_warpgate: true,
+              sessionId,
+              url: urlMatch[0],
+              securityKey: keyMatch ? keyMatch[1] : "N/A",
+            });
+            return;
+          }
+        }
+
         const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
             p.prompt,
@@ -1184,6 +1254,195 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
 
 /**
  * @openapi
+ * /docker/ssh/connect-warpgate:
+ *   post:
+ *     summary: Complete Warpgate authentication
+ *     description: Submits empty response to complete Warpgate authentication after user completes browser auth.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID from initial connection attempt
+ *     responses:
+ *       200:
+ *         description: Warpgate authentication completed successfully.
+ *       401:
+ *         description: Authentication failed or unauthorized.
+ *       404:
+ *         description: Warpgate session expired.
+ */
+app.post("/docker/ssh/connect-warpgate", async (req, res) => {
+  const { sessionId } = req.body;
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    dockerLogger.error(
+      "Warpgate verification rejected: no authenticated user",
+      {
+        operation: "docker_warpgate_auth",
+        sessionId,
+      },
+    );
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    dockerLogger.warn("Warpgate session not found or expired", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "Warpgate session expired. Please reconnect." });
+  }
+
+  if (!session.isWarpgate) {
+    return res.status(400).json({ error: "Session is not a Warpgate session" });
+  }
+
+  if (Date.now() - session.createdAt > 300000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {}
+    dockerLogger.warn("Warpgate session timeout before completion", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "Warpgate session timeout. Please reconnect." });
+  }
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+        activeOperations: 0,
+        hostId: session.hostId,
+      };
+      scheduleSessionCleanup(sessionId);
+
+      res.json({
+        status: "success",
+        message: "Warpgate verified, SSH connection established",
+      });
+
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
+                ),
+              "ssh_data",
+              session.userId!,
+            );
+
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
+
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "docker",
+                hostId: session.hostId,
+                hostName,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            dockerLogger.warn("Failed to log Docker activity (Warpgate)", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200);
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    dockerLogger.error("Warpgate verification failed", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res
+      .status(401)
+      .json({ status: "error", message: "Warpgate authentication failed" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      dockerLogger.warn("Warpgate verification timeout", {
+        operation: "docker_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
+
+  session.finish([""]);
+});
+
+/**
+ * @openapi
  * /docker/ssh/keepalive:
  *   post:
  *     summary: Keep SSH session alive
@@ -1292,6 +1551,13 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
   }
 
   const session = sshSessions[sessionId];
@@ -1408,6 +1674,13 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
   }
 
   const session = sshSessions[sessionId];
