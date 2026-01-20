@@ -15,7 +15,7 @@ import {
   getSSHHosts,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
-import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";

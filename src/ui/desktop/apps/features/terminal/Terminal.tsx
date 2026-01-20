@@ -21,9 +21,9 @@ import {
   deleteCommandFromHistory,
   getCommandHistory,
 } from "@/ui/main-axios.ts";
-import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
-import { WarpgateDialog } from "@/ui/desktop/navigation/WarpgateDialog.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -38,6 +38,11 @@ import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-h
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "./ConnectionLogContext.tsx";
+import { ConnectionLog } from "./ConnectionLog.tsx";
 
 interface HostConfig {
   id?: number;
@@ -73,7 +78,7 @@ interface SSHTerminalProps {
   executeCommand?: string;
 }
 
-export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
+const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
       hostConfig,
@@ -100,6 +105,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
+    const { addLog } = useConnectionLog();
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
 
@@ -131,6 +137,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
+    const [totpAttemptsRemaining, setTotpAttemptsRemaining] =
+      useState<number>(3);
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
     const [showAuthDialog, setShowAuthDialog] = useState(false);
     const [authDialogReason, setAuthDialogReason] = useState<
@@ -671,7 +679,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               const wsHost = baseUrl.replace(/^https?:\/\//, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
+          : `/ssh/websocket/`;
 
       if (
         webSocketRef.current &&
@@ -690,6 +698,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
+
+      console.log("[WebSocket] Connecting:", {
+        url: wsUrl,
+        protocol: window.location.protocol,
+        isDev,
+        isElectron: isElectron(),
+      });
 
       const ws = new WebSocket(wsUrl);
       webSocketRef.current = ws;
@@ -931,6 +946,9 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "totp_required") {
             totpAttemptsRef.current = 0;
+            const attemptsRemaining =
+              msg.attemptsRemaining !== undefined ? msg.attemptsRemaining : 3;
+            setTotpAttemptsRemaining(attemptsRemaining);
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
@@ -951,9 +969,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "totp_retry") {
             totpAttemptsRef.current++;
             const attemptsRemaining =
-              msg.attempts_remaining || 3 - totpAttemptsRef.current;
+              msg.attemptsRemaining !== undefined
+                ? msg.attemptsRemaining
+                : 3 - totpAttemptsRef.current;
+            setTotpAttemptsRemaining(attemptsRemaining);
             toast.error(
-              `Invalid code. ${attemptsRemaining} ${attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`,
+              t("terminal.totpInvalid") +
+                ` ${attemptsRemaining} ${attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`,
             );
           } else if (msg.type === "password_required") {
             totpAttemptsRef.current = 0;
@@ -1011,6 +1033,15 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "connection_log") {
+            if (msg.data) {
+              addLog({
+                type: msg.data.level || "info",
+                stage: msg.data.stage || "auth",
+                message: msg.data.message,
+                details: msg.data.details,
+              });
+            }
           }
         } catch {
           toast.error(t("terminal.messageParseError"));
@@ -1024,6 +1055,13 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
+        console.log("[WebSocket] Closed:", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          wasDisconnectedBySSH: wasDisconnectedBySSH.current,
+        });
+
         setIsConnected(false);
         isConnectingRef.current = false;
         if (terminal) {
@@ -1033,6 +1071,17 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (totpTimeoutRef.current) {
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
+        }
+
+        if (event.code === 1006) {
+          console.error(
+            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          );
+          setConnectionError(t("terminal.websocketAbnormalClose"));
+          setIsConnecting(false);
+          shouldNotReconnectRef.current = true;
+          if (onClose) onClose();
+          return;
         }
 
         if (event.code === 1008) {
@@ -1062,10 +1111,12 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       });
 
-      ws.addEventListener("error", () => {
+      ws.addEventListener("error", (event) => {
         if (currentAttemptId !== connectionAttemptIdRef.current) {
           return;
         }
+
+        console.error("[WebSocket] Error:", event);
 
         setIsConnected(false);
         isConnectingRef.current = false;
@@ -1688,6 +1739,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
           backgroundColor={backgroundColor}
+          attemptsRemaining={totpAttemptsRemaining}
         />
 
         <SSHAuthDialog
@@ -1727,7 +1779,19 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           message={t("terminal.connecting")}
           backgroundColor={backgroundColor}
         />
+
+        <ConnectionLog />
       </div>
+    );
+  },
+);
+
+export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
+  function Terminal(props, ref) {
+    return (
+      <ConnectionLogProvider>
+        <TerminalInner {...props} ref={ref} />
+      </ConnectionLogProvider>
     );
   },
 );

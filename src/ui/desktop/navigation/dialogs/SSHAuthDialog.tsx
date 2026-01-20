@@ -5,13 +5,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/components/ui/card.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { PasswordInput } from "@/components/ui/password-input.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.tsx";
 import { Shield, AlertCircle, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CodeMirror from "@uiw/react-codemirror";

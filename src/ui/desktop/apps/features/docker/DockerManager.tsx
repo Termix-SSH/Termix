@@ -26,9 +26,9 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
-import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
-import { WarpgateDialog } from "@/ui/desktop/navigation/WarpgateDialog.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 interface DockerManagerProps {

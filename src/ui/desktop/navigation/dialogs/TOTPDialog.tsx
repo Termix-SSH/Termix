@@ -11,6 +11,7 @@ interface TOTPDialogProps {
   onSubmit: (code: string) => void;
   onCancel: () => void;
   backgroundColor?: string;
+  attemptsRemaining?: number;
 }
 
 export function TOTPDialog({
@@ -19,6 +20,7 @@ export function TOTPDialog({
   onSubmit,
   onCancel,
   backgroundColor,
+  attemptsRemaining,
 }: TOTPDialogProps) {
   const { t } = useTranslation();
 
@@ -31,11 +33,20 @@ export function TOTPDialog({
         style={{ backgroundColor: backgroundColor || undefined }}
       />
       <div className="bg-elevated border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="mb-4 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold">
-            {t("terminal.totpRequired")}
-          </h3>
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold">
+              {t("terminal.totpRequired")}
+            </h3>
+          </div>
+          {attemptsRemaining !== undefined && attemptsRemaining < 3 && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {t("terminal.totpAttemptsRemaining", {
+                count: attemptsRemaining,
+              })}
+            </p>
+          )}
         </div>
         <form
           onSubmit={(e) => {

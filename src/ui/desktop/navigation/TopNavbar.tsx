@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
-import { QuickConnectDialog } from "@/ui/desktop/navigation/QuickConnectDialog.tsx";
+import { QuickConnectDialog } from "@/ui/desktop/navigation/dialogs/QuickConnectDialog.tsx";
 
 interface TabData {
   id: number;
