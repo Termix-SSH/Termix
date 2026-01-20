@@ -1651,7 +1651,7 @@ app.post(
             tunnelConfig.endpointPassword = endpointHost.password;
             tunnelConfig.endpointAuthMethod = endpointHost.authType;
             tunnelConfig.endpointSSHKey = endpointHost.key;
-            tunnelConfig.endpointKeyPassword = endpointHost.key_password || endpointHost.keyPassword;
+            tunnelConfig.endpointKeyPassword = endpointHost.keyPassword;
             tunnelConfig.endpointKeyType = endpointHost.keyType;
             tunnelConfig.endpointCredentialId = endpointHost.credentialId;
             tunnelConfig.endpointUserId = endpointHost.userId;
@@ -1949,7 +1949,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 sourceAuthMethod: host.authType,
                 sourceSSHKey: host.autostartKey || host.key,
                 sourceKeyPassword:
-                  host.autostartKeyPassword || host.key_password || host.keyPassword,
+                  host.autostartKeyPassword || host.keyPassword,
                 sourceKeyType: host.keyType,
                 sourceCredentialId: host.credentialId,
                 sourceUserId: host.userId,
@@ -1970,7 +1970,6 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 endpointKeyPassword:
                   tunnelConnection.endpointKeyPassword ||
                   endpointHost.autostartKeyPassword ||
-                  endpointHost.key_password ||
                   endpointHost.keyPassword,
                 endpointKeyType:
                   tunnelConnection.endpointKeyType || endpointHost.keyType,
