@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronDown,
   ChevronUp,
-  Trash2,
   Copy,
   Info,
   CheckCircle2,
@@ -14,16 +13,52 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export function ConnectionLog() {
-  const { t } = useTranslation();
-  const { logs, clearLogs, isExpanded, toggleExpanded } = useConnectionLog();
-  const logEndRef = useRef<HTMLDivElement>(null);
+interface ConnectionLogProps {
+  isConnecting: boolean;
+  isConnected: boolean;
+  hasConnectionError: boolean;
+  position: "top" | "bottom";
+}
 
+export function ConnectionLog({
+  isConnecting,
+  isConnected,
+  hasConnectionError,
+  position,
+}: ConnectionLogProps) {
+  const { t } = useTranslation();
+  const { logs, clearLogs, isExpanded, toggleExpanded, setIsExpanded } =
+    useConnectionLog();
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const lastLogRef = useRef<HTMLDivElement>(null);
+
+  // Auto-expand on error
   useEffect(() => {
-    if (isExpanded && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (hasConnectionError) {
+      setIsExpanded(true);
+    }
+  }, [hasConnectionError, setIsExpanded]);
+
+  // Clear logs immediately when successfully connected
+  useEffect(() => {
+    if (isConnected && !hasConnectionError && !isConnecting) {
+      clearLogs();
+    }
+  }, [isConnected, hasConnectionError, isConnecting, clearLogs]);
+
+  // Scroll to the bottom when new logs are added and it's expanded
+  useEffect(() => {
+    if (isExpanded && lastLogRef.current) {
+      lastLogRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [logs, isExpanded]);
+
+  // Show when connecting (even with no logs) or when there are logs and not yet connected
+  const shouldShow = isConnecting || (logs.length > 0 && !isConnected);
+
+  if (!shouldShow) {
+    return null;
+  }
 
   const copyLogsToClipboard = async () => {
     const logsText = logs
@@ -71,27 +106,34 @@ export function ConnectionLog() {
     }
   };
 
+  const borderClass =
+    position === "bottom" && !isExpanded
+      ? "border-t-2 border-border"
+      : "border-b-2 border-border";
+
   return (
-    <div className="border-t border-border bg-bg-subtle">
-      <div className="flex items-center justify-between px-3 py-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleExpanded}
-          className="flex items-center gap-2"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronUp className="h-4 w-4" />
-          )}
-          <span className="text-sm font-medium">
-            {t("terminal.connectionLogTitle")} ({logs.length})
-          </span>
-        </Button>
-        <div className="flex items-center gap-2">
-          {logs.length > 0 && (
-            <>
+    <div
+      className={`absolute left-0 right-0 z-50 ${position === "top" ? "top-0" : "bottom-0"}`}
+    >
+      <div className={`bg-bg-subtle ${!isExpanded ? borderClass : ""}`}>
+        <div className="flex items-center justify-between px-3 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleExpanded}
+            className="flex items-center gap-2"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+            <span className="text-sm font-medium">
+              {t("terminal.connectionLogTitle")} ({logs.length})
+            </span>
+          </Button>
+          <div className="flex items-center gap-2">
+            {logs.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -100,42 +142,48 @@ export function ConnectionLog() {
               >
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearLogs}
-                title={t("terminal.connectionLogClear")}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-      {isExpanded && (
-        <div className="max-h-[200px] overflow-y-auto border-t border-border bg-bg-base px-3 py-2">
-          {logs.length === 0 ? (
-            <div className="py-4 text-center text-sm text-muted-foreground">
-              {t("terminal.connectionLogEmpty")}
-            </div>
-          ) : (
-            <div className="space-y-1 font-mono text-xs">
-              {logs.map((log) => (
-                <div key={log.id} className="flex items-start gap-2">
-                  <span className="text-muted-foreground shrink-0">
-                    {log.timestamp.toLocaleTimeString()}
-                  </span>
-                  <div className="shrink-0">{getIcon(log.type)}</div>
-                  <span className={`flex-1 ${getTextColor(log.type)}`}>
-                    {log.message}
-                  </span>
+        {isExpanded && (
+          <div
+            ref={logContainerRef}
+            className="max-h-60 overflow-y-auto border-t-2 border-border bg-bg-base"
+          >
+            <div className="px-3 py-2">
+              {logs.length === 0 ? (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  {isConnecting
+                    ? t("terminal.connectionLogConnecting")
+                    : t("terminal.connectionLogEmpty")}
                 </div>
-              ))}
-              <div ref={logEndRef} />
+              ) : (
+                <div className="space-y-1 font-mono text-xs">
+                  {logs.map((log, index) => (
+                    <div
+                      key={log.id}
+                      ref={index === logs.length - 1 ? lastLogRef : null}
+                      className="flex items-start gap-2"
+                    >
+                      <span className="shrink-0 text-muted-foreground">
+                        {log.timestamp.toLocaleTimeString()}
+                      </span>
+                      <div className="shrink-0">{getIcon(log.type)}</div>
+                      <span
+                        className={`flex-1 min-w-0 break-all whitespace-pre-wrap ${getTextColor(
+                          log.type,
+                        )}`}
+                      >
+                        {log.message}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

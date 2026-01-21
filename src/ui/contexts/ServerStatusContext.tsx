@@ -25,7 +25,7 @@ interface ServerStatusContextType {
 
 const ServerStatusContext = createContext<ServerStatusContextType | null>(null);
 
-const POLL_INTERVAL = 10000; // 10 seconds
+const POLL_INTERVAL = 30000; // 30 seconds
 
 export function ServerStatusProvider({
   children,
@@ -33,11 +33,17 @@ export function ServerStatusProvider({
   children: React.ReactNode;
 }) {
   const [statuses, setStatuses] = useState<Map<number, ServerStatusEntry>>(
-    new Map()
+    new Map(),
   );
   const [isLoading, setIsLoading] = useState(false);
   const [enabledHostIds, setEnabledHostIds] = useState<Set<number>>(new Set());
   const mountedRef = useRef(true);
+  const enabledHostIdsRef = useRef(enabledHostIds);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    enabledHostIdsRef.current = enabledHostIds;
+  }, [enabledHostIds]);
 
   // Fetch hosts to determine which ones have status check enabled
   const fetchEnabledHosts = useCallback(async () => {
@@ -84,7 +90,8 @@ export function ServerStatusProvider({
         Object.entries(data).forEach(([idStr, statusData]) => {
           const id = parseInt(idStr, 10);
           if (!isNaN(id)) {
-            const status = statusData?.status === "online" ? "online" : "offline";
+            const status =
+              statusData?.status === "online" ? "online" : "offline";
             newStatuses.set(id, {
               status,
               lastChecked: statusData?.lastChecked || now,
@@ -100,7 +107,7 @@ export function ServerStatusProvider({
       if (mountedRef.current) {
         setStatuses((prev) => {
           const updated = new Map(prev);
-          enabledHostIds.forEach((id) => {
+          enabledHostIdsRef.current.forEach((id) => {
             const existing = updated.get(id);
             updated.set(id, {
               status: "degraded",
@@ -115,7 +122,7 @@ export function ServerStatusProvider({
         setIsLoading(false);
       }
     }
-  }, [enabledHostIds]);
+  }, []); // No dependencies - use refs for dynamic values
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => {
@@ -125,10 +132,10 @@ export function ServerStatusProvider({
       }
       return statuses.get(hostId)?.status || "degraded";
     },
-    [statuses, enabledHostIds]
+    [statuses, enabledHostIds],
   );
 
-  // Initial fetch and polling setup
+  // Initial fetch and polling setup - only runs once on mount
   useEffect(() => {
     mountedRef.current = true;
 
@@ -145,7 +152,7 @@ export function ServerStatusProvider({
       mountedRef.current = false;
       clearInterval(intervalId);
     };
-  }, [fetchEnabledHosts, refreshStatuses]);
+  }, [fetchEnabledHosts, refreshStatuses]); // These callbacks never change, safe to depend on
 
   // Listen for host changes to update enabled hosts
   useEffect(() => {
@@ -161,7 +168,7 @@ export function ServerStatusProvider({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
       window.removeEventListener("hosts:refresh", handleHostsChanged);
     };
-  }, [fetchEnabledHosts, refreshStatuses]);
+  }, [fetchEnabledHosts, refreshStatuses]); // These callbacks never change, safe to depend on
 
   return (
     <ServerStatusContext.Provider
@@ -181,14 +188,17 @@ export function useServerStatus() {
   const context = useContext(ServerStatusContext);
   if (!context) {
     throw new Error(
-      "useServerStatus must be used within a ServerStatusProvider"
+      "useServerStatus must be used within a ServerStatusProvider",
     );
   }
   return context;
 }
 
 // Convenience hook for getting a single host's status
-export function useHostStatus(hostId: number, statusCheckEnabled: boolean = true) {
+export function useHostStatus(
+  hostId: number,
+  statusCheckEnabled: boolean = true,
+) {
   const { getStatus } = useServerStatus();
 
   if (!statusCheckEnabled) {

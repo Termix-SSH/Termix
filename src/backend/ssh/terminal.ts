@@ -974,6 +974,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("error", (err: Error) => {
       clearTimeout(connectionTimeout);
 
+      sendLog("error", "error", `Connection error: ${err.message}`);
+
       sshLogger.error("SSH connection error", err, {
         operation: "ssh_connect",
         hostId: id,
@@ -992,6 +994,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
         resolvedCredentials.authType === "none" &&
         !isKeyboardInteractive
       ) {
+        sendLog(
+          "auth",
+          "error",
+          "Server does not support keyboard-interactive authentication",
+        );
         clearTimeout(connectionTimeout);
         isAwaitingAuthCredentials = true;
         if (sshConn) {
@@ -1059,6 +1066,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hostId: id,
         error: err.message,
       });
+
+      if (
+        err.message.includes("authentication") ||
+        err.message.includes("Authentication")
+      ) {
+        sendLog("auth", "error", `Authentication failed: ${err.message}`);
+      } else {
+        sendLog("error", "error", `Connection failed: ${err.message}`);
+      }
 
       let errorMessage = "SSH error: " + err.message;
       if (err.message.includes("No matching key exchange algorithm")) {
@@ -1272,10 +1288,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       connectConfig.password = resolvedCredentials.password;
+      sendLog("auth", "info", "Using password authentication");
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
     ) {
+      sendLog("auth", "info", "Using SSH key authentication");
       try {
         if (
           !resolvedCredentials.key.includes("-----BEGIN") ||
@@ -1305,6 +1323,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
     } else if (resolvedCredentials.authType === "key") {
+      sendLog(
+        "auth",
+        "error",
+        "SSH key authentication requested but no key provided",
+      );
       sshLogger.error("SSH key authentication requested but no key provided");
       ws.send(
         JSON.stringify({
@@ -1314,6 +1337,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       );
       return;
     } else {
+      sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");
       ws.send(
         JSON.stringify({

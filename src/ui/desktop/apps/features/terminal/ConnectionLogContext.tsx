@@ -15,6 +15,7 @@ interface ConnectionLogContextType {
   clearLogs: () => void;
   isExpanded: boolean;
   toggleExpanded: () => void;
+  setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ConnectionLogContext = createContext<
@@ -36,10 +37,16 @@ export function ConnectionLogProvider({
       timestamp: new Date(),
     };
     setLogs((prev) => [...prev, newLog]);
+
+    // Auto-expand on errors and warnings
+    if (entry.type === "error" || entry.type === "warning") {
+      setIsExpanded(true);
+    }
   }, []);
 
   const clearLogs = useCallback(() => {
     setLogs([]);
+    setIsExpanded(false);
   }, []);
 
   const toggleExpanded = useCallback(() => {
@@ -48,7 +55,14 @@ export function ConnectionLogProvider({
 
   return (
     <ConnectionLogContext.Provider
-      value={{ logs, addLog, clearLogs, isExpanded, toggleExpanded }}
+      value={{
+        logs,
+        addLog,
+        clearLogs,
+        isExpanded,
+        toggleExpanded,
+        setIsExpanded,
+      }}
     >
       {children}
     </ConnectionLogContext.Provider>

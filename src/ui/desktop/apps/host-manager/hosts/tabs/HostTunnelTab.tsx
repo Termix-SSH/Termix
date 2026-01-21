@@ -66,7 +66,12 @@ export function HostTunnelTab({
                     brew install hudochenkov/sshpass/sshpass
                   </code>
                 </div>
-                <div>• {t("hosts.windows")}</div>
+                <div>
+                  • {t("hosts.windows")}{" "}
+                  <code className="bg-muted px-1 rounded inline">
+                    sudo apt install sshpass
+                  </code>
+                </div>
               </div>
             </AlertDescription>
           </Alert>
@@ -96,7 +101,18 @@ export function HostTunnelTab({
                 </code>{" "}
                 {t("hosts.permitRootLoginYes")}
               </div>
-              <div className="mt-2">{t("hosts.editSshConfig")}</div>
+              <div className="mt-2">
+                {t("hosts.editSshConfig")}{" "}
+                <code className="bg-muted px-1 rounded inline">
+                  {t("hosts.sshConfigPath")}
+                </code>
+              </div>
+              <div className="mt-2">
+                {t("hosts.restartSshService")}{" "}
+                <code className="bg-muted px-1 rounded inline">
+                  {t("hosts.restartSshCommand")}
+                </code>
+              </div>
             </AlertDescription>
           </Alert>
           <div className="mt-3 flex justify-between">

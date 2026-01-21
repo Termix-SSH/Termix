@@ -548,9 +548,16 @@ async function connectSSHTunnel(
     !tunnelConfig.sourceUsername ||
     !tunnelConfig.sourceSSHPort
   ) {
-    tunnelLogger.error("Invalid tunnel connection details", {
-      operation: "tunnel_connect",
+    const missingFields = [];
+    if (!tunnelConfig) missingFields.push("tunnelConfig");
+    if (!tunnelConfig?.sourceIP) missingFields.push("sourceIP");
+    if (!tunnelConfig?.sourceUsername) missingFields.push("sourceUsername");
+    if (!tunnelConfig?.sourceSSHPort) missingFields.push("sourceSSHPort");
+
+    tunnelLogger.error("Invalid tunnel connection details", undefined, {
+      operation: "tunnel_connect_validation_failed",
       tunnelName,
+      missingFields: missingFields.join(", "),
       hasSourceIP: !!tunnelConfig?.sourceIP,
       hasSourceUsername: !!tunnelConfig?.sourceUsername,
       hasSourceSSHPort: !!tunnelConfig?.sourceSSHPort,
@@ -560,6 +567,7 @@ async function connectSSHTunnel(
       status: CONNECTION_STATES.FAILED,
       reason: "Missing required connection details",
     });
+    tunnelConnecting.delete(tunnelName);
     return;
   }
 
@@ -600,12 +608,19 @@ async function connectSSHTunnel(
             };
           } else {
             const errorMessage = `Cannot connect tunnel '${tunnelName}': shared credentials not available`;
-            tunnelLogger.error(errorMessage);
+            tunnelLogger.error(errorMessage, undefined, {
+              operation: "tunnel_shared_credentials_unavailable",
+              tunnelName,
+              requestingUserId: tunnelConfig.requestingUserId,
+              sourceUserId: tunnelConfig.sourceUserId,
+              sourceHostId: tunnelConfig.sourceHostId,
+            });
             broadcastTunnelStatus(tunnelName, {
               connected: false,
               status: CONNECTION_STATES.FAILED,
               reason: errorMessage,
             });
+            tunnelConnecting.delete(tunnelName);
             return;
           }
         }
@@ -662,12 +677,18 @@ async function connectSSHTunnel(
     !resolvedEndpointCredentials.password
   ) {
     const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires password authentication but no plaintext password available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage);
+    tunnelLogger.error(errorMessage, undefined, {
+      operation: "tunnel_endpoint_password_unavailable",
+      tunnelName,
+      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+    });
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
       reason: errorMessage,
     });
+    tunnelConnecting.delete(tunnelName);
     return;
   }
 
@@ -676,12 +697,18 @@ async function connectSSHTunnel(
     !resolvedEndpointCredentials.sshKey
   ) {
     const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires key authentication but no plaintext key available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage);
+    tunnelLogger.error(errorMessage, undefined, {
+      operation: "tunnel_endpoint_key_unavailable",
+      tunnelName,
+      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+    });
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
       reason: errorMessage,
     });
+    tunnelConnecting.delete(tunnelName);
     return;
   }
 
@@ -745,6 +772,19 @@ async function connectSSHTunnel(
         return;
       }
 
+      tunnelLogger.error(
+        `Tunnel connection timeout after 60 seconds for '${tunnelName}'`,
+        undefined,
+        {
+          operation: "tunnel_connection_timeout",
+          tunnelName,
+          sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+          endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+          retryAttempt,
+          usingSocks5: tunnelConfig.useSocks5 || false,
+        },
+      );
+
       try {
         conn.end();
       } catch (error) {}
@@ -763,15 +803,28 @@ async function connectSSHTunnel(
 
   conn.on("error", (err) => {
     clearTimeout(connectionTimeout);
-    tunnelLogger.error(`SSH error for '${tunnelName}': ${err.message}`);
+
+    const errorType = classifyError(err.message);
+
+    tunnelLogger.error(`Tunnel connection failed for '${tunnelName}'`, err, {
+      operation: "tunnel_connect_error",
+      tunnelName,
+      errorType,
+      errorMessage: err.message,
+      sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+      tunnelType: tunnelConfig.tunnelType || "remote",
+      sourcePort: tunnelConfig.sourcePort,
+      retryAttempt,
+      usingSocks5: tunnelConfig.useSocks5 || false,
+      authMethod: tunnelConfig.sourceAuthMethod,
+    });
 
     tunnelConnecting.delete(tunnelName);
 
     if (activeRetryTimers.has(tunnelName)) {
       return;
     }
-
-    const errorType = classifyError(err.message);
 
     if (!manualDisconnects.has(tunnelName)) {
       broadcastTunnelStatus(tunnelName, {
@@ -848,15 +901,29 @@ async function connectSSHTunnel(
 
     conn.exec(tunnelCmd, (err, stream) => {
       if (err) {
+        const errorType = classifyError(err.message);
+
         tunnelLogger.error(
-          `Connection error for '${tunnelName}': ${err.message}`,
+          `Failed to execute tunnel command for '${tunnelName}'`,
+          err,
+          {
+            operation: "tunnel_exec_error",
+            tunnelName,
+            errorType,
+            errorMessage: err.message,
+            sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+            endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+            tunnelType: tunnelConfig.tunnelType || "remote",
+            sourcePort: tunnelConfig.sourcePort,
+            endpointPort: tunnelConfig.endpointPort,
+            retryAttempt,
+          },
         );
 
         conn.end();
 
         activeTunnels.delete(tunnelName);
 
-        const errorType = classifyError(err.message);
         const shouldNotRetry =
           errorType === "AUTHENTICATION_FAILED" ||
           errorType === "CONNECTION_FAILED";
@@ -1086,12 +1153,23 @@ async function connectSSHTunnel(
     ) {
       tunnelLogger.error(
         `Invalid SSH key format for tunnel '${tunnelName}'. Key should contain both BEGIN and END markers`,
+        undefined,
+        {
+          operation: "tunnel_invalid_ssh_key_format",
+          tunnelName,
+          sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+          keyType: resolvedSourceCredentials.keyType,
+          hasBeginMarker:
+            resolvedSourceCredentials.sshKey.includes("-----BEGIN"),
+          hasEndMarker: resolvedSourceCredentials.sshKey.includes("-----END"),
+        },
       );
       broadcastTunnelStatus(tunnelName, {
         connected: false,
         status: CONNECTION_STATES.FAILED,
         reason: "Invalid SSH key format",
       });
+      tunnelConnecting.delete(tunnelName);
       return;
     }
 
@@ -1112,12 +1190,20 @@ async function connectSSHTunnel(
   } else if (resolvedSourceCredentials.authMethod === "key") {
     tunnelLogger.error(
       `SSH key authentication requested but no key provided for tunnel '${tunnelName}'`,
+      undefined,
+      {
+        operation: "tunnel_ssh_key_missing",
+        tunnelName,
+        sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+        authMethod: resolvedSourceCredentials.authMethod,
+      },
     );
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
       reason: "SSH key authentication requested but no key provided",
     });
+    tunnelConnecting.delete(tunnelName);
     return;
   } else {
     connOptions.password = resolvedSourceCredentials.password;
@@ -1159,10 +1245,16 @@ async function connectSSHTunnel(
       }
     } catch (socks5Error) {
       tunnelLogger.error("SOCKS5 connection failed for tunnel", socks5Error, {
-        operation: "socks5_connect",
+        operation: "tunnel_socks5_connection_failed",
         tunnelName,
+        sourceHost: `${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
         proxyHost: tunnelConfig.socks5Host,
         proxyPort: tunnelConfig.socks5Port || 1080,
+        hasProxyAuth: !!(
+          tunnelConfig.socks5Username && tunnelConfig.socks5Password
+        ),
+        errorMessage:
+          socks5Error instanceof Error ? socks5Error.message : "Unknown error",
       });
       broadcastTunnelStatus(tunnelName, {
         connected: false,
@@ -1173,6 +1265,7 @@ async function connectSSHTunnel(
             ? socks5Error.message
             : "Unknown error"),
       });
+      tunnelConnecting.delete(tunnelName);
       return;
     }
   }
