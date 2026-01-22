@@ -38,6 +38,11 @@ import {
 } from "./widgets";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { RefreshCcw, RefreshCw, RefreshCwOff } from "lucide-react";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/components/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
 
 interface QuickAction {
   name: string;
@@ -73,7 +78,7 @@ interface ServerProps {
   embedded?: boolean;
 }
 
-export function ServerStats({
+function ServerStatsInner({
   hostConfig,
   title,
   isVisible = true,
@@ -82,6 +87,11 @@ export function ServerStats({
 }: ServerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
+  const {
+    addLog,
+    clearLogs,
+    isExpanded: isConnectionLogExpanded,
+  } = useConnectionLog();
   const { addTab, tabs, currentTab, removeTab } = useTabs() as {
     addTab: (tab: { type: string; [key: string]: unknown }) => number;
     tabs: TabData[];
@@ -110,6 +120,7 @@ export function ServerStats({
   const [viewerSessionId, setViewerSessionId] = React.useState<string | null>(
     null,
   );
+  const [hasConnectionError, setHasConnectionError] = React.useState(false);
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
@@ -402,12 +413,26 @@ export function ServerStats({
         setIsLoadingMetrics(true);
       }
       setShowStatsUI(true);
+      setHasConnectionError(false); // Reset error state on new connection attempt
+      clearLogs(); // Clear any previous logs before starting new connection
 
       try {
         if (!totpVerified) {
           const result = await startMetricsPolling(currentHostConfig.id);
 
           if (cancelled) return;
+
+          // Process connection logs from backend
+          if (result?.connectionLogs) {
+            result.connectionLogs.forEach((log: any) => {
+              addLog({
+                type: log.type,
+                stage: log.stage,
+                message: log.message,
+                details: log.details,
+              });
+            });
+          }
 
           if (result.requires_totp) {
             setTotpRequired(true);
@@ -451,6 +476,8 @@ export function ServerStats({
           if (!hasExistingMetrics) {
             setIsLoadingMetrics(false);
             logServerActivity();
+            // Clear logs on successful metrics collection
+            setTimeout(() => clearLogs(), 1000);
           }
         }
 
@@ -471,13 +498,29 @@ export function ServerStats({
             }
           }
         }, statsConfig.metricsInterval * 1000);
-      } catch (error) {
+      } catch (error: any) {
         if (!cancelled) {
           console.error("Failed to start metrics polling:", error);
           setIsLoadingMetrics(false);
-          toast.error(t("serverStats.failedToFetchMetrics"));
-          if (currentTab !== null) {
-            removeTab(currentTab);
+          setHasConnectionError(true);
+
+          // Process connection logs from error if available
+          if (error?.connectionLogs) {
+            error.connectionLogs.forEach((log: any) => {
+              addLog({
+                type: log.type,
+                stage: log.stage,
+                message: log.message,
+                details: log.details,
+              });
+            });
+          } else {
+            // Fallback if no connection logs in error
+            addLog({
+              type: "error",
+              stage: "connection",
+              message: error?.message || t("serverStats.connectionFailed"),
+            });
           }
         }
       }
@@ -502,7 +545,10 @@ export function ServerStats({
 
     debounceTimeout = setTimeout(() => {
       if (isActuallyVisible) {
-        startMetrics();
+        // Don't start metrics if there's already a connection error showing
+        if (!hasConnectionError) {
+          startMetrics();
+        }
       } else {
         stopMetrics();
       }
@@ -522,6 +568,7 @@ export function ServerStats({
     metricsEnabled,
     statsConfig.metricsInterval,
     totpVerified,
+    hasConnectionError,
   ]);
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
@@ -554,8 +601,16 @@ export function ServerStats({
 
   return (
     <div style={wrapperStyle} className={`${containerClass} relative`}>
-      <div className="h-full w-full flex flex-col">
-        {!totpRequired && (
+      <div
+        className="h-full w-full flex flex-col"
+        style={{
+          visibility:
+            hasConnectionError && isConnectionLogExpanded
+              ? "hidden"
+              : "visible",
+        }}
+      >
+        {!totpRequired && !isLoadingMetrics && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
             <div className="flex items-center gap-4 min-w-0">
               <div className="min-w-0">
@@ -653,7 +708,9 @@ export function ServerStats({
             </div>
           </div>
         )}
-        {!totpRequired && <Separator className="p-0.25 w-full" />}
+        {!totpRequired && !isLoadingMetrics && (
+          <Separator className="p-0.25 w-full" />
+        )}
 
         <div className="flex-1 overflow-y-auto min-h-0 thin-scrollbar relative">
           {(metricsEnabled && showStatsUI) ||
@@ -794,7 +851,7 @@ export function ServerStats({
 
           {metricsEnabled && (
             <SimpleLoader
-              visible={isLoadingMetrics && !metrics}
+              visible={isLoadingMetrics && !metrics && !isConnectionLogExpanded}
               message={t("serverStats.connecting")}
             />
           )}
@@ -808,6 +865,20 @@ export function ServerStats({
         onCancel={handleTOTPCancel}
         backgroundColor="var(--bg-canvas)"
       />
+      <ConnectionLog
+        isConnecting={isLoadingMetrics}
+        isConnected={serverStatus === "online"}
+        hasConnectionError={hasConnectionError}
+        position={hasConnectionError ? "top" : "bottom"}
+      />
     </div>
+  );
+}
+
+export function ServerStats(props: ServerProps): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <ServerStatsInner {...props} />
+    </ConnectionLogProvider>
   );
 }

@@ -119,6 +119,10 @@ volumes:
   <a href="https://crowdin.com/">
     <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
   </a>
+
+  <a href="https://www.blacksmith.sh/">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/684b4a332c1905034fdee368_ebf0b394c307e7e092874768e7f43edc_image-sblacksmith-socialgraph.png" height="50" alt="Crowdin">
+  </a>
 </p>
 
 # Support

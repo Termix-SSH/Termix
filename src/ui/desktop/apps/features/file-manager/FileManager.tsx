@@ -35,6 +35,12 @@ import {
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "../../../types/index.js";
 import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/components/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+import {
   listSSHFiles,
   uploadSSHFile,
   downloadSSHFile,
@@ -98,6 +104,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
+  const {
+    addLog,
+    clearLogs,
+    isExpanded: isConnectionLogExpanded,
+  } = useConnectionLog();
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
@@ -129,6 +140,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
   const [isClosing, setIsClosing] = useState<boolean>(false);
+  const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -225,14 +237,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const handleCloseWithError = useCallback(
     (errorMessage: string) => {
-      if (isClosing) return;
-      setIsClosing(true);
-      toast.error(errorMessage);
-      if (onClose) {
-        onClose();
-      }
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        stage: "connection",
+        message: errorMessage,
+      });
     },
-    [isClosing, onClose],
+    [addLog],
   );
 
   useEffect(() => {
@@ -341,6 +353,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     try {
       setIsLoading(true);
       initialLoadDoneRef.current = false;
+      setHasConnectionError(false); // Reset error state on new connection
+      clearLogs(); // Clear any previous logs before starting new connection
 
       const sessionId = currentHost.id.toString();
 
@@ -406,8 +420,52 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       } catch (dirError: unknown) {
         console.error("Failed to load initial directory:", dirError);
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("SSH connection failed:", error);
+
+      // Process connection logs from error if available
+      if (error?.connectionLogs) {
+        error.connectionLogs.forEach((log: any) => {
+          addLog({
+            type: log.type,
+            stage: log.stage,
+            message: log.message,
+            details: log.details,
+          });
+        });
+        // Also handle special cases like TOTP/Warpgate from error
+        if (error.requires_totp) {
+          setTotpRequired(true);
+          setTotpSessionId(error.sessionId || currentHost.id.toString());
+          setTotpPrompt(
+            error.prompt || t("fileManager.verificationCodePrompt"),
+          );
+          setIsLoading(false);
+          return;
+        }
+        if (error.requires_warpgate) {
+          setWarpgateRequired(true);
+          setWarpgateSessionId(error.sessionId || currentHost.id.toString());
+          setWarpgateUrl(error.url || "");
+          setWarpgateSecurityKey(error.securityKey || "N/A");
+          setIsLoading(false);
+          return;
+        }
+        if (error.status === "auth_required") {
+          setAuthDialogReason(error.reason || "no_keyboard");
+          setShowAuthDialog(true);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Fallback if no connection logs in error
+        addLog({
+          type: "error",
+          stage: "connection",
+          message: error?.message || t("fileManager.failedToConnect"),
+        });
+      }
+
       handleCloseWithError(
         t("fileManager.failedToConnect") + ": " + (error.message || error),
       );
@@ -2133,8 +2191,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-canvas">
-      <div className="flex-shrink-0 border-b border-edge">
+    <div className="h-full flex flex-col bg-canvas relative">
+      <div
+        className="flex-shrink-0 border-b border-edge"
+        style={{
+          visibility:
+            hasConnectionError && isConnectionLogExpanded
+              ? "hidden"
+              : "visible",
+        }}
+      >
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-foreground">
@@ -2226,7 +2292,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex" {...dragHandlers}>
+      <div
+        className="flex-1 flex"
+        {...dragHandlers}
+        style={{
+          visibility:
+            hasConnectionError && isConnectionLogExpanded
+              ? "hidden"
+              : "visible",
+        }}
+      >
         <div className="w-64 flex-shrink-0 h-full">
           <FileManagerSidebar
             currentHost={currentHost}
@@ -2374,14 +2449,32 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         }}
         onSubmit={handleSudoPasswordSubmit}
       />
+      <SimpleLoader
+        visible={(isReconnecting || isLoading) && !isConnectionLogExpanded}
+        message={t("fileManager.connecting")}
+      />
+      <ConnectionLog
+        isConnecting={isReconnecting || isLoading}
+        isConnected={!!sshSessionId}
+        hasConnectionError={hasConnectionError}
+        position={hasConnectionError ? "top" : "bottom"}
+      />
     </div>
   );
 }
 
-export function FileManager({ initialHost, onClose }: FileManagerProps) {
+function FileManagerInner({ initialHost, onClose }: FileManagerProps) {
   return (
     <WindowManager>
       <FileManagerContent initialHost={initialHost} onClose={onClose} />
     </WindowManager>
+  );
+}
+
+export function FileManager(props: FileManagerProps) {
+  return (
+    <ConnectionLogProvider>
+      <FileManagerInner {...props} />
+    </ConnectionLogProvider>
   );
 }

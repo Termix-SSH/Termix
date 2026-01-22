@@ -40,8 +40,8 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   ConnectionLogProvider,
   useConnectionLog,
-} from "./ConnectionLogContext.tsx";
-import { ConnectionLog } from "./ConnectionLog.tsx";
+} from "@/components/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
 
 interface HostConfig {
   id?: number;

@@ -1663,10 +1663,11 @@
     "fileTooLarge": "File too large: {{error}}",
     "sshConnectionFailed": "SSH connection failed. Please check your connection to {{name}} ({{ip}}:{{port}})",
     "loadFileFailed": "Failed to load file: {{error}}",
+    "connecting": "Connecting...",
     "connectedSuccessfully": "Connected successfully",
     "totpVerificationFailed": "TOTP verification failed",
     "warpgateVerificationFailed": "Warpgate authentication failed",
-    "sshConnectionFailed": "SSH connection failed. Please check your connection to {{name}} ({{ip}}:{{port}})",
+    "authenticationFailed": "Authentication failed",
     "verificationCodePrompt": "Verification code:",
     "newFolderDefault": "NewFolder",
     "newFileDefault": "NewFile.txt",
@@ -1773,6 +1774,8 @@
     "refreshStatus": "Refresh Status",
     "fileManagerAlreadyOpen": "File Manager already open for this host",
     "openFileManager": "Open File Manager",
+    "connecting": "Connecting...",
+    "connectionFailed": "Failed to connect to server",
     "cpuCores_one": "{{count}} CPU",
     "cpuCores_other": "{{count}} CPUs",
     "naCpus": "N/A CPU(s)",
@@ -2575,9 +2578,15 @@
     "notEnabled": "Docker is not enabled for this host",
     "validating": "Validating Docker...",
     "connectingToHost": "Connecting to host...",
+    "connecting": "Connecting...",
     "error": "Error",
     "errorCode": "Error code: {{code}}",
     "version": "Docker {{version}}",
+    "connectionFailed": "Failed to connect to Docker",
+    "totpVerificationFailed": "TOTP verification failed",
+    "warpgateVerificationFailed": "Warpgate verification failed",
+    "verificationCodePrompt": "Enter verification code",
+    "loadingContainers": "Loading containers...",
     "containerStarted": "Container {{name}} started",
     "failedToStartContainer": "Failed to start container {{name}}",
     "containerStopped": "Container {{name}} stopped",
@@ -2663,7 +2672,51 @@
     "logs": "Logs",
     "stats": "Stats",
     "consoleTab": "Console",
-    "startContainerToAccess": "Start the container to access the console"
+    "startContainerToAccess": "Start the container to access the console",
+    "log": {
+      "connecting": "Connecting to Docker host...",
+      "authStarted": "Resolving authentication credentials...",
+      "totpRequired": "TOTP verification required",
+      "warpgateRequired": "Warpgate authentication required",
+      "sessionCreated": "Docker SSH session established",
+      "sessionReady": "Ready for Docker operations",
+      "error": "Docker connection failed: {{error}}"
+    }
+  },
+  "stats": {
+    "log": {
+      "connecting": "Starting metrics collection...",
+      "existingSession": "Using existing metrics session",
+      "totpVerifying": "TOTP verification required",
+      "sessionEstablished": "Metrics session established",
+      "collecting": "Collecting server metrics",
+      "heartbeat": "Keeping connection alive",
+      "stopped": "Metrics collection stopped",
+      "error": "Metrics collection failed: {{error}}"
+    }
+  },
+  "tunnel": {
+    "log": {
+      "connecting": "Establishing tunnel connection...",
+      "sourceConnecting": "Connecting to source host {{host}}...",
+      "sourceConnected": "Connected to source host",
+      "endpointResolving": "Resolving endpoint host {{host}}...",
+      "endpointResolved": "Endpoint host resolved",
+      "forwarding": "Setting up port forwarding {{localPort}} → {{remotePort}}...",
+      "connected": "Tunnel established successfully",
+      "retrying": "Connection failed, retrying in {{countdown}}s (attempt {{attempt}}/{{max}})...",
+      "retryExhausted": "Max retry attempts reached",
+      "error": "Tunnel connection failed: {{error}}"
+    }
+  },
+  "sftp": {
+    "log": {
+      "connecting": "Connecting to SFTP server...",
+      "jumpHost": "Connecting via jump host {{host}}...",
+      "connected": "SFTP connection established",
+      "authFailed": "Authentication failed",
+      "error": "SFTP operation failed: {{error}}"
+    }
   },
   "theme": {
     "switchToLight": "Switch to Light",

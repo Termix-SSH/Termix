@@ -1,17 +1,10 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-
-export type LogEntry = {
-  id: string;
-  timestamp: Date;
-  type: "info" | "success" | "warning" | "error";
-  stage: "dns" | "tcp" | "handshake" | "auth" | "connected" | "error";
-  message: string;
-  details?: Record<string, any>;
-};
+import type { LogEntry } from "@/types/connection-log";
 
 interface ConnectionLogContextType {
   logs: LogEntry[];
   addLog: (entry: Omit<LogEntry, "id" | "timestamp">) => void;
+  setLogs: (entries: Omit<LogEntry, "id" | "timestamp">[]) => void;
   clearLogs: () => void;
   isExpanded: boolean;
   toggleExpanded: () => void;
@@ -27,7 +20,7 @@ export function ConnectionLogProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogsState] = useState<LogEntry[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const addLog = useCallback((entry: Omit<LogEntry, "id" | "timestamp">) => {
@@ -36,7 +29,7 @@ export function ConnectionLogProvider({
       id: `${Date.now()}-${Math.random()}`,
       timestamp: new Date(),
     };
-    setLogs((prev) => [...prev, newLog]);
+    setLogsState((prev) => [...prev, newLog]);
 
     // Auto-expand on errors and warnings
     if (entry.type === "error" || entry.type === "warning") {
@@ -44,8 +37,24 @@ export function ConnectionLogProvider({
     }
   }, []);
 
+  const setLogs = useCallback(
+    (entries: Omit<LogEntry, "id" | "timestamp">[]) => {
+      const newLogs = entries.map((entry, index) => ({
+        ...entry,
+        id: `${Date.now()}-${index}-${Math.random()}`,
+        timestamp: new Date(),
+      }));
+      setLogsState(newLogs);
+
+      if (entries.some((e) => e.type === "error" || e.type === "warning")) {
+        setIsExpanded(true);
+      }
+    },
+    [],
+  );
+
   const clearLogs = useCallback(() => {
-    setLogs([]);
+    setLogsState([]);
     setIsExpanded(false);
   }, []);
 
@@ -58,6 +67,7 @@ export function ConnectionLogProvider({
       value={{
         logs,
         addLog,
+        setLogs,
         clearLogs,
         isExpanded,
         toggleExpanded,

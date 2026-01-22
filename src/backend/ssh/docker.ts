@@ -12,8 +12,23 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 
 const dockerLogger = logger;
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 interface SSHSession {
   client: SSHClient;
@@ -411,6 +426,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
   } = req.body;
   const userId = (req as any).userId;
 
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
   if (!userId) {
     dockerLogger.error(
       "Docker SSH connection rejected: no authenticated user",
@@ -419,13 +436,26 @@ app.post("/docker/ssh/connect", async (req, res) => {
         sessionId,
       },
     );
-    return res.status(401).json({ error: "Authentication required" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Authentication required",
+      ),
+    );
+    return res
+      .status(401)
+      .json({ error: "Authentication required", connectionLogs });
   }
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    connectionLogs.push(
+      createConnectionLog("error", "docker_connecting", "Session expired"),
+    );
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
+      connectionLogs,
     });
   }
 
@@ -435,8 +465,25 @@ app.post("/docker/ssh/connect", async (req, res) => {
       sessionId,
       hasHostId: !!hostId,
     });
-    return res.status(400).json({ error: "Missing sessionId or hostId" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Missing connection parameters",
+      ),
+    );
+    return res
+      .status(400)
+      .json({ error: "Missing sessionId or hostId", connectionLogs });
   }
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "docker_connecting",
+      "Initiating Docker SSH connection",
+    ),
+  );
 
   try {
     const hosts = await SimpleDBOps.select(
@@ -446,7 +493,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
     );
 
     if (hosts.length === 0) {
-      return res.status(404).json({ error: "Host not found" });
+      connectionLogs.push(
+        createConnectionLog("error", "docker_connecting", "Host not found"),
+      );
+      return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
     const host = hosts[0] as unknown as SSHHost;
@@ -467,7 +517,14 @@ app.post("/docker/ssh/connect", async (req, res) => {
           hostId,
           userId,
         });
-        return res.status(403).json({ error: "Access denied" });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "docker_connecting",
+            "Access denied to host",
+          ),
+        );
+        return res.status(403).json({ error: "Access denied", connectionLogs });
       }
     }
     if (typeof host.jumpHosts === "string" && host.jumpHosts) {
@@ -487,12 +544,28 @@ app.post("/docker/ssh/connect", async (req, res) => {
         hostId,
         userId,
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "docker_connecting",
+          "Docker is not enabled for this host",
+        ),
+      );
       return res.status(403).json({
         error:
           "Docker is not enabled for this host. Enable it in Host Settings.",
         code: "DOCKER_DISABLED",
+        connectionLogs,
       });
     }
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "docker_auth",
+        "Resolving authentication credentials",
+      ),
+    );
 
     if (sshSessions[sessionId]) {
       cleanupSession(sessionId);
@@ -612,8 +685,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
             sessionId,
             hostId,
           });
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "docker_auth",
+              "Invalid SSH private key format",
+            ),
+          );
           return res.status(400).json({
             error: "Invalid private key format",
+            connectionLogs,
           });
         }
 
@@ -631,8 +712,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
           sessionId,
           hostId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "docker_auth",
+            "SSH key processing error",
+          ),
+        );
         return res.status(400).json({
           error: "SSH key format error: Invalid private key format",
+          connectionLogs,
         });
       }
     } else if (resolvedCredentials.authType === "key") {
@@ -644,17 +733,67 @@ app.post("/docker/ssh/connect", async (req, res) => {
           hostId,
         },
       );
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "docker_auth",
+          "SSH key authentication requested but no key provided",
+        ),
+      );
       return res.status(400).json({
         error: "SSH key authentication requested but no key provided",
+        connectionLogs,
       });
     }
 
     let responseSent = false;
     let keyboardInteractiveResponded = false;
 
+    connectionLogs.push(
+      createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
+    );
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "tcp",
+        `Connecting to ${host.ip}:${host.port || 22}`,
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+    );
+
+    if (resolvedCredentials.authType === "password") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with password"),
+      );
+    } else if (resolvedCredentials.authType === "key") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
+    } else if (resolvedCredentials.authType === "none") {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "auth",
+          "Attempting keyboard-interactive authentication",
+        ),
+      );
+    }
+
     client.on("ready", () => {
       if (responseSent) return;
       responseSent = true;
+
+      connectionLogs.push(
+        createConnectionLog(
+          "success",
+          "connected",
+          "SSH connection established successfully",
+        ),
+      );
 
       sshSessions[sessionId] = {
         client,
@@ -666,7 +805,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       scheduleSessionCleanup(sessionId);
 
-      res.json({ success: true, message: "SSH connection established" });
+      res.json({
+        success: true,
+        message: "SSH connection established",
+        connectionLogs,
+      });
     });
 
     client.on("error", (err) => {
@@ -696,6 +839,65 @@ app.post("/docker/ssh/connect", async (req, res) => {
         userId,
       });
 
+      let errorStage: ConnectionStage = "error";
+      if (
+        err.message.includes("ENOTFOUND") ||
+        err.message.includes("getaddrinfo")
+      ) {
+        errorStage = "dns";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `DNS resolution failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("ECONNREFUSED") ||
+        err.message.includes("ETIMEDOUT")
+      ) {
+        errorStage = "tcp";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `TCP connection failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("handshake") ||
+        err.message.includes("key exchange")
+      ) {
+        errorStage = "handshake";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `SSH handshake failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("authentication") ||
+        err.message.includes("Authentication")
+      ) {
+        errorStage = "auth";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `Authentication failed: ${err.message}`,
+          ),
+        );
+      } else {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "error",
+            `SSH connection failed: ${err.message}`,
+          ),
+        );
+      }
+
       if (
         resolvedCredentials.authType === "none" &&
         (err.message.includes("authentication") ||
@@ -704,11 +906,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
         res.json({
           status: "auth_required",
           reason: "no_keyboard",
+          connectionLogs,
         });
       } else {
         res.status(500).json({
           success: false,
           message: err.message || "SSH connection failed",
+          connectionLogs,
         });
       }
     });
@@ -772,11 +976,20 @@ app.post("/docker/ssh/connect", async (req, res) => {
               isWarpgate: true,
             };
 
+            connectionLogs.push(
+              createConnectionLog(
+                "info",
+                "docker_auth",
+                "Warpgate authentication required",
+              ),
+            );
+
             res.json({
               requires_warpgate: true,
               sessionId,
               url: urlMatch[0],
               securityKey: keyMatch ? keyMatch[1] : "N/A",
+              connectionLogs,
             });
             return;
           }
@@ -831,10 +1044,19 @@ app.post("/docker/ssh/connect", async (req, res) => {
             totpAttempts: 0,
           };
 
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "docker_auth",
+              "TOTP verification required",
+            ),
+          );
+
           res.json({
             requires_totp: true,
             sessionId,
             prompt: prompts[totpPromptIndex].prompt,
+            connectionLogs,
           });
         } else {
           const passwordPromptIndex = prompts.findIndex((p) =>
@@ -933,6 +1155,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
       (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
     ) {
       try {
+        connectionLogs.push(
+          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
+        );
         const socks5Socket = await createSocks5Connection(
           host.ip,
           host.port || 22,
@@ -959,6 +1184,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
           proxyHost: socks5Host,
           proxyPort: socks5Port || 1080,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "proxy",
+            `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
+          ),
+        );
         if (!responseSent) {
           responseSent = true;
           return res.status(500).json({
@@ -967,19 +1199,35 @@ app.post("/docker/ssh/connect", async (req, res) => {
               (socks5Error instanceof Error
                 ? socks5Error.message
                 : "Unknown error"),
+            connectionLogs,
           });
         }
         return;
       }
     } else if (host.jumpHosts && host.jumpHosts.length > 0) {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "jump",
+          `Connecting via ${host.jumpHosts.length} jump host(s)`,
+        ),
+      );
       const jumpClient = await createJumpHostChain(
         host.jumpHosts as Array<{ hostId: number }>,
         userId,
       );
 
       if (!jumpClient) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            "Failed to establish jump host chain",
+          ),
+        );
         return res.status(500).json({
           error: "Failed to establish jump host chain",
+          connectionLogs,
         });
       }
 
@@ -995,11 +1243,19 @@ app.post("/docker/ssh/connect", async (req, res) => {
               sessionId,
               hostId,
             });
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                "jump",
+                `Failed to forward through jump host: ${err.message}`,
+              ),
+            );
             jumpClient.end();
             if (!responseSent) {
               responseSent = true;
               return res.status(500).json({
                 error: "Failed to forward through jump host: " + err.message,
+                connectionLogs,
               });
             }
             return;
@@ -1019,9 +1275,17 @@ app.post("/docker/ssh/connect", async (req, res) => {
       hostId,
       userId,
     });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        `Connection error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ),
+    );
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
+      connectionLogs,
     });
   }
 });

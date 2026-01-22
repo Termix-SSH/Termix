@@ -275,6 +275,12 @@ export interface TunnelStatus {
   errorType?: ErrorType;
   manualDisconnect?: boolean;
   retryExhausted?: boolean;
+  connectionLogs?: Array<{
+    type: "info" | "success" | "warning" | "error";
+    stage: string;
+    message: string;
+    details?: Record<string, any>;
+  }>;
 }
 
 // ============================================================================

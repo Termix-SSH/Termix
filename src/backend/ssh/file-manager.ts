@@ -11,6 +11,21 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -481,13 +496,31 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_connecting",
+      `Initiating SFTP connection to ${username}@${ip}:${port}`,
+    ),
+  );
 
   if (!userId) {
     fileLogger.error("SSH connection rejected: no authenticated user", {
       operation: "file_connect_auth",
       sessionId,
     });
-    return res.status(401).json({ error: "Authentication required" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_auth",
+        "Authentication required - no user session",
+      ),
+    );
+    return res
+      .status(401)
+      .json({ error: "Authentication required", connectionLogs });
   }
 
   if (!sessionId || !ip || !username || !port) {
@@ -498,7 +531,16 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       hasUsername: !!username,
       hasPort: !!port,
     });
-    return res.status(400).json({ error: "Missing SSH connection parameters" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_connecting",
+        "Missing required connection parameters",
+      ),
+    );
+    return res
+      .status(400)
+      .json({ error: "Missing SSH connection parameters", connectionLogs });
   }
 
   if (sshSessions[sessionId]?.isConnected) {
@@ -514,6 +556,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const client = new SSHClient();
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_auth",
+      "Resolving authentication credentials",
+    ),
+  );
 
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
@@ -541,6 +591,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: credential.key_password || credential.keyPassword,
           authType: credential.auth_type || credential.authType,
         };
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "Credentials resolved from credential store",
+          ),
+        );
       } else {
         fileLogger.warn(`No credentials found for host ${hostId}`, {
           operation: "ssh_credentials",
@@ -548,6 +605,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           credentialId,
           userId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "warning",
+            "sftp_auth",
+            "No stored credentials found, using provided credentials",
+          ),
+        );
       }
     } catch (error) {
       fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
@@ -556,6 +620,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         credentialId,
         error: error instanceof Error ? error.message : "Unknown error",
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "warning",
+          "sftp_auth",
+          `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
     }
   } else if (credentialId && hostId) {
     fileLogger.warn(
@@ -660,6 +731,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using SSH key authentication",
+        ),
+      );
     } catch (keyError) {
       fileLogger.error("SSH key format error for file manager", {
         operation: "file_connect",
@@ -667,17 +745,46 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostId,
         error: keyError.message,
       });
-      return res.status(400).json({ error: "Invalid SSH key format" });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          `Invalid SSH key format: ${keyError.message}`,
+        ),
+      );
+      return res
+        .status(400)
+        .json({ error: "Invalid SSH key format", connectionLogs });
     }
   } else if (resolvedCredentials.authType === "password") {
     if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          "Password required for password authentication",
+        ),
+      );
       return res
         .status(400)
-        .json({ error: "Password required for password authentication" });
+        .json({
+          error: "Password required for password authentication",
+          connectionLogs,
+        });
     }
 
     config.password = resolvedCredentials.password;
+    connectionLogs.push(
+      createConnectionLog("info", "sftp_auth", "Using password authentication"),
+    );
   } else if (resolvedCredentials.authType === "none") {
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "sftp_auth",
+        "Using keyboard-interactive authentication",
+      ),
+    );
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -690,16 +797,60 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hasKey: !!resolvedCredentials.sshKey,
       },
     );
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_auth",
+        "No valid authentication method provided",
+      ),
+    );
     return res
       .status(400)
-      .json({ error: "Either password or SSH key must be provided" });
+      .json({
+        error: "Either password or SSH key must be provided",
+        connectionLogs,
+      });
   }
 
   let responseSent = false;
 
+  connectionLogs.push(
+    createConnectionLog("info", "dns", `Resolving DNS for ${ip}`),
+  );
+
+  connectionLogs.push(
+    createConnectionLog("info", "tcp", `Connecting to ${ip}:${port}`),
+  );
+
+  connectionLogs.push(
+    createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+  );
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_connecting",
+      "Establishing SSH connection...",
+    ),
+  );
+
   client.on("ready", () => {
     if (responseSent) return;
     responseSent = true;
+    connectionLogs.push(
+      createConnectionLog(
+        "success",
+        "connected",
+        "SSH connection established successfully",
+      ),
+    );
+    connectionLogs.push(
+      createConnectionLog(
+        "success",
+        "sftp_connected",
+        "SFTP session established successfully",
+      ),
+    );
     sshSessions[sessionId] = {
       client,
       isConnected: true,
@@ -707,7 +858,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
     };
     scheduleSessionCleanup(sessionId);
-    res.json({ status: "success", message: "SSH connection established" });
+    res.json({
+      status: "success",
+      message: "SSH connection established",
+      connectionLogs,
+    });
 
     if (hostId && userId) {
       (async () => {
@@ -765,6 +920,70 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       error: err.message,
     });
 
+    let errorStage: ConnectionStage = "error";
+    if (
+      err.message.includes("ENOTFOUND") ||
+      err.message.includes("getaddrinfo")
+    ) {
+      errorStage = "dns";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `DNS resolution failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("ECONNREFUSED") ||
+      err.message.includes("ETIMEDOUT")
+    ) {
+      errorStage = "tcp";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `TCP connection failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("handshake") ||
+      err.message.includes("key exchange")
+    ) {
+      errorStage = "handshake";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `SSH handshake failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("authentication") ||
+      err.message.includes("Authentication")
+    ) {
+      errorStage = "auth";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `Authentication failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else {
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "error",
+          `SSH connection failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    }
+
     if (
       resolvedCredentials.authType === "none" &&
       (err.message.includes("authentication") ||
@@ -773,9 +992,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       res.json({
         status: "auth_required",
         reason: "no_keyboard",
+        connectionLogs,
       });
     } else {
-      res.status(500).json({ status: "error", message: err.message });
+      res
+        .status(500)
+        .json({ status: "error", message: err.message, connectionLogs });
     }
   });
 
@@ -816,6 +1038,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
           keyboardInteractiveResponded = true;
 
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "sftp_auth",
+              "Warpgate authentication required",
+              { url: urlMatch[0] },
+            ),
+          );
+
           pendingTOTPSessions[sessionId] = {
             client,
             finish,
@@ -839,6 +1070,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             sessionId,
             url: urlMatch[0],
             securityKey: keyMatch ? keyMatch[1] : "N/A",
+            connectionLogs,
           });
           return;
         }
@@ -876,6 +1108,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
         keyboardInteractiveResponded = true;
 
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "TOTP verification required",
+            { prompt: prompts[totpPromptIndex].prompt },
+          ),
+        );
+
         pendingTOTPSessions[sessionId] = {
           client,
           finish,
@@ -897,6 +1138,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           requires_totp: true,
           sessionId,
           prompt: prompts[totpPromptIndex].prompt,
+          connectionLogs,
         });
       } else {
         const hasStoredPassword =
@@ -991,6 +1233,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     useSocks5 &&
     (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
   ) {
+    connectionLogs.push(
+      createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy", {
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      }),
+    );
     try {
       const socks5Socket = await createSocks5Connection(ip, port, {
         useSocks5,
@@ -1002,6 +1250,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
 
       if (socks5Socket) {
+        connectionLogs.push(
+          createConnectionLog(
+            "success",
+            "proxy",
+            "SOCKS5 proxy connected successfully",
+          ),
+        );
         config.sock = socks5Socket;
         client.connect(config);
         return;
@@ -1010,6 +1265,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           operation: "sftp_socks5_socket_null",
           sessionId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "proxy",
+            "SOCKS5 socket creation returned null",
+          ),
+        );
       }
     } catch (socks5Error) {
       fileLogger.error("SOCKS5 connection failed", socks5Error, {
@@ -1019,16 +1281,31 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         proxyHost: socks5Host,
         proxyPort: socks5Port || 1080,
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "proxy",
+          `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
+        ),
+      );
       return res.status(500).json({
         error:
           "SOCKS5 proxy connection failed: " +
           (socks5Error instanceof Error
             ? socks5Error.message
             : "Unknown error"),
+        connectionLogs,
       });
     }
   } else if (jumpHosts && jumpHosts.length > 0 && userId) {
     try {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "jump",
+          `Connecting via ${jumpHosts.length} jump host(s)`,
+        ),
+      );
       const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
       if (!jumpClient) {
@@ -1037,9 +1314,19 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sessionId,
           hostId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            "Failed to establish jump host chain",
+          ),
+        );
         return res
           .status(500)
-          .json({ error: "Failed to connect through jump hosts" });
+          .json({
+            error: "Failed to connect through jump hosts",
+            connectionLogs,
+          });
       }
 
       jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
@@ -1051,9 +1338,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             ip,
             port,
           });
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "jump",
+              `Failed to forward through jump host: ${err.message}`,
+            ),
+          );
           jumpClient.end();
           return res.status(500).json({
             error: "Failed to forward through jump host: " + err.message,
+            connectionLogs,
           });
         }
 
@@ -1066,9 +1361,19 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         sessionId,
         hostId,
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "jump",
+          `Jump host error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
       return res
         .status(500)
-        .json({ error: "Failed to connect through jump hosts" });
+        .json({
+          error: "Failed to connect through jump hosts",
+          connectionLogs,
+        });
     }
   } else {
     client.connect(config);

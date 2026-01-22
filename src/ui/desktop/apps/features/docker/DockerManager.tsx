@@ -30,6 +30,11 @@ import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/components/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -46,7 +51,7 @@ interface TabData {
   [key: string]: unknown;
 }
 
-export function DockerManager({
+function DockerManagerInner({
   hostConfig,
   title,
   isVisible = true,
@@ -56,6 +61,12 @@ export function DockerManager({
 }: DockerManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
+  const {
+    addLog,
+    setLogs,
+    clearLogs,
+    isExpanded: isConnectionLogExpanded,
+  } = useConnectionLog();
   const { currentTab, removeTab } = useTabs() as {
     currentTab: number | null;
     removeTab: (tabId: number) => void;
@@ -87,6 +98,7 @@ export function DockerManager({
   const [authReason, setAuthReason] = React.useState<
     "no_keyboard" | "auth_failed" | "timeout"
   >("no_keyboard");
+  const [hasConnectionError, setHasConnectionError] = React.useState(false);
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
@@ -180,6 +192,8 @@ export function DockerManager({
       }
 
       setIsConnecting(true);
+      setHasConnectionError(false); // Reset error state on new connection
+      clearLogs(); // Clear any previous logs before starting new connection
       const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       try {
@@ -226,19 +240,35 @@ export function DockerManager({
         setIsValidating(false);
 
         if (!validation.available) {
-          toast.error(
-            validation.error || "Docker is not available on this host",
-          );
+          setHasConnectionError(true);
+          addLog({
+            type: "error",
+            stage: "validation",
+            message: validation.error || t("docker.error"),
+            details: validation.code
+              ? `Error code: ${validation.code}`
+              : undefined,
+          });
         } else {
           logDockerActivity();
+          // Clear logs on successful connection
+          setTimeout(() => clearLogs(), 1000);
         }
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to connect to host",
-        );
+      } catch (error: any) {
         setIsConnecting(false);
         setIsValidating(false);
-        onClose?.();
+        setHasConnectionError(true);
+
+        if (error?.connectionLogs) {
+          setLogs(error.connectionLogs);
+        } else {
+          // Fallback if no connection logs in error
+          addLog({
+            type: "error",
+            stage: "connection",
+            message: error?.message || t("docker.connectionFailed"),
+          });
+        }
       } finally {
         setIsConnecting(false);
       }
@@ -335,16 +365,27 @@ export function DockerManager({
         setIsValidating(false);
 
         if (!validation.available) {
-          toast.error(
-            validation.error || "Docker is not available on this host",
-          );
+          setHasConnectionError(true);
+          addLog({
+            type: "error",
+            stage: "validation",
+            message: validation.error || t("docker.error"),
+            details: validation.code
+              ? `Error code: ${validation.code}`
+              : undefined,
+          });
         } else {
           logDockerActivity();
         }
       }
     } catch (error) {
       console.error("TOTP verification failed:", error);
-      toast.error(t("docker.totpVerificationFailed"));
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        stage: "auth",
+        message: t("docker.totpVerificationFailed"),
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -380,16 +421,27 @@ export function DockerManager({
         setIsValidating(false);
 
         if (!validation.available) {
-          toast.error(
-            validation.error || "Docker is not available on this host",
-          );
+          setHasConnectionError(true);
+          addLog({
+            type: "error",
+            stage: "validation",
+            message: validation.error || t("docker.error"),
+            details: validation.code
+              ? `Error code: ${validation.code}`
+              : undefined,
+          });
         } else {
           logDockerActivity();
         }
       }
     } catch (error) {
       console.error("Warpgate verification failed:", error);
-      toast.error(t("docker.warpgateVerificationFailed"));
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        stage: "auth",
+        message: t("docker.warpgateVerificationFailed"),
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -469,15 +521,20 @@ export function DockerManager({
       setIsValidating(false);
 
       if (!validation.available) {
-        toast.error(validation.error || "Docker is not available on this host");
+        setHasConnectionError(true);
+        // Don't show toast - connection log will display the error
       } else {
         logDockerActivity();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to connect");
       setIsConnecting(false);
       setIsValidating(false);
-      onClose?.();
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        stage: "connection",
+        message: error?.message || t("docker.connectionFailed"),
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -510,7 +567,7 @@ export function DockerManager({
 
   if (!currentHostConfig?.enableDocker) {
     return (
-      <div style={wrapperStyle} className={containerClass}>
+      <div style={wrapperStyle} className={`${containerClass} relative`}>
         <div className="h-full w-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
             <div className="flex items-center gap-4 min-w-0">
@@ -536,35 +593,30 @@ export function DockerManager({
 
   if (isConnecting || isValidating) {
     return (
-      <div style={wrapperStyle} className={containerClass}>
+      <div style={wrapperStyle} className={`${containerClass} relative`}>
         <div className="h-full w-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="min-w-0">
-                <h1 className="font-bold text-lg truncate">
-                  {currentHostConfig?.folder} / {title}
-                </h1>
-              </div>
-            </div>
-          </div>
-          <Separator className="p-0.25 w-full" />
-
           <div className="flex-1 overflow-hidden min-h-0 relative">
             <SimpleLoader
-              visible={true}
+              visible={true && !isConnectionLogExpanded}
               message={
                 isValidating ? t("docker.validating") : t("docker.connecting")
               }
             />
           </div>
         </div>
+        <ConnectionLog
+          isConnecting={isConnecting}
+          isConnected={!!sessionId && !!dockerValidation?.available}
+          hasConnectionError={hasConnectionError}
+          position={hasConnectionError ? "top" : "bottom"}
+        />
       </div>
     );
   }
 
   if (dockerValidation && !dockerValidation.available) {
     return (
-      <div style={wrapperStyle} className={containerClass}>
+      <div style={wrapperStyle} className={`${containerClass} relative`}>
         <div className="h-full w-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
             <div className="flex items-center gap-4 min-w-0">
@@ -592,13 +644,37 @@ export function DockerManager({
             </Alert>
           </div>
         </div>
+        <ConnectionLog
+          isConnecting={isConnecting}
+          isConnected={!!sessionId && !!dockerValidation?.available}
+          hasConnectionError={
+            hasConnectionError ||
+            (!!dockerValidation && !dockerValidation.available)
+          }
+          position={
+            hasConnectionError ||
+            (!!dockerValidation && !dockerValidation.available)
+              ? "top"
+              : "bottom"
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div style={wrapperStyle} className={containerClass}>
-      <div className="h-full w-full flex flex-col">
+    <div style={wrapperStyle} className={`${containerClass} relative`}>
+      <div
+        className="h-full w-full flex flex-col"
+        style={{
+          visibility:
+            (hasConnectionError ||
+              (!!dockerValidation && !dockerValidation.available)) &&
+            isConnectionLogExpanded
+              ? "hidden"
+              : "visible",
+        }}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
@@ -687,6 +763,32 @@ export function DockerManager({
           }}
         />
       )}
+      <SimpleLoader
+        visible={isConnecting && !isConnectionLogExpanded}
+        message={t("docker.connecting")}
+      />
+      <ConnectionLog
+        isConnecting={isConnecting}
+        isConnected={!!sessionId && !!dockerValidation?.available}
+        hasConnectionError={
+          hasConnectionError ||
+          (!!dockerValidation && !dockerValidation.available)
+        }
+        position={
+          hasConnectionError ||
+          (!!dockerValidation && !dockerValidation.available)
+            ? "top"
+            : "bottom"
+        }
+      />
     </div>
+  );
+}
+
+export function DockerManager(props: DockerManagerProps): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <DockerManagerInner {...props} />
+    </ConnectionLogProvider>
   );
 }

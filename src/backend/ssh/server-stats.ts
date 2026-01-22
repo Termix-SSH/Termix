@@ -11,6 +11,7 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { collectCpuMetrics } from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
 import { collectDiskMetrics } from "./widgets/disk-collector.js";
@@ -22,6 +23,20 @@ import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 async function resolveJumpHost(
   hostId: number,
@@ -2264,24 +2279,74 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    connectionLogs.push(
+      createConnectionLog("error", "stats_connecting", "Session expired"),
+    );
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
+      connectionLogs,
     });
   }
 
   try {
     const host = await fetchHostById(id, userId);
     if (!host) {
-      return res.status(404).json({ error: "Host not found" });
+      connectionLogs.push(
+        createConnectionLog("error", "stats_connecting", "Host not found"),
+      );
+      return res.status(404).json({ error: "Host not found", connectionLogs });
+    }
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "stats_connecting",
+        "Starting metrics collection",
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
+    );
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "tcp",
+        `Connecting to ${host.ip}:${host.port}`,
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+    );
+
+    if (host.authType === "password") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with password"),
+      );
+    } else if (host.authType === "key") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
     }
 
     const sessionKey = getSessionKey(host.id, userId);
 
     const existingSession = metricsSessions[sessionKey];
     if (existingSession && existingSession.isConnected) {
-      return res.json({ success: true });
+      connectionLogs.push(
+        createConnectionLog(
+          "success",
+          "stats_polling",
+          "Using existing metrics session",
+        ),
+      );
+      return res.json({ success: true, connectionLogs });
     }
 
     const config = buildSshConfig(host);
@@ -2333,6 +2398,14 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
               totpAttempts: 0,
             };
 
+            connectionLogs.push(
+              createConnectionLog(
+                "info",
+                "stats_totp",
+                "TOTP verification required",
+              ),
+            );
+
             clearTimeout(timeout);
             if (!isResolved) {
               isResolved = true;
@@ -2361,6 +2434,22 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         if (!isResolved) {
           isResolved = true;
 
+          connectionLogs.push(
+            createConnectionLog(
+              "success",
+              "connected",
+              "SSH connection established successfully",
+            ),
+          );
+
+          connectionLogs.push(
+            createConnectionLog(
+              "success",
+              "stats_polling",
+              "Metrics session established",
+            ),
+          );
+
           metricsSessions[sessionKey] = {
             client,
             isConnected: true,
@@ -2382,10 +2471,73 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         clearTimeout(timeout);
         if (!isResolved) {
           isResolved = true;
+
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          let errorStage: ConnectionStage = "error";
+
+          if (
+            errorMessage.includes("ENOTFOUND") ||
+            errorMessage.includes("getaddrinfo")
+          ) {
+            errorStage = "dns";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `DNS resolution failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("ECONNREFUSED") ||
+            errorMessage.includes("ETIMEDOUT")
+          ) {
+            errorStage = "tcp";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `TCP connection failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("handshake") ||
+            errorMessage.includes("key exchange")
+          ) {
+            errorStage = "handshake";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `SSH handshake failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("authentication") ||
+            errorMessage.includes("Authentication")
+          ) {
+            errorStage = "auth";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `Authentication failed: ${errorMessage}`,
+              ),
+            );
+          } else {
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                "error",
+                `SSH connection failed: ${errorMessage}`,
+              ),
+            );
+          }
+
           statsLogger.error("SSH connection error in metrics/start", {
             operation: "metrics_start_ssh_error",
             hostId: host.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           });
           reject(error);
         }
@@ -2396,6 +2548,9 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         (host.socks5Host ||
           (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
       ) {
+        connectionLogs.push(
+          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
+        );
         createSocks5Connection(host.ip, host.port, {
           useSocks5: host.useSocks5,
           socks5Host: host.socks5Host,
@@ -2414,6 +2569,13 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             if (!isResolved) {
               isResolved = true;
               clearTimeout(timeout);
+              connectionLogs.push(
+                createConnectionLog(
+                  "error",
+                  "proxy",
+                  `SOCKS5 proxy connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                ),
+              );
               reject(error);
             }
           });
@@ -2423,18 +2585,26 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
     });
 
     const result = await connectionPromise;
-    res.json(result);
+    res.json({ ...result, connectionLogs });
   } catch (error) {
     statsLogger.error("Failed to start metrics collection", {
       operation: "metrics_start_error",
       hostId: id,
       error: error instanceof Error ? error.message : String(error),
     });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "stats_connecting",
+        `Failed to start metrics: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ),
+    );
     res.status(500).json({
       error:
         error instanceof Error
           ? error.message
           : "Failed to start metrics collection",
+      connectionLogs,
     });
   }
 });

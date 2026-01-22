@@ -1394,6 +1394,7 @@ export async function connectSSH(
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    jumpHosts?: any[];
   },
 ): Promise<Record<string, unknown>> {
   try {
@@ -1402,7 +1403,34 @@ export async function connectSSH(
       ...config,
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      // Also preserve other fields like requires_totp
+      if (error.response.data.requires_totp) {
+        (errorWithLogs as any).requires_totp = true;
+        (errorWithLogs as any).sessionId = error.response.data.sessionId;
+        (errorWithLogs as any).prompt = error.response.data.prompt;
+      }
+      if (error.response.data.requires_warpgate) {
+        (errorWithLogs as any).requires_warpgate = true;
+        (errorWithLogs as any).sessionId = error.response.data.sessionId;
+        (errorWithLogs as any).url = error.response.data.url;
+        (errorWithLogs as any).securityKey = error.response.data.securityKey;
+      }
+      if (error.response.data.status === "auth_required") {
+        (errorWithLogs as any).status = "auth_required";
+        (errorWithLogs as any).reason = error.response.data.reason;
+      }
+      throw errorWithLogs;
+    }
     handleApiError(error, "connect SSH");
   }
 }
@@ -2164,11 +2192,21 @@ export async function startMetricsPolling(hostId: number): Promise<{
   sessionId?: string;
   prompt?: string;
   viewerSessionId?: string;
+  connectionLogs?: any[];
 }> {
   try {
     const response = await statsApi.post(`/metrics/start/${hostId}`);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error || error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      throw errorWithLogs;
+    }
     handleApiError(error, "start metrics polling");
     throw error;
   }
@@ -3678,6 +3716,10 @@ export async function connectDockerSession(
   isPassword?: boolean;
   status?: string;
   reason?: string;
+  connectionLogs?: any[];
+  requires_warpgate?: boolean;
+  url?: string;
+  securityKey?: string;
 }> {
   try {
     const response = await dockerApi.post("/ssh/connect", {
@@ -3692,6 +3734,20 @@ export async function connectDockerSession(
     }
     if (error.response?.data?.requires_totp) {
       return error.response.data;
+    }
+    if (error.response?.data?.requires_warpgate) {
+      return error.response.data;
+    }
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      throw errorWithLogs;
     }
     throw handleApiError(error, "connect to Docker SSH session");
   }

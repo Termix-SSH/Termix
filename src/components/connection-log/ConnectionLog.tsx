@@ -53,8 +53,9 @@ export function ConnectionLog({
     }
   }, [logs, isExpanded]);
 
-  // Show when connecting (even with no logs) or when there are logs and not yet connected
-  const shouldShow = isConnecting || (logs.length > 0 && !isConnected);
+  // Show when connecting, has error, or when there are logs and not yet connected
+  const shouldShow =
+    isConnecting || hasConnectionError || (logs.length > 0 && !isConnected);
 
   if (!shouldShow) {
     return null;
@@ -113,11 +114,11 @@ export function ConnectionLog({
 
   return (
     <div
-      className={`absolute inset-0 z-[110] flex flex-col pointer-events-none ${position === "top" ? "justify-start" : "justify-end"}`}
+      className={`absolute inset-0 z-[110] flex flex-col ${isExpanded || hasConnectionError ? "pointer-events-auto" : "pointer-events-none"} ${position === "top" ? "justify-start" : "justify-end"}`}
     >
       {/* Backdrop for visibility when expanded or error */}
       {(isExpanded || hasConnectionError) && (
-        <div className="absolute inset-0 bg-bg-base/80 pointer-events-none" />
+        <div className="absolute inset-0 bg-bg-base pointer-events-auto" />
       )}
 
       <div
