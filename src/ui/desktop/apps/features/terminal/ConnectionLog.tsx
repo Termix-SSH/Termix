@@ -113,10 +113,18 @@ export function ConnectionLog({
 
   return (
     <div
-      className={`absolute left-0 right-0 z-50 ${position === "top" ? "top-0" : "bottom-0"}`}
+      className={`absolute inset-0 z-[110] flex flex-col pointer-events-none ${position === "top" ? "justify-start" : "justify-end"}`}
     >
-      <div className={`bg-bg-subtle ${!isExpanded ? borderClass : ""}`}>
-        <div className="flex items-center justify-between px-3 py-2">
+      {/* Backdrop for visibility when expanded or error */}
+      {(isExpanded || hasConnectionError) && (
+        <div className="absolute inset-0 bg-bg-base/80 pointer-events-none" />
+      )}
+
+      <div
+        className={`relative z-10 bg-bg-subtle pointer-events-auto ${isExpanded ? "flex flex-col h-full" : ""} ${!isExpanded ? borderClass : ""}`}
+      >
+        {/* Header - always visible */}
+        <div className="flex items-center justify-between px-3 py-2 shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -145,10 +153,12 @@ export function ConnectionLog({
             )}
           </div>
         </div>
+
+        {/* Scrollable content - fills remaining space */}
         {isExpanded && (
           <div
             ref={logContainerRef}
-            className="max-h-60 overflow-y-auto border-t-2 border-border bg-bg-base"
+            className="flex-1 h-0 overflow-y-auto overflow-x-hidden thin-scrollbar border-t-2 border-border bg-bg-base"
           >
             <div className="px-3 py-2">
               {logs.length === 0 ? (

@@ -12,7 +12,6 @@ import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   getCookie,
   isElectron,
@@ -105,7 +104,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
-    const { addLog } = useConnectionLog();
+    const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
 
@@ -785,7 +784,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.clear();
             }
             const timeoutMessage = t("terminal.connectionTimeout");
-            toast.error(timeoutMessage);
             updateConnectionError(timeoutMessage);
             addLog({
               type: "error",
@@ -921,7 +919,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   errorMessage.toLowerCase().includes("key"))) ||
               errorMessage.toLowerCase().includes("incorrect password")
             ) {
-              toast.error(t("terminal.authError", { message: errorMessage }));
               updateConnectionError(errorMessage);
               setIsConnecting(false);
               shouldNotReconnectRef.current = true;
@@ -932,7 +929,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               return;
             }
 
-            toast.error(t("terminal.error", { message: errorMessage }));
             updateConnectionError(errorMessage);
             setIsConnecting(false);
           } else if (msg.type === "connected") {
@@ -945,7 +941,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               connectionTimeoutRef.current = null;
             }
             if (reconnectAttempts.current > 0) {
-              toast.success(t("terminal.reconnected"));
               addLog({
                 type: "success",
                 stage: "connection",
@@ -1041,7 +1036,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             totpTimeoutRef.current = setTimeout(() => {
               setTotpRequired(false);
-              toast.error(t("terminal.totpTimeout"));
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
@@ -1053,10 +1047,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 ? msg.attemptsRemaining
                 : 3 - totpAttemptsRef.current;
             setTotpAttemptsRemaining(attemptsRemaining);
-            toast.error(
-              t("terminal.totpInvalid") +
-                ` ${attemptsRemaining} ${attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`,
-            );
           } else if (msg.type === "password_required") {
             totpAttemptsRef.current = 0;
             setTotpRequired(true);
@@ -1071,7 +1061,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             totpTimeoutRef.current = setTimeout(() => {
               setTotpRequired(false);
-              toast.error(t("terminal.passwordTimeout"));
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
@@ -1093,7 +1082,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             warpgateTimeoutRef.current = setTimeout(() => {
               setWarpgateAuthRequired(false);
-              toast.error(t("terminal.warpgateTimeout"));
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
@@ -1124,7 +1112,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
         } catch {
-          toast.error(t("terminal.messageParseError"));
+          // Message parse errors are logged via backend
         }
       });
 
@@ -1869,7 +1857,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         />
 
         <SimpleLoader
-          visible={isConnecting}
+          visible={isConnecting && !isConnectionLogExpanded}
           message={t("terminal.connecting")}
           backgroundColor={backgroundColor}
         />

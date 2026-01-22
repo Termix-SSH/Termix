@@ -30,6 +30,7 @@ import { ServerStatsCard } from "@/ui/desktop/apps/dashboard/cards/ServerStatsCa
 import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { useDashboardPreferences } from "@/ui/desktop/apps/dashboard/hooks/useDashboardPreferences";
 import { DashboardSettingsDialog } from "@/ui/desktop/apps/dashboard/components/DashboardSettingsDialog";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader";
 
 interface DashboardProps {
   onSelectView: (view: string) => void;
@@ -84,6 +85,7 @@ export function Dashboard({
   const [viewerSessions, setViewerSessions] = useState<Map<number, string>>(
     new Map(),
   );
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
   const {
@@ -302,6 +304,8 @@ export function Dashboard({
         console.error("Failed to fetch dashboard data:", error);
         setRecentActivityLoading(false);
         setServerStatsLoading(false);
+      } finally {
+        setInitialLoading(false);
       }
     };
 
@@ -476,6 +480,10 @@ export function Dashboard({
           }}
         >
           <div className="flex flex-col relative z-10 w-full h-full min-w-0">
+            <SimpleLoader
+              visible={initialLoading}
+              message={t("dashboard.loading")}
+            />
             <div className="flex flex-row items-center justify-between w-full px-3 mt-3 min-w-0 flex-wrap gap-2">
               <div className="flex flex-row items-center gap-3">
                 <div className="text-2xl text-foreground font-semibold shrink-0">

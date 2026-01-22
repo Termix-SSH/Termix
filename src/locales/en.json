@@ -1361,6 +1361,7 @@
     "connectionLogCopy": "Copy logs to clipboard",
     "connectionLogClear": "Clear logs",
     "connectionLogEmpty": "No connection logs yet",
+    "connectionLogConnecting": "Connecting to host...",
     "connectionLogCopied": "Connection logs copied to clipboard",
     "connectionLogCopyFailed": "Failed to copy logs to clipboard",
     "allAuthMethodsFailed": "All authentication methods failed. Please check your credentials.",
@@ -2270,6 +2271,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "loading": "Loading dashboard...",
     "github": "GitHub",
     "support": "Support",
     "discord": "Discord",
