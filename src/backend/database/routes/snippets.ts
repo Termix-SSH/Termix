@@ -194,7 +194,9 @@ router.put(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name } = req.params;
+    const name = Array.isArray(req.params.name)
+      ? req.params.name[0]
+      : req.params.name;
     const { color, icon } = req.body;
 
     if (!isNonEmptyString(userId) || !name) {
@@ -415,7 +417,9 @@ router.delete(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name } = req.params;
+    const name = Array.isArray(req.params.name)
+      ? req.params.name[0]
+      : req.params.name;
 
     if (!isNonEmptyString(userId) || !name) {
       authLogger.warn("Invalid request for snippet folder delete");
@@ -924,7 +928,7 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const snippetId = parseInt(id, 10);
 
     if (!isNonEmptyString(userId) || isNaN(snippetId)) {
@@ -1104,7 +1108,7 @@ router.put(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const updateData = req.body;
 
     if (!isNonEmptyString(userId) || !id) {
@@ -1203,7 +1207,7 @@ router.delete(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for snippet delete");

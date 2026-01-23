@@ -76,7 +76,8 @@ router.post(
   "/host/:id/share",
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
-    const hostId = parseInt(req.params.id, 10);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const hostId = parseInt(id, 10);
     const userId = req.userId!;
 
     if (isNaN(hostId)) {
@@ -303,8 +304,12 @@ router.delete(
   "/host/:id/access/:accessId",
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
-    const hostId = parseInt(req.params.id, 10);
-    const accessId = parseInt(req.params.accessId, 10);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const accessIdParam = Array.isArray(req.params.accessId)
+      ? req.params.accessId[0]
+      : req.params.accessId;
+    const hostId = parseInt(id, 10);
+    const accessId = parseInt(accessIdParam, 10);
     const userId = req.userId!;
 
     if (isNaN(hostId) || isNaN(accessId)) {
@@ -365,7 +370,8 @@ router.get(
   "/host/:id/access",
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
-    const hostId = parseInt(req.params.id, 10);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const hostId = parseInt(id, 10);
     const userId = req.userId!;
 
     if (isNaN(hostId)) {
@@ -700,7 +706,8 @@ router.put(
   authenticateJWT,
   permissionManager.requireAdmin(),
   async (req: AuthenticatedRequest, res: Response) => {
-    const roleId = parseInt(req.params.id, 10);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const roleId = parseInt(id, 10);
     const { displayName, description } = req.body;
 
     if (isNaN(roleId)) {
@@ -791,7 +798,8 @@ router.delete(
   authenticateJWT,
   permissionManager.requireAdmin(),
   async (req: AuthenticatedRequest, res: Response) => {
-    const roleId = parseInt(req.params.id, 10);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const roleId = parseInt(id, 10);
 
     if (isNaN(roleId)) {
       return res.status(400).json({ error: "Invalid role ID" });
@@ -890,7 +898,9 @@ router.post(
   authenticateJWT,
   permissionManager.requireAdmin(),
   async (req: AuthenticatedRequest, res: Response) => {
-    const targetUserId = req.params.userId;
+    const targetUserId = Array.isArray(req.params.userId)
+      ? req.params.userId[0]
+      : req.params.userId;
     const currentUserId = req.userId!;
 
     try {
@@ -1031,8 +1041,13 @@ router.delete(
   authenticateJWT,
   permissionManager.requireAdmin(),
   async (req: AuthenticatedRequest, res: Response) => {
-    const targetUserId = req.params.userId;
-    const roleId = parseInt(req.params.roleId, 10);
+    const targetUserId = Array.isArray(req.params.userId)
+      ? req.params.userId[0]
+      : req.params.userId;
+    const roleIdParam = Array.isArray(req.params.roleId)
+      ? req.params.roleId[0]
+      : req.params.roleId;
+    const roleId = parseInt(roleIdParam, 10);
 
     if (isNaN(roleId)) {
       return res.status(400).json({ error: "Invalid role ID" });
@@ -1109,7 +1124,9 @@ router.get(
   "/users/:userId/roles",
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
-    const targetUserId = req.params.userId;
+    const targetUserId = Array.isArray(req.params.userId)
+      ? req.params.userId[0]
+      : req.params.userId;
     const currentUserId = req.userId!;
 
     if (

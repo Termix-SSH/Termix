@@ -764,7 +764,9 @@ router.put(
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
     let hostData: Record<string, unknown>;
 
@@ -1385,7 +1387,9 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
@@ -1487,7 +1491,9 @@ router.get(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
@@ -1590,7 +1596,9 @@ router.delete(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
     if (!isNonEmptyString(userId) || !hostId) {
       sshLogger.warn("Invalid userId or hostId for SSH host delete", {
@@ -1725,9 +1733,10 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for recent files fetch");
@@ -1921,9 +1930,10 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for pinned files fetch");
@@ -2115,9 +2125,10 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for shortcuts fetch");
@@ -2309,7 +2320,10 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = parseInt(req.params.hostId, 10);
+    const hostIdParam = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
+    const hostId = parseInt(hostIdParam, 10);
 
     if (!isNonEmptyString(userId) || !hostId) {
       sshLogger.warn("Invalid userId or hostId for command history fetch", {

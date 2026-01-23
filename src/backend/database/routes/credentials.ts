@@ -404,7 +404,7 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for credential fetch");
@@ -501,7 +501,7 @@ router.put(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const updateData = req.body;
 
     if (!isNonEmptyString(userId) || !id) {
@@ -667,7 +667,7 @@ router.delete(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for credential deletion");
@@ -809,7 +809,12 @@ router.post(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id: credentialId, hostId } = req.params;
+    const credentialId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
 
     if (!isNonEmptyString(userId) || !credentialId || !hostId) {
       authLogger.warn("Invalid request for credential application");
@@ -908,7 +913,9 @@ router.get(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id: credentialId } = req.params;
+    const credentialId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
     if (!isNonEmptyString(userId) || !credentialId) {
       authLogger.warn("Invalid request for credential hosts fetch");
@@ -1886,7 +1893,8 @@ router.post(
   "/:id/deploy-to-host",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const credentialId = parseInt(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id);
     const { targetHostId } = req.body;
 
     if (!credentialId || !targetHostId) {
