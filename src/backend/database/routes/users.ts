@@ -3409,7 +3409,9 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
  */
 router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { sessionId } = req.params;
+  const sessionId = Array.isArray(req.params.sessionId)
+    ? req.params.sessionId[0]
+    : req.params.sessionId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });

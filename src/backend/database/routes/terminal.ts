@@ -112,7 +112,9 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hostId } = req.params;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
     const hostIdNum = parseInt(hostId, 10);
 
     if (!isNonEmptyString(userId) || isNaN(hostIdNum)) {
@@ -248,7 +250,9 @@ router.delete(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hostId } = req.params;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
     const hostIdNum = parseInt(hostId, 10);
 
     if (!isNonEmptyString(userId) || isNaN(hostIdNum)) {

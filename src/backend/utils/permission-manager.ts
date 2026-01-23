@@ -387,7 +387,10 @@ class PermissionManager {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const hostId = parseInt(req.params[hostIdParam], 10);
+      const hostIdValue = Array.isArray(req.params[hostIdParam])
+        ? req.params[hostIdParam][0]
+        : req.params[hostIdParam];
+      const hostId = parseInt(hostIdValue, 10);
 
       if (isNaN(hostId)) {
         return res.status(400).json({ error: "Invalid host ID" });

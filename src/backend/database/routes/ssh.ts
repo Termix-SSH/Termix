@@ -2762,7 +2762,9 @@ router.delete(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const folderName = req.params.name;
+    const folderName = Array.isArray(req.params.name)
+      ? req.params.name[0]
+      : req.params.name;
 
     if (!isNonEmptyString(userId) || !folderName) {
       return res.status(400).json({ error: "Invalid folder name" });
