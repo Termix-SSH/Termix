@@ -135,7 +135,7 @@ channel, however, response times may be longer.
 
 # Screenshots
 
-[![Watch the video](https://img.youtube.com/vi/j1_I1mkhUkE/0.jpg)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
+[![](https://utfs.io/f/nGnSqDveMsqxqiKJF5EnObSopHatulx93N0E1KVsP7hvjMfF)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
