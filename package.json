@@ -1,7 +1,7 @@
 {
   "name": "termix",
   "private": true,
-  "version": "1.10.1",
+  "version": "1.11.0",
   "description": "A web-based server management platform with SSH terminal, tunneling, and file editing capabilities",
   "author": "Karmaa",
   "main": "electron/main.cjs",
