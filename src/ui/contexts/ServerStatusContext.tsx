@@ -29,8 +29,10 @@ const POLL_INTERVAL = 30000;
 
 export function ServerStatusProvider({
   children,
+  isAuthenticated = false,
 }: {
   children: React.ReactNode;
+  isAuthenticated?: boolean;
 }) {
   const [statuses, setStatuses] = useState<Map<number, ServerStatusEntry>>(
     new Map(),
@@ -45,6 +47,10 @@ export function ServerStatusProvider({
   }, [enabledHostIds]);
 
   const fetchEnabledHosts = useCallback(async () => {
+    if (!isAuthenticated) {
+      return new Set<number>();
+    }
+
     try {
       const hosts = await getSSHHosts();
       const enabled = new Set<number>();
@@ -68,13 +74,12 @@ export function ServerStatusProvider({
       setEnabledHostIds(enabled);
       return enabled;
     } catch (error) {
-      console.error("Failed to fetch hosts for status check:", error);
       return new Set<number>();
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const refreshStatuses = useCallback(async () => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !isAuthenticated) return;
 
     setIsLoading(true);
     try {
@@ -100,7 +105,6 @@ export function ServerStatusProvider({
 
       setStatuses(newStatuses);
     } catch (error) {
-      console.error("Failed to fetch server statuses:", error);
       if (mountedRef.current) {
         setStatuses((prev) => {
           const updated = new Map(prev);
@@ -119,7 +123,7 @@ export function ServerStatusProvider({
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => {

@@ -332,7 +332,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sshStream: ClientChannel | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
-  let totpAttempts = 0;
   let totpTimeout: NodeJS.Timeout | null = null;
   let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
@@ -458,7 +457,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             totpTimeout = null;
           }
           const totpCode = totpData.code;
-          totpAttempts++;
           keyboardInteractiveFinish([totpCode]);
           keyboardInteractiveFinish = null;
           totpPromptSent = false;
@@ -1163,7 +1161,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       warpgateAuthPromptSent,
       totpTimeout,
       warpgateAuthTimeout,
-      totpAttempts,
+      totpAttempts: 0,
     });
 
     sshConn.on(
@@ -1197,7 +1195,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         warpgateAuthPromptSent = sshAuthManager.context.warpgateAuthPromptSent;
         totpTimeout = sshAuthManager.context.totpTimeout;
         warpgateAuthTimeout = sshAuthManager.context.warpgateAuthTimeout;
-        totpAttempts = sshAuthManager.context.totpAttempts;
       },
     );
 
@@ -1530,7 +1527,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     totpPromptSent = false;
-    totpAttempts = 0;
     warpgateAuthPromptSent = false;
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;

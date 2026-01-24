@@ -21,7 +21,11 @@ import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
 
-function AppContent() {
+function AppContent({
+  onAuthStateChange,
+}: {
+  onAuthStateChange?: (isAuthenticated: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -215,6 +219,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
   }, [isTopbarOpen]);
+
+  useEffect(() => {
+    onAuthStateChange?.(isAuthenticated);
+  }, [isAuthenticated, onAuthStateChange]);
 
   const handleAuthSuccess = useCallback(
     (authData: {
@@ -608,11 +616,13 @@ function AppContent() {
 }
 
 function DesktopApp() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
     <TabProvider>
-      <ServerStatusProvider>
+      <ServerStatusProvider isAuthenticated={isAuthenticated}>
         <CommandHistoryProvider>
-          <AppContent />
+          <AppContent onAuthStateChange={setIsAuthenticated} />
         </CommandHistoryProvider>
       </ServerStatusProvider>
     </TabProvider>

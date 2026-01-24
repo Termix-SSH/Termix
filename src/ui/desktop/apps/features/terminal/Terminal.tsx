@@ -143,8 +143,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
-    const [totpAttemptsRemaining, setTotpAttemptsRemaining] =
-      useState<number>(3);
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
     const [showAuthDialog, setShowAuthDialog] = useState(false);
     const [authDialogReason, setAuthDialogReason] = useState<
@@ -176,7 +174,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       return () => {};
     }, [hostConfig.id]);
     const connectionAttemptIdRef = useRef(0);
-    const totpAttemptsRef = useRef(0);
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
@@ -990,10 +987,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               onClose();
             }
           } else if (msg.type === "totp_required") {
-            totpAttemptsRef.current = 0;
-            const attemptsRemaining =
-              msg.attemptsRemaining !== undefined ? msg.attemptsRemaining : 3;
-            setTotpAttemptsRemaining(attemptsRemaining);
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
@@ -1011,14 +1004,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 180000);
           } else if (msg.type === "totp_retry") {
-            totpAttemptsRef.current++;
-            const attemptsRemaining =
-              msg.attemptsRemaining !== undefined
-                ? msg.attemptsRemaining
-                : 3 - totpAttemptsRef.current;
-            setTotpAttemptsRemaining(attemptsRemaining);
           } else if (msg.type === "password_required") {
-            totpAttemptsRef.current = 0;
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("common.password"));
             setIsPasswordPrompt(true);
@@ -1804,7 +1790,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
           backgroundColor={backgroundColor}
-          attemptsRemaining={totpAttemptsRemaining}
         />
 
         <SSHAuthDialog

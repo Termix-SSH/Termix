@@ -1353,7 +1353,6 @@
     "sudoPasswordPopupConfirm": "Insert",
     "sudoPasswordPopupDismiss": "Dismiss",
     "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
-    "totpAttemptsRemaining": "{{count}} attempt(s) remaining",
     "totpInvalid": "Invalid code. Please try again.",
     "authMethodFallback": "{{method}} authentication failed. Trying alternative method...",
     "authenticationRequired": "Authentication required",
@@ -1971,8 +1970,7 @@
     "authenticationDisabled": "Authentication Disabled",
     "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator.",
     "passwordResetSuccess": "Password Reset Successful",
-    "passwordResetSuccessDesc": "Your password has been reset successfully. You can now log in with your new password.",
-    "attemptsRemaining": "attempts remaining"
+    "passwordResetSuccessDesc": "Your password has been reset successfully. You can now log in with your new password."
   },
   "errors": {
     "notFound": "Page not found",

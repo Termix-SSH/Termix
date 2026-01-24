@@ -15,18 +15,23 @@ const DEFAULT_LAYOUT: DashboardLayout = {
   ],
 };
 
-export function useDashboardPreferences() {
+export function useDashboardPreferences(enabled: boolean = true) {
   const [layout, setLayout] = useState<DashboardLayout | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLayout(DEFAULT_LAYOUT);
+      setLoading(false);
+      return;
+    }
+
     const fetchPreferences = async () => {
       try {
         const preferences = await getDashboardPreferences();
         setLayout(preferences);
       } catch (error) {
-        console.error("Failed to load dashboard preferences:", error);
         setLayout(DEFAULT_LAYOUT);
       } finally {
         setLoading(false);
@@ -34,7 +39,7 @@ export function useDashboardPreferences() {
     };
 
     fetchPreferences();
-  }, []);
+  }, [enabled]);
 
   const updateLayout = useCallback(
     (newLayout: DashboardLayout) => {

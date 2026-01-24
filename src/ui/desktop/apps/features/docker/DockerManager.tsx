@@ -22,8 +22,6 @@ import {
   getSSHHosts,
 } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
@@ -614,33 +612,6 @@ function DockerManagerInner({
   if (dockerValidation && !dockerValidation.available) {
     return (
       <div style={wrapperStyle} className={`${containerClass} relative`}>
-        <div className="h-full w-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="min-w-0">
-                <h1 className="font-bold text-lg truncate">
-                  {currentHostConfig?.folder} / {title}
-                </h1>
-              </div>
-            </div>
-          </div>
-          <Separator className="p-0.25 w-full" />
-
-          <div className="flex-1 overflow-hidden min-h-0 p-4">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="font-semibold mb-2">{t("docker.error")}</div>
-                <div>{dockerValidation.error}</div>
-                {dockerValidation.code && (
-                  <div className="mt-2 text-xs opacity-70">
-                    {t("docker.errorCode", { code: dockerValidation.code })}
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-          </div>
-        </div>
         <ConnectionLog
           isConnecting={isConnecting}
           isConnected={!!sessionId && !!dockerValidation?.available}

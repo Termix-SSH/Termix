@@ -38,6 +38,8 @@ import {
   updateFolderMetadata,
   deleteAllHostsInFolder,
   refreshServerPolling,
+  isElectron,
+  getConfiguredServerUrl,
 } from "@/ui/main-axios.ts";
 import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
 import { toast } from "sonner";
@@ -352,7 +354,9 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   };
 
   const copyFullScreenUrl = (host: SSHHost, appType: string) => {
-    const baseUrl = window.location.origin;
+    const baseUrl = isElectron()
+      ? getConfiguredServerUrl() || window.location.origin
+      : window.location.origin;
     const url = `${baseUrl}?view=${appType}&hostId=${host.id}`;
     navigator.clipboard.writeText(url);
     toast.success(t("hosts.fullScreenUrlCopied"));

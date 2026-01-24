@@ -206,38 +206,16 @@ export class SSHAuthManager {
     resolvedCredentials: ResolvedCredentials,
   ): void {
     if (this.context.totpPromptSent) {
-      sshLogger.warn("TOTP prompt asked again - checking attempt count", {
+      sshLogger.warn("TOTP prompt asked again - invalid code", {
         operation: "ssh_keyboard_interactive_totp_retry",
         hostId: this.context.hostId,
-        attempts: this.context.totpAttempts,
       });
 
-      if (this.context.totpAttempts >= MAX_TOTP_ATTEMPTS) {
-        this.sendLog(
-          "auth",
-          "error",
-          `Maximum TOTP attempts (${MAX_TOTP_ATTEMPTS}) exceeded`,
-        );
-        this.context.ws.send(
-          JSON.stringify({
-            type: "error",
-            message: `Maximum TOTP attempts (${MAX_TOTP_ATTEMPTS}) exceeded. Please reconnect.`,
-          }),
-        );
-        return;
-      }
-
-      this.context.totpAttempts++;
-      this.sendLog(
-        "auth",
-        "warning",
-        `Invalid TOTP code. Attempt ${this.context.totpAttempts}/${MAX_TOTP_ATTEMPTS}`,
-      );
+      this.sendLog("auth", "warning", "Invalid TOTP code");
 
       this.context.ws.send(
         JSON.stringify({
           type: "totp_retry",
-          attemptsRemaining: MAX_TOTP_ATTEMPTS - this.context.totpAttempts,
         }),
       );
       return;
@@ -245,7 +223,6 @@ export class SSHAuthManager {
 
     this.context.totpPromptSent = true;
     this.context.keyboardInteractiveResponded = true;
-    this.context.totpAttempts = 1;
 
     this.context.keyboardInteractiveFinish = (totpResponses: string[]) => {
       const totpCode = (totpResponses[0] || "").trim();
@@ -290,7 +267,6 @@ export class SSHAuthManager {
       JSON.stringify({
         type: "totp_required",
         prompt: prompts[totpPromptIndex].prompt,
-        attemptsRemaining: MAX_TOTP_ATTEMPTS - this.context.totpAttempts,
       }),
     );
   }
@@ -402,6 +378,5 @@ export class SSHAuthManager {
     this.context.totpPromptSent = false;
     this.context.warpgateAuthPromptSent = false;
     this.context.keyboardInteractiveResponded = false;
-    this.context.totpAttempts = 0;
   }
 }

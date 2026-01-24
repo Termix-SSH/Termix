@@ -579,6 +579,10 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
   }
 }
 
+export function getConfiguredServerUrl(): string | null {
+  return configuredServerUrl;
+}
+
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
   requestId?: string;

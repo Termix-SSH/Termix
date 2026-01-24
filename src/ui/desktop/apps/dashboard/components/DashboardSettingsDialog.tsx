@@ -78,7 +78,7 @@ export function DashboardSettingsDialog({
               {t("dashboard.enableDisableCards")}
             </Label>
             <div className="space-y-3">
-              {layout.cards.map((card) => (
+              {layout.cards?.map((card) => (
                 <div
                   key={card.id}
                   className="flex items-center space-x-3 border-2 border-edge rounded-md p-3"

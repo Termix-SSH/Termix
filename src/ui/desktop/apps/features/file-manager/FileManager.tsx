@@ -2180,58 +2180,167 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   return (
     <div className="h-full flex flex-col bg-canvas relative">
       <div
-        className="flex-shrink-0 border-b border-edge"
+        className="h-full w-full flex flex-col"
         style={{
-          visibility:
-            hasConnectionError && isConnectionLogExpanded
-              ? "hidden"
-              : "visible",
+          visibility: isConnectionLogExpanded ? "hidden" : "visible",
         }}
       >
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-foreground">
-              {currentHost.name}
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {currentHost.ip}:{currentHost.port}
-            </span>
+        <div className="flex-shrink-0 border-b border-edge">
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-foreground">
+                {currentHost.name}
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {currentHost.ip}:{currentHost.port}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t("fileManager.searchFiles")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 w-48 h-9 bg-button border-edge"
+                />
+              </div>
+
+              <div className="flex border border-edge rounded-md">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-r-none h-9"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none h-9"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.multiple = true;
+                  input.onchange = (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files) handleFilesDropped(files);
+                  };
+                  input.click();
+                }}
+                className="h-9"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {t("fileManager.upload")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateNewFolder}
+                className="h-9"
+              >
+                <FolderPlus className="w-4 h-4 mr-2" />
+                {t("fileManager.newFolder")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateNewFile}
+                className="h-9"
+              >
+                <FilePlus className="w-4 h-4 mr-2" />
+                {t("fileManager.newFile")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshDirectory}
+                className="h-9"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 flex" {...dragHandlers}>
+          <div className="w-64 flex-shrink-0 h-full">
+            <FileManagerSidebar
+              currentHost={currentHost}
+              currentPath={currentPath}
+              onPathChange={setCurrentPath}
+              onLoadDirectory={loadDirectory}
+              onFileOpen={handleSidebarFileOpen}
+              sshSessionId={sshSessionId}
+              refreshTrigger={sidebarRefreshTrigger}
+            />
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("fileManager.searchFiles")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-48 h-9 bg-button border-edge"
-              />
-            </div>
+          <div className="flex-1 relative">
+            <FileManagerGrid
+              files={filteredFiles}
+              selectedFiles={selectedFiles}
+              onFileSelect={() => {}}
+              onFileOpen={handleFileOpen}
+              onSelectionChange={setSelection}
+              currentPath={currentPath}
+              isLoading={isLoading}
+              onPathChange={setCurrentPath}
+              onRefresh={handleRefreshDirectory}
+              onUpload={handleFilesDropped}
+              onDownload={(files) => files.forEach(handleDownloadFile)}
+              onContextMenu={handleContextMenu}
+              viewMode={viewMode}
+              onRename={handleRenameConfirm}
+              editingFile={editingFile}
+              onStartEdit={handleStartEdit}
+              onCancelEdit={handleCancelEdit}
+              onDelete={handleDeleteFiles}
+              onCopy={handleCopyFiles}
+              onCut={handleCutFiles}
+              onPaste={handlePasteFiles}
+              onUndo={handleUndo}
+              hasClipboard={!!clipboard}
+              onFileDrop={handleFileDrop}
+              onFileDiff={handleFileDiff}
+              onSystemDragStart={handleFileDragStart}
+              onSystemDragEnd={handleFileDragEnd}
+              createIntent={createIntent}
+              onConfirmCreate={handleConfirmCreate}
+              onCancelCreate={handleCancelCreate}
+              onNewFile={handleCreateNewFile}
+              onNewFolder={handleCreateNewFolder}
+            />
 
-            <div className="flex border border-edge rounded-md">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-r-none h-9"
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-l-none h-9"
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
+            <FileManagerContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              files={contextMenu.files}
+              isVisible={contextMenu.isVisible}
+              onClose={() =>
+                setContextMenu((prev) => ({ ...prev, isVisible: false }))
+              }
+              onDownload={(files) => files.forEach(handleDownloadFile)}
+              onRename={handleRenameFile}
+              onCopy={handleCopyFiles}
+              onCut={handleCutFiles}
+              onPaste={handlePasteFiles}
+              onDelete={handleDeleteFiles}
+              onUpload={() => {
                 const input = document.createElement("input");
                 input.type = "file";
                 input.multiple = true;
@@ -2241,143 +2350,24 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 };
                 input.click();
               }}
-              className="h-9"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              {t("fileManager.upload")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateNewFolder}
-              className="h-9"
-            >
-              <FolderPlus className="w-4 h-4 mr-2" />
-              {t("fileManager.newFolder")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateNewFile}
-              className="h-9"
-            >
-              <FilePlus className="w-4 h-4 mr-2" />
-              {t("fileManager.newFile")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshDirectory}
-              className="h-9"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
+              onNewFolder={handleCreateNewFolder}
+              onNewFile={handleCreateNewFile}
+              onRefresh={handleRefreshDirectory}
+              hasClipboard={!!clipboard}
+              onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
+              onOpenTerminal={(path) => handleOpenTerminal(path)}
+              onRunExecutable={(file) => handleRunExecutable(file)}
+              onPinFile={handlePinFile}
+              onUnpinFile={handleUnpinFile}
+              onAddShortcut={handleAddShortcut}
+              isPinned={isPinnedFile}
+              currentPath={currentPath}
+              onProperties={handleOpenPermissionsDialog}
+              onExtractArchive={handleExtractArchive}
+              onCompress={handleOpenCompressDialog}
+              onCopyPath={handleCopyPath}
+            />
           </div>
-        </div>
-      </div>
-
-      <div
-        className="flex-1 flex"
-        {...dragHandlers}
-        style={{
-          visibility:
-            hasConnectionError && isConnectionLogExpanded
-              ? "hidden"
-              : "visible",
-        }}
-      >
-        <div className="w-64 flex-shrink-0 h-full">
-          <FileManagerSidebar
-            currentHost={currentHost}
-            currentPath={currentPath}
-            onPathChange={setCurrentPath}
-            onLoadDirectory={loadDirectory}
-            onFileOpen={handleSidebarFileOpen}
-            sshSessionId={sshSessionId}
-            refreshTrigger={sidebarRefreshTrigger}
-          />
-        </div>
-
-        <div className="flex-1 relative">
-          <FileManagerGrid
-            files={filteredFiles}
-            selectedFiles={selectedFiles}
-            onFileSelect={() => {}}
-            onFileOpen={handleFileOpen}
-            onSelectionChange={setSelection}
-            currentPath={currentPath}
-            isLoading={isLoading}
-            onPathChange={setCurrentPath}
-            onRefresh={handleRefreshDirectory}
-            onUpload={handleFilesDropped}
-            onDownload={(files) => files.forEach(handleDownloadFile)}
-            onContextMenu={handleContextMenu}
-            viewMode={viewMode}
-            onRename={handleRenameConfirm}
-            editingFile={editingFile}
-            onStartEdit={handleStartEdit}
-            onCancelEdit={handleCancelEdit}
-            onDelete={handleDeleteFiles}
-            onCopy={handleCopyFiles}
-            onCut={handleCutFiles}
-            onPaste={handlePasteFiles}
-            onUndo={handleUndo}
-            hasClipboard={!!clipboard}
-            onFileDrop={handleFileDrop}
-            onFileDiff={handleFileDiff}
-            onSystemDragStart={handleFileDragStart}
-            onSystemDragEnd={handleFileDragEnd}
-            createIntent={createIntent}
-            onConfirmCreate={handleConfirmCreate}
-            onCancelCreate={handleCancelCreate}
-            onNewFile={handleCreateNewFile}
-            onNewFolder={handleCreateNewFolder}
-          />
-
-          <FileManagerContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            files={contextMenu.files}
-            isVisible={contextMenu.isVisible}
-            onClose={() =>
-              setContextMenu((prev) => ({ ...prev, isVisible: false }))
-            }
-            onDownload={(files) => files.forEach(handleDownloadFile)}
-            onRename={handleRenameFile}
-            onCopy={handleCopyFiles}
-            onCut={handleCutFiles}
-            onPaste={handlePasteFiles}
-            onDelete={handleDeleteFiles}
-            onUpload={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.multiple = true;
-              input.onchange = (e) => {
-                const files = (e.target as HTMLInputElement).files;
-                if (files) handleFilesDropped(files);
-              };
-              input.click();
-            }}
-            onNewFolder={handleCreateNewFolder}
-            onNewFile={handleCreateNewFile}
-            onRefresh={handleRefreshDirectory}
-            hasClipboard={!!clipboard}
-            onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
-            onOpenTerminal={(path) => handleOpenTerminal(path)}
-            onRunExecutable={(file) => handleRunExecutable(file)}
-            onPinFile={handlePinFile}
-            onUnpinFile={handleUnpinFile}
-            onAddShortcut={handleAddShortcut}
-            isPinned={isPinnedFile}
-            currentPath={currentPath}
-            onProperties={handleOpenPermissionsDialog}
-            onExtractArchive={handleExtractArchive}
-            onCompress={handleOpenCompressDialog}
-            onCopyPath={handleCopyPath}
-          />
         </div>
       </div>
 

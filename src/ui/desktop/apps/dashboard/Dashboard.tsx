@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Auth } from "@/ui/desktop/authentication/Auth.tsx";
 import { AlertManager } from "@/ui/desktop/apps/dashboard/apps/alerts/AlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -93,15 +93,15 @@ export function Dashboard({
     loading: preferencesLoading,
     updateLayout,
     resetLayout,
-  } = useDashboardPreferences();
+  } = useDashboardPreferences(loggedIn);
 
   let sidebarState: "expanded" | "collapsed" = "expanded";
+  let sidebarAvailable = false;
   try {
     const sidebar = useSidebar();
     sidebarState = sidebar.state;
-  } catch (error) {
-    console.error("Dashboard operation failed:", error);
-  }
+    sidebarAvailable = true;
+  } catch {}
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
