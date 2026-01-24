@@ -135,7 +135,7 @@ channel, however, response times may be longer.
 
 # Screenshots
 
-<div style="left: 0; width: 100%; height: 0; position: relative; padding-bottom: 56.25%;"><iframe src="https://www.youtube.com/embed/j1_I1mkhUkE?rel=0" style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;" allowfullscreen scrolling="no" allow="accelerometer *; clipboard-write *; encrypted-media *; gyroscope *; picture-in-picture *; web-share *;" referrerpolicy="strict-origin"></iframe></div>
+[![Watch the video](https://img.youtube.com/vi/j1_I1mkhUkE/0.jpg)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
