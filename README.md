@@ -56,6 +56,7 @@ free and self-hosted alternative to Termius available for all platforms.
 - **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), PWA, and dedicated mobile/tablet app for iOS and Android.
 - **SSH Tools** - Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 - **Command History** - Auto-complete and view previously ran SSH commands
+- **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
 - **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, password autofill, etc.
 - **Network Graph** - Customize your Dashboard to visualize your homelab based off your SSH connections with status support
@@ -159,7 +160,12 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
+</p>
+
+<p align="center">
+  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 Some videos and images may be out of date or may not perfectly showcase features.
