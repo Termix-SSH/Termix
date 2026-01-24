@@ -681,6 +681,13 @@ export function HostManagerEditor({
           )
             ? cleanedHost.terminalConfig.environmentVariables
             : [],
+          sudoPassword:
+            cleanedHost.sudoPassword ||
+            cleanedHost.terminalConfig?.sudoPassword ||
+            "",
+          sudoPasswordAutoFill:
+            cleanedHost.terminalConfig?.sudoPasswordAutoFill ??
+            Boolean(cleanedHost.sudoPassword),
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
         notes: cleanedHost.notes || "",
@@ -792,6 +799,13 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
+
+      if (
+        data.terminalConfig?.sudoPasswordAutoFill &&
+        data.terminalConfig?.sudoPassword
+      ) {
+        submitData.sudoPassword = data.terminalConfig.sudoPassword;
+      }
 
       if (data.authType !== "credential") {
         submitData.credentialId = undefined;

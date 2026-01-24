@@ -358,8 +358,37 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       ? getConfiguredServerUrl() || window.location.origin
       : window.location.origin;
     const url = `${baseUrl}?view=${appType}&hostId=${host.id}`;
-    navigator.clipboard.writeText(url);
-    toast.success(t("hosts.fullScreenUrlCopied"));
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(
+        () => {
+          toast.success(t("hosts.fullScreenUrlCopied"));
+        },
+        () => {
+          fallbackCopyTextToClipboard(url);
+        },
+      );
+    } else {
+      fallbackCopyTextToClipboard(url);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand("copy");
+      toast.success(t("hosts.fullScreenUrlCopied"));
+    } catch (err) {
+      toast.error(t("hosts.failedToCopyUrl"));
+    }
+    document.body.removeChild(textArea);
   };
 
   const handleRemoveFromFolder = async (host: SSHHost) => {

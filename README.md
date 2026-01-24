@@ -135,6 +135,8 @@ channel, however, response times may be longer.
 
 # Screenshots
 
+<div style="left: 0; width: 100%; height: 0; position: relative; padding-bottom: 56.25%;"><iframe src="https://www.youtube.com/embed/j1_I1mkhUkE?rel=0" style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;" allowfullscreen scrolling="no" allow="accelerometer *; clipboard-write *; encrypted-media *; gyroscope *; picture-in-picture *; web-share *;" referrerpolicy="strict-origin"></iframe></div>
+
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
   <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
@@ -160,11 +162,6 @@ channel, however, response times may be longer.
   <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
 </p>
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
-    Your browser does not support the video tag.
-  </video>
-</p>
 Some videos and images may be out of date or may not perfectly showcase features.
 
 # License

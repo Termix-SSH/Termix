@@ -1219,6 +1219,7 @@ router.get(
           forceKeyboardInteractive: sshData.forceKeyboardInteractive,
           statsConfig: sshData.statsConfig,
           terminalConfig: sshData.terminalConfig,
+          sudoPassword: sshData.sudoPassword,
           createdAt: sshData.createdAt,
           updatedAt: sshData.updatedAt,
           credentialId: sshData.credentialId,

@@ -1187,6 +1187,7 @@
     "openDocker": "Open Docker",
     "copyFullScreenUrl": "Copy Full-Screen URL",
     "fullScreenUrlCopied": "Full-screen URL copied to clipboard",
+    "failedToCopyUrl": "Failed to copy URL to clipboard",
     "copyTerminalUrl": "Copy Terminal URL",
     "copyFileManagerUrl": "Copy File Manager URL",
     "copyTunnelUrl": "Copy Tunnel URL",

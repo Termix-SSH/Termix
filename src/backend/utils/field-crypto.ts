@@ -35,6 +35,7 @@ class FieldCrypto {
       "autostartPassword",
       "autostartKey",
       "autostartKeyPassword",
+      "sudoPassword",
     ]),
     ssh_credentials: new Set([
       "password",
