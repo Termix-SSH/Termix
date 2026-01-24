@@ -381,7 +381,6 @@ function execWithSudo(
       });
 
       stream.on("close", (code: number) => {
-        // Filter out sudo password prompt from output
         stdout = stdout.replace(/\[sudo\] password for .+?:\s*/g, "");
         resolve({ stdout, stderr, code: code || 0 });
       });
@@ -472,6 +471,143 @@ function detectBinary(buffer: Buffer): boolean {
   return nullBytes / sampleSize > 0.01;
 }
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect:
+ *   post:
+ *     summary: Connect to SSH for file management
+ *     description: Establishes an SSH/SFTP connection for file manager operations. Supports password, key-based, and keyboard-interactive authentication, as well as jump hosts and SOCKS5 proxies.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - ip
+ *               - port
+ *               - username
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Unique session identifier
+ *               hostId:
+ *                 type: number
+ *                 description: Host ID from database
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP address
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               password:
+ *                 type: string
+ *                 description: SSH password (for password auth)
+ *               sshKey:
+ *                 type: string
+ *                 description: SSH private key (for key-based auth)
+ *               keyPassword:
+ *                 type: string
+ *                 description: Private key passphrase
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, none]
+ *                 description: Authentication method
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID to use from database
+ *               userProvidedPassword:
+ *                 type: string
+ *                 description: User-provided password for keyboard-interactive auth
+ *               forceKeyboardInteractive:
+ *                 type: boolean
+ *                 description: Force keyboard-interactive authentication
+ *               jumpHosts:
+ *                 type: array
+ *                 description: Jump host configuration
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     hostId:
+ *                       type: number
+ *               useSocks5:
+ *                 type: boolean
+ *                 description: Use SOCKS5 proxy
+ *               socks5Host:
+ *                 type: string
+ *                 description: SOCKS5 proxy host
+ *               socks5Port:
+ *                 type: number
+ *                 description: SOCKS5 proxy port
+ *               socks5Username:
+ *                 type: string
+ *                 description: SOCKS5 proxy username
+ *               socks5Password:
+ *                 type: string
+ *                 description: SOCKS5 proxy password
+ *               socks5ProxyChain:
+ *                 type: array
+ *                 description: Chain of SOCKS5 proxies
+ *     responses:
+ *       200:
+ *         description: SSH connection established successfully, or requires TOTP/Warpgate authentication.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: success
+ *                     message:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     requires_totp:
+ *                       type: boolean
+ *                     sessionId:
+ *                       type: string
+ *                     prompt:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     requires_warpgate:
+ *                       type: boolean
+ *                     sessionId:
+ *                       type: string
+ *                     url:
+ *                       type: string
+ *                     securityKey:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: auth_required
+ *                     reason:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *       400:
+ *         description: Missing required parameters or invalid SSH key format.
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: SSH connection failed.
+ */
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -547,7 +683,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   }
 
-  // Clean up any stale pending TOTP sessions
   if (pendingTOTPSessions[sessionId]) {
     try {
       pendingTOTPSessions[sessionId].client.end();
@@ -765,12 +900,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "Password required for password authentication",
         ),
       );
-      return res
-        .status(400)
-        .json({
-          error: "Password required for password authentication",
-          connectionLogs,
-        });
+      return res.status(400).json({
+        error: "Password required for password authentication",
+        connectionLogs,
+      });
     }
 
     config.password = resolvedCredentials.password;
@@ -804,12 +937,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         "No valid authentication method provided",
       ),
     );
-    return res
-      .status(400)
-      .json({
-        error: "Either password or SSH key must be provided",
-        connectionLogs,
-      });
+    return res.status(400).json({
+      error: "Either password or SSH key must be provided",
+      connectionLogs,
+    });
   }
 
   let responseSent = false;
@@ -1321,12 +1452,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             "Failed to establish jump host chain",
           ),
         );
-        return res
-          .status(500)
-          .json({
-            error: "Failed to connect through jump hosts",
-            connectionLogs,
-          });
+        return res.status(500).json({
+          error: "Failed to connect through jump hosts",
+          connectionLogs,
+        });
       }
 
       jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
@@ -1368,12 +1497,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           `Jump host error: ${error instanceof Error ? error.message : "Unknown error"}`,
         ),
       );
-      return res
-        .status(500)
-        .json({
-          error: "Failed to connect through jump hosts",
-          connectionLogs,
-        });
+      return res.status(500).json({
+        error: "Failed to connect through jump hosts",
+        connectionLogs,
+      });
     }
   } else {
     client.connect(config);
@@ -2042,7 +2169,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
             errorData.toLowerCase().includes("access denied");
 
           if (isPermissionDenied) {
-            // If we have sudo password, retry with sudo
             if (sshConn.sudoPassword) {
               fileLogger.info(
                 `Permission denied for listFiles, retrying with sudo: ${sshPath}`,
@@ -2051,7 +2177,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
               return;
             }
 
-            // No sudo password - tell frontend to request one
             sshConn.activeOperations--;
             fileLogger.warn(
               `Permission denied for listFiles, sudo required: ${sshPath}`,
@@ -2155,16 +2280,13 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
       stream.on("close", (code) => {
         sshConn.activeOperations--;
 
-        // Filter out sudo password prompt from output
         data = data.replace(/\[sudo\] password for .+?:\s*/g, "");
 
-        // Check for sudo authentication failure
         if (
           data.toLowerCase().includes("sorry, try again") ||
           data.toLowerCase().includes("incorrect password") ||
           errorData.toLowerCase().includes("sorry, try again")
         ) {
-          // Clear invalid sudo password
           sshConn.sudoPassword = undefined;
           return res.status(403).json({
             error: "Sudo authentication failed. Please try again.",
@@ -4438,8 +4560,55 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   });
 });
 
-// Route: Extract archive file (requires JWT)
-// POST /ssh/file_manager/ssh/extractArchive
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/extractArchive:
+ *   post:
+ *     summary: Extract archive file
+ *     description: Extracts an archive file (.tar, .tar.gz, .tgz, .zip, .tar.bz2, .tbz2, .tar.xz, .txz) to a specified or default location on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - archivePath
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: SSH session ID
+ *               archivePath:
+ *                 type: string
+ *                 description: Path to the archive file on remote host
+ *               extractPath:
+ *                 type: string
+ *                 description: Optional custom extraction path (defaults to same directory as archive)
+ *     responses:
+ *       200:
+ *         description: Archive extracted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                 extractPath:
+ *                   type: string
+ *       400:
+ *         description: Missing required parameters, SSH connection not established, or unsupported archive format.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to extract archive.
+ */
 app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const { sessionId, archivePath, extractPath } = req.body;
 

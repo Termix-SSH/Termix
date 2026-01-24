@@ -18,28 +18,37 @@ export function useConfirmation() {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmationOptions | null>(null);
   const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null);
-  const [activeToastId, setActiveToastId] = useState<string | number | null>(null);
-  const [pendingConfirmCallback, setPendingConfirmCallback] = useState<(() => void) | null>(null);
-  const [pendingResolve, setPendingResolve] = useState<((value: boolean) => void) | null>(null);
+  const [activeToastId, setActiveToastId] = useState<string | number | null>(
+    null,
+  );
+  const [pendingConfirmCallback, setPendingConfirmCallback] = useState<
+    (() => void) | null
+  >(null);
+  const [pendingResolve, setPendingResolve] = useState<
+    ((value: boolean) => void) | null
+  >(null);
 
-  const handleEnterKey = useCallback((event: KeyboardEvent) => {
-    if (event.key === "Enter" && activeToastId !== null) {
-      event.preventDefault();
-      event.stopPropagation();
+  const handleEnterKey = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "Enter" && activeToastId !== null) {
+        event.preventDefault();
+        event.stopPropagation();
 
-      if (pendingConfirmCallback) {
-        pendingConfirmCallback();
+        if (pendingConfirmCallback) {
+          pendingConfirmCallback();
+        }
+        if (pendingResolve) {
+          pendingResolve(true);
+        }
+
+        toast.dismiss(activeToastId);
+        setActiveToastId(null);
+        setPendingConfirmCallback(null);
+        setPendingResolve(null);
       }
-      if (pendingResolve) {
-        pendingResolve(true);
-      }
-
-      toast.dismiss(activeToastId);
-      setActiveToastId(null);
-      setPendingConfirmCallback(null);
-      setPendingResolve(null);
-    }
-  }, [activeToastId, pendingConfirmCallback, pendingResolve]);
+    },
+    [activeToastId, pendingConfirmCallback, pendingResolve],
+  );
 
   useEffect(() => {
     if (activeToastId !== null) {
@@ -103,13 +112,21 @@ export function useConfirmation() {
       };
 
       const message = typeof opts === "string" ? opts : opts.description;
-      const actualConfirmLabel = typeof opts === "object" && opts.confirmText ? opts.confirmText : confirmLabel;
-      const actualCancelLabel = typeof opts === "object" && opts.cancelText ? opts.cancelText : cancelLabel;
+      const actualConfirmLabel =
+        typeof opts === "object" && opts.confirmText
+          ? opts.confirmText
+          : confirmLabel;
+      const actualCancelLabel =
+        typeof opts === "object" && opts.cancelText
+          ? opts.cancelText
+          : cancelLabel;
 
       const toastId = toast(message, {
         duration,
         action: {
-          label: confirmOnEnter ? `${actualConfirmLabel} ↵` : actualConfirmLabel,
+          label: confirmOnEnter
+            ? `${actualConfirmLabel} ↵`
+            : actualConfirmLabel,
           onClick: handleToastConfirm,
         },
         cancel: {

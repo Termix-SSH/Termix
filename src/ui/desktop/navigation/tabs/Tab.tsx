@@ -81,9 +81,7 @@ export function Tab({
       }
 
       await navigator.clipboard.writeText(passwordToCopy);
-    } catch {
-      // Silent fail - clipboard copy errors are not critical
-    }
+    } catch {}
   };
 
   const hasPassword =

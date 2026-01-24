@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { useConnectionLog } from "./ConnectionLogContext";
+import { useConnectionLog } from "./ConnectionLogContext.tsx";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button.tsx";
 import {
   ChevronDown,
   ChevronUp,
@@ -32,28 +32,24 @@ export function ConnectionLog({
   const logContainerRef = useRef<HTMLDivElement>(null);
   const lastLogRef = useRef<HTMLDivElement>(null);
 
-  // Auto-expand on error
   useEffect(() => {
     if (hasConnectionError) {
       setIsExpanded(true);
     }
   }, [hasConnectionError, setIsExpanded]);
 
-  // Clear logs immediately when successfully connected
   useEffect(() => {
     if (isConnected && !hasConnectionError && !isConnecting) {
       clearLogs();
     }
   }, [isConnected, hasConnectionError, isConnecting, clearLogs]);
 
-  // Scroll to the bottom when new logs are added and it's expanded
   useEffect(() => {
     if (isExpanded && lastLogRef.current) {
       lastLogRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [logs, isExpanded]);
 
-  // Show when connecting, has error, or when there are logs and not yet connected
   const shouldShow =
     isConnecting || hasConnectionError || (logs.length > 0 && !isConnected);
 

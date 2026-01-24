@@ -236,7 +236,6 @@ export function NetworkGraphCard({
         console.warn("Starting with empty topology");
       }
 
-      // Validate edges - remove edges that reference non-existent nodes
       const nodeIds = new Set(nodes.map((n: any) => n.data.id));
       const validEdges = edges.filter((edge: any) => {
         const sourceExists = nodeIds.has(edge.data.source);
@@ -244,7 +243,6 @@ export function NetworkGraphCard({
         return sourceExists && targetExists;
       });
 
-      // Add nodes first, then edges to ensure proper order
       setElements([...nodes, ...validEdges]);
     } catch (err) {
       console.error("Failed to load topology:", err);
@@ -497,11 +495,9 @@ export function NetworkGraphCard({
         evt.stopPropagation();
         const node = evt.target;
 
-        // Check if it's a group by ID prefix or if it's a parent node
         const nodeId = node.id();
         const isGroup = node.isParent() || String(nodeId).startsWith("group-");
 
-        // Don't show context menu for groups in embedded mode
         if (isGroup && embedded) {
           return;
         }

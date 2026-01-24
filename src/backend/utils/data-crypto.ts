@@ -476,10 +476,6 @@ class DataCrypto {
     }
   }
 
-  /**
-   * Encrypt sensitive credential fields with system key for offline sharing
-   * Returns an object with systemPassword, systemKey, systemKeyPassword fields
-   */
   static async encryptRecordWithSystemKey<T extends Record<string, unknown>>(
     tableName: string,
     record: T,

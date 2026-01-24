@@ -376,8 +376,8 @@ export function Auth({
       };
       toast.error(
         error?.response?.data?.error ||
-        error?.message ||
-        t("errors.failedPasswordReset"),
+          error?.message ||
+          t("errors.failedPasswordReset"),
       );
     } finally {
       setResetLoading(false);
@@ -936,8 +936,8 @@ export function Auth({
                 }}
               >
                 {theme === "dark" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
+                (theme === "system" &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
                   <Moon className="w-4 h-4" />
                 ) : (
                   <Sun className="w-4 h-4" />
@@ -1497,10 +1497,10 @@ export function Auth({
                               }}
                             >
                               {theme === "dark" ||
-                                (theme === "system" &&
-                                  window.matchMedia(
-                                    "(prefers-color-scheme: dark)",
-                                  ).matches) ? (
+                              (theme === "system" &&
+                                window.matchMedia(
+                                  "(prefers-color-scheme: dark)",
+                                ).matches) ? (
                                 <Moon className="w-4 h-4" />
                               ) : (
                                 <Sun className="w-4 h-4" />

@@ -41,8 +41,8 @@ import { RefreshCcw, RefreshCw, RefreshCwOff } from "lucide-react";
 import {
   ConnectionLogProvider,
   useConnectionLog,
-} from "@/components/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 
 interface QuickAction {
   name: string;
@@ -413,8 +413,8 @@ function ServerStatsInner({
         setIsLoadingMetrics(true);
       }
       setShowStatsUI(true);
-      setHasConnectionError(false); // Reset error state on new connection attempt
-      clearLogs(); // Clear any previous logs before starting new connection
+      setHasConnectionError(false);
+      clearLogs();
 
       try {
         if (!totpVerified) {
@@ -422,7 +422,6 @@ function ServerStatsInner({
 
           if (cancelled) return;
 
-          // Process connection logs from backend
           if (result?.connectionLogs) {
             result.connectionLogs.forEach((log: any) => {
               addLog({
@@ -476,7 +475,6 @@ function ServerStatsInner({
           if (!hasExistingMetrics) {
             setIsLoadingMetrics(false);
             logServerActivity();
-            // Clear logs on successful metrics collection
             setTimeout(() => clearLogs(), 1000);
           }
         }
@@ -504,7 +502,6 @@ function ServerStatsInner({
           setIsLoadingMetrics(false);
           setHasConnectionError(true);
 
-          // Process connection logs from error if available
           if (error?.connectionLogs) {
             error.connectionLogs.forEach((log: any) => {
               addLog({
@@ -515,7 +512,6 @@ function ServerStatsInner({
               });
             });
           } else {
-            // Fallback if no connection logs in error
             addLog({
               type: "error",
               stage: "connection",
@@ -545,7 +541,6 @@ function ServerStatsInner({
 
     debounceTimeout = setTimeout(() => {
       if (isActuallyVisible) {
-        // Don't start metrics if there's already a connection error showing
         if (!hasConnectionError) {
           startMetrics();
         }

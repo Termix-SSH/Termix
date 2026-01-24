@@ -316,7 +316,7 @@ export function AppView({
             ...DEFAULT_TERMINAL_CONFIG,
             ...(t.hostConfig as any)?.terminalConfig,
           };
-          // Auto-switch between termixDark and termixLight based on app theme
+
           let themeColors;
           if (terminalConfig.theme === "termix") {
             themeColors = isDarkMode

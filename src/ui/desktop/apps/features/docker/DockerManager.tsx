@@ -33,8 +33,8 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ConnectionLogProvider,
   useConnectionLog,
-} from "@/components/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -192,8 +192,8 @@ function DockerManagerInner({
       }
 
       setIsConnecting(true);
-      setHasConnectionError(false); // Reset error state on new connection
-      clearLogs(); // Clear any previous logs before starting new connection
+      setHasConnectionError(false);
+      clearLogs();
       const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       try {
@@ -251,7 +251,6 @@ function DockerManagerInner({
           });
         } else {
           logDockerActivity();
-          // Clear logs on successful connection
           setTimeout(() => clearLogs(), 1000);
         }
       } catch (error: any) {
@@ -262,7 +261,6 @@ function DockerManagerInner({
         if (error?.connectionLogs) {
           setLogs(error.connectionLogs);
         } else {
-          // Fallback if no connection logs in error
           addLog({
             type: "error",
             stage: "connection",
@@ -522,7 +520,6 @@ function DockerManagerInner({
 
       if (!validation.available) {
         setHasConnectionError(true);
-        // Don't show toast - connection log will display the error
       } else {
         logDockerActivity();
       }

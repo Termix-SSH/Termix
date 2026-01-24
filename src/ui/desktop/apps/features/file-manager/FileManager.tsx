@@ -37,8 +37,8 @@ import type { SSHHost, FileItem } from "../../../types/index.js";
 import {
   ConnectionLogProvider,
   useConnectionLog,
-} from "@/components/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import {
   listSSHFiles,
@@ -353,8 +353,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     try {
       setIsLoading(true);
       initialLoadDoneRef.current = false;
-      setHasConnectionError(false); // Reset error state on new connection
-      clearLogs(); // Clear any previous logs before starting new connection
+      setHasConnectionError(false);
+      clearLogs();
 
       const sessionId = currentHost.id.toString();
 
@@ -423,7 +423,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     } catch (error: any) {
       console.error("SSH connection failed:", error);
 
-      // Process connection logs from error if available
       if (error?.connectionLogs) {
         error.connectionLogs.forEach((log: any) => {
           addLog({
@@ -433,7 +432,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             details: log.details,
           });
         });
-        // Also handle special cases like TOTP/Warpgate from error
         if (error.requires_totp) {
           setTotpRequired(true);
           setTotpSessionId(error.sessionId || currentHost.id.toString());
@@ -458,7 +456,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           return;
         }
       } else {
-        // Fallback if no connection logs in error
         addLog({
           type: "error",
           stage: "connection",
@@ -519,11 +516,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             message?: string;
           };
 
-          // Check if this is a permission denied error that needs sudo
           if (axiosError.response?.data?.needsSudo) {
             console.log("Permission denied, sudo required for:", path);
 
-            // Only show dialog if not already in a sudo retry flow
             if (!sudoDialogOpen) {
               setPendingSudoOperation({ type: "navigate", path });
               setSudoDialogOpen(true);
@@ -539,7 +534,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
           console.error("Failed to load directory:", error);
 
-          // Show more specific error message
           const errorMessage =
             axiosError.response?.data?.error ||
             axiosError.message ||
@@ -889,13 +883,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         handleRefreshDirectory();
         clearSelection();
       } else if (pendingSudoOperation.type === "navigate") {
-        // Retry navigation with sudo password now set
         const success = await loadDirectory(pendingSudoOperation.path);
         if (success) {
           setCurrentPath(pendingSudoOperation.path);
           setPendingSudoOperation(null);
         }
-        // If failed, loadDirectory already handles showing the error/dialog
         return;
       }
 
@@ -906,7 +898,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         message?: string;
       };
 
-      // If sudo auth failed, keep dialog open for retry
       if (axiosError.response?.data?.sudoFailed) {
         toast.error(t("fileManager.sudoAuthFailed"));
         setSudoDialogOpen(true);

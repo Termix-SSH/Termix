@@ -30,7 +30,8 @@ export function ElectronVersionCheck({
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
   useEffect(() => {
-    const updateCheckDisabled = localStorage.getItem("disableUpdateCheck") === "true";
+    const updateCheckDisabled =
+      localStorage.getItem("disableUpdateCheck") === "true";
     if (updateCheckDisabled) {
       onContinue();
       return;

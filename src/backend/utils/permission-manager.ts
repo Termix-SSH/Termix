@@ -63,9 +63,6 @@ class PermissionManager {
     return this.instance;
   }
 
-  /**
-   * Clean up expired host access entries
-   */
   private async cleanupExpiredAccess(): Promise<void> {
     try {
       const now = new Date().toISOString();
@@ -85,23 +82,14 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Clear permission cache
-   */
   private clearPermissionCache(): void {
     this.permissionCache.clear();
   }
 
-  /**
-   * Invalidate permission cache for a specific user
-   */
   invalidateUserPermissionCache(userId: string): void {
     this.permissionCache.delete(userId);
   }
 
-  /**
-   * Get user permissions from roles
-   */
   async getUserPermissions(userId: string): Promise<string[]> {
     const cached = this.permissionCache.get(userId);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -150,10 +138,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Check if user has a specific permission
-   * Supports wildcards: "hosts.*", "*"
-   */
   async hasPermission(userId: string, permission: string): Promise<boolean> {
     const userPermissions = await this.getUserPermissions(userId);
 
@@ -176,9 +160,6 @@ class PermissionManager {
     return false;
   }
 
-  /**
-   * Check if user can access a specific host
-   */
   async canAccessHost(
     userId: string,
     hostId: number,
@@ -229,8 +210,6 @@ class PermissionManager {
       if (sharedAccess.length > 0) {
         const access = sharedAccess[0];
 
-        // Double-check ownership: user might have shared the host to their own role
-        // In this case, they should retain full owner permissions
         const hostOwnerCheck = await db
           .select({ ownerId: sshData.userId })
           .from(sshData)
@@ -298,9 +277,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Check if user is admin (backward compatibility)
-   */
   async isAdmin(userId: string): Promise<boolean> {
     try {
       const user = await db
@@ -334,9 +310,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Middleware: Require specific permission
-   */
   requirePermission(permission: string) {
     return async (
       req: AuthenticatedRequest,
@@ -369,9 +342,6 @@ class PermissionManager {
     };
   }
 
-  /**
-   * Middleware: Require host access
-   */
   requireHostAccess(
     hostIdParam: string = "id",
     action: "read" | "write" | "execute" | "delete" | "share" = "read",
@@ -419,9 +389,6 @@ class PermissionManager {
     };
   }
 
-  /**
-   * Middleware: Require admin role (backward compatible)
-   */
   requireAdmin() {
     return async (
       req: AuthenticatedRequest,

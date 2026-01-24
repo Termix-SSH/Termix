@@ -155,7 +155,6 @@ router.post(
 
       const db = getDb();
 
-      // Ensure topology is a string
       const topologyStr =
         typeof topology === "string" ? topology : JSON.stringify(topology);
 
@@ -165,13 +164,11 @@ router.post(
         .where(eq(networkTopology.userId, userId));
 
       if (existing.length > 0) {
-        // Update existing record
         await db
           .update(networkTopology)
           .set({ topology: topologyStr })
           .where(eq(networkTopology.userId, userId));
       } else {
-        // Insert new record
         await db
           .insert(networkTopology)
           .values({ userId, topology: topologyStr });

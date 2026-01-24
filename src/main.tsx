@@ -88,7 +88,6 @@ function RootApp() {
   const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
-  // PWA Service Worker registration (production web only)
   useServiceWorker();
 
   const userAgent =

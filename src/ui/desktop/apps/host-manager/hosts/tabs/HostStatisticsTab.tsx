@@ -268,8 +268,7 @@ export function HostStatisticsTab({
                         {widget === "system" && t("serverStats.systemInfo")}
                         {widget === "login_stats" &&
                           t("serverStats.loginStats")}
-                        {widget === "ports" &&
-                          t("serverStats.ports.title")}
+                        {widget === "ports" && t("serverStats.ports.title")}
                         {widget === "firewall" &&
                           t("serverStats.firewall.title")}
                       </label>

@@ -40,8 +40,8 @@ import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   ConnectionLogProvider,
   useConnectionLog,
-} from "@/components/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/components/connection-log/ConnectionLog.tsx";
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 
 interface HostConfig {
   id?: number;
@@ -166,21 +166,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
 
-    // Reset flags when component mounts or hostConfig.id changes
     useEffect(() => {
-      console.log(
-        "[Init] Resetting connection flags for terminal:",
-        hostConfig.id,
-      );
       isUnmountingRef.current = false;
       shouldNotReconnectRef.current = false;
       isReconnectingRef.current = false;
       isConnectingRef.current = false;
       reconnectAttempts.current = 0;
 
-      return () => {
-        console.log("[Init] Cleanup for terminal:", hostConfig.id);
-      };
+      return () => {};
     }, [hostConfig.id]);
     const connectionAttemptIdRef = useRef(0);
     const totpAttemptsRef = useRef(0);
@@ -587,21 +580,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function attemptReconnection() {
-      // Strict guard - don't allow any reconnection if already in progress
       if (
         isUnmountingRef.current ||
         shouldNotReconnectRef.current ||
         isReconnectingRef.current ||
         isConnectingRef.current ||
         wasDisconnectedBySSH.current ||
-        reconnectTimeoutRef.current !== null // Already have a reconnection scheduled
+        reconnectTimeoutRef.current !== null
       ) {
-        console.log("[Reconnect] Blocked - already in progress or not allowed");
         return;
       }
 
       if (reconnectAttempts.current >= maxReconnectAttempts) {
-        console.log("[Reconnect] Max attempts reached");
         updateConnectionError(t("terminal.maxReconnectAttemptsReached"));
         setIsConnecting(false);
         shouldNotReconnectRef.current = true;
@@ -610,7 +600,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           stage: "connection",
           message: t("terminal.maxReconnectAttemptsReached"),
         });
-        // Keep terminal open to show connection logs
         return;
       }
 
@@ -621,10 +610,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       reconnectAttempts.current++;
-
-      console.log(
-        `[Reconnect] Attempt ${reconnectAttempts.current}/${maxReconnectAttempts}`,
-      );
 
       addLog({
         type: "info",
@@ -641,7 +626,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
 
       reconnectTimeoutRef.current = setTimeout(() => {
-        reconnectTimeoutRef.current = null; // Clear the timeout reference
+        reconnectTimeoutRef.current = null;
 
         if (
           isUnmountingRef.current ||
@@ -685,17 +670,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     function connectToHost(cols: number, rows: number) {
       if (isConnectingRef.current) {
-        console.log("[Connect] Already connecting, ignoring");
         return;
       }
 
-      console.log("[Connect] Starting connection attempt");
       isConnectingRef.current = true;
       connectionAttemptIdRef.current++;
 
       if (!isReconnectingRef.current) {
         reconnectAttempts.current = 0;
-        shouldNotReconnectRef.current = false; // Reset on fresh connection
+        shouldNotReconnectRef.current = false;
       }
 
       const isDev =
@@ -748,13 +731,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
-
-      console.log("[WebSocket] Connecting:", {
-        url: wsUrl,
-        protocol: window.location.protocol,
-        isDev,
-        isElectron: isElectron(),
-      });
 
       const ws = new WebSocket(wsUrl);
       webSocketRef.current = ws;
@@ -833,9 +809,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 : msg.data;
 
               terminal.write(outputData);
-              // Universal regex pattern for sudo password prompt
-              // Matches "[sudo]" prefix + any text + ":" suffix, works for all languages
-              // Also matches "sudo: a password is required" for some systems
               const sudoPasswordPattern =
                 /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
               const passwordToFill =
@@ -905,8 +878,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
               setIsConnecting(false);
               wasDisconnectedBySSH.current = false;
-              // Don't call attemptReconnection here - let the WebSocket close event handle it
-              // to avoid creating a reconnection loop
               return;
             }
 
@@ -925,7 +896,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
-              // Keep terminal tab open to show connection logs
               return;
             }
 
@@ -1066,10 +1036,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 180000);
           } else if (msg.type === "warpgate_auth_required") {
-            console.log("[Warpgate] Auth required:", {
-              url: msg.url,
-              securityKey: msg.securityKey,
-            });
             setWarpgateAuthRequired(true);
             setWarpgateAuthUrl(msg.url || "");
             setWarpgateSecurityKey(msg.securityKey || "N/A");
@@ -1123,13 +1089,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        console.log("[WebSocket] Closed:", {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          wasDisconnectedBySSH: wasDisconnectedBySSH.current,
-        });
-
         setIsConnected(false);
         isConnectingRef.current = false;
         if (terminal) {
@@ -1176,8 +1135,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        // If WebSocket closes cleanly before connection is established, don't reconnect
-        // This typically means the server rejected the connection (verifyClient failed)
         if (
           !isConnected &&
           event.wasClean &&
@@ -1195,8 +1152,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        // Only set isConnecting to false if we're NOT going to attempt reconnection
-        // This prevents the useEffect from triggering another connection attempt
         const shouldAttemptReconnection =
           !wasDisconnectedBySSH.current &&
           !isUnmountingRef.current &&
@@ -1204,18 +1159,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !isConnectingRef.current;
 
         if (shouldAttemptReconnection) {
-          console.log("[WebSocket] Close event triggering reconnection");
           wasDisconnectedBySSH.current = false;
-          // Keep isConnecting true so useEffect doesn't trigger
           attemptReconnection();
         } else {
-          console.log("[WebSocket] Close event NOT triggering reconnection:", {
-            wasDisconnectedBySSH: wasDisconnectedBySSH.current,
-            isUnmounting: isUnmountingRef.current,
-            shouldNotReconnect: shouldNotReconnectRef.current,
-            isConnecting: isConnectingRef.current,
-          });
-          // Only now set isConnecting false since we're giving up
           setIsConnecting(false);
         }
       });
@@ -1239,9 +1185,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
         }
-
-        // Don't attempt reconnection here - let the close event handle it
-        // to avoid double reconnection attempts
       });
     }
 
@@ -1538,9 +1481,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       resizeObserver.observe(xtermRef.current);
 
       return () => {
-        // Only clean up UI-related resources here.
-        // WebSocket cleanup is handled in a separate unmount-only effect
-        // to prevent session loss when hostConfig object reference changes.
         isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
@@ -1550,8 +1490,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
     }, [xtermRef, terminal, hostConfig, isDarkMode]);
 
-    // Separate effect for WebSocket cleanup on true component unmount only.
-    // This prevents session loss when hostConfig properties are updated.
     useEffect(() => {
       return () => {
         isUnmountingRef.current = true;
@@ -1579,8 +1517,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
-        // Ctrl+Alt+<key> → Ctrl+<key> remapping for browser-blocked shortcuts
-        // Browsers intercept Ctrl+W/T/N/Q, so we use Ctrl+Alt as an alternative
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
           const key = e.key.toLowerCase();
           const blockedKeys = ["w", "t", "n", "q"];
@@ -1781,17 +1717,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (!terminal || !hostConfig || !isVisible) return;
       if (isConnected || isConnecting) return;
 
-      // Don't try to connect if we're already reconnecting or have a scheduled reconnection
       if (isReconnectingRef.current || reconnectTimeoutRef.current !== null) {
-        console.log("[Effect] Skipping connection - reconnection in progress");
         return;
       }
 
-      // Don't try to connect if we've been explicitly told not to (e.g. auth failed, max retries)
       if (shouldNotReconnectRef.current) {
-        console.log(
-          "[Effect] Skipping connection - shouldNotReconnect is true",
-        );
         return;
       }
 
@@ -1807,7 +1737,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      console.log("[Effect] Initiating connection");
       setIsConnecting(true);
       fitAddonRef.current?.fit();
       if (terminal.cols > 0 && terminal.rows > 0) {

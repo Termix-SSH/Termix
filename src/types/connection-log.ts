@@ -1,5 +1,4 @@
 export type ConnectionStage =
-  // SSH/Terminal stages
   | "dns"
   | "tcp"
   | "handshake"
@@ -9,24 +8,20 @@ export type ConnectionStage =
   | "error"
   | "proxy"
   | "jump"
-  // Docker stages
   | "docker_connecting"
   | "docker_auth"
   | "docker_session"
   | "docker_ready"
-  // Stats stages
   | "stats_connecting"
   | "stats_totp"
   | "stats_polling"
   | "stats_heartbeat"
-  // Tunnel stages
   | "tunnel_connecting"
   | "tunnel_source"
   | "tunnel_endpoint"
   | "tunnel_forwarding"
   | "tunnel_retry"
   | "tunnel_connected"
-  // SFTP stages
   | "sftp_connecting"
   | "sftp_auth"
   | "sftp_connected";

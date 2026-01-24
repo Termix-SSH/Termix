@@ -132,9 +132,7 @@ function AppContent() {
 
   useEffect(() => {
     const path = window.location.pathname;
-    // New format: /terminal/{hostNameOrId}
     const terminalMatch = path.match(/^\/terminal\/([a-zA-Z0-9_-]+)$/);
-    // Legacy format: /hosts/{id}/terminal (backward compatible)
     const legacyMatch = path.match(/^\/hosts\/([a-zA-Z0-9_-]+)\/terminal$/);
     const hostIdentifier = terminalMatch?.[1] || legacyMatch?.[1];
 
@@ -145,11 +143,9 @@ function AppContent() {
             await import("@/ui/main-axios.ts");
           let host = null;
 
-          // Pure numeric → lookup by ID
           if (/^\d+$/.test(hostIdentifier)) {
             host = await getSSHHostById(parseInt(hostIdentifier, 10));
           } else {
-            // Non-numeric → lookup by name (first match)
             const hosts = await getSSHHosts();
             host =
               hosts.find((h: { name?: string }) => h.name === hostIdentifier) ||
@@ -162,7 +158,6 @@ function AppContent() {
               title: host.name || host.ip,
               data: { host, initialCommand: "" },
             });
-            // Clean URL to prevent re-opening on refresh
             window.history.replaceState({}, "", "/");
           } else {
             toast.error(`Host "${hostIdentifier}" not found`);

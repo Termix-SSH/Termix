@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import type { LogEntry } from "@/types/connection-log";
+import type { LogEntry } from "@/types/connection-log.ts";
 
 interface ConnectionLogContextType {
   logs: LogEntry[];
@@ -31,7 +31,6 @@ export function ConnectionLogProvider({
     };
     setLogsState((prev) => [...prev, newLog]);
 
-    // Auto-expand on errors and warnings
     if (entry.type === "error" || entry.type === "warning") {
       setIsExpanded(true);
     }

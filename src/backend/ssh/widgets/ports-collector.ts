@@ -1,6 +1,9 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import type { PortsMetrics, ListeningPort } from "../../../types/stats-widgets.js";
+import type {
+  PortsMetrics,
+  ListeningPort,
+} from "../../../types/stats-widgets.js";
 
 function parseSsOutput(output: string): ListeningPort[] {
   const ports: ListeningPort[] = [];
@@ -114,11 +117,7 @@ export async function collectPortsMetrics(
   client: Client,
 ): Promise<PortsMetrics> {
   try {
-    const ssResult = await execCommand(
-      client,
-      "ss -tulnp 2>/dev/null",
-      15000,
-    );
+    const ssResult = await execCommand(client, "ss -tulnp 2>/dev/null", 15000);
 
     if (ssResult.stdout && ssResult.stdout.includes("Local")) {
       const ports = parseSsOutput(ssResult.stdout);

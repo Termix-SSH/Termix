@@ -25,7 +25,7 @@ interface ServerStatusContextType {
 
 const ServerStatusContext = createContext<ServerStatusContextType | null>(null);
 
-const POLL_INTERVAL = 30000; // 30 seconds
+const POLL_INTERVAL = 30000;
 
 export function ServerStatusProvider({
   children,
@@ -40,12 +40,10 @@ export function ServerStatusProvider({
   const mountedRef = useRef(true);
   const enabledHostIdsRef = useRef(enabledHostIds);
 
-  // Keep ref in sync with state
   useEffect(() => {
     enabledHostIdsRef.current = enabledHostIds;
   }, [enabledHostIds]);
 
-  // Fetch hosts to determine which ones have status check enabled
   const fetchEnabledHosts = useCallback(async () => {
     try {
       const hosts = await getSSHHosts();
@@ -103,7 +101,6 @@ export function ServerStatusProvider({
       setStatuses(newStatuses);
     } catch (error) {
       console.error("Failed to fetch server statuses:", error);
-      // On error, mark all as degraded
       if (mountedRef.current) {
         setStatuses((prev) => {
           const updated = new Map(prev);
@@ -122,11 +119,10 @@ export function ServerStatusProvider({
         setIsLoading(false);
       }
     }
-  }, []); // No dependencies - use refs for dynamic values
+  }, []);
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => {
-      // If status check is disabled for this host, return offline
       if (!enabledHostIds.has(hostId)) {
         return "offline";
       }
@@ -135,7 +131,6 @@ export function ServerStatusProvider({
     [statuses, enabledHostIds],
   );
 
-  // Initial fetch and polling setup - only runs once on mount
   useEffect(() => {
     mountedRef.current = true;
 
@@ -152,9 +147,8 @@ export function ServerStatusProvider({
       mountedRef.current = false;
       clearInterval(intervalId);
     };
-  }, [fetchEnabledHosts, refreshStatuses]); // These callbacks never change, safe to depend on
+  }, [fetchEnabledHosts, refreshStatuses]);
 
-  // Listen for host changes to update enabled hosts
   useEffect(() => {
     const handleHostsChanged = async () => {
       await fetchEnabledHosts();
@@ -168,7 +162,7 @@ export function ServerStatusProvider({
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
       window.removeEventListener("hosts:refresh", handleHostsChanged);
     };
-  }, [fetchEnabledHosts, refreshStatuses]); // These callbacks never change, safe to depend on
+  }, [fetchEnabledHosts, refreshStatuses]);
 
   return (
     <ServerStatusContext.Provider
@@ -194,7 +188,6 @@ export function useServerStatus() {
   return context;
 }
 
-// Convenience hook for getting a single host's status
 export function useHostStatus(
   hostId: number,
   statusCheckEnabled: boolean = true,

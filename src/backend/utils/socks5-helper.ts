@@ -13,13 +13,6 @@ export interface SOCKS5Config {
   socks5ProxyChain?: ProxyNode[];
 }
 
-/**
- * Creates a SOCKS5 connection through a single proxy or a chain of proxies
- * @param targetHost - Target SSH server hostname/IP
- * @param targetPort - Target SSH server port
- * @param socks5Config - SOCKS5 proxy configuration
- * @returns Promise with connected socket or null if SOCKS5 is not enabled
- */
 export async function createSocks5Connection(
   targetHost: string,
   targetPort: number,
@@ -47,9 +40,6 @@ export async function createSocks5Connection(
   return null;
 }
 
-/**
- * Creates a connection through a single SOCKS proxy
- */
 async function createSingleProxyConnection(
   targetHost: string,
   targetPort: number,
@@ -87,10 +77,6 @@ async function createSingleProxyConnection(
   }
 }
 
-/**
- * Creates a connection through a chain of SOCKS proxies
- * Each proxy in the chain connects through the previous one
- */
 async function createProxyChainConnection(
   targetHost: string,
   targetPort: number,

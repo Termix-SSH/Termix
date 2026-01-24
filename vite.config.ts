@@ -23,21 +23,42 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-switch', '@radix-ui/react-tooltip', '@radix-ui/react-scroll-area', '@radix-ui/react-separator', 'lucide-react', 'clsx', 'tailwind-merge', 'class-variance-authority'],
-          'monaco': ['monaco-editor'],
-          'codemirror': ['@uiw/react-codemirror', '@codemirror/view', '@codemirror/state', '@codemirror/language', '@codemirror/commands', '@codemirror/search', '@codemirror/autocomplete'],
-        }
-      }
+          "react-vendor": ["react", "react-dom"],
+          "ui-vendor": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-separator",
+            "lucide-react",
+            "clsx",
+            "tailwind-merge",
+            "class-variance-authority",
+          ],
+          monaco: ["monaco-editor"],
+          codemirror: [
+            "@uiw/react-codemirror",
+            "@codemirror/view",
+            "@codemirror/state",
+            "@codemirror/language",
+            "@codemirror/commands",
+            "@codemirror/search",
+            "@codemirror/autocomplete",
+          ],
+        },
+      },
     },
     chunkSizeWarningLimit: 1000,
   },
   server: {
     https: useHTTPS
       ? {
-        cert: fs.readFileSync(sslCertPath),
-        key: fs.readFileSync(sslKeyPath),
-      }
+          cert: fs.readFileSync(sslCertPath),
+          key: fs.readFileSync(sslKeyPath),
+        }
       : false,
     port: 5173,
     host: "localhost",
