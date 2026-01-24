@@ -1643,7 +1643,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                           </Tooltip>
                         ))}
                       </div>
-                      {/* Show More / Show Less button for pagination */}
                       {folderHosts.length > INITIAL_HOSTS_PER_FOLDER && (
                         <div className="flex justify-center mt-3">
                           <Button

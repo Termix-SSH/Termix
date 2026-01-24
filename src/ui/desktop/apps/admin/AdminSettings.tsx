@@ -439,7 +439,6 @@ export function AdminSettings({
         </div>
       </div>
 
-      {/* Dialogs */}
       <CreateUserDialog
         open={createUserDialogOpen}
         onOpenChange={setCreateUserDialogOpen}

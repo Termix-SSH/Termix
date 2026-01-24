@@ -517,8 +517,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           };
 
           if (axiosError.response?.data?.needsSudo) {
-            console.log("Permission denied, sudo required for:", path);
-
             if (!sudoDialogOpen) {
               setPendingSudoOperation({ type: "navigate", path });
               setSudoDialogOpen(true);
@@ -2160,9 +2158,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   }, [currentHost?.id]);
 
   useEffect(() => {
-    console.log("Saving viewMode to localStorage:", viewMode);
     localStorage.setItem("fileManagerViewMode", viewMode);
-    console.log("Saved value:", localStorage.getItem("fileManagerViewMode"));
   }, [viewMode]);
 
   const filteredFiles = files.filter((file) =>

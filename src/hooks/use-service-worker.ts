@@ -25,7 +25,6 @@ export function useServiceWorker(): ServiceWorkerState {
           navigator.serviceWorker.controller
         ) {
           setState((prev) => ({ ...prev, updateAvailable: true }));
-          console.log("[SW] Update available");
         }
       });
     },
@@ -43,8 +42,6 @@ export function useServiceWorker(): ServiceWorkerState {
     const registerSW = async () => {
       try {
         const registration = await navigator.serviceWorker.register("/sw.js");
-        console.log("[SW] Registered:", registration.scope);
-
         setState((prev) => ({ ...prev, isRegistered: true }));
 
         registration.addEventListener("updatefound", () =>
