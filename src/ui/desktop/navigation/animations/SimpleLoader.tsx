@@ -44,7 +44,7 @@ export function SimpleLoader({
 
       <div
         className={cn(
-          "absolute inset-0 flex items-center justify-center z-50",
+          "absolute inset-0 flex items-center justify-center z-[100]",
           className,
         )}
         style={{ backgroundColor: backgroundColor || "var(--bg-base)" }}

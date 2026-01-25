@@ -12,15 +12,17 @@ import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   getCookie,
   isElectron,
   logActivity,
   getSnippets,
+  deleteCommandFromHistory,
+  getCommandHistory,
 } from "@/ui/main-axios.ts";
-import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -35,6 +37,11 @@ import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-h
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 
 interface HostConfig {
   id?: number;
@@ -70,7 +77,7 @@ interface SSHTerminalProps {
   executeCommand?: string;
 }
 
-export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
+const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
       hostConfig,
@@ -97,6 +104,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
+    const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
     const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
 
@@ -124,7 +132,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
-    const [, setConnectionError] = useState<string | null>(null);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
+    const connectionErrorRef = useRef<string | null>(null);
+
+    const updateConnectionError = useCallback((error: string | null) => {
+      connectionErrorRef.current = error;
+      setConnectionError(error);
+    }, []);
+
     const [, setIsAuthenticated] = useState(false);
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
@@ -135,6 +150,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     >("no_keyboard");
     const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
       useState(false);
+    const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
+    const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
+    const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
+    const warpgateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -144,8 +163,17 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
+
+    useEffect(() => {
+      isUnmountingRef.current = false;
+      shouldNotReconnectRef.current = false;
+      isReconnectingRef.current = false;
+      isConnectingRef.current = false;
+      reconnectAttempts.current = 0;
+
+      return () => {};
+    }, [hostConfig.id]);
     const connectionAttemptIdRef = useRef(0);
-    const totpAttemptsRef = useRef(0);
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
@@ -212,8 +240,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (showHistoryDialog && hostConfig.id) {
         setIsLoadingHistory(true);
         setIsLoadingRef.current(true);
-        import("@/ui/main-axios.ts")
-          .then((module) => module.getCommandHistory(hostConfig.id!))
+        getCommandHistory(hostConfig.id!)
           .then((history) => {
             setCommandHistory(history);
             setCommandHistoryContextRef.current(history);
@@ -235,8 +262,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         localStorage.getItem("commandAutocomplete") === "true";
 
       if (hostConfig.id && autocompleteEnabled) {
-        import("@/ui/main-axios.ts")
-          .then((module) => module.getCommandHistory(hostConfig.id!))
+        getCommandHistory(hostConfig.id!)
           .then((history) => {
             autocompleteHistory.current = history;
           })
@@ -401,6 +427,41 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (onClose) onClose();
     }
 
+    function handleWarpgateContinue() {
+      if (webSocketRef.current) {
+        if (warpgateTimeoutRef.current) {
+          clearTimeout(warpgateTimeoutRef.current);
+          warpgateTimeoutRef.current = null;
+        }
+        webSocketRef.current.send(
+          JSON.stringify({
+            type: "warpgate_auth_continue",
+            data: {},
+          }),
+        );
+        setWarpgateAuthRequired(false);
+        setWarpgateAuthUrl("");
+        setWarpgateSecurityKey("");
+      }
+    }
+
+    function handleWarpgateCancel() {
+      if (warpgateTimeoutRef.current) {
+        clearTimeout(warpgateTimeoutRef.current);
+        warpgateTimeoutRef.current = null;
+      }
+      setWarpgateAuthRequired(false);
+      setWarpgateAuthUrl("");
+      setWarpgateSecurityKey("");
+      if (onClose) onClose();
+    }
+
+    function handleWarpgateOpenUrl() {
+      if (warpgateAuthUrl) {
+        window.open(warpgateAuthUrl, "_blank", "noopener,noreferrer");
+      }
+    }
+
     function handleAuthDialogSubmit(credentials: {
       password?: string;
       sshKey?: string;
@@ -476,6 +537,10 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearTimeout(totpTimeoutRef.current);
             totpTimeoutRef.current = null;
           }
+          if (warpgateTimeoutRef.current) {
+            clearTimeout(warpgateTimeoutRef.current);
+            warpgateTimeoutRef.current = null;
+          }
           webSocketRef.current?.close();
           setIsConnected(false);
           setIsConnecting(false);
@@ -517,16 +582,21 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         shouldNotReconnectRef.current ||
         isReconnectingRef.current ||
         isConnectingRef.current ||
-        wasDisconnectedBySSH.current
+        wasDisconnectedBySSH.current ||
+        reconnectTimeoutRef.current !== null
       ) {
         return;
       }
 
       if (reconnectAttempts.current >= maxReconnectAttempts) {
-        toast.error(t("terminal.maxReconnectAttemptsReached"));
-        if (onClose) {
-          onClose();
-        }
+        updateConnectionError(t("terminal.maxReconnectAttemptsReached"));
+        setIsConnecting(false);
+        shouldNotReconnectRef.current = true;
+        addLog({
+          type: "error",
+          stage: "connection",
+          message: t("terminal.maxReconnectAttemptsReached"),
+        });
         return;
       }
 
@@ -538,12 +608,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       reconnectAttempts.current++;
 
-      toast.info(
-        t("terminal.reconnecting", {
+      addLog({
+        type: "info",
+        stage: "connection",
+        message: t("terminal.reconnecting", {
           attempt: reconnectAttempts.current,
           max: maxReconnectAttempts,
         }),
-      );
+      });
 
       const delay = Math.min(
         2000 * Math.pow(2, reconnectAttempts.current - 1),
@@ -551,6 +623,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
 
       reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = null;
+
         if (
           isUnmountingRef.current ||
           shouldNotReconnectRef.current ||
@@ -569,7 +643,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (!jwtToken || jwtToken.trim() === "") {
           console.warn("Reconnection cancelled - no authentication token");
           isReconnectingRef.current = false;
-          setConnectionError("Authentication required for reconnection");
+          updateConnectionError(t("terminal.authenticationRequired"));
+          setIsConnecting(false);
+          shouldNotReconnectRef.current = true;
+          addLog({
+            type: "error",
+            stage: "auth",
+            message: t("terminal.authenticationRequired"),
+          });
           return;
         }
 
@@ -594,6 +675,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       if (!isReconnectingRef.current) {
         reconnectAttempts.current = 0;
+        shouldNotReconnectRef.current = false;
       }
 
       const isDev =
@@ -609,7 +691,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         console.error("No JWT token available for WebSocket connection");
         setIsConnected(false);
         setIsConnecting(false);
-        setConnectionError("Authentication required");
+        updateConnectionError("Authentication required");
         isConnectingRef.current = false;
         return;
       }
@@ -627,7 +709,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               const wsHost = baseUrl.replace(/^https?:\/\//, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
+          : `/ssh/websocket/`;
 
       if (
         webSocketRef.current &&
@@ -650,7 +732,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       const ws = new WebSocket(wsUrl);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
-      setConnectionError(null);
+      updateConnectionError(null);
       shouldNotReconnectRef.current = false;
       isReconnectingRef.current = false;
       setIsConnecting(true);
@@ -665,21 +747,30 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     ) {
       ws.addEventListener("open", () => {
         connectionTimeoutRef.current = setTimeout(() => {
-          if (!isConnected && !totpRequired && !isPasswordPrompt) {
+          if (
+            !isConnected &&
+            !totpRequired &&
+            !isPasswordPrompt &&
+            !connectionErrorRef.current
+          ) {
             if (terminal) {
               terminal.clear();
             }
-            toast.error(t("terminal.connectionTimeout"));
+            const timeoutMessage = t("terminal.connectionTimeout");
+            updateConnectionError(timeoutMessage);
+            addLog({
+              type: "error",
+              stage: "connection",
+              message: timeoutMessage,
+            });
             if (webSocketRef.current) {
               webSocketRef.current.close();
             }
             if (reconnectAttempts.current > 0) {
               attemptReconnection();
             } else {
+              setIsConnecting(false);
               shouldNotReconnectRef.current = true;
-              if (onClose) {
-                onClose();
-              }
             }
           }
         }, 35000);
@@ -716,7 +807,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               terminal.write(outputData);
               const sudoPasswordPattern =
-                /(?:\[sudo\] password for \S+:|sudo: a password is required)/;
+                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
               const passwordToFill =
                 hostConfig.terminalConfig?.sudoPassword || hostConfig.password;
               if (
@@ -746,6 +837,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   },
                   t("common.confirm"),
                   t("common.cancel"),
+                  { confirmOnEnter: true },
                 );
                 setTimeout(() => {
                   sudoPromptShownRef.current = false;
@@ -765,21 +857,24 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");
 
+            addLog({
+              type: "error",
+              stage: "connection",
+              message: errorMessage,
+            });
+
             if (
               errorMessage.toLowerCase().includes("connection") ||
               errorMessage.toLowerCase().includes("timeout") ||
               errorMessage.toLowerCase().includes("network")
             ) {
-              toast.error(
-                t("terminal.connectionError", { message: errorMessage }),
-              );
+              updateConnectionError(errorMessage);
               setIsConnected(false);
               if (terminal) {
                 terminal.clear();
               }
-              setIsConnecting(true);
+              setIsConnecting(false);
               wasDisconnectedBySSH.current = false;
-              attemptReconnection();
               return;
             }
 
@@ -792,28 +887,38 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   errorMessage.toLowerCase().includes("key"))) ||
               errorMessage.toLowerCase().includes("incorrect password")
             ) {
-              toast.error(t("terminal.authError", { message: errorMessage }));
+              updateConnectionError(errorMessage);
+              setIsConnecting(false);
               shouldNotReconnectRef.current = true;
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
-              if (onClose) {
-                onClose();
-              }
               return;
             }
 
-            toast.error(t("terminal.error", { message: errorMessage }));
+            updateConnectionError(errorMessage);
+            setIsConnecting(false);
           } else if (msg.type === "connected") {
             setIsConnected(true);
             setIsConnecting(false);
             isConnectingRef.current = false;
+            updateConnectionError(null);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
             if (reconnectAttempts.current > 0) {
-              toast.success(t("terminal.reconnected"));
+              addLog({
+                type: "success",
+                stage: "connection",
+                message: t("terminal.reconnected"),
+              });
+            } else {
+              addLog({
+                type: "success",
+                stage: "connection",
+                message: t("terminal.connected"),
+              });
             }
             reconnectAttempts.current = 0;
             isReconnectingRef.current = false;
@@ -882,7 +987,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               onClose();
             }
           } else if (msg.type === "totp_required") {
-            totpAttemptsRef.current = 0;
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
@@ -895,20 +999,12 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             totpTimeoutRef.current = setTimeout(() => {
               setTotpRequired(false);
-              toast.error(t("terminal.totpTimeout"));
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
             }, 180000);
           } else if (msg.type === "totp_retry") {
-            totpAttemptsRef.current++;
-            const attemptsRemaining =
-              msg.attempts_remaining || 3 - totpAttemptsRef.current;
-            toast.error(
-              `Invalid code. ${attemptsRemaining} ${attemptsRemaining === 1 ? "attempt" : "attempts"} remaining.`,
-            );
           } else if (msg.type === "password_required") {
-            totpAttemptsRef.current = 0;
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("common.password"));
             setIsPasswordPrompt(true);
@@ -921,11 +1017,27 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             totpTimeoutRef.current = setTimeout(() => {
               setTotpRequired(false);
-              toast.error(t("terminal.passwordTimeout"));
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
             }, 180000);
+          } else if (msg.type === "warpgate_auth_required") {
+            setWarpgateAuthRequired(true);
+            setWarpgateAuthUrl(msg.url || "");
+            setWarpgateSecurityKey(msg.securityKey || "N/A");
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+            if (warpgateTimeoutRef.current) {
+              clearTimeout(warpgateTimeoutRef.current);
+            }
+            warpgateTimeoutRef.current = setTimeout(() => {
+              setWarpgateAuthRequired(false);
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 300000);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -941,9 +1053,18 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "connection_log") {
+            if (msg.data) {
+              addLog({
+                type: msg.data.level || "info",
+                stage: msg.data.stage || "auth",
+                message: msg.data.message,
+                details: msg.data.details,
+              });
+            }
           }
         } catch {
-          toast.error(t("terminal.messageParseError"));
+          // Message parse errors are logged via backend
         }
       });
 
@@ -965,9 +1086,29 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           totpTimeoutRef.current = null;
         }
 
+        if (event.code === 1006) {
+          console.error(
+            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          );
+          addLog({
+            type: "error",
+            stage: "connection",
+            message: t("terminal.websocketAbnormalClose"),
+          });
+          updateConnectionError(t("terminal.websocketAbnormalClose"));
+          setIsConnecting(false);
+          shouldNotReconnectRef.current = true;
+          return;
+        }
+
         if (event.code === 1008) {
           console.error("WebSocket authentication failed:", event.reason);
-          setConnectionError("Authentication failed - please re-login");
+          addLog({
+            type: "error",
+            stage: "auth",
+            message: "Authentication failed - please re-login",
+          });
+          updateConnectionError("Authentication failed - please re-login");
           setIsConnecting(false);
           shouldNotReconnectRef.current = true;
 
@@ -980,26 +1121,47 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        setIsConnecting(false);
         if (
+          !isConnected &&
+          event.wasClean &&
+          (event.code === 1005 || event.code === 1000)
+        ) {
+          console.error("[WebSocket] Connection rejected by server");
+          addLog({
+            type: "error",
+            stage: "connection",
+            message: t("terminal.connectionRejected"),
+          });
+          updateConnectionError(t("terminal.connectionRejected"));
+          setIsConnecting(false);
+          shouldNotReconnectRef.current = true;
+          return;
+        }
+
+        const shouldAttemptReconnection =
           !wasDisconnectedBySSH.current &&
           !isUnmountingRef.current &&
           !shouldNotReconnectRef.current &&
-          !isConnectingRef.current
-        ) {
+          !isConnectingRef.current;
+
+        if (shouldAttemptReconnection) {
           wasDisconnectedBySSH.current = false;
           attemptReconnection();
+        } else {
+          setIsConnecting(false);
         }
       });
 
-      ws.addEventListener("error", () => {
+      ws.addEventListener("error", (event) => {
         if (currentAttemptId !== connectionAttemptIdRef.current) {
           return;
         }
 
+        console.error("[WebSocket] Error:", event);
+
         setIsConnected(false);
         isConnectingRef.current = false;
-        setConnectionError(t("terminal.websocketError"));
+        updateConnectionError(t("terminal.websocketError"));
         if (terminal) {
           terminal.clear();
         }
@@ -1008,15 +1170,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (totpTimeoutRef.current) {
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
-        }
-
-        if (
-          !isUnmountingRef.current &&
-          !shouldNotReconnectRef.current &&
-          !isConnectingRef.current
-        ) {
-          wasDisconnectedBySSH.current = false;
-          attemptReconnection();
         }
       });
     }
@@ -1107,8 +1260,6 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (!hostConfig.id) return;
 
         try {
-          const { deleteCommandFromHistory } =
-            await import("@/ui/main-axios.ts");
           await deleteCommandFromHistory(hostConfig.id, command);
 
           setCommandHistory((prev) => {
@@ -1162,7 +1313,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontSize: config.fontSize,
         fontFamily,
         allowTransparency: true,
-        convertEol: true,
+        convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
@@ -1316,16 +1467,21 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       resizeObserver.observe(xtermRef.current);
 
       return () => {
-        isUnmountingRef.current = true;
-        shouldNotReconnectRef.current = true;
-        isReconnectingRef.current = false;
-        setIsConnecting(false);
         isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleMacKeyboard, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
+      };
+    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+
+    useEffect(() => {
+      return () => {
+        isUnmountingRef.current = true;
+        shouldNotReconnectRef.current = true;
+        isReconnectingRef.current = false;
+        setIsConnecting(false);
         if (reconnectTimeoutRef.current)
           clearTimeout(reconnectTimeoutRef.current);
         if (connectionTimeoutRef.current)
@@ -1337,7 +1493,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         webSocketRef.current?.close();
       };
-    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+    }, []);
 
     useEffect(() => {
       if (!terminal) return;
@@ -1345,6 +1501,25 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       const handleCustomKey = (e: KeyboardEvent): boolean => {
         if (e.type !== "keydown") {
           return true;
+        }
+
+        if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
+          const key = e.key.toLowerCase();
+          const blockedKeys = ["w", "t", "n", "q"];
+          if (blockedKeys.includes(key)) {
+            e.preventDefault();
+            e.stopPropagation();
+            const ctrlCode = key.charCodeAt(0) - 96;
+            if (webSocketRef.current?.readyState === 1) {
+              webSocketRef.current.send(
+                JSON.stringify({
+                  type: "input",
+                  data: String.fromCharCode(ctrlCode),
+                }),
+              );
+            }
+            return false;
+          }
         }
 
         if (showAutocompleteRef.current) {
@@ -1528,6 +1703,14 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (!terminal || !hostConfig || !isVisible) return;
       if (isConnected || isConnecting) return;
 
+      if (isReconnectingRef.current || reconnectTimeoutRef.current !== null) {
+        return;
+      }
+
+      if (shouldNotReconnectRef.current) {
+        return;
+      }
+
       if (terminal.cols < 10 || terminal.rows < 3) {
         requestAnimationFrame(() => {
           if (terminal.cols > 0 && terminal.rows > 0) {
@@ -1546,7 +1729,11 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
         scheduleNotify(terminal.cols, terminal.rows);
         connectToHost(terminal.cols, terminal.rows);
       }
-    }, [terminal, hostConfig, isVisible, isConnected, isConnecting]);
+      // Note: Using hostConfig.id instead of hostConfig object to prevent
+      // unnecessary reconnections when host properties are updated.
+      // Only reconnect when switching to a different host.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {
       if (!terminal || !fitAddonRef.current || !isVisible) return;
@@ -1563,6 +1750,8 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
       return () => clearTimeout(fitTimeoutId);
     }, [terminal, isVisible, splitScreen, isConnecting]);
 
+    const hasConnectionError = !!connectionError;
+
     return (
       <div className="h-full w-full relative" style={{ backgroundColor }}>
         <div
@@ -1570,13 +1759,29 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           className="h-full w-full"
           style={{
             pointerEvents: isVisible ? "auto" : "none",
-            visibility: isConnecting || !isFitted ? "hidden" : "visible",
+            visibility:
+              isConnected && isFitted && !connectionError
+                ? "visible"
+                : "hidden",
           }}
           onClick={() => {
             if (terminal && !splitScreen) {
               terminal.focus();
             }
           }}
+        />
+
+        <SimpleLoader
+          visible={isConnecting && !isConnectionLogExpanded}
+          message={t("terminal.connecting")}
+          backgroundColor={backgroundColor}
+        />
+
+        <ConnectionLog
+          isConnecting={isConnecting}
+          isConnected={isConnected}
+          hasConnectionError={hasConnectionError}
+          position={hasConnectionError ? "top" : "bottom"}
         />
 
         <TOTPDialog
@@ -1601,6 +1806,16 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           backgroundColor={backgroundColor}
         />
 
+        <WarpgateDialog
+          isOpen={warpgateAuthRequired}
+          url={warpgateAuthUrl}
+          securityKey={warpgateSecurityKey}
+          onContinue={handleWarpgateContinue}
+          onCancel={handleWarpgateCancel}
+          onOpenUrl={handleWarpgateOpenUrl}
+          backgroundColor={backgroundColor}
+        />
+
         <CommandAutocomplete
           visible={showAutocomplete}
           suggestions={autocompleteSuggestions}
@@ -1608,13 +1823,17 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
-
-        <SimpleLoader
-          visible={isConnecting}
-          message={t("terminal.connecting")}
-          backgroundColor={backgroundColor}
-        />
       </div>
+    );
+  },
+);
+
+export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
+  function Terminal(props, ref) {
+    return (
+      <ConnectionLogProvider>
+        <TerminalInner {...props} ref={ref} />
+      </ConnectionLogProvider>
     );
   },
 );
@@ -1657,7 +1876,6 @@ style.innerHTML = `
   font-display: swap;
 }
 
-/* Light theme scrollbars */
 .xterm .xterm-viewport::-webkit-scrollbar {
   width: 8px;
   background: transparent;
@@ -1674,7 +1892,6 @@ style.innerHTML = `
   scrollbar-color: rgba(0,0,0,0.3) transparent;
 }
 
-/* Dark theme scrollbars */
 .dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.3);
 }

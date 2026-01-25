@@ -5,6 +5,7 @@ import { FormControl, FormItem, FormLabel } from "@/components/ui/form.tsx";
 import { getCredentials } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import type { Credential } from "../../../../../types";
+import { toast } from "sonner";
 
 interface CredentialSelectorProps {
   value?: number | null;
@@ -36,7 +37,6 @@ export function CredentialSelector({
           : data.credentials || data.data || [];
         setCredentials(credentialsArray);
       } catch {
-        const { toast } = await import("sonner");
         toast.error(t("credentials.failedToFetchCredentials"));
         setCredentials([]);
       } finally {
@@ -178,17 +178,6 @@ export function CredentialSelector({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5">
-                    {value && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-left rounded-lg px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors duration-200"
-                        onClick={handleClear}
-                      >
-                        {t("common.clear")}
-                      </Button>
-                    )}
                     {filteredCredentials.map((credential) => (
                       <Button
                         key={credential.id}

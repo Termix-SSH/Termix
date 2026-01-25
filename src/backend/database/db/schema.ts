@@ -90,6 +90,21 @@ export const sshData = sqliteTable("ssh_data", {
   enableDocker: integer("enable_docker", { mode: "boolean" })
     .notNull()
     .default(false),
+  showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
+    .notNull()
+    .default(false),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   terminalConfig: text("terminal_config"),
@@ -291,6 +306,35 @@ export const commandHistory = sqliteTable("command_history", {
     .references(() => sshData.id, { onDelete: "cascade" }),
   command: text("command").notNull(),
   executedAt: text("executed_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const networkTopology = sqliteTable("network_topology", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  topology: text("topology"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const dashboardPreferences = sqliteTable("dashboard_preferences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  layout: text("layout").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

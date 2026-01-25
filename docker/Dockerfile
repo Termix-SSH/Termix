@@ -19,7 +19,7 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    npm run build
+    NODE_OPTIONS="--max-old-space-size=3072" npm run build
 
 # Stage 3: Build backend
 FROM deps AS backend-builder
@@ -73,6 +73,9 @@ COPY --chown=node:node package.json ./
 VOLUME ["/app/data"]
 
 EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:30001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

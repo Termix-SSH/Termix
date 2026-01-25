@@ -42,6 +42,7 @@ import { PasswordReset } from "@/ui/desktop/user/PasswordReset.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
+import { toast } from "sonner";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
@@ -132,6 +133,14 @@ export function UserProfile({
     const saved = localStorage.getItem("showHostTags");
     return saved !== null ? saved === "true" : true;
   });
+  const [disableUpdateCheck, setDisableUpdateCheck] = useState<boolean>(
+    localStorage.getItem("disableUpdateCheck") === "true",
+  );
+  const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
+    useState<boolean>(() => {
+      const saved = localStorage.getItem("commandPaletteShortcutEnabled");
+      return saved !== null ? saved === "true" : true;
+    });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -144,7 +153,6 @@ export function UserProfile({
       const info = await getVersionInfo();
       setVersionInfo({ version: info.localVersion });
     } catch {
-      const { toast } = await import("sonner");
       toast.error(t("user.failedToLoadVersionInfo"));
     }
   };
@@ -210,6 +218,16 @@ export function UserProfile({
     setShowHostTags(enabled);
     localStorage.setItem("showHostTags", enabled.toString());
     window.dispatchEvent(new Event("showHostTagsChanged"));
+  };
+
+  const handleDisableUpdateCheckToggle = (enabled: boolean) => {
+    setDisableUpdateCheck(enabled);
+    localStorage.setItem("disableUpdateCheck", enabled.toString());
+  };
+
+  const handleCommandPaletteShortcutToggle = (enabled: boolean) => {
+    setCommandPaletteShortcutEnabled(enabled);
+    localStorage.setItem("commandPaletteShortcutEnabled", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -565,6 +583,20 @@ export function UserProfile({
                         onCheckedChange={handleTerminalSyntaxHighlightingToggle}
                       />
                     </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.enableCommandPaletteShortcut")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.enableCommandPaletteShortcutDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandPaletteShortcutEnabled}
+                        onCheckedChange={handleCommandPaletteShortcutToggle}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -609,6 +641,28 @@ export function UserProfile({
                         onCheckedChange={
                           handleDefaultSnippetFoldersCollapsedToggle
                         }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {t("profile.updateSettings")}
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.disableUpdateCheck")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.disableUpdateCheckDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={disableUpdateCheck}
+                        onCheckedChange={handleDisableUpdateCheckToggle}
                       />
                     </div>
                   </div>

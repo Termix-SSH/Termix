@@ -11,6 +11,21 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 function isExecutableFile(permissions: string, fileName: string): boolean {
   const hasExecutePermission =
@@ -42,6 +57,58 @@ function isExecutableFile(permissions: string, fileName: string): boolean {
     hasExecutePermission &&
     (hasScriptExtension || hasExecutableExtension || hasNoExtension)
   );
+}
+
+function modeToPermissions(mode: number): string {
+  const S_IFDIR = 0o040000;
+  const S_IFLNK = 0o120000;
+  const S_IFMT = 0o170000;
+
+  const type = mode & S_IFMT;
+  const prefix = type === S_IFDIR ? "d" : type === S_IFLNK ? "l" : "-";
+
+  const perms = [
+    mode & 0o400 ? "r" : "-",
+    mode & 0o200 ? "w" : "-",
+    mode & 0o100 ? "x" : "-",
+    mode & 0o040 ? "r" : "-",
+    mode & 0o020 ? "w" : "-",
+    mode & 0o010 ? "x" : "-",
+    mode & 0o004 ? "r" : "-",
+    mode & 0o002 ? "w" : "-",
+    mode & 0o001 ? "x" : "-",
+  ].join("");
+
+  return prefix + perms;
+}
+
+function formatMtime(mtime: number): string {
+  const date = new Date(mtime * 1000);
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const month = months[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, " ");
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+
+  if (date > sixMonthsAgo) {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${month} ${day} ${hours}:${minutes}`;
+  }
+  return `${month} ${day}  ${date.getFullYear()}`;
 }
 
 const app = express();
@@ -263,6 +330,7 @@ interface SSHSession {
   lastActive: number;
   timeout?: NodeJS.Timeout;
   activeOperations: number;
+  sudoPassword?: string;
 }
 
 interface PendingTOTPSession {
@@ -280,10 +348,49 @@ interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
+  isWarpgate?: boolean;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
+
+function execWithSudo(
+  client: SSHClient,
+  command: string,
+  sudoPassword: string,
+): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve) => {
+    const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
+    const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
+
+    client.exec(sudoCommand, (err, stream) => {
+      if (err) {
+        resolve({ stdout: "", stderr: err.message, code: 1 });
+        return;
+      }
+
+      let stdout = "";
+      let stderr = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+
+      stream.on("close", (code: number) => {
+        stdout = stdout.replace(/\[sudo\] password for .+?:\s*/g, "");
+        resolve({ stdout, stderr, code: code || 0 });
+      });
+
+      stream.on("error", (streamErr: Error) => {
+        resolve({ stdout, stderr: streamErr.message, code: 1 });
+      });
+    });
+  });
+}
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
@@ -343,6 +450,164 @@ function getMimeType(fileName: string): string {
   return mimeTypes[ext || ""] || "application/octet-stream";
 }
 
+function detectBinary(buffer: Buffer): boolean {
+  if (buffer.length === 0) return false;
+
+  const sampleSize = Math.min(buffer.length, 8192);
+  let nullBytes = 0;
+
+  for (let i = 0; i < sampleSize; i++) {
+    const byte = buffer[i];
+
+    if (byte === 0) {
+      nullBytes++;
+    }
+
+    if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
+      if (++nullBytes > 1) return true;
+    }
+  }
+
+  return nullBytes / sampleSize > 0.01;
+}
+
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect:
+ *   post:
+ *     summary: Connect to SSH for file management
+ *     description: Establishes an SSH/SFTP connection for file manager operations. Supports password, key-based, and keyboard-interactive authentication, as well as jump hosts and SOCKS5 proxies.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - ip
+ *               - port
+ *               - username
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Unique session identifier
+ *               hostId:
+ *                 type: number
+ *                 description: Host ID from database
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP address
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               password:
+ *                 type: string
+ *                 description: SSH password (for password auth)
+ *               sshKey:
+ *                 type: string
+ *                 description: SSH private key (for key-based auth)
+ *               keyPassword:
+ *                 type: string
+ *                 description: Private key passphrase
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, none]
+ *                 description: Authentication method
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID to use from database
+ *               userProvidedPassword:
+ *                 type: string
+ *                 description: User-provided password for keyboard-interactive auth
+ *               forceKeyboardInteractive:
+ *                 type: boolean
+ *                 description: Force keyboard-interactive authentication
+ *               jumpHosts:
+ *                 type: array
+ *                 description: Jump host configuration
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     hostId:
+ *                       type: number
+ *               useSocks5:
+ *                 type: boolean
+ *                 description: Use SOCKS5 proxy
+ *               socks5Host:
+ *                 type: string
+ *                 description: SOCKS5 proxy host
+ *               socks5Port:
+ *                 type: number
+ *                 description: SOCKS5 proxy port
+ *               socks5Username:
+ *                 type: string
+ *                 description: SOCKS5 proxy username
+ *               socks5Password:
+ *                 type: string
+ *                 description: SOCKS5 proxy password
+ *               socks5ProxyChain:
+ *                 type: array
+ *                 description: Chain of SOCKS5 proxies
+ *     responses:
+ *       200:
+ *         description: SSH connection established successfully, or requires TOTP/Warpgate authentication.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: success
+ *                     message:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     requires_totp:
+ *                       type: boolean
+ *                     sessionId:
+ *                       type: string
+ *                     prompt:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     requires_warpgate:
+ *                       type: boolean
+ *                     sessionId:
+ *                       type: string
+ *                     url:
+ *                       type: string
+ *                     securityKey:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: auth_required
+ *                     reason:
+ *                       type: string
+ *                     connectionLogs:
+ *                       type: array
+ *       400:
+ *         description: Missing required parameters or invalid SSH key format.
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: SSH connection failed.
+ */
 app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -367,13 +632,31 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   } = req.body;
 
   const userId = (req as AuthenticatedRequest).userId;
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_connecting",
+      `Initiating SFTP connection to ${username}@${ip}:${port}`,
+    ),
+  );
 
   if (!userId) {
     fileLogger.error("SSH connection rejected: no authenticated user", {
       operation: "file_connect_auth",
       sessionId,
     });
-    return res.status(401).json({ error: "Authentication required" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_auth",
+        "Authentication required - no user session",
+      ),
+    );
+    return res
+      .status(401)
+      .json({ error: "Authentication required", connectionLogs });
   }
 
   if (!sessionId || !ip || !username || !port) {
@@ -384,14 +667,22 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       hasUsername: !!username,
       hasPort: !!port,
     });
-    return res.status(400).json({ error: "Missing SSH connection parameters" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_connecting",
+        "Missing required connection parameters",
+      ),
+    );
+    return res
+      .status(400)
+      .json({ error: "Missing SSH connection parameters", connectionLogs });
   }
 
   if (sshSessions[sessionId]?.isConnected) {
     cleanupSession(sessionId);
   }
 
-  // Clean up any stale pending TOTP sessions
   if (pendingTOTPSessions[sessionId]) {
     try {
       pendingTOTPSessions[sessionId].client.end();
@@ -400,6 +691,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const client = new SSHClient();
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_auth",
+      "Resolving authentication credentials",
+    ),
+  );
 
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
@@ -427,6 +726,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: credential.key_password || credential.keyPassword,
           authType: credential.auth_type || credential.authType,
         };
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "Credentials resolved from credential store",
+          ),
+        );
       } else {
         fileLogger.warn(`No credentials found for host ${hostId}`, {
           operation: "ssh_credentials",
@@ -434,6 +740,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           credentialId,
           userId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "warning",
+            "sftp_auth",
+            "No stored credentials found, using provided credentials",
+          ),
+        );
       }
     } catch (error) {
       fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
@@ -442,6 +755,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         credentialId,
         error: error instanceof Error ? error.message : "Unknown error",
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "warning",
+          "sftp_auth",
+          `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
     }
   } else if (credentialId && hostId) {
     fileLogger.warn(
@@ -546,6 +866,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using SSH key authentication",
+        ),
+      );
     } catch (keyError) {
       fileLogger.error("SSH key format error for file manager", {
         operation: "file_connect",
@@ -553,17 +880,44 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostId,
         error: keyError.message,
       });
-      return res.status(400).json({ error: "Invalid SSH key format" });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          `Invalid SSH key format: ${keyError.message}`,
+        ),
+      );
+      return res
+        .status(400)
+        .json({ error: "Invalid SSH key format", connectionLogs });
     }
   } else if (resolvedCredentials.authType === "password") {
     if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
-      return res
-        .status(400)
-        .json({ error: "Password required for password authentication" });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          "Password required for password authentication",
+        ),
+      );
+      return res.status(400).json({
+        error: "Password required for password authentication",
+        connectionLogs,
+      });
     }
 
     config.password = resolvedCredentials.password;
+    connectionLogs.push(
+      createConnectionLog("info", "sftp_auth", "Using password authentication"),
+    );
   } else if (resolvedCredentials.authType === "none") {
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "sftp_auth",
+        "Using keyboard-interactive authentication",
+      ),
+    );
   } else {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
@@ -576,16 +930,58 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hasKey: !!resolvedCredentials.sshKey,
       },
     );
-    return res
-      .status(400)
-      .json({ error: "Either password or SSH key must be provided" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "sftp_auth",
+        "No valid authentication method provided",
+      ),
+    );
+    return res.status(400).json({
+      error: "Either password or SSH key must be provided",
+      connectionLogs,
+    });
   }
 
   let responseSent = false;
 
+  connectionLogs.push(
+    createConnectionLog("info", "dns", `Resolving DNS for ${ip}`),
+  );
+
+  connectionLogs.push(
+    createConnectionLog("info", "tcp", `Connecting to ${ip}:${port}`),
+  );
+
+  connectionLogs.push(
+    createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+  );
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "sftp_connecting",
+      "Establishing SSH connection...",
+    ),
+  );
+
   client.on("ready", () => {
     if (responseSent) return;
     responseSent = true;
+    connectionLogs.push(
+      createConnectionLog(
+        "success",
+        "connected",
+        "SSH connection established successfully",
+      ),
+    );
+    connectionLogs.push(
+      createConnectionLog(
+        "success",
+        "sftp_connected",
+        "SFTP session established successfully",
+      ),
+    );
     sshSessions[sessionId] = {
       client,
       isConnected: true,
@@ -593,7 +989,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
     };
     scheduleSessionCleanup(sessionId);
-    res.json({ status: "success", message: "SSH connection established" });
+    res.json({
+      status: "success",
+      message: "SSH connection established",
+      connectionLogs,
+    });
 
     if (hostId && userId) {
       (async () => {
@@ -651,6 +1051,70 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       error: err.message,
     });
 
+    let errorStage: ConnectionStage = "error";
+    if (
+      err.message.includes("ENOTFOUND") ||
+      err.message.includes("getaddrinfo")
+    ) {
+      errorStage = "dns";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `DNS resolution failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("ECONNREFUSED") ||
+      err.message.includes("ETIMEDOUT")
+    ) {
+      errorStage = "tcp";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `TCP connection failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("handshake") ||
+      err.message.includes("key exchange")
+    ) {
+      errorStage = "handshake";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `SSH handshake failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (
+      err.message.includes("authentication") ||
+      err.message.includes("Authentication")
+    ) {
+      errorStage = "auth";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `Authentication failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else {
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "error",
+          `SSH connection failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    }
+
     if (
       resolvedCredentials.authType === "none" &&
       (err.message.includes("authentication") ||
@@ -659,9 +1123,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       res.json({
         status: "auth_required",
         reason: "no_keyboard",
+        connectionLogs,
       });
     } else {
-      res.status(500).json({ status: "error", message: err.message });
+      res
+        .status(500)
+        .json({ status: "error", message: err.message, connectionLogs });
     }
   });
 
@@ -682,6 +1149,64 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       finish: (responses: string[]) => void,
     ) => {
       const promptTexts = prompts.map((p) => p.prompt);
+
+      const warpgatePattern = /warpgate\s+authentication/i;
+      const isWarpgate =
+        warpgatePattern.test(name) ||
+        warpgatePattern.test(instructions) ||
+        promptTexts.some((p) => warpgatePattern.test(p));
+
+      if (isWarpgate) {
+        const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
+        const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
+        const keyMatch = fullText.match(
+          /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
+        );
+
+        if (urlMatch) {
+          if (responseSent) return;
+          responseSent = true;
+
+          keyboardInteractiveResponded = true;
+
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "sftp_auth",
+              "Warpgate authentication required",
+              { url: urlMatch[0] },
+            ),
+          );
+
+          pendingTOTPSessions[sessionId] = {
+            client,
+            finish,
+            config,
+            createdAt: Date.now(),
+            sessionId,
+            hostId,
+            ip,
+            port,
+            username,
+            userId,
+            prompts,
+            totpPromptIndex: -1,
+            resolvedPassword: resolvedCredentials.password,
+            totpAttempts: 0,
+            isWarpgate: true,
+          };
+
+          res.json({
+            requires_warpgate: true,
+            sessionId,
+            url: urlMatch[0],
+            securityKey: keyMatch ? keyMatch[1] : "N/A",
+            connectionLogs,
+          });
+          return;
+        }
+      }
+
       const totpPromptIndex = prompts.findIndex((p) =>
         /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
           p.prompt,
@@ -714,6 +1239,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
         keyboardInteractiveResponded = true;
 
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "TOTP verification required",
+            { prompt: prompts[totpPromptIndex].prompt },
+          ),
+        );
+
         pendingTOTPSessions[sessionId] = {
           client,
           finish,
@@ -735,6 +1269,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           requires_totp: true,
           sessionId,
           prompt: prompts[totpPromptIndex].prompt,
+          connectionLogs,
         });
       } else {
         const hasStoredPassword =
@@ -829,6 +1364,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     useSocks5 &&
     (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
   ) {
+    connectionLogs.push(
+      createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy", {
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      }),
+    );
     try {
       const socks5Socket = await createSocks5Connection(ip, port, {
         useSocks5,
@@ -840,6 +1381,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
 
       if (socks5Socket) {
+        connectionLogs.push(
+          createConnectionLog(
+            "success",
+            "proxy",
+            "SOCKS5 proxy connected successfully",
+          ),
+        );
         config.sock = socks5Socket;
         client.connect(config);
         return;
@@ -848,6 +1396,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           operation: "sftp_socks5_socket_null",
           sessionId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "proxy",
+            "SOCKS5 socket creation returned null",
+          ),
+        );
       }
     } catch (socks5Error) {
       fileLogger.error("SOCKS5 connection failed", socks5Error, {
@@ -857,16 +1412,31 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         proxyHost: socks5Host,
         proxyPort: socks5Port || 1080,
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "proxy",
+          `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
+        ),
+      );
       return res.status(500).json({
         error:
           "SOCKS5 proxy connection failed: " +
           (socks5Error instanceof Error
             ? socks5Error.message
             : "Unknown error"),
+        connectionLogs,
       });
     }
   } else if (jumpHosts && jumpHosts.length > 0 && userId) {
     try {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "jump",
+          `Connecting via ${jumpHosts.length} jump host(s)`,
+        ),
+      );
       const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
       if (!jumpClient) {
@@ -875,9 +1445,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sessionId,
           hostId,
         });
-        return res
-          .status(500)
-          .json({ error: "Failed to connect through jump hosts" });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            "Failed to establish jump host chain",
+          ),
+        );
+        return res.status(500).json({
+          error: "Failed to connect through jump hosts",
+          connectionLogs,
+        });
       }
 
       jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
@@ -889,9 +1467,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             ip,
             port,
           });
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "jump",
+              `Failed to forward through jump host: ${err.message}`,
+            ),
+          );
           jumpClient.end();
           return res.status(500).json({
             error: "Failed to forward through jump host: " + err.message,
+            connectionLogs,
           });
         }
 
@@ -904,15 +1490,43 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         sessionId,
         hostId,
       });
-      return res
-        .status(500)
-        .json({ error: "Failed to connect through jump hosts" });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "jump",
+          `Jump host error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
+      return res.status(500).json({
+        error: "Failed to connect through jump hosts",
+        connectionLogs,
+      });
     }
   } else {
     client.connect(config);
   }
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect-totp:
+ *   post:
+ *     summary: Verify TOTP and complete connection
+ *     description: Verifies the TOTP code and completes the SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     responses:
+ *       200:
+ *         description: TOTP verified, SSH connection established.
+ *       400:
+ *         description: Session ID and TOTP code required.
+ *       401:
+ *         description: Invalid TOTP code or authentication required.
+ *       404:
+ *         description: TOTP session expired.
+ *       408:
+ *         description: TOTP session timeout.
+ */
 app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
 
@@ -1076,18 +1690,295 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   session.finish(responses);
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/connect-warpgate:
+ *   post:
+ *     summary: Complete Warpgate authentication
+ *     description: Submits empty response to complete Warpgate authentication after user completes browser auth.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID from initial connection attempt
+ *     responses:
+ *       200:
+ *         description: Warpgate authentication completed successfully.
+ *       401:
+ *         description: Authentication failed or unauthorized.
+ *       404:
+ *         description: Warpgate session expired.
+ *       408:
+ *         description: Warpgate session timeout.
+ */
+app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
+  const { sessionId } = req.body;
+
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!userId) {
+    fileLogger.error("Warpgate verification rejected: no authenticated user", {
+      operation: "file_warpgate_auth",
+      sessionId,
+    });
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    fileLogger.warn("Warpgate session not found or expired", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "Warpgate session expired. Please reconnect." });
+  }
+
+  if (!session.isWarpgate) {
+    return res.status(400).json({ error: "Session is not a Warpgate session" });
+  }
+
+  if (Date.now() - session.createdAt > 300000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch (error) {}
+    fileLogger.warn("Warpgate session timeout before completion", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "Warpgate session timeout. Please reconnect." });
+  }
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+        activeOperations: 0,
+      };
+      scheduleSessionCleanup(sessionId);
+
+      res.json({
+        status: "success",
+        message: "Warpgate verified, SSH connection established",
+      });
+
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
+                ),
+              "ssh_data",
+              session.userId!,
+            );
+
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
+
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "file_manager",
+                hostId: session.hostId,
+                hostName,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            fileLogger.warn("Failed to log file manager activity", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200);
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    fileLogger.error("Warpgate verification failed", {
+      operation: "file_warpgate_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res
+      .status(401)
+      .json({ status: "error", message: "Warpgate authentication failed" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      fileLogger.warn("Warpgate verification timeout", {
+        operation: "file_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
+
+  session.finish([""]);
+});
+
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/disconnect:
+ *   post:
+ *     summary: Disconnect from SSH
+ *     description: Closes an active SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     responses:
+ *       200:
+ *         description: SSH connection disconnected.
+ */
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
   cleanupSession(sessionId);
   res.json({ status: "success", message: "SSH connection disconnected" });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/sudo-password:
+ *   post:
+ *     summary: Set sudo password for session
+ *     description: Stores sudo password temporarily in session for elevated operations.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Sudo password set successfully.
+ *       400:
+ *         description: Invalid session.
+ */
+app.post("/ssh/file_manager/sudo-password", (req, res) => {
+  const { sessionId, password } = req.body;
+  const session = sshSessions[sessionId];
+  if (!session || !session.isConnected) {
+    return res.status(400).json({ error: "Invalid or disconnected session" });
+  }
+  session.sudoPassword = password;
+  session.lastActive = Date.now();
+  res.json({ status: "success", message: "Sudo password set" });
+});
+
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/status:
+ *   get:
+ *     summary: Get SSH connection status
+ *     description: Checks the status of an SSH connection for file manager.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: SSH connection status.
+ */
 app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const isConnected = !!sshSessions[sessionId]?.isConnected;
   res.json({ status: "success", connected: isConnected });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/keepalive:
+ *   post:
+ *     summary: Keep SSH session alive
+ *     description: Keeps an active SSH session for file manager alive.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session keepalive successful.
+ *       400:
+ *         description: Session ID is required or session not found.
+ */
 app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   const { sessionId } = req.body;
 
@@ -1115,6 +2006,33 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/listFiles:
+ *   get:
+ *     summary: List files in a directory
+ *     description: Lists the files and directories in a given path on the remote host.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of files and directories.
+ *       400:
+ *         description: Session ID is required or SSH connection not established.
+ *       500:
+ *         description: Failed to list files.
+ */
 app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1131,90 +2049,359 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
 
-  const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-  sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
-    if (err) {
-      sshConn.activeOperations--;
-      fileLogger.error("SSH listFiles error:", err);
-      return res.status(500).json({ error: err.message });
+  const trySFTP = () => {
+    try {
+      sshConn.client.sftp((err, sftp) => {
+        if (err) {
+          fileLogger.warn(
+            `SFTP failed for listFiles, trying fallback: ${err.message}`,
+          );
+          tryFallbackMethod();
+          return;
+        }
+
+        sftp.readdir(sshPath, (readdirErr, list) => {
+          if (readdirErr) {
+            fileLogger.warn(
+              `SFTP readdir failed, trying fallback: ${readdirErr.message}`,
+            );
+            tryFallbackMethod();
+            return;
+          }
+
+          const symlinks: Array<{ index: number; path: string }> = [];
+          const files: Array<{
+            name: string;
+            type: string;
+            size: number | undefined;
+            modified: string;
+            permissions: string;
+            owner: string;
+            group: string;
+            linkTarget: string | undefined;
+            path: string;
+            executable: boolean;
+          }> = [];
+
+          for (const entry of list) {
+            if (entry.filename === "." || entry.filename === "..") continue;
+
+            const attrs = entry.attrs;
+            const permissions = modeToPermissions(attrs.mode);
+            const isDirectory = attrs.isDirectory();
+            const isLink = attrs.isSymbolicLink();
+
+            const fileEntry = {
+              name: entry.filename,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : attrs.size,
+              modified: formatMtime(attrs.mtime),
+              permissions,
+              owner: String(attrs.uid),
+              group: String(attrs.gid),
+              linkTarget: undefined as string | undefined,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${entry.filename}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, entry.filename)
+                  : false,
+            };
+
+            if (isLink) {
+              symlinks.push({ index: files.length, path: fileEntry.path });
+            }
+
+            files.push(fileEntry);
+          }
+
+          if (symlinks.length === 0) {
+            sshConn.activeOperations--;
+            return res.json({ files, path: sshPath });
+          }
+
+          let resolved = 0;
+          for (const link of symlinks) {
+            sftp.readlink(link.path, (linkErr, target) => {
+              resolved++;
+              if (!linkErr && target) {
+                files[link.index].linkTarget = target;
+              }
+              if (resolved === symlinks.length) {
+                sshConn.activeOperations--;
+                res.json({ files, path: sshPath });
+              }
+            });
+          }
+        });
+      });
+    } catch (sftpErr: unknown) {
+      const errMsg =
+        sftpErr instanceof Error ? sftpErr.message : "Unknown error";
+      fileLogger.warn(`SFTP connection error, trying fallback: ${errMsg}`);
+      tryFallbackMethod();
     }
+  };
 
-    let data = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      data += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-    });
-
-    stream.on("close", (code) => {
-      sshConn.activeOperations--;
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        return res.status(500).json({ error: `Command failed: ${errorData}` });
+  const tryFallbackMethod = () => {
+    const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
+    sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
+      if (err) {
+        sshConn.activeOperations--;
+        fileLogger.error("SSH listFiles error:", err);
+        return res.status(500).json({ error: err.message });
       }
 
-      const lines = data.split("\n").filter((line) => line.trim());
-      const files = [];
+      let data = "";
+      let errorData = "";
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        const parts = line.split(/\s+/);
-        if (parts.length >= 9) {
-          const permissions = parts[0];
-          const owner = parts[2];
-          const group = parts[3];
-          const size = parseInt(parts[4], 10);
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
 
-          let dateStr = "";
-          const nameStartIndex = 8;
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
 
-          if (parts[5] && parts[6] && parts[7]) {
-            dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+      stream.on("close", (code) => {
+        if (code !== 0) {
+          const isPermissionDenied =
+            errorData.toLowerCase().includes("permission denied") ||
+            errorData.toLowerCase().includes("access denied");
+
+          if (isPermissionDenied) {
+            if (sshConn.sudoPassword) {
+              fileLogger.info(
+                `Permission denied for listFiles, retrying with sudo: ${sshPath}`,
+              );
+              tryWithSudo();
+              return;
+            }
+
+            sshConn.activeOperations--;
+            fileLogger.warn(
+              `Permission denied for listFiles, sudo required: ${sshPath}`,
+            );
+            return res.status(403).json({
+              error: `Permission denied: Cannot access ${sshPath}`,
+              needsSudo: true,
+              path: sshPath,
+            });
           }
 
-          const name = parts.slice(nameStartIndex).join(" ");
-          const isDirectory = permissions.startsWith("d");
-          const isLink = permissions.startsWith("l");
+          sshConn.activeOperations--;
+          fileLogger.error(
+            `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res
+            .status(500)
+            .json({ error: `Command failed: ${errorData}` });
+        }
+        sshConn.activeOperations--;
 
-          if (name === "." || name === "..") continue;
+        const lines = data.split("\n").filter((line) => line.trim());
+        const files = [];
 
-          let actualName = name;
-          let linkTarget = undefined;
-          if (isLink && name.includes(" -> ")) {
-            const linkParts = name.split(" -> ");
-            actualName = linkParts[0];
-            linkTarget = linkParts[1];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const parts = line.split(/\s+/);
+          if (parts.length >= 9) {
+            const permissions = parts[0];
+            const owner = parts[2];
+            const group = parts[3];
+            const size = parseInt(parts[4], 10);
+
+            let dateStr = "";
+            const nameStartIndex = 8;
+
+            if (parts[5] && parts[6] && parts[7]) {
+              dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+            }
+
+            const name = parts.slice(nameStartIndex).join(" ");
+            const isDirectory = permissions.startsWith("d");
+            const isLink = permissions.startsWith("l");
+
+            if (name === "." || name === "..") continue;
+
+            let actualName = name;
+            let linkTarget = undefined;
+            if (isLink && name.includes(" -> ")) {
+              const linkParts = name.split(" -> ");
+              actualName = linkParts[0];
+              linkTarget = linkParts[1];
+            }
+
+            files.push({
+              name: actualName,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : size,
+              modified: dateStr,
+              permissions,
+              owner,
+              group,
+              linkTarget,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, actualName)
+                  : false,
+            });
           }
+        }
 
-          files.push({
-            name: actualName,
-            type: isDirectory ? "directory" : isLink ? "link" : "file",
-            size: isDirectory ? undefined : size,
-            modified: dateStr,
-            permissions,
-            owner,
-            group,
-            linkTarget,
-            path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
-            executable:
-              !isDirectory && !isLink
-                ? isExecutableFile(permissions, actualName)
-                : false,
+        res.json({ files, path: sshPath });
+      });
+    });
+  };
+
+  const tryWithSudo = () => {
+    const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
+    const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
+    const sudoCommand = `echo '${escapedPassword}' | sudo -S ls -la '${escapedPath}' 2>&1`;
+
+    sshConn.client.exec(sudoCommand, (err, stream) => {
+      if (err) {
+        sshConn.activeOperations--;
+        fileLogger.error("SSH sudo listFiles error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      let data = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        sshConn.activeOperations--;
+
+        data = data.replace(/\[sudo\] password for .+?:\s*/g, "");
+
+        if (
+          data.toLowerCase().includes("sorry, try again") ||
+          data.toLowerCase().includes("incorrect password") ||
+          errorData.toLowerCase().includes("sorry, try again")
+        ) {
+          sshConn.sudoPassword = undefined;
+          return res.status(403).json({
+            error: "Sudo authentication failed. Please try again.",
+            needsSudo: true,
+            sudoFailed: true,
+            path: sshPath,
           });
         }
-      }
 
-      res.json({ files, path: sshPath });
+        if (code !== 0 && !data.trim()) {
+          fileLogger.error(
+            `SSH sudo listFiles failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res
+            .status(500)
+            .json({ error: `Sudo command failed: ${errorData || data}` });
+        }
+
+        const lines = data.split("\n").filter((line) => line.trim());
+        const files: Array<{
+          name: string;
+          type: string;
+          size: number | undefined;
+          modified: string;
+          permissions: string;
+          owner: string;
+          group: string;
+          linkTarget: string | undefined;
+          path: string;
+          executable: boolean;
+        }> = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const parts = line.split(/\s+/);
+          if (parts.length >= 9) {
+            const permissions = parts[0];
+            const owner = parts[2];
+            const group = parts[3];
+            const size = parseInt(parts[4], 10);
+
+            let dateStr = "";
+            const nameStartIndex = 8;
+
+            if (parts[5] && parts[6] && parts[7]) {
+              dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
+            }
+
+            const name = parts.slice(nameStartIndex).join(" ");
+            const isDirectory = permissions.startsWith("d");
+            const isLink = permissions.startsWith("l");
+
+            if (name === "." || name === "..") continue;
+
+            let actualName = name;
+            let linkTarget = undefined;
+            if (isLink && name.includes(" -> ")) {
+              const linkParts = name.split(" -> ");
+              actualName = linkParts[0];
+              linkTarget = linkParts[1];
+            }
+
+            files.push({
+              name: actualName,
+              type: isDirectory ? "directory" : isLink ? "link" : "file",
+              size: isDirectory ? undefined : size,
+              modified: dateStr,
+              permissions,
+              owner,
+              group,
+              linkTarget,
+              path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
+              executable:
+                !isDirectory && !isLink
+                  ? isExecutableFile(permissions, actualName)
+                  : false,
+            });
+          }
+        }
+
+        res.json({ files, path: sshPath });
+      });
     });
-  });
+  };
+
+  trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/identifySymlink:
+ *   get:
+ *     summary: Identify symbolic link
+ *     description: Identifies the target of a symbolic link.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Symbolic link information.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to identify symbolic link.
+ */
 app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1282,6 +2469,35 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/readFile:
+ *   get:
+ *     summary: Read a file
+ *     description: Reads the content of a file from the remote host.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The content of the file.
+ *       400:
+ *         description: Missing required parameters or file too large.
+ *       404:
+ *         description: File not found.
+ *       500:
+ *         description: Failed to read file.
+ */
 app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
@@ -1368,11 +2584,11 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
             return res.status(500).json({ error: err.message });
           }
 
-          let data = "";
+          let binaryData = Buffer.alloc(0);
           let errorData = "";
 
           stream.on("data", (chunk: Buffer) => {
-            data += chunk.toString();
+            binaryData = Buffer.concat([binaryData, chunk]);
           });
 
           stream.stderr.on("data", (chunk: Buffer) => {
@@ -1396,7 +2612,23 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
               });
             }
 
-            res.json({ content: data, path: filePath });
+            const isBinary = detectBinary(binaryData);
+
+            if (isBinary) {
+              const base64Content = binaryData.toString("base64");
+              res.json({
+                content: base64Content,
+                path: filePath,
+                encoding: "base64",
+              });
+            } else {
+              const textContent = binaryData.toString("utf8");
+              res.json({
+                content: textContent,
+                path: filePath,
+                encoding: "utf8",
+              });
+            }
           });
         });
       });
@@ -1404,6 +2636,35 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   );
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/writeFile:
+ *   post:
+ *     summary: Write to a file
+ *     description: Writes content to a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File written successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to write file.
+ */
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -1440,7 +2701,16 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
-            fileBuffer = Buffer.from(content, "base64");
+            try {
+              const testBuffer = Buffer.from(content, "base64");
+              if (testBuffer.toString("base64") === content) {
+                fileBuffer = testBuffer;
+              } else {
+                fileBuffer = Buffer.from(content, "utf8");
+              }
+            } catch {
+              fileBuffer = Buffer.from(content, "utf8");
+            }
           } else if (Buffer.isBuffer(content)) {
             fileBuffer = content;
           } else {
@@ -1542,7 +2812,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           if (!res.headersSent) {
             return res.status(500).json({
               error: `Write failed: ${err.message}`,
-              toast: { type: "error", message: `Write failed: ${err.message}` },
+              toast: {
+                type: "error",
+                message: `Write failed: ${err.message}`,
+              },
             });
           }
           return;
@@ -1606,6 +2879,37 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/uploadFile:
+ *   post:
+ *     summary: Upload a file
+ *     description: Uploads a file to the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               fileName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to upload file.
+ */
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -1906,6 +3210,37 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   trySFTP();
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/createFile:
+ *   post:
+ *     summary: Create a file
+ *     description: Creates an empty file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               fileName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File created successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to create file.
+ */
 app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
   const { sessionId, path: filePath, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2007,6 +3342,37 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/createFolder:
+ *   post:
+ *     summary: Create a folder
+ *     description: Creates a new folder on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               folderName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder created successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to create folder.
+ */
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2108,6 +3474,37 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/deleteItem:
+ *   delete:
+ *     summary: Delete a file or directory
+ *     description: Deletes a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               isDirectory:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Item deleted successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to delete item.
+ */
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2128,88 +3525,141 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
 
   const deleteCommand = isDirectory
-    ? `rm -rf '${escapedPath}' && echo "SUCCESS" && exit 0`
-    : `rm -f '${escapedPath}' && echo "SUCCESS" && exit 0`;
+    ? `rm -rf '${escapedPath}'`
+    : `rm -f '${escapedPath}'`;
 
-  sshConn.client.exec(deleteCommand, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH deleteItem error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied deleting: ${itemPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot delete ${itemPath}. Check file permissions.`,
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      if (outputData.includes("SUCCESS")) {
-        if (!res.headersSent) {
-          res.json({
-            message: "Item deleted successfully",
-            path: itemPath,
-            toast: {
-              type: "success",
-              message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
-            },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH deleteItem command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: { type: "error", message: `Delete failed: ${errorData}` },
-          });
-        }
-        return;
-      }
-
-      if (!res.headersSent) {
-        res.json({
-          message: "Item deleted successfully",
-          path: itemPath,
-          toast: {
-            type: "success",
-            message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+  const executeDelete = (useSudo: boolean): Promise<void> => {
+    return new Promise((resolve) => {
+      if (useSudo && sshConn.sudoPassword) {
+        execWithSudo(sshConn.client, deleteCommand, sshConn.sudoPassword).then(
+          (result) => {
+            if (
+              result.code === 0 ||
+              (!result.stderr.includes("Permission denied") &&
+                !result.stdout.includes("Permission denied"))
+            ) {
+              res.json({
+                message: "Item deleted successfully",
+                path: itemPath,
+                toast: {
+                  type: "success",
+                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+                },
+              });
+            } else {
+              res.status(500).json({
+                error: `Delete failed: ${result.stderr || result.stdout}`,
+              });
+            }
+            resolve();
           },
-        });
+        );
+        return;
       }
-    });
 
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH deleteItem stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
+      sshConn.client.exec(
+        `${deleteCommand} && echo "SUCCESS"`,
+        (err, stream) => {
+          if (err) {
+            fileLogger.error("SSH deleteItem error:", err);
+            res.status(500).json({ error: err.message });
+            resolve();
+            return;
+          }
+
+          let outputData = "";
+          let errorData = "";
+          let permissionDenied = false;
+
+          stream.on("data", (chunk: Buffer) => {
+            outputData += chunk.toString();
+          });
+
+          stream.stderr.on("data", (chunk: Buffer) => {
+            errorData += chunk.toString();
+            if (chunk.toString().includes("Permission denied")) {
+              permissionDenied = true;
+            }
+          });
+
+          stream.on("close", (code) => {
+            if (permissionDenied) {
+              if (sshConn.sudoPassword) {
+                executeDelete(true).then(resolve);
+                return;
+              }
+              fileLogger.error(`Permission denied deleting: ${itemPath}`);
+              res.status(403).json({
+                error: `Permission denied: Cannot delete ${itemPath}.`,
+                needsSudo: true,
+              });
+              resolve();
+              return;
+            }
+
+            if (outputData.includes("SUCCESS") || code === 0) {
+              res.json({
+                message: "Item deleted successfully",
+                path: itemPath,
+                toast: {
+                  type: "success",
+                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+                },
+              });
+            } else {
+              res.status(500).json({
+                error: `Command failed: ${errorData}`,
+              });
+            }
+            resolve();
+          });
+
+          stream.on("error", (streamErr) => {
+            fileLogger.error("SSH deleteItem stream error:", streamErr);
+            res
+              .status(500)
+              .json({ error: `Stream error: ${streamErr.message}` });
+            resolve();
+          });
+        },
+      );
     });
-  });
+  };
+
+  await executeDelete(false);
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/renameItem:
+ *   put:
+ *     summary: Rename a file or directory
+ *     description: Renames a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               oldPath:
+ *                 type: string
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item renamed successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to rename item.
+ */
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2318,6 +3768,39 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/moveItem:
+ *   put:
+ *     summary: Move a file or directory
+ *     description: Moves a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               oldPath:
+ *                 type: string
+ *               newPath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item moved successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       403:
+ *         description: Permission denied.
+ *       408:
+ *         description: Move operation timed out.
+ *       500:
+ *         description: Failed to move item.
+ */
 app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
   const { sessionId, oldPath, newPath } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2443,6 +3926,37 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/downloadFile:
+ *   post:
+ *     summary: Download a file
+ *     description: Downloads a file from the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               hostId:
+ *                 type: integer
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The file content.
+ *       400:
+ *         description: Missing required parameters or file too large.
+ *       500:
+ *         description: Failed to download file.
+ */
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   const { sessionId, path: filePath, hostId, userId } = req.body;
 
@@ -2544,6 +4058,39 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/copyItem:
+ *   post:
+ *     summary: Copy a file or directory
+ *     description: Copies a file or directory on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               sourcePath:
+ *                 type: string
+ *               targetDir:
+ *                 type: string
+ *               hostId:
+ *                 type: integer
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Item copied successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not established.
+ *       500:
+ *         description: Failed to copy item.
+ */
 app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
   const { sessionId, sourcePath, targetDir, hostId, userId } = req.body;
 
@@ -2707,6 +4254,33 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/executeFile:
+ *   post:
+ *     summary: Execute a file
+ *     description: Executes a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               filePath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File execution result.
+ *       400:
+ *         description: Missing required parameters or SSH connection not available.
+ *       500:
+ *         description: Failed to execute file.
+ */
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   const { sessionId, filePath } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2805,6 +4379,37 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/changePermissions:
+ *   post:
+ *     summary: Change file permissions
+ *     description: Changes the permissions of a file on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               path:
+ *                 type: string
+ *               permissions:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Permissions changed successfully.
+ *       400:
+ *         description: Missing required parameters or SSH connection not available.
+ *       408:
+ *         description: Permission change timed out.
+ *       500:
+ *         description: Failed to change permissions.
+ */
 app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   const { sessionId, path, permissions } = req.body;
   const sshConn = sshSessions[sessionId];
@@ -2955,8 +4560,55 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   });
 });
 
-// Route: Extract archive file (requires JWT)
-// POST /ssh/file_manager/ssh/extractArchive
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/extractArchive:
+ *   post:
+ *     summary: Extract archive file
+ *     description: Extracts an archive file (.tar, .tar.gz, .tgz, .zip, .tar.bz2, .tbz2, .tar.xz, .txz) to a specified or default location on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - archivePath
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: SSH session ID
+ *               archivePath:
+ *                 type: string
+ *                 description: Path to the archive file on remote host
+ *               extractPath:
+ *                 type: string
+ *                 description: Optional custom extraction path (defaults to same directory as archive)
+ *     responses:
+ *       200:
+ *         description: Archive extracted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                 extractPath:
+ *                   type: string
+ *       400:
+ *         description: Missing required parameters, SSH connection not established, or unsupported archive format.
+ *       403:
+ *         description: Permission denied.
+ *       500:
+ *         description: Failed to extract archive.
+ */
 app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const { sessionId, archivePath, extractPath } = req.body;
 
@@ -3122,8 +4774,39 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   });
 });
 
-// Route: Compress files/folders (requires JWT)
-// POST /ssh/file_manager/ssh/compressFiles
+/**
+ * @openapi
+ * /ssh/file_manager/ssh/compressFiles:
+ *   post:
+ *     summary: Compress files
+ *     description: Compresses files and/or directories on the remote host.
+ *     tags:
+ *       - File Manager
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               paths:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               archiveName:
+ *                 type: string
+ *               format:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Files compressed successfully.
+ *       400:
+ *         description: Missing required parameters or unsupported compression format.
+ *       500:
+ *         description: Failed to compress files.
+ */
 app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const { sessionId, paths, archiveName, format } = req.body;
 

@@ -16,17 +16,6 @@
   <small style="color: #666;">Achieved on September 1st, 2025</small>
 </p>
 
-#### Top Technologies
-
-[![React Badge](https://img.shields.io/badge/-React-61DBFB?style=flat-square&labelColor=black&logo=react&logoColor=61DBFB)](#)
-[![TypeScript Badge](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&labelColor=black&logo=typescript&logoColor=3178C6)](#)
-[![Node.js Badge](https://img.shields.io/badge/-Node.js-3C873A?style=flat-square&labelColor=black&logo=node.js&logoColor=3C873A)](#)
-[![Vite Badge](https://img.shields.io/badge/-Vite-646CFF?style=flat-square&labelColor=black&logo=vite&logoColor=646CFF)](#)
-[![Tailwind CSS Badge](https://img.shields.io/badge/-TailwindCSS-38B2AC?style=flat-square&labelColor=black&logo=tailwindcss&logoColor=38B2AC)](#)
-[![Docker Badge](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&labelColor=black&logo=docker&logoColor=2496ED)](#)
-[![SQLite Badge](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&labelColor=black&logo=sqlite&logoColor=003B57)](#)
-[![Radix UI Badge](https://img.shields.io/badge/-Radix%20UI-161618?style=flat-square&labelColor=black&logo=radixui&logoColor=161618)](#)
-
 <br />
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
@@ -51,24 +40,26 @@ free and self-hosted alternative to Termius available for all platforms.
 # Features
 
 - **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components
-- **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring
-- **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly
+- **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring and support for -l or -r connections
+- **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
 - **Docker Management** - Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
-- **Server Stats** - View CPU, memory, and disk usage along with network, uptime, and system information on any SSH server
+- **Server Stats** - View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers
 - **Dashboard** - View server information at a glance on your dashboard
 - **RBAC** - Create roles and share hosts across users/roles
 - **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 - **Database Encryption** - Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
-- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn. Choose between dark or light mode based UI.
-- **Languages** - Built-in support ~30 languages (bulk translated via Google Translate, results may vary ofc)
-- **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), and dedicated mobile/tablet app for iOS and Android.
+- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn. Choose between dark or light mode based UI. Use URL routes to open any connection in full-screen.
+- **Languages** - Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations))
+- **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), PWA, and dedicated mobile/tablet app for iOS and Android.
 - **SSH Tools** - Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 - **Command History** - Auto-complete and view previously ran SSH commands
+- **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
-- **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, SOCKS5, password autofill, etc.
+- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, password autofill, etc.
+- **Network Graph** - Customize your Dashboard to visualize your homelab based off your SSH connections with status support
 
 # Planned Features
 
@@ -78,13 +69,14 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned fe
 
 Supported Devices:
 
-- Website (any modern browser on any platform like Chrome, Safari, and Firefox)
+- Website (any modern browser on any platform like Chrome, Safari, and Firefox) (includes PWA support)
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
   - Chocolatey Package Manager
 - Linux (x64/ia32)
   - Portable
+  - AUR
   - AppImage
   - Deb
   - Flatpak
@@ -120,6 +112,22 @@ volumes:
     driver: local
 ```
 
+# Sponsors
+
+<p align="left">
+  <a href="https://www.digitalocean.com/">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://crowdin.com/">
+    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.blacksmith.sh/">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+  </a>
+</p>
+
 # Support
 
 If you need help or want to request a feature with Termix, visit the [Issues](https://github.com/Termix-SSH/Support/issues) page, log in, and press `New Issue`.
@@ -127,6 +135,8 @@ Please be as detailed as possible in your issue, preferably written in English. 
 channel, however, response times may be longer.
 
 # Screenshots
+
+[![](https://utfs.io/f/nGnSqDveMsqxqiKJF5EnObSopHatulx93N0E1KVsP7hvjMfF)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
@@ -150,14 +160,14 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
-    Your browser does not support the video tag.
-  </video>
+  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
 </p>
+
 Some videos and images may be out of date or may not perfectly showcase features.
 
 # License

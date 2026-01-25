@@ -125,7 +125,7 @@ class DataCrypto {
         if (needsUpdate) {
           const updateQuery = `
             UPDATE ssh_data
-            SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, updated_at = CURRENT_TIMESTAMP
+            SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
@@ -136,6 +136,7 @@ class DataCrypto {
             updatedRecord.autostartPassword || null,
             updatedRecord.autostartKey || null,
             updatedRecord.autostartKeyPassword || null,
+            updatedRecord.sudoPassword || null,
             record.id,
           );
 
@@ -476,10 +477,6 @@ class DataCrypto {
     }
   }
 
-  /**
-   * Encrypt sensitive credential fields with system key for offline sharing
-   * Returns an object with systemPassword, systemKey, systemKeyPassword fields
-   */
   static async encryptRecordWithSystemKey<T extends Record<string, unknown>>(
     tableName: string,
     record: T,

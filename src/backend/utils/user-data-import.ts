@@ -177,30 +177,57 @@ class UserDataImport {
           continue;
         }
 
-        const tempId = `import-ssh-${targetUserId}-${Date.now()}-${imported}`;
-        const newHostData = {
+        const existing = await getDb()
+          .select()
+          .from(sshData)
+          .where(
+            and(
+              eq(sshData.userId, targetUserId),
+              eq(sshData.ip, host.ip as string),
+              eq(sshData.port, host.port as number),
+              eq(sshData.username, host.username as string),
+            ),
+          );
+
+        if (existing.length > 0 && !options.replaceExisting) {
+          skipped++;
+          continue;
+        }
+
+        const newHostData: any = {
           ...host,
-          id: tempId,
           userId: targetUserId,
-          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        let processedHostData = newHostData;
+        if (existing.length === 0) {
+          newHostData.createdAt = new Date().toISOString();
+        }
+
+        let processedHostData: any = newHostData;
         if (options.userDataKey) {
           processedHostData = DataCrypto.encryptRecord(
             "ssh_data",
             newHostData,
             targetUserId,
             options.userDataKey,
-          );
+          ) as Record<string, unknown>;
         }
 
         delete processedHostData.id;
 
-        await getDb()
-          .insert(sshData)
-          .values(processedHostData as unknown as typeof sshData.$inferInsert);
+        if (existing.length > 0 && options.replaceExisting) {
+          await getDb()
+            .update(sshData)
+            .set(processedHostData as unknown as typeof sshData.$inferInsert)
+            .where(eq(sshData.id, existing[0].id));
+        } else {
+          await getDb()
+            .insert(sshData)
+            .values(
+              processedHostData as unknown as typeof sshData.$inferInsert,
+            );
+        }
         imported++;
       } catch (error) {
         errors.push(
@@ -233,34 +260,59 @@ class UserDataImport {
           continue;
         }
 
-        const tempCredId = `import-cred-${targetUserId}-${Date.now()}-${imported}`;
-        const newCredentialData = {
+        const existing = await getDb()
+          .select()
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.userId, targetUserId),
+              eq(sshCredentials.name, credential.name as string),
+            ),
+          );
+
+        if (existing.length > 0 && !options.replaceExisting) {
+          skipped++;
+          continue;
+        }
+
+        const newCredentialData: any = {
           ...credential,
-          id: tempCredId,
           userId: targetUserId,
-          usageCount: 0,
-          lastUsed: null,
-          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        let processedCredentialData = newCredentialData;
+        if (existing.length === 0) {
+          newCredentialData.usageCount = 0;
+          newCredentialData.lastUsed = null;
+          newCredentialData.createdAt = new Date().toISOString();
+        }
+
+        let processedCredentialData: any = newCredentialData;
         if (options.userDataKey) {
           processedCredentialData = DataCrypto.encryptRecord(
             "ssh_credentials",
             newCredentialData,
             targetUserId,
             options.userDataKey,
-          );
+          ) as Record<string, unknown>;
         }
 
         delete processedCredentialData.id;
 
-        await getDb()
-          .insert(sshCredentials)
-          .values(
-            processedCredentialData as unknown as typeof sshCredentials.$inferInsert,
-          );
+        if (existing.length > 0 && options.replaceExisting) {
+          await getDb()
+            .update(sshCredentials)
+            .set(
+              processedCredentialData as unknown as typeof sshCredentials.$inferInsert,
+            )
+            .where(eq(sshCredentials.id, existing[0].id));
+        } else {
+          await getDb()
+            .insert(sshCredentials)
+            .values(
+              processedCredentialData as unknown as typeof sshCredentials.$inferInsert,
+            );
+        }
         imported++;
       } catch (error) {
         errors.push(

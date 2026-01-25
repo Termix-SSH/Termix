@@ -17,12 +17,14 @@ import {
   Shield as AdminIcon,
   Network as SshManagerIcon,
   User as UserIcon,
+  Network,
+  X,
 } from "lucide-react";
 import { useTabs, type Tab } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 
 export function TabDropdown(): React.ReactElement {
-  const { tabs, currentTab, setCurrentTab } = useTabs();
+  const { tabs, currentTab, setCurrentTab, removeTab } = useTabs();
   const { t } = useTranslation();
 
   const getTabIcon = (tabType: Tab["type"]) => {
@@ -45,6 +47,8 @@ export function TabDropdown(): React.ReactElement {
         return <SshManagerIcon className="h-4 w-4" />;
       case "admin":
         return <AdminIcon className="h-4 w-4" />;
+      case "network_graph":
+        return <Network className="h-4 w-4" />;
       default:
         return <TerminalIcon className="h-4 w-4" />;
     }
@@ -68,6 +72,8 @@ export function TabDropdown(): React.ReactElement {
         return tab.title || t("nav.sshManager");
       case "admin":
         return tab.title || t("nav.admin");
+      case "network_graph":
+        return tab.title || t("dashboard.networkGraph");
       case "terminal":
       default:
         return tab.title || t("nav.terminal");
@@ -76,6 +82,16 @@ export function TabDropdown(): React.ReactElement {
 
   const handleTabSwitch = (tabId: number) => {
     setCurrentTab(tabId);
+  };
+
+  const handleCloseTab = (
+    e: React.MouseEvent,
+    tabId: number,
+    tabType: Tab["type"],
+  ) => {
+    e.stopPropagation();
+    if (tabType === "home") return;
+    removeTab(tabId);
   };
 
   return (
@@ -95,6 +111,7 @@ export function TabDropdown(): React.ReactElement {
       >
         {tabs.map((tab) => {
           const isActive = tab.id === currentTab;
+          const canClose = tab.type !== "home";
           return (
             <DropdownMenuItem
               key={tab.id}
@@ -107,8 +124,14 @@ export function TabDropdown(): React.ReactElement {
             >
               {getTabIcon(tab.type)}
               <span className="flex-1 truncate">{getTabDisplayTitle(tab)}</span>
-              {isActive && (
-                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+              {canClose && (
+                <button
+                  onClick={(e) => handleCloseTab(e, tab.id, tab.type)}
+                  className="ml-1 p-0.5 rounded hover:bg-hover-secondary flex-shrink-0 transition-colors"
+                  title={t("nav.closeTab", { defaultValue: "Close tab" })}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
             </DropdownMenuItem>
           );

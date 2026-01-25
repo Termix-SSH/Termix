@@ -284,7 +284,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
           '"Caskaydia Cove Nerd Font Mono", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         theme: themeColors,
         allowTransparency: true,
-        convertEol: true,
+        convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
@@ -489,7 +489,6 @@ style.innerHTML = `
   font-display: swap;
 }
 
-/* Light theme scrollbars */
 .xterm .xterm-viewport::-webkit-scrollbar {
   width: 8px;
   background: transparent;
@@ -506,7 +505,6 @@ style.innerHTML = `
   scrollbar-color: rgba(0,0,0,0.3) transparent;
 }
 
-/* Dark theme scrollbars */
 .dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.3);
 }

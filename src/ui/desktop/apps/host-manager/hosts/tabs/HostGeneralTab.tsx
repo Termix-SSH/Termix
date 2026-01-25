@@ -611,6 +611,132 @@ export function HostGeneralTab({
       </Tabs>
       <Separator className="my-6" />
       <Accordion type="multiple" className="w-full">
+        <AccordionItem value="sidebar-customization">
+          <AccordionTrigger>{t("hosts.sidebarCustomization")}</AccordionTrigger>
+          <AccordionContent className="space-y-4 pt-4">
+            <Alert>
+              <AlertDescription>
+                {t("hosts.sidebarCustomizationDesc")}
+              </AlertDescription>
+            </Alert>
+
+            {form.watch("enableTerminal") && (
+              <FormField
+                control={form.control}
+                name="showTerminalInSidebar"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                    <div className="space-y-0.5">
+                      <FormLabel>{t("hosts.showTerminalInSidebar")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.showTerminalInSidebarDesc")}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch("enableFileManager") && (
+              <FormField
+                control={form.control}
+                name="showFileManagerInSidebar"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                    <div className="space-y-0.5">
+                      <FormLabel>
+                        {t("hosts.showFileManagerInSidebar")}
+                      </FormLabel>
+                      <FormDescription>
+                        {t("hosts.showFileManagerInSidebarDesc")}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch("enableTunnel") && (
+              <FormField
+                control={form.control}
+                name="showTunnelInSidebar"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                    <div className="space-y-0.5">
+                      <FormLabel>{t("hosts.showTunnelInSidebar")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.showTunnelInSidebarDesc")}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch("enableDocker") && (
+              <FormField
+                control={form.control}
+                name="showDockerInSidebar"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                    <div className="space-y-0.5">
+                      <FormLabel>{t("hosts.showDockerInSidebar")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.showDockerInSidebarDesc")}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="showServerStatsInSidebar"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                  <div className="space-y-0.5">
+                    <FormLabel>{t("hosts.showServerStatsInSidebar")}</FormLabel>
+                    <FormDescription>
+                      {t("hosts.showServerStatsInSidebarDesc")}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
         <AccordionItem value="advanced-auth">
           <AccordionTrigger>{t("hosts.advancedAuthSettings")}</AccordionTrigger>
           <AccordionContent className="space-y-4 pt-4">

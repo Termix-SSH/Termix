@@ -232,7 +232,6 @@ export function RolesTab(): React.ReactElement {
         </Table>
       </div>
 
-      {/* Create/Edit Role Dialog */}
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-canvas border-2 border-edge">
           <DialogHeader>

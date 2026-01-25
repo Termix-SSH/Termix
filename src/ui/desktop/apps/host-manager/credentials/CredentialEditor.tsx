@@ -34,6 +34,7 @@ import type {
 } from "../../../../../types";
 import { CredentialGeneralTab } from "./tabs/CredentialGeneralTab";
 import { CredentialAuthenticationTab } from "./tabs/CredentialAuthenticationTab";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 export function CredentialEditor({
   editingCredential,
@@ -59,6 +60,7 @@ export function CredentialEditor({
   const keyDetectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeTab, setActiveTab] = useState("general");
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [detectedPublicKeyType, setDetectedPublicKeyType] = useState<
     string | null
@@ -168,6 +170,7 @@ export function CredentialEditor({
     resolver: zodResolver(formSchema) as unknown as Parameters<
       typeof useForm<FormData>
     >[0]["resolver"],
+    mode: "all",
     defaultValues: {
       name: "",
       description: "",
@@ -182,6 +185,45 @@ export function CredentialEditor({
       keyType: "auto",
     },
   });
+
+  const watchedFields = form.watch();
+
+  const isFormValid = React.useMemo(() => {
+    const values = form.getValues();
+
+    if (!values.name || !values.username) return false;
+
+    if (authTab === "password") {
+      return !!(values.password && values.password.trim() !== "");
+    } else if (authTab === "key") {
+      if (editingCredential) {
+        return true;
+      }
+      return !!values.key;
+    }
+
+    return false;
+  }, [watchedFields, authTab, editingCredential]);
+
+  useEffect(() => {
+    const updateAuthFields = async () => {
+      form.setValue("authType", authTab, { shouldValidate: true });
+
+      if (authTab === "password") {
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("publicKey", "", { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+      } else if (authTab === "key") {
+        form.setValue("password", "", { shouldValidate: true });
+      }
+
+      await form.trigger();
+    };
+
+    updateAuthFields();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authTab]);
 
   useEffect(() => {
     if (editingCredential && fullCredentialDetails) {
@@ -331,6 +373,7 @@ export function CredentialEditor({
 
   const onSubmit = async (data: FormData) => {
     try {
+      setIsSubmitting(true);
       setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
@@ -388,6 +431,8 @@ export function CredentialEditor({
       } else {
         toast.error(t("credentials.failedToSaveCredential"));
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -457,9 +502,18 @@ export function CredentialEditor({
 
   return (
     <div
-      className="flex-1 flex flex-col h-full min-h-0 w-full"
+      className="flex-1 flex flex-col h-full min-h-0 w-full relative"
       key={editingCredential?.id || "new"}
     >
+      <SimpleLoader
+        visible={isSubmitting}
+        message={
+          editingCredential
+            ? t("credentials.updatingCredential")
+            : t("credentials.savingCredential")
+        }
+        backgroundColor="var(--bg-base)"
+      />
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, handleFormError)}
@@ -529,11 +583,18 @@ export function CredentialEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            <Button className="translate-y-2" type="submit" variant="outline">
-              {editingCredential
-                ? t("credentials.updateCredential")
-                : t("credentials.addCredential")}
-            </Button>
+            {!isSubmitting && (
+              <Button
+                className="translate-y-2"
+                type="submit"
+                variant="outline"
+                disabled={!isFormValid}
+              >
+                {editingCredential
+                  ? t("credentials.updateCredential")
+                  : t("credentials.addCredential")}
+              </Button>
+            )}
           </footer>
         </form>
       </Form>

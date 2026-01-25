@@ -12,8 +12,23 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 
 const dockerLogger = logger;
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 interface SSHSession {
   client: SSHClient;
@@ -39,6 +54,7 @@ interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
+  isWarpgate?: boolean;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -365,7 +381,34 @@ app.use(express.urlencoded({ limit: "100mb", extended: true }));
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
-// POST /docker/ssh/connect - Establish SSH session
+/**
+ * @openapi
+ * /docker/ssh/connect:
+ *   post:
+ *     summary: Establish SSH session for Docker
+ *     description: Establishes an SSH session to a host for Docker operations.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: SSH connection established.
+ *       400:
+ *         description: Missing sessionId or hostId.
+ *       401:
+ *         description: Authentication required.
+ *       403:
+ *         description: Docker is not enabled for this host.
+ *       404:
+ *         description: Host not found.
+ *       500:
+ *         description: SSH connection failed.
+ */
 app.post("/docker/ssh/connect", async (req, res) => {
   const {
     sessionId,
@@ -383,6 +426,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
   } = req.body;
   const userId = (req as any).userId;
 
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
   if (!userId) {
     dockerLogger.error(
       "Docker SSH connection rejected: no authenticated user",
@@ -391,13 +436,26 @@ app.post("/docker/ssh/connect", async (req, res) => {
         sessionId,
       },
     );
-    return res.status(401).json({ error: "Authentication required" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Authentication required",
+      ),
+    );
+    return res
+      .status(401)
+      .json({ error: "Authentication required", connectionLogs });
   }
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    connectionLogs.push(
+      createConnectionLog("error", "docker_connecting", "Session expired"),
+    );
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
+      connectionLogs,
     });
   }
 
@@ -407,8 +465,25 @@ app.post("/docker/ssh/connect", async (req, res) => {
       sessionId,
       hasHostId: !!hostId,
     });
-    return res.status(400).json({ error: "Missing sessionId or hostId" });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Missing connection parameters",
+      ),
+    );
+    return res
+      .status(400)
+      .json({ error: "Missing sessionId or hostId", connectionLogs });
   }
+
+  connectionLogs.push(
+    createConnectionLog(
+      "info",
+      "docker_connecting",
+      "Initiating Docker SSH connection",
+    ),
+  );
 
   try {
     const hosts = await SimpleDBOps.select(
@@ -418,7 +493,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
     );
 
     if (hosts.length === 0) {
-      return res.status(404).json({ error: "Host not found" });
+      connectionLogs.push(
+        createConnectionLog("error", "docker_connecting", "Host not found"),
+      );
+      return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
     const host = hosts[0] as unknown as SSHHost;
@@ -439,7 +517,14 @@ app.post("/docker/ssh/connect", async (req, res) => {
           hostId,
           userId,
         });
-        return res.status(403).json({ error: "Access denied" });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "docker_connecting",
+            "Access denied to host",
+          ),
+        );
+        return res.status(403).json({ error: "Access denied", connectionLogs });
       }
     }
     if (typeof host.jumpHosts === "string" && host.jumpHosts) {
@@ -459,12 +544,28 @@ app.post("/docker/ssh/connect", async (req, res) => {
         hostId,
         userId,
       });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "docker_connecting",
+          "Docker is not enabled for this host",
+        ),
+      );
       return res.status(403).json({
         error:
           "Docker is not enabled for this host. Enable it in Host Settings.",
         code: "DOCKER_DISABLED",
+        connectionLogs,
       });
     }
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "docker_auth",
+        "Resolving authentication credentials",
+      ),
+    );
 
     if (sshSessions[sessionId]) {
       cleanupSession(sessionId);
@@ -584,8 +685,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
             sessionId,
             hostId,
           });
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "docker_auth",
+              "Invalid SSH private key format",
+            ),
+          );
           return res.status(400).json({
             error: "Invalid private key format",
+            connectionLogs,
           });
         }
 
@@ -603,8 +712,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
           sessionId,
           hostId,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "docker_auth",
+            "SSH key processing error",
+          ),
+        );
         return res.status(400).json({
           error: "SSH key format error: Invalid private key format",
+          connectionLogs,
         });
       }
     } else if (resolvedCredentials.authType === "key") {
@@ -616,17 +733,67 @@ app.post("/docker/ssh/connect", async (req, res) => {
           hostId,
         },
       );
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "docker_auth",
+          "SSH key authentication requested but no key provided",
+        ),
+      );
       return res.status(400).json({
         error: "SSH key authentication requested but no key provided",
+        connectionLogs,
       });
     }
 
     let responseSent = false;
     let keyboardInteractiveResponded = false;
 
+    connectionLogs.push(
+      createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
+    );
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "tcp",
+        `Connecting to ${host.ip}:${host.port || 22}`,
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+    );
+
+    if (resolvedCredentials.authType === "password") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with password"),
+      );
+    } else if (resolvedCredentials.authType === "key") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
+    } else if (resolvedCredentials.authType === "none") {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "auth",
+          "Attempting keyboard-interactive authentication",
+        ),
+      );
+    }
+
     client.on("ready", () => {
       if (responseSent) return;
       responseSent = true;
+
+      connectionLogs.push(
+        createConnectionLog(
+          "success",
+          "connected",
+          "SSH connection established successfully",
+        ),
+      );
 
       sshSessions[sessionId] = {
         client,
@@ -638,11 +805,31 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       scheduleSessionCleanup(sessionId);
 
-      res.json({ success: true, message: "SSH connection established" });
+      res.json({
+        success: true,
+        message: "SSH connection established",
+        connectionLogs,
+      });
     });
 
     client.on("error", (err) => {
-      if (responseSent) return;
+      if (responseSent) {
+        dockerLogger.error(
+          "Docker SSH connection error after response sent",
+          err,
+          {
+            operation: "docker_connect_after_response",
+            sessionId,
+            hostId,
+            userId,
+          },
+        );
+
+        if (pendingTOTPSessions[sessionId]) {
+          delete pendingTOTPSessions[sessionId];
+        }
+        return;
+      }
       responseSent = true;
 
       dockerLogger.error("Docker SSH connection failed", err, {
@@ -652,6 +839,65 @@ app.post("/docker/ssh/connect", async (req, res) => {
         userId,
       });
 
+      let errorStage: ConnectionStage = "error";
+      if (
+        err.message.includes("ENOTFOUND") ||
+        err.message.includes("getaddrinfo")
+      ) {
+        errorStage = "dns";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `DNS resolution failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("ECONNREFUSED") ||
+        err.message.includes("ETIMEDOUT")
+      ) {
+        errorStage = "tcp";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `TCP connection failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("handshake") ||
+        err.message.includes("key exchange")
+      ) {
+        errorStage = "handshake";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `SSH handshake failed: ${err.message}`,
+          ),
+        );
+      } else if (
+        err.message.includes("authentication") ||
+        err.message.includes("Authentication")
+      ) {
+        errorStage = "auth";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `Authentication failed: ${err.message}`,
+          ),
+        );
+      } else {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "error",
+            `SSH connection failed: ${err.message}`,
+          ),
+        );
+      }
+
       if (
         resolvedCredentials.authType === "none" &&
         (err.message.includes("authentication") ||
@@ -660,11 +906,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
         res.json({
           status: "auth_required",
           reason: "no_keyboard",
+          connectionLogs,
         });
       } else {
         res.status(500).json({
           success: false,
           message: err.message || "SSH connection failed",
+          connectionLogs,
         });
       }
     });
@@ -673,6 +921,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
       if (sshSessions[sessionId]) {
         sshSessions[sessionId].isConnected = false;
         cleanupSession(sessionId);
+      }
+
+      if (pendingTOTPSessions[sessionId]) {
+        delete pendingTOTPSessions[sessionId];
       }
     });
 
@@ -685,6 +937,64 @@ app.post("/docker/ssh/connect", async (req, res) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
+        const promptTexts = prompts.map((p) => p.prompt);
+
+        const warpgatePattern = /warpgate\s+authentication/i;
+        const isWarpgate =
+          warpgatePattern.test(name) ||
+          warpgatePattern.test(instructions) ||
+          promptTexts.some((p) => warpgatePattern.test(p));
+
+        if (isWarpgate) {
+          const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
+          const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
+          const keyMatch = fullText.match(
+            /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
+          );
+
+          if (urlMatch) {
+            if (responseSent) return;
+            responseSent = true;
+
+            keyboardInteractiveResponded = true;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId,
+              ip: host.ip,
+              port: host.port || 22,
+              username: host.username,
+              userId,
+              prompts,
+              totpPromptIndex: -1,
+              resolvedPassword: resolvedCredentials.password,
+              totpAttempts: 0,
+              isWarpgate: true,
+            };
+
+            connectionLogs.push(
+              createConnectionLog(
+                "info",
+                "docker_auth",
+                "Warpgate authentication required",
+              ),
+            );
+
+            res.json({
+              requires_warpgate: true,
+              sessionId,
+              url: urlMatch[0],
+              securityKey: keyMatch ? keyMatch[1] : "N/A",
+              connectionLogs,
+            });
+            return;
+          }
+        }
+
         const totpPromptIndex = prompts.findIndex((p) =>
           /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
             p.prompt,
@@ -734,10 +1044,19 @@ app.post("/docker/ssh/connect", async (req, res) => {
             totpAttempts: 0,
           };
 
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "docker_auth",
+              "TOTP verification required",
+            ),
+          );
+
           res.json({
             requires_totp: true,
             sessionId,
             prompt: prompts[totpPromptIndex].prompt,
+            connectionLogs,
           });
         } else {
           const passwordPromptIndex = prompts.findIndex((p) =>
@@ -836,6 +1155,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
       (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
     ) {
       try {
+        connectionLogs.push(
+          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
+        );
         const socks5Socket = await createSocks5Connection(
           host.ip,
           host.port || 22,
@@ -862,6 +1184,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
           proxyHost: socks5Host,
           proxyPort: socks5Port || 1080,
         });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "proxy",
+            `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
+          ),
+        );
         if (!responseSent) {
           responseSent = true;
           return res.status(500).json({
@@ -870,19 +1199,35 @@ app.post("/docker/ssh/connect", async (req, res) => {
               (socks5Error instanceof Error
                 ? socks5Error.message
                 : "Unknown error"),
+            connectionLogs,
           });
         }
         return;
       }
     } else if (host.jumpHosts && host.jumpHosts.length > 0) {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "jump",
+          `Connecting via ${host.jumpHosts.length} jump host(s)`,
+        ),
+      );
       const jumpClient = await createJumpHostChain(
         host.jumpHosts as Array<{ hostId: number }>,
         userId,
       );
 
       if (!jumpClient) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            "Failed to establish jump host chain",
+          ),
+        );
         return res.status(500).json({
           error: "Failed to establish jump host chain",
+          connectionLogs,
         });
       }
 
@@ -898,11 +1243,19 @@ app.post("/docker/ssh/connect", async (req, res) => {
               sessionId,
               hostId,
             });
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                "jump",
+                `Failed to forward through jump host: ${err.message}`,
+              ),
+            );
             jumpClient.end();
             if (!responseSent) {
               responseSent = true;
               return res.status(500).json({
                 error: "Failed to forward through jump host: " + err.message,
+                connectionLogs,
               });
             }
             return;
@@ -922,14 +1275,44 @@ app.post("/docker/ssh/connect", async (req, res) => {
       hostId,
       userId,
     });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        `Connection error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ),
+    );
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
+      connectionLogs,
     });
   }
 });
 
-// POST /docker/ssh/disconnect - Close SSH session
+/**
+ * @openapi
+ * /docker/ssh/disconnect:
+ *   post:
+ *     summary: Disconnect SSH session
+ *     description: Closes an active SSH session for Docker operations.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: SSH session disconnected.
+ *       400:
+ *         description: Session ID is required.
+ */
 app.post("/docker/ssh/disconnect", async (req, res) => {
   const { sessionId } = req.body;
 
@@ -942,7 +1325,35 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
   res.json({ success: true, message: "SSH session disconnected" });
 });
 
-// POST /docker/ssh/connect-totp - Verify TOTP and complete connection
+/**
+ * @openapi
+ * /docker/ssh/connect-totp:
+ *   post:
+ *     summary: Verify TOTP and complete connection
+ *     description: Verifies the TOTP code and completes the SSH connection.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               totpCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP verified, SSH connection established.
+ *       400:
+ *         description: Session ID and TOTP code required.
+ *       401:
+ *         description: Invalid TOTP code.
+ *       404:
+ *         description: TOTP session expired.
+ */
 app.post("/docker/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
   const userId = (req as any).userId;
@@ -1105,7 +1516,218 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   session.finish(responses);
 });
 
-// POST /docker/ssh/keepalive - Keep session alive
+/**
+ * @openapi
+ * /docker/ssh/connect-warpgate:
+ *   post:
+ *     summary: Complete Warpgate authentication
+ *     description: Submits empty response to complete Warpgate authentication after user completes browser auth.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID from initial connection attempt
+ *     responses:
+ *       200:
+ *         description: Warpgate authentication completed successfully.
+ *       401:
+ *         description: Authentication failed or unauthorized.
+ *       404:
+ *         description: Warpgate session expired.
+ */
+app.post("/docker/ssh/connect-warpgate", async (req, res) => {
+  const { sessionId } = req.body;
+  const userId = (req as any).userId;
+
+  if (!userId) {
+    dockerLogger.error(
+      "Warpgate verification rejected: no authenticated user",
+      {
+        operation: "docker_warpgate_auth",
+        sessionId,
+      },
+    );
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID required" });
+  }
+
+  const session = pendingTOTPSessions[sessionId];
+
+  if (!session) {
+    dockerLogger.warn("Warpgate session not found or expired", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      availableSessions: Object.keys(pendingTOTPSessions),
+    });
+    return res
+      .status(404)
+      .json({ error: "Warpgate session expired. Please reconnect." });
+  }
+
+  if (!session.isWarpgate) {
+    return res.status(400).json({ error: "Session is not a Warpgate session" });
+  }
+
+  if (Date.now() - session.createdAt > 300000) {
+    delete pendingTOTPSessions[sessionId];
+    try {
+      session.client.end();
+    } catch {}
+    dockerLogger.warn("Warpgate session timeout before completion", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      age: Date.now() - session.createdAt,
+    });
+    return res
+      .status(408)
+      .json({ error: "Warpgate session timeout. Please reconnect." });
+  }
+
+  let responseSent = false;
+  let responseTimeout: NodeJS.Timeout;
+
+  session.client.once("ready", () => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    setTimeout(() => {
+      sshSessions[sessionId] = {
+        client: session.client,
+        isConnected: true,
+        lastActive: Date.now(),
+        activeOperations: 0,
+        hostId: session.hostId,
+      };
+      scheduleSessionCleanup(sessionId);
+
+      res.json({
+        status: "success",
+        message: "Warpgate verified, SSH connection established",
+      });
+
+      if (session.hostId && session.userId) {
+        (async () => {
+          try {
+            const hosts = await SimpleDBOps.select(
+              getDb()
+                .select()
+                .from(sshData)
+                .where(
+                  and(
+                    eq(sshData.id, session.hostId!),
+                    eq(sshData.userId, session.userId!),
+                  ),
+                ),
+              "ssh_data",
+              session.userId!,
+            );
+
+            const hostName =
+              hosts.length > 0 && hosts[0].name
+                ? hosts[0].name
+                : `${session.username}@${session.ip}:${session.port}`;
+
+            await axios.post(
+              "http://localhost:30006/activity/log",
+              {
+                type: "docker",
+                hostId: session.hostId,
+                hostName,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${await authManager.generateJWTToken(session.userId!)}`,
+                },
+              },
+            );
+          } catch (error) {
+            dockerLogger.warn("Failed to log Docker activity (Warpgate)", {
+              operation: "activity_log_error",
+              userId: session.userId,
+              hostId: session.hostId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        })();
+      }
+    }, 200);
+  });
+
+  session.client.once("error", (err) => {
+    if (responseSent) return;
+    responseSent = true;
+    clearTimeout(responseTimeout);
+
+    delete pendingTOTPSessions[sessionId];
+
+    dockerLogger.error("Warpgate verification failed", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+      error: err.message,
+    });
+
+    res
+      .status(401)
+      .json({ status: "error", message: "Warpgate authentication failed" });
+  });
+
+  responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      dockerLogger.warn("Warpgate verification timeout", {
+        operation: "docker_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
+
+  session.finish([""]);
+});
+
+/**
+ * @openapi
+ * /docker/ssh/keepalive:
+ *   post:
+ *     summary: Keep SSH session alive
+ *     description: Keeps an active SSH session alive.
+ *     tags:
+ *       - Docker
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session keepalive successful.
+ *       400:
+ *         description: Session ID is required or session not found.
+ */
 app.post("/docker/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
 
@@ -1133,7 +1755,26 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
   });
 });
 
-// GET /docker/ssh/status - Check session status
+/**
+ * @openapi
+ * /docker/ssh/status:
+ *   get:
+ *     summary: Check SSH session status
+ *     description: Checks the status of an active SSH session.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session status.
+ *       400:
+ *         description: Session ID is required.
+ */
 app.get("/docker/ssh/status", async (req, res) => {
   const sessionId = req.query.sessionId as string;
 
@@ -1146,13 +1787,41 @@ app.get("/docker/ssh/status", async (req, res) => {
   res.json({ success: true, connected: isConnected });
 });
 
-// GET /docker/validate/:sessionId - Validate Docker availability
+/**
+ * @openapi
+ * /docker/validate/{sessionId}:
+ *   get:
+ *     summary: Validate Docker availability
+ *     description: Validates if Docker is available on the host.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Docker availability status.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       500:
+ *         description: Validation failed.
+ */
 app.get("/docker/validate/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const userId = (req as any).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
   }
 
   const session = sshSessions[sessionId];
@@ -1236,7 +1905,32 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId - List all containers
+/**
+ * @openapi
+ * /docker/containers/{sessionId}:
+ *   get:
+ *     summary: List all containers
+ *     description: Lists all Docker containers on the host.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: all
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: A list of containers.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       500:
+ *         description: Failed to list containers.
+ */
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const all = req.query.all !== "false";
@@ -1244,6 +1938,13 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (pendingTOTPSessions[sessionId]) {
+    return res.status(400).json({
+      error: "Connection pending authentication",
+      code: "AUTH_PENDING",
+    });
   }
 
   const session = sshSessions[sessionId];
@@ -1297,7 +1998,35 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId/:containerId - Get container details
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}:
+ *   get:
+ *     summary: Get container details
+ *     description: Retrieves detailed information about a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container details.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container details.
+ */
 app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   const { sessionId, containerId } = req.params;
   const userId = (req as any).userId;
@@ -1356,7 +2085,35 @@ app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   }
 });
 
-// POST /docker/containers/:sessionId/:containerId/start - Start container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/start:
+ *   post:
+ *     summary: Start container
+ *     description: Starts a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container started successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to start container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/start",
   async (req, res) => {
@@ -1414,7 +2171,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/stop - Stop container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/stop:
+ *   post:
+ *     summary: Stop container
+ *     description: Stops a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container stopped successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to stop container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/stop",
   async (req, res) => {
@@ -1472,7 +2257,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/restart - Restart container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/restart:
+ *   post:
+ *     summary: Restart container
+ *     description: Restarts a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container restarted successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to restart container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/restart",
   async (req, res) => {
@@ -1530,7 +2343,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/pause - Pause container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/pause:
+ *   post:
+ *     summary: Pause container
+ *     description: Pauses a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container paused successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to pause container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/pause",
   async (req, res) => {
@@ -1588,7 +2429,35 @@ app.post(
   },
 );
 
-// POST /docker/containers/:sessionId/:containerId/unpause - Unpause container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/unpause:
+ *   post:
+ *     summary: Unpause container
+ *     description: Unpauses a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container unpaused successfully.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to unpause container.
+ */
 app.post(
   "/docker/containers/:sessionId/:containerId/unpause",
   async (req, res) => {
@@ -1646,7 +2515,39 @@ app.post(
   },
 );
 
-// DELETE /docker/containers/:sessionId/:containerId/remove - Remove container
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/remove:
+ *   delete:
+ *     summary: Remove container
+ *     description: Removes a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: force
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Container removed successfully.
+ *       400:
+ *         description: SSH session not found or not connected, or cannot remove a running container.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to remove container.
+ */
 app.delete(
   "/docker/containers/:sessionId/:containerId/remove",
   async (req, res) => {
@@ -1718,7 +2619,51 @@ app.delete(
   },
 );
 
-// GET /docker/containers/:sessionId/:containerId/logs - Get container logs
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/logs:
+ *   get:
+ *     summary: Get container logs
+ *     description: Retrieves logs for a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: tail
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: timestamps
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: since
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: until
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container logs.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container logs.
+ */
 app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const { sessionId, containerId } = req.params;
   const tail = req.query.tail ? parseInt(req.query.tail as string) : 100;
@@ -1795,7 +2740,35 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   }
 });
 
-// GET /docker/containers/:sessionId/:containerId/stats - Get container stats
+/**
+ * @openapi
+ * /docker/containers/{sessionId}/{containerId}/stats:
+ *   get:
+ *     summary: Get container stats
+ *     description: Retrieves stats for a specific container.
+ *     tags:
+ *       - Docker
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: containerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Container stats.
+ *       400:
+ *         description: SSH session not found or not connected.
+ *       404:
+ *         description: Container not found.
+ *       500:
+ *         description: Failed to get container stats.
+ */
 app.get(
   "/docker/containers/:sessionId/:containerId/stats",
   async (req, res) => {

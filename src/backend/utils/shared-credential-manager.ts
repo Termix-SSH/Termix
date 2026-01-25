@@ -21,11 +21,6 @@ interface CredentialData {
   keyType?: string;
 }
 
-/**
- * Manages shared credentials for RBAC host sharing.
- * Creates per-user encrypted credential copies to enable credential sharing
- * without requiring the credential owner to be online.
- */
 class SharedCredentialManager {
   private static instance: SharedCredentialManager;
 
@@ -38,10 +33,6 @@ class SharedCredentialManager {
     return this.instance;
   }
 
-  /**
-   * Create shared credential for a specific user
-   * Called when sharing a host with a user
-   */
   async createSharedCredentialForUser(
     hostAccessId: number,
     originalCredentialId: number,
@@ -121,10 +112,6 @@ class SharedCredentialManager {
     }
   }
 
-  /**
-   * Create shared credentials for all users in a role
-   * Called when sharing a host with a role
-   */
   async createSharedCredentialsForRole(
     hostAccessId: number,
     originalCredentialId: number,
@@ -172,10 +159,6 @@ class SharedCredentialManager {
     }
   }
 
-  /**
-   * Get credential data for a shared user
-   * Called when a shared user connects to a host
-   */
   async getSharedCredentialForUser(
     hostId: number,
     userId: string,
@@ -230,10 +213,6 @@ class SharedCredentialManager {
     }
   }
 
-  /**
-   * Update all shared credentials when original credential is updated
-   * Called when credential owner updates credential
-   */
   async updateSharedCredentialsForOriginal(
     credentialId: number,
     ownerId: string,
@@ -310,10 +289,6 @@ class SharedCredentialManager {
     }
   }
 
-  /**
-   * Delete shared credentials when original credential is deleted
-   * Called from credential deletion route
-   */
   async deleteSharedCredentialsForOriginal(
     credentialId: number,
   ): Promise<void> {
@@ -330,10 +305,6 @@ class SharedCredentialManager {
     }
   }
 
-  /**
-   * Re-encrypt pending shared credentials for a user when they log in
-   * Called during user login
-   */
   async reEncryptPendingCredentialsForUser(userId: string): Promise<void> {
     try {
       const userDEK = DataCrypto.getUserDataKey(userId);
@@ -405,9 +376,6 @@ class SharedCredentialManager {
     };
   }
 
-  /**
-   * Decrypt credential using system key (for offline sharing when owner is offline)
-   */
   private async getDecryptedCredentialViaSystemKey(
     credentialId: number,
   ): Promise<CredentialData> {

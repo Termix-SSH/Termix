@@ -32,10 +32,10 @@ class FieldCrypto {
       "key",
       "key_password",
       "keyPassword",
-      "keyType",
       "autostartPassword",
       "autostartKey",
       "autostartKeyPassword",
+      "sudoPassword",
     ]),
     ssh_credentials: new Set([
       "password",
@@ -46,7 +46,6 @@ class FieldCrypto {
       "key",
       "public_key",
       "publicKey",
-      "keyType",
     ]),
   };
 

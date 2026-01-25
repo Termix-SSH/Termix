@@ -15,6 +15,7 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+import { SSHAuthManager } from "./auth-manager.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -331,7 +332,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sshStream: ClientChannel | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
-  let totpAttempts = 0;
   let totpTimeout: NodeJS.Timeout | null = null;
   let isKeyboardInteractive = false;
   let keyboardInteractiveResponded = false;
@@ -339,6 +339,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnected = false;
   let isCleaningUp = false;
   let isShellInitializing = false;
+  let warpgateAuthPromptSent = false;
+  let warpgateAuthTimeout: NodeJS.Timeout | null = null;
+  let isAwaitingAuthCredentials = false;
 
   ws.on("close", () => {
     const userWs = userConnections.get(userId);
@@ -454,7 +457,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             totpTimeout = null;
           }
           const totpCode = totpData.code;
-          totpAttempts++;
           keyboardInteractiveFinish([totpCode]);
           keyboardInteractiveFinish = null;
           totpPromptSent = false;
@@ -505,6 +507,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "warpgate_auth_continue": {
+        if (keyboardInteractiveFinish) {
+          if (warpgateAuthTimeout) {
+            clearTimeout(warpgateAuthTimeout);
+            warpgateAuthTimeout = null;
+          }
+          keyboardInteractiveFinish([""]);
+          keyboardInteractiveFinish = null;
+          warpgateAuthPromptSent = false;
+        }
+        break;
+      }
+
       case "reconnect_with_credentials": {
         const credentialsData = data as {
           cols: number;
@@ -525,6 +540,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           credentialsData.hostConfig.authType = "key";
         }
 
+        isAwaitingAuthCredentials = false;
         cleanupSSH();
 
         const reconnectData: ConnectToHostData = {
@@ -575,6 +591,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
+
+    const sendLog = (
+      stage: string,
+      level: string,
+      message: string,
+      details?: Record<string, any>,
+    ) => {
+      ws.send(
+        JSON.stringify({
+          type: "connection_log",
+          data: { stage, level, message, details },
+        }),
+      );
+    };
 
     if (!username || typeof username !== "string" || username.trim() === "") {
       sshLogger.error("Invalid username provided", undefined, {
@@ -634,6 +664,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = true;
     sshConn = new Client();
 
+    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
+
     const connectionTimeout = setTimeout(() => {
       if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
@@ -648,7 +681,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         cleanupSSH(connectionTimeout);
       }
-    }, 30000);
+    }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
@@ -713,6 +746,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
 
+      sendLog("handshake", "success", "SSH handshake completed");
+      sendLog("auth", "success", `Authentication successful for ${username}`);
+      sendLog("connected", "success", "Connection established");
+
       const conn = sshConn;
 
       if (!conn || isCleaningUp || !sshConn) {
@@ -761,6 +798,36 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
+      sshLogger.info("Creating shell", {
+        operation: "ssh_shell_start",
+        hostId: id,
+        ip,
+        port,
+        username,
+      });
+
+      let shellCallbackReceived = false;
+      const shellTimeout = setTimeout(() => {
+        if (!shellCallbackReceived && isShellInitializing) {
+          sshLogger.error("Shell creation timeout - no response from server", {
+            operation: "ssh_shell_timeout",
+            hostId: id,
+            ip,
+            port,
+            username,
+          });
+          isShellInitializing = false;
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Shell creation timeout. The server may not support interactive shells or the connection was interrupted.",
+            }),
+          );
+          cleanupSSH(connectionTimeout);
+        }
+      }, 15000);
+
       conn.shell(
         {
           rows: data.rows,
@@ -768,6 +835,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           term: "xterm-256color",
         } as PseudoTtyOptions,
         (err, stream) => {
+          shellCallbackReceived = true;
+          clearTimeout(shellTimeout);
           isShellInitializing = false;
 
           if (err) {
@@ -784,6 +853,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 message: "Shell error: " + err.message,
               }),
             );
+            cleanupSSH(connectionTimeout);
             return;
           }
 
@@ -902,21 +972,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("error", (err: Error) => {
       clearTimeout(connectionTimeout);
 
-      if (
-        (authMethodNotAvailable && resolvedCredentials.authType === "none") ||
-        (resolvedCredentials.authType === "none" &&
-          err.message.includes("All configured authentication methods failed"))
-      ) {
-        ws.send(
-          JSON.stringify({
-            type: "auth_method_not_available",
-            message:
-              "The server does not support keyboard-interactive authentication. Please provide credentials.",
-          }),
-        );
-        cleanupSSH(connectionTimeout);
-        return;
-      }
+      sendLog("error", "error", `Connection error: ${err.message}`);
 
       sshLogger.error("SSH connection error", err, {
         operation: "ssh_connect",
@@ -925,7 +981,98 @@ wss.on("connection", async (ws: WebSocket, req) => {
         port,
         username,
         authType: resolvedCredentials.authType,
+        warpgateAuthPromptSent,
+        isKeyboardInteractive,
+        hasKeyboardInteractiveFinish: !!keyboardInteractiveFinish,
+        keyboardInteractiveResponded,
       });
+
+      if (
+        authMethodNotAvailable &&
+        resolvedCredentials.authType === "none" &&
+        !isKeyboardInteractive
+      ) {
+        sendLog(
+          "auth",
+          "error",
+          "Server does not support keyboard-interactive authentication",
+        );
+        clearTimeout(connectionTimeout);
+        isAwaitingAuthCredentials = true;
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        isConnecting = false;
+        isConnected = false;
+        ws.send(
+          JSON.stringify({
+            type: "auth_method_not_available",
+            message:
+              "The server does not support keyboard-interactive authentication. Please provide credentials.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        resolvedCredentials.authType === "none" &&
+        err.message.includes("All configured authentication methods failed") &&
+        !isKeyboardInteractive &&
+        !keyboardInteractiveResponded
+      ) {
+        clearTimeout(connectionTimeout);
+        isAwaitingAuthCredentials = true;
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        isConnecting = false;
+        isConnected = false;
+        ws.send(
+          JSON.stringify({
+            type: "auth_method_not_available",
+            message:
+              "The server does not support keyboard-interactive authentication. Please provide credentials.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        isKeyboardInteractive &&
+        keyboardInteractiveFinish &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn(
+          "Authentication error during keyboard-interactive - SKIPPING cleanup, waiting for user response",
+          {
+            operation: "ssh_error_during_keyboard_interactive_skip_cleanup",
+            hostId: id,
+            error: err.message,
+          },
+        );
+        return;
+      }
+
+      sshLogger.error("Proceeding with cleanup after error", {
+        operation: "ssh_error_cleanup",
+        hostId: id,
+        error: err.message,
+      });
+
+      if (
+        err.message.includes("authentication") ||
+        err.message.includes("Authentication")
+      ) {
+        sendLog("auth", "error", `Authentication failed: ${err.message}`);
+      } else {
+        sendLog("error", "error", `Connection failed: ${err.message}`);
+      }
 
       let errorMessage = "SSH error: " + err.message;
       if (err.message.includes("No matching key exchange algorithm")) {
@@ -969,7 +1116,52 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("close", () => {
       clearTimeout(connectionTimeout);
+
+      if (isAwaitingAuthCredentials) {
+        cleanupSSH(connectionTimeout);
+        return;
+      }
+
+      if (isShellInitializing || (isConnected && !sshStream)) {
+        sshLogger.warn("SSH connection closed during shell initialization", {
+          operation: "ssh_close_during_init",
+          hostId: id,
+          ip,
+          port,
+          username,
+          isShellInitializing,
+          hasStream: !!sshStream,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Connection closed during shell initialization. The server may have rejected the shell request.",
+          }),
+        );
+      } else if (!sshStream) {
+        ws.send(
+          JSON.stringify({
+            type: "disconnected",
+            message: "Connection closed",
+          }),
+        );
+      }
       cleanupSSH(connectionTimeout);
+    });
+
+    const sshAuthManager = new SSHAuthManager({
+      userId,
+      ws,
+      hostId: id || 0,
+      isKeyboardInteractive,
+      keyboardInteractiveResponded,
+      keyboardInteractiveFinish,
+      totpPromptSent,
+      warpgateAuthPromptSent,
+      totpTimeout,
+      warpgateAuthTimeout,
+      totpAttempts: 0,
     });
 
     sshConn.on(
@@ -981,130 +1173,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
         prompts: Array<{ prompt: string; echo: boolean }>,
         finish: (responses: string[]) => void,
       ) => {
-        isKeyboardInteractive = true;
-        const promptTexts = prompts.map((p) => p.prompt);
-        const totpPromptIndex = prompts.findIndex((p) =>
-          /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-            p.prompt,
-          ),
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+        }
+
+        sshAuthManager.handleKeyboardInteractive(
+          name,
+          instructions,
+          instructionsLang,
+          prompts,
+          finish,
+          resolvedCredentials as any,
         );
 
-        if (totpPromptIndex !== -1) {
-          if (totpPromptSent) {
-            sshLogger.warn("TOTP prompt asked again - ignoring duplicate", {
-              operation: "ssh_keyboard_interactive_totp_duplicate",
-              hostId: id,
-              prompts: promptTexts,
-            });
-            return;
-          }
-          totpPromptSent = true;
-          keyboardInteractiveResponded = true;
-
-          keyboardInteractiveFinish = (totpResponses: string[]) => {
-            const totpCode = (totpResponses[0] || "").trim();
-
-            const responses = prompts.map((p, index) => {
-              if (index === totpPromptIndex) {
-                return totpCode;
-              }
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-
-            finish(responses);
-          };
-
-          totpTimeout = setTimeout(() => {
-            if (keyboardInteractiveFinish) {
-              keyboardInteractiveFinish = null;
-              totpPromptSent = false;
-              sshLogger.warn("TOTP prompt timeout", {
-                operation: "totp_timeout",
-                hostId: id,
-              });
-              ws.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "TOTP verification timeout. Please reconnect.",
-                }),
-              );
-              cleanupSSH(connectionTimeout);
-            }
-          }, 180000);
-
-          ws.send(
-            JSON.stringify({
-              type: "totp_required",
-              prompt: prompts[totpPromptIndex].prompt,
-            }),
-          );
-        } else {
-          const hasStoredPassword =
-            resolvedCredentials.password &&
-            resolvedCredentials.authType !== "none";
-
-          const passwordPromptIndex = prompts.findIndex((p) =>
-            /password/i.test(p.prompt),
-          );
-
-          if (!hasStoredPassword && passwordPromptIndex !== -1) {
-            if (keyboardInteractiveResponded) {
-              return;
-            }
-            keyboardInteractiveResponded = true;
-
-            keyboardInteractiveFinish = (userResponses: string[]) => {
-              const userInput = (userResponses[0] || "").trim();
-
-              const responses = prompts.map((p, index) => {
-                if (index === passwordPromptIndex) {
-                  return userInput;
-                }
-                return "";
-              });
-
-              finish(responses);
-            };
-
-            totpTimeout = setTimeout(() => {
-              if (keyboardInteractiveFinish) {
-                keyboardInteractiveFinish = null;
-                keyboardInteractiveResponded = false;
-                sshLogger.warn("Password prompt timeout", {
-                  operation: "password_timeout",
-                  hostId: id,
-                });
-                ws.send(
-                  JSON.stringify({
-                    type: "error",
-                    message: "Password verification timeout. Please reconnect.",
-                  }),
-                );
-                cleanupSSH(connectionTimeout);
-              }
-            }, 180000);
-
-            ws.send(
-              JSON.stringify({
-                type: "password_required",
-                prompt: prompts[passwordPromptIndex].prompt,
-              }),
-            );
-            return;
-          }
-
-          const responses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-              return resolvedCredentials.password;
-            }
-            return "";
-          });
-
-          finish(responses);
-        }
+        isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
+        keyboardInteractiveResponded =
+          sshAuthManager.context.keyboardInteractiveResponded;
+        keyboardInteractiveFinish =
+          sshAuthManager.context.keyboardInteractiveFinish;
+        totpPromptSent = sshAuthManager.context.totpPromptSent;
+        warpgateAuthPromptSent = sshAuthManager.context.warpgateAuthPromptSent;
+        totpTimeout = sshAuthManager.context.totpTimeout;
+        warpgateAuthTimeout = sshAuthManager.context.warpgateAuthTimeout;
       },
     );
 
@@ -1115,10 +1205,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tryKeyboard: true,
       keepaliveInterval: 30000,
       keepaliveCountMax: 3,
-      readyTimeout: 30000,
+      readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-      timeout: 30000,
+      timeout: 120000,
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -1195,10 +1285,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       connectConfig.password = resolvedCredentials.password;
+      sendLog("auth", "info", "Using password authentication");
     } else if (
       resolvedCredentials.authType === "key" &&
       resolvedCredentials.key
     ) {
+      sendLog("auth", "info", "Using SSH key authentication");
       try {
         if (
           !resolvedCredentials.key.includes("-----BEGIN") ||
@@ -1228,6 +1320,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
     } else if (resolvedCredentials.authType === "key") {
+      sendLog(
+        "auth",
+        "error",
+        "SSH key authentication requested but no key provided",
+      );
       sshLogger.error("SSH key authentication requested but no key provided");
       ws.send(
         JSON.stringify({
@@ -1237,6 +1334,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       );
       return;
     } else {
+      sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");
       ws.send(
         JSON.stringify({
@@ -1333,6 +1431,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           connectConfig.sock = stream;
+          sendLog(
+            "handshake",
+            "info",
+            "Starting SSH session through jump host",
+          );
+          sendLog("auth", "info", `Authenticating as ${username}`);
           sshConn.connect(connectConfig);
         });
       } catch (error) {
@@ -1350,6 +1454,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
     } else {
+      sendLog("handshake", "info", "Starting SSH session");
+      sendLog("auth", "info", `Authenticating as ${username}`);
       sshConn.connect(connectConfig);
     }
   }
@@ -1391,6 +1497,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       totpTimeout = null;
     }
 
+    if (warpgateAuthTimeout) {
+      clearTimeout(warpgateAuthTimeout);
+      warpgateAuthTimeout = null;
+    }
+
     if (sshStream) {
       try {
         sshStream.end();
@@ -1416,13 +1527,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     totpPromptSent = false;
-    totpAttempts = 0;
+    warpgateAuthPromptSent = false;
     isKeyboardInteractive = false;
     keyboardInteractiveResponded = false;
     keyboardInteractiveFinish = null;
     isConnecting = false;
     isConnected = false;
     isCleaningUp = false;
+    isAwaitingAuthCredentials = false;
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

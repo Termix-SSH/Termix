@@ -758,15 +758,6 @@ export function CredentialsManager({
                                         )}
                                         {credential.authType}
                                       </Badge>
-                                      {credential.authType === "key" &&
-                                        credential.keyType && (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs px-1 py-0"
-                                          >
-                                            {credential.keyType}
-                                          </Badge>
-                                        )}
                                     </div>
                                   </div>
                                 </div>

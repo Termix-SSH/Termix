@@ -17,8 +17,33 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-// Save command to history
-// POST /terminal/command_history
+/**
+ * @openapi
+ * /terminal/command_history:
+ *   post:
+ *     summary: Save command to history
+ *     description: Saves a command to the command history for a specific host.
+ *     tags:
+ *       - Terminal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               command:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Command saved successfully.
+ *       400:
+ *         description: Missing required parameters.
+ *       500:
+ *         description: Failed to save command.
+ */
 router.post(
   "/command_history",
   authenticateJWT,
@@ -59,15 +84,37 @@ router.post(
   },
 );
 
-// Get command history for a specific host
-// GET /terminal/command_history/:hostId
+/**
+ * @openapi
+ * /terminal/command_history/{hostId}:
+ *   get:
+ *     summary: Get command history
+ *     description: Retrieves the command history for a specific host.
+ *     tags:
+ *       - Terminal
+ *     parameters:
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of commands.
+ *       400:
+ *         description: Invalid request parameters.
+ *       500:
+ *         description: Failed to fetch history.
+ */
 router.get(
   "/command_history/:hostId",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hostId } = req.params;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
     const hostIdNum = parseInt(hostId, 10);
 
     if (!isNonEmptyString(userId) || isNaN(hostIdNum)) {
@@ -107,8 +154,33 @@ router.get(
   },
 );
 
-// Delete a specific command from history
-// POST /terminal/command_history/delete
+/**
+ * @openapi
+ * /terminal/command_history/delete:
+ *   post:
+ *     summary: Delete a specific command from history
+ *     description: Deletes a specific command from the history of a host.
+ *     tags:
+ *       - Terminal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               command:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Command deleted successfully.
+ *       400:
+ *         description: Missing required parameters.
+ *       500:
+ *         description: Failed to delete command.
+ */
 router.post(
   "/command_history/delete",
   authenticateJWT,
@@ -150,15 +222,37 @@ router.post(
   },
 );
 
-// Clear command history for a specific host (optional feature)
-// DELETE /terminal/command_history/:hostId
+/**
+ * @openapi
+ * /terminal/command_history/{hostId}:
+ *   delete:
+ *     summary: Clear command history
+ *     description: Clears the entire command history for a specific host.
+ *     tags:
+ *       - Terminal
+ *     parameters:
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Command history cleared successfully.
+ *       400:
+ *         description: Invalid request.
+ *       500:
+ *         description: Failed to clear history.
+ */
 router.delete(
   "/command_history/:hostId",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hostId } = req.params;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
     const hostIdNum = parseInt(hostId, 10);
 
     if (!isNonEmptyString(userId) || isNaN(hostIdNum)) {

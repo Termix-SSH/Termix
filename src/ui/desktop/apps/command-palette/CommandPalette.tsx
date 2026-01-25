@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button.tsx";
+import { ButtonGroup } from "@/components/ui/button-group.tsx";
 
 interface SSHHost {
   id: number;
@@ -353,6 +354,18 @@ export function CommandPalette({
                     hasTunnelConnections = false;
                   }
 
+                  const visibleButtons = [
+                    host.enableTerminal && (host.showTerminalInSidebar ?? true),
+                    host.enableFileManager &&
+                      (host.showFileManagerInSidebar ?? false),
+                    host.enableTunnel &&
+                      hasTunnelConnections &&
+                      (host.showTunnelInSidebar ?? false),
+                    host.enableDocker && (host.showDockerInSidebar ?? false),
+                    shouldShowMetrics &&
+                      (host.showServerStatsInSidebar ?? false),
+                  ].filter(Boolean).length;
+
                   return (
                     <CommandItem
                       key={`host-${index}-${host.id}`}
@@ -364,19 +377,94 @@ export function CommandPalette({
                       }}
                       className="flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-2">
-                        <Server className="h-4 w-4" />
-                        <span>{title}</span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Server className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{title}</span>
                       </div>
-                      <div
-                        className="flex items-center gap-1"
+                      <ButtonGroup
+                        className="flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {host.enableTerminal &&
+                          (host.showTerminalInSidebar ?? true) && (
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-edge"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostTerminalClick(host);
+                              }}
+                            >
+                              <Terminal className="h-3 w-3" />
+                            </Button>
+                          )}
+
+                        {host.enableFileManager &&
+                          (host.showFileManagerInSidebar ?? false) && (
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-edge"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostFileManagerClick(host);
+                              }}
+                            >
+                              <FolderOpen className="h-3 w-3" />
+                            </Button>
+                          )}
+
+                        {host.enableTunnel &&
+                          hasTunnelConnections &&
+                          (host.showTunnelInSidebar ?? false) && (
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-edge"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostTunnelClick(host);
+                              }}
+                            >
+                              <ArrowDownUp className="h-3 w-3" />
+                            </Button>
+                          )}
+
+                        {host.enableDocker &&
+                          (host.showDockerInSidebar ?? false) && (
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-edge"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostDockerClick(host);
+                              }}
+                            >
+                              <Container className="h-3 w-3" />
+                            </Button>
+                          )}
+
+                        {shouldShowMetrics &&
+                          (host.showServerStatsInSidebar ?? false) && (
+                            <Button
+                              variant="outline"
+                              className="!px-2 h-7 border-1 border-edge"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHostServerDetailsClick(host);
+                              }}
+                            >
+                              <Server className="h-3 w-3" />
+                            </Button>
+                          )}
+
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
-                              className="!px-2 h-7 border-1 border-edge"
+                              className={cn(
+                                "!px-2 h-7 border-1 border-edge",
+                                visibleButtons > 0 &&
+                                  "rounded-l-none border-l-0",
+                              )}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-3 w-3" />
@@ -387,62 +475,82 @@ export function CommandPalette({
                             side="right"
                             className="w-56 bg-canvas border-edge text-foreground"
                           >
-                            {shouldShowMetrics && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleHostServerDetailsClick(host);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                              >
-                                <Server className="h-4 w-4" />
-                                <span className="flex-1">
-                                  {t("hosts.openServerStats")}
-                                </span>
-                              </DropdownMenuItem>
-                            )}
-                            {host.enableFileManager && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleHostFileManagerClick(host);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                              >
-                                <FolderOpen className="h-4 w-4" />
-                                <span className="flex-1">
-                                  {t("hosts.openFileManager")}
-                                </span>
-                              </DropdownMenuItem>
-                            )}
-                            {host.enableTunnel && hasTunnelConnections && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleHostTunnelClick(host);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                              >
-                                <ArrowDownUp className="h-4 w-4" />
-                                <span className="flex-1">
-                                  {t("hosts.openTunnels")}
-                                </span>
-                              </DropdownMenuItem>
-                            )}
-                            {host.enableDocker && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleHostDockerClick(host);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                              >
-                                <Container className="h-4 w-4" />
-                                <span className="flex-1">
-                                  {t("hosts.openDocker")}
-                                </span>
-                              </DropdownMenuItem>
-                            )}
+                            {host.enableTerminal &&
+                              !(host.showTerminalInSidebar ?? true) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHostTerminalClick(host);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                                >
+                                  <Terminal className="h-4 w-4" />
+                                  <span className="flex-1">
+                                    {t("hosts.openTerminal")}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            {shouldShowMetrics &&
+                              !(host.showServerStatsInSidebar ?? false) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHostServerDetailsClick(host);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                                >
+                                  <Server className="h-4 w-4" />
+                                  <span className="flex-1">
+                                    {t("hosts.openServerStats")}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            {host.enableFileManager &&
+                              !(host.showFileManagerInSidebar ?? false) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHostFileManagerClick(host);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                                >
+                                  <FolderOpen className="h-4 w-4" />
+                                  <span className="flex-1">
+                                    {t("hosts.openFileManager")}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            {host.enableTunnel &&
+                              hasTunnelConnections &&
+                              !(host.showTunnelInSidebar ?? false) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHostTunnelClick(host);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                                >
+                                  <ArrowDownUp className="h-4 w-4" />
+                                  <span className="flex-1">
+                                    {t("hosts.openTunnels")}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            {host.enableDocker &&
+                              !(host.showDockerInSidebar ?? false) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHostDockerClick(host);
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                                >
+                                  <Container className="h-4 w-4" />
+                                  <span className="flex-1">
+                                    {t("hosts.openDocker")}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -455,7 +563,7 @@ export function CommandPalette({
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
+                      </ButtonGroup>
                     </CommandItem>
                   );
                 })}

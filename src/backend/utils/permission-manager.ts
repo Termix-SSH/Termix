@@ -63,9 +63,6 @@ class PermissionManager {
     return this.instance;
   }
 
-  /**
-   * Clean up expired host access entries
-   */
   private async cleanupExpiredAccess(): Promise<void> {
     try {
       const now = new Date().toISOString();
@@ -85,23 +82,14 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Clear permission cache
-   */
   private clearPermissionCache(): void {
     this.permissionCache.clear();
   }
 
-  /**
-   * Invalidate permission cache for a specific user
-   */
   invalidateUserPermissionCache(userId: string): void {
     this.permissionCache.delete(userId);
   }
 
-  /**
-   * Get user permissions from roles
-   */
   async getUserPermissions(userId: string): Promise<string[]> {
     const cached = this.permissionCache.get(userId);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -150,10 +138,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Check if user has a specific permission
-   * Supports wildcards: "hosts.*", "*"
-   */
   async hasPermission(userId: string, permission: string): Promise<boolean> {
     const userPermissions = await this.getUserPermissions(userId);
 
@@ -176,9 +160,6 @@ class PermissionManager {
     return false;
   }
 
-  /**
-   * Check if user can access a specific host
-   */
   async canAccessHost(
     userId: string,
     hostId: number,
@@ -228,6 +209,20 @@ class PermissionManager {
 
       if (sharedAccess.length > 0) {
         const access = sharedAccess[0];
+
+        const hostOwnerCheck = await db
+          .select({ ownerId: sshData.userId })
+          .from(sshData)
+          .where(eq(sshData.id, hostId))
+          .limit(1);
+
+        if (hostOwnerCheck.length > 0 && hostOwnerCheck[0].ownerId === userId) {
+          return {
+            hasAccess: true,
+            isOwner: true,
+            isShared: false,
+          };
+        }
 
         if (action === "write" || action === "delete") {
           return {
@@ -282,9 +277,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Check if user is admin (backward compatibility)
-   */
   async isAdmin(userId: string): Promise<boolean> {
     try {
       const user = await db
@@ -318,9 +310,6 @@ class PermissionManager {
     }
   }
 
-  /**
-   * Middleware: Require specific permission
-   */
   requirePermission(permission: string) {
     return async (
       req: AuthenticatedRequest,
@@ -353,9 +342,6 @@ class PermissionManager {
     };
   }
 
-  /**
-   * Middleware: Require host access
-   */
   requireHostAccess(
     hostIdParam: string = "id",
     action: "read" | "write" | "execute" | "delete" | "share" = "read",
@@ -371,7 +357,10 @@ class PermissionManager {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const hostId = parseInt(req.params[hostIdParam], 10);
+      const hostIdValue = Array.isArray(req.params[hostIdParam])
+        ? req.params[hostIdParam][0]
+        : req.params[hostIdParam];
+      const hostId = parseInt(hostIdValue, 10);
 
       if (isNaN(hostId)) {
         return res.status(400).json({ error: "Invalid host ID" });
@@ -400,9 +389,6 @@ class PermissionManager {
     };
   }
 
-  /**
-   * Middleware: Require admin role (backward compatible)
-   */
   requireAdmin() {
     return async (
       req: AuthenticatedRequest,

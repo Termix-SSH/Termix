@@ -1,9 +1,14 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { getDb } from "./database/db/index.js";
-import { recentActivity, sshData, hostAccess } from "./database/db/schema.js";
-import { eq, and, desc, or } from "drizzle-orm";
+import { getDb, DatabaseSaveTrigger } from "./database/db/index.js";
+import {
+  recentActivity,
+  sshData,
+  hostAccess,
+  dashboardPreferences,
+} from "./database/db/schema.js";
+import { eq, and, desc, or, sql } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -58,6 +63,31 @@ app.use(express.json({ limit: "1mb" }));
 
 app.use(authManager.createAuthMiddleware());
 
+/**
+ * @openapi
+ * /uptime:
+ *   get:
+ *     summary: Get server uptime
+ *     description: Returns the uptime of the server in various formats.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Server uptime information.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uptimeMs:
+ *                   type: number
+ *                 uptimeSeconds:
+ *                   type: number
+ *                 formatted:
+ *                   type: string
+ *       500:
+ *         description: Failed to get uptime.
+ */
 app.get("/uptime", async (req, res) => {
   try {
     const uptimeMs = Date.now() - serverStartTime;
@@ -77,6 +107,28 @@ app.get("/uptime", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/recent:
+ *   get:
+ *     summary: Get recent activity
+ *     description: Fetches the most recent activities for the authenticated user.
+ *     tags:
+ *       - Dashboard
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The maximum number of activities to return.
+ *     responses:
+ *       200:
+ *         description: A list of recent activities.
+ *       401:
+ *         description: Session expired.
+ *       500:
+ *         description: Failed to get recent activity.
+ */
 app.get("/activity/recent", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -108,6 +160,40 @@ app.get("/activity/recent", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/log:
+ *   post:
+ *     summary: Log a new activity
+ *     description: Logs a new user activity, such as accessing a terminal or file manager. This endpoint is rate-limited.
+ *     tags:
+ *       - Dashboard
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [terminal, file_manager, server_stats, tunnel, docker]
+ *               hostId:
+ *                 type: integer
+ *               hostName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Activity logged successfully or rate-limited.
+ *       400:
+ *         description: Invalid request body.
+ *       401:
+ *         description: Session expired.
+ *       404:
+ *         description: Host not found or access denied.
+ *       500:
+ *         description: Failed to log activity.
+ */
 app.post("/activity/log", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -224,6 +310,22 @@ app.post("/activity/log", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /activity/reset:
+ *   delete:
+ *     summary: Reset recent activity
+ *     description: Clears all recent activity for the authenticated user.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Recent activity cleared.
+ *       401:
+ *         description: Session expired.
+ *       500:
+ *         description: Failed to reset activity.
+ */
 app.delete("/activity/reset", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -250,6 +352,160 @@ app.delete("/activity/reset", async (req, res) => {
   } catch (err) {
     dashboardLogger.error("Failed to reset activity", err);
     res.status(500).json({ error: "Failed to reset activity" });
+  }
+});
+
+/**
+ * @openapi
+ * /dashboard/preferences:
+ *   get:
+ *     summary: Get dashboard layout preferences
+ *     description: Returns the user's customized dashboard layout settings. If no preferences exist, returns default layout.
+ *     tags:
+ *       - Dashboard
+ *     responses:
+ *       200:
+ *         description: Dashboard preferences retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       enabled:
+ *                         type: boolean
+ *                       order:
+ *                         type: integer
+ *       401:
+ *         description: Session expired
+ *       500:
+ *         description: Failed to get preferences
+ */
+app.get("/dashboard/preferences", async (req, res) => {
+  try {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const preferences = await getDb()
+      .select()
+      .from(dashboardPreferences)
+      .where(eq(dashboardPreferences.userId, userId));
+
+    if (preferences.length === 0) {
+      const defaultLayout = {
+        cards: [
+          { id: "server_overview", enabled: true, order: 1 },
+          { id: "recent_activity", enabled: true, order: 2 },
+          { id: "network_graph", enabled: false, order: 3 },
+          { id: "quick_actions", enabled: true, order: 4 },
+          { id: "server_stats", enabled: true, order: 5 },
+        ],
+      };
+      return res.json(defaultLayout);
+    }
+
+    const layout = JSON.parse(preferences[0].layout as string);
+    res.json(layout);
+  } catch (err) {
+    dashboardLogger.error("Failed to get dashboard preferences", err);
+    res.status(500).json({ error: "Failed to get dashboard preferences" });
+  }
+});
+
+/**
+ * @openapi
+ * /dashboard/preferences:
+ *   post:
+ *     summary: Save dashboard layout preferences
+ *     description: Saves or updates the user's customized dashboard layout settings.
+ *     tags:
+ *       - Dashboard
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cards:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     enabled:
+ *                       type: boolean
+ *                     order:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Preferences saved successfully
+ *       400:
+ *         description: Invalid request body
+ *       401:
+ *         description: Session expired
+ *       500:
+ *         description: Failed to save preferences
+ */
+app.post("/dashboard/preferences", async (req, res) => {
+  try {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      return res.status(401).json({
+        error: "Session expired - please log in again",
+        code: "SESSION_EXPIRED",
+      });
+    }
+
+    const { cards } = req.body;
+
+    if (!cards || !Array.isArray(cards)) {
+      return res.status(400).json({
+        error: "Invalid request body. Expected { cards: Array }",
+      });
+    }
+
+    const layout = JSON.stringify({ cards });
+
+    const existing = await getDb()
+      .select()
+      .from(dashboardPreferences)
+      .where(eq(dashboardPreferences.userId, userId));
+
+    if (existing.length > 0) {
+      await getDb()
+        .update(dashboardPreferences)
+        .set({ layout, updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(dashboardPreferences.userId, userId));
+    } else {
+      await getDb().insert(dashboardPreferences).values({ userId, layout });
+    }
+
+    await DatabaseSaveTrigger.triggerSave("dashboard_preferences_updated");
+
+    dashboardLogger.success("Dashboard preferences saved", {
+      operation: "save_dashboard_preferences",
+      userId,
+    });
+
+    res.json({ success: true, message: "Dashboard preferences saved" });
+  } catch (err) {
+    dashboardLogger.error("Failed to save dashboard preferences", err);
+    res.status(500).json({ error: "Failed to save dashboard preferences" });
   }
 });
 

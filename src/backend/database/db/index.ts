@@ -585,6 +585,32 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
   addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_terminal_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_file_manager_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_tunnel_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_docker_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "show_server_stats_in_sidebar",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+
   addColumnIfNotExists("ssh_credentials", "private_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
@@ -647,6 +673,54 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create sessions table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite
+      .prepare("SELECT id FROM network_topology LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS network_topology (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          topology TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create network_topology table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite
+      .prepare("SELECT id FROM dashboard_preferences LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS dashboard_preferences (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL UNIQUE,
+          layout TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create dashboard_preferences table", {
         operation: "schema_migration",
         error: createError,
       });

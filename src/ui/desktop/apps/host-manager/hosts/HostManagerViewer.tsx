@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
@@ -16,6 +22,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip.tsx";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
+import {
   getSSHHosts,
   deleteSSHHost,
   bulkImportSSHHosts,
@@ -25,8 +37,11 @@ import {
   getSSHFolders,
   updateFolderMetadata,
   deleteAllHostsInFolder,
-  getServerStatusById,
+  refreshServerPolling,
+  isElectron,
+  getConfiguredServerUrl,
 } from "@/ui/main-axios.ts";
+import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -63,6 +78,7 @@ import {
   Users,
   ArrowDownUp,
   Container,
+  Link,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -72,6 +88,8 @@ import type {
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
 import { FolderEditDialog } from "@/ui/desktop/apps/host-manager/dialogs/FolderEditDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+
+const INITIAL_HOSTS_PER_FOLDER = 12;
 
 export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
@@ -93,9 +111,10 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const [editingFolderAppearance, setEditingFolderAppearance] = useState<
     string | null
   >(null);
-  const [serverStatuses, setServerStatuses] = useState<
-    Map<number, "online" | "offline" | "degraded">
-  >(new Map());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
+  const { getStatus } = useServerStatus();
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -210,74 +229,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     );
   };
 
-  useEffect(() => {
-    if (hosts.length === 0) return;
-
-    const statusIntervals: NodeJS.Timeout[] = [];
-    const statusCancelled: boolean[] = [];
-
-    hosts.forEach((host, index) => {
-      const statsConfig = (() => {
-        try {
-          return host.statsConfig
-            ? JSON.parse(host.statsConfig)
-            : DEFAULT_STATS_CONFIG;
-        } catch {
-          return DEFAULT_STATS_CONFIG;
-        }
-      })();
-
-      const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
-
-      if (!shouldShowStatus) {
-        setServerStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(host.id, "offline");
-          return next;
-        });
-        return;
-      }
-
-      const fetchStatus = async () => {
-        try {
-          const res = await getServerStatusById(host.id);
-          if (!statusCancelled[index]) {
-            setServerStatuses((prev) => {
-              const next = new Map(prev);
-              next.set(
-                host.id,
-                res?.status === "online" ? "online" : "offline",
-              );
-              return next;
-            });
-          }
-        } catch (error: unknown) {
-          if (!statusCancelled[index]) {
-            const err = error as { response?: { status?: number } };
-            let status: "online" | "offline" | "degraded" = "offline";
-            if (err?.response?.status === 504) {
-              status = "degraded";
-            }
-            setServerStatuses((prev) => {
-              const next = new Map(prev);
-              next.set(host.id, status);
-              return next;
-            });
-          }
-        }
-      };
-
-      fetchStatus();
-      const intervalId = setInterval(fetchStatus, 10000);
-      statusIntervals.push(intervalId);
-    });
-
-    return () => {
-      statusCancelled.fill(true);
-      statusIntervals.forEach((interval) => clearInterval(interval));
-    };
-  }, [hosts]);
-
   const getFolderIcon = (folderName: string) => {
     const metadata = folderMetadata.get(folderName);
     if (!metadata?.icon) return Folder;
@@ -313,7 +264,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           await fetchHosts();
           window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
-          const { refreshServerPolling } = await import("@/ui/main-axios.ts");
           refreshServerPolling();
         } catch {
           toast.error(t("hosts.failedToDeleteHost"));
@@ -401,6 +351,44 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
       delete clonedHost.id;
       onEditHost(clonedHost);
     }
+  };
+
+  const copyFullScreenUrl = (host: SSHHost, appType: string) => {
+    const baseUrl = isElectron()
+      ? getConfiguredServerUrl() || window.location.origin
+      : window.location.origin;
+    const url = `${baseUrl}?view=${appType}&hostId=${host.id}`;
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(
+        () => {
+          toast.success(t("hosts.fullScreenUrlCopied"));
+        },
+        () => {
+          fallbackCopyTextToClipboard(url);
+        },
+      );
+    } else {
+      fallbackCopyTextToClipboard(url);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand("copy");
+      toast.success(t("hosts.fullScreenUrlCopied"));
+    } catch (err) {
+      toast.error(t("hosts.failedToCopyUrl"));
+    }
+    document.body.removeChild(textArea);
   };
 
   const handleRemoveFromFolder = async (host: SSHHost) => {
@@ -818,6 +806,31 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     return sortedGrouped;
   }, [filteredAndSortedHosts]);
 
+  const toggleFolderExpansion = useCallback((folderName: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderName)) {
+        next.delete(folderName);
+      } else {
+        next.add(folderName);
+      }
+      return next;
+    });
+  }, []);
+
+  const getVisibleHosts = useCallback(
+    (folderName: string, allHosts: SSHHost[]) => {
+      if (
+        expandedFolders.has(folderName) ||
+        allHosts.length <= INITIAL_HOSTS_PER_FOLDER
+      ) {
+        return allHosts;
+      }
+      return allHosts.slice(0, INITIAL_HOSTS_PER_FOLDER);
+    },
+    [expandedFolders],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -844,16 +857,16 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
 
   if (hosts.length === 0) {
     return (
-      <div className="flex flex-col h-full min-h-0">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
-            <p className="text-muted-foreground">
-              {t("hosts.hostsCount", { count: 0 })}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
+      <TooltipProvider>
+        <div className="flex flex-col h-full min-h-0">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
+              <p className="text-muted-foreground">
+                {t("hosts.hostsCount", { count: 0 })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -868,10 +881,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                     {importing ? t("hosts.importing") : t("hosts.importJson")}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg"
-                >
+                <TooltipContent side="bottom" className="max-w-sm">
                   <div className="space-y-2">
                     <p className="font-semibold text-sm">
                       {t("hosts.importJsonTitle")}
@@ -882,7 +892,93 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                   </div>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadSample}
+              >
+                {t("hosts.downloadSample")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.open("https://docs.termix.site/json-import", "_blank");
+                }}
+              >
+                {t("hosts.formatGuide")}
+              </Button>
+
+              <div className="w-px h-6 bg-border mx-2" />
+
+              <Button onClick={fetchHosts} variant="outline" size="sm">
+                {t("hosts.refresh")}
+              </Button>
+            </div>
+          </div>
+
+          <input
+            id="json-import-input"
+            type="file"
+            accept=".json"
+            onChange={handleJsonImport}
+            className="hidden"
+          />
+
+          <div className="flex items-center justify-center flex-1">
+            <div className="text-center">
+              <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {t("hosts.noHosts")}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {t("hosts.noHostsMessage")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
+            <p className="text-muted-foreground">
+              {t("hosts.hostsCount", { count: filteredAndSortedHosts.length })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="relative"
+                  onClick={() =>
+                    document.getElementById("json-import-input")?.click()
+                  }
+                  disabled={importing}
+                >
+                  {importing ? t("hosts.importing") : t("hosts.importJson")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-sm">
+                <div className="space-y-2">
+                  <p className="font-semibold text-sm">
+                    {t("hosts.importJsonTitle")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("hosts.importJsonDesc")}
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
 
             <Button variant="outline" size="sm" onClick={handleDownloadSample}>
               {t("hosts.downloadSample")}
@@ -914,217 +1010,133 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           className="hidden"
         />
 
-        <div className="flex items-center justify-center flex-1">
-          <div className="text-center">
-            <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t("hosts.noHosts")}</h3>
-            <p className="text-muted-foreground mb-4">
-              {t("hosts.noHostsMessage")}
-            </p>
-          </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("placeholders.searchHosts")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
-          <p className="text-muted-foreground">
-            {t("hosts.hostsCount", { count: filteredAndSortedHosts.length })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="relative"
-                  onClick={() =>
-                    document.getElementById("json-import-input")?.click()
-                  }
-                  disabled={importing}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-2 pb-20">
+            {Object.entries(hostsByFolder).map(([folder, folderHosts]) => (
+              <div
+                key={folder}
+                className={`border rounded-md transition-all duration-200 ${
+                  dragOverFolder === folder
+                    ? "border-blue-500 bg-blue-500/10"
+                    : ""
+                }`}
+                onDragOver={handleDragOver}
+                onDragEnter={(e) => handleDragEnter(e, folder)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, folder)}
+              >
+                <Accordion
+                  type="multiple"
+                  defaultValue={Object.keys(hostsByFolder)}
                 >
-                  {importing ? t("hosts.importing") : t("hosts.importJson")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="bottom"
-                className="max-w-sm bg-popover text-popover-foreground border border-border shadow-lg"
-              >
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm">
-                    {t("hosts.importJsonTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("hosts.importJsonDesc")}
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Button variant="outline" size="sm" onClick={handleDownloadSample}>
-            {t("hosts.downloadSample")}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              window.open("https://docs.termix.site/json-import", "_blank");
-            }}
-          >
-            {t("hosts.formatGuide")}
-          </Button>
-
-          <div className="w-px h-6 bg-border mx-2" />
-
-          <Button onClick={fetchHosts} variant="outline" size="sm">
-            {t("hosts.refresh")}
-          </Button>
-        </div>
-      </div>
-
-      <input
-        id="json-import-input"
-        type="file"
-        accept=".json"
-        onChange={handleJsonImport}
-        className="hidden"
-      />
-
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t("placeholders.searchHosts")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="space-y-2 pb-20">
-          {Object.entries(hostsByFolder).map(([folder, folderHosts]) => (
-            <div
-              key={folder}
-              className={`border rounded-md transition-all duration-200 ${
-                dragOverFolder === folder
-                  ? "border-blue-500 bg-blue-500/10"
-                  : ""
-              }`}
-              onDragOver={handleDragOver}
-              onDragEnter={(e) => handleDragEnter(e, folder)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, folder)}
-            >
-              <Accordion
-                type="multiple"
-                defaultValue={Object.keys(hostsByFolder)}
-              >
-                <AccordionItem value={folder} className="border-none">
-                  <AccordionTrigger className="px-2 py-1 bg-muted/20 border-b hover:no-underline rounded-t-md">
-                    <div className="flex items-center gap-2 flex-1">
-                      {(() => {
-                        const FolderIcon = getFolderIcon(folder);
-                        const folderColor = getFolderColor(folder);
-                        return (
-                          <FolderIcon
-                            className="h-4 w-4"
-                            style={
-                              folderColor ? { color: folderColor } : undefined
-                            }
-                          />
-                        );
-                      })()}
-                      {editingFolder === folder ? (
-                        <div
-                          className="flex items-center gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Input
-                            value={editingFolderName}
-                            onChange={(e) =>
-                              setEditingFolderName(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleFolderRename(folder);
-                              if (e.key === "Escape") cancelFolderEdit();
-                            }}
-                            className="h-6 text-sm px-2 flex-1"
-                            autoFocus
-                            disabled={operationLoading}
-                          />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFolderRename(folder);
-                            }}
-                            className="h-6 w-6 p-0"
-                            disabled={operationLoading}
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cancelFolderEdit();
-                            }}
-                            className="h-6 w-6 p-0"
-                            disabled={operationLoading}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span
-                            className="font-medium cursor-pointer hover:text-blue-400 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (folder !== t("hosts.uncategorized")) {
-                                startFolderEdit(folder);
+                  <AccordionItem value={folder} className="border-none">
+                    <AccordionTrigger className="px-2 py-1 bg-muted/20 border-b hover:no-underline rounded-t-md">
+                      <div className="flex items-center gap-2 flex-1">
+                        {(() => {
+                          const FolderIcon = getFolderIcon(folder);
+                          const folderColor = getFolderColor(folder);
+                          return (
+                            <FolderIcon
+                              className="h-4 w-4"
+                              style={
+                                folderColor ? { color: folderColor } : undefined
                               }
-                            }}
-                            title={
-                              folder !== t("hosts.uncategorized")
-                                ? t("hosts.clickToRenameFolder")
-                                : ""
-                            }
+                            />
+                          );
+                        })()}
+                        {editingFolder === folder ? (
+                          <div
+                            className="flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            {folder}
-                          </span>
-                          {folder !== t("hosts.uncategorized") && (
+                            <Input
+                              value={editingFolderName}
+                              onChange={(e) =>
+                                setEditingFolderName(e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter")
+                                  handleFolderRename(folder);
+                                if (e.key === "Escape") cancelFolderEdit();
+                              }}
+                              className="h-6 text-sm px-2 flex-1"
+                              autoFocus
+                              disabled={operationLoading}
+                            />
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                startFolderEdit(folder);
+                                handleFolderRename(folder);
                               }}
-                              className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
-                              title={t("hosts.renameFolder")}
+                              className="h-6 w-6 p-0"
+                              disabled={operationLoading}
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Check className="h-3 w-3" />
                             </Button>
-                          )}
-                        </>
-                      )}
-                      <Badge variant="secondary" className="text-xs">
-                        {folderHosts.length}
-                      </Badge>
-                      {folder !== t("hosts.uncategorized") && (
-                        <div className="flex items-center gap-1 ml-auto">
-                          <TooltipProvider>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelFolderEdit();
+                              }}
+                              className="h-6 w-6 p-0"
+                              disabled={operationLoading}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <span
+                              className="font-medium cursor-pointer hover:text-blue-400 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (folder !== t("hosts.uncategorized")) {
+                                  startFolderEdit(folder);
+                                }
+                              }}
+                              title={
+                                folder !== t("hosts.uncategorized")
+                                  ? t("hosts.clickToRenameFolder")
+                                  : ""
+                              }
+                            >
+                              {folder}
+                            </span>
+                            {folder !== t("hosts.uncategorized") && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startFolderEdit(folder);
+                                }}
+                                className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
+                                title={t("hosts.renameFolder")}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {folderHosts.length}
+                        </Badge>
+                        {folder !== t("hosts.uncategorized") && (
+                          <div className="flex items-center gap-1 ml-auto">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1143,8 +1155,6 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 {t("hosts.editFolderAppearance")}
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1163,16 +1173,14 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                 {t("hosts.deleteAllHostsInFolder")}
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {folderHosts.map((host) => (
-                        <TooltipProvider key={host.id}>
-                          <Tooltip>
+                          </div>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {getVisibleHosts(folder, folderHosts).map((host) => (
+                          <Tooltip key={host.id}>
                             <TooltipTrigger asChild>
                               <div
                                 draggable
@@ -1201,9 +1209,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                         const shouldShowStatus =
                                           statsConfig.statusCheckEnabled !==
                                           false;
-                                        const serverStatus =
-                                          serverStatuses.get(host.id) ||
-                                          "degraded";
+                                        const serverStatus = getStatus(host.id);
 
                                         return shouldShowStatus ? (
                                           <Status
@@ -1350,6 +1356,99 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                                             <p>{t("hosts.cloneHostTooltip")}</p>
                                           </TooltipContent>
                                         </Tooltip>
+                                        <DropdownMenu>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                  }}
+                                                  className="h-5 w-5 p-0 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-500/10"
+                                                >
+                                                  <Link className="h-3 w-3" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>
+                                                {t("hosts.copyFullScreenUrl")}
+                                              </p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <DropdownMenuContent align="end">
+                                            {host.enableTerminal && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "terminal",
+                                                  );
+                                                }}
+                                              >
+                                                <Terminal className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyTerminalUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            {host.enableFileManager && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "file-manager",
+                                                  );
+                                                }}
+                                              >
+                                                <FolderOpen className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyFileManagerUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            {host.enableTunnel && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "tunnel",
+                                                  );
+                                                }}
+                                              >
+                                                <ArrowDownUp className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyTunnelUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyFullScreenUrl(
+                                                  host,
+                                                  "server-stats",
+                                                );
+                                              }}
+                                            >
+                                              <Server className="h-4 w-4 mr-2" />
+                                              {t("hosts.copyServerStatsUrl")}
+                                            </DropdownMenuItem>
+                                            {host.enableDocker && (
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  copyFullScreenUrl(
+                                                    host,
+                                                    "docker",
+                                                  );
+                                                }}
+                                              >
+                                                <Container className="h-4 w-4 mr-2" />
+                                                {t("hosts.copyDockerUrl")}
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </>
                                     )}
                                   </div>
@@ -1575,36 +1674,54 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
                               </div>
                             </TooltipContent>
                           </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+                        ))}
+                      </div>
+                      {folderHosts.length > INITIAL_HOSTS_PER_FOLDER && (
+                        <div className="flex justify-center mt-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleFolderExpansion(folder)}
+                            className="text-xs"
+                          >
+                            {expandedFolders.has(folder)
+                              ? t("common.showLess")
+                              : t("common.showMore", {
+                                  count:
+                                    folderHosts.length -
+                                    INITIAL_HOSTS_PER_FOLDER,
+                                })}
+                          </Button>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
 
-      {editingFolderAppearance && (
-        <FolderEditDialog
-          folderName={editingFolderAppearance}
-          currentColor={getFolderColor(editingFolderAppearance)}
-          currentIcon={folderMetadata.get(editingFolderAppearance)?.icon}
-          open={editingFolderAppearance !== null}
-          onOpenChange={(open) => {
-            if (!open) setEditingFolderAppearance(null);
-          }}
-          onSave={async (color, icon) => {
-            await handleSaveFolderAppearance(
-              editingFolderAppearance,
-              color,
-              icon,
-            );
-            setEditingFolderAppearance(null);
-          }}
-        />
-      )}
-    </div>
+        {editingFolderAppearance && (
+          <FolderEditDialog
+            folderName={editingFolderAppearance}
+            currentColor={getFolderColor(editingFolderAppearance)}
+            currentIcon={folderMetadata.get(editingFolderAppearance)?.icon}
+            open={editingFolderAppearance !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditingFolderAppearance(null);
+            }}
+            onSave={async (color, icon) => {
+              await handleSaveFolderAppearance(
+                editingFolderAppearance,
+                color,
+                icon,
+              );
+              setEditingFolderAppearance(null);
+            }}
+          />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

@@ -8,6 +8,36 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
+import HostManagerApp from "./ui/desktop/apps/HostManagerApp.tsx";
+import TerminalApp from "./ui/desktop/apps/features/terminal/TerminalApp.tsx";
+import FileManagerApp from "./ui/desktop/apps/features/file-manager/FileManagerApp.tsx";
+import TunnelApp from "./ui/desktop/apps/features/tunnel/TunnelApp.tsx";
+import ServerStatsApp from "./ui/desktop/apps/features/server-stats/ServerStatsApp.tsx";
+import DockerApp from "./ui/desktop/apps/features/docker/DockerApp.tsx";
+
+const FullscreenApp: React.FC = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const view = searchParams.get("view");
+  const hostId = searchParams.get("hostId");
+
+  switch (view) {
+    case "host-manager":
+      return <HostManagerApp />;
+    case "terminal":
+      return <TerminalApp hostId={hostId || undefined} />;
+    case "file-manager":
+      return <FileManagerApp hostId={hostId || undefined} />;
+    case "tunnel":
+      return <TunnelApp hostId={hostId || undefined} />;
+    case "server-stats":
+      return <ServerStatsApp hostId={hostId || undefined} />;
+    case "docker":
+      return <DockerApp hostId={hostId || undefined} />;
+    default:
+      return <DesktopApp />;
+  }
+};
+import { useServiceWorker } from "@/hooks/use-service-worker";
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -58,11 +88,20 @@ function RootApp() {
   const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
+  useServiceWorker();
+
   const userAgent =
     navigator.userAgent || navigator.vendor || (window as any).opera || "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const isFullscreen = searchParams.has("view");
+
   const renderApp = () => {
+    if (isFullscreen) {
+      return <FullscreenApp />;
+    }
+
     if (isElectron()) {
       return <DesktopApp />;
     }
@@ -76,25 +115,27 @@ function RootApp() {
 
   return (
     <>
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundColor: "var(--bg-base)",
-          backgroundImage: `linear-gradient(
-            135deg,
-            transparent 0%,
-            transparent 49%,
-            rgba(128, 128, 128, 0.03) 49%,
-            rgba(128, 128, 128, 0.03) 51%,
-            transparent 51%,
-            transparent 100%
-          )`,
-          backgroundSize: "80px 80px",
-          zIndex: 0,
-        }}
-      />
+      {!isFullscreen && (
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundColor: "var(--bg-base)",
+            backgroundImage: `linear-gradient(
+              135deg,
+              transparent 0%,
+              transparent 49%,
+              rgba(128, 128, 128, 0.03) 49%,
+              rgba(128, 128, 128, 0.03) 51%,
+              transparent 51%,
+              transparent 100%
+            )`,
+            backgroundSize: "80px 80px",
+            zIndex: 0,
+          }}
+        />
+      )}
       <div className="relative min-h-screen" style={{ zIndex: 1 }}>
-        {isElectron() && showVersionCheck ? (
+        {isElectron() && showVersionCheck && !isFullscreen ? (
           <ElectronVersionCheck
             onContinue={() => setShowVersionCheck(false)}
             isAuthenticated={false}

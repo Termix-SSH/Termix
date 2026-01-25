@@ -18,18 +18,17 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getServerStatusById } from "@/ui/main-axios";
+import { getSSHHosts } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
+import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
+import { cn } from "@/lib/utils.ts";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
   const [host, setHost] = useState(initialHost);
   const { t } = useTranslation();
-  const [serverStatus, setServerStatus] = useState<
-    "online" | "offline" | "degraded"
-  >("degraded");
   const [showTags, setShowTags] = useState<boolean>(() => {
     const saved = localStorage.getItem("showHostTags");
     return saved !== null ? saved === "true" : true;
@@ -47,7 +46,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
 
   useEffect(() => {
     const handleHostsChanged = async () => {
-      const { getSSHHosts } = await import("@/ui/main-axios.ts");
       const hosts = await getSSHHosts();
       const updatedHost = hosts.find((h) => h.id === host.id);
       if (updatedHost) {
@@ -84,6 +82,9 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
+  // Use shared status context instead of individual polling
+  const serverStatus = useHostStatus(host.id, shouldShowStatus);
+
   const hasTunnelConnections = useMemo(() => {
     if (!host.tunnelConnections) return false;
     try {
@@ -96,48 +97,19 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     }
   }, [host.tunnelConnections]);
 
-  useEffect(() => {
-    if (!shouldShowStatus) {
-      setServerStatus("offline");
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchStatus = async () => {
-      try {
-        const res = await getServerStatusById(host.id);
-        if (!cancelled) {
-          setServerStatus(res?.status === "online" ? "online" : "offline");
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          const err = error as { response?: { status?: number } };
-          if (err?.response?.status === 503) {
-            setServerStatus("offline");
-          } else if (err?.response?.status === 504) {
-            setServerStatus("degraded");
-          } else if (err?.response?.status === 404) {
-            setServerStatus("offline");
-          } else {
-            setServerStatus("offline");
-          }
-        }
-      }
-    };
-
-    fetchStatus();
-    const intervalId = window.setInterval(fetchStatus, 10000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
-    };
-  }, [host.id, shouldShowStatus]);
-
   const handleTerminalClick = () => {
     addTab({ type: "terminal", title, hostConfig: host });
   };
+
+  const visibleButtons = [
+    host.enableTerminal && (host.showTerminalInSidebar ?? true),
+    host.enableFileManager && (host.showFileManagerInSidebar ?? false),
+    host.enableTunnel &&
+      hasTunnelConnections &&
+      (host.showTunnelInSidebar ?? false),
+    host.enableDocker && (host.showDockerInSidebar ?? false),
+    shouldShowMetrics && (host.showServerStatsInSidebar ?? false),
+  ].filter(Boolean).length;
 
   return (
     <div>
@@ -156,7 +128,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
         </p>
 
         <ButtonGroup className="flex-shrink-0">
-          {host.enableTerminal && (
+          {host.enableTerminal && (host.showTerminalInSidebar ?? true) && (
             <Button
               variant="outline"
               className="!px-2 border-1 border-edge"
@@ -166,13 +138,65 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             </Button>
           )}
 
+          {host.enableFileManager &&
+            (host.showFileManagerInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "file_manager", title, hostConfig: host })
+                }
+              >
+                <FolderOpen />
+              </Button>
+            )}
+
+          {host.enableTunnel &&
+            hasTunnelConnections &&
+            (host.showTunnelInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "tunnel", title, hostConfig: host })
+                }
+              >
+                <ArrowDownUp />
+              </Button>
+            )}
+
+          {host.enableDocker && (host.showDockerInSidebar ?? false) && (
+            <Button
+              variant="outline"
+              className="!px-2 border-1 border-edge"
+              onClick={() =>
+                addTab({ type: "docker", title, hostConfig: host })
+              }
+            >
+              <Container />
+            </Button>
+          )}
+
+          {shouldShowMetrics && (host.showServerStatsInSidebar ?? false) && (
+            <Button
+              variant="outline"
+              className="!px-2 border-1 border-edge"
+              onClick={() =>
+                addTab({ type: "server_stats", title, hostConfig: host })
+              }
+            >
+              <Server />
+            </Button>
+          )}
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className={`!px-2 border-1 border-edge ${
-                  host.enableTerminal ? "rounded-tl-none rounded-bl-none" : ""
-                }`}
+                className={cn(
+                  "!px-2 border-1 border-edge",
+                  visibleButtons > 0 && "rounded-l-none border-l-0",
+                )}
               >
                 <EllipsisVertical />
               </Button>
@@ -183,40 +207,53 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               side="right"
               className="w-56 bg-canvas border-edge text-foreground"
             >
-              {shouldShowMetrics && (
+              {host.enableTerminal && !(host.showTerminalInSidebar ?? true) && (
                 <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "server_stats", title, hostConfig: host })
-                  }
+                  onClick={handleTerminalClick}
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
-                  <Server className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openServerStats")}</span>
+                  <Terminal className="h-4 w-4" />
+                  <span className="flex-1">{t("hosts.openTerminal")}</span>
                 </DropdownMenuItem>
               )}
-              {host.enableFileManager && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "file_manager", title, hostConfig: host })
-                  }
-                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openFileManager")}</span>
-                </DropdownMenuItem>
-              )}
-              {host.enableTunnel && hasTunnelConnections && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "tunnel", title, hostConfig: host })
-                  }
-                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                >
-                  <ArrowDownUp className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openTunnels")}</span>
-                </DropdownMenuItem>
-              )}
-              {host.enableDocker && (
+              {shouldShowMetrics &&
+                !(host.showServerStatsInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "server_stats", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <Server className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openServerStats")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableFileManager &&
+                !(host.showFileManagerInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "file_manager", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openFileManager")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableTunnel &&
+                hasTunnelConnections &&
+                !(host.showTunnelInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "tunnel", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openTunnels")}</span>
+                  </DropdownMenuItem>
+                )}
+              {host.enableDocker && !(host.showDockerInSidebar ?? false) && (
                 <DropdownMenuItem
                   onClick={() =>
                     addTab({ type: "docker", title, hostConfig: host })

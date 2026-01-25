@@ -52,6 +52,7 @@ import {
   getHostAccess,
   revokeHostAccess,
   getSSHHostById,
+  notifyHostCreatedOrUpdated,
   type Role,
   type AccessRecord,
 } from "@/ui/main-axios.ts";
@@ -292,9 +293,18 @@ export function HostManagerEditor({
       tunnelConnections: z
         .array(
           z.object({
+            tunnelType: z
+              .enum(["local", "remote"])
+              .default("remote")
+              .optional(),
             sourcePort: z.coerce.number().min(1).max(65535),
             endpointPort: z.coerce.number().min(1).max(65535),
             endpointHost: z.string().min(1),
+            endpointPassword: z.string().optional(),
+            endpointKey: z.string().optional(),
+            endpointKeyPassword: z.string().optional(),
+            endpointAuthType: z.string().optional(),
+            endpointKeyType: z.string().optional(),
             maxRetries: z.coerce.number().min(0).max(100).default(3),
             retryInterval: z.coerce.number().min(1).max(3600).default(10),
             autoStart: z.boolean().default(false),
@@ -316,6 +326,8 @@ export function HostManagerEditor({
                 "processes",
                 "system",
                 "login_stats",
+                "ports",
+                "firewall",
               ]),
             )
             .default([
@@ -326,6 +338,8 @@ export function HostManagerEditor({
               "uptime",
               "system",
               "login_stats",
+              "ports",
+              "firewall",
             ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
@@ -341,6 +355,8 @@ export function HostManagerEditor({
             "uptime",
             "system",
             "login_stats",
+            "ports",
+            "firewall",
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
@@ -411,6 +427,11 @@ export function HostManagerEditor({
         )
         .optional(),
       enableDocker: z.boolean().default(false),
+      showTerminalInSidebar: z.boolean().default(true),
+      showFileManagerInSidebar: z.boolean().default(false),
+      showTunnelInSidebar: z.boolean().default(false),
+      showDockerInSidebar: z.boolean().default(false),
+      showServerStatsInSidebar: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
       if (data.authType === "none") {
@@ -493,6 +514,11 @@ export function HostManagerEditor({
       enableTerminal: true,
       enableTunnel: true,
       enableFileManager: true,
+      showTerminalInSidebar: true,
+      showFileManagerInSidebar: false,
+      showTunnelInSidebar: false,
+      showDockerInSidebar: false,
+      showServerStatsInSidebar: false,
       defaultPath: "/",
       tunnelConnections: [],
       jumpHosts: [],
@@ -635,7 +661,10 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
-          ? cleanedHost.tunnelConnections
+          ? cleanedHost.tunnelConnections.map((conn: any) => ({
+              ...conn,
+              tunnelType: conn.tunnelType || "remote",
+            }))
           : [],
         jumpHosts: Array.isArray(cleanedHost.jumpHosts)
           ? cleanedHost.jumpHosts
@@ -652,6 +681,13 @@ export function HostManagerEditor({
           )
             ? cleanedHost.terminalConfig.environmentVariables
             : [],
+          sudoPassword:
+            cleanedHost.sudoPassword ||
+            cleanedHost.terminalConfig?.sudoPassword ||
+            "",
+          sudoPasswordAutoFill:
+            cleanedHost.terminalConfig?.sudoPasswordAutoFill ??
+            Boolean(cleanedHost.sudoPassword),
         },
         forceKeyboardInteractive: Boolean(cleanedHost.forceKeyboardInteractive),
         notes: cleanedHost.notes || "",
@@ -664,6 +700,11 @@ export function HostManagerEditor({
           ? cleanedHost.socks5ProxyChain
           : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
+        showTerminalInSidebar: cleanedHost.showTerminalInSidebar ?? true,
+        showFileManagerInSidebar: cleanedHost.showFileManagerInSidebar ?? false,
+        showTunnelInSidebar: cleanedHost.showTunnelInSidebar ?? false,
+        showDockerInSidebar: cleanedHost.showDockerInSidebar ?? false,
+        showServerStatsInSidebar: cleanedHost.showServerStatsInSidebar ?? false,
       };
 
       if (
@@ -724,6 +765,11 @@ export function HostManagerEditor({
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
         enableDocker: false,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: false,
+        showTunnelInSidebar: false,
+        showDockerInSidebar: false,
+        showServerStatsInSidebar: false,
       };
 
       form.reset(defaultFormData as FormData);
@@ -753,6 +799,13 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
+
+      if (
+        data.terminalConfig?.sudoPasswordAutoFill &&
+        data.terminalConfig?.sudoPassword
+      ) {
+        submitData.sudoPassword = data.terminalConfig.sudoPassword;
+      }
 
       if (data.authType !== "credential") {
         submitData.credentialId = undefined;
@@ -819,8 +872,6 @@ export function HostManagerEditor({
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
 
       if (savedHost?.id) {
-        const { notifyHostCreatedOrUpdated } =
-          await import("@/ui/main-axios.ts");
         notifyHostCreatedOrUpdated(savedHost.id);
       }
     } catch (error) {
@@ -1068,7 +1119,6 @@ export function HostManagerEditor({
         }
         backgroundColor="var(--bg-base)"
       />
-
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, handleFormError)}
@@ -1203,12 +1253,12 @@ export function HostManagerEditor({
           </ScrollArea>
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
-            {!editingHost?.isShared && (
+            {!editingHost?.isShared && !isSubmitting && (
               <Button
                 className="translate-y-2"
                 type="submit"
                 variant="outline"
-                disabled={!isFormValid || isSubmitting}
+                disabled={!isFormValid}
               >
                 {editingHost
                   ? editingHost.id
