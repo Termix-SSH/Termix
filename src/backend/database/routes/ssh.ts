@@ -35,6 +35,7 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
+import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 
 const router = express.Router();
 
@@ -53,6 +54,22 @@ const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
+/**
+ * @openapi
+ * /ssh/db/host/internal:
+ *   get:
+ *     summary: Get internal SSH host data
+ *     description: Returns internal SSH host data for autostart tunnels. Requires internal auth token.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: A list of autostart hosts.
+ *       403:
+ *         description: Forbidden.
+ *       500:
+ *         description: Failed to fetch autostart SSH data.
+ */
 router.get("/db/host/internal", async (req: Request, res: Response) => {
   try {
     const internalToken = req.headers["x-internal-auth-token"];
@@ -123,6 +140,11 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           pin: !!host.pin,
           enableTerminal: !!host.enableTerminal,
           enableFileManager: !!host.enableFileManager,
+          showTerminalInSidebar: !!host.showTerminalInSidebar,
+          showFileManagerInSidebar: !!host.showFileManagerInSidebar,
+          showTunnelInSidebar: !!host.showTunnelInSidebar,
+          showDockerInSidebar: !!host.showDockerInSidebar,
+          showServerStatsInSidebar: !!host.showServerStatsInSidebar,
           tags: ["autostart"],
         };
       })
@@ -135,6 +157,22 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @openapi
+ * /ssh/db/host/internal/all:
+ *   get:
+ *     summary: Get all internal SSH host data
+ *     description: Returns all internal SSH host data. Requires internal auth token.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: A list of all hosts.
+ *       401:
+ *         description: Invalid or missing internal authentication token.
+ *       500:
+ *         description: Failed to fetch all hosts.
+ */
 router.get("/db/host/internal/all", async (req: Request, res: Response) => {
   try {
     const internalToken = req.headers["x-internal-auth-token"];
@@ -181,6 +219,11 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         pin: !!host.pin,
         enableTerminal: !!host.enableTerminal,
         enableFileManager: !!host.enableFileManager,
+        showTerminalInSidebar: !!host.showTerminalInSidebar,
+        showFileManagerInSidebar: !!host.showFileManagerInSidebar,
+        showTunnelInSidebar: !!host.showTunnelInSidebar,
+        showDockerInSidebar: !!host.showDockerInSidebar,
+        showServerStatsInSidebar: !!host.showServerStatsInSidebar,
         defaultPath: host.defaultPath,
         createdAt: host.createdAt,
         updatedAt: host.updatedAt,
@@ -194,8 +237,22 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
   }
 });
 
-// Route: Create SSH data (requires JWT)
-// POST /ssh/host
+/**
+ * @openapi
+ * /ssh/db/host:
+ *   post:
+ *     summary: Create SSH host
+ *     description: Creates a new SSH host configuration.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: Host created successfully.
+ *       400:
+ *         description: Invalid SSH data.
+ *       500:
+ *         description: Failed to save SSH data.
+ */
 router.post(
   "/db/host",
   authenticateJWT,
@@ -252,6 +309,11 @@ router.post(
       enableTunnel,
       enableFileManager,
       enableDocker,
+      showTerminalInSidebar,
+      showFileManagerInSidebar,
+      showTunnelInSidebar,
+      showDockerInSidebar,
+      showServerStatsInSidebar,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -308,6 +370,11 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
+      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
+      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
+      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
+      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
+      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
@@ -330,6 +397,39 @@ router.post(
       sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
+      if (key && typeof key === "string") {
+        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+          sshLogger.warn("Invalid SSH key format provided", {
+            operation: "host_create",
+            userId,
+            name,
+            ip,
+            port,
+          });
+          return res.status(400).json({
+            error: "Invalid SSH key format. Key must be in PEM format.",
+          });
+        }
+
+        const keyValidation = parseSSHKey(
+          key,
+          typeof keyPassword === "string" ? keyPassword : undefined,
+        );
+        if (!keyValidation.success) {
+          sshLogger.warn("SSH key validation failed", {
+            operation: "host_create",
+            userId,
+            name,
+            ip,
+            port,
+            error: keyValidation.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyValidation.error || "Unable to parse key"}`,
+          });
+        }
+      }
+
       sshDataObj.key = key || null;
       sshDataObj.key_password = keyPassword || null;
       sshDataObj.keyType = keyType;
@@ -380,6 +480,11 @@ router.post(
           : [],
         enableFileManager: !!createdHost.enableFileManager,
         enableDocker: !!createdHost.enableDocker,
+        showTerminalInSidebar: !!createdHost.showTerminalInSidebar,
+        showFileManagerInSidebar: !!createdHost.showFileManagerInSidebar,
+        showTunnelInSidebar: !!createdHost.showTunnelInSidebar,
+        showDockerInSidebar: !!createdHost.showDockerInSidebar,
+        showServerStatsInSidebar: !!createdHost.showServerStatsInSidebar,
         statsConfig: createdHost.statsConfig
           ? JSON.parse(createdHost.statsConfig as string)
           : undefined,
@@ -438,15 +543,230 @@ router.post(
   },
 );
 
-// Route: Update SSH data (requires JWT)
-// PUT /ssh/host/:id
+/**
+ * @openapi
+ * /ssh/quick-connect:
+ *   post:
+ *     summary: Create a temporary SSH connection without saving to database
+ *     description: Returns a temporary host configuration for immediate use
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ip
+ *               - port
+ *               - username
+ *               - authType
+ *             properties:
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP or hostname
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, credential]
+ *                 description: Authentication method
+ *               password:
+ *                 type: string
+ *                 description: Password (required if authType is password)
+ *               key:
+ *                 type: string
+ *                 description: SSH private key (required if authType is key)
+ *               keyPassword:
+ *                 type: string
+ *                 description: SSH key password (optional)
+ *               keyType:
+ *                 type: string
+ *                 description: SSH key type
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID (required if authType is credential)
+ *               overrideCredentialUsername:
+ *                 type: boolean
+ *                 description: Use provided username instead of credential username
+ *     responses:
+ *       200:
+ *         description: Temporary host configuration created successfully
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Credential not found
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  "/quick-connect",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const {
+      ip,
+      port,
+      username,
+      authType,
+      password,
+      key,
+      keyPassword,
+      keyType,
+      credentialId,
+      overrideCredentialUsername,
+    } = req.body;
+
+    if (
+      !isNonEmptyString(ip) ||
+      !isValidPort(port) ||
+      !isNonEmptyString(username) ||
+      !authType
+    ) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+      let resolvedPassword = password;
+      let resolvedKey = key;
+      let resolvedKeyPassword = keyPassword;
+      let resolvedKeyType = keyType;
+      let resolvedAuthType = authType;
+      let resolvedUsername = username;
+
+      if (authType === "credential" && credentialId) {
+        const credentials = await SimpleDBOps.select(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            ),
+          "ssh_credentials",
+          userId,
+        );
+
+        if (!credentials || credentials.length === 0) {
+          return res.status(404).json({ error: "Credential not found" });
+        }
+
+        const cred = credentials[0];
+
+        resolvedPassword = cred.password as string | undefined;
+        resolvedKey = (cred.private_key || cred.privateKey || cred.key) as
+          | string
+          | undefined;
+        resolvedKeyPassword = (cred.key_password || cred.keyPassword) as
+          | string
+          | undefined;
+        resolvedKeyType = (cred.key_type || cred.keyType) as string | undefined;
+        resolvedAuthType = (cred.auth_type || cred.authType) as
+          | string
+          | undefined;
+
+        if (!overrideCredentialUsername) {
+          resolvedUsername = cred.username as string;
+        }
+      }
+
+      const tempHost: Record<string, unknown> = {
+        id: -Date.now(),
+        userId: userId,
+        name: `${resolvedUsername}@${ip}:${port}`,
+        ip,
+        port: Number(port),
+        username: resolvedUsername,
+        folder: "",
+        tags: [],
+        pin: false,
+        authType: resolvedAuthType || authType,
+        password: resolvedPassword,
+        key: resolvedKey,
+        keyPassword: resolvedKeyPassword,
+        keyType: resolvedKeyType,
+        enableTerminal: true,
+        enableTunnel: false,
+        enableFileManager: true,
+        enableDocker: false,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: false,
+        showTunnelInSidebar: false,
+        showDockerInSidebar: false,
+        showServerStatsInSidebar: false,
+        defaultPath: "/",
+        tunnelConnections: [],
+        jumpHosts: [],
+        quickActions: [],
+        statsConfig: {},
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      return res.status(200).json(tempHost);
+    } catch (error) {
+      sshLogger.error("Quick connect failed", error, {
+        operation: "quick_connect",
+        userId,
+        ip,
+        port,
+        authType,
+      });
+      return res
+        .status(500)
+        .json({ error: "Failed to create quick connection" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/db/host/{id}:
+ *   put:
+ *     summary: Update SSH host
+ *     description: Updates an existing SSH host configuration.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Host updated successfully.
+ *       400:
+ *         description: Invalid SSH data.
+ *       403:
+ *         description: Access denied.
+ *       404:
+ *         description: Host not found.
+ *       500:
+ *         description: Failed to update SSH data.
+ */
 router.put(
   "/db/host/:id",
   authenticateJWT,
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
     let hostData: Record<string, unknown>;
 
@@ -499,6 +819,11 @@ router.put(
       enableTunnel,
       enableFileManager,
       enableDocker,
+      showTerminalInSidebar,
+      showFileManagerInSidebar,
+      showTunnelInSidebar,
+      showDockerInSidebar,
+      showServerStatsInSidebar,
       defaultPath,
       tunnelConnections,
       jumpHosts,
@@ -556,6 +881,11 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
+      showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
+      showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
+      showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
+      showDockerInSidebar: showDockerInSidebar ? 1 : 0,
+      showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
       statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
       terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
@@ -580,7 +910,40 @@ router.put(
       sshDataObj.key_password = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
-      if (key) {
+      if (key && typeof key === "string") {
+        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+          sshLogger.warn("Invalid SSH key format provided", {
+            operation: "host_update",
+            hostId: parseInt(hostId),
+            userId,
+            name,
+            ip,
+            port,
+          });
+          return res.status(400).json({
+            error: "Invalid SSH key format. Key must be in PEM format.",
+          });
+        }
+
+        const keyValidation = parseSSHKey(
+          key,
+          typeof keyPassword === "string" ? keyPassword : undefined,
+        );
+        if (!keyValidation.success) {
+          sshLogger.warn("SSH key validation failed", {
+            operation: "host_update",
+            hostId: parseInt(hostId),
+            userId,
+            name,
+            ip,
+            port,
+            error: keyValidation.error,
+          });
+          return res.status(400).json({
+            error: `Invalid SSH key: ${keyValidation.error || "Unable to parse key"}`,
+          });
+        }
+
         sshDataObj.key = key;
       }
       if (keyPassword !== undefined) {
@@ -723,6 +1086,11 @@ router.put(
           : [],
         enableFileManager: !!updatedHost.enableFileManager,
         enableDocker: !!updatedHost.enableDocker,
+        showTerminalInSidebar: !!updatedHost.showTerminalInSidebar,
+        showFileManagerInSidebar: !!updatedHost.showFileManagerInSidebar,
+        showTunnelInSidebar: !!updatedHost.showTunnelInSidebar,
+        showDockerInSidebar: !!updatedHost.showDockerInSidebar,
+        showServerStatsInSidebar: !!updatedHost.showServerStatsInSidebar,
         statsConfig: updatedHost.statsConfig
           ? JSON.parse(updatedHost.statsConfig as string)
           : undefined,
@@ -785,8 +1153,22 @@ router.put(
   },
 );
 
-// Route: Get SSH data for the authenticated user (requires JWT)
-// GET /ssh/host
+/**
+ * @openapi
+ * /ssh/db/host:
+ *   get:
+ *     summary: Get all SSH hosts
+ *     description: Retrieves all SSH hosts for the authenticated user.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: A list of SSH hosts.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to fetch SSH data.
+ */
 router.get(
   "/db/host",
   authenticateJWT,
@@ -837,6 +1219,7 @@ router.get(
           forceKeyboardInteractive: sshData.forceKeyboardInteractive,
           statsConfig: sshData.statsConfig,
           terminalConfig: sshData.terminalConfig,
+          sudoPassword: sshData.sudoPassword,
           createdAt: sshData.createdAt,
           updatedAt: sshData.updatedAt,
           credentialId: sshData.credentialId,
@@ -844,6 +1227,11 @@ router.get(
           quickActions: sshData.quickActions,
           notes: sshData.notes,
           enableDocker: sshData.enableDocker,
+          showTerminalInSidebar: sshData.showTerminalInSidebar,
+          showFileManagerInSidebar: sshData.showFileManagerInSidebar,
+          showTunnelInSidebar: sshData.showTunnelInSidebar,
+          showDockerInSidebar: sshData.showDockerInSidebar,
+          showServerStatsInSidebar: sshData.showServerStatsInSidebar,
           useSocks5: sshData.useSocks5,
           socks5Host: sshData.socks5Host,
           socks5Port: sshData.socks5Port,
@@ -852,7 +1240,7 @@ router.get(
           socks5ProxyChain: sshData.socks5ProxyChain,
 
           ownerId: sshData.userId,
-          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL`,
+          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${sshData.userId} != ${userId}`,
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
         })
@@ -933,6 +1321,11 @@ router.get(
               : [],
             enableFileManager: !!row.enableFileManager,
             enableDocker: !!row.enableDocker,
+            showTerminalInSidebar: !!row.showTerminalInSidebar,
+            showFileManagerInSidebar: !!row.showFileManagerInSidebar,
+            showTunnelInSidebar: !!row.showTunnelInSidebar,
+            showDockerInSidebar: !!row.showDockerInSidebar,
+            showServerStatsInSidebar: !!row.showServerStatsInSidebar,
             statsConfig: row.statsConfig
               ? JSON.parse(row.statsConfig as string)
               : undefined,
@@ -966,14 +1359,38 @@ router.get(
   },
 );
 
-// Route: Get SSH host by ID (requires JWT)
-// GET /ssh/host/:id
+/**
+ * @openapi
+ * /ssh/db/host/{id}:
+ *   get:
+ *     summary: Get SSH host by ID
+ *     description: Retrieves a specific SSH host by its ID.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The requested SSH host.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       404:
+ *         description: SSH host not found.
+ *       500:
+ *         description: Failed to fetch SSH host.
+ */
 router.get(
   "/db/host/:id",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
@@ -1017,6 +1434,11 @@ router.get(
         jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts) : [],
         quickActions: host.quickActions ? JSON.parse(host.quickActions) : [],
         enableFileManager: !!host.enableFileManager,
+        showTerminalInSidebar: !!host.showTerminalInSidebar,
+        showFileManagerInSidebar: !!host.showFileManagerInSidebar,
+        showTunnelInSidebar: !!host.showTunnelInSidebar,
+        showDockerInSidebar: !!host.showDockerInSidebar,
+        showServerStatsInSidebar: !!host.showServerStatsInSidebar,
         statsConfig: host.statsConfig
           ? JSON.parse(host.statsConfig)
           : undefined,
@@ -1041,14 +1463,38 @@ router.get(
   },
 );
 
-// Route: Export SSH host with decrypted credentials (requires data access)
-// GET /ssh/db/host/:id/export
+/**
+ * @openapi
+ * /ssh/db/host/{id}/export:
+ *   get:
+ *     summary: Export SSH host
+ *     description: Exports a specific SSH host with decrypted credentials.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The exported SSH host.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       404:
+ *         description: SSH host not found.
+ *       500:
+ *         description: Failed to export SSH host.
+ */
 router.get(
   "/db/host/:id/export",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!isNonEmptyString(userId) || !hostId) {
@@ -1121,15 +1567,39 @@ router.get(
   },
 );
 
-// Route: Delete SSH host by id (requires JWT)
-// DELETE /ssh/host/:id
+/**
+ * @openapi
+ * /ssh/db/host/{id}:
+ *   delete:
+ *     summary: Delete SSH host
+ *     description: Deletes an SSH host by its ID.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: SSH host deleted successfully.
+ *       400:
+ *         description: Invalid userId or id.
+ *       404:
+ *         description: SSH host not found.
+ *       500:
+ *         description: Failed to delete SSH host.
+ */
 router.delete(
   "/db/host/:id",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.params.id;
+    const hostId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
     if (!isNonEmptyString(userId) || !hostId) {
       sshLogger.warn("Invalid userId or hostId for SSH host delete", {
@@ -1237,16 +1707,37 @@ router.delete(
   },
 );
 
-// Route: Get recent files (requires JWT)
-// GET /ssh/file_manager/recent
+/**
+ * @openapi
+ * /ssh/file_manager/recent:
+ *   get:
+ *     summary: Get recent files
+ *     description: Retrieves a list of recent files for a specific host.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: query
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of recent files.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       500:
+ *         description: Failed to fetch recent files.
+ */
 router.get(
   "/file_manager/recent",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for recent files fetch");
@@ -1279,8 +1770,35 @@ router.get(
   },
 );
 
-// Route: Add recent file (requires JWT)
-// POST /ssh/file_manager/recent
+/**
+ * @openapi
+ * /ssh/file_manager/recent:
+ *   post:
+ *     summary: Add recent file
+ *     description: Adds a file to the list of recent files for a host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Recent file added.
+ *       400:
+ *         description: Invalid data.
+ *       500:
+ *         description: Failed to add recent file.
+ */
 router.post(
   "/file_manager/recent",
   authenticateJWT,
@@ -1328,8 +1846,33 @@ router.post(
   },
 );
 
-// Route: Remove recent file (requires JWT)
-// DELETE /ssh/file_manager/recent
+/**
+ * @openapi
+ * /ssh/file_manager/recent:
+ *   delete:
+ *     summary: Remove recent file
+ *     description: Removes a file from the list of recent files for a host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Recent file removed.
+ *       400:
+ *         description: Invalid data.
+ *       500:
+ *         description: Failed to remove recent file.
+ */
 router.delete(
   "/file_manager/recent",
   authenticateJWT,
@@ -1361,16 +1904,37 @@ router.delete(
   },
 );
 
-// Route: Get pinned files (requires JWT)
-// GET /ssh/file_manager/pinned
+/**
+ * @openapi
+ * /ssh/file_manager/pinned:
+ *   get:
+ *     summary: Get pinned files
+ *     description: Retrieves a list of pinned files for a specific host.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: query
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of pinned files.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       500:
+ *         description: Failed to fetch pinned files.
+ */
 router.get(
   "/file_manager/pinned",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for pinned files fetch");
@@ -1402,8 +1966,37 @@ router.get(
   },
 );
 
-// Route: Add pinned file (requires JWT)
-// POST /ssh/file_manager/pinned
+/**
+ * @openapi
+ * /ssh/file_manager/pinned:
+ *   post:
+ *     summary: Add pinned file
+ *     description: Adds a file to the list of pinned files for a host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: File pinned.
+ *       400:
+ *         description: Invalid data.
+ *       409:
+ *         description: File already pinned.
+ *       500:
+ *         description: Failed to pin file.
+ */
 router.post(
   "/file_manager/pinned",
   authenticateJWT,
@@ -1448,8 +2041,33 @@ router.post(
   },
 );
 
-// Route: Remove pinned file (requires JWT)
-// DELETE /ssh/file_manager/pinned
+/**
+ * @openapi
+ * /ssh/file_manager/pinned:
+ *   delete:
+ *     summary: Remove pinned file
+ *     description: Removes a file from the list of pinned files for a host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Pinned file removed.
+ *       400:
+ *         description: Invalid data.
+ *       500:
+ *         description: Failed to remove pinned file.
+ */
 router.delete(
   "/file_manager/pinned",
   authenticateJWT,
@@ -1481,16 +2099,37 @@ router.delete(
   },
 );
 
-// Route: Get shortcuts (requires JWT)
-// GET /ssh/file_manager/shortcuts
+/**
+ * @openapi
+ * /ssh/file_manager/shortcuts:
+ *   get:
+ *     summary: Get shortcuts
+ *     description: Retrieves a list of shortcuts for a specific host.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: query
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of shortcuts.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       500:
+ *         description: Failed to fetch shortcuts.
+ */
 router.get(
   "/file_manager/shortcuts",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = req.query.hostId
-      ? parseInt(req.query.hostId as string)
-      : null;
+    const hostIdQuery = Array.isArray(req.query.hostId)
+      ? req.query.hostId[0]
+      : req.query.hostId;
+    const hostId = hostIdQuery ? parseInt(hostIdQuery as string) : null;
 
     if (!isNonEmptyString(userId)) {
       sshLogger.warn("Invalid userId for shortcuts fetch");
@@ -1522,8 +2161,37 @@ router.get(
   },
 );
 
-// Route: Add shortcut (requires JWT)
-// POST /ssh/file_manager/shortcuts
+/**
+ * @openapi
+ * /ssh/file_manager/shortcuts:
+ *   post:
+ *     summary: Add shortcut
+ *     description: Adds a shortcut for a specific host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Shortcut added.
+ *       400:
+ *         description: Invalid data.
+ *       409:
+ *         description: Shortcut already exists.
+ *       500:
+ *         description: Failed to add shortcut.
+ */
 router.post(
   "/file_manager/shortcuts",
   authenticateJWT,
@@ -1568,8 +2236,33 @@ router.post(
   },
 );
 
-// Route: Remove shortcut (requires JWT)
-// DELETE /ssh/file_manager/shortcuts
+/**
+ * @openapi
+ * /ssh/file_manager/shortcuts:
+ *   delete:
+ *     summary: Remove shortcut
+ *     description: Removes a shortcut for a specific host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               path:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Shortcut removed.
+ *       400:
+ *         description: Invalid data.
+ *       500:
+ *         description: Failed to remove shortcut.
+ */
 router.delete(
   "/file_manager/shortcuts",
   authenticateJWT,
@@ -1601,14 +2294,37 @@ router.delete(
   },
 );
 
-// Route: Get command history for a host
-// GET /ssh/command-history/:hostId
+/**
+ * @openapi
+ * /ssh/command-history/{hostId}:
+ *   get:
+ *     summary: Get command history
+ *     description: Retrieves the command history for a specific host.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of commands.
+ *       400:
+ *         description: Invalid userId or hostId.
+ *       500:
+ *         description: Failed to fetch command history.
+ */
 router.get(
   "/command-history/:hostId",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const hostId = parseInt(req.params.hostId, 10);
+    const hostIdParam = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
+    const hostId = parseInt(hostIdParam, 10);
 
     if (!isNonEmptyString(userId) || !hostId) {
       sshLogger.warn("Invalid userId or hostId for command history fetch", {
@@ -1647,8 +2363,33 @@ router.get(
   },
 );
 
-// Route: Delete command from history
-// DELETE /ssh/command-history
+/**
+ * @openapi
+ * /ssh/command-history:
+ *   delete:
+ *     summary: Delete command from history
+ *     description: Deletes a specific command from the history of a host.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               command:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Command deleted from history.
+ *       400:
+ *         description: Invalid data.
+ *       500:
+ *         description: Failed to delete command.
+ */
 router.delete(
   "/command-history",
   authenticateJWT,
@@ -1789,8 +2530,33 @@ async function resolveHostCredentials(
   }
 }
 
-// Route: Rename folder (requires JWT)
-// PUT /ssh/db/folders/rename
+/**
+ * @openapi
+ * /ssh/folders/rename:
+ *   put:
+ *     summary: Rename folder
+ *     description: Renames a folder for SSH hosts and credentials.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldName:
+ *                 type: string
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder renamed successfully.
+ *       400:
+ *         description: Old name and new name are required.
+ *       500:
+ *         description: Failed to rename folder.
+ */
 router.put(
   "/folders/rename",
   authenticateJWT,
@@ -1864,8 +2630,22 @@ router.put(
   },
 );
 
-// Route: Get all folders with metadata (requires JWT)
-// GET /ssh/db/folders
+/**
+ * @openapi
+ * /ssh/folders:
+ *   get:
+ *     summary: Get all folders
+ *     description: Retrieves all folders for the authenticated user.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: A list of folders.
+ *       400:
+ *         description: Invalid user ID.
+ *       500:
+ *         description: Failed to fetch folders.
+ */
 router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1889,8 +2669,35 @@ router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
-// Route: Update folder metadata (requires JWT)
-// PUT /ssh/db/folders/metadata
+/**
+ * @openapi
+ * /ssh/folders/metadata:
+ *   put:
+ *     summary: Update folder metadata
+ *     description: Updates the metadata (color, icon) of a folder.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               color:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder metadata updated successfully.
+ *       400:
+ *         description: Folder name is required.
+ *       500:
+ *         description: Failed to update folder metadata.
+ */
 router.put(
   "/folders/metadata",
   authenticateJWT,
@@ -1943,14 +2750,36 @@ router.put(
   },
 );
 
-// Route: Delete all hosts in folder (requires JWT)
-// DELETE /ssh/db/folders/:name/hosts
+/**
+ * @openapi
+ * /ssh/folders/{name}/hosts:
+ *   delete:
+ *     summary: Delete all hosts in folder
+ *     description: Deletes all SSH hosts within a specific folder.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Hosts deleted successfully.
+ *       400:
+ *         description: Invalid folder name.
+ *       500:
+ *         description: Failed to delete hosts in folder.
+ */
 router.delete(
   "/folders/:name/hosts",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const folderName = req.params.name;
+    const folderName = Array.isArray(req.params.name)
+      ? req.params.name[0]
+      : req.params.name;
 
     if (!isNonEmptyString(userId) || !folderName) {
       return res.status(400).json({ error: "Invalid folder name" });
@@ -2062,8 +2891,31 @@ router.delete(
   },
 );
 
-// Route: Bulk import SSH hosts (requires JWT)
-// POST /ssh/bulk-import
+/**
+ * @openapi
+ * /ssh/bulk-import:
+ *   post:
+ *     summary: Bulk import SSH hosts
+ *     description: Bulk imports multiple SSH hosts.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hosts:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: Import completed.
+ *       400:
+ *         description: Invalid request body.
+ */
 router.post(
   "/bulk-import",
   authenticateJWT,
@@ -2220,8 +3072,33 @@ router.post(
   },
 );
 
-// Route: Enable autostart for SSH configuration (requires JWT)
-// POST /ssh/autostart/enable
+/**
+ * @openapi
+ * /ssh/autostart/enable:
+ *   post:
+ *     summary: Enable autostart for SSH configuration
+ *     description: Enables autostart for a specific SSH configuration.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sshConfigId:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: AutoStart enabled successfully.
+ *       400:
+ *         description: Valid sshConfigId is required.
+ *       404:
+ *         description: SSH configuration not found.
+ *       500:
+ *         description: Internal server error.
+ */
 router.post(
   "/autostart/enable",
   authenticateJWT,
@@ -2374,8 +3251,31 @@ router.post(
   },
 );
 
-// Route: Disable autostart for SSH configuration (requires JWT)
-// DELETE /ssh/autostart/disable
+/**
+ * @openapi
+ * /ssh/autostart/disable:
+ *   delete:
+ *     summary: Disable autostart for SSH configuration
+ *     description: Disables autostart for a specific SSH configuration.
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sshConfigId:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: AutoStart disabled successfully.
+ *       400:
+ *         description: Valid sshConfigId is required.
+ *       500:
+ *         description: Internal server error.
+ */
 router.delete(
   "/autostart/disable",
   authenticateJWT,
@@ -2420,8 +3320,20 @@ router.delete(
   },
 );
 
-// Route: Get autostart status for user's SSH configurations (requires JWT)
-// GET /ssh/autostart/status
+/**
+ * @openapi
+ * /ssh/autostart/status:
+ *   get:
+ *     summary: Get autostart status
+ *     description: Retrieves the autostart status for the user's SSH configurations.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: A list of autostart configurations.
+ *       500:
+ *         description: Internal server error.
+ */
 router.get(
   "/autostart/status",
   authenticateJWT,

@@ -4,6 +4,7 @@ import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-sta
 import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
+import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -19,7 +20,7 @@ import {
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
 import { useTheme } from "@/components/theme-provider";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/SSHAuthDialog.tsx";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 
 interface TabData {
   id: number;
@@ -70,7 +71,8 @@ export function AppView({
           tab.type === "server_stats" ||
           tab.type === "file_manager" ||
           tab.type === "tunnel" ||
-          tab.type === "docker",
+          tab.type === "docker" ||
+          tab.type === "network_graph",
       ),
     [tabs],
   );
@@ -226,7 +228,8 @@ export function AppView({
       const isFileManagerTab =
         mainTab.type === "file_manager" ||
         mainTab.type === "tunnel" ||
-        mainTab.type === "docker";
+        mainTab.type === "docker" ||
+        mainTab.type === "network_graph";
       const newStyle = {
         position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
@@ -278,7 +281,8 @@ export function AppView({
           const isFileManagerTab =
             t.type === "file_manager" ||
             t.type === "tunnel" ||
-            t.type === "docker";
+            t.type === "docker" ||
+            t.type === "network_graph";
           const standardStyle = {
             position: "absolute" as const,
             top: isFileManagerTab ? 0 : 4,
@@ -312,7 +316,7 @@ export function AppView({
             ...DEFAULT_TERMINAL_CONFIG,
             ...(t.hostConfig as any)?.terminalConfig,
           };
-          // Auto-switch between termixDark and termixLight based on app theme
+
           let themeColors;
           if (terminalConfig.theme === "termix") {
             themeColors = isDarkMode
@@ -352,6 +356,13 @@ export function AppView({
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
+                  />
+                ) : t.type === "network_graph" ? (
+                  <NetworkGraphCard
+                    isTopbarOpen={isTopbarOpen}
+                    rightSidebarOpen={rightSidebarOpen}
+                    rightSidebarWidth={rightSidebarWidth}
+                    embedded={false}
                   />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager

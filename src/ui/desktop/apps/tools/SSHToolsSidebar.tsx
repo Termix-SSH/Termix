@@ -728,7 +728,6 @@ export function SSHToolsSidebar({
       toast.success(t("snippets.executeSuccess", { name: snippet.name }));
     }
 
-    // Remove focus from any active element in the sidebar to prevent accidental re-execution
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }

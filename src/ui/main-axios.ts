@@ -64,6 +64,7 @@ import {
   dashboardLogger,
   type LogContext,
 } from "../lib/frontend-logger.js";
+import { dbHealthMonitor } from "../lib/db-health-monitor.js";
 
 interface FileManagerOperation {
   name: string;
@@ -76,6 +77,10 @@ interface FileManagerOperation {
 export type ServerStatus = {
   status: "online" | "offline";
   lastChecked: string;
+};
+
+export type SSHHostWithStatus = SSHHost & {
+  status: "online" | "offline" | "unknown";
 };
 
 interface CpuMetrics {
@@ -113,6 +118,8 @@ interface AuthResponse {
   is_oidc?: boolean;
   totp_enabled?: boolean;
   data_unlocked?: boolean;
+  requires_totp?: boolean;
+  temp_token?: string;
 }
 
 interface UserInfo {
@@ -268,6 +275,8 @@ export function getCookie(name: string): string | undefined {
   }
 }
 
+let userWasAuthenticated = false;
+
 function createApiInstance(
   baseURL: string,
   serviceName: string = "API",
@@ -279,12 +288,12 @@ function createApiInstance(
     withCredentials: true,
   });
 
-  instance.interceptors.request.use((config) => {
+  instance.interceptors.request.use((config: AxiosRequestConfig) => {
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    (config as Record<string, unknown>).startTime = startTime;
-    (config as Record<string, unknown>).requestId = requestId;
+    (config as any).startTime = startTime;
+    (config as any).requestId = requestId;
 
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
@@ -309,6 +318,7 @@ function createApiInstance(
       const token = localStorage.getItem("jwt");
       if (token) {
         config.headers["Authorization"] = `Bearer ${token}`;
+        userWasAuthenticated = true;
       }
     }
 
@@ -328,15 +338,24 @@ function createApiInstance(
       config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
     }
 
+    if (!isElectron()) {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("jwt="));
+      if (token) {
+        userWasAuthenticated = true;
+      }
+    }
+
     return config;
   });
 
   instance.interceptors.response.use(
-    (response) => {
+    (response: AxiosResponse) => {
       const endTime = performance.now();
-      const startTime = (response.config as Record<string, unknown>).startTime;
-      const requestId = (response.config as Record<string, unknown>).requestId;
-      const responseTime = Math.round(endTime - startTime);
+      const startTime = (response.config as any).startTime;
+      const requestId = (response.config as any).requestId;
+      const responseTime = Math.round(endTime - (startTime || endTime));
 
       const method = response.config.method?.toUpperCase() || "UNKNOWN";
       const url = response.config.url || "UNKNOWN";
@@ -368,14 +387,14 @@ function createApiInstance(
         logger.warn(`🐌 Slow request: ${responseTime}ms`, context);
       }
 
+      dbHealthMonitor.reportDatabaseSuccess();
+
       return response;
     },
-    (error: AxiosError) => {
+    (error: AxiosErrorExtended) => {
       const endTime = performance.now();
-      const startTime = (error.config as Record<string, unknown> | undefined)
-        ?.startTime;
-      const requestId = (error.config as Record<string, unknown> | undefined)
-        ?.requestId;
+      const startTime = error.config?.startTime;
+      const requestId = error.config?.requestId;
       const responseTime = startTime
         ? Math.round(endTime - startTime)
         : undefined;
@@ -385,11 +404,11 @@ function createApiInstance(
       const fullUrl = error.config ? `${error.config.baseURL}${url}` : url;
       const status = error.response?.status;
       const message =
-        (error.response?.data as Record<string, unknown>)?.error ||
+        (error.response?.data as { error?: string })?.error ||
         (error as Error).message ||
         "Unknown error";
       const errorCode =
-        (error.response?.data as Record<string, unknown>)?.code || error.code;
+        (error.response?.data as { code?: string })?.code || error.code;
 
       const context: LogContext = {
         requestId,
@@ -431,9 +450,12 @@ function createApiInstance(
         const isInvalidToken =
           errorCode === "AUTH_REQUIRED" ||
           errorMessage === "Invalid token" ||
-          errorMessage === "Authentication required";
+          errorMessage === "Authentication required" ||
+          errorMessage === "Missing authentication token";
 
         if (isSessionExpired || isSessionNotFound || isInvalidToken) {
+          const wasAuthenticated = userWasAuthenticated;
+
           localStorage.removeItem("jwt");
 
           if (isElectron()) {
@@ -449,7 +471,14 @@ function createApiInstance(
             console.warn("Session expired - please log in again");
             toast.warning("Session expired. Please log in again.");
           }
+
+          dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
+
+          userWasAuthenticated = false;
         }
+      } else {
+        const wasAuthenticated = !!localStorage.getItem("jwt");
+        dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
       }
 
       return Promise.reject(error);
@@ -484,6 +513,19 @@ let configuredServerUrl: string | null = null;
 export interface ServerConfig {
   serverUrl: string;
   lastUpdated: string;
+}
+
+interface AxiosRequestConfigExtended extends AxiosRequestConfig {
+  startTime?: number;
+  requestId?: string;
+}
+
+interface AxiosResponseExtended extends AxiosResponse {
+  config: AxiosRequestConfigExtended;
+}
+
+interface AxiosErrorExtended extends AxiosError {
+  config?: AxiosRequestConfigExtended;
 }
 
 export async function getServerConfig(): Promise<ServerConfig | null> {
@@ -535,6 +577,23 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
     console.error("Failed to save server config:", error);
     return false;
   }
+}
+
+export function getConfiguredServerUrl(): string | null {
+  return configuredServerUrl;
+}
+
+interface AxiosRequestConfigExtended extends AxiosRequestConfig {
+  startTime?: number;
+  requestId?: string;
+}
+
+interface AxiosResponseExtended extends AxiosResponse {
+  config: AxiosRequestConfigExtended;
+}
+
+interface AxiosErrorExtended extends AxiosError {
+  config?: AxiosRequestConfigExtended;
 }
 
 export async function testServerConnection(
@@ -635,8 +694,8 @@ function initializeApiInstances() {
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
 
-  // Homepage API (port 30006)
-  homepageApi = createApiInstance(getApiUrl("", 30006), "HOMEPAGE");
+  // Dashboard API (port 30006)
+  dashboardApi = createApiInstance(getApiUrl("", 30006), "DASHBOARD");
 
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
@@ -660,8 +719,8 @@ export let statsApi: AxiosInstance;
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
 
-// Homepage API (port 30006)
-export let homepageApi: AxiosInstance;
+// Dashboard API (port 30006)
+export let dashboardApi: AxiosInstance;
 
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
@@ -881,12 +940,20 @@ function handleApiError(error: unknown, operation: string): never {
 // SSH HOST MANAGEMENT
 // ============================================================================
 
-export async function getSSHHosts(): Promise<SSHHost[]> {
+export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
-    const response = await sshHostApi.get("/db/host");
-    return response.data;
+    const hostsResponse = await sshHostApi.get("/db/host");
+    const hosts: SSHHost[] = hostsResponse.data;
+
+    const statusesResponse = await getAllServerStatuses();
+    const statuses = statusesResponse || {};
+
+    return hosts.map((host) => ({
+      ...host,
+      status: statuses[host.id]?.status || "unknown",
+    }));
   } catch (error) {
-    handleApiError(error, "fetch SSH hosts");
+    throw handleApiError(error, "fetch SSH hosts");
   }
 }
 
@@ -912,6 +979,11 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
       enableDocker: Boolean(hostData.enableDocker),
+      showTerminalInSidebar: Boolean(hostData.showTerminalInSidebar),
+      showFileManagerInSidebar: Boolean(hostData.showFileManagerInSidebar),
+      showTunnelInSidebar: Boolean(hostData.showTunnelInSidebar),
+      showDockerInSidebar: Boolean(hostData.showDockerInSidebar),
+      showServerStatsInSidebar: Boolean(hostData.showServerStatsInSidebar),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -986,6 +1058,11 @@ export async function updateSSHHost(
       enableTunnel: Boolean(hostData.enableTunnel),
       enableFileManager: Boolean(hostData.enableFileManager),
       enableDocker: Boolean(hostData.enableDocker),
+      showTerminalInSidebar: Boolean(hostData.showTerminalInSidebar),
+      showFileManagerInSidebar: Boolean(hostData.showFileManagerInSidebar),
+      showTunnelInSidebar: Boolean(hostData.showTunnelInSidebar),
+      showDockerInSidebar: Boolean(hostData.showDockerInSidebar),
+      showServerStatsInSidebar: Boolean(hostData.showServerStatsInSidebar),
       defaultPath: hostData.defaultPath || "/",
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
@@ -1321,6 +1398,7 @@ export async function connectSSH(
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    jumpHosts?: any[];
   },
 ): Promise<Record<string, unknown>> {
   try {
@@ -1329,7 +1407,34 @@ export async function connectSSH(
       ...config,
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      // Also preserve other fields like requires_totp
+      if (error.response.data.requires_totp) {
+        (errorWithLogs as any).requires_totp = true;
+        (errorWithLogs as any).sessionId = error.response.data.sessionId;
+        (errorWithLogs as any).prompt = error.response.data.prompt;
+      }
+      if (error.response.data.requires_warpgate) {
+        (errorWithLogs as any).requires_warpgate = true;
+        (errorWithLogs as any).sessionId = error.response.data.sessionId;
+        (errorWithLogs as any).url = error.response.data.url;
+        (errorWithLogs as any).securityKey = error.response.data.securityKey;
+      }
+      if (error.response.data.status === "auth_required") {
+        (errorWithLogs as any).status = "auth_required";
+        (errorWithLogs as any).reason = error.response.data.reason;
+      }
+      throw errorWithLogs;
+    }
     handleApiError(error, "connect SSH");
   }
 }
@@ -1359,6 +1464,96 @@ export async function verifySSHTOTP(
     return response.data;
   } catch (error) {
     handleApiError(error, "verify SSH TOTP");
+  }
+}
+
+export async function verifySSHWarpgate(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await fileManagerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "verify SSH Warpgate");
+  }
+}
+
+/**
+ * @openapi
+ * /ssh/quick-connect:
+ *   post:
+ *     summary: Create a temporary SSH connection without saving to database
+ *     description: Returns a temporary host configuration for immediate use
+ *     tags:
+ *       - SSH
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ip
+ *               - port
+ *               - username
+ *               - authType
+ *             properties:
+ *               ip:
+ *                 type: string
+ *                 description: SSH server IP or hostname
+ *               port:
+ *                 type: number
+ *                 description: SSH server port
+ *               username:
+ *                 type: string
+ *                 description: SSH username
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key, credential]
+ *                 description: Authentication method
+ *               password:
+ *                 type: string
+ *                 description: Password (required if authType is password)
+ *               key:
+ *                 type: string
+ *                 description: SSH private key (required if authType is key)
+ *               keyPassword:
+ *                 type: string
+ *                 description: SSH key password (optional)
+ *               keyType:
+ *                 type: string
+ *                 description: SSH key type
+ *               credentialId:
+ *                 type: number
+ *                 description: Credential ID (required if authType is credential)
+ *               overrideCredentialUsername:
+ *                 type: boolean
+ *                 description: Use provided username instead of credential username
+ *     responses:
+ *       200:
+ *         description: Temporary host configuration created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               description: SSHHost object
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+export async function quickConnect(
+  data: Record<string, unknown>,
+): Promise<SSHHost> {
+  try {
+    const response = await authApi.post("/ssh/quick-connect", data);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "quick connect");
   }
 }
 
@@ -1581,6 +1776,20 @@ export async function deleteSSHItem(
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH item");
+  }
+}
+
+export async function setSudoPassword(
+  sessionId: string,
+  password: string,
+): Promise<void> {
+  try {
+    await fileManagerApi.post("/sudo-password", {
+      sessionId,
+      password,
+    });
+  } catch (error) {
+    handleApiError(error, "set sudo password");
   }
 }
 
@@ -1987,11 +2196,21 @@ export async function startMetricsPolling(hostId: number): Promise<{
   sessionId?: string;
   prompt?: string;
   viewerSessionId?: string;
+  connectionLogs?: any[];
 }> {
   try {
     const response = await statsApi.post(`/metrics/start/${hostId}`);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error || error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      throw errorWithLogs;
+    }
     handleApiError(error, "start metrics polling");
     throw error;
   }
@@ -2147,9 +2366,12 @@ export async function loginUser(
       username: response.data.username,
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
+      is_oidc: response.data.is_oidc,
+      totp_enabled: response.data.totp_enabled,
+      data_unlocked: response.data.data_unlocked,
     };
   } catch (error) {
-    handleApiError(error, "login user");
+    throw handleApiError(error, "login user");
   }
 }
 
@@ -2438,6 +2660,28 @@ export async function updatePasswordLoginAllowed(
     return response.data;
   } catch (error) {
     handleApiError(error, "update password login allowed");
+  }
+}
+
+export async function getPasswordResetAllowed(): Promise<boolean> {
+  try {
+    const response = await authApi.get("/users/password-reset-allowed");
+    return response.data.allowed;
+  } catch (error) {
+    handleApiError(error, "get password reset allowed");
+  }
+}
+
+export async function updatePasswordResetAllowed(
+  allowed: boolean,
+): Promise<{ allowed: boolean }> {
+  try {
+    const response = await authApi.patch("/users/password-reset-allowed", {
+      allowed,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update password reset allowed");
   }
 }
 
@@ -3044,14 +3288,32 @@ export async function executeSnippet(
   }
 }
 
-export async function reorderSnippets(
-  snippets: Array<{ id: number; order: number; folder?: string }>,
-): Promise<{ success: boolean; updated: number }> {
+// ============================================================================
+// MISCELLANEOUS API CALLS
+// ============================================================================
+
+export interface NetworkTopologyData {
+  nodes: any[];
+  edges: any[];
+}
+
+export async function getNetworkTopology(): Promise<NetworkTopologyData | null> {
   try {
-    const response = await authApi.put("/snippets/reorder", { snippets });
+    const response = await authApi.get("/network-topology/");
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "reorder snippets");
+    throw handleApiError(error, "fetch network topology");
+  }
+}
+
+export async function saveNetworkTopology(
+  topology: NetworkTopologyData,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/network-topology/", { topology });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "save network topology");
   }
 }
 
@@ -3120,8 +3382,19 @@ export async function deleteSnippetFolder(
   }
 }
 
+export async function reorderSnippets(
+  updates: Array<{ id: number; order: number; folder?: string }>,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.post("/snippets/reorder", { updates });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "reorder snippets");
+  }
+}
+
 // ============================================================================
-// HOMEPAGE API
+// DASHBOARD API
 // ============================================================================
 
 export interface UptimeInfo {
@@ -3141,7 +3414,7 @@ export interface RecentActivityItem {
 
 export async function getUptime(): Promise<UptimeInfo> {
   try {
-    const response = await homepageApi.get("/uptime");
+    const response = await dashboardApi.get("/uptime");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch uptime");
@@ -3152,7 +3425,7 @@ export async function getRecentActivity(
   limit?: number,
 ): Promise<RecentActivityItem[]> {
   try {
-    const response = await homepageApi.get("/activity/recent", {
+    const response = await dashboardApi.get("/activity/recent", {
       params: { limit },
     });
     return response.data;
@@ -3167,7 +3440,7 @@ export async function logActivity(
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {
   try {
-    const response = await homepageApi.post("/activity/log", {
+    const response = await dashboardApi.post("/activity/log", {
       type,
       hostId,
       hostName,
@@ -3180,7 +3453,7 @@ export async function logActivity(
 
 export async function resetRecentActivity(): Promise<{ message: string }> {
   try {
-    const response = await homepageApi.delete("/activity/reset");
+    const response = await dashboardApi.delete("/activity/reset");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
@@ -3447,6 +3720,10 @@ export async function connectDockerSession(
   isPassword?: boolean;
   status?: string;
   reason?: string;
+  connectionLogs?: any[];
+  requires_warpgate?: boolean;
+  url?: string;
+  securityKey?: string;
 }> {
   try {
     const response = await dockerApi.post("/ssh/connect", {
@@ -3461,6 +3738,20 @@ export async function connectDockerSession(
     }
     if (error.response?.data?.requires_totp) {
       return error.response.data;
+    }
+    if (error.response?.data?.requires_warpgate) {
+      return error.response.data;
+    }
+    // Preserve connection logs from error response
+    if (error?.response?.data?.connectionLogs) {
+      const errorWithLogs = new Error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error.message,
+      );
+      (errorWithLogs as any).connectionLogs =
+        error.response.data.connectionLogs;
+      throw errorWithLogs;
     }
     throw handleApiError(error, "connect to Docker SSH session");
   }
@@ -3478,6 +3769,19 @@ export async function verifyDockerTOTP(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "verify Docker TOTP");
+  }
+}
+
+export async function verifyDockerWarpgate(
+  sessionId: string,
+): Promise<{ status: string; message: string }> {
+  try {
+    const response = await dockerApi.post("/ssh/connect-warpgate", {
+      sessionId,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "verify Docker Warpgate");
   }
 }
 
@@ -3696,4 +4000,20 @@ export async function getContainerStats(
   } catch (error) {
     throw handleApiError(error, "get container stats");
   }
+}
+
+export interface DashboardLayout {
+  cards: Array<{ id: string; enabled: boolean; order: number }>;
+}
+
+export async function getDashboardPreferences(): Promise<DashboardLayout> {
+  const response = await dashboardApi.get("/dashboard/preferences");
+  return response.data;
+}
+
+export async function saveDashboardPreferences(
+  layout: DashboardLayout,
+): Promise<{ success: boolean }> {
+  const response = await dashboardApi.post("/dashboard/preferences", layout);
+  return response.data;
 }

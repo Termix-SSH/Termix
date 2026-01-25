@@ -42,6 +42,11 @@ export interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
+  showTerminalInSidebar: boolean;
+  showFileManagerInSidebar: boolean;
+  showTunnelInSidebar: boolean;
+  showDockerInSidebar: boolean;
+  showServerStatsInSidebar: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
@@ -102,6 +107,11 @@ export interface SSHHostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
+  showTerminalInSidebar?: boolean;
+  showFileManagerInSidebar?: boolean;
+  showTunnelInSidebar?: boolean;
+  showDockerInSidebar?: boolean;
+  showServerStatsInSidebar?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
@@ -193,6 +203,7 @@ export interface CredentialData {
 // ============================================================================
 
 export interface TunnelConnection {
+  tunnelType?: "local" | "remote";
   sourcePort: number;
   endpointPort: number;
   endpointHost: string;
@@ -210,6 +221,7 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+  tunnelType?: "local" | "remote";
 
   sourceHostId: number;
   tunnelIndex: number;
@@ -263,6 +275,12 @@ export interface TunnelStatus {
   errorType?: ErrorType;
   manualDisconnect?: boolean;
   retryExhausted?: boolean;
+  connectionLogs?: Array<{
+    type: "info" | "success" | "warning" | "error";
+    stage: string;
+    message: string;
+    details?: Record<string, any>;
+  }>;
 }
 
 // ============================================================================
@@ -393,7 +411,8 @@ export interface TabContextTab {
     | "admin"
     | "file_manager"
     | "user_profile"
-    | "docker";
+    | "docker"
+    | "network_graph";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;

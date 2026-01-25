@@ -15,7 +15,7 @@ import {
   getSSHHosts,
   type ServerMetrics,
 } from "@/ui/main-axios.ts";
-import { TOTPDialog } from "@/ui/desktop/navigation/TOTPDialog.tsx";
+import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -33,8 +33,16 @@ import {
   ProcessesWidget,
   SystemWidget,
   LoginStatsWidget,
+  PortsWidget,
+  FirewallWidget,
 } from "./widgets";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+import { RefreshCcw, RefreshCw, RefreshCwOff } from "lucide-react";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 
 interface QuickAction {
   name: string;
@@ -70,7 +78,7 @@ interface ServerProps {
   embedded?: boolean;
 }
 
-export function ServerStats({
+function ServerStatsInner({
   hostConfig,
   title,
   isVisible = true,
@@ -79,6 +87,11 @@ export function ServerStats({
 }: ServerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
+  const {
+    addLog,
+    clearLogs,
+    isExpanded: isConnectionLogExpanded,
+  } = useConnectionLog();
   const { addTab, tabs, currentTab, removeTab } = useTabs() as {
     addTab: (tab: { type: string; [key: string]: unknown }) => number;
     tabs: TabData[];
@@ -107,6 +120,7 @@ export function ServerStats({
   const [viewerSessionId, setViewerSessionId] = React.useState<string | null>(
     null,
   );
+  const [hasConnectionError, setHasConnectionError] = React.useState(false);
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
@@ -265,6 +279,16 @@ export function ServerStats({
           <LoginStatsWidget metrics={metrics} metricsHistory={metricsHistory} />
         );
 
+      case "ports":
+        return (
+          <PortsWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
+      case "firewall":
+        return (
+          <FirewallWidget metrics={metrics} metricsHistory={metricsHistory} />
+        );
+
       default:
         return null;
     }
@@ -389,12 +413,25 @@ export function ServerStats({
         setIsLoadingMetrics(true);
       }
       setShowStatsUI(true);
+      setHasConnectionError(false);
+      clearLogs();
 
       try {
         if (!totpVerified) {
           const result = await startMetricsPolling(currentHostConfig.id);
 
           if (cancelled) return;
+
+          if (result?.connectionLogs) {
+            result.connectionLogs.forEach((log: any) => {
+              addLog({
+                type: log.type,
+                stage: log.stage,
+                message: log.message,
+                details: log.details,
+              });
+            });
+          }
 
           if (result.requires_totp) {
             setTotpRequired(true);
@@ -438,6 +475,7 @@ export function ServerStats({
           if (!hasExistingMetrics) {
             setIsLoadingMetrics(false);
             logServerActivity();
+            setTimeout(() => clearLogs(), 1000);
           }
         }
 
@@ -458,13 +496,27 @@ export function ServerStats({
             }
           }
         }, statsConfig.metricsInterval * 1000);
-      } catch (error) {
+      } catch (error: any) {
         if (!cancelled) {
           console.error("Failed to start metrics polling:", error);
           setIsLoadingMetrics(false);
-          toast.error(t("serverStats.failedToFetchMetrics"));
-          if (currentTab !== null) {
-            removeTab(currentTab);
+          setHasConnectionError(true);
+
+          if (error?.connectionLogs) {
+            error.connectionLogs.forEach((log: any) => {
+              addLog({
+                type: log.type,
+                stage: log.stage,
+                message: log.message,
+                details: log.details,
+              });
+            });
+          } else {
+            addLog({
+              type: "error",
+              stage: "connection",
+              message: error?.message || t("serverStats.connectionFailed"),
+            });
           }
         }
       }
@@ -489,7 +541,9 @@ export function ServerStats({
 
     debounceTimeout = setTimeout(() => {
       if (isActuallyVisible) {
-        startMetrics();
+        if (!hasConnectionError) {
+          startMetrics();
+        }
       } else {
         stopMetrics();
       }
@@ -509,6 +563,7 @@ export function ServerStats({
     metricsEnabled,
     statsConfig.metricsInterval,
     totpVerified,
+    hasConnectionError,
   ]);
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
@@ -541,8 +596,16 @@ export function ServerStats({
 
   return (
     <div style={wrapperStyle} className={`${containerClass} relative`}>
-      <div className="h-full w-full flex flex-col">
-        {!totpRequired && (
+      <div
+        className="h-full w-full flex flex-col"
+        style={{
+          visibility:
+            hasConnectionError && isConnectionLogExpanded
+              ? "hidden"
+              : "visible",
+        }}
+      >
+        {!totpRequired && !isLoadingMetrics && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 pt-3 pb-3 gap-3">
             <div className="flex items-center gap-4 min-w-0">
               <div className="min-w-0">
@@ -631,65 +694,18 @@ export function ServerStats({
               >
                 {isRefreshing ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-foreground-secondary border-t-transparent rounded-full animate-spin"></div>
-                    {t("serverStats.refreshing")}
+                    <RefreshCw className="animate-spin" />
                   </div>
                 ) : (
-                  t("serverStats.refreshStatus")
+                  <RefreshCw />
                 )}
               </Button>
-              {currentHostConfig?.enableFileManager && (
-                <Button
-                  variant="outline"
-                  className="font-semibold"
-                  disabled={isFileManagerAlreadyOpen}
-                  title={
-                    isFileManagerAlreadyOpen
-                      ? t("serverStats.fileManagerAlreadyOpen")
-                      : t("serverStats.openFileManager")
-                  }
-                  onClick={() => {
-                    if (!currentHostConfig || isFileManagerAlreadyOpen) return;
-                    const titleBase =
-                      currentHostConfig?.name &&
-                      currentHostConfig.name.trim() !== ""
-                        ? currentHostConfig.name.trim()
-                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                    addTab({
-                      type: "file_manager",
-                      title: titleBase,
-                      hostConfig: currentHostConfig,
-                    });
-                  }}
-                >
-                  {t("nav.fileManager")}
-                </Button>
-              )}
-
-              {currentHostConfig?.enableDocker && (
-                <Button
-                  variant="outline"
-                  className="font-semibold"
-                  onClick={() => {
-                    const titleBase =
-                      currentHostConfig?.name &&
-                      currentHostConfig.name.trim() !== ""
-                        ? currentHostConfig.name.trim()
-                        : `${currentHostConfig.username}@${currentHostConfig.ip}`;
-                    addTab({
-                      type: "docker",
-                      title: titleBase,
-                      hostConfig: currentHostConfig,
-                    });
-                  }}
-                >
-                  {t("nav.docker")}
-                </Button>
-              )}
             </div>
           </div>
         )}
-        {!totpRequired && <Separator className="p-0.25 w-full" />}
+        {!totpRequired && !isLoadingMetrics && (
+          <Separator className="p-0.25 w-full" />
+        )}
 
         <div className="flex-1 overflow-y-auto min-h-0 thin-scrollbar relative">
           {(metricsEnabled && showStatsUI) ||
@@ -830,7 +846,7 @@ export function ServerStats({
 
           {metricsEnabled && (
             <SimpleLoader
-              visible={isLoadingMetrics && !metrics}
+              visible={isLoadingMetrics && !metrics && !isConnectionLogExpanded}
               message={t("serverStats.connecting")}
             />
           )}
@@ -844,6 +860,20 @@ export function ServerStats({
         onCancel={handleTOTPCancel}
         backgroundColor="var(--bg-canvas)"
       />
+      <ConnectionLog
+        isConnecting={isLoadingMetrics}
+        isConnected={serverStatus === "online"}
+        hasConnectionError={hasConnectionError}
+        position={hasConnectionError ? "top" : "bottom"}
+      />
     </div>
+  );
+}
+
+export function ServerStats(props: ServerProps): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <ServerStatsInner {...props} />
+    </ConnectionLogProvider>
   );
 }

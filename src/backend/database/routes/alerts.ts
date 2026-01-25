@@ -99,8 +99,20 @@ const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 
-// Route: Get alerts for the authenticated user (excluding dismissed ones)
-// GET /alerts
+/**
+ * @openapi
+ * /alerts:
+ *   get:
+ *     summary: Get active alerts
+ *     description: Fetches active alerts for the authenticated user, excluding those that have been dismissed.
+ *     tags:
+ *      - Alerts
+ *     responses:
+ *       200:
+ *         description: A list of active alerts.
+ *       500:
+ *         description: Failed to fetch alerts.
+ */
 router.get("/", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -131,8 +143,33 @@ router.get("/", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Dismiss an alert for the authenticated user
-// POST /alerts/dismiss
+/**
+ * @openapi
+ * /alerts/dismiss:
+ *   post:
+ *     summary: Dismiss an alert
+ *     description: Marks an alert as dismissed for the authenticated user.
+ *     tags:
+ *      - Alerts
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               alertId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Alert dismissed successfully.
+ *       400:
+ *         description: Alert ID is required.
+ *       409:
+ *         description: Alert already dismissed.
+ *       500:
+ *         description: Failed to dismiss alert.
+ */
 router.post("/dismiss", authenticateJWT, async (req, res) => {
   try {
     const { alertId } = req.body;
@@ -170,8 +207,20 @@ router.post("/dismiss", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Get dismissed alerts for a user
-// GET /alerts/dismissed/:userId
+/**
+ * @openapi
+ * /alerts/dismissed:
+ *   get:
+ *     summary: Get dismissed alerts
+ *     description: Fetches a list of alerts that have been dismissed by the authenticated user.
+ *     tags:
+ *      - Alerts
+ *     responses:
+ *       200:
+ *         description: A list of dismissed alerts.
+ *       500:
+ *         description: Failed to fetch dismissed alerts.
+ */
 router.get("/dismissed", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -194,8 +243,33 @@ router.get("/dismissed", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Undismiss an alert for the authenticated user (remove from dismissed list)
-// DELETE /alerts/dismiss
+/**
+ * @openapi
+ * /alerts/dismiss:
+ *   delete:
+ *     summary: Undismiss an alert
+ *     description: Removes an alert from the dismissed list for the authenticated user.
+ *     tags:
+ *      - Alerts
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               alertId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Alert undismissed successfully.
+ *       400:
+ *         description: Alert ID is required.
+ *       404:
+ *         description: Dismissed alert not found.
+ *       500:
+ *         description: Failed to undismiss alert.
+ */
 router.delete("/dismiss", authenticateJWT, async (req, res) => {
   try {
     const { alertId } = req.body;

@@ -11,6 +11,7 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
+import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { collectCpuMetrics } from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
 import { collectDiskMetrics } from "./widgets/disk-collector.js";
@@ -19,7 +20,23 @@ import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
+import { collectPortsMetrics } from "./widgets/ports-collector.js";
+import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+
+function createConnectionLog(
+  type: "info" | "success" | "warning" | "error",
+  stage: ConnectionStage,
+  message: string,
+  details?: Record<string, any>,
+): Omit<LogEntry, "id" | "timestamp"> {
+  return {
+    type,
+    stage,
+    message,
+    details,
+  };
+}
 
 async function resolveJumpHost(
   hostId: number,
@@ -1283,12 +1300,6 @@ class PollingManager {
 
     for (const [sessionId, viewer] of this.viewerDetails.entries()) {
       if (now - viewer.lastHeartbeat > maxInactivity) {
-        statsLogger.warn("Cleaning up inactive viewer", {
-          operation: "cleanup_inactive_viewer",
-          sessionId,
-          hostId: viewer.hostId,
-          inactiveFor: Math.floor((now - viewer.lastHeartbeat) / 1000),
-        });
         this.unregisterViewer(viewer.hostId, sessionId);
       }
     }
@@ -1782,6 +1793,62 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           login_stats = await collectLoginStats(client);
         } catch (e) {}
 
+        let ports: {
+          source: "ss" | "netstat" | "none";
+          ports: Array<{
+            protocol: "tcp" | "udp";
+            localAddress: string;
+            localPort: number;
+            state?: string;
+            pid?: number;
+            process?: string;
+          }>;
+        } = {
+          source: "none",
+          ports: [],
+        };
+        try {
+          ports = await collectPortsMetrics(client);
+        } catch (e) {
+          statsLogger.debug("Failed to collect ports metrics", {
+            operation: "ports_metrics_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+
+        let firewall: {
+          type: "iptables" | "nftables" | "none";
+          status: "active" | "inactive" | "unknown";
+          chains: Array<{
+            name: string;
+            policy: string;
+            rules: Array<{
+              chain: string;
+              target: string;
+              protocol: string;
+              source: string;
+              destination: string;
+              dport?: string;
+              sport?: string;
+              state?: string;
+              interface?: string;
+              extra?: string;
+            }>;
+          }>;
+        } = {
+          type: "none",
+          status: "unknown",
+          chains: [],
+        };
+        try {
+          firewall = await collectFirewallMetrics(client);
+        } catch (e) {
+          statsLogger.debug("Failed to collect firewall metrics", {
+            operation: "firewall_metrics_failed",
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+
         const result = {
           cpu,
           memory,
@@ -1791,6 +1858,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           processes,
           system,
           login_stats,
+          ports,
+          firewall,
         };
 
         metricsCache.set(host.id, result);
@@ -1864,6 +1933,20 @@ function tcpPing(
   });
 }
 
+/**
+ * @openapi
+ * /status:
+ *   get:
+ *     summary: Get all host statuses
+ *     description: Retrieves the status of all hosts for the authenticated user.
+ *     tags:
+ *       - Server Stats
+ *     responses:
+ *       200:
+ *         description: A map of host IDs to their status entries.
+ *       401:
+ *         description: Session expired - please log in again.
+ */
 app.get("/status", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1886,6 +1969,28 @@ app.get("/status", async (req, res) => {
   res.json(result);
 });
 
+/**
+ * @openapi
+ * /status/{id}:
+ *   get:
+ *     summary: Get host status by ID
+ *     description: Retrieves the status of a specific host by its ID.
+ *     tags:
+ *       - Server Stats
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Host status entry.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       404:
+ *         description: Status not available.
+ */
 app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
@@ -1910,6 +2015,20 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   res.json(statusEntry);
 });
 
+/**
+ * @openapi
+ * /clear-connections:
+ *   post:
+ *     summary: Clear all SSH connections
+ *     description: Clears all SSH connections from the connection pool.
+ *     tags:
+ *       - Server Stats
+ *     responses:
+ *       200:
+ *         description: All SSH connections cleared.
+ *       401:
+ *         description: Session expired - please log in again.
+ */
 app.post("/clear-connections", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1924,6 +2043,20 @@ app.post("/clear-connections", async (req, res) => {
   res.json({ message: "All SSH connections cleared" });
 });
 
+/**
+ * @openapi
+ * /refresh:
+ *   post:
+ *     summary: Refresh polling
+ *     description: Clears all SSH connections and refreshes host polling.
+ *     tags:
+ *       - Server Stats
+ *     responses:
+ *       200:
+ *         description: Polling refreshed.
+ *       401:
+ *         description: Session expired - please log in again.
+ */
 app.post("/refresh", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1940,6 +2073,35 @@ app.post("/refresh", async (req, res) => {
   res.json({ message: "Polling refreshed" });
 });
 
+/**
+ * @openapi
+ * /host-updated:
+ *   post:
+ *     summary: Start polling for updated host
+ *     description: Starts polling for a specific host after it has been updated.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Host polling started.
+ *       400:
+ *         description: Invalid hostId.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       404:
+ *         description: Host not found.
+ *       500:
+ *         description: Failed to start polling.
+ */
 app.post("/host-updated", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
@@ -1975,6 +2137,33 @@ app.post("/host-updated", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /host-deleted:
+ *   post:
+ *     summary: Stop polling for deleted host
+ *     description: Stops polling for a specific host after it has been deleted.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Host polling stopped.
+ *       400:
+ *         description: Invalid hostId.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       500:
+ *         description: Failed to stop polling.
+ */
 app.post("/host-deleted", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
@@ -2003,6 +2192,28 @@ app.post("/host-deleted", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /metrics/{id}:
+ *   get:
+ *     summary: Get host metrics
+ *     description: Retrieves current metrics for a specific host including CPU, memory, disk, network, processes, and system information.
+ *     tags:
+ *       - Server Stats
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Host metrics data.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       404:
+ *         description: Metrics not available.
+ */
 app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
@@ -2040,28 +2251,102 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /metrics/start/{id}:
+ *   post:
+ *     summary: Start metrics collection
+ *     description: Establishes an SSH connection and starts collecting metrics for a specific host.
+ *     tags:
+ *       - Server Stats
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Metrics collection started successfully, or TOTP required.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       404:
+ *         description: Host not found.
+ *       500:
+ *         description: Failed to start metrics collection.
+ */
 app.post("/metrics/start/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
+  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
+
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    connectionLogs.push(
+      createConnectionLog("error", "stats_connecting", "Session expired"),
+    );
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
+      connectionLogs,
     });
   }
 
   try {
     const host = await fetchHostById(id, userId);
     if (!host) {
-      return res.status(404).json({ error: "Host not found" });
+      connectionLogs.push(
+        createConnectionLog("error", "stats_connecting", "Host not found"),
+      );
+      return res.status(404).json({ error: "Host not found", connectionLogs });
+    }
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "stats_connecting",
+        "Starting metrics collection",
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
+    );
+
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "tcp",
+        `Connecting to ${host.ip}:${host.port}`,
+      ),
+    );
+
+    connectionLogs.push(
+      createConnectionLog("info", "handshake", "Initiating SSH handshake"),
+    );
+
+    if (host.authType === "password") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with password"),
+      );
+    } else if (host.authType === "key") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
     }
 
     const sessionKey = getSessionKey(host.id, userId);
 
     const existingSession = metricsSessions[sessionKey];
     if (existingSession && existingSession.isConnected) {
-      return res.json({ success: true });
+      connectionLogs.push(
+        createConnectionLog(
+          "success",
+          "stats_polling",
+          "Using existing metrics session",
+        ),
+      );
+      return res.json({ success: true, connectionLogs });
     }
 
     const config = buildSshConfig(host);
@@ -2113,6 +2398,14 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
               totpAttempts: 0,
             };
 
+            connectionLogs.push(
+              createConnectionLog(
+                "info",
+                "stats_totp",
+                "TOTP verification required",
+              ),
+            );
+
             clearTimeout(timeout);
             if (!isResolved) {
               isResolved = true;
@@ -2141,6 +2434,22 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         if (!isResolved) {
           isResolved = true;
 
+          connectionLogs.push(
+            createConnectionLog(
+              "success",
+              "connected",
+              "SSH connection established successfully",
+            ),
+          );
+
+          connectionLogs.push(
+            createConnectionLog(
+              "success",
+              "stats_polling",
+              "Metrics session established",
+            ),
+          );
+
           metricsSessions[sessionKey] = {
             client,
             isConnected: true,
@@ -2162,10 +2471,73 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         clearTimeout(timeout);
         if (!isResolved) {
           isResolved = true;
+
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          let errorStage: ConnectionStage = "error";
+
+          if (
+            errorMessage.includes("ENOTFOUND") ||
+            errorMessage.includes("getaddrinfo")
+          ) {
+            errorStage = "dns";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `DNS resolution failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("ECONNREFUSED") ||
+            errorMessage.includes("ETIMEDOUT")
+          ) {
+            errorStage = "tcp";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `TCP connection failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("handshake") ||
+            errorMessage.includes("key exchange")
+          ) {
+            errorStage = "handshake";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `SSH handshake failed: ${errorMessage}`,
+              ),
+            );
+          } else if (
+            errorMessage.includes("authentication") ||
+            errorMessage.includes("Authentication")
+          ) {
+            errorStage = "auth";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `Authentication failed: ${errorMessage}`,
+              ),
+            );
+          } else {
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                "error",
+                `SSH connection failed: ${errorMessage}`,
+              ),
+            );
+          }
+
           statsLogger.error("SSH connection error in metrics/start", {
             operation: "metrics_start_ssh_error",
             hostId: host.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           });
           reject(error);
         }
@@ -2176,6 +2548,9 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         (host.socks5Host ||
           (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
       ) {
+        connectionLogs.push(
+          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
+        );
         createSocks5Connection(host.ip, host.port, {
           useSocks5: host.useSocks5,
           socks5Host: host.socks5Host,
@@ -2194,6 +2569,13 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             if (!isResolved) {
               isResolved = true;
               clearTimeout(timeout);
+              connectionLogs.push(
+                createConnectionLog(
+                  "error",
+                  "proxy",
+                  `SOCKS5 proxy connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                ),
+              );
               reject(error);
             }
           });
@@ -2203,22 +2585,61 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
     });
 
     const result = await connectionPromise;
-    res.json(result);
+    res.json({ ...result, connectionLogs });
   } catch (error) {
     statsLogger.error("Failed to start metrics collection", {
       operation: "metrics_start_error",
       hostId: id,
       error: error instanceof Error ? error.message : String(error),
     });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "stats_connecting",
+        `Failed to start metrics: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ),
+    );
     res.status(500).json({
       error:
         error instanceof Error
           ? error.message
           : "Failed to start metrics collection",
+      connectionLogs,
     });
   }
 });
 
+/**
+ * @openapi
+ * /metrics/stop/{id}:
+ *   post:
+ *     summary: Stop metrics collection
+ *     description: Stops metrics collection for a specific host and cleans up the SSH session.
+ *     tags:
+ *       - Server Stats
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               viewerSessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Metrics collection stopped successfully.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       500:
+ *         description: Failed to stop metrics collection.
+ */
 app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
@@ -2261,6 +2682,37 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /metrics/connect-totp:
+ *   post:
+ *     summary: Complete TOTP verification for metrics
+ *     description: Verifies the TOTP code and completes the metrics SSH connection.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               totpCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP verified, metrics connection established.
+ *       400:
+ *         description: Missing sessionId or totpCode.
+ *       401:
+ *         description: Session expired or invalid TOTP code.
+ *       404:
+ *         description: TOTP session not found or expired.
+ *       500:
+ *         description: Failed to verify TOTP.
+ */
 app.post("/metrics/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
@@ -2396,6 +2848,35 @@ app.post("/metrics/connect-totp", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /metrics/heartbeat:
+ *   post:
+ *     summary: Update viewer heartbeat
+ *     description: Updates the heartbeat timestamp for a metrics viewer session to keep it alive.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               viewerSessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Heartbeat updated successfully.
+ *       400:
+ *         description: Invalid viewerSessionId.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       404:
+ *         description: Viewer session not found.
+ *       500:
+ *         description: Failed to update heartbeat.
+ */
 app.post("/metrics/heartbeat", async (req, res) => {
   const { viewerSessionId } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
@@ -2428,6 +2909,33 @@ app.post("/metrics/heartbeat", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /metrics/register-viewer:
+ *   post:
+ *     summary: Register metrics viewer
+ *     description: Registers a new viewer session for a host to track who is viewing metrics.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Viewer registered successfully.
+ *       400:
+ *         description: Invalid hostId.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       500:
+ *         description: Failed to register viewer.
+ */
 app.post("/metrics/register-viewer", async (req, res) => {
   const { hostId } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
@@ -2458,6 +2966,35 @@ app.post("/metrics/register-viewer", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /metrics/unregister-viewer:
+ *   post:
+ *     summary: Unregister metrics viewer
+ *     description: Unregisters a viewer session when they stop viewing metrics for a host.
+ *     tags:
+ *       - Server Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               viewerSessionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Viewer unregistered successfully.
+ *       400:
+ *         description: Invalid hostId or viewerSessionId.
+ *       401:
+ *         description: Session expired - please log in again.
+ *       500:
+ *         description: Failed to unregister viewer.
+ */
 app.post("/metrics/unregister-viewer", async (req, res) => {
   const { hostId, viewerSessionId } = req.body;
   const userId = (req as AuthenticatedRequest).userId;

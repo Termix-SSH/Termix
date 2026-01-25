@@ -20,6 +20,10 @@ import {
   commandHistory,
   roles,
   userRoles,
+  hostAccess,
+  sharedCredentials,
+  auditLogs,
+  sessionRecordings,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -142,6 +146,22 @@ const requireAdmin = authManager.createAdminMiddleware();
 async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
     await db
+      .delete(sharedCredentials)
+      .where(eq(sharedCredentials.targetUserId, userId));
+
+    await db
+      .delete(sessionRecordings)
+      .where(eq(sessionRecordings.userId, userId));
+
+    await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
+    await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
+
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+
+    await db.delete(userRoles).where(eq(userRoles.userId, userId));
+    await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+
+    await db
       .delete(sshCredentialUsage)
       .where(eq(sshCredentialUsage.userId, userId));
 
@@ -187,8 +207,37 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
   }
 }
 
-// Route: Create traditional user (username/password)
-// POST /users/create
+/**
+ * @openapi
+ * /users/create:
+ *   post:
+ *     summary: Create a new user
+ *     description: Creates a new user with a username and password.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User created successfully.
+ *       400:
+ *         description: Username and password are required.
+ *       403:
+ *         description: Registration is currently disabled.
+ *       409:
+ *         description: Username already exists.
+ *       500:
+ *         description: Failed to create user.
+ */
 router.post("/create", async (req, res) => {
   try {
     const row = db.$client
@@ -338,8 +387,22 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// Route: Create OIDC provider configuration (admin only)
-// POST /users/oidc-config
+/**
+ * @openapi
+ * /users/oidc-config:
+ *   post:
+ *     summary: Configure OIDC provider
+ *     description: Creates or updates the OIDC provider configuration.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: OIDC configuration updated.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to update OIDC config.
+ */
 router.post("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -474,8 +537,22 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Disable OIDC configuration (admin only)
-// DELETE /users/oidc-config
+/**
+ * @openapi
+ * /users/oidc-config:
+ *   delete:
+ *     summary: Disable OIDC configuration
+ *     description: Disables the OIDC provider configuration.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: OIDC configuration disabled.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to disable OIDC config.
+ */
 router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -496,8 +573,20 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Get OIDC configuration (public - needed for login page)
-// GET /users/oidc-config
+/**
+ * @openapi
+ * /users/oidc-config:
+ *   get:
+ *     summary: Get OIDC configuration
+ *     description: Returns the public OIDC configuration.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Public OIDC configuration.
+ *       500:
+ *         description: Failed to get OIDC config.
+ */
 router.get("/oidc-config", async (req, res) => {
   try {
     const row = db.$client
@@ -523,8 +612,20 @@ router.get("/oidc-config", async (req, res) => {
   }
 });
 
-// Route: Get OIDC configuration for Admin (admin only)
-// GET /users/oidc-config/admin
+/**
+ * @openapi
+ * /users/oidc-config/admin:
+ *   get:
+ *     summary: Get OIDC configuration for admin
+ *     description: Returns the full OIDC configuration for an admin.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Full OIDC configuration.
+ *       500:
+ *         description: Failed to get OIDC config for admin.
+ */
 router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -580,8 +681,22 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
   }
 });
 
-// Route: Get OIDC authorization URL
-// GET /users/oidc/authorize
+/**
+ * @openapi
+ * /users/oidc/authorize:
+ *   get:
+ *     summary: Get OIDC authorization URL
+ *     description: Returns the OIDC authorization URL.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: OIDC authorization URL.
+ *       404:
+ *         description: OIDC not configured.
+ *       500:
+ *         description: Failed to generate authorization URL.
+ */
 router.get("/oidc/authorize", async (req, res) => {
   try {
     const row = db.$client
@@ -629,8 +744,20 @@ router.get("/oidc/authorize", async (req, res) => {
   }
 });
 
-// Route: OIDC callback - exchange code for token and create/login user
-// GET /users/oidc/callback
+/**
+ * @openapi
+ * /users/oidc/callback:
+ *   get:
+ *     summary: OIDC callback
+ *     description: Handles the OIDC callback, exchanges the code for a token, and creates or logs in the user.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       302:
+ *         description: Redirects to the frontend with a success or error message.
+ *       400:
+ *         description: Code and state are required.
+ */
 router.get("/oidc/callback", async (req, res) => {
   const { code, state } = req.query;
 
@@ -1042,8 +1169,39 @@ router.get("/oidc/callback", async (req, res) => {
   }
 });
 
-// Route: Get user JWT by username and password (traditional login)
-// POST /users/login
+/**
+ * @openapi
+ * /users/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticates a user and returns a JWT.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful.
+ *       400:
+ *         description: Invalid username or password.
+ *       401:
+ *         description: Invalid username or password.
+ *       403:
+ *         description: Password authentication is currently disabled.
+ *       429:
+ *         description: Too many login attempts.
+ *       500:
+ *         description: Login failed.
+ */
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
@@ -1241,8 +1399,20 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Route: Logout user
-// POST /users/logout
+/**
+ * @openapi
+ * /users/logout:
+ *   post:
+ *     summary: User logout
+ *     description: Logs out the user and clears the JWT cookie.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Logged out successfully.
+ *       500:
+ *         description: Logout failed.
+ */
 router.post("/logout", authenticateJWT, async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
@@ -1277,8 +1447,22 @@ router.post("/logout", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Get current user's info using JWT
-// GET /users/me
+/**
+ * @openapi
+ * /users/me:
+ *   get:
+ *     summary: Get current user's info
+ *     description: Retrieves information about the currently authenticated user.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: User information.
+ *       401:
+ *         description: Invalid userId or user not found.
+ *       500:
+ *         description: Failed to get username.
+ */
 router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -1312,8 +1496,20 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
   }
 });
 
-// Route: Check if system requires initial setup (public - for first-time setup detection)
-// GET /users/setup-required
+/**
+ * @openapi
+ * /users/setup-required:
+ *   get:
+ *     summary: Check if setup is required
+ *     description: Checks if the system requires initial setup (i.e., no users exist).
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Setup status.
+ *       500:
+ *         description: Failed to check setup status.
+ */
 router.get("/setup-required", async (req, res) => {
   try {
     const countResult = db.$client
@@ -1330,8 +1526,22 @@ router.get("/setup-required", async (req, res) => {
   }
 });
 
-// Route: Count users (admin only - for dashboard statistics)
-// GET /users/count
+/**
+ * @openapi
+ * /users/count:
+ *   get:
+ *     summary: Count users
+ *     description: Returns the total number of users in the system.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: User count.
+ *       403:
+ *         description: Admin access required.
+ *       500:
+ *         description: Failed to count users.
+ */
 router.get("/count", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -1351,8 +1561,20 @@ router.get("/count", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: DB health check (actually queries DB)
-// GET /users/db-health
+/**
+ * @openapi
+ * /users/db-health:
+ *   get:
+ *     summary: Database health check
+ *     description: Checks if the database is accessible.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Database is accessible.
+ *       500:
+ *         description: Database not accessible.
+ */
 router.get("/db-health", requireAdmin, async (req, res) => {
   try {
     db.$client.prepare("SELECT 1").get();
@@ -1363,8 +1585,20 @@ router.get("/db-health", requireAdmin, async (req, res) => {
   }
 });
 
-// Route: Get registration allowed status (public - needed for login page)
-// GET /users/registration-allowed
+/**
+ * @openapi
+ * /users/registration-allowed:
+ *   get:
+ *     summary: Get registration status
+ *     description: Checks if user registration is currently allowed.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Registration status.
+ *       500:
+ *         description: Failed to get registration allowed status.
+ */
 router.get("/registration-allowed", async (req, res) => {
   try {
     const row = db.$client
@@ -1379,8 +1613,33 @@ router.get("/registration-allowed", async (req, res) => {
   }
 });
 
-// Route: Set registration allowed status (admin only)
-// PATCH /users/registration-allowed
+/**
+ * @openapi
+ * /users/registration-allowed:
+ *   patch:
+ *     summary: Set registration status
+ *     description: Enables or disables user registration.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               allowed:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Registration status updated.
+ *       400:
+ *         description: Invalid value for allowed.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set registration allowed status.
+ */
 router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -1402,8 +1661,20 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Get password login allowed status (public - needed for login page)
-// GET /users/password-login-allowed
+/**
+ * @openapi
+ * /users/password-login-allowed:
+ *   get:
+ *     summary: Get password login status
+ *     description: Checks if password-based login is currently allowed.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Password login status.
+ *       500:
+ *         description: Failed to get password login allowed status.
+ */
 router.get("/password-login-allowed", async (req, res) => {
   try {
     const row = db.$client
@@ -1418,8 +1689,33 @@ router.get("/password-login-allowed", async (req, res) => {
   }
 });
 
-// Route: Set password login allowed status (admin only)
-// PATCH /users/password-login-allowed
+/**
+ * @openapi
+ * /users/password-login-allowed:
+ *   patch:
+ *     summary: Set password login status
+ *     description: Enables or disables password-based login.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               allowed:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Password login status updated.
+ *       400:
+ *         description: Invalid value for allowed.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set password login allowed status.
+ */
 router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -1443,8 +1739,115 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Delete user account
-// DELETE /users/delete-account
+/**
+ * @openapi
+ * /users/password-reset-allowed:
+ *   get:
+ *     summary: Get password reset status
+ *     description: Checks if password reset is currently allowed.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Password reset status.
+ *       500:
+ *         description: Failed to get password reset allowed status.
+ */
+router.get("/password-reset-allowed", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
+      .get();
+    res.json({
+      allowed: row ? (row as { value: string }).value === "true" : true,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get password reset allowed", err);
+    res.status(500).json({ error: "Failed to get password reset allowed" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/password-reset-allowed:
+ *   patch:
+ *     summary: Set password reset status
+ *     description: Enables or disables password reset.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               allowed:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Password reset status updated.
+ *       400:
+ *         description: Invalid value for allowed.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set password reset allowed status.
+ */
+router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].is_admin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { allowed } = req.body;
+    if (typeof allowed !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for allowed" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_reset', ?)",
+      )
+      .run(allowed ? "true" : "false");
+    res.json({ allowed });
+  } catch (err) {
+    authLogger.error("Failed to set password reset allowed", err);
+    res.status(500).json({ error: "Failed to set password reset allowed" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/delete-account:
+ *   delete:
+ *     summary: Delete user account
+ *     description: Deletes the authenticated user's account.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully.
+ *       400:
+ *         description: Password is required.
+ *       401:
+ *         description: Incorrect password.
+ *       403:
+ *         description: Cannot delete external authentication accounts or the last admin user.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to delete account.
+ */
 router.delete("/delete-account", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { password } = req.body;
@@ -1499,9 +1902,52 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Initiate password reset
-// POST /users/initiate-reset
+/**
+ * @openapi
+ * /users/initiate-reset:
+ *   post:
+ *     summary: Initiate password reset
+ *     description: Initiates the password reset process for a user.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset code has been generated.
+ *       400:
+ *         description: Username is required.
+ *       403:
+ *         description: Password reset not available for external authentication users.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to initiate password reset.
+ */
 router.post("/initiate-reset", async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
+      .get();
+    if (row && (row as { value: string }).value !== "true") {
+      return res
+        .status(403)
+        .json({ error: "Password reset is currently disabled" });
+    }
+  } catch (e) {
+    authLogger.warn("Failed to check password reset status", {
+      operation: "password_reset_check",
+      error: e,
+    });
+  }
+
   const { username } = req.body;
 
   if (!isNonEmptyString(username)) {
@@ -1551,8 +1997,33 @@ router.post("/initiate-reset", async (req, res) => {
   }
 });
 
-// Route: Verify reset code
-// POST /users/verify-reset-code
+/**
+ * @openapi
+ * /users/verify-reset-code:
+ *   post:
+ *     summary: Verify reset code
+ *     description: Verifies the password reset code.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               resetCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Reset code verified.
+ *       400:
+ *         description: Invalid or expired reset code.
+ *       500:
+ *         description: Failed to verify reset code.
+ */
 router.post("/verify-reset-code", async (req, res) => {
   const { username, resetCode } = req.body;
 
@@ -1563,13 +2034,37 @@ router.post("/verify-reset-code", async (req, res) => {
   }
 
   try {
+    const lockStatus = loginRateLimiter.isResetCodeLocked(username);
+    if (lockStatus.locked) {
+      authLogger.warn("Reset code verification blocked due to rate limiting", {
+        operation: "reset_code_verify_blocked",
+        username,
+        remainingTime: lockStatus.remainingTime,
+      });
+      return res.status(429).json({
+        error: `Rate limited: Too many verification attempts. Please wait ${lockStatus.remainingTime} seconds before trying again.`,
+        remainingTime: lockStatus.remainingTime,
+        code: "RESET_CODE_RATE_LIMITED",
+      });
+    }
+
+    loginRateLimiter.recordResetCodeAttempt(username);
+
     const resetDataRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = ?")
       .get(`reset_code_${username}`);
     if (!resetDataRow) {
-      return res
-        .status(400)
-        .json({ error: "No reset code found for this user" });
+      authLogger.warn("Reset code verification failed - no code found", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "No reset code found for this user",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
 
     const resetData = JSON.parse(
@@ -1582,12 +2077,34 @@ router.post("/verify-reset-code", async (req, res) => {
       db.$client
         .prepare("DELETE FROM settings WHERE key = ?")
         .run(`reset_code_${username}`);
-      return res.status(400).json({ error: "Reset code has expired" });
+      authLogger.warn("Reset code verification failed - code expired", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "Reset code has expired",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
 
     if (resetData.code !== resetCode) {
-      return res.status(400).json({ error: "Invalid reset code" });
+      authLogger.warn("Reset code verification failed - invalid code", {
+        operation: "reset_code_verify_failed",
+        username,
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
+      return res.status(400).json({
+        error: "Invalid reset code",
+        remainingAttempts:
+          loginRateLimiter.getRemainingResetCodeAttempts(username),
+      });
     }
+
+    loginRateLimiter.resetResetCodeAttempts(username);
 
     const tempToken = nanoid();
     const tempTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -1609,8 +2126,37 @@ router.post("/verify-reset-code", async (req, res) => {
   }
 });
 
-// Route: Complete password reset
-// POST /users/complete-reset
+/**
+ * @openapi
+ * /users/complete-reset:
+ *   post:
+ *     summary: Complete password reset
+ *     description: Completes the password reset process with a new password.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               tempToken:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password has been successfully reset.
+ *       400:
+ *         description: Invalid or expired temporary token.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to complete password reset.
+ */
 router.post("/complete-reset", async (req, res) => {
   const { username, tempToken, newPassword } = req.body;
 
@@ -1797,6 +2343,35 @@ router.post("/complete-reset", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /users/change-password:
+ *   post:
+ *     summary: Change user password
+ *     description: Changes the authenticated user's password.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed successfully.
+ *       400:
+ *         description: Old and new passwords are required.
+ *       401:
+ *         description: Incorrect current password.
+ *       500:
+ *         description: Failed to update password and re-encrypt data.
+ */
 router.post("/change-password", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { oldPassword, newPassword } = req.body;
@@ -1841,8 +2416,22 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   res.json({ message: "Password changed successfully. Please log in again." });
 });
 
-// Route: List all users (admin only)
-// GET /users/list
+/**
+ * @openapi
+ * /users/list:
+ *   get:
+ *     summary: List all users
+ *     description: Retrieves a list of all users in the system.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: A list of users.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to list users.
+ */
 router.get("/list", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -1868,8 +2457,35 @@ router.get("/list", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Make user admin (admin only)
-// POST /users/make-admin
+/**
+ * @openapi
+ * /users/make-admin:
+ *   post:
+ *     summary: Make user admin
+ *     description: Grants admin privileges to a user.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User is now an admin.
+ *       400:
+ *         description: Username is required or user is already an admin.
+ *       403:
+ *         description: Not authorized.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to make user admin.
+ */
 router.post("/make-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
@@ -1921,8 +2537,35 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Remove admin status (admin only)
-// POST /users/remove-admin
+/**
+ * @openapi
+ * /users/remove-admin:
+ *   post:
+ *     summary: Remove admin status
+ *     description: Revokes admin privileges from a user.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Admin status removed from user.
+ *       400:
+ *         description: Username is required or cannot remove your own admin status.
+ *       403:
+ *         description: Not authorized.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to remove admin status.
+ */
 router.post("/remove-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
@@ -1980,8 +2623,352 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Verify TOTP during login
-// POST /users/totp/verify-login
+/**
+ * @openapi
+ * /users/totp/setup:
+ *   post:
+ *     summary: Setup TOTP
+ *     description: Initiates TOTP setup by generating a secret and QR code.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: TOTP setup initiated with secret and QR code.
+ *       400:
+ *         description: TOTP is already enabled.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to setup TOTP.
+ */
+router.post("/totp/setup", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is already enabled" });
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Termix (${userRecord.username})`,
+      length: 32,
+    });
+
+    await db
+      .update(users)
+      .set({ totp_secret: secret.base32 })
+      .where(eq(users.id, userId));
+
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
+
+    res.json({
+      secret: secret.base32,
+      qr_code: qrCodeUrl,
+    });
+  } catch (err) {
+    authLogger.error("Failed to setup TOTP", err);
+    res.status(500).json({ error: "Failed to setup TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/enable:
+ *   post:
+ *     summary: Enable TOTP
+ *     description: Enables TOTP after verifying the initial code.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP enabled successfully with backup codes.
+ *       400:
+ *         description: TOTP code is required or TOTP already enabled.
+ *       401:
+ *         description: Invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to enable TOTP.
+ */
+router.post("/totp/enable", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { totp_code } = req.body;
+
+  if (!totp_code) {
+    return res.status(400).json({ error: "TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is already enabled" });
+    }
+
+    if (!userRecord.totp_secret) {
+      return res.status(400).json({ error: "TOTP setup not initiated" });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: userRecord.totp_secret,
+      encoding: "base32",
+      token: totp_code,
+      window: 2,
+    });
+
+    if (!verified) {
+      return res.status(401).json({ error: "Invalid TOTP code" });
+    }
+
+    const backupCodes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 10).toUpperCase(),
+    );
+
+    await db
+      .update(users)
+      .set({
+        totp_enabled: true,
+        totp_backup_codes: JSON.stringify(backupCodes),
+      })
+      .where(eq(users.id, userId));
+
+    res.json({
+      message: "TOTP enabled successfully",
+      backup_codes: backupCodes,
+    });
+  } catch (err) {
+    authLogger.error("Failed to enable TOTP", err);
+    res.status(500).json({ error: "Failed to enable TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/disable:
+ *   post:
+ *     summary: Disable TOTP
+ *     description: Disables TOTP for a user.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP disabled successfully.
+ *       400:
+ *         description: Password or TOTP code is required.
+ *       401:
+ *         description: Incorrect password or invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to disable TOTP.
+ */
+router.post("/totp/disable", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { password, totp_code } = req.body;
+
+  if (!password && !totp_code) {
+    return res.status(400).json({ error: "Password or TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (!userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is not enabled" });
+    }
+
+    if (password && !userRecord.is_oidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+    } else if (totp_code) {
+      const verified = speakeasy.totp.verify({
+        secret: userRecord.totp_secret!,
+        encoding: "base32",
+        token: totp_code,
+        window: 2,
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: "Invalid TOTP code" });
+      }
+    } else {
+      return res.status(400).json({ error: "Authentication required" });
+    }
+
+    await db
+      .update(users)
+      .set({
+        totp_enabled: false,
+        totp_secret: null,
+        totp_backup_codes: null,
+      })
+      .where(eq(users.id, userId));
+
+    res.json({ message: "TOTP disabled successfully" });
+  } catch (err) {
+    authLogger.error("Failed to disable TOTP", err);
+    res.status(500).json({ error: "Failed to disable TOTP" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/backup-codes:
+ *   post:
+ *     summary: Generate new backup codes
+ *     description: Generates new TOTP backup codes.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New backup codes generated.
+ *       400:
+ *         description: Password or TOTP code is required.
+ *       401:
+ *         description: Incorrect password or invalid TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to generate backup codes.
+ */
+router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const { password, totp_code } = req.body;
+
+  if (!password && !totp_code) {
+    return res.status(400).json({ error: "Password or TOTP code is required" });
+  }
+
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userRecord = user[0];
+
+    if (!userRecord.totp_enabled) {
+      return res.status(400).json({ error: "TOTP is not enabled" });
+    }
+
+    if (password && !userRecord.is_oidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+    } else if (totp_code) {
+      const verified = speakeasy.totp.verify({
+        secret: userRecord.totp_secret!,
+        encoding: "base32",
+        token: totp_code,
+        window: 2,
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: "Invalid TOTP code" });
+      }
+    } else {
+      return res.status(400).json({ error: "Authentication required" });
+    }
+
+    const backupCodes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 10).toUpperCase(),
+    );
+
+    await db
+      .update(users)
+      .set({ totp_backup_codes: JSON.stringify(backupCodes) })
+      .where(eq(users.id, userId));
+
+    res.json({ backup_codes: backupCodes });
+  } catch (err) {
+    authLogger.error("Failed to generate backup codes", err);
+    res.status(500).json({ error: "Failed to generate backup codes" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/totp/verify-login:
+ *   post:
+ *     summary: Verify TOTP during login
+ *     description: Verifies the TOTP code during login.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               temp_token:
+ *                 type: string
+ *               totp_code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: TOTP verification successful.
+ *       400:
+ *         description: Token and TOTP code are required.
+ *       401:
+ *         description: Invalid temporary token or TOTP code.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: TOTP verification failed.
+ */
 router.post("/totp/verify-login", async (req, res) => {
   const { temp_token, totp_code } = req.body;
 
@@ -2004,6 +2991,22 @@ router.post("/totp/verify-login", async (req, res) => {
     }
 
     const userRecord = user[0];
+
+    const lockStatus = loginRateLimiter.isTOTPLocked(userRecord.id);
+    if (lockStatus.locked) {
+      authLogger.warn("TOTP verification blocked due to rate limiting", {
+        operation: "totp_verify_blocked",
+        userId: userRecord.id,
+        remainingTime: lockStatus.remainingTime,
+      });
+      return res.status(429).json({
+        error: `Rate limited: Too many TOTP verification attempts. Please wait ${lockStatus.remainingTime} seconds before trying again.`,
+        remainingTime: lockStatus.remainingTime,
+        code: "TOTP_RATE_LIMITED",
+      });
+    }
+
+    loginRateLimiter.recordFailedTOTPAttempt(userRecord.id);
 
     if (!userRecord.totp_enabled || !userRecord.totp_secret) {
       return res.status(400).json({ error: "TOTP not enabled for this user" });
@@ -2064,7 +3067,19 @@ router.post("/totp/verify-login", async (req, res) => {
       const backupIndex = backupCodes.indexOf(totp_code);
 
       if (backupIndex === -1) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
+        authLogger.warn("TOTP verification failed - invalid code", {
+          operation: "totp_verify_failed",
+          userId: userRecord.id,
+          remainingAttempts: loginRateLimiter.getRemainingTOTPAttempts(
+            userRecord.id,
+          ),
+        });
+        return res.status(401).json({
+          error: "Invalid TOTP code",
+          remainingAttempts: loginRateLimiter.getRemainingTOTPAttempts(
+            userRecord.id,
+          ),
+        });
       }
 
       backupCodes.splice(backupIndex, 1);
@@ -2073,6 +3088,8 @@ router.post("/totp/verify-login", async (req, res) => {
         .set({ totp_backup_codes: JSON.stringify(backupCodes) })
         .where(eq(users.id, userRecord.id));
     }
+
+    loginRateLimiter.resetTOTPAttempts(userRecord.id);
 
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
@@ -2118,222 +3135,35 @@ router.post("/totp/verify-login", async (req, res) => {
   }
 });
 
-// Route: Setup TOTP
-// POST /users/totp/setup
-router.post("/totp/setup", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-
-  try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const userRecord = user[0];
-
-    if (userRecord.totp_enabled) {
-      return res.status(400).json({ error: "TOTP is already enabled" });
-    }
-
-    const secret = speakeasy.generateSecret({
-      name: `Termix (${userRecord.username})`,
-      length: 32,
-    });
-
-    await db
-      .update(users)
-      .set({ totp_secret: secret.base32 })
-      .where(eq(users.id, userId));
-
-    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
-
-    res.json({
-      secret: secret.base32,
-      qr_code: qrCodeUrl,
-    });
-  } catch (err) {
-    authLogger.error("Failed to setup TOTP", err);
-    res.status(500).json({ error: "Failed to setup TOTP" });
-  }
-});
-
-// Route: Enable TOTP
-// POST /users/totp/enable
-router.post("/totp/enable", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { totp_code } = req.body;
-
-  if (!totp_code) {
-    return res.status(400).json({ error: "TOTP code is required" });
-  }
-
-  try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const userRecord = user[0];
-
-    if (userRecord.totp_enabled) {
-      return res.status(400).json({ error: "TOTP is already enabled" });
-    }
-
-    if (!userRecord.totp_secret) {
-      return res.status(400).json({ error: "TOTP setup not initiated" });
-    }
-
-    const verified = speakeasy.totp.verify({
-      secret: userRecord.totp_secret,
-      encoding: "base32",
-      token: totp_code,
-      window: 2,
-    });
-
-    if (!verified) {
-      return res.status(401).json({ error: "Invalid TOTP code" });
-    }
-
-    const backupCodes = Array.from({ length: 8 }, () =>
-      Math.random().toString(36).substring(2, 10).toUpperCase(),
-    );
-
-    await db
-      .update(users)
-      .set({
-        totp_enabled: true,
-        totp_backup_codes: JSON.stringify(backupCodes),
-      })
-      .where(eq(users.id, userId));
-
-    res.json({
-      message: "TOTP enabled successfully",
-      backup_codes: backupCodes,
-    });
-  } catch (err) {
-    authLogger.error("Failed to enable TOTP", err);
-    res.status(500).json({ error: "Failed to enable TOTP" });
-  }
-});
-
-// Route: Disable TOTP
-// POST /users/totp/disable
-router.post("/totp/disable", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { password, totp_code } = req.body;
-
-  if (!password && !totp_code) {
-    return res.status(400).json({ error: "Password or TOTP code is required" });
-  }
-
-  try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const userRecord = user[0];
-
-    if (!userRecord.totp_enabled) {
-      return res.status(400).json({ error: "TOTP is not enabled" });
-    }
-
-    if (password && !userRecord.is_oidc) {
-      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
-      if (!isMatch) {
-        return res.status(401).json({ error: "Incorrect password" });
-      }
-    } else if (totp_code) {
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totp_secret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
-
-      if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
-      }
-    } else {
-      return res.status(400).json({ error: "Authentication required" });
-    }
-
-    await db
-      .update(users)
-      .set({
-        totp_enabled: false,
-        totp_secret: null,
-        totp_backup_codes: null,
-      })
-      .where(eq(users.id, userId));
-
-    res.json({ message: "TOTP disabled successfully" });
-  } catch (err) {
-    authLogger.error("Failed to disable TOTP", err);
-    res.status(500).json({ error: "Failed to disable TOTP" });
-  }
-});
-
-// Route: Generate new backup codes
-// POST /users/totp/backup-codes
-router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { password, totp_code } = req.body;
-
-  if (!password && !totp_code) {
-    return res.status(400).json({ error: "Password or TOTP code is required" });
-  }
-
-  try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const userRecord = user[0];
-
-    if (!userRecord.totp_enabled) {
-      return res.status(400).json({ error: "TOTP is not enabled" });
-    }
-
-    if (password && !userRecord.is_oidc) {
-      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
-      if (!isMatch) {
-        return res.status(401).json({ error: "Incorrect password" });
-      }
-    } else if (totp_code) {
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totp_secret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
-
-      if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
-      }
-    } else {
-      return res.status(400).json({ error: "Authentication required" });
-    }
-
-    const backupCodes = Array.from({ length: 8 }, () =>
-      Math.random().toString(36).substring(2, 10).toUpperCase(),
-    );
-
-    await db
-      .update(users)
-      .set({ totp_backup_codes: JSON.stringify(backupCodes) })
-      .where(eq(users.id, userId));
-
-    res.json({ backup_codes: backupCodes });
-  } catch (err) {
-    authLogger.error("Failed to generate backup codes", err);
-    res.status(500).json({ error: "Failed to generate backup codes" });
-  }
-});
-
-// Route: Delete user (admin only)
-// DELETE /users/delete-user
+/**
+ * @openapi
+ * /users/delete-user:
+ *   delete:
+ *     summary: Delete user (admin only)
+ *     description: Allows an admin to delete another user and all related data.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User deleted successfully.
+ *       400:
+ *         description: Username is required or cannot delete yourself.
+ *       403:
+ *         description: Not authorized or cannot delete last admin.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to delete user.
+ */
 router.delete("/delete-user", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { username } = req.body;
@@ -2373,7 +3203,6 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
     const targetUserId = targetUser[0].id;
 
-    // Use the comprehensive deletion utility
     await deleteUserAndRelatedData(targetUserId);
 
     authLogger.success(
@@ -2398,8 +3227,33 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: User data unlock - used when session expires
-// POST /users/unlock-data
+/**
+ * @openapi
+ * /users/unlock-data:
+ *   post:
+ *     summary: Unlock user data
+ *     description: Re-authenticates user with password to unlock encrypted data.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Data unlocked successfully.
+ *       400:
+ *         description: Password is required.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to unlock data.
+ */
 router.post("/unlock-data", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { password } = req.body;
@@ -2431,8 +3285,20 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Check user data unlock status
-// GET /users/data-status
+/**
+ * @openapi
+ * /users/data-status:
+ *   get:
+ *     summary: Check user data unlock status
+ *     description: Checks if user data is currently unlocked.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Data status returned.
+ *       500:
+ *         description: Failed to check data status.
+ */
 router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -2450,69 +3316,22 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Change user password (re-encrypt data keys)
-// POST /users/change-password
-router.post("/change-password", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({
-      error: "Current password and new password are required",
-    });
-  }
-
-  if (newPassword.length < 8) {
-    return res.status(400).json({
-      error: "New password must be at least 8 characters long",
-    });
-  }
-
-  try {
-    const success = await authManager.changeUserPassword(
-      userId,
-      currentPassword,
-      newPassword,
-    );
-
-    if (success) {
-      const saltRounds = parseInt(process.env.SALT || "10", 10);
-      const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
-      await db
-        .update(users)
-        .set({ password_hash: newPasswordHash })
-        .where(eq(users.id, userId));
-
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
-
-      authLogger.success("User password changed successfully", {
-        operation: "password_change_success",
-        userId,
-      });
-
-      res.json({
-        success: true,
-        message: "Password changed successfully",
-      });
-    } else {
-      authLogger.warn("Password change failed - invalid current password", {
-        operation: "password_change_failed",
-        userId,
-      });
-      res.status(401).json({ error: "Current password is incorrect" });
-    }
-  } catch (err) {
-    authLogger.error("Password change failed", err, {
-      operation: "password_change_error",
-      userId,
-    });
-    res.status(500).json({ error: "Failed to change password" });
-  }
-});
-
-// Route: Get sessions (all for admin, own for user)
-// GET /users/sessions
+/**
+ * @openapi
+ * /users/sessions:
+ *   get:
+ *     summary: Get sessions
+ *     description: Retrieves all sessions for authenticated user (or all sessions for admins).
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Sessions list returned.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to get sessions.
+ */
 router.get("/sessions", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -2554,11 +3373,38 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Revoke a specific session
-// DELETE /users/sessions/:sessionId
+/**
+ * @openapi
+ * /users/sessions/{sessionId}:
+ *   delete:
+ *     summary: Revoke a specific session
+ *     description: Revokes a specific session by ID.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID to revoke
+ *     responses:
+ *       200:
+ *         description: Session revoked successfully.
+ *       400:
+ *         description: Session ID is required.
+ *       403:
+ *         description: Not authorized to revoke this session.
+ *       404:
+ *         description: Session not found.
+ *       500:
+ *         description: Failed to revoke session.
+ */
 router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { sessionId } = req.params;
+  const sessionId = Array.isArray(req.params.sessionId)
+    ? req.params.sessionId[0]
+    : req.params.sessionId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2609,8 +3455,35 @@ router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Revoke all sessions for a user
-// POST /users/sessions/revoke-all
+/**
+ * @openapi
+ * /users/sessions/revoke-all:
+ *   post:
+ *     summary: Revoke all sessions for a user
+ *     description: Revokes all sessions with option to exclude current session.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetUserId:
+ *                 type: string
+ *               exceptCurrent:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Sessions revoked successfully.
+ *       403:
+ *         description: Not authorized to revoke sessions for other users.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to revoke sessions.
+ */
 router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { targetUserId, exceptCurrent } = req.body;
@@ -2665,8 +3538,37 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Link OIDC user to existing password account (merge accounts)
-// POST /users/link-oidc-to-password
+/**
+ * @openapi
+ * /users/link-oidc-to-password:
+ *   post:
+ *     summary: Link OIDC user to password account
+ *     description: Merges an OIDC-only account into a password-based account (admin only).
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oidcUserId:
+ *                 type: string
+ *               targetUsername:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Accounts linked successfully.
+ *       400:
+ *         description: Invalid request or incompatible accounts.
+ *       403:
+ *         description: Admin access required.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to link accounts.
+ */
 router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
   const adminUserId = (req as AuthenticatedRequest).userId;
   const { oidcUserId, targetUsername } = req.body;
@@ -2832,8 +3734,35 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
   }
 });
 
-// Route: Unlink OIDC from password account (admin only)
-// POST /users/unlink-oidc-from-password
+/**
+ * @openapi
+ * /users/unlink-oidc-from-password:
+ *   post:
+ *     summary: Unlink OIDC from password account
+ *     description: Removes OIDC authentication from a dual-auth account (admin only).
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OIDC unlinked successfully.
+ *       400:
+ *         description: Invalid request or user doesn't have OIDC.
+ *       403:
+ *         description: Admin privileges required.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to unlink OIDC.
+ */
 router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
   const adminUserId = (req as AuthenticatedRequest).userId;
   const { userId } = req.body;
