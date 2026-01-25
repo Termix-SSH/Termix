@@ -16,17 +16,6 @@
   <small style="color: #666;">2025年9月1日获得</small>
 </p>
 
-#### 核心技术
-
-[![React Badge](https://img.shields.io/badge/-React-61DBFB?style=flat-square&labelColor=black&logo=react&logoColor=61DBFB)](#)
-[![TypeScript Badge](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&labelColor=black&logo=typescript&logoColor=3178C6)](#)
-[![Node.js Badge](https://img.shields.io/badge/-Node.js-3C873A?style=flat-square&labelColor=black&logo=node.js&logoColor=3C873A)](#)
-[![Vite Badge](https://img.shields.io/badge/-Vite-646CFF?style=flat-square&labelColor=black&logo=vite&logoColor=646CFF)](#)
-[![Tailwind CSS Badge](https://img.shields.io/badge/-TailwindCSS-38B2AC?style=flat-square&labelColor=black&logo=tailwindcss&logoColor=38B2AC)](#)
-[![Docker Badge](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&labelColor=black&logo=docker&logoColor=2496ED)](#)
-[![SQLite Badge](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&labelColor=black&logo=sqlite&logoColor=003B57)](#)
-[![Radix UI Badge](https://img.shields.io/badge/-Radix%20UI-161618?style=flat-square&labelColor=black&logo=radixui&logoColor=161618)](#)
-
 <br />
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
@@ -61,12 +50,14 @@ Termix 是一个开源、永久免费、自托管的一体化服务器管理平�
 - **数据导出/导入** - 导出和导入 SSH 主机、凭据和文件管理器数据
 - **自动 SSL 设置** - 内置 SSL 证书生成和管理，支持 HTTPS 重定向
 - **现代用户界面** - 使用 React、Tailwind CSS 和 Shadcn 构建的简洁的桌面/移动设备友好界面。可选择基于深色或浅色模式的用户界面。
-- **语言** - 内置支持约 30 种语言（通过 Google 翻译批量翻译，结果可能有所不同）
-- **平台支持** - 可作为 Web 应用程序、桌面应用程序（Windows、Linux 和 macOS）以及适用于 iOS 和 Android 的专用移动/平板电脑应用程序。
+- **语言** - 内置支持约 30 种语言（由 [Crowdin](https://docs.termix.site/translations) 管理）
+- **平台支持** - 可作为 Web 应用程序、桌面应用程序（Windows、Linux 和 macOS）、PWA 以及适用于 iOS 和 Android 的专用移动/平板电脑应用程序。
 - **SSH 工具** - 创建可重用的命令片段，单击即可执行。在多个打开的终端上同时运行一个命令。
 - **命令历史** - 自动完成并查看以前运行的 SSH 命令
+- **快速连接** - 无需保存连接数据即可连接到服务器
 - **命令面板** - 双击左 Shift 键可快速使用键盘访问 SSH 连接
-- **SSH 功能丰富** - 支持跳板机、warpgate、基于 TOTP 的连接、SOCKS5、密码自动填充等。
+- **SSH 功能丰富** - 支持跳板机、Warpgate、基于 TOTP 的连接、SOCKS5、密码自动填充等。
+- **网络图** - 自定义您的仪表板，根据您的 SSH 连接可视化您的家庭实验室，支持状态显示
 
 # 计划功能
 
@@ -76,20 +67,21 @@ Termix 是一个开源、永久免费、自托管的一体化服务器管理平�
 
 支持的设备：
 
-- 网站（任何平台上的任何现代浏览器，如 Chrome、Safari 和 Firefox）
+- 网站（任何平台上的任何现代浏览器，如 Chrome、Safari 和 Firefox）（包括 PWA 支持）
 - Windows（x64/ia32）
   - 便携版
   - MSI 安装程序
-  - Chocolatey 软件包管理器（即将推出）
+  - Chocolatey 软件包管理器
 - Linux（x64/ia32）
   - 便携版
+  - AUR
   - AppImage
   - Deb
-  - Flatpak（即将推出）
+  - Flatpak
 - macOS（x64/ia32 on v12.0+）
-  - Apple App Store（即将推出）
+  - Apple App Store
   - DMG
-  - Homebrew（即将推出）
+  - Homebrew
 - iOS/iPadOS（v15.1+）
   - Apple App Store
   - ISO
@@ -117,6 +109,22 @@ volumes:
     driver: local
 ```
 
+# 赞助商
+
+<p align="left">
+  <a href="https://www.digitalocean.com/">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://crowdin.com/">
+    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.blacksmith.sh/">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+  </a>
+</p>
+
 # 支持
 
 如果你需要 Termix 的帮助或想要请求功能，请访问 [Issues](https://github.com/Termix-SSH/Support/issues) 页面，登录并点击 `New Issue`。
@@ -124,6 +132,8 @@ volumes:
 频道，但响应时间可能较长。
 
 # 展示
+
+[![](https://utfs.io/f/nGnSqDveMsqxqiKJF5EnObSopHatulx93N0E1KVsP7hvjMfF)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
@@ -147,14 +157,14 @@ volumes:
 
 <p align="center">
   <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 110"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
-    你的浏览器不支持 video 标签。
-  </video>
+  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
 </p>
+
 某些视频和图像可能已过时或可能无法完美展示功能。
 
 # 许可证
