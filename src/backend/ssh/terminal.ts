@@ -1284,7 +1284,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      connectConfig.password = resolvedCredentials.password;
+      if (!hostConfig.forceKeyboardInteractive) {
+        connectConfig.password = resolvedCredentials.password;
+      }
+
       sendLog("auth", "info", "Using password authentication");
     } else if (
       resolvedCredentials.authType === "key" &&

@@ -518,6 +518,15 @@ class AuthManager {
     };
   }
 
+  getClearCookieOptions(req: RequestWithHeaders) {
+    return {
+      httpOnly: false,
+      secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+      sameSite: "strict" as const,
+      path: "/",
+    };
+  }
+
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       const authReq = req as AuthenticatedRequest;

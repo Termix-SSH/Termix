@@ -309,7 +309,7 @@ export function Auth({
             "*",
           );
           setWebviewAuthSuccess(true);
-          setTimeout(() => window.location.reload(), 100);
+          return;
         } catch (e) {
           console.error("Error posting auth success message:", e);
         }
@@ -518,7 +518,6 @@ export function Auth({
             "*",
           );
           setWebviewAuthSuccess(true);
-          setTimeout(() => window.location.reload(), 100);
           setTotpLoading(false);
           return;
         } catch (e) {
@@ -655,7 +654,6 @@ export function Auth({
                   "*",
                 );
                 setWebviewAuthSuccess(true);
-                setTimeout(() => window.location.reload(), 100);
                 setOidcLoading(false);
                 return;
               } catch (e) {
