@@ -232,9 +232,9 @@ export function ContainerStats({
         </CardHeader>
         <CardContent className="px-4 pb-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{t("docker.name")}</span>
-              <span className="font-mono text-foreground">{containerName}</span>
+            <div className="flex justify-between items-center gap-2 min-w-0">
+              <span className="text-muted-foreground shrink-0">{t("docker.name")}</span>
+              <span className="font-mono text-foreground truncate">{containerName}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">{t("docker.id")}</span>
