@@ -1503,7 +1503,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
-        // Handle Ctrl+V (Windows/Linux) and Cmd+V (Mac) for paste
         if (
           ((e.ctrlKey && !e.altKey && !e.metaKey) ||
             (e.metaKey && !e.ctrlKey && !e.altKey)) &&
