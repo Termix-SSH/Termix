@@ -558,7 +558,7 @@ export function Dashboard({
                 <div
                   className="grid gap-4"
                   style={{
-                    gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(540px, 1fr))",
                     gridAutoRows: "minmax(300px, 1fr)",
                     minHeight: "100%",
                   }}
