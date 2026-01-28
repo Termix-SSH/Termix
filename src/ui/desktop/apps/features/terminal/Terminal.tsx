@@ -12,6 +12,7 @@ import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
+import { getBasePath } from "@/lib/base-path";
 import {
   getCookie,
   isElectron,
@@ -709,7 +710,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               const wsHost = baseUrl.replace(/^https?:\/\//, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
-          : `/ssh/websocket/`;
+          : `${getBasePath()}/ssh/websocket/`;
 
       if (
         webSocketRef.current &&

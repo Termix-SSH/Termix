@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { isElectron } from "@/ui/main-axios";
+import { getBasePath } from "@/lib/base-path";
 
 interface ServiceWorkerState {
   isSupported: boolean;
@@ -41,7 +42,7 @@ export function useServiceWorker(): ServiceWorkerState {
 
     const registerSW = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("/sw.js");
+        const registration = await navigator.serviceWorker.register(`${getBasePath()}/sw.js`);
         setState((prev) => ({ ...prev, isRegistered: true }));
 
         registration.addEventListener("updatefound", () =>

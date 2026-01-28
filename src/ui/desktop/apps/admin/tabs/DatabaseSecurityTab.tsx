@@ -6,6 +6,7 @@ import { Download, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { isElectron } from "@/ui/main-axios.ts";
+import { getBasePath } from "@/lib/base-path";
 
 interface DatabaseSecurityTabProps {
   currentUser: {
@@ -56,7 +57,7 @@ export function DatabaseSecurityTab({
         ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/export`
         : isDev
           ? `http://localhost:30001/database/export`
-          : `${window.location.protocol}//${window.location.host}/database/export`;
+          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/export`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -127,7 +128,7 @@ export function DatabaseSecurityTab({
         ? `${(window as { configuredServerUrl?: string }).configuredServerUrl}/database/import`
         : isDev
           ? `http://localhost:30001/database/import`
-          : `${window.location.protocol}//${window.location.host}/database/import`;
+          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/import`;
 
       const formData = new FormData();
       formData.append("file", importFile);

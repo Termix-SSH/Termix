@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
+import { getBasePath } from "@/lib/base-path";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
@@ -169,7 +170,7 @@ export function ConsoleTerminal({
               const wsHost = baseUrl.replace(/^https?:\/\//, "");
               return `${wsProtocol}${wsHost}/docker/console/`;
             })()
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/docker/console/`;
+          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
 
       const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);

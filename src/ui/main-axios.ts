@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
+import { getBasePath } from "@/lib/base-path";
 import type {
   SSHHost,
   SSHHostData,
@@ -671,7 +672,7 @@ function getApiUrl(path: string, defaultPort: number): string {
     const url = `${protocol}://${apiHost}:${sslPort}${path}`;
     return url;
   } else {
-    return path;
+    return getBasePath() + path;
   }
 }
 
