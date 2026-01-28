@@ -2120,6 +2120,18 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           }
 
           let resolved = 0;
+          let responded = false;
+
+          const sendResponse = () => {
+            if (responded) return;
+            responded = true;
+            sshConn.activeOperations--;
+            res.json({ files, path: sshPath });
+          };
+
+          // Timeout: send response even if some readlink callbacks never return
+          const readlinkTimeout = setTimeout(sendResponse, 5000);
+
           for (const link of symlinks) {
             sftp.readlink(link.path, (linkErr, target) => {
               resolved++;
@@ -2127,8 +2139,8 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
                 files[link.index].linkTarget = target;
               }
               if (resolved === symlinks.length) {
-                sshConn.activeOperations--;
-                res.json({ files, path: sshPath });
+                clearTimeout(readlinkTimeout);
+                sendResponse();
               }
             });
           }
