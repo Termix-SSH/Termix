@@ -16,7 +16,12 @@
     "!vite.config.ts",
     "!eslint.config.js"
   ],
-  "asarUnpack": ["node_modules/node-fetch/**/*"],
+  "asarUnpack": [
+    "node_modules/node-fetch/**/*",
+    "node_modules/better-sqlite3/**/*",
+    "node_modules/ssh2/**/*",
+    "dist/**/*"
+  ],
   "extraMetadata": {
     "main": "electron/main.cjs"
   },

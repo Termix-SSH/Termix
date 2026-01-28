@@ -45,6 +45,10 @@ import type {
 } from "../../types/index.js";
 import { getDb, DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -1743,6 +1747,47 @@ app.use("/snippets", snippetsRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
+
+// Serve frontend static files (for Electron embedded mode and standalone deployment)
+const frontendDistPaths = [
+  path.join(__dirname, "../../../dist"),        // dev: from dist/backend/backend/ → dist/
+  path.join(__dirname, "../../dist"),           // alternative relative path
+  path.join(process.cwd(), "dist"),             // cwd-based fallback
+];
+
+const frontendDist = frontendDistPaths.find(
+  (p) => fs.existsSync(path.join(p, "index.html")),
+);
+
+if (frontendDist) {
+  databaseLogger.info(`Serving frontend from: ${frontendDist}`, {
+    operation: "static_files",
+  });
+  app.use(express.static(frontendDist));
+
+  // SPA fallback: serve index.html for non-API routes
+  app.use((req, res, next) => {
+    if (
+      req.method === "GET" &&
+      !req.path.startsWith("/users") &&
+      !req.path.startsWith("/ssh") &&
+      !req.path.startsWith("/alerts") &&
+      !req.path.startsWith("/credentials") &&
+      !req.path.startsWith("/snippets") &&
+      !req.path.startsWith("/terminal") &&
+      !req.path.startsWith("/network-topology") &&
+      !req.path.startsWith("/rbac") &&
+      !req.path.startsWith("/health") &&
+      !req.path.startsWith("/version") &&
+      !req.path.startsWith("/database") &&
+      !req.path.startsWith("/uploads")
+    ) {
+      res.sendFile(path.join(frontendDist, "index.html"));
+    } else {
+      next();
+    }
+  });
+}
 
 app.use(
   (

@@ -9,6 +9,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const { fork } = require("child_process");
 
 if (process.platform === "linux") {
   app.commandLine.appendSwitch("--ozone-platform-hint=auto");
@@ -22,9 +23,100 @@ app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
+let backendProcess = null;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+
+function getBackendEntryPath() {
+  if (isDev) {
+    return path.join(appRoot, "dist", "backend", "backend", "starter.js");
+  }
+  // In production, backend is in app.asar.unpacked (fork can't read from asar)
+  const asarUnpacked = appRoot.replace("app.asar", "app.asar.unpacked");
+  return path.join(asarUnpacked, "dist", "backend", "backend", "starter.js");
+}
+
+function getBackendDataDir() {
+  const userDataPath = app.getPath("userData");
+  const dataDir = path.join(userDataPath, "server-data");
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  return dataDir;
+}
+
+function startBackendServer() {
+  const entryPath = getBackendEntryPath();
+
+  if (!fs.existsSync(entryPath)) {
+    console.error("Backend entry not found:", entryPath);
+    return false;
+  }
+
+  const dataDir = getBackendDataDir();
+  console.log("Starting embedded backend server...");
+  console.log("Backend entry:", entryPath);
+  console.log("Data directory:", dataDir);
+
+  const cwd = isDev
+    ? appRoot
+    : appRoot.replace("app.asar", "app.asar.unpacked");
+
+  backendProcess = fork(entryPath, [], {
+    cwd: cwd,
+    env: {
+      ...process.env,
+      DATA_DIR: dataDir,
+      NODE_ENV: "production",
+      ELECTRON_EMBEDDED: "true",
+    },
+    stdio: ["pipe", "pipe", "pipe", "ipc"],
+  });
+
+  backendProcess.stdout.on("data", (data) => {
+    console.log("[backend]", data.toString().trim());
+  });
+
+  backendProcess.stderr.on("data", (data) => {
+    console.error("[backend]", data.toString().trim());
+  });
+
+  backendProcess.on("exit", (code, signal) => {
+    console.log(
+      `Backend process exited with code ${code}, signal ${signal}`,
+    );
+    backendProcess = null;
+  });
+
+  backendProcess.on("error", (err) => {
+    console.error("Failed to start backend process:", err);
+    backendProcess = null;
+  });
+
+  return true;
+}
+
+function stopBackendServer() {
+  if (backendProcess) {
+    console.log("Stopping embedded backend server...");
+    backendProcess.kill("SIGTERM");
+
+    // Force kill after 5 seconds if still alive
+    const forceKillTimeout = setTimeout(() => {
+      if (backendProcess) {
+        console.log("Force killing backend process...");
+        backendProcess.kill("SIGKILL");
+        backendProcess = null;
+      }
+    }, 5000);
+
+    backendProcess.on("exit", () => {
+      clearTimeout(forceKillTimeout);
+      backendProcess = null;
+    });
+  }
+}
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -358,6 +450,14 @@ ipcMain.handle("get-platform", () => {
   return process.platform;
 });
 
+ipcMain.handle("get-embedded-server-status", () => {
+  return {
+    running: backendProcess !== null && !backendProcess.killed,
+    embedded: !isDev,
+    dataDir: isDev ? null : getBackendDataDir(),
+  };
+});
+
 ipcMain.handle("get-server-config", () => {
   try {
     const userDataPath = app.getPath("userData");
@@ -658,6 +758,12 @@ function createMenu() {
 
 app.whenReady().then(() => {
   createMenu();
+
+  // Start embedded backend server (skip in dev mode, backend runs separately)
+  if (!isDev) {
+    startBackendServer();
+  }
+
   createWindow();
 });
 
@@ -673,6 +779,7 @@ app.on("activate", () => {
 
 app.on("will-quit", () => {
   console.log("App will quit...");
+  stopBackendServer();
 });
 
 process.on("uncaughtException", (error) => {
