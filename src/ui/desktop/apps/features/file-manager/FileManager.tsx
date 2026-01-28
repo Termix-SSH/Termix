@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
 import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
 import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";
@@ -2161,8 +2161,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     localStorage.setItem("fileManagerViewMode", viewMode);
   }, [viewMode]);
 
-  const filteredFiles = files.filter((file) =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredFiles = useMemo(
+    () =>
+      files
+        .filter((file) =>
+          file.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .sort((a, b) => {
+          if (a.type === "directory" && b.type !== "directory") return -1;
+          if (a.type !== "directory" && b.type === "directory") return 1;
+          return a.name.localeCompare(b.name, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+        }),
+    [files, searchQuery],
   );
 
   if (!currentHost) {
