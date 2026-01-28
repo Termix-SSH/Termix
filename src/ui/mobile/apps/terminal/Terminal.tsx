@@ -12,6 +12,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { isElectron, getCookie } from "@/ui/main-axios.ts";
+import { getBasePath } from "@/lib/base-path";
 import { useTheme } from "@/components/theme-provider";
 import { TERMINAL_THEMES } from "@/constants/terminal-themes";
 
@@ -380,7 +381,7 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
                   const wsHost = baseUrl.replace(/^https?:\/\//, "");
                   return `${wsProtocol}${wsHost}/ssh/websocket/`;
                 })()
-              : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ssh/websocket/`;
+              : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/ssh/websocket/`;
 
           if (isConnectingRef.current) {
             setVisible(true);
