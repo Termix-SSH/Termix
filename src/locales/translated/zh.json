@@ -2651,8 +2651,8 @@
   },
   "sftp": {
     "log": {
-      "connecting": "正在连接SFTP服务器...",
-      "jumpHost": "通过跳转主机连接 {{host}}...",
+      "connecting": "正在连接SFTP服务器......",
+      "jumpHost": "通过跳转主机连接 {{host}}......",
       "connected": "已建立 SFTP 连接",
       "authFailed": "身份验证失败",
       "error": "SFTP 操作失败： {{error}}"
