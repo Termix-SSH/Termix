@@ -1503,6 +1503,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
+        if (
+          ((e.ctrlKey && !e.altKey && !e.metaKey) ||
+            (e.metaKey && !e.ctrlKey && !e.altKey)) &&
+          e.key.toLowerCase() === "v"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          readTextFromClipboard().then((pasteText) => {
+            if (pasteText && webSocketRef.current?.readyState === 1) {
+              terminal.paste(pasteText);
+            }
+          });
+          return false;
+        }
+
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
           const key = e.key.toLowerCase();
           const blockedKeys = ["w", "t", "n", "q"];

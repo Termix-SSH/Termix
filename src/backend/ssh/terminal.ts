@@ -1229,6 +1229,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "ecdh-sha2-nistp384",
           "ecdh-sha2-nistp256",
           "diffie-hellman-group-exchange-sha256",
+          "diffie-hellman-group18-sha512",
+          "diffie-hellman-group17-sha512",
+          "diffie-hellman-group16-sha512",
+          "diffie-hellman-group15-sha512",
           "diffie-hellman-group14-sha256",
           "diffie-hellman-group14-sha1",
           "diffie-hellman-group-exchange-sha1",
@@ -1287,7 +1291,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (!hostConfig.forceKeyboardInteractive) {
         connectConfig.password = resolvedCredentials.password;
       }
-
       sendLog("auth", "info", "Using password authentication");
     } else if (
       resolvedCredentials.authType === "key" &&
