@@ -255,10 +255,6 @@ function AppContent({
     setTimeout(async () => {
       try {
         await logoutUser();
-
-        if (isElectron()) {
-          localStorage.removeItem("jwt");
-        }
       } catch (error) {
         console.error("Logout failed:", error);
       }

@@ -1029,7 +1029,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       return response.data;
     }
   } catch (error) {
-    handleApiError(error, "create SSH host");
+    throw handleApiError(error, "create SSH host");
   }
 }
 
@@ -1107,7 +1107,7 @@ export async function updateSSHHost(
       return response.data;
     }
   } catch (error) {
-    handleApiError(error, "update SSH host");
+    throw handleApiError(error, "update SSH host");
   }
 }
 
@@ -2381,8 +2381,30 @@ export async function logoutUser(): Promise<{
 }> {
   try {
     const response = await authApi.post("/users/logout");
+
+    if (isElectron()) {
+      localStorage.removeItem("jwt");
+      electronSettingsCache.delete("jwt");
+    } else {
+      const isSecure = window.location.protocol === "https:";
+      const cookieString = isSecure
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+      document.cookie = cookieString;
+    }
+
     return response.data;
   } catch (error) {
+    if (isElectron()) {
+      localStorage.removeItem("jwt");
+      electronSettingsCache.delete("jwt");
+    } else {
+      const isSecure = window.location.protocol === "https:";
+      const cookieString = isSecure
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+      document.cookie = cookieString;
+    }
     handleApiError(error, "logout user");
   }
 }

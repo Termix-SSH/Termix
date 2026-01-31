@@ -49,6 +49,50 @@ function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
+function transformHostResponse(
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...host,
+    tags:
+      typeof host.tags === "string"
+        ? host.tags
+          ? host.tags.split(",").filter(Boolean)
+          : []
+        : [],
+    pin: !!host.pin,
+    enableTerminal: !!host.enableTerminal,
+    enableTunnel: !!host.enableTunnel,
+    enableFileManager: !!host.enableFileManager,
+    enableDocker: !!host.enableDocker,
+    showTerminalInSidebar: !!host.showTerminalInSidebar,
+    showFileManagerInSidebar: !!host.showFileManagerInSidebar,
+    showTunnelInSidebar: !!host.showTunnelInSidebar,
+    showDockerInSidebar: !!host.showDockerInSidebar,
+    showServerStatsInSidebar: !!host.showServerStatsInSidebar,
+    tunnelConnections: host.tunnelConnections
+      ? JSON.parse(host.tunnelConnections as string)
+      : [],
+    jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
+    quickActions: host.quickActions
+      ? JSON.parse(host.quickActions as string)
+      : [],
+    statsConfig: host.statsConfig
+      ? JSON.parse(host.statsConfig as string)
+      : undefined,
+    terminalConfig: host.terminalConfig
+      ? JSON.parse(host.terminalConfig as string)
+      : undefined,
+    dockerConfig: host.dockerConfig
+      ? JSON.parse(host.dockerConfig as string)
+      : undefined,
+    forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+    socks5ProxyChain: host.socks5ProxyChain
+      ? JSON.parse(host.socks5ProxyChain as string)
+      : [],
+  };
+}
+
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -461,34 +505,7 @@ router.post(
       }
 
       const createdHost = result;
-      const baseHost = {
-        ...createdHost,
-        tags:
-          typeof createdHost.tags === "string"
-            ? createdHost.tags
-              ? createdHost.tags.split(",").filter(Boolean)
-              : []
-            : [],
-        pin: !!createdHost.pin,
-        enableTerminal: !!createdHost.enableTerminal,
-        enableTunnel: !!createdHost.enableTunnel,
-        tunnelConnections: createdHost.tunnelConnections
-          ? JSON.parse(createdHost.tunnelConnections as string)
-          : [],
-        jumpHosts: createdHost.jumpHosts
-          ? JSON.parse(createdHost.jumpHosts as string)
-          : [],
-        enableFileManager: !!createdHost.enableFileManager,
-        enableDocker: !!createdHost.enableDocker,
-        showTerminalInSidebar: !!createdHost.showTerminalInSidebar,
-        showFileManagerInSidebar: !!createdHost.showFileManagerInSidebar,
-        showTunnelInSidebar: !!createdHost.showTunnelInSidebar,
-        showDockerInSidebar: !!createdHost.showDockerInSidebar,
-        showServerStatsInSidebar: !!createdHost.showServerStatsInSidebar,
-        statsConfig: createdHost.statsConfig
-          ? JSON.parse(createdHost.statsConfig as string)
-          : undefined,
-      };
+      const baseHost = transformHostResponse(createdHost);
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
@@ -1067,37 +1084,7 @@ router.put(
       }
 
       const updatedHost = updatedHosts[0];
-      const baseHost = {
-        ...updatedHost,
-        tags:
-          typeof updatedHost.tags === "string"
-            ? updatedHost.tags
-              ? updatedHost.tags.split(",").filter(Boolean)
-              : []
-            : [],
-        pin: !!updatedHost.pin,
-        enableTerminal: !!updatedHost.enableTerminal,
-        enableTunnel: !!updatedHost.enableTunnel,
-        tunnelConnections: updatedHost.tunnelConnections
-          ? JSON.parse(updatedHost.tunnelConnections as string)
-          : [],
-        jumpHosts: updatedHost.jumpHosts
-          ? JSON.parse(updatedHost.jumpHosts as string)
-          : [],
-        enableFileManager: !!updatedHost.enableFileManager,
-        enableDocker: !!updatedHost.enableDocker,
-        showTerminalInSidebar: !!updatedHost.showTerminalInSidebar,
-        showFileManagerInSidebar: !!updatedHost.showFileManagerInSidebar,
-        showTunnelInSidebar: !!updatedHost.showTunnelInSidebar,
-        showDockerInSidebar: !!updatedHost.showDockerInSidebar,
-        showServerStatsInSidebar: !!updatedHost.showServerStatsInSidebar,
-        statsConfig: updatedHost.statsConfig
-          ? JSON.parse(updatedHost.statsConfig as string)
-          : undefined,
-        dockerConfig: updatedHost.dockerConfig
-          ? JSON.parse(updatedHost.dockerConfig as string)
-          : undefined,
-      };
+      const baseHost = transformHostResponse(updatedHost);
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
@@ -1302,41 +1289,7 @@ router.get(
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
           const baseHost = {
-            ...row,
-            tags:
-              typeof row.tags === "string"
-                ? row.tags
-                  ? row.tags.split(",").filter(Boolean)
-                  : []
-                : [],
-            pin: !!row.pin,
-            enableTerminal: !!row.enableTerminal,
-            enableTunnel: !!row.enableTunnel,
-            tunnelConnections: row.tunnelConnections
-              ? JSON.parse(row.tunnelConnections as string)
-              : [],
-            jumpHosts: row.jumpHosts ? JSON.parse(row.jumpHosts as string) : [],
-            quickActions: row.quickActions
-              ? JSON.parse(row.quickActions as string)
-              : [],
-            enableFileManager: !!row.enableFileManager,
-            enableDocker: !!row.enableDocker,
-            showTerminalInSidebar: !!row.showTerminalInSidebar,
-            showFileManagerInSidebar: !!row.showFileManagerInSidebar,
-            showTunnelInSidebar: !!row.showTunnelInSidebar,
-            showDockerInSidebar: !!row.showDockerInSidebar,
-            showServerStatsInSidebar: !!row.showServerStatsInSidebar,
-            statsConfig: row.statsConfig
-              ? JSON.parse(row.statsConfig as string)
-              : undefined,
-            terminalConfig: row.terminalConfig
-              ? JSON.parse(row.terminalConfig as string)
-              : undefined,
-            forceKeyboardInteractive: row.forceKeyboardInteractive === "true",
-            socks5ProxyChain: row.socks5ProxyChain
-              ? JSON.parse(row.socks5ProxyChain as string)
-              : [],
-
+            ...transformHostResponse(row),
             isShared: !!row.isShared,
             permissionLevel: row.permissionLevel || undefined,
             sharedExpiresAt: row.expiresAt || undefined,
@@ -1417,39 +1370,7 @@ router.get(
       }
 
       const host = data[0];
-      const result = {
-        ...host,
-        tags:
-          typeof host.tags === "string"
-            ? host.tags
-              ? host.tags.split(",").filter(Boolean)
-              : []
-            : [],
-        pin: !!host.pin,
-        enableTerminal: !!host.enableTerminal,
-        enableTunnel: !!host.enableTunnel,
-        tunnelConnections: host.tunnelConnections
-          ? JSON.parse(host.tunnelConnections)
-          : [],
-        jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts) : [],
-        quickActions: host.quickActions ? JSON.parse(host.quickActions) : [],
-        enableFileManager: !!host.enableFileManager,
-        showTerminalInSidebar: !!host.showTerminalInSidebar,
-        showFileManagerInSidebar: !!host.showFileManagerInSidebar,
-        showTunnelInSidebar: !!host.showTunnelInSidebar,
-        showDockerInSidebar: !!host.showDockerInSidebar,
-        showServerStatsInSidebar: !!host.showServerStatsInSidebar,
-        statsConfig: host.statsConfig
-          ? JSON.parse(host.statsConfig)
-          : undefined,
-        terminalConfig: host.terminalConfig
-          ? JSON.parse(host.terminalConfig)
-          : undefined,
-        forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
-        socks5ProxyChain: host.socks5ProxyChain
-          ? JSON.parse(host.socks5ProxyChain)
-          : [],
-      };
+      const result = transformHostResponse(host);
 
       res.json((await resolveHostCredentials(result, userId)) || result);
     } catch (err) {

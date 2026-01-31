@@ -60,18 +60,19 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          return caches.match("/index.html");
-        }),
+      fetch(request).catch(() => {
+        return caches.match("/index.html");
+      }),
     );
+    return;
+  }
+
+  const isStaticAsset = STATIC_ASSETS.some((asset) => {
+    if (asset === "/") return url.pathname === "/";
+    return url.pathname === asset || url.pathname.startsWith("/assets/");
+  });
+
+  if (!isStaticAsset) {
     return;
   }
 

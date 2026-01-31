@@ -62,7 +62,13 @@ function getOIDCConfigFromEnv(): {
   const token_url = process.env.OIDC_TOKEN_URL;
 
   // All required fields must be set
-  if (!client_id || !client_secret || !issuer_url || !authorization_url || !token_url) {
+  if (
+    !client_id ||
+    !client_secret ||
+    !issuer_url ||
+    !authorization_url ||
+    !token_url
+  ) {
     return null;
   }
 
@@ -1209,7 +1215,7 @@ router.get("/oidc/callback", async (req, res) => {
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
 
-    res.clearCookie("jwt", authManager.getSecureCookieOptions(req));
+    res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -1503,7 +1509,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
     }
 
     return res
-      .clearCookie("jwt", authManager.getSecureCookieOptions(req))
+      .clearCookie("jwt", authManager.getClearCookieOptions(req))
       .json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     authLogger.error("Logout failed", err);
