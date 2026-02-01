@@ -2879,11 +2879,13 @@ router.post(
         }
 
         if (
-          !["password", "key", "credential", "none"].includes(hostData.authType)
+          !["password", "key", "credential", "none", "opkssh"].includes(
+            hostData.authType,
+          )
         ) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', or 'none'`,
+            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', or 'opkssh'`,
           );
           continue;
         }

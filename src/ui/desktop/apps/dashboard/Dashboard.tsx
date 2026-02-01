@@ -246,6 +246,10 @@ export function Dashboard({
                     return null;
                   }
 
+                  if (host.authType === "opkssh") {
+                    return null;
+                  }
+
                   const existingSession = viewerSessions.get(host.id);
                   let sessionId = existingSession;
 

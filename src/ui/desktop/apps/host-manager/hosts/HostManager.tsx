@@ -114,7 +114,6 @@ export function HostManager({
       setEditingHost(null);
       lastProcessedHostIdRef.current = undefined;
 
-      // Clear hostConfig from tab data when leaving add_host tab
       if (updateTab && currentTabId !== undefined) {
         updateTab(currentTabId, { hostConfig: null });
       }
@@ -123,7 +122,6 @@ export function HostManager({
       setEditingCredential(null);
     }
 
-    // Clear editing state when switching TO add_host tab (to ensure fresh state)
     if (value === "add_host" && activeTab !== "add_host") {
       setEditingHost(null);
       lastProcessedHostIdRef.current = undefined;

@@ -319,7 +319,8 @@ export function HostGeneralTab({
             | "password"
             | "key"
             | "credential"
-            | "none";
+            | "none"
+            | "opkssh";
           setAuthTab(newAuthType);
           form.setValue("authType", newAuthType);
         }}
@@ -353,6 +354,13 @@ export function HostGeneralTab({
             className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t("hosts.none")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="opkssh"
+            disabled={editingHost?.isShared}
+            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {t("hosts.opkssh")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="password">
@@ -605,6 +613,14 @@ export function HostGeneralTab({
               <strong>{t("hosts.noneAuthTitle")}</strong>
               <div className="mt-2">{t("hosts.noneAuthDescription")}</div>
               <div className="mt-2 text-sm">{t("hosts.noneAuthDetails")}</div>
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+        <TabsContent value="opkssh">
+          <Alert className="mt-2">
+            <AlertDescription>
+              <strong>{t("hosts.opksshAuthTitle")}</strong>
+              <div className="mt-2">{t("hosts.opksshAuthDescription")}</div>
             </AlertDescription>
           </Alert>
         </TabsContent>

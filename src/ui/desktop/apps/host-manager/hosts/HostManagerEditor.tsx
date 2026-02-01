@@ -165,7 +165,7 @@ export function HostManagerEditor({
   const [proxyMode, setProxyMode] = useState<"single" | "chain">("single");
 
   const [authTab, setAuthTab] = useState<
-    "password" | "key" | "credential" | "none"
+    "password" | "key" | "credential" | "none" | "opkssh"
   >("password");
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
@@ -269,7 +269,7 @@ export function HostManagerEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
-      authType: z.enum(["password", "key", "credential", "none"]),
+      authType: z.enum(["password", "key", "credential", "none", "opkssh"]),
       credentialId: z.number().optional().nullable(),
       overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
@@ -438,6 +438,10 @@ export function HostManagerEditor({
         return;
       }
 
+      if (data.authType === "opkssh") {
+        return;
+      }
+
       if (data.authType === "password") {
         if (
           !data.password ||
@@ -465,6 +469,14 @@ export function HostManagerEditor({
             code: z.ZodIssueCode.custom,
             message: t("hosts.keyTypeRequired"),
             path: ["keyType"],
+          });
+        }
+      } else if (data.authType === "credential") {
+        if (!data.credentialId) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("hosts.credentialRequired"),
+            path: ["credentialId"],
           });
         }
       } else if (data.authType === "credential") {
@@ -553,6 +565,8 @@ export function HostManagerEditor({
       return !!values.credentialId;
     } else if (authTab === "none") {
       return true;
+    } else if (authTab === "opkssh") {
+      return true;
     }
 
     return false;
@@ -594,6 +608,12 @@ export function HostManagerEditor({
         form.setValue("keyPassword", "", { shouldValidate: true });
         form.setValue("keyType", "auto", { shouldValidate: true });
         form.setValue("credentialId", null, { shouldValidate: true });
+      } else if (authTab === "opkssh") {
+        form.setValue("password", "", { shouldValidate: true });
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+        form.setValue("credentialId", null, { shouldValidate: true });
       }
 
       await form.trigger();
@@ -616,13 +636,20 @@ export function HostManagerEditor({
         cleanedHost.password = undefined;
       }
 
-      const defaultAuthType = cleanedHost.credentialId
-        ? "credential"
-        : cleanedHost.key
-          ? "key"
-          : cleanedHost.password
-            ? "password"
-            : "none";
+      const defaultAuthType = (cleanedHost.authType ||
+        (cleanedHost.credentialId
+          ? "credential"
+          : cleanedHost.key
+            ? "key"
+            : cleanedHost.password
+              ? "password"
+              : "none")) as
+        | "password"
+        | "key"
+        | "credential"
+        | "none"
+        | "opkssh";
+
       setAuthTab(defaultAuthType);
 
       let parsedStatsConfig: StatsConfig = DEFAULT_STATS_CONFIG;
@@ -647,7 +674,12 @@ export function HostManagerEditor({
         folder: cleanedHost.folder || "",
         tags: Array.isArray(cleanedHost.tags) ? cleanedHost.tags : [],
         pin: Boolean(cleanedHost.pin),
-        authType: defaultAuthType as "password" | "key" | "credential" | "none",
+        authType: defaultAuthType as
+          | "password"
+          | "key"
+          | "credential"
+          | "none"
+          | "opkssh",
         credentialId: cleanedHost.credentialId,
         overrideCredentialUsername: Boolean(
           cleanedHost.overrideCredentialUsername,

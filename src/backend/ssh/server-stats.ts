@@ -1687,6 +1687,7 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
   } else if (host.authType === "none") {
+  } else if (host.authType === "opkssh") {
   } else {
     throw new Error(
       `Unsupported authentication type '${host.authType}' for host ${host.ip}`,
