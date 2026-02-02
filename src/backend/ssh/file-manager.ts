@@ -920,17 +920,19 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           createConnectionLog(
             "error",
             "sftp_auth",
-            "No valid OPKSSH token found - authentication required",
+            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
           ),
         );
         return res.status(401).json({
-          error: "OPKSSH authentication required",
+          error:
+            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
           requiresOPKSSHAuth: true,
           connectionLogs,
         });
       }
 
-      config.privateKey = Buffer.from(token.privateKey, "utf8");
+      const combinedKey = `${token.privateKey}\n${token.sshCert}`;
+      config.privateKey = Buffer.from(combinedKey, "utf8");
       connectionLogs.push(
         createConnectionLog(
           "info",
