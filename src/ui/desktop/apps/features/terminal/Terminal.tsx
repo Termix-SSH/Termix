@@ -24,6 +24,7 @@ import {
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
+import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -155,6 +156,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
     const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
     const warpgateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [opksshDialog, setOpksshDialog] = useState<{
+      isOpen: boolean;
+      authUrl: string;
+      requestId: string;
+      stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
+      error?: string;
+    } | null>(null);
+    const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const currentHostIdRef = useRef<number | null>(null);
+    const currentHostConfigRef = useRef<any>(null);
+
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -776,6 +789,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }, 35000);
 
+        currentHostIdRef.current = hostConfig.id;
+        currentHostConfigRef.current = hostConfig;
+
         ws.send(
           JSON.stringify({
             type: "connectToHost",
@@ -1039,6 +1055,104 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 webSocketRef.current.close();
               }
             }, 300000);
+          } else if (msg.type === "opkssh_auth_required") {
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+            if (webSocketRef.current) {
+              webSocketRef.current.send(
+                JSON.stringify({
+                  type: "opkssh_start_auth",
+                  data: { hostId: msg.hostId },
+                }),
+              );
+            }
+          } else if (msg.type === "opkssh_status") {
+            if (msg.stage === "chooser") {
+              setOpksshDialog({
+                isOpen: true,
+                authUrl: msg.url || "",
+                requestId: msg.requestId || "",
+                stage: "chooser",
+              });
+              if (opksshTimeoutRef.current) {
+                clearTimeout(opksshTimeoutRef.current);
+              }
+              opksshTimeoutRef.current = setTimeout(() => {
+                setOpksshDialog(null);
+                if (webSocketRef.current) {
+                  webSocketRef.current.close();
+                }
+              }, 300000);
+            } else {
+              setOpksshDialog((prev) =>
+                prev ? { ...prev, stage: msg.stage } : null,
+              );
+            }
+          } else if (msg.type === "opkssh_completed") {
+            if (opksshTimeoutRef.current) {
+              clearTimeout(opksshTimeoutRef.current);
+              opksshTimeoutRef.current = null;
+            }
+            setOpksshDialog(null);
+            if (webSocketRef.current && terminal) {
+              webSocketRef.current.send(
+                JSON.stringify({
+                  type: "opkssh_auth_completed",
+                  data: {
+                    hostId: currentHostIdRef.current,
+                    cols: terminal.cols || 80,
+                    rows: terminal.rows || 24,
+                    hostConfig: currentHostConfigRef.current,
+                  },
+                }),
+              );
+            }
+          } else if (msg.type === "opkssh_error") {
+            if (opksshDialog) {
+              setOpksshDialog((prev) =>
+                prev ? { ...prev, stage: "error", error: msg.error } : null,
+              );
+            } else {
+              setOpksshDialog({
+                isOpen: true,
+                authUrl: "",
+                requestId: msg.requestId || "",
+                stage: "error",
+                error: msg.error,
+              });
+            }
+            setIsConnecting(false);
+          } else if (msg.type === "opkssh_timeout") {
+            if (opksshDialog) {
+              setOpksshDialog((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      stage: "error",
+                      error: t("terminal.opksshTimeout"),
+                    }
+                  : null,
+              );
+            } else {
+              setOpksshDialog({
+                isOpen: true,
+                authUrl: "",
+                requestId: msg.requestId || "",
+                stage: "error",
+                error: t("terminal.opksshTimeout"),
+              });
+            }
+            setIsConnecting(false);
+          } else if (msg.type === "opkssh_config_error") {
+            setOpksshDialog({
+              isOpen: true,
+              authUrl: "",
+              requestId: msg.requestId || "",
+              stage: "error",
+              error: msg.instructions || msg.error,
+            });
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -1064,8 +1178,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               });
             }
           }
-        } catch {
-          // Message parse errors are logged via backend
+        } catch (error) {
+          console.error("WebSocket message handler error:", error);
         }
       });
 
@@ -1831,6 +1945,43 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           onOpenUrl={handleWarpgateOpenUrl}
           backgroundColor={backgroundColor}
         />
+
+        {opksshDialog?.isOpen && (
+          <OPKSSHDialog
+            isOpen={opksshDialog.isOpen}
+            authUrl={opksshDialog.authUrl}
+            requestId={opksshDialog.requestId}
+            stage={opksshDialog.stage}
+            error={opksshDialog.error}
+            onCancel={() => {
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "opkssh_cancel",
+                    data: { requestId: opksshDialog.requestId },
+                  }),
+                );
+              }
+              setOpksshDialog(null);
+              if (opksshTimeoutRef.current) {
+                clearTimeout(opksshTimeoutRef.current);
+                opksshTimeoutRef.current = null;
+              }
+            }}
+            onOpenUrl={() => {
+              window.open(opksshDialog.authUrl, "_blank");
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "opkssh_browser_opened",
+                    data: { requestId: opksshDialog.requestId },
+                  }),
+                );
+              }
+            }}
+            backgroundColor={backgroundColor}
+          />
+        )}
 
         <CommandAutocomplete
           visible={showAutocomplete}

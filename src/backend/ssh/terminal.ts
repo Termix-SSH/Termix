@@ -355,7 +355,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     cleanupSSH();
   });
 
-  ws.on("message", (msg: RawData) => {
+  ws.on("message", async (msg: RawData) => {
     const currentDataKey = userCrypto.getUserDataKey(userId);
     if (!currentDataKey) {
       ws.send(
@@ -561,6 +561,112 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect with provided credentials: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
+
+      case "opkssh_start_auth": {
+        const opksshData = data as { hostId: number };
+        try {
+          const { startOPKSSHAuth, getRequestOrigin } =
+            await import("./opkssh-auth.js");
+          const db = getDb();
+          const hostRow = await db
+            .select()
+            .from(sshData)
+            .where(eq(sshData.id, opksshData.hostId))
+            .limit(1);
+          if (!hostRow || hostRow.length === 0) {
+            sshLogger.error(
+              `Host ${opksshData.hostId} not found for OPKSSH auth`,
+              {
+                operation: "opkssh_start_auth_host_not_found",
+                userId,
+                hostId: opksshData.hostId,
+              },
+            );
+            ws.send(
+              JSON.stringify({
+                type: "opkssh_error",
+                requestId: "",
+                error: "Host not found",
+              }),
+            );
+            break;
+          }
+          const hostname = hostRow[0].name || hostRow[0].ip;
+          const requestOrigin = getRequestOrigin(req);
+          await startOPKSSHAuth(
+            userId,
+            opksshData.hostId,
+            hostname,
+            ws,
+            requestOrigin,
+          );
+        } catch (error) {
+          sshLogger.error("Failed to start OPKSSH auth", error, {
+            operation: "opkssh_start_auth_error",
+            userId,
+            hostId: opksshData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "opkssh_error",
+              requestId: "",
+              error: "Failed to start OPKSSH authentication",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "opkssh_cancel": {
+        const cancelData = data as { requestId: string };
+        try {
+          const { cancelAuthSession } = await import("./opkssh-auth.js");
+          cancelAuthSession(cancelData.requestId);
+        } catch (error) {
+          sshLogger.error("Failed to cancel OPKSSH auth", error, {
+            operation: "opkssh_cancel_error",
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "opkssh_browser_opened": {
+        break;
+      }
+
+      case "opkssh_auth_completed": {
+        const completedData = data as {
+          hostId: number;
+          cols?: number;
+          rows?: number;
+          hostConfig?: any;
+        };
+        const reconnectConfig: ConnectToHostData = {
+          cols: completedData.cols || 80,
+          rows: completedData.rows || 24,
+          hostConfig:
+            completedData.hostConfig ||
+            ({ id: completedData.hostId, userId } as any),
+        };
+
+        handleConnectToHost(reconnectConfig).catch((error) => {
+          sshLogger.error("Failed to reconnect after OPKSSH auth", error, {
+            operation: "opkssh_reconnect_error",
+            userId,
+            hostId: completedData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect after authentication: " +
                 (error instanceof Error ? error.message : "Unknown error"),
             }),
           );
@@ -1339,6 +1445,48 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    } else if (resolvedCredentials.authType === "opkssh") {
+      sendLog("auth", "info", "Using OPKSSH certificate authentication");
+      try {
+        const { getOPKSSHToken } = await import("./opkssh-auth.js");
+        const token = await getOPKSSHToken(userId, id);
+
+        if (!token) {
+          sendLog(
+            "auth",
+            "info",
+            "No valid OPKSSH token found, requesting authentication",
+          );
+          ws.send(
+            JSON.stringify({
+              type: "opkssh_auth_required",
+              hostId: id,
+            }),
+          );
+          return;
+        }
+
+        sendLog("auth", "info", "Using cached OPKSSH certificate");
+        const combinedKey = `${token.privateKey}\n${token.sshCert}`;
+        connectConfig.privateKey = Buffer.from(combinedKey, "utf8");
+      } catch (opksshError) {
+        sshLogger.error("OPKSSH authentication error", opksshError, {
+          operation: "opkssh_auth_error",
+          userId,
+          hostId: id,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "OPKSSH authentication failed: " +
+              (opksshError instanceof Error
+                ? opksshError.message
+                : "Unknown error"),
+          }),
+        );
+        return;
+      }
     } else {
       sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");

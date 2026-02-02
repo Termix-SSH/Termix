@@ -910,6 +910,54 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     connectionLogs.push(
       createConnectionLog("info", "sftp_auth", "Using password authentication"),
     );
+  } else if (resolvedCredentials.authType === "opkssh") {
+    try {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(userId, hostId);
+
+      if (!token) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "sftp_auth",
+            "No valid OPKSSH token found - authentication required",
+          ),
+        );
+        return res.status(401).json({
+          error: "OPKSSH authentication required",
+          requiresOPKSSHAuth: true,
+          connectionLogs,
+        });
+      }
+
+      config.privateKey = Buffer.from(token.privateKey, "utf8");
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using OPKSSH certificate authentication",
+        ),
+      );
+    } catch (opksshError) {
+      fileLogger.error("OPKSSH authentication error for file manager", {
+        operation: "file_connect",
+        sessionId,
+        hostId,
+        error:
+          opksshError instanceof Error ? opksshError.message : "Unknown error",
+      });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          `OPKSSH authentication failed: ${opksshError instanceof Error ? opksshError.message : "Unknown error"}`,
+        ),
+      );
+      return res.status(500).json({
+        error: "OPKSSH authentication failed",
+        connectionLogs,
+      });
+    }
   } else if (resolvedCredentials.authType === "none") {
     connectionLogs.push(
       createConnectionLog(

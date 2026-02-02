@@ -3299,4 +3299,251 @@ router.get(
   },
 );
 
+/**
+ * @openapi
+ * /ssh/opkssh/token/{hostId}:
+ *   get:
+ *     summary: Get OPKSSH token status for a host
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: hostId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Host ID
+ *     responses:
+ *       200:
+ *         description: Token status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *                   description: Whether a valid token exists
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Token expiration timestamp
+ *                 email:
+ *                   type: string
+ *                   description: User email from OIDC identity
+ *       404:
+ *         description: No valid token found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  "/ssh/opkssh/token/:hostId",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const hostId = parseInt(req.params.hostId);
+
+    if (!userId || isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const { opksshTokens } = await import("../db/schema.js");
+      const token = await db
+        .select()
+        .from(opksshTokens)
+        .where(
+          and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
+        )
+        .limit(1);
+
+      if (!token || token.length === 0) {
+        return res.status(404).json({ exists: false });
+      }
+
+      const tokenData = token[0];
+      const expiresAt = new Date(tokenData.expiresAt);
+
+      if (expiresAt < new Date()) {
+        await db
+          .delete(opksshTokens)
+          .where(
+            and(
+              eq(opksshTokens.userId, userId),
+              eq(opksshTokens.hostId, hostId),
+            ),
+          );
+        return res.status(404).json({ exists: false });
+      }
+
+      res.json({
+        exists: true,
+        expiresAt: tokenData.expiresAt,
+        email: tokenData.email,
+      });
+    } catch (error) {
+      sshLogger.error("Error retrieving OPKSSH token status", error, {
+        operation: "opkssh_token_status_error",
+        userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/opkssh/token/{hostId}:
+ *   delete:
+ *     summary: Delete OPKSSH token for a host
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: hostId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Host ID
+ *     responses:
+ *       200:
+ *         description: Token deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  "/ssh/opkssh/token/:hostId",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const hostId = parseInt(req.params.hostId);
+
+    if (!userId || isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const { deleteOPKSSHToken } = await import("../../ssh/opkssh-auth.js");
+      await deleteOPKSSHToken(userId, hostId);
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Error deleting OPKSSH token", error, {
+        operation: "opkssh_token_delete_error",
+        userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /opkssh-callback/{requestId}:
+ *   get:
+ *     summary: OAuth callback from OIDC provider for OPKSSH authentication
+ *     tags: [SSH]
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authentication request ID
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       404:
+ *         description: Invalid authentication session
+ *       500:
+ *         description: Authentication failed
+ */
+router.get(
+  "/opkssh-callback/:requestId",
+  async (req: Request, res: Response) => {
+    const { requestId } = req.params;
+    const queryString = req.url.split("?")[1] || "";
+
+    try {
+      const { handleOAuthCallback } = await import("../../ssh/opkssh-auth.js");
+      const result = await handleOAuthCallback(requestId, queryString);
+
+      if (result.success) {
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentication Successful</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+              h1 { color: #22c55e; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✓ Authentication Successful</h1>
+              <p>You can now close this window and return to Termix.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      } else {
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentication Failed</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+              h1 { color: #ef4444; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✗ Authentication Failed</h1>
+              <p>${result.message || "An error occurred during authentication."}</p>
+              <p>Please close this window and try again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+    } catch (error) {
+      sshLogger.error("Error handling OPKSSH OAuth callback", error, {
+        operation: "opkssh_oauth_callback_error",
+        requestId,
+      });
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Error</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h1 { color: #ef4444; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>✗ Error</h1>
+            <p>An unexpected error occurred. Please try again.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+  },
+);
+
 export default router;

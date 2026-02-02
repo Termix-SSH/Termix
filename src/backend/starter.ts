@@ -96,6 +96,20 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await authManager.initialize();
     DataCrypto.initialize();
 
+    const { OPKSSHBinaryManager } =
+      await import("./utils/opkssh-binary-manager.js");
+    try {
+      await OPKSSHBinaryManager.ensureBinary();
+    } catch (error) {
+      systemLogger.warn(
+        "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
+        {
+          operation: "opkssh_binary_init_failed",
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      );
+    }
+
     await import("./database/database.js");
 
     await import("./ssh/terminal.js");

@@ -926,6 +926,37 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT id FROM opkssh_tokens LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS opkssh_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          ssh_cert TEXT NOT NULL,
+          private_key TEXT NOT NULL,
+          email TEXT,
+          sub TEXT,
+          issuer TEXT,
+          audience TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          last_used TEXT,
+          UNIQUE(user_id, host_id),
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create opkssh_tokens table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
     const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
 
     try {

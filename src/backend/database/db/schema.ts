@@ -491,3 +491,27 @@ export const sessionRecordings = sqliteTable("session_recordings", {
     .default(false),
   terminationReason: text("termination_reason"),
 });
+
+export const opksshTokens = sqliteTable("opkssh_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id, { onDelete: "cascade" }),
+
+  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
+
+  email: text("email"),
+  sub: text("sub"),
+  issuer: text("issuer"),
+  audience: text("audience"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastUsed: text("last_used"),
+});
