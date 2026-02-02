@@ -12,7 +12,7 @@ import csTranslation from "../locales/translated/cs.json";
 import daTranslation from "../locales/translated/da.json";
 import deTranslation from "../locales/translated/de.json";
 import elTranslation from "../locales/translated/el.json";
-import esTranslation from "../locales/translated/es.json";
+import esESTranslation from "../locales/translated/es-ES.json";
 import fiTranslation from "../locales/translated/fi.json";
 import frTranslation from "../locales/translated/fr.json";
 import heTranslation from "../locales/translated/he.json";
@@ -25,16 +25,18 @@ import koTranslation from "../locales/translated/ko.json";
 import nlTranslation from "../locales/translated/nl.json";
 import noTranslation from "../locales/translated/no.json";
 import plTranslation from "../locales/translated/pl.json";
-import ptTranslation from "../locales/translated/pt.json";
+import ptPTTranslation from "../locales/translated/pt-PT.json";
+import ptBRTranslation from "../locales/translated/pt-BR.json";
 import roTranslation from "../locales/translated/ro.json";
 import ruTranslation from "../locales/translated/ru.json";
 import srTranslation from "../locales/translated/sr.json";
-import svTranslation from "../locales/translated/sv.json";
+import svSETranslation from "../locales/translated/sv-SE.json";
 import thTranslation from "../locales/translated/th.json";
 import trTranslation from "../locales/translated/tr.json";
 import ukTranslation from "../locales/translated/uk.json";
 import viTranslation from "../locales/translated/vi.json";
-import zhTranslation from "../locales/translated/zh.json";
+import zhCNTranslation from "../locales/translated/zh-CN.json";
+import zhTWTranslation from "../locales/translated/zh-TW.json";
 
 i18n
   .use(LanguageDetector)
@@ -51,7 +53,7 @@ i18n
       "da",
       "de",
       "el",
-      "es",
+      "es-ES",
       "fi",
       "fr",
       "he",
@@ -64,16 +66,18 @@ i18n
       "nl",
       "no",
       "pl",
-      "pt",
+      "pt-PT",
+      "pt-BR",
       "ro",
       "ru",
       "sr",
-      "sv",
+      "sv-SE",
       "th",
       "tr",
       "uk",
       "vi",
-      "zh",
+      "zh-CN",
+      "zh-TW",
     ],
     fallbackLng: "en",
     debug: false,
@@ -117,8 +121,8 @@ i18n
       el: {
         translation: elTranslation,
       },
-      es: {
-        translation: esTranslation,
+      "es-ES": {
+        translation: esESTranslation,
       },
       fi: {
         translation: fiTranslation,
@@ -156,8 +160,11 @@ i18n
       pl: {
         translation: plTranslation,
       },
-      pt: {
-        translation: ptTranslation,
+      "pt-PT": {
+        translation: ptPTTranslation,
+      },
+      "pt-BR": {
+        translation: ptBRTranslation,
       },
       ro: {
         translation: roTranslation,
@@ -168,8 +175,8 @@ i18n
       sr: {
         translation: srTranslation,
       },
-      sv: {
-        translation: svTranslation,
+      "sv-SE": {
+        translation: svSETranslation,
       },
       th: {
         translation: thTranslation,
@@ -183,8 +190,11 @@ i18n
       vi: {
         translation: viTranslation,
       },
-      zh: {
-        translation: zhTranslation,
+      "zh-CN": {
+        translation: zhCNTranslation,
+      },
+      "zh-TW": {
+        translation: zhTWTranslation,
       },
     },
 
