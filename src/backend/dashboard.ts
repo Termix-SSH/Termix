@@ -90,12 +90,23 @@ app.use(authManager.createAuthMiddleware());
  */
 app.get("/uptime", async (req, res) => {
   try {
+    const startTime = Date.now();
+    const userId = (req as AuthenticatedRequest).userId;
+    dashboardLogger.debug("Dashboard stats requested", {
+      operation: "dashboard_stats_request",
+      userId,
+    });
     const uptimeMs = Date.now() - serverStartTime;
     const uptimeSeconds = Math.floor(uptimeMs / 1000);
     const days = Math.floor(uptimeSeconds / 86400);
     const hours = Math.floor((uptimeSeconds % 86400) / 3600);
     const minutes = Math.floor((uptimeSeconds % 3600) / 60);
 
+    dashboardLogger.debug("Dashboard stats compiled", {
+      operation: "dashboard_stats_success",
+      userId,
+      duration: Date.now() - startTime,
+    });
     res.json({
       uptimeMs,
       uptimeSeconds,

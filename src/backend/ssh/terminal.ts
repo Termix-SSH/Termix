@@ -10,7 +10,7 @@ import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { sshLogger } from "../utils/logger.js";
+import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
@@ -70,6 +70,11 @@ async function resolveJumpHost(
   hostId: number,
   userId: string,
 ): Promise<any | null> {
+  sshLogger.info("Resolving jump host", {
+    operation: "terminal_jumphost_resolve",
+    userId,
+    hostId,
+  });
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -166,6 +171,13 @@ async function createJumpHostChain(
 
         jumpClient.on("ready", () => {
           clearTimeout(timeout);
+          sshLogger.success("Jump host connection established", {
+            operation: "terminal_jumphost_connected",
+            userId,
+            hostId: jumpHostConfig.id,
+            ip: jumpHostConfig.ip,
+            depth: i,
+          });
           resolve(true);
         });
 
@@ -279,6 +291,7 @@ const wss = new WebSocketServer({
 
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
+  let sessionId: string | undefined;
 
   try {
     const url = parseUrl(req.url!, true);
@@ -296,6 +309,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     userId = payload.userId;
+    sessionId = payload.sessionId;
   } catch (error) {
     sshLogger.error(
       "WebSocket JWT verification failed during connection",
@@ -327,6 +341,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
   const userWs = userConnections.get(userId)!;
   userWs.add(ws);
+  sshLogger.info("Terminal WebSocket connection established", {
+    operation: "terminal_ws_connect",
+    sessionId,
+    userId,
+  });
 
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
@@ -344,6 +363,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isAwaitingAuthCredentials = false;
 
   ws.on("close", () => {
+    sshLogger.info("Terminal WebSocket disconnected", {
+      operation: "terminal_ws_disconnect",
+      sessionId,
+      userId,
+    });
     const userWs = userConnections.get(userId);
     if (userWs) {
       userWs.delete(ws);
@@ -697,6 +721,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
+    sshLogger.info("Resolving SSH host configuration", {
+      operation: "terminal_host_resolve",
+      sessionId,
+      userId,
+      hostId: id,
+    });
 
     const sendLog = (
       stage: string,
@@ -792,6 +822,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
+      sshLogger.debug("Loading SSH credentials", {
+        operation: "terminal_credential_load",
+        sessionId,
+        userId,
+        hostId: id,
+        credentialId,
+      });
       try {
         const credentials = await SimpleDBOps.select(
           getDb()
@@ -851,7 +888,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
-
+      sshLogger.success("SSH connection established", {
+        operation: "terminal_ssh_connected",
+        sessionId,
+        userId,
+        hostId: id,
+        ip,
+      });
+      if (totpPromptSent) {
+        authLogger.success("TOTP verification successful for SSH session", {
+          operation: "terminal_totp_success",
+          sessionId,
+          userId,
+          hostId: id,
+        });
+      }
       sendLog("handshake", "success", "SSH handshake completed");
       sendLog("auth", "success", `Authentication successful for ${username}`);
       sendLog("connected", "success", "Connection established");
@@ -964,6 +1015,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           sshStream = stream;
+          sshLogger.success("Terminal shell channel opened", {
+            operation: "terminal_shell_opened",
+            sessionId,
+            userId,
+            hostId: id,
+            termType: "xterm-256color",
+          });
 
           stream.on("data", (data: Buffer) => {
             try {
@@ -1175,6 +1233,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         err.message.includes("authentication") ||
         err.message.includes("Authentication")
       ) {
+        authLogger.error("SSH authentication failed", err, {
+          operation: "terminal_ssh_auth_failed",
+          sessionId,
+          userId,
+          hostId: id,
+          authType: resolvedCredentials.authType,
+        });
         sendLog("auth", "error", `Authentication failed: ${err.message}`);
       } else {
         sendLog("error", "error", `Connection failed: ${err.message}`);
@@ -1222,6 +1287,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("close", () => {
       clearTimeout(connectionTimeout);
+      sshLogger.info("SSH connection closed", {
+        operation: "terminal_ssh_disconnected",
+        sessionId,
+        userId,
+        hostId: id,
+      });
 
       if (isAwaitingAuthCredentials) {
         cleanupSSH(connectionTimeout);
@@ -1609,6 +1680,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
             "Starting SSH session through jump host",
           );
           sendLog("auth", "info", `Authenticating as ${username}`);
+          sshLogger.info("Initiating SSH connection", {
+            operation: "terminal_ssh_connect_attempt",
+            sessionId,
+            userId,
+            hostId: id,
+            ip,
+            port,
+            username,
+            authType: resolvedCredentials.authType,
+          });
           sshConn.connect(connectConfig);
         });
       } catch (error) {
@@ -1628,6 +1709,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else {
       sendLog("handshake", "info", "Starting SSH session");
       sendLog("auth", "info", `Authenticating as ${username}`);
+      sshLogger.info("Initiating SSH connection", {
+        operation: "terminal_ssh_connect_attempt",
+        sessionId,
+        userId,
+        hostId: id,
+        ip,
+        port,
+        username,
+        authType: resolvedCredentials.authType,
+      });
       sshConn.connect(connectConfig);
     }
   }

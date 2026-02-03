@@ -448,6 +448,12 @@ router.get(
       if (credential.key_password) {
         output.keyPassword = credential.key_password;
       }
+      authLogger.debug("SSH credential accessed", {
+        operation: "credential_access",
+        userId,
+        credentialId: parseInt(id),
+        usage: "ssh_connection",
+      });
 
       res.json(output);
     } catch (err) {
@@ -508,6 +514,12 @@ router.put(
       authLogger.warn("Invalid request for credential update");
       return res.status(400).json({ error: "Invalid request" });
     }
+    authLogger.info("Updating SSH credential", {
+      operation: "credential_update",
+      userId,
+      credentialId: parseInt(id),
+      changes: Object.keys(updateData),
+    });
 
     try {
       const existing = await db
@@ -614,17 +626,11 @@ router.put(
       );
 
       const credential = updated[0];
-      authLogger.success(
-        `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
-        {
-          operation: "credential_update_success",
-          userId,
-          credentialId: parseInt(id),
-          name: credential.name,
-          authType: credential.authType,
-          username: credential.username,
-        },
-      );
+      authLogger.success("SSH credential updated", {
+        operation: "credential_update_success",
+        userId,
+        credentialId: parseInt(id),
+      });
 
       res.json(formatCredentialOutput(updated[0]));
     } catch (err) {
@@ -673,6 +679,11 @@ router.delete(
       authLogger.warn("Invalid request for credential deletion");
       return res.status(400).json({ error: "Invalid request" });
     }
+    authLogger.info("Deleting SSH credential", {
+      operation: "credential_delete",
+      userId,
+      credentialId: parseInt(id),
+    });
 
     try {
       const credentialToDelete = await db
@@ -752,17 +763,11 @@ router.delete(
         );
 
       const credential = credentialToDelete[0];
-      authLogger.success(
-        `SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`,
-        {
-          operation: "credential_delete_success",
-          userId,
-          credentialId: parseInt(id),
-          name: credential.name,
-          authType: credential.authType,
-          username: credential.username,
-        },
-      );
+      authLogger.success("SSH credential deleted", {
+        operation: "credential_delete_success",
+        userId,
+        credentialId: parseInt(id),
+      });
 
       res.json({ message: "Credential deleted successfully" });
     } catch (err) {

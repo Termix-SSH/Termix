@@ -28,7 +28,7 @@ import {
 } from "drizzle-orm";
 import type { Request, Response } from "express";
 import multer from "multer";
-import { sshLogger } from "../../utils/logger.js";
+import { sshLogger, databaseLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -374,6 +374,12 @@ router.post(
       socks5ProxyChain,
       overrideCredentialUsername,
     } = hostData;
+    databaseLogger.info("Creating SSH host", {
+      operation: "host_create",
+      userId,
+      name,
+      ip,
+    });
 
     if (
       !isNonEmptyString(userId) ||
@@ -509,19 +515,12 @@ router.post(
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
-
-      sshLogger.success(
-        `SSH host created: ${name} (${ip}:${port}) by user ${userId}`,
-        {
-          operation: "host_create_success",
-          userId,
-          hostId: createdHost.id as number,
-          name,
-          ip,
-          port,
-          authType: effectiveAuthType,
-        },
-      );
+      databaseLogger.success("SSH host created", {
+        operation: "host_create_success",
+        userId,
+        hostId: createdHost.id as number,
+        name,
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -857,6 +856,12 @@ router.put(
       socks5ProxyChain,
       overrideCredentialUsername,
     } = hostData;
+    databaseLogger.info("Updating SSH host", {
+      operation: "host_update",
+      userId,
+      hostId: parseInt(hostId),
+      changes: Object.keys(hostData),
+    });
 
     if (
       !isNonEmptyString(userId) ||
@@ -1088,19 +1093,11 @@ router.put(
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
-
-      sshLogger.success(
-        `SSH host updated: ${name} (${ip}:${port}) by user ${userId}`,
-        {
-          operation: "host_update_success",
-          userId,
-          hostId: parseInt(hostId),
-          name,
-          ip,
-          port,
-          authType: effectiveAuthType,
-        },
-      );
+      databaseLogger.success("SSH host updated", {
+        operation: "host_update_success",
+        userId,
+        hostId: parseInt(hostId),
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -1300,6 +1297,11 @@ router.get(
           return resolved;
         }),
       );
+      databaseLogger.debug("Fetching SSH hosts", {
+        operation: "host_list",
+        userId,
+        count: result.length,
+      });
 
       res.json(result);
     } catch (err) {
@@ -1530,6 +1532,11 @@ router.delete(
       });
       return res.status(400).json({ error: "Invalid userId or id" });
     }
+    databaseLogger.info("Deleting SSH host", {
+      operation: "host_delete",
+      userId,
+      hostId: parseInt(hostId),
+    });
     try {
       const hostToDelete = await db
         .select()
@@ -1582,17 +1589,11 @@ router.delete(
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
 
       const host = hostToDelete[0];
-      sshLogger.success(
-        `SSH host deleted: ${host.name} (${host.ip}:${host.port}) by user ${userId}`,
-        {
-          operation: "host_delete_success",
-          userId,
-          hostId: parseInt(hostId),
-          name: host.name,
-          ip: host.ip,
-          port: host.port,
-        },
-      );
+      databaseLogger.success("SSH host deleted", {
+        operation: "host_delete_success",
+        userId,
+        hostId: parseInt(hostId),
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -2638,6 +2639,11 @@ router.put(
         .limit(1);
 
       if (existing.length > 0) {
+        databaseLogger.info("Updating SSH folder", {
+          operation: "folder_update",
+          userId,
+          folderId: existing[0].id,
+        });
         await db
           .update(sshFolders)
           .set({
@@ -2647,6 +2653,11 @@ router.put(
           })
           .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)));
       } else {
+        databaseLogger.info("Creating SSH folder", {
+          operation: "folder_create",
+          userId,
+          name,
+        });
         await db.insert(sshFolders).values({
           userId,
           name,
@@ -2705,6 +2716,11 @@ router.delete(
     if (!isNonEmptyString(userId) || !folderName) {
       return res.status(400).json({ error: "Invalid folder name" });
     }
+    databaseLogger.info("Deleting SSH folder", {
+      operation: "folder_delete",
+      userId,
+      folderId: folderName,
+    });
 
     try {
       const hostsToDelete = await db

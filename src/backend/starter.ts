@@ -10,6 +10,7 @@ import { SystemCrypto } from "./utils/system-crypto.js";
 import { systemLogger, versionLogger } from "./utils/logger.js";
 
 (async () => {
+  const initStartTime = Date.now();
   try {
     dotenv.config({ quiet: true });
 
@@ -22,6 +23,12 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
         Object.assign(process.env, persistentConfig.parsed);
       }
     } catch (error) {}
+
+    systemLogger.info("Termix backend initialization started", {
+      operation: "backend_init_start",
+      nodeEnv: process.env.NODE_ENV || "production",
+      port: process.env.PORT || 4090,
+    });
 
     let version = "unknown";
 
@@ -88,9 +95,16 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await systemCrypto.initializeInternalAuthToken();
 
     await AutoSSLSetup.initialize();
+    systemLogger.success("SSL setup completed", {
+      operation: "backend_init_ssl",
+      sslEnabled: process.env.SSL_ENABLED === "true",
+    });
 
     const dbModule = await import("./database/db/index.js");
     await dbModule.initializeDatabase();
+    systemLogger.success("Database initialized", {
+      operation: "backend_init_db",
+    });
 
     const authManager = AuthManager.getInstance();
     await authManager.initialize();
@@ -119,6 +133,13 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/docker.js");
     await import("./ssh/docker-console.js");
     await import("./dashboard.js");
+
+    systemLogger.success("Termix backend started successfully", {
+      operation: "backend_init_complete",
+      port: process.env.PORT || 4090,
+      ssl: process.env.SSL_ENABLED === "true",
+      duration: Date.now() - initStartTime,
+    });
 
     process.on("SIGINT", () => {
       systemLogger.info(

@@ -1018,6 +1018,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   client.on("ready", () => {
     if (responseSent) return;
     responseSent = true;
+    fileLogger.info("File manager SSH connection established", {
+      operation: "file_ssh_connected",
+      sessionId,
+      userId,
+      hostId,
+      ip,
+      port,
+      username,
+    });
     connectionLogs.push(
       createConnectionLog(
         "success",
@@ -1183,6 +1192,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   });
 
   client.on("close", () => {
+    fileLogger.info("File manager SSH connection closed", {
+      operation: "file_ssh_disconnected",
+      sessionId,
+      userId,
+      hostId,
+    });
     if (sshSessions[sessionId]) sshSessions[sessionId].isConnected = false;
     cleanupSession(sessionId);
   });
@@ -1942,6 +1957,12 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+  fileLogger.info("File manager disconnection requested", {
+    operation: "file_disconnect_request",
+    sessionId,
+    userId,
+  });
   cleanupSession(sessionId);
   res.json({ status: "success", message: "SSH connection disconnected" });
 });
@@ -2087,6 +2108,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const sshPath = decodeURIComponent((req.query.path as string) || "/");
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2098,9 +2120,21 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
+  fileLogger.debug("Listing directory", {
+    operation: "file_list_dir",
+    sessionId,
+    userId,
+    path: sshPath,
+  });
 
   const trySFTP = () => {
     try {
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: sshPath,
+      });
       sshConn.client.sftp((err, sftp) => {
         if (err) {
           fileLogger.warn(
@@ -2165,6 +2199,13 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           }
 
           if (symlinks.length === 0) {
+            fileLogger.debug("Directory listed successfully", {
+              operation: "file_list_dir_success",
+              sessionId,
+              userId,
+              path: sshPath,
+              fileCount: files.length,
+            });
             sshConn.activeOperations--;
             return res.json({ files, path: sshPath });
           }
@@ -2175,6 +2216,13 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const sendResponse = () => {
             if (responded) return;
             responded = true;
+            fileLogger.debug("Directory listed successfully", {
+              operation: "file_list_dir_success",
+              sessionId,
+              userId,
+              path: sshPath,
+              fileCount: files.length,
+            });
             sshConn.activeOperations--;
             res.json({ files, path: sshPath });
           };
@@ -2564,6 +2612,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const filePath = decodeURIComponent(req.query.path as string);
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2577,6 +2626,12 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
     return res.status(400).json({ error: "File path is required" });
   }
 
+  fileLogger.info("Reading file", {
+    operation: "file_read",
+    sessionId,
+    userId,
+    path: filePath,
+  });
   sshConn.lastActive = Date.now();
 
   const MAX_READ_SIZE = 500 * 1024 * 1024;
@@ -2675,6 +2730,13 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
             }
 
             const isBinary = detectBinary(binaryData);
+            fileLogger.success("File read successfully", {
+              operation: "file_read_success",
+              sessionId,
+              userId,
+              path: filePath,
+              bytes: binaryData.length,
+            });
 
             if (isBinary) {
               const base64Content = binaryData.toString("base64");
@@ -2730,6 +2792,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2747,10 +2810,25 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
     return res.status(400).json({ error: "File content is required" });
   }
 
+  const contentLength =
+    typeof content === "string" ? content.length : Buffer.byteLength(content);
+  fileLogger.info("Writing file", {
+    operation: "file_write",
+    sessionId,
+    userId,
+    path: filePath,
+    bytes: contentLength,
+  });
   sshConn.lastActive = Date.now();
 
   const trySFTP = () => {
     try {
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: filePath,
+      });
       sshConn.client.sftp((err, sftp) => {
         if (err) {
           fileLogger.warn(
@@ -2805,6 +2883,13 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File written successfully", {
+            operation: "file_write_success",
+            sessionId,
+            userId,
+            path: filePath,
+            bytes: fileBuffer.length,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File written successfully",
@@ -2817,6 +2902,13 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File written successfully", {
+            operation: "file_write_success",
+            sessionId,
+            userId,
+            path: filePath,
+            bytes: fileBuffer.length,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File written successfully",
@@ -2975,6 +3067,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3000,9 +3093,23 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const fullPath = filePath.endsWith("/")
     ? filePath + fileName
     : filePath + "/" + fileName;
+  const uploadStartTime = Date.now();
+  fileLogger.info("File upload started", {
+    operation: "file_upload_start",
+    sessionId,
+    userId,
+    path: fullPath,
+    bytes: contentSize,
+  });
 
   const trySFTP = () => {
     try {
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: fullPath,
+      });
       sshConn.client.sftp((err, sftp) => {
         if (err) {
           fileLogger.warn(
@@ -3055,6 +3162,14 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File upload completed", {
+            operation: "file_upload_complete",
+            sessionId,
+            userId,
+            path: fullPath,
+            bytes: fileBuffer.length,
+            duration: Date.now() - uploadStartTime,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File uploaded successfully",
@@ -3067,6 +3182,14 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File upload completed", {
+            operation: "file_upload_complete",
+            sessionId,
+            userId,
+            path: fullPath,
+            bytes: fileBuffer.length,
+            duration: Date.now() - uploadStartTime,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File uploaded successfully",
@@ -3438,6 +3561,7 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3456,6 +3580,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const fullPath = folderPath.endsWith("/")
     ? folderPath + folderName
     : folderPath + "/" + folderName;
+  fileLogger.info("Creating directory", {
+    operation: "file_mkdir",
+    sessionId,
+    userId,
+    path: fullPath,
+  });
   const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
   const createCommand = `mkdir -p '${escapedPath}' && echo "SUCCESS" && exit 0`;
@@ -3492,6 +3622,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 
     stream.on("close", (code) => {
       if (outputData.includes("SUCCESS")) {
+        fileLogger.success("Directory created successfully", {
+          operation: "file_mkdir_success",
+          sessionId,
+          userId,
+          path: fullPath,
+        });
         if (!res.headersSent) {
           res.json({
             message: "Folder created successfully",
@@ -3518,6 +3654,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
         return;
       }
 
+      fileLogger.success("Directory created successfully", {
+        operation: "file_mkdir_success",
+        sessionId,
+        userId,
+        path: fullPath,
+      });
       if (!res.headersSent) {
         res.json({
           message: "Folder created successfully",
@@ -3570,6 +3712,7 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3583,6 +3726,13 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
     return res.status(400).json({ error: "Item path is required" });
   }
 
+  fileLogger.info("Deleting item", {
+    operation: "file_delete",
+    sessionId,
+    userId,
+    path: itemPath,
+    type: isDirectory ? "directory" : "file",
+  });
   sshConn.lastActive = Date.now();
   const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
 
@@ -3660,6 +3810,12 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
             }
 
             if (outputData.includes("SUCCESS") || code === 0) {
+              fileLogger.success("Item deleted successfully", {
+                operation: "file_delete_success",
+                sessionId,
+                userId,
+                path: itemPath,
+              });
               res.json({
                 message: "Item deleted successfully",
                 path: itemPath,
@@ -3725,6 +3881,7 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3744,6 +3901,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 
   const oldDir = oldPath.substring(0, oldPath.lastIndexOf("/") + 1);
   const newPath = oldDir + newName;
+  fileLogger.info("Renaming item", {
+    operation: "file_rename",
+    sessionId,
+    userId,
+    from: oldPath,
+    to: newPath,
+  });
   const escapedOldPath = oldPath.replace(/'/g, "'\"'\"'");
   const escapedNewPath = newPath.replace(/'/g, "'\"'\"'");
 
@@ -3781,6 +3945,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 
     stream.on("close", (code) => {
       if (outputData.includes("SUCCESS")) {
+        fileLogger.success("Item renamed successfully", {
+          operation: "file_rename_success",
+          sessionId,
+          userId,
+          from: oldPath,
+          to: newPath,
+        });
         if (!res.headersSent) {
           res.json({
             message: "Item renamed successfully",
@@ -3808,6 +3979,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
         return;
       }
 
+      fileLogger.success("Item renamed successfully", {
+        operation: "file_rename_success",
+        sessionId,
+        userId,
+        from: oldPath,
+        to: newPath,
+      });
       if (!res.headersSent) {
         res.json({
           message: "Item renamed successfully",
@@ -4021,6 +4199,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   const { sessionId, path: filePath, hostId, userId } = req.body;
+  const downloadStartTime = Date.now();
 
   if (!sessionId || !filePath) {
     fileLogger.warn("Missing download parameters", {
@@ -4030,6 +4209,13 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
     });
     return res.status(400).json({ error: "Missing download parameters" });
   }
+
+  fileLogger.info("File download started", {
+    operation: "file_download_start",
+    sessionId,
+    userId,
+    path: filePath,
+  });
 
   const sshConn = sshSessions[sessionId];
   if (!sshConn || !sshConn.isConnected) {
@@ -4045,6 +4231,12 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
 
   sshConn.lastActive = Date.now();
   scheduleSessionCleanup(sessionId);
+  fileLogger.info("Opening SFTP channel", {
+    operation: "file_sftp_open",
+    sessionId,
+    userId,
+    path: filePath,
+  });
 
   sshConn.client.sftp((err, sftp) => {
     if (err) {
@@ -4097,15 +4289,14 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
 
         const base64Content = data.toString("base64");
         const fileName = filePath.split("/").pop() || "download";
-
-        fileLogger.success("File downloaded successfully", {
-          operation: "file_download",
+        fileLogger.success("File download completed", {
+          operation: "file_download_complete",
           sessionId,
-          filePath,
-          fileName,
-          fileSize: stats.size,
-          hostId,
           userId,
+          hostId,
+          path: filePath,
+          bytes: stats.size,
+          duration: Date.now() - downloadStartTime,
         });
 
         res.json({

@@ -1023,6 +1023,27 @@ class PollingManager {
     const statusOnly = options?.statusOnly ?? false;
     const viewerUserId = options?.viewerUserId;
 
+    const enabledCollectors: string[] = [];
+    if (statsConfig.statusCheckEnabled) enabledCollectors.push("status");
+    if (!statusOnly && statsConfig.metricsEnabled) {
+      enabledCollectors.push(
+        "cpu",
+        "memory",
+        "disk",
+        "network",
+        "uptime",
+        "processes",
+        "system",
+      );
+    }
+    if (enabledCollectors.length > 0) {
+      statsLogger.info("Server stats collector initialized", {
+        operation: "stats_init",
+        hostId: host.id,
+        collectors: enabledCollectors.join(","),
+      });
+    }
+
     const existingConfig = this.pollingConfigs.get(host.id);
 
     if (existingConfig) {
@@ -1150,12 +1171,10 @@ class PollingManager {
       const latestConfig = this.pollingConfigs.get(refreshedHost.id);
       if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         const backoffInfo = pollingBackoff.getBackoffInfo(refreshedHost.id);
-        statsLogger.error("Failed to collect metrics for host", {
-          operation: "metrics_poll_failed",
+        statsLogger.error("Stats collector connection failed", error, {
+          operation: "stats_connect_failed",
           hostId: refreshedHost.id,
-          hostName: refreshedHost.name,
-          error: errorMessage,
-          backoff: backoffInfo,
+          retryInfo: backoffInfo,
         });
       }
     }
@@ -1172,6 +1191,10 @@ class PollingManager {
         clearInterval(config.metricsTimer);
         config.metricsTimer = undefined;
       }
+      statsLogger.info("Server stats collector stopped", {
+        operation: "stats_stop",
+        hostId,
+      });
       this.pollingConfigs.delete(hostId);
       if (clearData) {
         this.statusStore.delete(hostId);
