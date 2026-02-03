@@ -1467,8 +1467,26 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         sendLog("auth", "info", "Using cached OPKSSH certificate");
-        const combinedKey = `${token.privateKey}\n${token.sshCert}`;
-        connectConfig.privateKey = Buffer.from(combinedKey, "utf8");
+
+        const { promises: fs } = await import("fs");
+        const path = await import("path");
+        const os = await import("os");
+
+        const tempDir = os.tmpdir();
+        const keyPath = path.join(tempDir, `opkssh-${userId}-${id}`);
+        const certPath = `${keyPath}-cert.pub`;
+
+        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
+        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
+
+        connectConfig.privateKey = await fs.readFile(keyPath);
+
+        setTimeout(async () => {
+          try {
+            await fs.unlink(keyPath).catch(() => {});
+            await fs.unlink(certPath).catch(() => {});
+          } catch {}
+        }, 60000);
       } catch (opksshError) {
         sshLogger.error("OPKSSH authentication error", opksshError, {
           operation: "opkssh_auth_error",

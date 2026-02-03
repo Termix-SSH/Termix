@@ -235,22 +235,22 @@ export async function startOPKSSHAuth(
     const configPath = getOPKConfigPath();
     const configDir = path.dirname(configPath);
 
-    const opksshProcess = spawn(
-      binaryPath,
-      [
-        "login",
-        "--print-key",
-        `--redirect-uri=${redirectUri}`,
-        `--remote-redirect-uri=${remoteRedirectUri}`,
-      ],
-      {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: {
-          ...process.env,
-          OPK_CONFIG_DIR: configDir,
-        },
+    const isLocalhost =
+      requestOrigin.includes("localhost") ||
+      requestOrigin.includes("127.0.0.1");
+
+    const args = ["login", "--print-key", `--config-path=${configPath}`];
+
+    if (!isLocalhost) {
+      args.push(`--remote-redirect-uri=${remoteRedirectUri}`);
+    }
+
+    const opksshProcess = spawn(binaryPath, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
       },
-    );
+    });
     session.process = opksshProcess;
 
     const cleanup = async () => {
@@ -380,14 +380,14 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   }
 
   const certMatch = session.stdoutBuffer.match(
-    /(ecdsa-sha2-nistp256-cert-v01@openssh\.com[^\s]+|ssh-rsa-cert-v01@openssh\.com[^\s]+|ssh-ed25519-cert-v01@openssh\.com[^\s]+)/,
+    /(ecdsa-sha2-nistp256-cert-v01@openssh\.com\s+[A-Za-z0-9+/=]+|ssh-rsa-cert-v01@openssh\.com\s+[A-Za-z0-9+/=]+|ssh-ed25519-cert-v01@openssh\.com\s+[A-Za-z0-9+/=]+)/,
   );
   if (certMatch) {
     session.sshCertBuffer = certMatch[1].trim();
   }
 
   const identityMatch = session.stdoutBuffer.match(
-    /Email, sub, issuer, audience:\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/,
+    /Email, sub, issuer, audience:\s*\n?\s*([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/,
   );
   if (identityMatch) {
     session.identity = {
