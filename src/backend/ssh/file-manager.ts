@@ -2120,13 +2120,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
-  fileLogger.debug("Listing directory", {
-    operation: "file_list_dir",
-    sessionId,
-    userId,
-    path: sshPath,
-  });
-
   const trySFTP = () => {
     try {
       fileLogger.info("Opening SFTP channel", {
@@ -2199,13 +2192,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           }
 
           if (symlinks.length === 0) {
-            fileLogger.debug("Directory listed successfully", {
-              operation: "file_list_dir_success",
-              sessionId,
-              userId,
-              path: sshPath,
-              fileCount: files.length,
-            });
             sshConn.activeOperations--;
             return res.json({ files, path: sshPath });
           }
@@ -2216,13 +2202,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const sendResponse = () => {
             if (responded) return;
             responded = true;
-            fileLogger.debug("Directory listed successfully", {
-              operation: "file_list_dir_success",
-              sessionId,
-              userId,
-              path: sshPath,
-              fileCount: files.length,
-            });
             sshConn.activeOperations--;
             res.json({ files, path: sshPath });
           };

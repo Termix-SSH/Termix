@@ -1297,11 +1297,6 @@ router.get(
           return resolved;
         }),
       );
-      databaseLogger.debug("Fetching SSH hosts", {
-        operation: "host_list",
-        userId,
-        count: result.length,
-      });
 
       res.json(result);
     } catch (err) {

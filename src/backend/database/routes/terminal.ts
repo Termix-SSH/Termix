@@ -73,12 +73,6 @@ router.post(
         .insert(commandHistory)
         .values(insertData)
         .returning();
-      databaseLogger.debug("Terminal command saved to history", {
-        operation: "terminal_history_save",
-        userId,
-        hostId: insertData.hostId,
-        commandLength: command.length,
-      });
 
       res.status(201).json(result[0]);
     } catch (err) {

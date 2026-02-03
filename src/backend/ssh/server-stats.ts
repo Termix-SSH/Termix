@@ -1834,10 +1834,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         try {
           ports = await collectPortsMetrics(client);
         } catch (e) {
-          statsLogger.debug("Failed to collect ports metrics", {
-            operation: "ports_metrics_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
+
         }
 
         let firewall: {
@@ -1867,10 +1864,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         try {
           firewall = await collectFirewallMetrics(client);
         } catch (e) {
-          statsLogger.debug("Failed to collect firewall metrics", {
-            operation: "firewall_metrics_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
+
         }
 
         const result = {

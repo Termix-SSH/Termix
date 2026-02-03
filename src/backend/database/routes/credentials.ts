@@ -448,12 +448,6 @@ router.get(
       if (credential.key_password) {
         output.keyPassword = credential.key_password;
       }
-      authLogger.debug("SSH credential accessed", {
-        operation: "credential_access",
-        userId,
-        credentialId: parseInt(id),
-        usage: "ssh_connection",
-      });
 
       res.json(output);
     } catch (err) {

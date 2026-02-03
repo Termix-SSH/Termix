@@ -822,13 +822,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
     let authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
-      sshLogger.debug("Loading SSH credentials", {
-        operation: "terminal_credential_load",
-        sessionId,
-        userId,
-        hostId: id,
-        credentialId,
-      });
       try {
         const credentials = await SimpleDBOps.select(
           getDb()
