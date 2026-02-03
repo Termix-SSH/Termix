@@ -3343,7 +3343,11 @@ router.get(
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
-    const hostId = parseInt(req.params.hostId);
+    const hostId = parseInt(
+      Array.isArray(req.params.hostId)
+        ? req.params.hostId[0]
+        : req.params.hostId,
+    );
 
     if (!userId || isNaN(hostId)) {
       return res.status(400).json({ error: "Invalid request" });
@@ -3421,7 +3425,11 @@ router.delete(
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
-    const hostId = parseInt(req.params.hostId);
+    const hostId = parseInt(
+      Array.isArray(req.params.hostId)
+        ? req.params.hostId[0]
+        : req.params.hostId,
+    );
 
     if (!userId || isNaN(hostId)) {
       return res.status(400).json({ error: "Invalid request" });
@@ -3466,7 +3474,9 @@ router.delete(
 router.get(
   "/opkssh-callback/:requestId",
   async (req: Request, res: Response) => {
-    const { requestId } = req.params;
+    const requestId = Array.isArray(req.params.requestId)
+      ? req.params.requestId[0]
+      : req.params.requestId;
     const queryString = req.url.split("?")[1] || "";
 
     try {
