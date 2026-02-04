@@ -122,6 +122,7 @@ import {
   Shield,
   Clock,
   UserCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { HostGeneralTab } from "./tabs/HostGeneralTab";
 import { HostTerminalTab } from "./tabs/HostTerminalTab";
@@ -141,11 +142,13 @@ interface User {
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
   onFormSubmit?: (updatedHost?: SSHHost) => void;
+  onBack?: () => void;
 }
 
 export function HostManagerEditor({
   editingHost,
   onFormSubmit,
+  onBack,
 }: SSHManagerHostEditorProps) {
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
@@ -1163,6 +1166,26 @@ export function HostManagerEditor({
                   <AlertDescription>{formError}</AlertDescription>
                 </Alert>
               )}
+              <div className="flex items-center gap-2 mb-3">
+                {onBack && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onBack}
+                    className="flex-shrink-0"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    {t("common.back")}
+                  </Button>
+                )}
+                <h3 className="text-lg font-semibold flex-shrink-0">
+                  {editingHost
+                    ? editingHost.id
+                      ? t("hosts.editHost")
+                      : t("hosts.cloneHost")
+                    : t("hosts.addHost")}
+                </h3>
+              </div>
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}

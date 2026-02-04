@@ -270,7 +270,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     type: "ssh_manager",
                     title: t("nav.hostManager"),
                     hostConfig: host,
-                    initialTab: "add_host",
+                    initialTab: "hosts",
                   })
                 }
                 className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"

@@ -486,11 +486,13 @@ export interface ApiResponse<T = unknown> {
 
 export interface CredentialsManagerProps {
   onEditCredential?: (credential: Credential) => void;
+  onAddCredential?: () => void;
 }
 
 export interface CredentialEditorProps {
   editingCredential?: Credential | null;
   onFormSubmit?: () => void;
+  onBack?: () => void;
 }
 
 export interface CredentialViewerProps {
@@ -523,6 +525,7 @@ export interface SSHManagerHostEditorProps {
 
 export interface SSHManagerHostViewerProps {
   onEditHost?: (host: SSHHost) => void;
+  onAddHost?: () => void;
 }
 
 export interface HostProps {

@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Credentials Viewer",
     "manageYourSSHCredentials": "Manage your SSH credentials securely",
     "addCredential": "Add Credential",
@@ -818,6 +819,7 @@
   },
   "hosts": {
     "title": "Host Manager",
+    "hosts": "Hosts",
     "sshHosts": "SSH Hosts",
     "noHosts": "No SSH Hosts",
     "noHostsMessage": "You haven't added any SSH hosts yet. Click \"Add Host\" to get started.",

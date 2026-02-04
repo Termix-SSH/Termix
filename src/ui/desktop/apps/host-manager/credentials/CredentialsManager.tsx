@@ -47,6 +47,7 @@ import {
   ChevronsUpDown,
   Terminal,
   Copy,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -65,6 +66,7 @@ import type { Credential, CredentialsManagerProps } from "../../../../../types";
 
 export function CredentialsManager({
   onEditCredential,
+  onAddCredential,
 }: CredentialsManagerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -510,14 +512,20 @@ export function CredentialsManager({
         </div>
       </div>
 
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t("placeholders.searchCredentials")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("placeholders.searchCredentials")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-9"
+          />
+        </div>
+        <Button variant="outline" className="h-9" onClick={onAddCredential}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("credentials.addCredential")}
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
@@ -748,7 +756,11 @@ export function CredentialsManager({
                                               </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <p>{t("credentials.copyDeployCommand")}</p>
+                                              <p>
+                                                {t(
+                                                  "credentials.copyDeployCommand",
+                                                )}
+                                              </p>
                                             </TooltipContent>
                                           </Tooltip>
                                         </>

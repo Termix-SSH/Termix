@@ -15,6 +15,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 import {
   createCredential,
   updateCredential,
@@ -39,6 +40,7 @@ import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.ts
 export function CredentialEditor({
   editingCredential,
   onFormSubmit,
+  onBack,
 }: CredentialEditorProps) {
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
@@ -525,6 +527,24 @@ export function CredentialEditor({
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>
             )}
+            <div className="flex items-center gap-2 mb-3">
+              {onBack && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onBack}
+                  className="flex-shrink-0"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {t("common.back")}
+                </Button>
+              )}
+              <h3 className="text-lg font-semibold flex-shrink-0">
+                {editingCredential
+                  ? t("credentials.editCredential")
+                  : t("credentials.addCredential")}
+              </h3>
+            </div>
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}

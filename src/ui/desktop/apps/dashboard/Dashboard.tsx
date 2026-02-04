@@ -399,36 +399,40 @@ export function Dashboard({
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, {
-        initialTab: "add_host",
-        hostConfig: undefined,
-      });
       setCurrentTab(sshManagerTab.id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-host"));
+      }, 100);
     } else {
       const id = addTab({
         type: "ssh_manager",
         title: "Host Manager",
-        initialTab: "add_host",
+        initialTab: "hosts",
       });
       setCurrentTab(id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-host"));
+      }, 100);
     }
   };
 
   const handleAddCredential = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, {
-        initialTab: "add_credential",
-        hostConfig: undefined,
-      });
       setCurrentTab(sshManagerTab.id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-credential"));
+      }, 100);
     } else {
       const id = addTab({
         type: "ssh_manager",
         title: "Host Manager",
-        initialTab: "add_credential",
+        initialTab: "credentials",
       });
       setCurrentTab(id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-credential"));
+      }, 100);
     }
   };
 
