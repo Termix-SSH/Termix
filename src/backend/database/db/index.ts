@@ -585,6 +585,13 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
   addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
+  addColumnIfNotExists("ssh_data", "host_key_fingerprint", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_type", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_algorithm", "TEXT DEFAULT 'sha256'");
+  addColumnIfNotExists("ssh_data", "host_key_first_seen", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_last_verified", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_changed_count", "INTEGER DEFAULT 0");
+
   addColumnIfNotExists(
     "ssh_data",
     "show_terminal_in_sidebar",

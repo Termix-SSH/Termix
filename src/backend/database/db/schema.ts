@@ -118,6 +118,13 @@ export const sshData = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  hostKeyFingerprint: text("host_key_fingerprint"),
+  hostKeyType: text("host_key_type"),
+  hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
+  hostKeyFirstSeen: text("host_key_first_seen"),
+  hostKeyLastVerified: text("host_key_last_verified"),
+  hostKeyChangedCount: integer("host_key_changed_count").default(0),
+
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

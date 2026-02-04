@@ -1386,7 +1386,8 @@
     "automaticFallback": "Automatically trying {{method}} authentication...",
     "totpTimeout": "TOTP verification timeout. Please reconnect.",
     "passwordTimeout": "Password verification timeout. Please reconnect.",
-    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration."
+    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "File Manager",
@@ -1988,6 +1989,20 @@
     "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator.",
     "passwordResetSuccess": "Password Reset Successful",
     "passwordResetSuccessDesc": "Your password has been reset successfully. You can now log in with your new password."
+  },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
   },
   "errors": {
     "notFound": "Page not found",

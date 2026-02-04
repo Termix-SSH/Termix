@@ -2369,7 +2369,6 @@ async function resolveHostCredentials(
           if (sharedCred) {
             const resolvedHost: Record<string, unknown> = {
               ...host,
-              authType: sharedCred.authType,
               password: sharedCred.password,
               key: sharedCred.key,
               keyPassword: sharedCred.keyPassword,
@@ -2416,7 +2415,6 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         const resolvedHost: Record<string, unknown> = {
           ...host,
-          authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
           keyPassword: credential.key_password || credential.keyPassword,

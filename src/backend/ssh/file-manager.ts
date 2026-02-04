@@ -12,6 +12,7 @@ import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -244,6 +245,15 @@ async function createJumpHostChain(
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -270,6 +280,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -785,6 +796,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      hostId,
+      ip,
+      port,
+      null,
+      userId,
+      false,
+    ),
     env: {
       TERM: "xterm-256color",
       LANG: "en_US.UTF-8",
@@ -1160,6 +1179,16 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `Authentication failed: ${err.message}`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
+    } else if (err.message.includes("verification failed")) {
+      errorStage = "handshake";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
           { errorCode: (err as any).code, errorLevel: (err as any).level },
         ),
       );

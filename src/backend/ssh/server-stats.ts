@@ -23,6 +23,7 @@ import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -125,6 +126,15 @@ async function createJumpHostChain(
       const jumpClient = new Client();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -151,6 +161,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -379,7 +390,7 @@ class SSHConnectionPool {
     host: SSHHostWithCredentials,
   ): Promise<Client> {
     return new Promise(async (resolve, reject) => {
-      const config = buildSshConfig(host);
+      const config = await buildSshConfig(host);
       const client = new Client();
       const timeout = setTimeout(() => {
         client.end();
@@ -1036,13 +1047,6 @@ class PollingManager {
         "system",
       );
     }
-    if (enabledCollectors.length > 0) {
-      statsLogger.info("Server stats collector initialized", {
-        operation: "stats_init",
-        hostId: host.id,
-        collectors: enabledCollectors.join(","),
-      });
-    }
 
     const existingConfig = this.pollingConfigs.get(host.id);
 
@@ -1191,10 +1195,7 @@ class PollingManager {
         clearInterval(config.metricsTimer);
         config.metricsTimer = undefined;
       }
-      statsLogger.info("Server stats collector stopped", {
-        operation: "stats_stop",
-        hostId,
-      });
+
       this.pollingConfigs.delete(hostId);
       if (clearData) {
         this.statusStore.delete(hostId);
@@ -1605,7 +1606,9 @@ function addLegacyCredentials(
   baseHost.keyType = host.keyType;
 }
 
-function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
+async function buildSshConfig(
+  host: SSHHostWithCredentials,
+): Promise<ConnectConfig> {
   const base: ConnectConfig = {
     host: host.ip,
     port: host.port,
@@ -1616,6 +1619,14 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      host.id,
+      host.ip,
+      host.port,
+      null,
+      host.userId || "",
+      false,
+    ),
     env: {
       TERM: "xterm-256color",
       LANG: "en_US.UTF-8",
@@ -1833,9 +1844,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           ports = await collectPortsMetrics(client);
-        } catch (e) {
-
-        }
+        } catch (e) {}
 
         let firewall: {
           type: "iptables" | "nftables" | "none";
@@ -1863,9 +1872,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           firewall = await collectFirewallMetrics(client);
-        } catch (e) {
-
-        }
+        } catch (e) {}
 
         const result = {
           cpu,
@@ -2367,7 +2374,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       return res.json({ success: true, connectionLogs });
     }
 
-    const config = buildSshConfig(host);
+    const config = await buildSshConfig(host);
     const client = new Client();
 
     const connectionPromise = new Promise<{
@@ -2540,6 +2547,15 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 "error",
                 errorStage,
                 `Authentication failed: ${errorMessage}`,
+              ),
+            );
+          } else if (errorMessage.includes("verification failed")) {
+            errorStage = "handshake";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
               ),
             );
           } else {

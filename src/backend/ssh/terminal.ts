@@ -16,6 +16,7 @@ import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSHAuthManager } from "./auth-manager.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -164,6 +165,15 @@ async function createJumpHostChain(
       const jumpClient = new Client();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -197,6 +207,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -1379,6 +1390,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
       timeout: 120000,
+      hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+        id,
+        ip,
+        port,
+        ws,
+        userId,
+        false,
+      ),
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",

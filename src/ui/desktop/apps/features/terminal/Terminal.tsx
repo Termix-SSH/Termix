@@ -25,6 +25,7 @@ import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
+import { HostKeyVerificationDialog } from "@/ui/desktop/navigation/dialogs/HostKeyVerificationDialog.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -167,6 +168,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<any>(null);
+
+    const [hostKeyVerification, setHostKeyVerification] = useState<{
+      isOpen: boolean;
+      scenario: "new" | "changed";
+      data: any;
+    } | null>(null);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
@@ -1168,6 +1175,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "host_key_verification_required") {
+            setHostKeyVerification({
+              isOpen: true,
+              scenario: "new",
+              data: msg.data,
+            });
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else if (msg.type === "host_key_changed") {
+            setHostKeyVerification({
+              isOpen: true,
+              scenario: "changed",
+              data: msg.data,
+            });
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1978,6 +2005,39 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
+            }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
+        {hostKeyVerification?.isOpen && (
+          <HostKeyVerificationDialog
+            isOpen={true}
+            scenario={hostKeyVerification.scenario}
+            {...hostKeyVerification.data}
+            onAccept={() => {
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "host_key_verification_response",
+                    data: { action: "accept" },
+                  }),
+                );
+              }
+              setHostKeyVerification(null);
+            }}
+            onReject={() => {
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "host_key_verification_response",
+                    data: { action: "reject" },
+                  }),
+                );
+              }
+              setHostKeyVerification(null);
+              setIsConnecting(false);
+              updateConnectionError(t("terminal.hostKeyRejected"));
             }}
             backgroundColor={backgroundColor}
           />
