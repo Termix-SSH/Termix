@@ -633,6 +633,16 @@ export function HostGeneralTab({
             <AlertDescription>
               <strong>{t("hosts.opksshAuthTitle")}</strong>
               <div className="mt-2">{t("hosts.opksshAuthDescription")}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() =>
+                  window.open("https://docs.termix.site/opkssh", "_blank")
+                }
+              >
+                {t("common.documentation")}
+              </Button>
             </AlertDescription>
           </Alert>
         </TabsContent>

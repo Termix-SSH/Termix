@@ -85,41 +85,9 @@ async function ensureOPKConfigDir(): Promise<void> {
 async function createTemplateConfig(): Promise<void> {
   const configPath = getOPKConfigPath();
   const template = `
-# See documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md
-
-# Configure your OpenID providers below
-providers:
-  # Google OAuth Example
-  # - alias: google
-  #   issuer: https://accounts.google.com
-  #   client_id: YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
-  #   scopes: "openid email profile"
-  #   redirect_uris:
-  #     - http://localhost:3000/login-callback
-  #     - http://localhost:10001/login-callback
-
-  # Microsoft/Azure AD Example
-  # - alias: microsoft
-  #   issuer: https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0
-  #   client_id: YOUR_AZURE_CLIENT_ID
-  #   scopes: "openid profile email offline_access"
-  #   redirect_uris:
-  #     - http://localhost:3000/login-callback
-  #     - http://localhost:10001/login-callback
-
-  # GitLab Example
-  # - alias: gitlab
-  #   issuer: https://gitlab.com
-  #   client_id: YOUR_GITLAB_CLIENT_ID
-  #   scopes: "openid profile email"
-  #   redirect_uris:
-  #     - http://localhost:3000/login-callback
-  #     - http://localhost:10001/login-callback
-
-# To get started:
-# 1. Uncomment one of the provider examples above or add a new one
-# 2. Replace the prefilled ID's
-# 4. Save this file and restart the connection
+# OPKSSH Configuration
+# OPKSSH Documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md
+# Termix Documentation: https://docs.termix.site/opkssh
 `;
 
   try {
