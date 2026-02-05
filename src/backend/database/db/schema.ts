@@ -199,7 +199,7 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   folder: text("folder"),
   tags: text("tags"),
   authType: text("auth_type").notNull(),
-  username: text("username").notNull(),
+  username: text("username"),
   password: text("password"),
   key: text("key", { length: 16384 }),
   private_key: text("private_key", { length: 16384 }),

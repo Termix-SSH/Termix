@@ -118,10 +118,15 @@ export function HostGeneralTab({
           name="username"
           render={({ field }) => {
             const isCredentialAuth = authTab === "credential";
-            const hasCredential = !!form.watch("credentialId");
-            const overrideEnabled = !!form.watch("overrideCredentialUsername");
+            const credentialId = form.watch("credentialId");
+            const overrideEnabled = form.watch("overrideCredentialUsername");
+            const selectedCredential = credentials.find(
+              (c) => c.id === credentialId,
+            );
             const shouldDisable =
-              isCredentialAuth && hasCredential && !overrideEnabled;
+              isCredentialAuth &&
+              selectedCredential?.username &&
+              !overrideEnabled;
 
             return (
               <FormItem className="col-span-6">
@@ -566,6 +571,7 @@ export function HostGeneralTab({
                       onCredentialSelect={(credential) => {
                         if (
                           credential &&
+                          credential.username &&
                           !form.getValues("overrideCredentialUsername")
                         ) {
                           form.setValue("username", credential.username);
@@ -581,30 +587,36 @@ export function HostGeneralTab({
                 </FormItem>
               )}
             />
-            {form.watch("credentialId") && (
-              <FormField
-                control={form.control}
-                name="overrideCredentialUsername"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
-                    <div className="space-y-0.5">
-                      <FormLabel>
-                        {t("hosts.overrideCredentialUsername")}
-                      </FormLabel>
-                      <FormDescription>
-                        {t("hosts.overrideCredentialUsernameDesc")}
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
+            {form.watch("credentialId") &&
+              (() => {
+                const selectedCredential = credentials.find(
+                  (c) => c.id === form.watch("credentialId"),
+                );
+                return selectedCredential?.username ? (
+                  <FormField
+                    control={form.control}
+                    name="overrideCredentialUsername"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                        <div className="space-y-0.5">
+                          <FormLabel>
+                            {t("hosts.overrideCredentialUsername")}
+                          </FormLabel>
+                          <FormDescription>
+                            {t("hosts.overrideCredentialUsernameDesc")}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ) : null;
+              })()}
           </div>
         </TabsContent>
         <TabsContent value="none">

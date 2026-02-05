@@ -558,7 +558,8 @@ export function HostManagerEditor({
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
 
-    if (!values.ip || !values.username) return false;
+    if (!values.ip || !values.username || values.username.trim() === "")
+      return false;
 
     if (authTab === "password") {
       return !!(values.password && values.password.trim() !== "");
@@ -599,7 +600,7 @@ export function HostManagerEditor({
           const selectedCredential = credentials.find(
             (c) => c.id === currentCredentialId,
           );
-          if (selectedCredential) {
+          if (selectedCredential?.username) {
             form.setValue("username", selectedCredential.username, {
               shouldValidate: true,
             });

@@ -53,9 +53,9 @@ ENV DATA_DIR=/app/data \
 
 RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
+    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
     chown -R node:node /app && \
-    chmod 755 /app/data /app/uploads /app/nginx && \
+    chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx && \
     touch /app/nginx/nginx.conf && \
     chown node:node /app/nginx/nginx.conf
 

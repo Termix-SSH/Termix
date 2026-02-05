@@ -127,7 +127,7 @@ export function CredentialEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       authType: z.enum(["password", "key"]),
-      username: z.string().min(1),
+      username: z.string().optional(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
       publicKey: z.string().optional(),
@@ -193,7 +193,7 @@ export function CredentialEditor({
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
 
-    if (!values.name || !values.username) return false;
+    if (!values.name) return false;
 
     if (authTab === "password") {
       return !!(values.password && values.password.trim() !== "");
@@ -379,7 +379,7 @@ export function CredentialEditor({
       setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
-        data.name = data.username;
+        data.name = data.username || "Unnamed Credential";
       }
 
       const submitData: CredentialData = {
@@ -388,7 +388,7 @@ export function CredentialEditor({
         folder: data.folder,
         tags: data.tags,
         authType: data.authType,
-        username: data.username,
+        username: data.username || undefined,
         keyType: data.keyType,
       };
 

@@ -149,18 +149,13 @@ router.post(
       keyType,
     } = req.body;
 
-    if (
-      !isNonEmptyString(userId) ||
-      !isNonEmptyString(name) ||
-      !isNonEmptyString(username)
-    ) {
+    if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
       authLogger.warn("Invalid credential creation data validation failed", {
         operation: "credential_create",
         userId,
         hasName: !!name,
-        hasUsername: !!username,
       });
-      return res.status(400).json({ error: "Name and username are required" });
+      return res.status(400).json({ error: "Name is required" });
     }
 
     if (!["password", "key"].includes(authType)) {
@@ -227,7 +222,7 @@ router.post(
         folder: folder?.trim() || null,
         tags: Array.isArray(tags) ? tags.join(",") : tags || "",
         authType,
-        username: username.trim(),
+        username: username?.trim() || null,
         password: plainPassword,
         key: plainKey,
         private_key: keyInfo?.privateKey || plainKey,
@@ -544,7 +539,7 @@ router.put(
           : updateData.tags || "";
       }
       if (updateData.username !== undefined)
-        updateFields.username = updateData.username.trim();
+        updateFields.username = updateData.username?.trim() || null;
       if (updateData.authType !== undefined)
         updateFields.authType = updateData.authType;
       if (updateData.keyType !== undefined)
@@ -845,7 +840,7 @@ router.post(
         .update(sshData)
         .set({
           credentialId: parseInt(credentialId),
-          username: credential.username as string,
+          username: (credential.username as string) || "",
           authType: (credential.auth_type || credential.authType) as string,
           password: null,
           key: null,
@@ -960,7 +955,7 @@ function formatCredentialOutput(
           : []
         : [],
     authType: credential.authType || credential.auth_type,
-    username: credential.username,
+    username: credential.username || null,
     publicKey: credential.public_key || credential.publicKey,
     keyType: credential.key_type || credential.keyType,
     detectedKeyType: credential.detected_key_type || credential.detectedKeyType,

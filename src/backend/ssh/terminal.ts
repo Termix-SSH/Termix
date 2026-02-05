@@ -372,6 +372,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
+  let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
   ws.on("close", () => {
     sshLogger.info("Terminal WebSocket disconnected", {
@@ -389,6 +390,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     cleanupSSH();
   });
+
+  function resetConnectionState() {
+    isConnecting = false;
+    isConnected = false;
+    isKeyboardInteractive = false;
+    keyboardInteractiveResponded = false;
+    keyboardInteractiveFinish = null;
+    totpPromptSent = false;
+    warpgateAuthPromptSent = false;
+  }
 
   ws.on("message", async (msg: RawData) => {
     const currentDataKey = userCrypto.getUserDataKey(userId);
@@ -663,6 +674,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         try {
           const { cancelAuthSession } = await import("./opkssh-auth.js");
           cancelAuthSession(cancelData.requestId);
+          resetConnectionState();
         } catch (error) {
           sshLogger.error("Failed to cancel OPKSSH auth", error, {
             operation: "opkssh_cancel_error",
@@ -683,6 +695,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows?: number;
           hostConfig?: any;
         };
+
+        resetConnectionState();
+
         const reconnectConfig: ConnectToHostData = {
           cols: completedData.cols || 80,
           rows: completedData.rows || 24,
@@ -1173,8 +1188,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           } catch (e) {}
           sshConn = null;
         }
-        isConnecting = false;
-        isConnected = false;
+        resetConnectionState();
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1199,8 +1213,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           } catch (e) {}
           sshConn = null;
         }
-        isConnecting = false;
-        isConnected = false;
+        resetConnectionState();
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1224,6 +1237,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             error: err.message,
           },
         );
+        resetConnectionState();
         return;
       }
 
@@ -1562,14 +1576,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
         await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
 
+        opksshTempFiles = { keyPath, certPath };
         connectConfig.privateKey = await fs.readFile(keyPath);
-
-        setTimeout(async () => {
-          try {
-            await fs.unlink(keyPath).catch(() => {});
-            await fs.unlink(certPath).catch(() => {});
-          } catch {}
-        }, 60000);
       } catch (opksshError) {
         sshLogger.error("OPKSSH authentication error", opksshError, {
           operation: "opkssh_auth_error",
@@ -1801,15 +1809,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sshConn = null;
     }
 
-    totpPromptSent = false;
-    warpgateAuthPromptSent = false;
-    isKeyboardInteractive = false;
-    keyboardInteractiveResponded = false;
-    keyboardInteractiveFinish = null;
-    isConnecting = false;
-    isConnected = false;
+    resetConnectionState();
     isCleaningUp = false;
     isAwaitingAuthCredentials = false;
+
+    if (opksshTempFiles) {
+      (async () => {
+        try {
+          const { promises: fs } = await import("fs");
+          await fs.unlink(opksshTempFiles.keyPath).catch(() => {});
+          await fs.unlink(opksshTempFiles.certPath).catch(() => {});
+        } catch {}
+      })();
+      opksshTempFiles = null;
+    }
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

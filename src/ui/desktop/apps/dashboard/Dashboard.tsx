@@ -72,6 +72,9 @@ export function Dashboard({
   const [totalServers, setTotalServers] = useState<number>(0);
   const [totalTunnels, setTotalTunnels] = useState<number>(0);
   const [totalCredentials, setTotalCredentials] = useState<number>(0);
+  const [updateCheckDisabled, setUpdateCheckDisabled] = useState<boolean>(
+    localStorage.getItem("disableUpdateCheck") === "true",
+  );
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
@@ -159,9 +162,10 @@ export function Dashboard({
         const uptimeInfo = await getUptime();
         setUptime(uptimeInfo.formatted);
 
-        const updateCheckDisabled =
+        const updateDisabled =
           localStorage.getItem("disableUpdateCheck") === "true";
-        if (!updateCheckDisabled) {
+        setUpdateCheckDisabled(updateDisabled);
+        if (!updateDisabled) {
           const versionInfo = await getVersionInfo();
           setVersionText(`v${versionInfo.localVersion}`);
           if (
@@ -170,6 +174,9 @@ export function Dashboard({
           ) {
             setVersionStatus(versionInfo.status);
           }
+        } else {
+          const versionInfo = await getVersionInfo();
+          setVersionText(`v${versionInfo.localVersion}`);
         }
 
         try {
@@ -587,6 +594,7 @@ export function Dashboard({
                             totalServers={totalServers}
                             totalTunnels={totalTunnels}
                             totalCredentials={totalCredentials}
+                            updateCheckDisabled={updateCheckDisabled}
                           />
                         );
                       } else if (card.id === "recent_activity") {

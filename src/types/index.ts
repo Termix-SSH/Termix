@@ -150,7 +150,7 @@ export interface Credential {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;
@@ -170,7 +170,7 @@ export interface CredentialBackend {
   folder: string | null;
   tags: string;
   authType: "password" | "key";
-  username: string;
+  username: string | null;
   password: string | null;
   key: string;
   private_key?: string;
@@ -190,7 +190,7 @@ export interface CredentialData {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;

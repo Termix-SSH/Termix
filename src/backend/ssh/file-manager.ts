@@ -950,8 +950,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         });
       }
 
-      const combinedKey = `${token.privateKey}\n${token.sshCert}`;
-      config.privateKey = Buffer.from(combinedKey, "utf8");
+      const { promises: fs } = await import("fs");
+      const path = await import("path");
+      const os = await import("os");
+
+      const tempDir = os.tmpdir();
+      const keyPath = path.join(tempDir, `opkssh-fm-${userId}-${hostId}`);
+      const certPath = `${keyPath}-cert.pub`;
+
+      await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
+      await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
+
+      config.privateKey = await fs.readFile(keyPath);
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -959,6 +969,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "Using OPKSSH certificate authentication",
         ),
       );
+
+      setTimeout(async () => {
+        try {
+          await fs.unlink(keyPath).catch(() => {});
+          await fs.unlink(certPath).catch(() => {});
+        } catch {}
+      }, 60000);
     } catch (opksshError) {
       fileLogger.error("OPKSSH authentication error for file manager", {
         operation: "file_connect",

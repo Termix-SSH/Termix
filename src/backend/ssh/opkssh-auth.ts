@@ -137,6 +137,11 @@ async function checkOPKConfigExists(): Promise<{
   configPath?: string;
 }> {
   const configPath = getOPKConfigPath();
+  const isDocker =
+    !!process.env.DATA_DIR && process.env.DATA_DIR.startsWith("/app");
+  const dockerHint = isDocker
+    ? "\n\nDocker: Ensure /app/data is mounted as a volume with write permissions for node:node user."
+    : "";
 
   try {
     const content = await fs.readFile(configPath, "utf8");
@@ -145,7 +150,7 @@ async function checkOPKConfigExists(): Promise<{
       return {
         exists: false,
         configPath,
-        error: `OPKSSH configuration is missing 'providers' section. Please edit the config file at:\n${configPath}\n\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md`,
+        error: `OPKSSH configuration is missing 'providers' section. Please edit the config file at:\n${configPath}\n\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
       };
     }
 
@@ -162,7 +167,7 @@ async function checkOPKConfigExists(): Promise<{
       return {
         exists: false,
         configPath,
-        error: `OPKSSH configuration has no active providers. Please edit the config file at:\n${configPath}\n\nUncomment and configure at least one OIDC provider.\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md`,
+        error: `OPKSSH configuration has no active providers. Please edit the config file at:\n${configPath}\n\nUncomment and configure at least one OIDC provider.\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
       };
     }
 
@@ -172,7 +177,7 @@ async function checkOPKConfigExists(): Promise<{
     return {
       exists: false,
       configPath,
-      error: `OPKSSH configuration not found. A template config file has been created at:\n${configPath}\n\nPlease edit this file and configure your OIDC provider (Google, GitHub, Microsoft, etc.).\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md`,
+      error: `OPKSSH configuration not found. A template config file has been created at:\n${configPath}\n\nPlease edit this file and configure your OIDC provider (Google, GitHub, Microsoft, etc.).\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
     };
   }
 }
@@ -184,6 +189,26 @@ export async function startOPKSSHAuth(
   ws: WebSocket,
   requestOrigin: string,
 ): Promise<string> {
+  try {
+    await ensureOPKConfigDir();
+    const configDir = path.dirname(getOPKConfigPath());
+    await fs.access(configDir, fs.constants.R_OK | fs.constants.W_OK);
+  } catch (error) {
+    sshLogger.error("OPKSSH directory not accessible", error);
+    const isDocker =
+      !!process.env.DATA_DIR && process.env.DATA_DIR.startsWith("/app");
+    const dockerHint = isDocker
+      ? "\n\nDocker: Ensure /app/data is mounted as a volume with write permissions for node:node user."
+      : "";
+    ws.send(
+      JSON.stringify({
+        type: "opkssh_error",
+        error: `OPKSSH directory initialization failed: ${error.message}${dockerHint}`,
+      }),
+    );
+    return "";
+  }
+
   const configCheck = await checkOPKConfigExists();
   if (!configCheck.exists) {
     ws.send(

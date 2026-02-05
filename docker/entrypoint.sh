@@ -19,8 +19,14 @@ fi
 
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /app/nginx/nginx.conf
 
-mkdir -p /app/data /app/uploads
-chmod 755 /app/data /app/uploads 2>/dev/null || true
+mkdir -p /app/data /app/uploads /app/data/.opk
+chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
+
+if [ -w /app/data ]; then
+    echo "Data directory is writable"
+else
+    echo "WARNING: Data directory is not writable. OPKSSH may fail."
+fi
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."

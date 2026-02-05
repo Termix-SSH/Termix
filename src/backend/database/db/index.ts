@@ -270,7 +270,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         folder TEXT,
         tags TEXT,
         auth_type TEXT NOT NULL,
-        username TEXT NOT NULL,
+        username TEXT,
         password TEXT,
         key TEXT,
         key_password TEXT,
@@ -625,6 +625,66 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
+
+  try {
+    const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }>;
+    const usernameCol = tableInfo.find((col) => col.name === "username");
+
+    if (usernameCol && usernameCol.notnull === 1) {
+      const tempTableName = "ssh_credentials_temp_migration";
+      const allColumns = tableInfo.map((col) => col.name).join(", ");
+
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          folder TEXT,
+          tags TEXT,
+          auth_type TEXT NOT NULL,
+          username TEXT,
+          password TEXT,
+          key TEXT,
+          key_password TEXT,
+          key_type TEXT,
+          usage_count INTEGER NOT NULL DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          private_key TEXT,
+          public_key TEXT,
+          detected_key_type TEXT,
+          system_password TEXT,
+          system_key TEXT,
+          system_key_password TEXT,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+
+        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM ssh_credentials;
+
+        DROP TABLE ssh_credentials;
+
+        ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
+      `);
+
+      databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
+        operation: "schema_migration_username_nullable",
+      });
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate ssh_credentials username column", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
 
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");

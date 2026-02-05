@@ -92,7 +92,7 @@ export function HostManager({
         setActiveTab(normalizedTab);
       }
 
-      if (hostConfig && hostConfig.id !== editingHost?.id) {
+      if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
         setEditingHost(hostConfig);
         setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
@@ -110,7 +110,7 @@ export function HostManager({
               : initialTab;
         setActiveTab(normalizedTab);
       }
-      if (hostConfig) {
+      if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
         setEditingHost(hostConfig);
         setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
@@ -132,10 +132,11 @@ export function HostManager({
 
   const handleFormSubmit = () => {
     ignoreNextHostConfigChangeRef.current = true;
+    const savedHostId = editingHost?.id;
     setEditingHost(null);
     setIsAddingHost(false);
     setTimeout(() => {
-      lastProcessedHostIdRef.current = undefined;
+      lastProcessedHostIdRef.current = savedHostId;
     }, 500);
   };
 
@@ -231,6 +232,7 @@ export function HostManager({
                     onBack={() => {
                       setEditingHost(null);
                       setIsAddingHost(false);
+                      lastProcessedHostIdRef.current = undefined;
                     }}
                   />
                 </div>
