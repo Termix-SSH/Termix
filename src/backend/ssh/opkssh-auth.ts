@@ -274,6 +274,11 @@ export async function startOPKSSHAuth(
 
     opksshProcess.stderr?.on("data", (data) => {
       const stderr = data.toString();
+
+      if (stderr.includes("error") || stderr.includes("failed")) {
+        console.error(`OPKSSH error [${requestId}]:`, stderr.trim());
+      }
+
       if (stderr.includes("provider not found") || stderr.includes("config")) {
         ws.send(
           JSON.stringify({
@@ -336,6 +341,12 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
   session.stdoutBuffer += output;
 
+  if (!output.includes("BEGIN OPENSSH PRIVATE KEY")) {
+    sshLogger.debug(`OPKSSH stdout [${requestId}]:`, {
+      output: output.trim().substring(0, 200),
+    });
+  }
+
   const chooserUrlMatch = session.stdoutBuffer.match(
     /Opening browser to (http:\/\/localhost:\d+\/chooser)/,
   );
@@ -392,6 +403,34 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   }
 
   if (session.privateKeyBuffer && session.sshCertBuffer) {
+    if (!session.privateKeyBuffer.includes("BEGIN OPENSSH PRIVATE KEY")) {
+      sshLogger.error(`Invalid private key extracted [${requestId}]`, {
+        bufferPrefix: session.privateKeyBuffer.substring(0, 50),
+      });
+      session.ws.send(
+        JSON.stringify({
+          type: "opkssh_error",
+          requestId,
+          error: "Failed to extract valid private key from OPKSSH output",
+        }),
+      );
+      return;
+    }
+
+    if (!session.sshCertBuffer.match(/-cert-v01@openssh\.com/)) {
+      sshLogger.error(`Invalid SSH certificate extracted [${requestId}]`, {
+        bufferPrefix: session.sshCertBuffer.substring(0, 50),
+      });
+      session.ws.send(
+        JSON.stringify({
+          type: "opkssh_error",
+          requestId,
+          error: "Failed to extract valid SSH certificate from OPKSSH output",
+        }),
+      );
+      return;
+    }
+
     storeOPKSSHToken(session);
   }
 }
@@ -573,6 +612,34 @@ export async function deleteOPKSSHToken(
     .where(
       and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
     );
+}
+
+export async function invalidateOPKSSHToken(
+  userId: string,
+  hostId: number,
+  reason: string,
+): Promise<void> {
+  try {
+    sshLogger.info(
+      `Invalidating OPKSSH token for user ${userId}, host ${hostId}`,
+      {
+        reason,
+      },
+    );
+    const db = getDb();
+    await db
+      .delete(opksshTokens)
+      .where(
+        and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
+      );
+  } catch (error) {
+    sshLogger.error(`Failed to invalidate OPKSSH token`, {
+      userId,
+      hostId,
+      reason,
+      error,
+    });
+  }
 }
 
 export async function handleOAuthCallback(

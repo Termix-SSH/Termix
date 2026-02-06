@@ -115,11 +115,17 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     try {
       await OPKSSHBinaryManager.ensureBinary();
     } catch (error) {
+      const dataDir =
+        process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
       systemLogger.warn(
         "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
         {
           operation: "opkssh_binary_init_failed",
           error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          platform: process.platform,
+          arch: process.arch,
+          dataDir,
         },
       );
     }

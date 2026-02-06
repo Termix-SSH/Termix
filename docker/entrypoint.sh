@@ -26,6 +26,18 @@ if [ -w /app/data ]; then
     echo "Data directory is writable"
 else
     echo "WARNING: Data directory is not writable. OPKSSH may fail."
+    ls -ld /app/data
+fi
+
+if [ -w /app/data/.opk ]; then
+    echo "OPKSSH directory is writable"
+else
+    echo "WARNING: OPKSSH directory is not writable. OPKSSH authentication will fail."
+    ls -ld /app/data/.opk
+fi
+
+if [ ! -d "/app/opkssh" ]; then
+    echo "WARNING: OPKSSH binary directory not found at /app/opkssh"
 fi
 
 if [ "$ENABLE_SSL" = "true" ]; then

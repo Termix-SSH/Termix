@@ -972,9 +972,28 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
       setTimeout(async () => {
         try {
-          await fs.unlink(keyPath).catch(() => {});
-          await fs.unlink(certPath).catch(() => {});
-        } catch {}
+          const cleanupResults = await Promise.allSettled([
+            fs.unlink(keyPath),
+            fs.unlink(certPath),
+          ]);
+
+          cleanupResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+              fileLogger.warn(`Failed to cleanup OPKSSH temp file`, {
+                operation: "opkssh_temp_cleanup_failed",
+                file: index === 0 ? "keyPath" : "certPath",
+                sessionId,
+                error: result.reason,
+              });
+            }
+          });
+        } catch (error) {
+          fileLogger.error("Failed to cleanup OPKSSH temp files", {
+            operation: "opkssh_temp_cleanup_error",
+            sessionId,
+            error,
+          });
+        }
       }, 60000);
     } catch (opksshError) {
       fileLogger.error("OPKSSH authentication error for file manager", {

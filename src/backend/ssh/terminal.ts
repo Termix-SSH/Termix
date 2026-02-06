@@ -1171,6 +1171,57 @@ wss.on("connection", async (ws: WebSocket, req) => {
       });
 
       if (
+        resolvedCredentials.authType === "opkssh" &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn("OPKSSH authentication failed - invalidating token", {
+          operation: "opkssh_auth_failed",
+          hostId: id,
+          userId,
+          error: err.message,
+        });
+
+        (async () => {
+          try {
+            const { invalidateOPKSSHToken } = await import("./opkssh-auth.js");
+            await invalidateOPKSSHToken(userId, id, "SSH auth failed");
+          } catch (invalidateError) {
+            sshLogger.error("Failed to invalidate OPKSSH token", {
+              operation: "opkssh_token_invalidation_error",
+              userId,
+              hostId: id,
+              error: invalidateError,
+            });
+          }
+        })();
+
+        clearTimeout(connectionTimeout);
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        resetConnectionState();
+
+        sendLog(
+          "auth",
+          "error",
+          "OPKSSH certificate authentication failed. Please authenticate again.",
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "opkssh_auth_required",
+            hostId: id,
+            message:
+              "OPKSSH authentication failed or expired. Please authenticate again.",
+          }),
+        );
+        return;
+      }
+
+      if (
         authMethodNotAvailable &&
         resolvedCredentials.authType === "none" &&
         !isKeyboardInteractive
@@ -1814,14 +1865,37 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isAwaitingAuthCredentials = false;
 
     if (opksshTempFiles) {
+      const tempFilesToClean = opksshTempFiles;
+      opksshTempFiles = null;
+
       (async () => {
         try {
           const { promises: fs } = await import("fs");
-          await fs.unlink(opksshTempFiles.keyPath).catch(() => {});
-          await fs.unlink(opksshTempFiles.certPath).catch(() => {});
-        } catch {}
+          const cleanupResults = await Promise.allSettled([
+            fs.unlink(tempFilesToClean.keyPath),
+            fs.unlink(tempFilesToClean.certPath),
+          ]);
+
+          cleanupResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+              sshLogger.warn(`Failed to cleanup OPKSSH temp file`, {
+                operation: "opkssh_temp_cleanup_failed",
+                file: index === 0 ? "keyPath" : "certPath",
+                path:
+                  index === 0
+                    ? tempFilesToClean.keyPath
+                    : tempFilesToClean.certPath,
+                error: result.reason,
+              });
+            }
+          });
+        } catch (error) {
+          sshLogger.error("Failed to cleanup OPKSSH temp files", {
+            operation: "opkssh_temp_cleanup_error",
+            error,
+          });
+        }
       })();
-      opksshTempFiles = null;
     }
   }
 
