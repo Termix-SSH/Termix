@@ -228,15 +228,12 @@ export async function startOPKSSHAuth(
     const configPath = getOPKConfigPath();
     const configDir = path.dirname(configPath);
 
-    const isLocalhost =
-      requestOrigin.includes("localhost") ||
-      requestOrigin.includes("127.0.0.1");
-
-    const args = ["login", "--print-key", `--config-path=${configPath}`];
-
-    if (!isLocalhost) {
-      args.push(`--remote-redirect-uri=${remoteRedirectUri}`);
-    }
+    const args = [
+      "login",
+      "--print-key",
+      `--config-path=${configPath}`,
+      `--remote-redirect-uri=${remoteRedirectUri}`,
+    ];
 
     const opksshProcess = spawn(binaryPath, args, {
       stdio: ["ignore", "pipe", "pipe"],
@@ -275,8 +272,12 @@ export async function startOPKSSHAuth(
     opksshProcess.stderr?.on("data", (data) => {
       const stderr = data.toString();
 
-      if (stderr.includes("error") || stderr.includes("failed")) {
-        console.error(`OPKSSH error [${requestId}]:`, stderr.trim());
+      if (stderr.includes("level=error") || stderr.includes("failed")) {
+        sshLogger.error("OPKSSH error", {
+          operation: "opkssh_auth",
+          requestId,
+          error: stderr.trim(),
+        });
       }
 
       if (stderr.includes("provider not found") || stderr.includes("config")) {
