@@ -20,13 +20,13 @@ jobs:
       - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
-          npm install && npm ci
+          npm install
 
       - name: Run ESLint
-        run: npm run lint
+        run: npx eslint . -c eslint.config.js 
 
       - name: Run Prettier check
-        run: npm run format:check
+        run: npx prettier --check . --config .prettierrc
 
       - name: Type check
         run: npm run type-check
