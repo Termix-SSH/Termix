@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           rm -rf node_modules package-lock.json
-          npm ci
+          npm install && npm ci
 
       - name: Run ESLint
         run: npx eslint .
