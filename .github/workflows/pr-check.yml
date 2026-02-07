@@ -33,3 +33,28 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  build:
+    name: Scan repo
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read          # Required to checkout and read repo files
+      security-events: write  # Required to upload SARIF files to Security tab
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner with rootfs command
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'rootfs'
+          scan-ref: 'rootfs-example-binary'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
