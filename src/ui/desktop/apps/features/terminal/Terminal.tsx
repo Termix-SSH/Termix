@@ -1732,7 +1732,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // Note: Using hostConfig.id instead of hostConfig object to prevent
       // unnecessary reconnections when host properties are updated.
       // Only reconnect when switching to a different host.
-       
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {

@@ -508,7 +508,10 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                 return (
                   <FormItem>
                     <FormLabel>{t("hosts.startupSnippet")}</FormLabel>
-                    <Popover open={snippetPopoverOpen} onOpenChange={setSnippetPopoverOpen}>
+                    <Popover
+                      open={snippetPopoverOpen}
+                      onOpenChange={setSnippetPopoverOpen}
+                    >
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button

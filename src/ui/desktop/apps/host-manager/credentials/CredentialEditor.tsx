@@ -222,7 +222,6 @@ export function CredentialEditor({
     };
 
     updateAuthFields();
-     
   }, [authTab]);
 
   useEffect(() => {

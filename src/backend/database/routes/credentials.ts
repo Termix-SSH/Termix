@@ -57,7 +57,6 @@ function generateSSHKeyPair(
       options.cipher = "aes128-cbc";
     }
 
-     
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
     return {

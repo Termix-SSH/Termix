@@ -600,7 +600,6 @@ export function HostManagerEditor({
     };
 
     updateAuthFields();
-     
   }, [authTab, credentials]);
 
   useEffect(() => {
@@ -774,7 +773,6 @@ export function HostManagerEditor({
 
       form.reset(defaultFormData as FormData);
     }
-     
   }, [editingHost]);
 
   useEffect(() => {
