@@ -154,8 +154,9 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
+      const { getSqlite, saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
 
       const sqlite = getSqlite();
 
@@ -170,8 +171,9 @@ class AuthManager {
       }
 
       try {
-        const { CredentialSystemEncryptionMigration } =
-          await import("./credential-system-encryption-migration.js");
+        const { CredentialSystemEncryptionMigration } = await import(
+          "./credential-system-encryption-migration.js"
+        );
         const credMigration = new CredentialSystemEncryptionMigration();
         const credResult = await credMigration.migrateUserCredentials(userId);
 
@@ -247,8 +249,9 @@ class AuthManager {
         });
 
         try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -349,8 +352,9 @@ class AuthManager {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -401,8 +405,9 @@ class AuthManager {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -443,8 +448,9 @@ class AuthManager {
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -589,8 +595,9 @@ class AuthManager {
               .where(eq(sessions.id, payload.sessionId))
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } =
-                    await import("../database/db/index.js");
+                  const { saveMemoryDatabaseToFile } = await import(
+                    "../database/db/index.js"
+                  );
                   await saveMemoryDatabaseToFile();
 
                   const remainingSessions = await db
@@ -734,8 +741,9 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
 
         try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
