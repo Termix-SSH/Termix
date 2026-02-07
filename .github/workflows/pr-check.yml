@@ -23,13 +23,13 @@ jobs:
           npm install && npm ci
 
       - name: Run ESLint
-        run: npx eslint .
+        run: npm eslint .
 
       - name: Run Prettier check
-        run: npx prettier --check .
+        run: npm prettier --check .
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm tsc --noEmit
 
       - name: Build
         run: npm run build
