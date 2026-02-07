@@ -23,10 +23,10 @@ jobs:
           npm install
 
       - name: Run ESLint
-        run: npx eslint . -c eslint.config.js 
+        run: npm run lint
 
       - name: Run Prettier check
-        run: npx prettier --check . --config .prettierrc
+        run: npm run format:check
 
       - name: Type check
         run: npm run type-check

@@ -222,7 +222,7 @@ export function CredentialEditor({
     };
 
     updateAuthFields();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [authTab]);
 
   useEffect(() => {
