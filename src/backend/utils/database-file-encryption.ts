@@ -480,12 +480,14 @@ class DatabaseFileEncryption {
       try {
         const metadataContent = fs.readFileSync(metadataPath, "utf8");
         const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-        return (
+        if (
           metadata.version === this.VERSION &&
           metadata.algorithm === this.ALGORITHM
-        );
+        ) {
+          return true;
+        }
       } catch {
-        return false;
+        // .meta parse failed, fall through to single-file detection
       }
     }
 
