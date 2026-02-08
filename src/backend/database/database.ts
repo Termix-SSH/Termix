@@ -42,7 +42,7 @@ import type {
   GitHubAPIResponse,
   AuthenticatedRequest,
 } from "../../types/index.js";
-import { getDb } from "./db/index.js";
+import { getDb, DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
 
 const app = express();
@@ -1543,6 +1543,15 @@ app.post(
         }
 
         result.success = true;
+
+        try {
+          await DatabaseSaveTrigger.forceSave("database_import");
+        } catch (saveError) {
+          apiLogger.error("Failed to persist imported data to disk", saveError, {
+            operation: "import_force_save_failed",
+            userId,
+          });
+        }
       } finally {
         if (importDb) {
           importDb.close();
