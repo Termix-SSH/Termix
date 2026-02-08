@@ -76,6 +76,25 @@ function getOPKConfigPath(): string {
   return path.join(dataDir, ".opk", "config.yml");
 }
 
+async function parseOPKSSHConfigPort(): Promise<number | null> {
+  try {
+    const configPath = getOPKConfigPath();
+    const content = await fs.readFile(configPath, "utf8");
+
+    const redirectUriMatch = content.match(
+      /redirect_uris:\s*\n?\s*-\s*["']?http:\/\/localhost:(\d+)/,
+    );
+    if (redirectUriMatch) {
+      const port = parseInt(redirectUriMatch[1], 10);
+      return port;
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
 async function ensureOPKConfigDir(): Promise<void> {
   const configPath = getOPKConfigPath();
   const configDir = path.dirname(configPath);
@@ -190,19 +209,6 @@ export async function startOPKSSHAuth(
     return "";
   }
 
-  const localPort = allocatePort();
-  if (!localPort) {
-    ws.send(
-      JSON.stringify({
-        type: "opkssh_error",
-        requestId: "",
-        error:
-          "No available ports for OPKSSH authentication. Please try again later.",
-      }),
-    );
-    return "";
-  }
-
   const requestId = randomUUID();
   const remoteRedirectUri = `${requestOrigin}/opkssh-callback/${requestId}`;
 
@@ -211,7 +217,7 @@ export async function startOPKSSHAuth(
     userId,
     hostId,
     hostname,
-    localPort,
+    localPort: 0,
     remoteRedirectUri,
     status: "starting",
     ws,
@@ -224,7 +230,6 @@ export async function startOPKSSHAuth(
 
   try {
     const binaryPath = OPKSSHBinaryManager.getBinaryPath();
-    const redirectUri = `http://localhost:${localPort}/login-callback`;
     const configPath = getOPKConfigPath();
     const configDir = path.dirname(configPath);
 
@@ -262,7 +267,6 @@ export async function startOPKSSHAuth(
     session.approvalTimeout = timeout;
 
     activeAuthSessions.set(requestId, session as OPKSSHAuthSession);
-    portAllocationMap.set(localPort, requestId);
 
     opksshProcess.stdout?.on("data", (data) => {
       const output = data.toString();
@@ -322,7 +326,6 @@ export async function startOPKSSHAuth(
     return requestId;
   } catch (error) {
     sshLogger.error(`Failed to start OPKSSH auth session`, error);
-    releasePort(localPort);
     ws.send(
       JSON.stringify({
         type: "opkssh_error",
@@ -342,24 +345,29 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
   session.stdoutBuffer += output;
 
-  if (!output.includes("BEGIN OPENSSH PRIVATE KEY")) {
-    sshLogger.debug(`OPKSSH stdout [${requestId}]:`, {
-      output: output.trim().substring(0, 200),
-    });
-  }
-
   const chooserUrlMatch = session.stdoutBuffer.match(
-    /Opening browser to (http:\/\/localhost:\d+\/chooser)/,
+    /Opening browser to (http:\/\/localhost:(\d+)\/chooser)/,
   );
   if (chooserUrlMatch && session.status === "starting") {
-    const chooserUrl = chooserUrlMatch[1];
+    const localChooserUrl = chooserUrlMatch[1];
+    const actualPort = parseInt(chooserUrlMatch[2], 10);
+
+    session.localPort = actualPort;
+
+    const baseUrl = session.remoteRedirectUri.replace(
+      /\/opkssh-callback\/.*/,
+      "",
+    );
+    const proxiedChooserUrl = `${baseUrl}/opkssh-chooser/${requestId}`;
+
     session.status = "waiting_for_auth";
     session.ws.send(
       JSON.stringify({
         type: "opkssh_status",
         requestId,
         stage: "chooser",
-        url: chooserUrl,
+        url: proxiedChooserUrl,
+        localUrl: localChooserUrl,
         message: "Please authenticate in your browser",
       }),
     );
@@ -715,7 +723,6 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
       }
     }
 
-    releasePort(session.localPort);
     activeAuthSessions.delete(requestId);
   } finally {
     cleanupInProgress.delete(requestId);
@@ -727,4 +734,10 @@ export function cancelAuthSession(requestId: string): void {
   if (session) {
     session.cleanup();
   }
+}
+
+export function getActiveAuthSession(
+  requestId: string,
+): OPKSSHAuthSession | undefined {
+  return activeAuthSessions.get(requestId);
 }

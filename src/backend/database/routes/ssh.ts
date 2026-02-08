@@ -3461,6 +3461,101 @@ router.delete(
 
 /**
  * @openapi
+ * /opkssh-chooser/{requestId}:
+ *   get:
+ *     summary: Proxy OPKSSH provider chooser page
+ *     tags: [SSH]
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authentication request ID
+ *     responses:
+ *       200:
+ *         description: Chooser page content
+ *       404:
+ *         description: Session not found
+ *       500:
+ *         description: Proxy error
+ */
+router.get(
+  "/opkssh-chooser/:requestId",
+  async (req: Request, res: Response) => {
+    const requestId = Array.isArray(req.params.requestId)
+      ? req.params.requestId[0]
+      : req.params.requestId;
+
+    try {
+      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const session = getActiveAuthSession(requestId);
+
+      if (!session) {
+        res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Session Not Found</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+              h1 { color: #ef4444; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✗ Session Not Found</h1>
+              <p>This authentication session has expired or is invalid.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const axios = (await import("axios")).default;
+      const chooserUrl = `http://localhost:${session.localPort}/chooser`;
+
+      const response = await axios.get(chooserUrl, {
+        timeout: 10000,
+        validateStatus: () => true,
+        responseType: "text",
+      });
+
+      res.status(response.status).send(response.data);
+    } catch (error) {
+      sshLogger.error("Error proxying OPKSSH chooser", error, {
+        operation: "opkssh_chooser_proxy_error",
+        requestId,
+      });
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Error</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h1 { color: #ef4444; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>✗ Error</h1>
+            <p>Failed to load authentication page. Please try again.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+  },
+);
+
+/**
+ * @openapi
  * /opkssh-callback/{requestId}:
  *   get:
  *     summary: OAuth callback from OIDC provider for OPKSSH authentication
