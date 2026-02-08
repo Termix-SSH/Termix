@@ -459,11 +459,32 @@ class DatabaseFileEncryption {
     }
 
     try {
-      const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
-      const metadataContent = fs.readFileSync(metadataPath, "utf8");
-      const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-
       const fileStats = fs.statSync(encryptedPath);
+      let metadata: EncryptedFileMetadata | null = null;
+
+      const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
+      if (fs.existsSync(metadataPath)) {
+        try {
+          const metadataContent = fs.readFileSync(metadataPath, "utf8");
+          metadata = JSON.parse(metadataContent);
+        } catch {
+          // .meta parse failed, try single-file format
+        }
+      }
+
+      if (!metadata) {
+        const fileBuffer = fs.readFileSync(encryptedPath);
+        const metadataLength = fileBuffer.readUInt32BE(0);
+        const metadataEnd = 4 + metadataLength;
+        const metadataJson = fileBuffer
+          .subarray(4, metadataEnd)
+          .toString("utf8");
+        metadata = JSON.parse(metadataJson);
+      }
+
+      if (!metadata) {
+        return null;
+      }
 
       return {
         version: metadata.version,
