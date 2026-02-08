@@ -276,12 +276,19 @@ export async function startOPKSSHAuth(
     opksshProcess.stderr?.on("data", (data) => {
       const stderr = data.toString();
 
+      if (stderr.includes("Opening browser to")) {
+        handleOPKSSHOutput(requestId, stderr);
+      }
+
       if (stderr.includes("level=error") || stderr.includes("failed")) {
-        sshLogger.error("OPKSSH error", {
-          operation: "opkssh_auth",
-          requestId,
-          error: stderr.trim(),
-        });
+        const isXdgOpenError = stderr.includes('exec: "xdg-open"');
+        if (!isXdgOpenError) {
+          sshLogger.error("OPKSSH error", {
+            operation: "opkssh_auth",
+            requestId,
+            error: stderr.trim(),
+          });
+        }
       }
 
       if (stderr.includes("provider not found") || stderr.includes("config")) {
@@ -346,11 +353,11 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   session.stdoutBuffer += output;
 
   const chooserUrlMatch = session.stdoutBuffer.match(
-    /Opening browser to (http:\/\/localhost:(\d+)\/chooser)/,
+    /Opening browser to http:\/\/localhost:(\d+)\/chooser/,
   );
   if (chooserUrlMatch && session.status === "starting") {
-    const localChooserUrl = chooserUrlMatch[1];
-    const actualPort = parseInt(chooserUrlMatch[2], 10);
+    const actualPort = parseInt(chooserUrlMatch[1], 10);
+    const localChooserUrl = `http://localhost:${actualPort}/chooser`;
 
     session.localPort = actualPort;
 
@@ -359,6 +366,13 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
       "",
     );
     const proxiedChooserUrl = `${baseUrl}/opkssh-chooser/${requestId}`;
+
+    sshLogger.info(`OPKSSH chooser ready on port ${actualPort}`, {
+      operation: "opkssh_chooser_ready",
+      requestId,
+      localPort: actualPort,
+      proxiedUrl: proxiedChooserUrl,
+    });
 
     session.status = "waiting_for_auth";
     session.ws.send(
