@@ -52,8 +52,18 @@ const cleanupInProgress = new Set<string>();
 
 export function getRequestOrigin(req: IncomingMessage): string {
   const proto = req.headers["x-forwarded-proto"] || "http";
-  const host =
-    req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  let host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+
+  if (Array.isArray(host)) {
+    host = host[0];
+  }
+
+  if (host.includes(":30002")) {
+    host = host.replace(":30002", ":30001");
+  } else if (host.includes(":30003") || host.includes(":30004")) {
+    host = host.replace(/:(30003|30004)/, ":30001");
+  }
+
   return `${proto}://${host}`;
 }
 
@@ -210,7 +220,7 @@ export async function startOPKSSHAuth(
   }
 
   const requestId = randomUUID();
-  const remoteRedirectUri = `${requestOrigin}/opkssh-callback/${requestId}`;
+  const remoteRedirectUri = `${requestOrigin}/ssh/opkssh-callback/${requestId}`;
 
   const session: Partial<OPKSSHAuthSession> = {
     requestId,
@@ -362,10 +372,10 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
     session.localPort = actualPort;
 
     const baseUrl = session.remoteRedirectUri.replace(
-      /\/opkssh-callback\/.*/,
+      /\/ssh\/opkssh-callback\/.*/,
       "",
     );
-    const proxiedChooserUrl = `${baseUrl}/opkssh-chooser/${requestId}`;
+    const proxiedChooserUrl = `${baseUrl}/ssh/opkssh-chooser/${requestId}`;
 
     sshLogger.info(`OPKSSH chooser ready on port ${actualPort}`, {
       operation: "opkssh_chooser_ready",

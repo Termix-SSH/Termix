@@ -28,12 +28,17 @@ export function OPKSSHDialog({
   backgroundColor,
 }: OPKSSHDialogProps) {
   const { t } = useTranslation();
+  const hasOpenedRef = React.useRef(false);
 
   useEffect(() => {
-    if (isOpen && authUrl && stage === "chooser") {
+    if (isOpen && authUrl && stage === "chooser" && !hasOpenedRef.current) {
+      hasOpenedRef.current = true;
       onOpenUrl();
     }
-  }, [isOpen, authUrl, stage]);
+    if (!isOpen) {
+      hasOpenedRef.current = false;
+    }
+  }, [isOpen, authUrl, stage, onOpenUrl]);
 
   if (!isOpen) return null;
 

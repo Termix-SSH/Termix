@@ -3463,7 +3463,7 @@ router.delete(
  * @openapi
  * /opkssh-chooser/{requestId}:
  *   get:
- *     summary: Proxy OPKSSH provider chooser page
+ *     summary: Proxy OPKSSH provider chooser page and all related resources
  *     tags: [SSH]
  *     parameters:
  *       - name: requestId
@@ -3480,7 +3480,8 @@ router.delete(
  *       500:
  *         description: Proxy error
  */
-router.get(
+
+router.use(
   "/opkssh-chooser/:requestId",
   async (req: Request, res: Response) => {
     const requestId = Array.isArray(req.params.requestId)
@@ -3516,12 +3517,35 @@ router.get(
       }
 
       const axios = (await import("axios")).default;
-      const chooserUrl = `http://localhost:${session.localPort}/chooser`;
 
-      const response = await axios.get(chooserUrl, {
+      const fullPath = req.originalUrl || req.url;
+      const pathAfterRequestId =
+        fullPath.split(`/opkssh-chooser/${requestId}`)[1] || "";
+      const targetPath = pathAfterRequestId || "/chooser";
+      const finalPath = targetPath.startsWith("/chooser")
+        ? targetPath
+        : `/chooser${targetPath}`;
+
+      const targetUrl = `http://localhost:${session.localPort}${finalPath}`;
+
+      const response = await axios({
+        method: req.method,
+        url: targetUrl,
+        headers: {
+          ...req.headers,
+          host: `localhost:${session.localPort}`,
+        },
+        data: req.body,
         timeout: 10000,
         validateStatus: () => true,
-        responseType: "text",
+        maxRedirects: 0,
+        responseType: "arraybuffer",
+      });
+
+      Object.entries(response.headers).forEach(([key, value]) => {
+        if (key.toLowerCase() !== "transfer-encoding") {
+          res.setHeader(key, value as string);
+        }
       });
 
       res.status(response.status).send(response.data);
