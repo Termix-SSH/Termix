@@ -3520,7 +3520,7 @@ router.use(
 
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
-        fullPath.split(`/opkssh-chooser/${requestId}`)[1] || "";
+        fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
       const targetPath = pathAfterRequestId || "/chooser";
       const finalPath = targetPath.startsWith("/chooser")
         ? targetPath
@@ -3548,7 +3548,17 @@ router.use(
         }
       });
 
-      res.status(response.status).send(response.data);
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("text/html")) {
+        let html = response.data.toString("utf-8");
+
+        const baseTag = `<base href="/ssh/opkssh-chooser/${requestId}/">`;
+        html = html.replace(/<head>/i, `<head>${baseTag}`);
+
+        res.status(response.status).send(html);
+      } else {
+        res.status(response.status).send(response.data);
+      }
     } catch (error) {
       sshLogger.error("Error proxying OPKSSH chooser", error, {
         operation: "opkssh_chooser_proxy_error",
