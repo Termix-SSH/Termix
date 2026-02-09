@@ -1,6 +1,22 @@
 #!/bin/sh
 set -e
 
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
+
+if [ "$(id -u)" = "0" ]; then
+    echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
+
+    groupmod -o -g "$PGID" node 2>/dev/null || true
+    usermod -o -u "$PUID" node 2>/dev/null || true
+
+    chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
+
+    echo "User node is now UID: $PUID, GID: $PGID"
+
+    exec su-exec node:node "$0" "$@"
+fi
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
