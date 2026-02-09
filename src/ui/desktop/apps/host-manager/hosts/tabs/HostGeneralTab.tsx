@@ -136,6 +136,17 @@ export function HostGeneralTab({
                     placeholder={t("placeholders.username")}
                     disabled={shouldDisable}
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      if (
+                        isCredentialAuth &&
+                        selectedCredential &&
+                        !selectedCredential.username &&
+                        e.target.value.trim() !== ""
+                      ) {
+                        form.setValue("overrideCredentialUsername", true);
+                      }
+                    }}
                     onBlur={(e) => {
                       field.onChange(e.target.value.trim());
                       field.onBlur();

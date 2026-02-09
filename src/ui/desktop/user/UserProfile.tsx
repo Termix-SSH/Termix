@@ -141,6 +141,11 @@ export function UserProfile({
       const saved = localStorage.getItem("commandPaletteShortcutEnabled");
       return saved !== null ? saved === "true" : true;
     });
+  const [confirmSnippetExecution, setConfirmSnippetExecution] =
+    useState<boolean>(() => {
+      const saved = localStorage.getItem("confirmSnippetExecution");
+      return saved !== null ? saved === "true" : false;
+    });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -228,6 +233,11 @@ export function UserProfile({
   const handleCommandPaletteShortcutToggle = (enabled: boolean) => {
     setCommandPaletteShortcutEnabled(enabled);
     localStorage.setItem("commandPaletteShortcutEnabled", enabled.toString());
+  };
+
+  const handleConfirmSnippetExecutionToggle = (enabled: boolean) => {
+    setConfirmSnippetExecution(enabled);
+    localStorage.setItem("confirmSnippetExecution", enabled.toString());
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -641,6 +651,20 @@ export function UserProfile({
                         onCheckedChange={
                           handleDefaultSnippetFoldersCollapsedToggle
                         }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.confirmSnippetExecution")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.confirmSnippetExecutionDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={confirmSnippetExecution}
+                        onCheckedChange={handleConfirmSnippetExecutionToggle}
                       />
                     </div>
                   </div>
