@@ -57,12 +57,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -1281,7 +1276,9 @@ app.post(
                 autostartKey: host.autostart_key,
                 autostartKeyPassword: host.autostart_key_password,
                 credentialId: host.credential_id || null,
-                overrideCredentialUsername: Boolean(host.override_credential_username),
+                overrideCredentialUsername: Boolean(
+                  host.override_credential_username,
+                ),
                 enableTerminal: Boolean(host.enable_terminal),
                 enableTunnel: Boolean(host.enable_tunnel),
                 tunnelConnections: host.tunnel_connections,
@@ -1289,10 +1286,14 @@ app.post(
                 enableFileManager: Boolean(host.enable_file_manager),
                 enableDocker: Boolean(host.enable_docker),
                 showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
-                showFileManagerInSidebar: Boolean(host.show_file_manager_in_sidebar),
+                showFileManagerInSidebar: Boolean(
+                  host.show_file_manager_in_sidebar,
+                ),
                 showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
                 showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
-                showServerStatsInSidebar: Boolean(host.show_server_stats_in_sidebar),
+                showServerStatsInSidebar: Boolean(
+                  host.show_server_stats_in_sidebar,
+                ),
                 defaultPath: host.default_path,
                 statsConfig: host.stats_config,
                 terminalConfig: host.terminal_config,

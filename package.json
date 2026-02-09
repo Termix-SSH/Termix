@@ -17,6 +17,8 @@
     "build": "vite build && tsc -p tsconfig.node.json",
     "build:backend": "tsc -p tsconfig.node.json",
     "dev:backend": "tsc -p tsconfig.node.json && node ./dist/backend/backend/starter.js",
+    "dev:docker": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker build -f docker/Dockerfile -t termix:dev --no-cache . && docker run -d --name termix-dev -p 3000:3000 -p 8080:8080 -p 30001-30006:30001-30006 -v \"%cd%\\db\\data:/app/data\" termix:dev",
+    "dev:docker:restart": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker run -d --name termix-dev -p 8080:8080 -p 30001-30006:30001-30006 -v \"%cd%\\db\\data:/app/data\" termix:dev",
     "generate:openapi": "tsc -p tsconfig.node.json && node ./dist/backend/backend/swagger.js",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"powershell -c \\\"Start-Sleep -Seconds 5\\\" && electron .\"",

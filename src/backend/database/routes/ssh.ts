@@ -3459,6 +3459,79 @@ router.delete(
   },
 );
 
+function rewriteOPKSSHHtml(
+  html: string,
+  requestId: string,
+  routePrefix: "opkssh-chooser" | "opkssh-callback",
+): string {
+  const basePath = `/ssh/${routePrefix}/${requestId}`;
+
+  // Rewrite relative URLs in HTML attributes
+  html = html.replace(/action=["']?\//g, `action="${basePath}/`);
+  html = html.replace(/href=["']?\//g, `href="${basePath}/`);
+  html = html.replace(/src=["']?\//g, `src="${basePath}/`);
+
+  // Rewrite absolute localhost URLs in HTML attributes (including query strings and fragments)
+  html = html.replace(
+    /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `href="${basePath}/$1`,
+  );
+  html = html.replace(
+    /action=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `action="${basePath}/$1`,
+  );
+  html = html.replace(
+    /src=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `src="${basePath}/$1`,
+  );
+
+  // Rewrite JavaScript string literals with localhost URLs (including query strings and fragments)
+  html = html.replace(
+    /(window\.location\.href\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(window\.location\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(fetch\(["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  // Rewrite any other common JavaScript patterns
+  html = html.replace(
+    /(location\.assign\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(location\.replace\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  // Rewrite meta refresh tags
+  html = html.replace(
+    /(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*url=)http:\/\/localhost:\d+\/([^"']+)(["'][^>]*>)/gi,
+    `$1${basePath}/$2$3`,
+  );
+
+  // Rewrite data attributes that might contain URLs
+  html = html.replace(
+    /(data-[\w-]+=["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  const baseTag = `<base href="${basePath}/">`;
+
+  if (html.includes("<base")) {
+    html = html.replace(/<base[^>]*>/i, baseTag);
+  } else {
+    html = html.replace(/<head>/i, `<head>${baseTag}`);
+  }
+
+  return html;
+}
+
 /**
  * @openapi
  * /opkssh-chooser/{requestId}:
@@ -3498,16 +3571,49 @@ router.use(
           <html>
           <head>
             <title>Session Not Found</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              h1 { color: #ef4444; }
-              p { color: #666; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              .icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                color: #f87171;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
             </style>
           </head>
           <body>
             <div class="container">
-              <h1>✗ Session Not Found</h1>
+              <h1>Session Not Found</h1>
               <p>This authentication session has expired or is invalid.</p>
             </div>
           </body>
@@ -3522,11 +3628,65 @@ router.use(
       const pathAfterRequestId =
         fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
       const targetPath = pathAfterRequestId || "/chooser";
-      const finalPath = targetPath.startsWith("/chooser")
-        ? targetPath
-        : `/chooser${targetPath}`;
 
-      const targetUrl = `http://localhost:${session.localPort}${finalPath}`;
+      if (!session.localPort || session.localPort === 0) {
+        sshLogger.error("OPKSSH session has no local port", {
+          operation: "opkssh_chooser_proxy",
+          requestId,
+          sessionStatus: session.status,
+        });
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Error</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Authentication Error</h1>
+              <p>Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
 
       const response = await axios({
         method: req.method,
@@ -3543,18 +3703,29 @@ router.use(
       });
 
       Object.entries(response.headers).forEach(([key, value]) => {
-        if (key.toLowerCase() !== "transfer-encoding") {
+        if (key.toLowerCase() === "transfer-encoding") {
+          return;
+        }
+        if (key.toLowerCase() === "location") {
+          const location = value as string;
+          if (location.startsWith("/")) {
+            const rewrittenLocation = `/ssh/opkssh-chooser/${requestId}${location}`;
+            res.setHeader(key, rewrittenLocation);
+          } else {
+            res.setHeader(key, value as string);
+          }
+        } else {
           res.setHeader(key, value as string);
         }
       });
 
       const contentType = response.headers["content-type"] || "";
       if (contentType.includes("text/html")) {
-        let html = response.data.toString("utf-8");
-
-        const baseTag = `<base href="/ssh/opkssh-chooser/${requestId}/">`;
-        html = html.replace(/<head>/i, `<head>${baseTag}`);
-
+        const html = rewriteOPKSSHHtml(
+          response.data.toString("utf-8"),
+          requestId,
+          "opkssh-chooser",
+        );
         res.status(response.status).send(html);
       } else {
         res.status(response.status).send(response.data);
@@ -3569,16 +3740,49 @@ router.use(
         <html>
         <head>
           <title>Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-            .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            h1 { color: #ef4444; }
-            p { color: #666; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #18181b;
+              color: #fafafa;
+              padding: 1rem;
+            }
+            .container {
+              text-align: center;
+              background: #27272a;
+              padding: 3rem 2rem;
+              border-radius: 0.625rem;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              max-width: 400px;
+              width: 100%;
+            }
+            .icon {
+              font-size: 3rem;
+              margin-bottom: 1rem;
+              color: #f87171;
+            }
+            h1 {
+              color: #fafafa;
+              font-size: 1.5rem;
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+            }
+            p {
+              color: #9ca3af;
+              font-size: 0.95rem;
+              line-height: 1.5;
+            }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>✗ Error</h1>
+            <h1>Error</h1>
             <p>Failed to load authentication page. Please try again.</p>
           </div>
         </body>
@@ -3590,9 +3794,85 @@ router.use(
 
 /**
  * @openapi
+ * /opkssh-callback:
+ *   get:
+ *     summary: Static OAuth callback from OIDC provider for OPKSSH authentication
+ *     tags: [SSH]
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       404:
+ *         description: No active authentication session found
+ *       500:
+ *         description: Authentication failed
+ */
+router.use("/opkssh-callback", async (req: Request, res: Response, next) => {
+  // Only handle if there's NO requestId in the path (static callback)
+  if (req.path !== "/opkssh-callback" && req.path !== "/opkssh-callback/") {
+    return next();
+  }
+
+  try {
+    const { getActiveSessionsForUser, getUserIdFromRequest } =
+      await import("../../ssh/opkssh-auth.js");
+
+    // Get user ID from JWT token
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    // Find active OPKSSH session for this user
+    const sessions = getActiveSessionsForUser(userId);
+    if (sessions.length === 0) {
+      res.status(404).send("No active authentication session found");
+      return;
+    }
+
+    // Use the most recent session
+    const session = sessions[sessions.length - 1];
+    const requestId = session.requestId;
+
+    // Proxy to OPKSSH's internal listener
+    const axios = (await import("axios")).default;
+    const targetUrl = `http://localhost:${session.localPort}/login-callback${req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""}`;
+
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers: {
+        ...req.headers,
+        host: `localhost:${session.localPort}`,
+      },
+      data: req.body,
+      timeout: 10000,
+      validateStatus: () => true,
+      maxRedirects: 0,
+      responseType: "arraybuffer",
+    });
+
+    // Forward headers
+    Object.entries(response.headers).forEach(([key, value]) => {
+      if (key.toLowerCase() !== "transfer-encoding") {
+        res.setHeader(key, value as string);
+      }
+    });
+
+    res.status(response.status).send(response.data);
+  } catch (error) {
+    sshLogger.error("Error handling OPKSSH static callback", error, {
+      operation: "opkssh_static_callback_error",
+    });
+    res.status(500).send("Authentication callback failed");
+  }
+});
+
+/**
+ * @openapi
  * /opkssh-callback/{requestId}:
  *   get:
- *     summary: OAuth callback from OIDC provider for OPKSSH authentication
+ *     summary: OAuth callback from OIDC provider for OPKSSH authentication (handles all sub-paths)
  *     tags: [SSH]
  *     parameters:
  *       - name: requestId
@@ -3609,82 +3889,238 @@ router.use(
  *       500:
  *         description: Authentication failed
  */
-router.get(
+router.use(
   "/opkssh-callback/:requestId",
   async (req: Request, res: Response) => {
     const requestId = Array.isArray(req.params.requestId)
       ? req.params.requestId[0]
       : req.params.requestId;
-    const queryString = req.url.split("?")[1] || "";
 
     try {
-      const { handleOAuthCallback } = await import("../../ssh/opkssh-auth.js");
-      const result = await handleOAuthCallback(requestId, queryString);
+      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const session = getActiveAuthSession(requestId);
 
-      if (result.success) {
-        res.send(`
+      if (!session) {
+        res.status(404).send(`
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Authentication Successful</title>
+            <title>Session Not Found</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              h1 { color: #22c55e; }
-              p { color: #666; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              .icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                color: #f87171;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+              p + p {
+                margin-top: 0.5rem;
+              }
             </style>
           </head>
           <body>
             <div class="container">
-              <h1>✓ Authentication Successful</h1>
-              <p>You can now close this window and return to Termix.</p>
-            </div>
-          </body>
-          </html>
-        `);
-      } else {
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Authentication Failed</title>
-            <style>
-              body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-              .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-              h1 { color: #ef4444; }
-              p { color: #666; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>✗ Authentication Failed</h1>
-              <p>${result.message || "An error occurred during authentication."}</p>
+              <h1>Session Not Found</h1>
+              <p>Authentication session expired or invalid.</p>
               <p>Please close this window and try again.</p>
             </div>
           </body>
           </html>
         `);
+        return;
+      }
+
+      const axios = (await import("axios")).default;
+      const fullPath = req.originalUrl || req.url;
+      const pathAfterRequestId =
+        fullPath.split(`/ssh/opkssh-callback/${requestId}`)[1] || "";
+      const targetPath = pathAfterRequestId || "/login-callback";
+
+      if (!session.callbackPort || session.callbackPort === 0) {
+        sshLogger.error("OPKSSH callback session has no callback port", {
+          operation: "opkssh_callback_proxy",
+          requestId,
+          sessionStatus: session.status,
+        });
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Error</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Callback Error</h1>
+              <p>OPKSSH callback listener not ready. Please try authenticating again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const targetUrl = `http://localhost:${session.callbackPort}${targetPath}`;
+
+      const response = await axios({
+        method: req.method,
+        url: targetUrl,
+        headers: {
+          ...req.headers,
+          host: `localhost:${session.callbackPort}`,
+        },
+        data: req.body,
+        timeout: 10000,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        responseType: "arraybuffer",
+      });
+
+      Object.entries(response.headers).forEach(([key, value]) => {
+        if (key.toLowerCase() === "transfer-encoding") {
+          return;
+        }
+        if (key.toLowerCase() === "location") {
+          const location = value as string;
+          if (location.startsWith("/")) {
+            res.setHeader(key, `/ssh/opkssh-callback/${requestId}${location}`);
+          } else {
+            res.setHeader(key, value as string);
+          }
+        } else {
+          res.setHeader(key, value as string);
+        }
+      });
+
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("text/html")) {
+        const html = rewriteOPKSSHHtml(
+          response.data.toString("utf-8"),
+          requestId,
+          "opkssh-callback",
+        );
+        res.status(response.status).send(html);
+      } else {
+        res.status(response.status).send(response.data);
       }
     } catch (error) {
       sshLogger.error("Error handling OPKSSH OAuth callback", error, {
         operation: "opkssh_oauth_callback_error",
         requestId,
       });
+
       res.status(500).send(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-            .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            h1 { color: #ef4444; }
-            p { color: #666; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #18181b;
+              color: #fafafa;
+              padding: 1rem;
+            }
+            .container {
+              text-align: center;
+              background: #27272a;
+              padding: 3rem 2rem;
+              border-radius: 0.625rem;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              max-width: 400px;
+              width: 100%;
+            }
+            .icon {
+              font-size: 3rem;
+              margin-bottom: 1rem;
+              color: #f87171;
+            }
+            h1 {
+              color: #fafafa;
+              font-size: 1.5rem;
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+            }
+            p {
+              color: #9ca3af;
+              font-size: 0.95rem;
+              line-height: 1.5;
+            }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>✗ Error</h1>
+            <h1>Error</h1>
             <p>An unexpected error occurred. Please try again.</p>
           </div>
         </body>

@@ -407,6 +407,7 @@
     "required": "Required",
     "optional": "Optional",
     "connect": "Connect",
+    "copied": "Copied",
     "connecting": "Connecting...",
     "creating": "Creating...",
     "clear": "Clear",

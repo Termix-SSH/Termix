@@ -13,8 +13,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
 
-const MIN_PORT = 40001;
-const MAX_PORT = 40999;
 const AUTH_TIMEOUT = 5 * 60 * 1000;
 
 interface OPKSSHAuthSession {
@@ -24,6 +22,7 @@ interface OPKSSHAuthSession {
   hostname: string;
   process: ChildProcess;
   localPort: number;
+  callbackPort: number;
   remoteRedirectUri: string;
   status:
     | "starting"
@@ -47,62 +46,47 @@ interface OPKSSHAuthSession {
 }
 
 const activeAuthSessions = new Map<string, OPKSSHAuthSession>();
-const portAllocationMap = new Map<number, string>();
 const cleanupInProgress = new Set<string>();
 
 export function getRequestOrigin(req: IncomingMessage): string {
-  const proto = req.headers["x-forwarded-proto"] || "http";
-  let host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const protoHeader =
+    req.headers["x-forwarded-proto"] ||
+    ((req.socket as any).encrypted ? "https" : "http");
+  const proto =
+    typeof protoHeader === "string"
+      ? protoHeader.split(",")[0].trim()
+      : String(protoHeader);
 
-  if (Array.isArray(host)) {
-    host = host[0];
+  const portHeader = req.headers["x-forwarded-port"];
+  const port =
+    typeof portHeader === "string"
+      ? portHeader.split(",")[0].trim()
+      : undefined;
+
+  const hostHeaderRaw =
+    req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const hostHeader =
+    typeof hostHeaderRaw === "string"
+      ? hostHeaderRaw.split(",")[0].trim()
+      : String(hostHeaderRaw);
+
+  if (port) {
+    const hostWithoutPort = hostHeader.split(":")[0];
+    const isDefaultPort =
+      (proto === "http" && port === "80") ||
+      (proto === "https" && port === "443");
+    return isDefaultPort
+      ? `${proto}://${hostWithoutPort}`
+      : `${proto}://${hostWithoutPort}:${port}`;
   }
 
-  if (host.includes(":30002")) {
-    host = host.replace(":30002", ":30001");
-  } else if (host.includes(":30003") || host.includes(":30004")) {
-    host = host.replace(/:(30003|30004)/, ":30001");
-  }
-
-  return `${proto}://${host}`;
-}
-
-function allocatePort(): number | null {
-  for (let port = MIN_PORT; port <= MAX_PORT; port++) {
-    if (!portAllocationMap.has(port)) {
-      return port;
-    }
-  }
-  return null;
-}
-
-function releasePort(port: number): void {
-  portAllocationMap.delete(port);
+  return `${proto}://${hostHeader}`;
 }
 
 function getOPKConfigPath(): string {
   const dataDir =
     process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
   return path.join(dataDir, ".opk", "config.yml");
-}
-
-async function parseOPKSSHConfigPort(): Promise<number | null> {
-  try {
-    const configPath = getOPKConfigPath();
-    const content = await fs.readFile(configPath, "utf8");
-
-    const redirectUriMatch = content.match(
-      /redirect_uris:\s*\n?\s*-\s*["']?http:\/\/localhost:(\d+)/,
-    );
-    if (redirectUriMatch) {
-      const port = parseInt(redirectUriMatch[1], 10);
-      return port;
-    }
-
-    return null;
-  } catch (error) {
-    return null;
-  }
 }
 
 async function ensureOPKConfigDir(): Promise<void> {
@@ -147,11 +131,12 @@ async function checkOPKConfigExists(): Promise<{
       return {
         exists: false,
         configPath,
-        error: `OPKSSH configuration is missing 'providers' section. Please edit the config file at:\n${configPath}\n\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
+        error: `OPKSSH configuration is missing 'providers' section. Please edit the config file at:\n${configPath}\n\n.`,
       };
     }
 
     const lines = content.split("\n");
+
     const hasUncommentedProvider = lines.some((line) => {
       const trimmed = line.trim();
       return (
@@ -165,6 +150,14 @@ async function checkOPKConfigExists(): Promise<{
         exists: false,
         configPath,
         error: `OPKSSH configuration has no active providers. Please edit the config file at:\n${configPath}\n\nUncomment and configure at least one OIDC provider.\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
+      };
+    }
+
+    if (!content.includes("redirect_uris:")) {
+      return {
+        exists: false,
+        configPath,
+        error: `OPKSSH configuration is missing 'redirect_uris' field.`,
       };
     }
 
@@ -220,7 +213,7 @@ export async function startOPKSSHAuth(
   }
 
   const requestId = randomUUID();
-  const remoteRedirectUri = `${requestOrigin}/ssh/opkssh-callback/${requestId}`;
+  const remoteRedirectUri = `${requestOrigin}/ssh/opkssh-callback`;
 
   const session: Partial<OPKSSHAuthSession> = {
     requestId,
@@ -228,6 +221,7 @@ export async function startOPKSSHAuth(
     hostId,
     hostname,
     localPort: 0,
+    callbackPort: 0,
     remoteRedirectUri,
     status: "starting",
     ws,
@@ -290,15 +284,8 @@ export async function startOPKSSHAuth(
         handleOPKSSHOutput(requestId, stderr);
       }
 
-      if (stderr.includes("level=error") || stderr.includes("failed")) {
-        const isXdgOpenError = stderr.includes('exec: "xdg-open"');
-        if (!isXdgOpenError) {
-          sshLogger.error("OPKSSH error", {
-            operation: "opkssh_auth",
-            requestId,
-            error: stderr.trim(),
-          });
-        }
+      if (stderr.includes("listening on")) {
+        handleOPKSSHOutput(requestId, stderr);
       }
 
       if (stderr.includes("provider not found") || stderr.includes("config")) {
@@ -313,6 +300,23 @@ export async function startOPKSSHAuth(
           }),
         );
         cleanup();
+      }
+
+      if (
+        stderr.includes("level=error") ||
+        stderr.includes("Error:") ||
+        stderr.includes("failed")
+      ) {
+        const isXdgOpenError = stderr.includes('exec: "xdg-open"');
+        if (!isXdgOpenError) {
+          if (
+            stderr.includes("bind: address already in use") ||
+            stderr.includes("error logging in") ||
+            stderr.includes("failed to start")
+          ) {
+            cleanup();
+          }
+        }
       }
     });
 
@@ -372,17 +376,10 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
     session.localPort = actualPort;
 
     const baseUrl = session.remoteRedirectUri.replace(
-      /\/ssh\/opkssh-callback\/.*/,
+      /\/ssh\/opkssh-callback$/,
       "",
     );
     const proxiedChooserUrl = `${baseUrl}/ssh/opkssh-chooser/${requestId}`;
-
-    sshLogger.info(`OPKSSH chooser ready on port ${actualPort}`, {
-      operation: "opkssh_chooser_ready",
-      requestId,
-      localPort: actualPort,
-      proxiedUrl: proxiedChooserUrl,
-    });
 
     session.status = "waiting_for_auth";
     session.ws.send(
@@ -395,6 +392,13 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
         message: "Please authenticate in your browser",
       }),
     );
+  }
+
+  const callbackPortMatch = session.stdoutBuffer.match(
+    /listening on http:\/\/127\.0\.0\.1:(\d+)\//,
+  );
+  if (callbackPortMatch && !session.callbackPort) {
+    session.callbackPort = parseInt(callbackPortMatch[1], 10);
   }
 
   if (output.includes("BEGIN OPENSSH PRIVATE KEY")) {
@@ -653,12 +657,6 @@ export async function invalidateOPKSSHToken(
   reason: string,
 ): Promise<void> {
   try {
-    sshLogger.info(
-      `Invalidating OPKSSH token for user ${userId}, host ${hostId}`,
-      {
-        reason,
-      },
-    );
     const db = getDb();
     await db
       .delete(opksshTokens)
@@ -739,6 +737,8 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
             resolve();
           });
         });
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       } catch (killError) {
         sshLogger.warn(
           `Failed to kill OPKSSH process for session ${requestId}`,
@@ -764,4 +764,32 @@ export function getActiveAuthSession(
   requestId: string,
 ): OPKSSHAuthSession | undefined {
   return activeAuthSessions.get(requestId);
+}
+
+export function getActiveSessionsForUser(userId: string): OPKSSHAuthSession[] {
+  const sessions: OPKSSHAuthSession[] = [];
+  for (const session of activeAuthSessions.values()) {
+    if (session.userId === userId) {
+      sessions.push(session);
+    }
+  }
+  return sessions;
+}
+
+export async function getUserIdFromRequest(req: any): Promise<string | null> {
+  try {
+    const { AuthManager } = await import("../utils/auth-manager.js");
+    const authManager = AuthManager.getInstance();
+
+    const token =
+      req.cookies?.jwt || req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return null;
+    }
+
+    const decoded = await authManager.verifyJWTToken(token);
+    return decoded?.userId || null;
+  } catch (error) {
+    return null;
+  }
 }

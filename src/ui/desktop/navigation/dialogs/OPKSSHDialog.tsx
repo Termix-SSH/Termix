@@ -31,13 +31,7 @@ export function OPKSSHDialog({
   const hasOpenedRef = React.useRef(false);
 
   useEffect(() => {
-    if (isOpen && authUrl && stage === "chooser" && !hasOpenedRef.current) {
-      hasOpenedRef.current = true;
-      onOpenUrl();
-    }
-    if (!isOpen) {
-      hasOpenedRef.current = false;
-    }
+    // Don't auto-open, let user click the button
   }, [isOpen, authUrl, stage, onOpenUrl]);
 
   if (!isOpen) return null;
