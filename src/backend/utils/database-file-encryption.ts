@@ -372,89 +372,20 @@ class DatabaseFileEncryption {
     encryptedPath: string,
     targetPath?: string,
   ): Promise<string> {
-    if (!fs.existsSync(encryptedPath)) {
-      throw new Error(
-        `Encrypted database file does not exist: ${encryptedPath}`,
-      );
-    }
-
-    const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
-    if (!fs.existsSync(metadataPath)) {
-      throw new Error(`Metadata file does not exist: ${metadataPath}`);
-    }
-
     const decryptedPath =
       targetPath || encryptedPath.replace(this.ENCRYPTED_FILE_SUFFIX, "");
 
     try {
-      const metadataContent = fs.readFileSync(metadataPath, "utf8");
-      const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
+      const decryptedBuffer =
+        await this.decryptDatabaseToBuffer(encryptedPath);
 
-      const encryptedData = fs.readFileSync(encryptedPath);
-
-      if (
-        metadata.dataSize !== undefined &&
-        encryptedData.length !== metadata.dataSize
-      ) {
-        databaseLogger.error(
-          "Encrypted file size mismatch - possible corrupted write or mismatched metadata",
-          null,
-          {
-            operation: "database_file_size_mismatch",
-            encryptedPath,
-            actualSize: encryptedData.length,
-            expectedSize: metadata.dataSize,
-          },
-        );
-        throw new Error(
-          `Encrypted file size mismatch: expected ${metadata.dataSize} bytes but got ${encryptedData.length} bytes. ` +
-            `This indicates corrupted files or interrupted write operation.`,
-        );
-      }
-
-      let key: Buffer;
-      if (metadata.version === "v2") {
-        key = await this.systemCrypto.getDatabaseKey();
-      } else if (metadata.version === "v1") {
-        databaseLogger.warn(
-          "Decrypting legacy v1 encrypted database - consider upgrading",
-          {
-            operation: "decrypt_legacy_v1",
-            path: encryptedPath,
-          },
-        );
-        if (!metadata.salt) {
-          throw new Error("v1 encrypted file missing required salt field");
-        }
-        const salt = Buffer.from(metadata.salt, "hex");
-        const fixedSeed =
-          process.env.DB_FILE_KEY || "termix-database-file-encryption-seed-v1";
-        key = crypto.pbkdf2Sync(fixedSeed, salt, 100000, 32, "sha256");
-      } else {
-        throw new Error(`Unsupported encryption version: ${metadata.version}`);
-      }
-
-      const decipher = crypto.createDecipheriv(
-        metadata.algorithm,
-        key,
-        Buffer.from(metadata.iv, "hex"),
-      ) as crypto.DecipherGCM;
-      decipher.setAuthTag(Buffer.from(metadata.tag, "hex"));
-
-      const decrypted = Buffer.concat([
-        decipher.update(encryptedData),
-        decipher.final(),
-      ]);
-
-      fs.writeFileSync(decryptedPath, decrypted);
+      fs.writeFileSync(decryptedPath, decryptedBuffer);
 
       databaseLogger.info("Database file decrypted successfully", {
         operation: "database_file_decryption",
         encryptedPath,
         decryptedPath,
-        encryptedSize: encryptedData.length,
-        decryptedSize: decrypted.length,
-        fingerprintPrefix: metadata.fingerprint,
+        decryptedSize: decryptedBuffer.length,
       });
 
       return decryptedPath;
@@ -480,12 +411,14 @@ class DatabaseFileEncryption {
       try {
         const metadataContent = fs.readFileSync(metadataPath, "utf8");
         const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-        return (
+        if (
           metadata.version === this.VERSION &&
           metadata.algorithm === this.ALGORITHM
-        );
+        ) {
+          return true;
+        }
       } catch {
-        return false;
+        // .meta parse failed, fall through to single-file detection
       }
     }
 
@@ -526,11 +459,32 @@ class DatabaseFileEncryption {
     }
 
     try {
-      const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
-      const metadataContent = fs.readFileSync(metadataPath, "utf8");
-      const metadata: EncryptedFileMetadata = JSON.parse(metadataContent);
-
       const fileStats = fs.statSync(encryptedPath);
+      let metadata: EncryptedFileMetadata | null = null;
+
+      const metadataPath = `${encryptedPath}${this.METADATA_FILE_SUFFIX}`;
+      if (fs.existsSync(metadataPath)) {
+        try {
+          const metadataContent = fs.readFileSync(metadataPath, "utf8");
+          metadata = JSON.parse(metadataContent);
+        } catch {
+          // .meta parse failed, try single-file format
+        }
+      }
+
+      if (!metadata) {
+        const fileBuffer = fs.readFileSync(encryptedPath);
+        const metadataLength = fileBuffer.readUInt32BE(0);
+        const metadataEnd = 4 + metadataLength;
+        const metadataJson = fileBuffer
+          .subarray(4, metadataEnd)
+          .toString("utf8");
+        metadata = JSON.parse(metadataJson);
+      }
+
+      if (!metadata) {
+        return null;
+      }
 
       return {
         version: metadata.version,
