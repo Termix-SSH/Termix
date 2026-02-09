@@ -13,7 +13,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
 
-const AUTH_TIMEOUT = 5 * 60 * 1000;
+const AUTH_TIMEOUT = 60 * 1000;
 
 interface OPKSSHAuthSession {
   requestId: string;
@@ -270,6 +270,10 @@ export async function startOPKSSHAuth(
 
     session.approvalTimeout = timeout;
 
+    ws.on("close", () => {
+      cleanup();
+    });
+
     activeAuthSessions.set(requestId, session as OPKSSHAuthSession);
 
     opksshProcess.stdout?.on("data", (data) => {
@@ -314,7 +318,7 @@ export async function startOPKSSHAuth(
             stderr.includes("error logging in") ||
             stderr.includes("failed to start")
           ) {
-            cleanup();
+            await cleanup();
           }
         }
       }
@@ -730,7 +734,7 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
               session.process.kill("SIGKILL");
             }
             resolve();
-          }, 5000);
+          }, 3000);
 
           session.process.once("exit", () => {
             clearTimeout(killTimeout);
@@ -738,7 +742,7 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
           });
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (killError) {
         sshLogger.warn(
           `Failed to kill OPKSSH process for session ${requestId}`,

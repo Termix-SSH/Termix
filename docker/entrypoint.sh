@@ -14,7 +14,7 @@ if [ "$(id -u)" = "0" ]; then
 
     echo "User node is now UID: $PUID, GID: $PGID"
 
-    exec su-exec node:node "$0" "$@"
+    exec gosu node:node "$0" "$@"
 fi
 
 export PORT=${PORT:-8080}
