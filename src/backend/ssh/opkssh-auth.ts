@@ -281,7 +281,7 @@ export async function startOPKSSHAuth(
       handleOPKSSHOutput(requestId, output);
     });
 
-    opksshProcess.stderr?.on("data", (data) => {
+    opksshProcess.stderr?.on("data", async (data) => {
       const stderr = data.toString();
 
       if (stderr.includes("Opening browser to")) {
