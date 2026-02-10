@@ -1074,7 +1074,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               connectionTimeoutRef.current = null;
             }
             if (opksshFailedRef.current) {
-              // SSH server rejected the cert after OAuth completed — don't loop, show error
               setOpksshDialog(null);
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);

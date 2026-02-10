@@ -30,9 +30,7 @@ export function OPKSSHDialog({
   const { t } = useTranslation();
   const hasOpenedRef = React.useRef(false);
 
-  useEffect(() => {
-    // Don't auto-open, let user click the button
-  }, [isOpen, authUrl, stage, onOpenUrl]);
+  useEffect(() => {}, [isOpen, authUrl, stage, onOpenUrl]);
 
   if (!isOpen) return null;
 

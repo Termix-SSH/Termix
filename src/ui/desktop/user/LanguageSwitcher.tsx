@@ -39,7 +39,11 @@ const languages = [
     name: "Portuguese",
     nativeName: "Português",
   },
-  { code: "pt-BR", name: "Portuguese (Brazil)", nativeName: "Português (Brasil)" },
+  {
+    code: "pt-BR",
+    name: "Portuguese (Brazil)",
+    nativeName: "Português (Brasil)",
+  },
   { code: "ro", name: "Romanian", nativeName: "Română" },
   { code: "ru", name: "Russian", nativeName: "Русский" },
   { code: "sr", name: "Serbian", nativeName: "Српски" },

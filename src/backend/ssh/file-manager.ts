@@ -2269,7 +2269,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
             res.json({ files, path: sshPath });
           };
 
-          // Timeout: send response even if some readlink callbacks never return
           const readlinkTimeout = setTimeout(sendResponse, 5000);
 
           for (const link of symlinks) {

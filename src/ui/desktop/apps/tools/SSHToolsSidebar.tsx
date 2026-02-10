@@ -82,6 +82,90 @@ import {
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import type { Snippet, SnippetData, SnippetFolder } from "../../../../types";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
+import { Separator } from "@/components/ui/separator.tsx";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs.tsx";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarGroupLabel,
+} from "@/components/ui/sidebar.tsx";
+import {
+  Plus,
+  Play,
+  Edit,
+  Trash2,
+  Copy,
+  X,
+  RotateCcw,
+  Search,
+  Loader2,
+  Terminal,
+  LayoutGrid,
+  MonitorCheck,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  FolderPlus,
+  Settings,
+  MoreVertical,
+  Server,
+  Cloud,
+  Database,
+  Box,
+  Package,
+  Layers,
+  Archive,
+  HardDrive,
+  Globe,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import {
+  getSnippets,
+  createSnippet,
+  updateSnippet,
+  deleteSnippet,
+  getCookie,
+  setCookie,
+  getCommandHistory,
+  deleteCommandFromHistory,
+  getSnippetFolders,
+  createSnippetFolder,
+  updateSnippetFolderMetadata,
+  renameSnippetFolder,
+  deleteSnippetFolder,
+  reorderSnippets,
+} from "@/ui/main-axios.ts";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import type { Snippet, SnippetData, SnippetFolder } from "../../../../types";
 
 interface TabData {
   id: number;

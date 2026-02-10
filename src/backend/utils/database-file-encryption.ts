@@ -376,8 +376,7 @@ class DatabaseFileEncryption {
       targetPath || encryptedPath.replace(this.ENCRYPTED_FILE_SUFFIX, "");
 
     try {
-      const decryptedBuffer =
-        await this.decryptDatabaseToBuffer(encryptedPath);
+      const decryptedBuffer = await this.decryptDatabaseToBuffer(encryptedPath);
 
       fs.writeFileSync(decryptedPath, decryptedBuffer);
 

@@ -3466,12 +3466,10 @@ function rewriteOPKSSHHtml(
 ): string {
   const basePath = `/ssh/${routePrefix}/${requestId}`;
 
-  // Rewrite relative URLs in HTML attributes
   html = html.replace(/action=["']?\//g, `action="${basePath}/`);
   html = html.replace(/href=["']?\//g, `href="${basePath}/`);
   html = html.replace(/src=["']?\//g, `src="${basePath}/`);
 
-  // Rewrite absolute localhost URLs in HTML attributes (including query strings and fragments)
   html = html.replace(
     /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
     `href="${basePath}/$1`,
@@ -3485,7 +3483,6 @@ function rewriteOPKSSHHtml(
     `src="${basePath}/$1`,
   );
 
-  // Rewrite JavaScript string literals with localhost URLs (including query strings and fragments)
   html = html.replace(
     /(window\.location\.href\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
     `$1${basePath}/$2$3`,
@@ -3499,7 +3496,6 @@ function rewriteOPKSSHHtml(
     `$1${basePath}/$2$3`,
   );
 
-  // Rewrite any other common JavaScript patterns
   html = html.replace(
     /(location\.assign\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
     `$1${basePath}/$2$3`,
@@ -3509,13 +3505,11 @@ function rewriteOPKSSHHtml(
     `$1${basePath}/$2$3`,
   );
 
-  // Rewrite meta refresh tags
   html = html.replace(
     /(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*url=)http:\/\/localhost:\d+\/([^"']+)(["'][^>]*>)/gi,
     `$1${basePath}/$2$3`,
   );
 
-  // Rewrite data attributes that might contain URLs
   html = html.replace(
     /(data-[\w-]+=["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
     `$1${basePath}/$2$3`,
@@ -3829,7 +3823,6 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
     const { getActiveSessionsAll } = await import("../../ssh/opkssh-auth.js");
 
-    // Find the most recently created session (there's typically only one active at a time)
     const allSessions = getActiveSessionsAll();
     const session = allSessions[allSessions.length - 1];
 
@@ -3843,7 +3836,6 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       return;
     }
 
-    // Proxy to OPKSSH's callback listener with the full query string
     const axios = (await import("axios")).default;
     const queryString = req.url.includes("?")
       ? req.url.substring(req.url.indexOf("?"))

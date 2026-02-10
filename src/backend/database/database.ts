@@ -1548,10 +1548,14 @@ app.post(
         try {
           await DatabaseSaveTrigger.forceSave("database_import");
         } catch (saveError) {
-          apiLogger.error("Failed to persist imported data to disk", saveError, {
-            operation: "import_force_save_failed",
-            userId,
-          });
+          apiLogger.error(
+            "Failed to persist imported data to disk",
+            saveError,
+            {
+              operation: "import_force_save_failed",
+              userId,
+            },
+          );
         }
       } finally {
         if (importDb) {

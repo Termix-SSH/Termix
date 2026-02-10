@@ -82,7 +82,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
-  // Use shared status context instead of individual polling
   const serverStatus = useHostStatus(host.id, shouldShowStatus);
 
   const hasTunnelConnections = useMemo(() => {

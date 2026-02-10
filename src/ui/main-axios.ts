@@ -50,7 +50,7 @@ export interface AccessRecord {
   roleDisplayName: string | null;
   grantedBy: string;
   grantedByUsername: string;
-  permissionLevel: "view"; // Only view permission is supported
+  permissionLevel: "view";
   expiresAt: string | null;
   createdAt: string;
 }

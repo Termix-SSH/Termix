@@ -42,7 +42,9 @@ export function useServiceWorker(): ServiceWorkerState {
 
     const registerSW = async () => {
       try {
-        const registration = await navigator.serviceWorker.register(`${getBasePath()}/sw.js`);
+        const registration = await navigator.serviceWorker.register(
+          `${getBasePath()}/sw.js`,
+        );
         setState((prev) => ({ ...prev, isRegistered: true }));
 
         registration.addEventListener("updatefound", () =>

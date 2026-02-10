@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
 import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
 import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";

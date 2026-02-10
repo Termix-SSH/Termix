@@ -61,7 +61,6 @@ function getOIDCConfigFromEnv(): {
   const authorization_url = process.env.OIDC_AUTHORIZATION_URL;
   const token_url = process.env.OIDC_TOKEN_URL;
 
-  // All required fields must be set
   if (
     !client_id ||
     !client_secret ||
@@ -636,7 +635,6 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
  */
 router.get("/oidc-config", async (req, res) => {
   try {
-    // Priority: Environment variables > Database
     const envConfig = getOIDCConfigFromEnv();
     if (envConfig) {
       return res.json({
@@ -757,7 +755,6 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
-    // Check environment variables first
     const envConfig = getOIDCConfigFromEnv();
     let config;
 
@@ -860,7 +857,6 @@ router.get("/oidc/callback", async (req, res) => {
       .prepare("DELETE FROM settings WHERE key = ?")
       .run(`oidc_redirect_${state}`);
 
-    // Check environment variables first
     const envConfig = getOIDCConfigFromEnv();
     let config;
 

@@ -444,7 +444,6 @@ export class SSHHostKeyVerifier {
 
   private static getKeyType(key: Buffer): string {
     try {
-      // SSH public key format: 4-byte length + key type string
       if (key.length < 4) {
         return "unknown";
       }
@@ -456,7 +455,6 @@ export class SSHHostKeyVerifier {
 
       const keyType = key.toString("utf8", 4, 4 + typeLength);
 
-      // Return the key type if it's valid
       if (
         (keyType && keyType.startsWith("ssh-")) ||
         keyType.startsWith("ecdsa-")
