@@ -1069,20 +1069,36 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 300000);
           } else if (msg.type === "opkssh_auth_required") {
-            opksshFailedRef.current = true;
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
-            if (webSocketRef.current) {
-              webSocketRef.current.send(
-                JSON.stringify({
-                  type: "opkssh_start_auth",
-                  data: { hostId: msg.hostId },
-                }),
-              );
+            if (opksshFailedRef.current) {
+              // SSH server rejected the cert after OAuth completed — don't loop, show error
+              setOpksshDialog(null);
+              if (opksshTimeoutRef.current) {
+                clearTimeout(opksshTimeoutRef.current);
+                opksshTimeoutRef.current = null;
+              }
+              updateConnectionError(t("terminal.opksshAuthFailed"));
+              addLog({
+                type: "error",
+                stage: "auth",
+                message: t("terminal.opksshAuthFailed"),
+              });
+            } else {
+              opksshFailedRef.current = true;
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "opkssh_start_auth",
+                    data: { hostId: msg.hostId },
+                  }),
+                );
+              }
             }
           } else if (msg.type === "opkssh_status") {
+            if (connectionErrorRef.current) return;
             if (msg.stage === "chooser") {
               setOpksshDialog({
                 isOpen: true,
@@ -1124,6 +1140,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               );
             }
           } else if (msg.type === "opkssh_error") {
+            if (connectionErrorRef.current) return;
             opksshFailedRef.current = true;
             if (opksshDialog) {
               setOpksshDialog((prev) =>
@@ -1140,6 +1157,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             setIsConnecting(false);
           } else if (msg.type === "opkssh_timeout") {
+            if (connectionErrorRef.current) return;
             opksshFailedRef.current = true;
             if (opksshDialog) {
               setOpksshDialog((prev) =>
