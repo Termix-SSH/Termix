@@ -530,6 +530,7 @@ export function CredentialEditor({
             <div className="flex items-center gap-2 mb-3">
               {onBack && (
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={onBack}
