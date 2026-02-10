@@ -780,6 +780,10 @@ export function getActiveSessionsForUser(userId: string): OPKSSHAuthSession[] {
   return sessions;
 }
 
+export function getActiveSessionsAll(): OPKSSHAuthSession[] {
+  return Array.from(activeAuthSessions.values());
+}
+
 export async function getUserIdFromRequest(req: any): Promise<string | null> {
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");

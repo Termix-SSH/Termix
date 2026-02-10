@@ -3709,10 +3709,29 @@ router.use(
         if (key.toLowerCase() === "location") {
           const location = value as string;
           if (location.startsWith("/")) {
-            const rewrittenLocation = `/ssh/opkssh-chooser/${requestId}${location}`;
-            res.setHeader(key, rewrittenLocation);
+            res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${location}`);
           } else {
-            res.setHeader(key, value as string);
+            const localhostMatch = location.match(
+              /^http:\/\/localhost:(\d+)(\/.*)?$/,
+            );
+            if (localhostMatch) {
+              const port = parseInt(localhostMatch[1], 10);
+              const path = localhostMatch[2] || "/";
+              if (session.callbackPort && port === session.callbackPort) {
+                res.setHeader(key, `/ssh/opkssh-callback/${requestId}${path}`);
+              } else if (port === session.localPort) {
+                res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${path}`);
+              } else {
+                const isCallback =
+                  path.includes("login") || path.includes("callback");
+                const prefix = isCallback
+                  ? "opkssh-callback"
+                  : "opkssh-chooser";
+                res.setHeader(key, `/ssh/${prefix}/${requestId}${path}`);
+              }
+            } else {
+              res.setHeader(key, value as string);
+            }
           }
         } else {
           res.setHeader(key, value as string);
@@ -3806,44 +3825,43 @@ router.use(
  *       500:
  *         description: Authentication failed
  */
-router.use("/opkssh-callback", async (req: Request, res: Response, next) => {
-  // Only handle if there's NO requestId in the path (static callback)
-  if (req.path !== "/opkssh-callback" && req.path !== "/opkssh-callback/") {
-    return next();
-  }
-
+router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
-    const { getActiveSessionsForUser, getUserIdFromRequest } =
-      await import("../../ssh/opkssh-auth.js");
+    const { getActiveSessionsAll } = await import("../../ssh/opkssh-auth.js");
 
-    // Get user ID from JWT token
-    const userId = await getUserIdFromRequest(req);
-    if (!userId) {
-      res.status(401).send("Unauthorized");
-      return;
-    }
+    // Find the most recently created session (there's typically only one active at a time)
+    const allSessions = getActiveSessionsAll();
+    const session = allSessions[allSessions.length - 1];
 
-    // Find active OPKSSH session for this user
-    const sessions = getActiveSessionsForUser(userId);
-    if (sessions.length === 0) {
+    if (!session) {
       res.status(404).send("No active authentication session found");
       return;
     }
 
-    // Use the most recent session
-    const session = sessions[sessions.length - 1];
-    const requestId = session.requestId;
+    if (!session.callbackPort) {
+      res.status(503).send("OPKSSH callback listener not ready yet");
+      return;
+    }
 
-    // Proxy to OPKSSH's internal listener
+    // Proxy to OPKSSH's callback listener with the full query string
     const axios = (await import("axios")).default;
-    const targetUrl = `http://localhost:${session.localPort}/login-callback${req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""}`;
+    const queryString = req.url.includes("?")
+      ? req.url.substring(req.url.indexOf("?"))
+      : "";
+    const targetUrl = `http://localhost:${session.callbackPort}/login-callback${queryString}`;
+
+    sshLogger.info("Proxying OAuth callback to OPKSSH", {
+      operation: "opkssh_static_callback",
+      callbackPort: session.callbackPort,
+      targetUrl,
+    });
 
     const response = await axios({
       method: req.method,
       url: targetUrl,
       headers: {
         ...req.headers,
-        host: `localhost:${session.localPort}`,
+        host: `localhost:${session.callbackPort}`,
       },
       data: req.body,
       timeout: 10000,
@@ -3852,7 +3870,6 @@ router.use("/opkssh-callback", async (req: Request, res: Response, next) => {
       responseType: "arraybuffer",
     });
 
-    // Forward headers
     Object.entries(response.headers).forEach(([key, value]) => {
       if (key.toLowerCase() !== "transfer-encoding") {
         res.setHeader(key, value as string);

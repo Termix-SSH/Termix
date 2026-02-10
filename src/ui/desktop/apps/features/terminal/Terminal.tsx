@@ -166,6 +166,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       error?: string;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<any>(null);
 
@@ -923,6 +924,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             updateConnectionError(errorMessage);
             setIsConnecting(false);
           } else if (msg.type === "connected") {
+            opksshFailedRef.current = false;
             setIsConnected(true);
             setIsConnecting(false);
             isConnectingRef.current = false;
@@ -1007,7 +1009,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.clear();
             }
             setIsConnecting(false);
-            if (onClose) {
+            if (
+              onClose &&
+              !connectionErrorRef.current &&
+              !opksshFailedRef.current
+            ) {
               onClose();
             }
           } else if (msg.type === "totp_required") {
@@ -1063,6 +1069,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 300000);
           } else if (msg.type === "opkssh_auth_required") {
+            opksshFailedRef.current = true;
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1117,6 +1124,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               );
             }
           } else if (msg.type === "opkssh_error") {
+            opksshFailedRef.current = true;
             if (opksshDialog) {
               setOpksshDialog((prev) =>
                 prev ? { ...prev, stage: "error", error: msg.error } : null,
@@ -1132,6 +1140,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             setIsConnecting(false);
           } else if (msg.type === "opkssh_timeout") {
+            opksshFailedRef.current = true;
             if (opksshDialog) {
               setOpksshDialog((prev) =>
                 prev
