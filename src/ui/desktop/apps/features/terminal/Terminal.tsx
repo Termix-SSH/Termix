@@ -177,7 +177,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const keyHandlerAttachedRef = useRef(false);
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
@@ -1399,11 +1398,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
-      const handleMacKeyboard = (e: KeyboardEvent) => {
-        const isMacOS =
-          navigator.platform.toUpperCase().indexOf("MAC") >= 0 ||
-          navigator.userAgent.toUpperCase().indexOf("MAC") >= 0;
-
+      const handleBackspaceMode = (e: KeyboardEvent) => {
         if (
           config.backspaceMode === "control-h" &&
           e.key === "Backspace" &&
@@ -1420,40 +1415,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
           return false;
         }
-
-        if (!isMacOS) return;
-
-        if (e.altKey && !e.metaKey && !e.ctrlKey) {
-          const keyMappings: { [key: string]: string } = {
-            "7": "|",
-            "2": "€",
-            "8": "[",
-            "9": "]",
-            l: "@",
-            L: "@",
-            Digit7: "|",
-            Digit2: "€",
-            Digit8: "[",
-            Digit9: "]",
-            KeyL: "@",
-          };
-
-          const char = keyMappings[e.key] || keyMappings[e.code];
-          if (char) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (webSocketRef.current?.readyState === 1) {
-              webSocketRef.current.send(
-                JSON.stringify({ type: "input", data: char }),
-              );
-            }
-            return false;
-          }
-        }
       };
 
-      element?.addEventListener("keydown", handleMacKeyboard, true);
+      element?.addEventListener("keydown", handleBackspaceMode, true);
 
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -1470,7 +1434,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         isFittingRef.current = false;
         resizeObserver.disconnect();
         element?.removeEventListener("contextmenu", handleContextMenu);
-        element?.removeEventListener("keydown", handleMacKeyboard, true);
+        element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       };
