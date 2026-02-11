@@ -502,6 +502,7 @@
     "checking": "Checking...",
     "checkingDatabase": "Checking database connection...",
     "checkingAuthentication": "Checking authentication...",
+    "backendReconnected": "Server connection restored",
     "actions": "Actions",
     "remove": "Remove",
     "revoke": "Revoke",

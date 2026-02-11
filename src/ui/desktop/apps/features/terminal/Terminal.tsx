@@ -1870,10 +1870,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       setIsConnecting(true);
       fitAddonRef.current?.fit();
-      if (terminal.cols > 0 && terminal.rows > 0) {
-        scheduleNotify(terminal.cols, terminal.rows);
-        connectToHost(terminal.cols, terminal.rows);
-      }
+      requestAnimationFrame(() => {
+        fitAddonRef.current?.fit();
+        if (terminal.cols > 0 && terminal.rows > 0) {
+          scheduleNotify(terminal.cols, terminal.rows);
+          connectToHost(terminal.cols, terminal.rows);
+        }
+      });
       // Note: Using hostConfig.id instead of hostConfig object to prevent
       // unnecessary reconnections when host properties are updated.
       // Only reconnect when switching to a different host.

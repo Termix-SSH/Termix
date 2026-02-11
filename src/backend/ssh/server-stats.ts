@@ -1549,7 +1549,15 @@ async function resolveHostCredentials(
           if (credentials.length > 0) {
             const credential = credentials[0];
             baseHost.credentialId = credential.id;
-            baseHost.authType = credential.auth_type || credential.authType;
+            baseHost.authType =
+              credential.auth_type ||
+              credential.authType ||
+              (credential.password
+                ? "password"
+                : credential.key ||
+                    (credential as Record<string, unknown>).private_key
+                  ? "key"
+                  : "none");
 
             if (!host.overrideCredentialUsername) {
               baseHost.username = credential.username;
@@ -1570,6 +1578,13 @@ async function resolveHostCredentials(
             }
           } else {
             addLegacyCredentials(baseHost, host);
+            if (baseHost.authType === "credential") {
+              baseHost.authType = baseHost.password
+                ? "password"
+                : baseHost.key
+                  ? "key"
+                  : "none";
+            }
           }
         }
       } catch (error) {
@@ -1577,6 +1592,13 @@ async function resolveHostCredentials(
           `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
         addLegacyCredentials(baseHost, host);
+        if (baseHost.authType === "credential") {
+          baseHost.authType = baseHost.password
+            ? "password"
+            : baseHost.key
+              ? "key"
+              : "none";
+        }
       }
     } else {
       addLegacyCredentials(baseHost, host);
@@ -1717,6 +1739,24 @@ async function buildSshConfig(
     }
   } else if (host.authType === "none") {
   } else if (host.authType === "opkssh") {
+  } else if (host.authType === "credential") {
+    if (host.password) {
+      base.password = host.password;
+    } else if (host.key) {
+      const cleanKey = host.key
+        .trim()
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      (base as Record<string, unknown>).privateKey = Buffer.from(
+        cleanKey,
+        "utf8",
+      );
+      if (host.keyPassword) {
+        (base as Record<string, unknown>).passphrase = host.keyPassword;
+      }
+    } else {
+      throw new Error(`Credential for host ${host.ip} could not be resolved`);
+    }
   } else {
     throw new Error(
       `Unsupported authentication type '${host.authType}' for host ${host.ip}`,

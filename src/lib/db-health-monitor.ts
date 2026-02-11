@@ -6,6 +6,8 @@ class DatabaseHealthMonitor {
   private lastCheckTime: number = 0;
   private checkInProgress: boolean = false;
   private listeners: Map<string, EventListener[]> = new Map();
+  private consecutiveErrorTimer: ReturnType<typeof setTimeout> | null = null;
+  private confirmedUnhealthy: boolean = false;
 
   private constructor() {}
 
@@ -68,25 +70,56 @@ class DatabaseHealthMonitor {
         errorMessage === "Invalid token" ||
         errorMessage === "Authentication required");
 
-    if (
-      (isDatabaseError || isBackendUnreachable || isAuthenticationLost) &&
-      this.dbHealthy
-    ) {
+    if (!(isDatabaseError || isBackendUnreachable || isAuthenticationLost)) {
+      return;
+    }
+
+    if (isAuthenticationLost && this.dbHealthy) {
       this.dbHealthy = false;
+      this.confirmedUnhealthy = true;
+      this.clearErrorTimer();
       this.emit("database-connection-lost", {
         error: errorMessage || "Backend server unreachable",
         code: errorCode,
         timestamp: Date.now(),
       });
+      return;
+    }
+
+    if (this.dbHealthy && !this.consecutiveErrorTimer) {
+      this.consecutiveErrorTimer = setTimeout(() => {
+        this.consecutiveErrorTimer = null;
+        if (this.dbHealthy) {
+          this.dbHealthy = false;
+          this.confirmedUnhealthy = true;
+          this.emit("database-connection-lost", {
+            error: errorMessage || "Backend server unreachable",
+            code: errorCode,
+            timestamp: Date.now(),
+          });
+        }
+      }, 10000);
     }
   }
 
   reportDatabaseSuccess() {
-    if (!this.dbHealthy) {
+    this.clearErrorTimer();
+
+    if (this.confirmedUnhealthy) {
       this.dbHealthy = true;
+      this.confirmedUnhealthy = false;
       this.emit("database-connection-restored", {
         timestamp: Date.now(),
       });
+    } else if (!this.dbHealthy) {
+      this.dbHealthy = true;
+    }
+  }
+
+  private clearErrorTimer(): void {
+    if (this.consecutiveErrorTimer !== null) {
+      clearTimeout(this.consecutiveErrorTimer);
+      this.consecutiveErrorTimer = null;
     }
   }
 
@@ -96,8 +129,10 @@ class DatabaseHealthMonitor {
 
   reset() {
     this.dbHealthy = true;
+    this.confirmedUnhealthy = false;
     this.lastCheckTime = 0;
     this.checkInProgress = false;
+    this.clearErrorTimer();
   }
 }
 

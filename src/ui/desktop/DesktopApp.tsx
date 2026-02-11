@@ -64,7 +64,7 @@ function AppContent({
 
     const handleDatabaseConnectionRestored = () => {
       setDbConnectionFailed(false);
-      window.location.reload();
+      toast.success(t("common.backendReconnected"));
     };
 
     dbHealthMonitor.on(
