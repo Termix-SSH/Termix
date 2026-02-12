@@ -2294,6 +2294,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    try {
     const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
     sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
       if (err) {
@@ -2403,9 +2404,19 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         res.json({ files, path: sshPath });
       });
     });
+    } catch (execErr: unknown) {
+      sshConn.activeOperations--;
+      const errMsg =
+        execErr instanceof Error ? execErr.message : "Unknown error";
+      fileLogger.error(`Fallback listFiles exec failed: ${errMsg}`);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: errMsg });
+      }
+    }
   };
 
   const tryWithSudo = () => {
+    try {
     const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
     const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
     const sudoCommand = `echo '${escapedPassword}' | sudo -S ls -la '${escapedPath}' 2>&1`;
@@ -2521,6 +2532,15 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         res.json({ files, path: sshPath });
       });
     });
+    } catch (execErr: unknown) {
+      sshConn.activeOperations--;
+      const errMsg =
+        execErr instanceof Error ? execErr.message : "Unknown error";
+      fileLogger.error(`Sudo listFiles exec failed: ${errMsg}`);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: errMsg });
+      }
+    }
   };
 
   trySFTP();
