@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { UserCrypto } from "./user-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
-import { databaseLogger } from "./logger.js";
+import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
@@ -346,6 +346,11 @@ class AuthManager {
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
+      authLogger.info("User session invalidated", {
+        operation: "user_logout",
+        sessionId,
+      });
+
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
@@ -386,6 +391,12 @@ class AuthManager {
       const deletedCount = userSessions.filter(
         (s) => !exceptSessionId || s.id !== exceptSessionId,
       ).length;
+
+      authLogger.info("All user sessions invalidated", {
+        operation: "user_logout_all",
+        userId,
+        sessionCount: deletedCount,
+      });
 
       if (exceptSessionId) {
         await db

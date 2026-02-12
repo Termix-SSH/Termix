@@ -15,6 +15,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 import {
   createCredential,
   updateCredential,
@@ -39,6 +40,7 @@ import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.ts
 export function CredentialEditor({
   editingCredential,
   onFormSubmit,
+  onBack,
 }: CredentialEditorProps) {
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
@@ -125,7 +127,7 @@ export function CredentialEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       authType: z.enum(["password", "key"]),
-      username: z.string().min(1),
+      username: z.string().optional(),
       password: z.string().optional(),
       key: z.any().optional().nullable(),
       publicKey: z.string().optional(),
@@ -191,7 +193,7 @@ export function CredentialEditor({
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
 
-    if (!values.name || !values.username) return false;
+    if (!values.name) return false;
 
     if (authTab === "password") {
       return !!(values.password && values.password.trim() !== "");
@@ -377,7 +379,7 @@ export function CredentialEditor({
       setFormError(null);
 
       if (!data.name || data.name.trim() === "") {
-        data.name = data.username;
+        data.name = data.username || "Unnamed Credential";
       }
 
       const submitData: CredentialData = {
@@ -386,7 +388,7 @@ export function CredentialEditor({
         folder: data.folder,
         tags: data.tags,
         authType: data.authType,
-        username: data.username,
+        username: data.username || undefined,
         keyType: data.keyType,
       };
 
@@ -525,6 +527,25 @@ export function CredentialEditor({
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>
             )}
+            <div className="flex items-center gap-2 mb-3">
+              {onBack && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onBack}
+                  className="flex-shrink-0"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {t("common.back")}
+                </Button>
+              )}
+              <h3 className="text-lg font-semibold flex-shrink-0">
+                {editingCredential
+                  ? t("credentials.editCredential")
+                  : t("credentials.addCredential")}
+              </h3>
+            </div>
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
