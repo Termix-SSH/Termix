@@ -1752,6 +1752,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         if (
           e.key === "Tab" &&
+          e.shiftKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === 1) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: "\x1b[Z" }),
+            );
+          }
+          return false;
+        }
+
+        if (
+          e.key === "Tab" &&
           !e.ctrlKey &&
           !e.altKey &&
           !e.metaKey &&
