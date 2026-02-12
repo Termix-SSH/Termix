@@ -473,7 +473,9 @@ function createApiInstance(
             toast.warning("Session expired. Please log in again.");
           }
 
-          dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
+          if (wasAuthenticated) {
+            dbHealthMonitor.reportSessionExpired();
+          }
 
           userWasAuthenticated = false;
         }

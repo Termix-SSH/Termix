@@ -42,10 +42,13 @@ class DatabaseHealthMonitor {
     }
   }
 
-  reportDatabaseError(error: any, wasAuthenticated: boolean = false) {
+  reportSessionExpired() {
+    this.emit("session-expired", { timestamp: Date.now() });
+  }
+
+  reportDatabaseError(error: any, _wasAuthenticated: boolean = false) {
     const errorMessage = error?.response?.data?.error || error?.message || "";
     const errorCode = error?.response?.data?.code || error?.code;
-    const httpStatus = error?.response?.status;
 
     const isDatabaseError =
       errorMessage.toLowerCase().includes("database") ||
@@ -60,29 +63,7 @@ class DatabaseHealthMonitor {
       (errorMessage.toLowerCase().includes("network error") &&
         error?.response === undefined);
 
-    const isAuthenticationLost =
-      wasAuthenticated &&
-      httpStatus === 401 &&
-      (errorCode === "AUTH_REQUIRED" ||
-        errorCode === "SESSION_EXPIRED" ||
-        errorCode === "SESSION_NOT_FOUND" ||
-        errorMessage === "Missing authentication token" ||
-        errorMessage === "Invalid token" ||
-        errorMessage === "Authentication required");
-
-    if (!(isDatabaseError || isBackendUnreachable || isAuthenticationLost)) {
-      return;
-    }
-
-    if (isAuthenticationLost && this.dbHealthy) {
-      this.dbHealthy = false;
-      this.confirmedUnhealthy = true;
-      this.clearErrorTimer();
-      this.emit("database-connection-lost", {
-        error: errorMessage || "Backend server unreachable",
-        code: errorCode,
-        timestamp: Date.now(),
-      });
+    if (!(isDatabaseError || isBackendUnreachable)) {
       return;
     }
 
