@@ -337,6 +337,8 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
   activeOperations: number;
   sudoPassword?: string;
+  sftp?: import("ssh2").SFTPWrapper;
+  poolKey?: string;
 }
 
 interface PendingTOTPSession {
@@ -398,6 +400,29 @@ function execWithSudo(
   });
 }
 
+function getSessionSftp(
+  session: SSHSession,
+): Promise<import("ssh2").SFTPWrapper> {
+  if (session.sftp) {
+    return Promise.resolve(session.sftp);
+  }
+  return new Promise((resolve, reject) => {
+    session.client.sftp((err, sftp) => {
+      if (err) {
+        return reject(err);
+      }
+      session.sftp = sftp;
+      sftp.on("error", () => {
+        session.sftp = undefined;
+      });
+      sftp.on("close", () => {
+        session.sftp = undefined;
+      });
+      resolve(sftp);
+    });
+  });
+}
+
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
@@ -415,8 +440,14 @@ function cleanupSession(sessionId: string) {
     }
 
     try {
+      if (session.sftp) {
+        session.sftp.end();
+        session.sftp = undefined;
+      }
+    } catch {}
+    try {
       session.client.end();
-    } catch (error) {}
+    } catch {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -2188,18 +2219,10 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
         userId,
         path: sshPath,
       });
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed for listFiles, trying fallback: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         sftp.readdir(sshPath, (readdirErr, list) => {
           if (readdirErr) {
-            sftp.end();
             fileLogger.warn(
               `SFTP readdir failed, trying fallback: ${readdirErr.message}`,
             );
@@ -2253,7 +2276,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           }
 
           if (symlinks.length === 0) {
-            sftp.end();
             sshConn.activeOperations--;
             return res.json({ files, path: sshPath });
           }
@@ -2264,7 +2286,6 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           const sendResponse = () => {
             if (responded) return;
             responded = true;
-            sftp.end();
             sshConn.activeOperations--;
             res.json({ files, path: sshPath });
           };
@@ -2284,7 +2305,13 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
             });
           }
         });
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed for listFiles, trying fallback: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr: unknown) {
       const errMsg =
         sftpErr instanceof Error ? sftpErr.message : "Unknown error";
@@ -2870,15 +2897,8 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         userId,
         path: filePath,
       });
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
@@ -2915,7 +2935,6 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("error", (streamErr) => {
           if (hasError || hasFinished) return;
           hasError = true;
-          sftp.end();
           fileLogger.warn(
             `SFTP write failed, trying fallback method: ${streamErr.message}`,
           );
@@ -2925,7 +2944,6 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
-          sftp.end();
           fileLogger.success("File written successfully", {
             operation: "file_write_success",
             sessionId,
@@ -2945,7 +2963,6 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
-          sftp.end();
           fileLogger.success("File written successfully", {
             operation: "file_write_success",
             sessionId,
@@ -2973,10 +2990,16 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           );
           tryFallbackMethod();
         }
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed, trying fallback method: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr) {
       fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${sftpErr.message}`,
+        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
       );
       tryFallbackMethod();
     }
@@ -3154,15 +3177,8 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         userId,
         path: fullPath,
       });
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
@@ -3190,7 +3206,6 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("error", (streamErr) => {
           if (hasError || hasFinished) return;
           hasError = true;
-          sftp.end();
           fileLogger.warn(
             `SFTP write failed, trying fallback method: ${streamErr.message}`,
             {
@@ -3207,7 +3222,6 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
-          sftp.end();
           fileLogger.success("File upload completed", {
             operation: "file_upload_complete",
             sessionId,
@@ -3228,7 +3242,6 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
-          sftp.end();
           fileLogger.success("File upload completed", {
             operation: "file_upload_complete",
             sessionId,
@@ -3253,14 +3266,20 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           if (hasError || hasFinished) return;
           hasError = true;
           fileLogger.warn(
-            `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
+            `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
           );
           tryFallbackMethod();
         }
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed, trying fallback method: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr) {
       fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${sftpErr.message}`,
+        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
       );
       tryFallbackMethod();
     }
@@ -4285,15 +4304,10 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
     path: filePath,
   });
 
-  sshConn.client.sftp((err, sftp) => {
-    if (err) {
-      fileLogger.error("SFTP connection failed for download:", err);
-      return res.status(500).json({ error: "SFTP connection failed" });
-    }
-
+  getSessionSftp(sshConn)
+    .then((sftp) => {
     sftp.stat(filePath, (statErr, stats) => {
       if (statErr) {
-        sftp.end();
         fileLogger.error("File stat failed for download:", statErr);
         return res
           .status(500)
@@ -4329,14 +4343,12 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
 
       sftp.readFile(filePath, (readErr, data) => {
         if (readErr) {
-          sftp.end();
           fileLogger.error("File read failed for download:", readErr);
           return res
             .status(500)
             .json({ error: `Failed to read file: ${readErr.message}` });
         }
 
-        sftp.end();
         const base64Content = data.toString("base64");
         const fileName = filePath.split("/").pop() || "download";
         fileLogger.success("File download completed", {
@@ -4358,7 +4370,11 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
         });
       });
     });
-  });
+    })
+    .catch((err) => {
+      fileLogger.error("SFTP connection failed for download:", err);
+      return res.status(500).json({ error: "SFTP connection failed" });
+    });
 });
 
 /**
