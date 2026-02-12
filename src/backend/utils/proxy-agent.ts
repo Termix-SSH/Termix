@@ -1,11 +1,6 @@
 import { HttpsProxyAgent } from "https-proxy-agent";
 import type { Agent } from "http";
 
-/**
- * Creates a proxy agent from environment variables.
- * Supports http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY.
- * Respects no_proxy/NO_PROXY exclusion lists.
- */
 export function getProxyAgent(targetUrl?: string): Agent | undefined {
   const proxyUrl =
     process.env.https_proxy ||
