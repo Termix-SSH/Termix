@@ -2295,7 +2295,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   const tryFallbackMethod = () => {
     const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-    sshConn.client.exec(`command ls -la '${escapedPath}'`, (err, stream) => {
+    sshConn.client.exec(`command ls -la --color=never '${escapedPath}'`, (err, stream) => {
       if (err) {
         sshConn.activeOperations--;
         fileLogger.error("SSH listFiles error:", err);
@@ -2408,7 +2408,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const tryWithSudo = () => {
     const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
     const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
-    const sudoCommand = `echo '${escapedPassword}' | sudo -S ls -la '${escapedPath}' 2>&1`;
+    const sudoCommand = `echo '${escapedPassword}' | sudo -S /bin/ls -la --color=never '${escapedPath}' 2>&1`;
 
     sshConn.client.exec(sudoCommand, (err, stream) => {
       if (err) {
