@@ -592,7 +592,7 @@ function DockerManagerInner({
         <div className="h-full w-full flex flex-col">
           <div className="flex-1 overflow-hidden min-h-0 relative">
             <SimpleLoader
-              visible={true && !isConnectionLogExpanded}
+              visible={!isConnectionLogExpanded}
               message={
                 isValidating ? t("docker.validating") : t("docker.connecting")
               }

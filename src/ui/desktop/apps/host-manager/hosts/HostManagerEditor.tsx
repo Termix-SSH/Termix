@@ -482,14 +482,6 @@ export function HostManagerEditor({
             path: ["credentialId"],
           });
         }
-      } else if (data.authType === "credential") {
-        if (!data.credentialId) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.credentialRequired"),
-            path: ["credentialId"],
-          });
-        }
       }
 
       data.tunnelConnections.forEach((connection, index) => {
