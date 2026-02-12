@@ -1114,14 +1114,16 @@ export async function updateSSHHost(
   }
 }
 
-export async function bulkImportSSHHosts(hosts: SSHHostData[]): Promise<{
+export async function bulkImportSSHHosts(hosts: SSHHostData[], overwrite = false): Promise<{
   message: string;
   success: number;
+  updated: number;
+  skipped: number;
   failed: number;
   errors: string[];
 }> {
   try {
-    const response = await sshHostApi.post("/bulk-import", { hosts });
+    const response = await sshHostApi.post("/bulk-import", { hosts, overwrite });
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk import SSH hosts");

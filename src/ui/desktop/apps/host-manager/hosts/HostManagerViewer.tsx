@@ -104,6 +104,7 @@ export function HostManagerViewer({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [importing, setImporting] = useState(false);
+  const overwriteRef = useRef(false);
   const [draggedHost, setDraggedHost] = useState<SSHHost | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
@@ -727,15 +728,14 @@ export function HostManagerViewer({
         throw new Error(t("hosts.maxHostsAllowed"));
       }
 
-      const result = await bulkImportSSHHosts(hostsArray);
+      const result = await bulkImportSSHHosts(hostsArray, overwriteRef.current);
 
-      if (result.success > 0) {
-        toast.success(
-          t("hosts.importCompleted", {
-            success: result.success,
-            failed: result.failed,
-          }),
-        );
+      if (result.success > 0 || result.updated > 0) {
+        const parts: string[] = [];
+        if (result.success > 0) parts.push(`${result.success} ${t("hosts.importCreated")}`);
+        if (result.updated > 0) parts.push(`${result.updated} ${t("hosts.importUpdated")}`);
+        if (result.failed > 0) parts.push(`${result.failed} ${t("hosts.importFailedCount")}`);
+        toast.success(parts.join(", "));
         if (result.errors.length > 0) {
           toast.error(`Import errors: ${result.errors.join(", ")}`);
         }
@@ -871,31 +871,35 @@ export function HostManagerViewer({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="relative"
-                    onClick={() =>
-                      document.getElementById("json-import-input")?.click()
-                    }
                     disabled={importing}
                   >
                     {importing ? t("hosts.importing") : t("hosts.importJson")}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-sm">
-                  <div className="space-y-2">
-                    <p className="font-semibold text-sm">
-                      {t("hosts.importJsonTitle")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("hosts.importJsonDesc")}
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      overwriteRef.current = false;
+                      document.getElementById("json-import-input")?.click();
+                    }}
+                  >
+                    {t("hosts.importSkipExisting")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      overwriteRef.current = true;
+                      document.getElementById("json-import-input")?.click();
+                    }}
+                  >
+                    {t("hosts.importOverwriteExisting")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 variant="outline"
@@ -975,31 +979,35 @@ export function HostManagerViewer({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="relative"
-                  onClick={() =>
-                    document.getElementById("json-import-input")?.click()
-                  }
                   disabled={importing}
                 >
                   {importing ? t("hosts.importing") : t("hosts.importJson")}
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-sm">
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm">
-                    {t("hosts.importJsonTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("hosts.importJsonDesc")}
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    overwriteRef.current = false;
+                    document.getElementById("json-import-input")?.click();
+                  }}
+                >
+                  {t("hosts.importSkipExisting")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    overwriteRef.current = true;
+                    document.getElementById("json-import-input")?.click();
+                  }}
+                >
+                  {t("hosts.importOverwriteExisting")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button variant="outline" size="sm" onClick={handleDownloadSample}>
               {t("hosts.downloadSample")}
