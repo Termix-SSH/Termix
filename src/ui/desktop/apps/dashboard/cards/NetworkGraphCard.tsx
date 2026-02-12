@@ -246,7 +246,6 @@ export function NetworkGraphCard({
       setElements([...nodes, ...validEdges]);
     } catch (err) {
       console.error("Failed to load topology:", err);
-      setError(t("networkGraph.failedToLoadData"));
     } finally {
       setLoading(false);
     }

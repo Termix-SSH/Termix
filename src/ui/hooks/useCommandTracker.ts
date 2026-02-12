@@ -41,7 +41,7 @@ export function useCommandTracker({
           if (
             (charCode >= 65 && charCode <= 90) ||
             (charCode >= 97 && charCode <= 122) ||
-            charCode === 126 // ~
+            charCode === 126
           ) {
             isInEscapeSequenceRef.current = false;
           }

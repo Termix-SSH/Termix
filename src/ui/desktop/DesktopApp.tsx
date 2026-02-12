@@ -59,12 +59,15 @@ function AppContent({
   useEffect(() => {
     const handleDatabaseConnectionLost = () => {
       setDbConnectionFailed(true);
-      setIsAuthenticated(false);
     };
 
     const handleDatabaseConnectionRestored = () => {
       setDbConnectionFailed(false);
-      window.location.reload();
+      toast.success(t("common.backendReconnected"));
+    };
+
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
     };
 
     dbHealthMonitor.on(
@@ -75,6 +78,7 @@ function AppContent({
       "database-connection-restored",
       handleDatabaseConnectionRestored,
     );
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
 
     return () => {
       dbHealthMonitor.off(
@@ -85,6 +89,7 @@ function AppContent({
         "database-connection-restored",
         handleDatabaseConnectionRestored,
       );
+      dbHealthMonitor.off("session-expired", handleSessionExpired);
     };
   }, []);
 

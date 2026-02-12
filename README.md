@@ -58,7 +58,7 @@ free and self-hosted alternative to Termius available for all platforms.
 - **Command History** - Auto-complete and view previously ran SSH commands
 - **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
-- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, password autofill, etc.
+- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
 - **Network Graph** - Customize your Dashboard to visualize your homelab based off your SSH connections with status support
 
 # Planned Features
@@ -136,7 +136,7 @@ channel, however, response times may be longer.
 
 # Screenshots
 
-[![](https://utfs.io/f/nGnSqDveMsqxqiKJF5EnObSopHatulx93N0E1KVsP7hvjMfF)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
+[![YouTube](./repo-images/YouTube.png)](https://youtu.be/8OYCPwS7ciA)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>

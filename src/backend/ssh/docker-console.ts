@@ -9,7 +9,7 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { systemLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
 
-const dockerConsoleLogger = systemLogger;
+const sshLogger = systemLogger;
 
 interface SSHSession {
   client: SSHClient;
@@ -17,6 +17,7 @@ interface SSHSession {
   isConnected: boolean;
   containerId?: string;
   shell?: string;
+  hostId?: number;
 }
 
 const activeSessions = new Map<string, SSHSession>();
@@ -121,7 +122,7 @@ async function createJumpHostChain(
       try {
         jumpHost.jumpHosts = JSON.parse(jumpHost.jumpHosts);
       } catch (e) {
-        dockerConsoleLogger.error("Failed to parse jump hosts", e, {
+        sshLogger.error("Failed to parse jump hosts", e, {
           hostId: jumpHost.id,
         });
         jumpHost.jumpHosts = [];
@@ -226,6 +227,11 @@ async function createJumpHostChain(
 wss.on("connection", async (ws: WebSocket, req) => {
   const userId = (req as any).userId;
   const sessionId = `docker-console-${Date.now()}-${Math.random()}`;
+  sshLogger.info("Docker console WebSocket connected", {
+    operation: "docker_console_connect",
+    sessionId,
+    userId,
+  });
 
   let sshSession: SSHSession | null = null;
 
@@ -251,7 +257,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             try {
               hostConfig.jumpHosts = JSON.parse(hostConfig.jumpHosts);
             } catch (e) {
-              dockerConsoleLogger.error("Failed to parse jump hosts", e, {
+              sshLogger.error("Failed to parse jump hosts", e, {
                 hostId: hostConfig.id,
               });
               hostConfig.jumpHosts = [];
@@ -383,6 +389,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               stream: null,
               isConnected: true,
               containerId,
+              hostId: hostConfig.id,
             };
 
             activeSessions.set(sessionId, sshSession);
@@ -417,7 +424,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   );
                 });
               } catch {
-                dockerConsoleLogger.warn(
+                sshLogger.warn(
                   `Requested shell ${shell} not found, detecting available shell`,
                   {
                     operation: "shell_validation",
@@ -435,6 +442,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
             sshSession.shell = shellToUse;
 
             const execCommand = `docker exec -it ${containerId} /bin/${shellToUse}`;
+            sshLogger.info("Attaching to Docker container", {
+              operation: "docker_attach",
+              sessionId,
+              userId,
+              hostId: hostConfig.id,
+              containerId,
+            });
 
             client.exec(
               execCommand,
@@ -447,15 +461,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
               },
               (err, stream) => {
                 if (err) {
-                  dockerConsoleLogger.error(
-                    "Failed to create docker exec",
-                    err,
-                    {
-                      operation: "docker_exec",
-                      sessionId,
-                      containerId,
-                    },
-                  );
+                  sshLogger.error("Failed to create docker exec", err, {
+                    operation: "docker_exec",
+                    sessionId,
+                    containerId,
+                  });
 
                   ws.send(
                     JSON.stringify({
@@ -467,6 +477,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 }
 
                 sshSession!.stream = stream;
+                sshLogger.success("Docker container attached", {
+                  operation: "docker_attach_success",
+                  sessionId,
+                  userId,
+                  hostId: hostConfig.id,
+                  containerId,
+                });
 
                 stream.on("data", (data: Buffer) => {
                   if (ws.readyState === WebSocket.OPEN) {
@@ -510,7 +527,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               },
             );
           } catch (error) {
-            dockerConsoleLogger.error("Failed to connect to container", error, {
+            sshLogger.error("Failed to connect to container", error, {
               operation: "console_connect",
               sessionId,
               containerId: message.data.containerId,
@@ -570,13 +587,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         default:
-          dockerConsoleLogger.warn("Unknown message type", {
+          sshLogger.warn("Unknown message type", {
             operation: "ws_message",
             type: message.type,
           });
       }
     } catch (error) {
-      dockerConsoleLogger.error("WebSocket message error", error, {
+      sshLogger.error("WebSocket message error", error, {
         operation: "ws_message",
         sessionId,
       });
@@ -591,6 +608,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
+    sshLogger.info("Docker console disconnected", {
+      operation: "docker_console_disconnect",
+      sessionId,
+      userId,
+      hostId: sshSession?.hostId,
+      containerId: sshSession?.containerId,
+    });
     if (sshSession) {
       if (sshSession.stream) {
         sshSession.stream.end();
@@ -601,7 +625,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("error", (error) => {
-    dockerConsoleLogger.error("WebSocket error", error, {
+    sshLogger.error("WebSocket error", error, {
       operation: "ws_error",
       sessionId,
     });

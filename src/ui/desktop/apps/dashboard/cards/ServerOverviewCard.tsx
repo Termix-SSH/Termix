@@ -20,6 +20,7 @@ interface ServerOverviewCardProps {
   totalServers: number;
   totalTunnels: number;
   totalCredentials: number;
+  updateCheckDisabled?: boolean;
 }
 
 export function ServerOverviewCard({
@@ -31,6 +32,7 @@ export function ServerOverviewCard({
   totalServers,
   totalTunnels,
   totalCredentials,
+  updateCheckDisabled = false,
 }: ServerOverviewCardProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -54,16 +56,20 @@ export function ServerOverviewCard({
               <p className="leading-none text-muted-foreground">
                 {versionText}
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
-              >
-                {versionStatus === "up_to_date"
-                  ? t("dashboard.upToDate")
-                  : t("dashboard.updateAvailable")}
-              </Button>
-              <UpdateLog loggedIn={loggedIn} />
+              {!updateCheckDisabled && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
+                  >
+                    {versionStatus === "up_to_date"
+                      ? t("dashboard.upToDate")
+                      : t("dashboard.updateAvailable")}
+                  </Button>
+                  <UpdateLog loggedIn={loggedIn} />
+                </>
+              )}
             </div>
           </div>
 
