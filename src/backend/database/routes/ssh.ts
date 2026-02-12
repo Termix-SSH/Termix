@@ -2851,7 +2851,7 @@ router.post(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hosts } = req.body;
+    const { hosts, overwrite } = req.body;
 
     if (!Array.isArray(hosts) || hosts.length === 0) {
       return res
@@ -2867,9 +2867,30 @@ router.post(
 
     const results = {
       success: 0,
+      updated: 0,
+      skipped: 0,
       failed: 0,
       errors: [] as string[],
     };
+
+    // Build lookup map for dedup when overwrite is enabled
+    let existingHostMap: Map<string, { id: number }> | undefined;
+    if (overwrite) {
+      try {
+        const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
+          db.select().from(sshData).where(eq(sshData.userId, userId)),
+          "ssh_data",
+          userId,
+        );
+        existingHostMap = new Map();
+        for (const h of allHosts) {
+          const key = `${h.ip}:${h.port}:${h.username}`;
+          existingHostMap.set(key, { id: h.id as number });
+        }
+      } catch {
+        existingHostMap = undefined;
+      }
+    }
 
     for (let i = 0; i < hosts.length; i++) {
       const hostData = hosts[i];
@@ -2981,12 +3002,26 @@ router.post(
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
             : 0,
-          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
-        results.success++;
+        const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
+        const existing = existingHostMap?.get(lookupKey);
+
+        if (existing) {
+          await SimpleDBOps.update(
+            sshData,
+            "ssh_data",
+            eq(sshData.id, existing.id),
+            sshDataObj,
+            userId,
+          );
+          results.updated++;
+        } else {
+          sshDataObj.createdAt = new Date().toISOString();
+          await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
+          results.success++;
+        }
       } catch (error) {
         results.failed++;
         results.errors.push(
@@ -2996,8 +3031,10 @@ router.post(
     }
 
     res.json({
-      message: `Import completed: ${results.success} successful, ${results.failed} failed`,
+      message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
       success: results.success,
+      updated: results.updated,
+      skipped: results.skipped,
       failed: results.failed,
       errors: results.errors,
     });
