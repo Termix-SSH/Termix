@@ -958,7 +958,7 @@ interface StatsConfig {
 const DEFAULT_STATS_CONFIG: StatsConfig = {
   enabledWidgets: ["cpu", "memory", "disk", "network", "uptime", "system"],
   statusCheckEnabled: true,
-  statusCheckInterval: 30,
+  statusCheckInterval: 60,
   metricsEnabled: true,
   metricsInterval: 30,
 };
@@ -1975,20 +1975,51 @@ function tcpPing(
     const socket = new net.Socket();
     let settled = false;
 
-    const onDone = (result: boolean) => {
+    const finish = (result: boolean) => {
       if (settled) return;
       settled = true;
+      resolve(result);
+    };
+
+    const cleanup = () => {
       try {
         socket.destroy();
-      } catch (error) {}
-      resolve(result);
+      } catch {}
     };
 
     socket.setTimeout(timeoutMs);
 
-    socket.once("connect", () => onDone(true));
-    socket.once("timeout", () => onDone(false));
-    socket.once("error", () => onDone(false));
+    socket.once("connect", () => {
+      // Wait for SSH server banner before closing to avoid
+      // kex_exchange_identification errors in sshd logs
+      const dataTimeout = setTimeout(() => {
+        cleanup();
+        finish(true);
+      }, 2000);
+
+      socket.once("data", (data) => {
+        clearTimeout(dataTimeout);
+        if (data.toString().startsWith("SSH-")) {
+          // Complete SSH identification exchange gracefully
+          try {
+            socket.end("SSH-2.0-TermixHealthCheck\r\n");
+          } catch {}
+          setTimeout(cleanup, 200);
+        } else {
+          cleanup();
+        }
+        finish(true);
+      });
+    });
+
+    socket.once("timeout", () => {
+      cleanup();
+      finish(false);
+    });
+    socket.once("error", () => {
+      cleanup();
+      finish(false);
+    });
     socket.connect(port, host);
   });
 }
