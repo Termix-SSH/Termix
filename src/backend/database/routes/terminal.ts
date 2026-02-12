@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { commandHistory } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { authLogger } from "../../utils/logger.js";
+import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 
 const router = express.Router();
@@ -269,9 +269,8 @@ router.delete(
             eq(commandHistory.hostId, hostIdNum),
           ),
         );
-
-      authLogger.success(`Command history cleared for host ${hostId}`, {
-        operation: "command_history_clear_success",
+      databaseLogger.info("Terminal history cleared", {
+        operation: "terminal_history_clear",
         userId,
         hostId: hostIdNum,
       });

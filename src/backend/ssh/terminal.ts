@@ -10,12 +10,13 @@ import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { sshLogger } from "../utils/logger.js";
+import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSHAuthManager } from "./auth-manager.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -70,6 +71,11 @@ async function resolveJumpHost(
   hostId: number,
   userId: string,
 ): Promise<any | null> {
+  sshLogger.info("Resolving jump host", {
+    operation: "terminal_jumphost_resolve",
+    userId,
+    hostId,
+  });
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -159,6 +165,15 @@ async function createJumpHostChain(
       const jumpClient = new Client();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -166,6 +181,13 @@ async function createJumpHostChain(
 
         jumpClient.on("ready", () => {
           clearTimeout(timeout);
+          sshLogger.success("Jump host connection established", {
+            operation: "terminal_jumphost_connected",
+            userId,
+            hostId: jumpHostConfig.id,
+            ip: jumpHostConfig.ip,
+            depth: i,
+          });
           resolve(true);
         });
 
@@ -185,6 +207,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -279,6 +302,7 @@ const wss = new WebSocketServer({
 
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
+  let sessionId: string | undefined;
 
   try {
     const url = parseUrl(req.url!, true);
@@ -296,6 +320,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     userId = payload.userId;
+    sessionId = payload.sessionId;
   } catch (error) {
     sshLogger.error(
       "WebSocket JWT verification failed during connection",
@@ -327,6 +352,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
   const userWs = userConnections.get(userId)!;
   userWs.add(ws);
+  sshLogger.info("Terminal WebSocket connection established", {
+    operation: "terminal_ws_connect",
+    sessionId,
+    userId,
+  });
 
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
@@ -342,8 +372,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
+  let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
   ws.on("close", () => {
+    sshLogger.info("Terminal WebSocket disconnected", {
+      operation: "terminal_ws_disconnect",
+      sessionId,
+      userId,
+    });
     const userWs = userConnections.get(userId);
     if (userWs) {
       userWs.delete(ws);
@@ -355,7 +391,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
     cleanupSSH();
   });
 
-  ws.on("message", (msg: RawData) => {
+  function resetConnectionState() {
+    isConnecting = false;
+    isConnected = false;
+    isKeyboardInteractive = false;
+    keyboardInteractiveResponded = false;
+    keyboardInteractiveFinish = null;
+    totpPromptSent = false;
+    warpgateAuthPromptSent = false;
+  }
+
+  ws.on("message", async (msg: RawData) => {
     const currentDataKey = userCrypto.getUserDataKey(userId);
     if (!currentDataKey) {
       ws.send(
@@ -568,6 +614,116 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "opkssh_start_auth": {
+        const opksshData = data as { hostId: number };
+        try {
+          const { startOPKSSHAuth, getRequestOrigin } =
+            await import("./opkssh-auth.js");
+          const db = getDb();
+          const hostRow = await db
+            .select()
+            .from(sshData)
+            .where(eq(sshData.id, opksshData.hostId))
+            .limit(1);
+          if (!hostRow || hostRow.length === 0) {
+            sshLogger.error(
+              `Host ${opksshData.hostId} not found for OPKSSH auth`,
+              {
+                operation: "opkssh_start_auth_host_not_found",
+                userId,
+                hostId: opksshData.hostId,
+              },
+            );
+            ws.send(
+              JSON.stringify({
+                type: "opkssh_error",
+                requestId: "",
+                error: "Host not found",
+              }),
+            );
+            break;
+          }
+          const hostname = hostRow[0].name || hostRow[0].ip;
+          const requestOrigin = getRequestOrigin(req);
+          await startOPKSSHAuth(
+            userId,
+            opksshData.hostId,
+            hostname,
+            ws,
+            requestOrigin,
+          );
+        } catch (error) {
+          sshLogger.error("Failed to start OPKSSH auth", error, {
+            operation: "opkssh_start_auth_error",
+            userId,
+            hostId: opksshData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "opkssh_error",
+              requestId: "",
+              error: "Failed to start OPKSSH authentication",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "opkssh_cancel": {
+        const cancelData = data as { requestId: string };
+        try {
+          const { cancelAuthSession } = await import("./opkssh-auth.js");
+          cancelAuthSession(cancelData.requestId);
+          resetConnectionState();
+        } catch (error) {
+          sshLogger.error("Failed to cancel OPKSSH auth", error, {
+            operation: "opkssh_cancel_error",
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "opkssh_browser_opened": {
+        break;
+      }
+
+      case "opkssh_auth_completed": {
+        const completedData = data as {
+          hostId: number;
+          cols?: number;
+          rows?: number;
+          hostConfig?: any;
+        };
+
+        resetConnectionState();
+
+        const reconnectConfig: ConnectToHostData = {
+          cols: completedData.cols || 80,
+          rows: completedData.rows || 24,
+          hostConfig:
+            completedData.hostConfig ||
+            ({ id: completedData.hostId, userId } as any),
+        };
+
+        handleConnectToHost(reconnectConfig).catch((error) => {
+          sshLogger.error("Failed to reconnect after OPKSSH auth", error, {
+            operation: "opkssh_reconnect_error",
+            userId,
+            hostId: completedData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect after authentication: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
+
       default:
         sshLogger.warn("Unknown message type received", {
           operation: "websocket_message_unknown_type",
@@ -591,6 +747,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
+    sshLogger.info("Resolving SSH host configuration", {
+      operation: "terminal_host_resolve",
+      sessionId,
+      userId,
+      hostId: id,
+    });
 
     const sendLog = (
       stage: string,
@@ -745,7 +907,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
-
+      sshLogger.success("SSH connection established", {
+        operation: "terminal_ssh_connected",
+        sessionId,
+        userId,
+        hostId: id,
+        ip,
+      });
+      if (totpPromptSent) {
+        authLogger.success("TOTP verification successful for SSH session", {
+          operation: "terminal_totp_success",
+          sessionId,
+          userId,
+          hostId: id,
+        });
+      }
       sendLog("handshake", "success", "SSH handshake completed");
       sendLog("auth", "success", `Authentication successful for ${username}`);
       sendLog("connected", "success", "Connection established");
@@ -858,6 +1034,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           sshStream = stream;
+          sshLogger.success("Terminal shell channel opened", {
+            operation: "terminal_shell_opened",
+            sessionId,
+            userId,
+            hostId: id,
+            termType: "xterm-256color",
+          });
 
           stream.on("data", (data: Buffer) => {
             try {
@@ -988,6 +1171,57 @@ wss.on("connection", async (ws: WebSocket, req) => {
       });
 
       if (
+        resolvedCredentials.authType === "opkssh" &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn("OPKSSH authentication failed - invalidating token", {
+          operation: "opkssh_auth_failed",
+          hostId: id,
+          userId,
+          error: err.message,
+        });
+
+        (async () => {
+          try {
+            const { invalidateOPKSSHToken } = await import("./opkssh-auth.js");
+            await invalidateOPKSSHToken(userId, id, "SSH auth failed");
+          } catch (invalidateError) {
+            sshLogger.error("Failed to invalidate OPKSSH token", {
+              operation: "opkssh_token_invalidation_error",
+              userId,
+              hostId: id,
+              error: invalidateError,
+            });
+          }
+        })();
+
+        clearTimeout(connectionTimeout);
+        if (sshConn) {
+          try {
+            sshConn.end();
+          } catch (e) {}
+          sshConn = null;
+        }
+        resetConnectionState();
+
+        sendLog(
+          "auth",
+          "error",
+          "OPKSSH certificate authentication failed. Please authenticate again.",
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "opkssh_auth_required",
+            hostId: id,
+            message:
+              "OPKSSH authentication failed or expired. Please authenticate again.",
+          }),
+        );
+        return;
+      }
+
+      if (
         authMethodNotAvailable &&
         resolvedCredentials.authType === "none" &&
         !isKeyboardInteractive
@@ -1005,8 +1239,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           } catch (e) {}
           sshConn = null;
         }
-        isConnecting = false;
-        isConnected = false;
+        resetConnectionState();
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1031,8 +1264,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           } catch (e) {}
           sshConn = null;
         }
-        isConnecting = false;
-        isConnected = false;
+        resetConnectionState();
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1056,6 +1288,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             error: err.message,
           },
         );
+        resetConnectionState();
         return;
       }
 
@@ -1069,6 +1302,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         err.message.includes("authentication") ||
         err.message.includes("Authentication")
       ) {
+        authLogger.error("SSH authentication failed", err, {
+          operation: "terminal_ssh_auth_failed",
+          sessionId,
+          userId,
+          hostId: id,
+          authType: resolvedCredentials.authType,
+        });
         sendLog("auth", "error", `Authentication failed: ${err.message}`);
       } else {
         sendLog("error", "error", `Connection failed: ${err.message}`);
@@ -1116,6 +1356,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     sshConn.on("close", () => {
       clearTimeout(connectionTimeout);
+      sshLogger.info("SSH connection closed", {
+        operation: "terminal_ssh_disconnected",
+        sessionId,
+        userId,
+        hostId: id,
+      });
 
       if (isAwaitingAuthCredentials) {
         cleanupSSH(connectionTimeout);
@@ -1209,6 +1455,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
       timeout: 120000,
+      hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+        id,
+        ip,
+        port,
+        ws,
+        userId,
+        false,
+      ),
       env: {
         TERM: "xterm-256color",
         LANG: "en_US.UTF-8",
@@ -1229,6 +1483,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "ecdh-sha2-nistp384",
           "ecdh-sha2-nistp256",
           "diffie-hellman-group-exchange-sha256",
+          "diffie-hellman-group18-sha512",
+          "diffie-hellman-group17-sha512",
+          "diffie-hellman-group16-sha512",
+          "diffie-hellman-group15-sha512",
           "diffie-hellman-group14-sha256",
           "diffie-hellman-group14-sha1",
           "diffie-hellman-group-exchange-sha1",
@@ -1287,7 +1545,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (!hostConfig.forceKeyboardInteractive) {
         connectConfig.password = resolvedCredentials.password;
       }
-
       sendLog("auth", "info", "Using password authentication");
     } else if (
       resolvedCredentials.authType === "key" &&
@@ -1336,6 +1593,60 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    } else if (resolvedCredentials.authType === "opkssh") {
+      sendLog("auth", "info", "Using OPKSSH certificate authentication");
+      try {
+        const { getOPKSSHToken } = await import("./opkssh-auth.js");
+        const token = await getOPKSSHToken(userId, id);
+
+        if (!token) {
+          sendLog(
+            "auth",
+            "info",
+            "No valid OPKSSH token found, requesting authentication",
+          );
+          ws.send(
+            JSON.stringify({
+              type: "opkssh_auth_required",
+              hostId: id,
+            }),
+          );
+          return;
+        }
+
+        sendLog("auth", "info", "Using cached OPKSSH certificate");
+
+        const { promises: fs } = await import("fs");
+        const path = await import("path");
+        const os = await import("os");
+
+        const tempDir = os.tmpdir();
+        const keyPath = path.join(tempDir, `opkssh-${userId}-${id}`);
+        const certPath = `${keyPath}-cert.pub`;
+
+        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
+        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
+
+        opksshTempFiles = { keyPath, certPath };
+        connectConfig.privateKey = await fs.readFile(keyPath);
+      } catch (opksshError) {
+        sshLogger.error("OPKSSH authentication error", opksshError, {
+          operation: "opkssh_auth_error",
+          userId,
+          hostId: id,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "OPKSSH authentication failed: " +
+              (opksshError instanceof Error
+                ? opksshError.message
+                : "Unknown error"),
+          }),
+        );
+        return;
+      }
     } else {
       sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");
@@ -1440,6 +1751,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
             "Starting SSH session through jump host",
           );
           sendLog("auth", "info", `Authenticating as ${username}`);
+          sshLogger.info("Initiating SSH connection", {
+            operation: "terminal_ssh_connect_attempt",
+            sessionId,
+            userId,
+            hostId: id,
+            ip,
+            port,
+            username,
+            authType: resolvedCredentials.authType,
+          });
           sshConn.connect(connectConfig);
         });
       } catch (error) {
@@ -1459,6 +1780,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else {
       sendLog("handshake", "info", "Starting SSH session");
       sendLog("auth", "info", `Authenticating as ${username}`);
+      sshLogger.info("Initiating SSH connection", {
+        operation: "terminal_ssh_connect_attempt",
+        sessionId,
+        userId,
+        hostId: id,
+        ip,
+        port,
+        username,
+        authType: resolvedCredentials.authType,
+      });
       sshConn.connect(connectConfig);
     }
   }
@@ -1529,15 +1860,43 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sshConn = null;
     }
 
-    totpPromptSent = false;
-    warpgateAuthPromptSent = false;
-    isKeyboardInteractive = false;
-    keyboardInteractiveResponded = false;
-    keyboardInteractiveFinish = null;
-    isConnecting = false;
-    isConnected = false;
+    resetConnectionState();
     isCleaningUp = false;
     isAwaitingAuthCredentials = false;
+
+    if (opksshTempFiles) {
+      const tempFilesToClean = opksshTempFiles;
+      opksshTempFiles = null;
+
+      (async () => {
+        try {
+          const { promises: fs } = await import("fs");
+          const cleanupResults = await Promise.allSettled([
+            fs.unlink(tempFilesToClean.keyPath),
+            fs.unlink(tempFilesToClean.certPath),
+          ]);
+
+          cleanupResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+              sshLogger.warn(`Failed to cleanup OPKSSH temp file`, {
+                operation: "opkssh_temp_cleanup_failed",
+                file: index === 0 ? "keyPath" : "certPath",
+                path:
+                  index === 0
+                    ? tempFilesToClean.keyPath
+                    : tempFilesToClean.certPath,
+                error: result.reason,
+              });
+            }
+          });
+        } catch (error) {
+          sshLogger.error("Failed to cleanup OPKSSH temp files", {
+            operation: "opkssh_temp_cleanup_error",
+            error,
+          });
+        }
+      })();
+    }
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

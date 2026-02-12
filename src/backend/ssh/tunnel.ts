@@ -30,12 +30,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -294,7 +289,12 @@ async function cleanupTunnelResources(
     if (verification?.timeout) clearTimeout(verification.timeout);
     try {
       verification?.conn.end();
-    } catch (error) {}
+    } catch (error) {
+      tunnelLogger.error("Error during tunnel cleanup", error, {
+        operation: "tunnel_cleanup_error",
+        tunnelName,
+      });
+    }
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -359,7 +359,12 @@ async function handleDisconnect(
       const verification = tunnelVerifications.get(tunnelName);
       if (verification?.timeout) clearTimeout(verification.timeout);
       verification?.conn.end();
-    } catch (error) {}
+    } catch (error) {
+      tunnelLogger.error("Error during tunnel cleanup", error, {
+        operation: "tunnel_cleanup_error",
+        tunnelName,
+      });
+    }
     tunnelVerifications.delete(tunnelName);
   }
 
@@ -519,6 +524,16 @@ async function connectSSHTunnel(
 ): Promise<void> {
   const tunnelName = tunnelConfig.name;
   const tunnelMarker = getTunnelMarker(tunnelName);
+  tunnelLogger.info("Tunnel creation request received", {
+    operation: "tunnel_create_request",
+    userId: tunnelConfig.sourceUserId,
+    hostId: tunnelConfig.sourceHostId,
+    tunnelName,
+    tunnelType: tunnelConfig.tunnelType || "remote",
+    sourcePort: tunnelConfig.sourcePort,
+    endpointHost: tunnelConfig.endpointHost,
+    endpointPort: tunnelConfig.endpointPort,
+  });
 
   if (manualDisconnects.has(tunnelName)) {
     return;
@@ -875,6 +890,12 @@ async function connectSSHTunnel(
 
   conn.on("ready", () => {
     clearTimeout(connectionTimeout);
+    tunnelLogger.info("Creating new SSH connection for tunnel", {
+      operation: "tunnel_connection_create",
+      userId: tunnelConfig.sourceUserId,
+      hostId: tunnelConfig.sourceHostId,
+      tunnelName,
+    });
 
     const isAlreadyVerifying = tunnelVerifications.has(tunnelName);
     if (isAlreadyVerifying) {
@@ -933,6 +954,14 @@ async function connectSSHTunnel(
       }
 
       activeTunnels.set(tunnelName, conn);
+      tunnelLogger.success("Tunnel port binding successful", {
+        operation: "tunnel_port_bound",
+        userId: tunnelConfig.sourceUserId,
+        hostId: tunnelConfig.sourceHostId,
+        tunnelName,
+        sourcePort: tunnelConfig.sourcePort,
+        endpointPort: tunnelConfig.endpointPort,
+      });
 
       setTimeout(() => {
         if (
@@ -940,6 +969,12 @@ async function connectSSHTunnel(
           activeTunnels.has(tunnelName)
         ) {
           tunnelConnecting.delete(tunnelName);
+          tunnelLogger.success("Tunnel creation complete", {
+            operation: "tunnel_create_complete",
+            userId: tunnelConfig.sourceUserId,
+            hostId: tunnelConfig.sourceHostId,
+            tunnelName,
+          });
 
           broadcastTunnelStatus(tunnelName, {
             connected: true,
@@ -1279,6 +1314,13 @@ async function killRemoteTunnelByMarker(
   callback: (err?: Error) => void,
 ) {
   const tunnelMarker = getTunnelMarker(tunnelName);
+  tunnelLogger.info("Killing remote tunnel process", {
+    operation: "tunnel_remote_kill",
+    userId: tunnelConfig.sourceUserId,
+    hostId: tunnelConfig.sourceHostId,
+    tunnelName,
+    marker: tunnelMarker,
+  });
 
   let resolvedSourceCredentials = {
     password: tunnelConfig.sourcePassword,
@@ -1418,10 +1460,24 @@ async function killRemoteTunnelByMarker(
 
       stream.on("close", () => {
         if (!foundProcesses) {
+          tunnelLogger.warn("Remote tunnel process not found", {
+            operation: "tunnel_remote_not_found",
+            userId: tunnelConfig.sourceUserId,
+            hostId: tunnelConfig.sourceHostId,
+            tunnelName,
+            marker: tunnelMarker,
+          });
           conn.end();
           callback();
           return;
         }
+        tunnelLogger.info("Remote tunnel process found, proceeding to kill", {
+          operation: "tunnel_remote_found",
+          userId: tunnelConfig.sourceUserId,
+          hostId: tunnelConfig.sourceHostId,
+          tunnelName,
+          marker: tunnelMarker,
+        });
 
         const killCmds = [
           `pkill -TERM -f '${tunnelMarker}'`,
@@ -1452,6 +1508,13 @@ async function killRemoteTunnelByMarker(
                   tunnelLogger.warn(
                     `Some tunnel processes may still be running for '${tunnelName}'`,
                   );
+                } else {
+                  tunnelLogger.success("Remote tunnel process killed", {
+                    operation: "tunnel_remote_killed",
+                    userId: tunnelConfig.sourceUserId,
+                    hostId: tunnelConfig.sourceHostId,
+                    tunnelName,
+                  });
                 }
                 conn.end();
                 callback();
@@ -1843,6 +1906,12 @@ app.post(
         }
       }
 
+      tunnelLogger.info("Tunnel stop request received", {
+        operation: "tunnel_stop_request",
+        userId,
+        hostId: config?.sourceHostId,
+        tunnelName,
+      });
       manualDisconnects.add(tunnelName);
       retryCounters.delete(tunnelName);
       retryExhaustedTunnels.delete(tunnelName);
@@ -1853,6 +1922,12 @@ app.post(
       }
 
       await cleanupTunnelResources(tunnelName, true);
+      tunnelLogger.info("Tunnel cleanup completed", {
+        operation: "tunnel_cleanup_complete",
+        userId,
+        hostId: config?.sourceHostId,
+        tunnelName,
+      });
 
       broadcastTunnelStatus(tunnelName, {
         connected: false,

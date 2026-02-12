@@ -122,6 +122,7 @@ import {
   Shield,
   Clock,
   UserCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { HostGeneralTab } from "./tabs/HostGeneralTab";
 import { HostTerminalTab } from "./tabs/HostTerminalTab";
@@ -141,11 +142,13 @@ interface User {
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
   onFormSubmit?: (updatedHost?: SSHHost) => void;
+  onBack?: () => void;
 }
 
 export function HostManagerEditor({
   editingHost,
   onFormSubmit,
+  onBack,
 }: SSHManagerHostEditorProps) {
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
@@ -165,7 +168,7 @@ export function HostManagerEditor({
   const [proxyMode, setProxyMode] = useState<"single" | "chain">("single");
 
   const [authTab, setAuthTab] = useState<
-    "password" | "key" | "credential" | "none"
+    "password" | "key" | "credential" | "none" | "opkssh"
   >("password");
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
@@ -269,7 +272,7 @@ export function HostManagerEditor({
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
-      authType: z.enum(["password", "key", "credential", "none"]),
+      authType: z.enum(["password", "key", "credential", "none", "opkssh"]),
       credentialId: z.number().optional().nullable(),
       overrideCredentialUsername: z.boolean().optional(),
       password: z.string().optional(),
@@ -438,6 +441,10 @@ export function HostManagerEditor({
         return;
       }
 
+      if (data.authType === "opkssh") {
+        return;
+      }
+
       if (data.authType === "password") {
         if (
           !data.password ||
@@ -465,6 +472,14 @@ export function HostManagerEditor({
             code: z.ZodIssueCode.custom,
             message: t("hosts.keyTypeRequired"),
             path: ["keyType"],
+          });
+        }
+      } else if (data.authType === "credential") {
+        if (!data.credentialId) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("hosts.credentialRequired"),
+            path: ["credentialId"],
           });
         }
       } else if (data.authType === "credential") {
@@ -543,7 +558,8 @@ export function HostManagerEditor({
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
 
-    if (!values.ip || !values.username) return false;
+    if (!values.ip || !values.username || values.username.trim() === "")
+      return false;
 
     if (authTab === "password") {
       return !!(values.password && values.password.trim() !== "");
@@ -552,6 +568,8 @@ export function HostManagerEditor({
     } else if (authTab === "credential") {
       return !!values.credentialId;
     } else if (authTab === "none") {
+      return true;
+    } else if (authTab === "opkssh") {
       return true;
     }
 
@@ -582,13 +600,19 @@ export function HostManagerEditor({
           const selectedCredential = credentials.find(
             (c) => c.id === currentCredentialId,
           );
-          if (selectedCredential) {
+          if (selectedCredential?.username) {
             form.setValue("username", selectedCredential.username, {
               shouldValidate: true,
             });
           }
         }
       } else if (authTab === "none") {
+        form.setValue("password", "", { shouldValidate: true });
+        form.setValue("key", null, { shouldValidate: true });
+        form.setValue("keyPassword", "", { shouldValidate: true });
+        form.setValue("keyType", "auto", { shouldValidate: true });
+        form.setValue("credentialId", null, { shouldValidate: true });
+      } else if (authTab === "opkssh") {
         form.setValue("password", "", { shouldValidate: true });
         form.setValue("key", null, { shouldValidate: true });
         form.setValue("keyPassword", "", { shouldValidate: true });
@@ -616,13 +640,20 @@ export function HostManagerEditor({
         cleanedHost.password = undefined;
       }
 
-      const defaultAuthType = cleanedHost.credentialId
-        ? "credential"
-        : cleanedHost.key
-          ? "key"
-          : cleanedHost.password
-            ? "password"
-            : "none";
+      const defaultAuthType = (cleanedHost.authType ||
+        (cleanedHost.credentialId
+          ? "credential"
+          : cleanedHost.key
+            ? "key"
+            : cleanedHost.password
+              ? "password"
+              : "none")) as
+        | "password"
+        | "key"
+        | "credential"
+        | "none"
+        | "opkssh";
+
       setAuthTab(defaultAuthType);
 
       let parsedStatsConfig: StatsConfig = DEFAULT_STATS_CONFIG;
@@ -647,7 +678,12 @@ export function HostManagerEditor({
         folder: cleanedHost.folder || "",
         tags: Array.isArray(cleanedHost.tags) ? cleanedHost.tags : [],
         pin: Boolean(cleanedHost.pin),
-        authType: defaultAuthType as "password" | "key" | "credential" | "none",
+        authType: defaultAuthType as
+          | "password"
+          | "key"
+          | "credential"
+          | "none"
+          | "opkssh",
         credentialId: cleanedHost.credentialId,
         overrideCredentialUsername: Boolean(
           cleanedHost.overrideCredentialUsername,
@@ -1131,6 +1167,27 @@ export function HostManagerEditor({
                   <AlertDescription>{formError}</AlertDescription>
                 </Alert>
               )}
+              <div className="flex items-center gap-2 mb-3">
+                {onBack && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onBack}
+                    className="flex-shrink-0"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    {t("common.back")}
+                  </Button>
+                )}
+                <h3 className="text-lg font-semibold flex-shrink-0">
+                  {editingHost
+                    ? editingHost.id
+                      ? t("hosts.editHost")
+                      : t("hosts.cloneHost")
+                    : t("hosts.addHost")}
+                </h3>
+              </div>
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}

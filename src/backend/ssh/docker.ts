@@ -13,8 +13,9 @@ import { AuthManager } from "../utils/auth-manager.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
-const dockerLogger = logger;
+const sshLogger = logger;
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -79,7 +80,7 @@ function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
     if (session.activeOperations > 0) {
-      dockerLogger.warn(
+      sshLogger.warn(
         `Deferring session cleanup for ${sessionId} - ${session.activeOperations} active operations`,
         {
           operation: "cleanup_deferred",
@@ -161,7 +162,7 @@ async function resolveJumpHost(
 
     return host;
   } catch (error) {
-    dockerLogger.error("Failed to resolve jump host", error, {
+    sshLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
       hostId,
       userId,
@@ -188,7 +189,7 @@ async function createJumpHostChain(
 
     for (let i = 0; i < jumpHostConfigs.length; i++) {
       if (!jumpHostConfigs[i]) {
-        dockerLogger.error(`Jump host ${i + 1} not found`, undefined, {
+        sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
         });
@@ -203,6 +204,15 @@ async function createJumpHostChain(
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -215,7 +225,7 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          dockerLogger.error(`Jump host ${i + 1} connection failed`, err, {
+          sshLogger.error(`Jump host ${i + 1} connection failed`, err, {
             operation: "jump_host_connect",
             hostId: jumpHostConfig.id,
             ip: jumpHostConfig.ip,
@@ -229,6 +239,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -275,7 +286,7 @@ async function createJumpHostChain(
 
     return currentClient;
   } catch (error) {
-    dockerLogger.error("Failed to create jump host chain", error, {
+    sshLogger.error("Failed to create jump host chain", error, {
       operation: "jump_host_chain",
     });
     clients.forEach((c) => c.end());
@@ -286,13 +297,27 @@ async function createJumpHostChain(
 async function executeDockerCommand(
   session: SSHSession,
   command: string,
+  sessionId?: string,
+  userId?: string,
+  hostId?: number,
 ): Promise<string> {
+  const startTime = Date.now();
+  sshLogger.info("Executing Docker command", {
+    operation: "docker_command_exec",
+    sessionId,
+    userId,
+    hostId,
+    command: command.split(" ")[1],
+  });
   return new Promise((resolve, reject) => {
     session.client.exec(command, (err, stream) => {
       if (err) {
-        dockerLogger.error("Docker command execution error", err, {
+        sshLogger.error("Docker command execution error", err, {
           operation: "execute_docker_command",
-          command,
+          sessionId,
+          userId,
+          hostId,
+          command: command.split(" ")[1],
         });
         return reject(err);
       }
@@ -302,14 +327,25 @@ async function executeDockerCommand(
 
       stream.on("close", (code: number) => {
         if (code !== 0) {
-          dockerLogger.error("Docker command failed", undefined, {
+          sshLogger.error("Docker command failed", undefined, {
             operation: "execute_docker_command",
-            command,
+            sessionId,
+            userId,
+            hostId,
+            command: command.split(" ")[1],
             exitCode: code,
             stderr,
           });
           reject(new Error(stderr || `Command exited with code ${code}`));
         } else {
+          sshLogger.success("Docker command completed", {
+            operation: "docker_command_success",
+            sessionId,
+            userId,
+            hostId,
+            command: command.split(" ")[1],
+            duration: Date.now() - startTime,
+          });
           resolve(stdout);
         }
       });
@@ -323,9 +359,12 @@ async function executeDockerCommand(
       });
 
       stream.on("error", (streamErr: Error) => {
-        dockerLogger.error("Docker command stream error", streamErr, {
+        sshLogger.error("Docker command stream error", streamErr, {
           operation: "execute_docker_command",
-          command,
+          sessionId,
+          userId,
+          hostId,
+          command: command.split(" ")[1],
         });
         reject(streamErr);
       });
@@ -350,12 +389,7 @@ app.use(
         return callback(null, true);
       }
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -429,13 +463,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
   if (!userId) {
-    dockerLogger.error(
-      "Docker SSH connection rejected: no authenticated user",
-      {
-        operation: "docker_connect_auth",
-        sessionId,
-      },
-    );
+    sshLogger.error("Docker SSH connection rejected: no authenticated user", {
+      operation: "docker_connect_auth",
+      sessionId,
+    });
     connectionLogs.push(
       createConnectionLog(
         "error",
@@ -460,7 +491,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
   }
 
   if (!sessionId || !hostId) {
-    dockerLogger.warn("Missing Docker SSH connection parameters", {
+    sshLogger.warn("Missing Docker SSH connection parameters", {
       operation: "docker_connect",
       sessionId,
       hasHostId: !!hostId,
@@ -512,7 +543,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       );
 
       if (!accessInfo.hasAccess) {
-        dockerLogger.warn("User does not have access to host", {
+        sshLogger.warn("User does not have access to host", {
           operation: "docker_connect",
           hostId,
           userId,
@@ -531,7 +562,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       try {
         host.jumpHosts = JSON.parse(host.jumpHosts);
       } catch (e) {
-        dockerLogger.error("Failed to parse jump hosts", e, {
+        sshLogger.error("Failed to parse jump hosts", e, {
           hostId: host.id,
         });
         host.jumpHosts = [];
@@ -539,7 +570,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     }
 
     if (!host.enableDocker) {
-      dockerLogger.warn("Docker not enabled for host", {
+      sshLogger.warn("Docker not enabled for host", {
         operation: "docker_connect",
         hostId,
         userId,
@@ -618,7 +649,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
             };
           }
         } catch (error) {
-          dockerLogger.error("Failed to resolve shared credential", error, {
+          sshLogger.error("Failed to resolve shared credential", error, {
             operation: "docker_connect",
             hostId,
             userId,
@@ -664,12 +695,108 @@ app.post("/docker/ssh/connect", async (req, res) => {
       readyTimeout: 60000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
+      hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+        hostId,
+        host.ip,
+        host.port || 22,
+        null,
+        userId,
+        false,
+      ),
     };
 
     if (resolvedCredentials.authType === "none") {
     } else if (resolvedCredentials.authType === "password") {
       if (resolvedCredentials.password) {
         config.password = resolvedCredentials.password;
+      }
+    } else if (resolvedCredentials.authType === "opkssh") {
+      try {
+        const { getOPKSSHToken } = await import("./opkssh-auth.js");
+        const token = await getOPKSSHToken(userId, hostId);
+
+        if (!token) {
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "docker_auth",
+              "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
+            ),
+          );
+          return res.status(401).json({
+            error:
+              "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
+            requiresOPKSSHAuth: true,
+            connectionLogs,
+          });
+        }
+
+        const { promises: fs } = await import("fs");
+        const path = await import("path");
+        const os = await import("os");
+
+        const tempDir = os.tmpdir();
+        const keyPath = path.join(tempDir, `opkssh-docker-${userId}-${hostId}`);
+        const certPath = `${keyPath}-cert.pub`;
+
+        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
+        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
+
+        config.privateKey = await fs.readFile(keyPath);
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "docker_auth",
+            "Using OPKSSH certificate authentication",
+          ),
+        );
+
+        setTimeout(async () => {
+          try {
+            const cleanupResults = await Promise.allSettled([
+              fs.unlink(keyPath),
+              fs.unlink(certPath),
+            ]);
+
+            cleanupResults.forEach((result, index) => {
+              if (result.status === "rejected") {
+                sshLogger.warn(`Failed to cleanup OPKSSH temp file`, {
+                  operation: "opkssh_temp_cleanup_failed",
+                  file: index === 0 ? "keyPath" : "certPath",
+                  sessionId,
+                  error: result.reason,
+                });
+              }
+            });
+          } catch (error) {
+            sshLogger.error("Failed to cleanup OPKSSH temp files", {
+              operation: "opkssh_temp_cleanup_error",
+              sessionId,
+              error,
+            });
+          }
+        }, 60000);
+      } catch (opksshError) {
+        sshLogger.error("OPKSSH authentication error for Docker", {
+          operation: "docker_connect",
+          sessionId,
+          hostId,
+          error:
+            opksshError instanceof Error
+              ? opksshError.message
+              : "Unknown error",
+        });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "docker_auth",
+            `OPKSSH authentication failed: ${opksshError instanceof Error ? opksshError.message : "Unknown error"}`,
+          ),
+        );
+        return res.status(500).json({
+          error: "OPKSSH authentication failed",
+          connectionLogs,
+        });
       }
     } else if (
       resolvedCredentials.authType === "key" &&
@@ -680,7 +807,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
           !resolvedCredentials.sshKey.includes("-----BEGIN") ||
           !resolvedCredentials.sshKey.includes("-----END")
         ) {
-          dockerLogger.error("Invalid SSH key format", {
+          sshLogger.error("Invalid SSH key format", {
             operation: "docker_connect",
             sessionId,
             hostId,
@@ -707,7 +834,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
           config.passphrase = resolvedCredentials.keyPassword;
         }
       } catch (error) {
-        dockerLogger.error("SSH key processing error", error, {
+        sshLogger.error("SSH key processing error", error, {
           operation: "docker_connect",
           sessionId,
           hostId,
@@ -725,14 +852,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
         });
       }
     } else if (resolvedCredentials.authType === "key") {
-      dockerLogger.error(
-        "SSH key authentication requested but no key provided",
-        {
-          operation: "docker_connect",
-          sessionId,
-          hostId,
-        },
-      );
+      sshLogger.error("SSH key authentication requested but no key provided", {
+        operation: "docker_connect",
+        sessionId,
+        hostId,
+      });
       connectionLogs.push(
         createConnectionLog(
           "error",
@@ -814,7 +938,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     client.on("error", (err) => {
       if (responseSent) {
-        dockerLogger.error(
+        sshLogger.error(
           "Docker SSH connection error after response sent",
           err,
           {
@@ -832,7 +956,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
       responseSent = true;
 
-      dockerLogger.error("Docker SSH connection failed", err, {
+      sshLogger.error("Docker SSH connection failed", err, {
         operation: "docker_connect",
         sessionId,
         hostId,
@@ -886,6 +1010,15 @@ app.post("/docker/ssh/connect", async (req, res) => {
             "error",
             errorStage,
             `Authentication failed: ${err.message}`,
+          ),
+        );
+      } else if (err.message.includes("verification failed")) {
+        errorStage = "handshake";
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            errorStage,
+            `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
           ),
         );
       } else {
@@ -1177,7 +1310,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
           return;
         }
       } catch (socks5Error) {
-        dockerLogger.error("SOCKS5 connection failed", socks5Error, {
+        sshLogger.error("SOCKS5 connection failed", socks5Error, {
           operation: "docker_socks5_connect",
           sessionId,
           hostId,
@@ -1238,7 +1371,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         host.port || 22,
         (err, stream) => {
           if (err) {
-            dockerLogger.error("Failed to forward through jump host", err, {
+            sshLogger.error("Failed to forward through jump host", err, {
               operation: "docker_jump_forward",
               sessionId,
               hostId,
@@ -1269,7 +1402,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       client.connect(config);
     }
   } catch (error) {
-    dockerLogger.error("Docker SSH connection error", error, {
+    sshLogger.error("Docker SSH connection error", error, {
       operation: "docker_connect",
       sessionId,
       hostId,
@@ -1359,7 +1492,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   const userId = (req as any).userId;
 
   if (!userId) {
-    dockerLogger.error("TOTP verification rejected: no authenticated user", {
+    sshLogger.error("TOTP verification rejected: no authenticated user", {
       operation: "docker_totp_auth",
       sessionId,
     });
@@ -1373,7 +1506,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   const session = pendingTOTPSessions[sessionId];
 
   if (!session) {
-    dockerLogger.warn("TOTP session not found or expired", {
+    sshLogger.warn("TOTP session not found or expired", {
       operation: "docker_totp_verify",
       sessionId,
       userId,
@@ -1389,7 +1522,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     try {
       session.client.end();
     } catch {}
-    dockerLogger.warn("TOTP session timeout before code submission", {
+    sshLogger.warn("TOTP session timeout before code submission", {
       operation: "docker_totp_verify",
       sessionId,
       userId,
@@ -1471,7 +1604,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
               },
             );
           } catch (error) {
-            dockerLogger.warn("Failed to log Docker activity (TOTP)", {
+            sshLogger.warn("Failed to log Docker activity (TOTP)", {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
@@ -1490,7 +1623,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
 
     delete pendingTOTPSessions[sessionId];
 
-    dockerLogger.error("TOTP verification failed", {
+    sshLogger.error("TOTP verification failed", {
       operation: "docker_totp_verify",
       sessionId,
       userId,
@@ -1504,7 +1637,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     if (!responseSent) {
       responseSent = true;
       delete pendingTOTPSessions[sessionId];
-      dockerLogger.warn("TOTP verification timeout", {
+      sshLogger.warn("TOTP verification timeout", {
         operation: "docker_totp_verify",
         sessionId,
         userId,
@@ -1549,13 +1682,10 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   const userId = (req as any).userId;
 
   if (!userId) {
-    dockerLogger.error(
-      "Warpgate verification rejected: no authenticated user",
-      {
-        operation: "docker_warpgate_auth",
-        sessionId,
-      },
-    );
+    sshLogger.error("Warpgate verification rejected: no authenticated user", {
+      operation: "docker_warpgate_auth",
+      sessionId,
+    });
     return res.status(401).json({ error: "Authentication required" });
   }
 
@@ -1566,7 +1696,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   const session = pendingTOTPSessions[sessionId];
 
   if (!session) {
-    dockerLogger.warn("Warpgate session not found or expired", {
+    sshLogger.warn("Warpgate session not found or expired", {
       operation: "docker_warpgate_verify",
       sessionId,
       userId,
@@ -1586,7 +1716,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
     try {
       session.client.end();
     } catch {}
-    dockerLogger.warn("Warpgate session timeout before completion", {
+    sshLogger.warn("Warpgate session timeout before completion", {
       operation: "docker_warpgate_verify",
       sessionId,
       userId,
@@ -1658,7 +1788,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
               },
             );
           } catch (error) {
-            dockerLogger.warn("Failed to log Docker activity (Warpgate)", {
+            sshLogger.warn("Failed to log Docker activity (Warpgate)", {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
@@ -1677,7 +1807,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
 
     delete pendingTOTPSessions[sessionId];
 
-    dockerLogger.error("Warpgate verification failed", {
+    sshLogger.error("Warpgate verification failed", {
       operation: "docker_warpgate_verify",
       sessionId,
       userId,
@@ -1693,7 +1823,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
     if (!responseSent) {
       responseSent = true;
       delete pendingTOTPSessions[sessionId];
-      dockerLogger.warn("Warpgate verification timeout", {
+      sshLogger.warn("Warpgate verification timeout", {
         operation: "docker_warpgate_verify",
         sessionId,
         userId,
@@ -1840,12 +1970,21 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
       const versionOutput = await executeDockerCommand(
         session,
         "docker --version",
+        sessionId,
+        userId,
+        session.hostId,
       );
       const versionMatch = versionOutput.match(/Docker version ([^\s,]+)/);
       const version = versionMatch ? versionMatch[1] : "unknown";
 
       try {
-        await executeDockerCommand(session, "docker ps >/dev/null 2>&1");
+        await executeDockerCommand(
+          session,
+          "docker ps >/dev/null 2>&1",
+          sessionId,
+          userId,
+          session.hostId,
+        );
 
         session.activeOperations--;
         return res.json({
@@ -1892,7 +2031,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
     }
   } catch (error) {
     session.activeOperations--;
-    dockerLogger.error("Docker validation error", error, {
+    sshLogger.error("Docker validation error", error, {
       operation: "docker_validate",
       sessionId,
       userId,
@@ -1962,7 +2101,13 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
     const allFlag = all ? "-a " : "";
     const command = `docker ps ${allFlag}--format '{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}"}'`;
 
-    const output = await executeDockerCommand(session, command);
+    const output = await executeDockerCommand(
+      session,
+      command,
+      sessionId,
+      userId,
+      session.hostId,
+    );
 
     const containers = output
       .split("\n")
@@ -1971,7 +2116,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
         try {
           return JSON.parse(line);
         } catch (e) {
-          dockerLogger.warn("Failed to parse container line", {
+          sshLogger.warn("Failed to parse container line", {
             operation: "parse_container",
             line,
           });
@@ -1985,7 +2130,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
     res.json(containers);
   } catch (error) {
     session.activeOperations--;
-    dockerLogger.error("Failed to list Docker containers", error, {
+    sshLogger.error("Failed to list Docker containers", error, {
       operation: "list_containers",
       sessionId,
       userId,
@@ -2048,7 +2193,13 @@ app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
 
   try {
     const command = `docker inspect ${containerId}`;
-    const output = await executeDockerCommand(session, command);
+    const output = await executeDockerCommand(
+      session,
+      command,
+      sessionId,
+      userId,
+      session.hostId,
+    );
     const details = JSON.parse(output);
 
     session.activeOperations--;
@@ -2072,7 +2223,7 @@ app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
       });
     }
 
-    dockerLogger.error("Failed to get container details", error, {
+    sshLogger.error("Failed to get container details", error, {
       operation: "get_container_details",
       sessionId,
       containerId,
@@ -2136,7 +2287,21 @@ app.post(
     session.activeOperations++;
 
     try {
-      await executeDockerCommand(session, `docker start ${containerId}`);
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "start",
+      });
+      await executeDockerCommand(
+        session,
+        `docker start ${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
+      );
 
       session.activeOperations--;
 
@@ -2156,7 +2321,7 @@ app.post(
         });
       }
 
-      dockerLogger.error("Failed to start container", error, {
+      sshLogger.error("Failed to start container", error, {
         operation: "start_container",
         sessionId,
         containerId,
@@ -2222,7 +2387,21 @@ app.post(
     session.activeOperations++;
 
     try {
-      await executeDockerCommand(session, `docker stop ${containerId}`);
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "stop",
+      });
+      await executeDockerCommand(
+        session,
+        `docker stop ${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
+      );
 
       session.activeOperations--;
 
@@ -2242,7 +2421,7 @@ app.post(
         });
       }
 
-      dockerLogger.error("Failed to stop container", error, {
+      sshLogger.error("Failed to stop container", error, {
         operation: "stop_container",
         sessionId,
         containerId,
@@ -2308,7 +2487,21 @@ app.post(
     session.activeOperations++;
 
     try {
-      await executeDockerCommand(session, `docker restart ${containerId}`);
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "restart",
+      });
+      await executeDockerCommand(
+        session,
+        `docker restart ${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
+      );
 
       session.activeOperations--;
 
@@ -2328,7 +2521,7 @@ app.post(
         });
       }
 
-      dockerLogger.error("Failed to restart container", error, {
+      sshLogger.error("Failed to restart container", error, {
         operation: "restart_container",
         sessionId,
         containerId,
@@ -2394,7 +2587,21 @@ app.post(
     session.activeOperations++;
 
     try {
-      await executeDockerCommand(session, `docker pause ${containerId}`);
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "pause",
+      });
+      await executeDockerCommand(
+        session,
+        `docker pause ${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
+      );
 
       session.activeOperations--;
 
@@ -2414,7 +2621,7 @@ app.post(
         });
       }
 
-      dockerLogger.error("Failed to pause container", error, {
+      sshLogger.error("Failed to pause container", error, {
         operation: "pause_container",
         sessionId,
         containerId,
@@ -2480,7 +2687,21 @@ app.post(
     session.activeOperations++;
 
     try {
-      await executeDockerCommand(session, `docker unpause ${containerId}`);
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "unpause",
+      });
+      await executeDockerCommand(
+        session,
+        `docker unpause ${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
+      );
 
       session.activeOperations--;
 
@@ -2500,7 +2721,7 @@ app.post(
         });
       }
 
-      dockerLogger.error("Failed to unpause container", error, {
+      sshLogger.error("Failed to unpause container", error, {
         operation: "unpause_container",
         sessionId,
         containerId,
@@ -2571,10 +2792,21 @@ app.delete(
     session.activeOperations++;
 
     try {
+      sshLogger.info("Docker container operation", {
+        operation: "docker_container_op",
+        sessionId,
+        userId,
+        hostId: session.hostId,
+        containerId,
+        action: "remove",
+      });
       const forceFlag = force ? "-f " : "";
       await executeDockerCommand(
         session,
         `docker rm ${forceFlag}${containerId}`,
+        sessionId,
+        userId,
+        session.hostId,
       );
 
       session.activeOperations--;
@@ -2604,7 +2836,7 @@ app.delete(
         });
       }
 
-      dockerLogger.error("Failed to remove container", error, {
+      sshLogger.error("Failed to remove container", error, {
         operation: "remove_container",
         sessionId,
         containerId,
@@ -2706,7 +2938,13 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
       command += ` --until ${until}`;
     }
 
-    const logs = await executeDockerCommand(session, command);
+    const logs = await executeDockerCommand(
+      session,
+      command,
+      sessionId,
+      userId,
+      session.hostId,
+    );
 
     session.activeOperations--;
 
@@ -2726,7 +2964,7 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
       });
     }
 
-    dockerLogger.error("Failed to get container logs", error, {
+    sshLogger.error("Failed to get container logs", error, {
       operation: "get_logs",
       sessionId,
       containerId,
@@ -2793,7 +3031,13 @@ app.get(
     try {
       const command = `docker stats ${containerId} --no-stream --format '{"cpu":"{{.CPUPerc}}","memory":"{{.MemUsage}}","memoryPercent":"{{.MemPerc}}","netIO":"{{.NetIO}}","blockIO":"{{.BlockIO}}","pids":"{{.PIDs}}"}'`;
 
-      const output = await executeDockerCommand(session, command);
+      const output = await executeDockerCommand(
+        session,
+        command,
+        sessionId,
+        userId,
+        session.hostId,
+      );
       const rawStats = JSON.parse(output.trim());
 
       const memoryParts = rawStats.memory.split(" / ");
@@ -2835,7 +3079,7 @@ app.get(
         });
       }
 
-      dockerLogger.error("Failed to get container stats", error, {
+      sshLogger.error("Failed to get container stats", error, {
         operation: "get_stats",
         sessionId,
         containerId,
@@ -2856,7 +3100,7 @@ app.listen(PORT, async () => {
   try {
     await authManager.initialize();
   } catch (err) {
-    dockerLogger.error("Failed to initialize Docker backend", err, {
+    sshLogger.error("Failed to initialize Docker backend", err, {
       operation: "startup",
     });
   }
