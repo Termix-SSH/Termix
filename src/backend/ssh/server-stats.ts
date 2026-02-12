@@ -24,6 +24,10 @@ import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import {
+  connectionPool,
+  withConnection,
+} from "./ssh-connection-pool.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -216,13 +220,6 @@ async function createJumpHostChain(
   }
 }
 
-interface PooledConnection {
-  client: Client;
-  lastUsed: number;
-  inUse: boolean;
-  hostKey: string;
-}
-
 interface MetricsSession {
   client: Client;
   isConnected: boolean;
@@ -297,355 +294,6 @@ function scheduleMetricsSessionCleanup(sessionId: string) {
 
 function getSessionKey(hostId: number, userId: string): string {
   return `${userId}:${hostId}`;
-}
-
-class SSHConnectionPool {
-  private connections = new Map<string, PooledConnection[]>();
-  private maxConnectionsPerHost = 3;
-  private connectionTimeout = 30000;
-  private cleanupInterval: NodeJS.Timeout;
-
-  constructor() {
-    this.cleanupInterval = setInterval(
-      () => {
-        this.cleanup();
-      },
-      2 * 60 * 1000,
-    );
-  }
-
-  private getHostKey(host: SSHHostWithCredentials): string {
-    const socks5Key = host.useSocks5
-      ? `:socks5:${host.socks5Host}:${host.socks5Port}:${JSON.stringify(host.socks5ProxyChain || [])}`
-      : "";
-    return `${host.ip}:${host.port}:${host.username}${socks5Key}`;
-  }
-
-  private isConnectionHealthy(client: Client): boolean {
-    try {
-      const sock = (client as any)._sock;
-      if (sock && (sock.destroyed || !sock.writable)) {
-        return false;
-      }
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async getConnection(host: SSHHostWithCredentials): Promise<Client> {
-    const hostKey = this.getHostKey(host);
-    let connections = this.connections.get(hostKey) || [];
-
-    const available = connections.find((conn) => !conn.inUse);
-    if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        statsLogger.warn("Removing unhealthy connection from pool", {
-          operation: "remove_dead_connection",
-          hostKey,
-        });
-        try {
-          available.client.end();
-        } catch (error) {
-          // Ignore cleanup errors
-        }
-        connections = connections.filter((c) => c !== available);
-        this.connections.set(hostKey, connections);
-      } else {
-        available.inUse = true;
-        available.lastUsed = Date.now();
-        return available.client;
-      }
-    }
-
-    if (connections.length < this.maxConnectionsPerHost) {
-      const client = await this.createConnection(host);
-      const pooled: PooledConnection = {
-        client,
-        lastUsed: Date.now(),
-        inUse: true,
-        hostKey,
-      };
-      connections.push(pooled);
-      this.connections.set(hostKey, connections);
-      return client;
-    }
-
-    return new Promise((resolve) => {
-      const checkAvailable = () => {
-        const available = connections.find((conn) => !conn.inUse);
-        if (available) {
-          available.inUse = true;
-          available.lastUsed = Date.now();
-          resolve(available.client);
-        } else {
-          setTimeout(checkAvailable, 100);
-        }
-      };
-      checkAvailable();
-    });
-  }
-
-  private async createConnection(
-    host: SSHHostWithCredentials,
-  ): Promise<Client> {
-    return new Promise(async (resolve, reject) => {
-      const config = await buildSshConfig(host);
-      const client = new Client();
-      const timeout = setTimeout(() => {
-        client.end();
-        reject(new Error("SSH connection timeout"));
-      }, this.connectionTimeout);
-
-      client.on("ready", () => {
-        clearTimeout(timeout);
-        resolve(client);
-      });
-
-      client.on("error", (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      });
-
-      client.on(
-        "keyboard-interactive",
-        (
-          name: string,
-          instructions: string,
-          instructionsLang: string,
-          prompts: Array<{ prompt: string; echo: boolean }>,
-          finish: (responses: string[]) => void,
-        ) => {
-          const totpPromptIndex = prompts.findIndex((p) =>
-            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-              p.prompt,
-            ),
-          );
-
-          if (totpPromptIndex !== -1) {
-            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            pendingTOTPSessions[sessionId] = {
-              client,
-              finish,
-              config,
-              createdAt: Date.now(),
-              sessionId,
-              hostId: host.id,
-              userId: host.userId!,
-              prompts: prompts.map((p) => ({
-                prompt: p.prompt,
-                echo: p.echo ?? false,
-              })),
-              totpPromptIndex,
-              resolvedPassword: host.password,
-              totpAttempts: 0,
-            };
-
-            return;
-          } else if (host.password) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt)) {
-                return host.password || "";
-              }
-              return "";
-            });
-            finish(responses);
-          } else {
-            finish(prompts.map(() => ""));
-          }
-        },
-      );
-
-      try {
-        if (
-          host.useSocks5 &&
-          (host.socks5Host ||
-            (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ) {
-          try {
-            const socks5Socket = await createSocks5Connection(
-              host.ip,
-              host.port,
-              {
-                useSocks5: host.useSocks5,
-                socks5Host: host.socks5Host,
-                socks5Port: host.socks5Port,
-                socks5Username: host.socks5Username,
-                socks5Password: host.socks5Password,
-                socks5ProxyChain: host.socks5ProxyChain,
-              },
-            );
-
-            if (socks5Socket) {
-              config.sock = socks5Socket;
-              client.connect(config);
-              return;
-            } else {
-              statsLogger.error("SOCKS5 socket is null", undefined, {
-                operation: "socks5_socket_null",
-                hostIp: host.ip,
-              });
-            }
-          } catch (socks5Error) {
-            clearTimeout(timeout);
-            statsLogger.error("SOCKS5 connection error", socks5Error, {
-              operation: "socks5_connection_error",
-              hostIp: host.ip,
-              errorMessage:
-                socks5Error instanceof Error ? socks5Error.message : "Unknown",
-            });
-            reject(
-              new Error(
-                "SOCKS5 proxy connection failed: " +
-                  (socks5Error instanceof Error
-                    ? socks5Error.message
-                    : "Unknown error"),
-              ),
-            );
-            return;
-          }
-        }
-
-        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-          const jumpClient = await createJumpHostChain(
-            host.jumpHosts,
-            host.userId,
-          );
-
-          if (!jumpClient) {
-            clearTimeout(timeout);
-            reject(new Error("Failed to establish jump host chain"));
-            return;
-          }
-
-          jumpClient.forwardOut(
-            "127.0.0.1",
-            0,
-            host.ip,
-            host.port,
-            (err, stream) => {
-              if (err) {
-                clearTimeout(timeout);
-                jumpClient.end();
-                reject(
-                  new Error(
-                    "Failed to forward through jump host: " + err.message,
-                  ),
-                );
-                return;
-              }
-
-              config.sock = stream;
-              client.connect(config);
-            },
-          );
-        } else {
-          client.connect(config);
-        }
-      } catch (err) {
-        clearTimeout(timeout);
-        reject(err);
-      }
-    });
-  }
-
-  releaseConnection(host: SSHHostWithCredentials, client: Client): void {
-    const hostKey = this.getHostKey(host);
-    const connections = this.connections.get(hostKey) || [];
-    const pooled = connections.find((conn) => conn.client === client);
-    if (pooled) {
-      pooled.inUse = false;
-      pooled.lastUsed = Date.now();
-    }
-  }
-
-  clearHostConnections(host: SSHHostWithCredentials): void {
-    const hostKey = this.getHostKey(host);
-    const connections = this.connections.get(hostKey) || [];
-
-    for (const conn of connections) {
-      try {
-        conn.client.end();
-      } catch (error) {
-        statsLogger.error("Error closing connection during cleanup", error, {
-          operation: "clear_connection_error",
-        });
-      }
-    }
-
-    this.connections.delete(hostKey);
-  }
-
-  private cleanup(): void {
-    const now = Date.now();
-    const maxAge = 10 * 60 * 1000;
-    let totalCleaned = 0;
-    let totalUnhealthy = 0;
-
-    for (const [hostKey, connections] of this.connections.entries()) {
-      const activeConnections = connections.filter((conn) => {
-        if (!conn.inUse && now - conn.lastUsed > maxAge) {
-          try {
-            conn.client.end();
-          } catch (error) {}
-          totalCleaned++;
-          return false;
-        }
-        if (!this.isConnectionHealthy(conn.client)) {
-          statsLogger.warn("Removing unhealthy connection during cleanup", {
-            operation: "cleanup_unhealthy",
-            hostKey,
-            inUse: conn.inUse,
-          });
-          try {
-            conn.client.end();
-          } catch (error) {}
-          totalUnhealthy++;
-          return false;
-        }
-        return true;
-      });
-
-      if (activeConnections.length === 0) {
-        this.connections.delete(hostKey);
-      } else {
-        this.connections.set(hostKey, activeConnections);
-      }
-    }
-  }
-
-  clearAllConnections(): void {
-    for (const [hostKey, connections] of this.connections.entries()) {
-      for (const conn of connections) {
-        try {
-          conn.client.end();
-        } catch (error) {
-          statsLogger.error(
-            "Error closing connection during full cleanup",
-            error,
-            {
-              operation: "clear_all_error",
-              hostKey,
-            },
-          );
-        }
-      }
-    }
-    this.connections.clear();
-  }
-
-  destroy(): void {
-    clearInterval(this.cleanupInterval);
-    for (const connections of this.connections.values()) {
-      for (const conn of connections) {
-        try {
-          conn.client.end();
-        } catch (error) {}
-      }
-    }
-    this.connections.clear();
-  }
 }
 
 class RequestQueue {
@@ -898,7 +546,6 @@ class PollingBackoff {
   }
 }
 
-const connectionPool = new SSHConnectionPool();
 const requestQueue = new RequestQueue();
 const metricsCache = new MetricsCache();
 const authFailureTracker = new AuthFailureTracker();
@@ -1766,18 +1413,177 @@ async function buildSshConfig(
   return base;
 }
 
+function getPoolKey(host: SSHHostWithCredentials): string {
+  const socks5Key = host.useSocks5
+    ? `:socks5:${host.socks5Host}:${host.socks5Port}`
+    : "";
+  return `stats:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
+}
+
+function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
+  return () =>
+    new Promise(async (resolve, reject) => {
+      const config = await buildSshConfig(host);
+      const client = new Client();
+      const timeout = setTimeout(() => {
+        client.end();
+        reject(new Error("SSH connection timeout"));
+      }, 30000);
+
+      client.on("ready", () => {
+        clearTimeout(timeout);
+        resolve(client);
+      });
+
+      client.on("error", (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+
+      client.on(
+        "keyboard-interactive",
+        (
+          _name: string,
+          _instructions: string,
+          _instructionsLang: string,
+          prompts: Array<{ prompt: string; echo: boolean }>,
+          finish: (responses: string[]) => void,
+        ) => {
+          const totpPromptIndex = prompts.findIndex((p) =>
+            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+              p.prompt,
+            ),
+          );
+
+          if (totpPromptIndex !== -1) {
+            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId: host.id,
+              userId: host.userId!,
+              prompts: prompts.map((p) => ({
+                prompt: p.prompt,
+                echo: p.echo ?? false,
+              })),
+              totpPromptIndex,
+              resolvedPassword: host.password,
+              totpAttempts: 0,
+            };
+
+            return;
+          } else if (host.password) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt)) {
+                return host.password || "";
+              }
+              return "";
+            });
+            finish(responses);
+          } else {
+            finish(prompts.map(() => ""));
+          }
+        },
+      );
+
+      try {
+        if (
+          host.useSocks5 &&
+          (host.socks5Host ||
+            (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+        ) {
+          try {
+            const socks5Socket = await createSocks5Connection(
+              host.ip,
+              host.port,
+              {
+                useSocks5: host.useSocks5,
+                socks5Host: host.socks5Host,
+                socks5Port: host.socks5Port,
+                socks5Username: host.socks5Username,
+                socks5Password: host.socks5Password,
+                socks5ProxyChain: host.socks5ProxyChain,
+              },
+            );
+
+            if (socks5Socket) {
+              config.sock = socks5Socket;
+              client.connect(config);
+              return;
+            } else {
+              statsLogger.error("SOCKS5 socket is null", undefined, {
+                operation: "socks5_socket_null",
+                hostIp: host.ip,
+              });
+            }
+          } catch (socks5Error) {
+            clearTimeout(timeout);
+            reject(
+              new Error(
+                "SOCKS5 proxy connection failed: " +
+                  (socks5Error instanceof Error
+                    ? socks5Error.message
+                    : "Unknown error"),
+              ),
+            );
+            return;
+          }
+        }
+
+        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+          const jumpClient = await createJumpHostChain(
+            host.jumpHosts,
+            host.userId,
+          );
+
+          if (!jumpClient) {
+            clearTimeout(timeout);
+            reject(new Error("Failed to establish jump host chain"));
+            return;
+          }
+
+          jumpClient.forwardOut(
+            "127.0.0.1",
+            0,
+            host.ip,
+            host.port,
+            (err, stream) => {
+              if (err) {
+                clearTimeout(timeout);
+                jumpClient.end();
+                reject(
+                  new Error(
+                    "Failed to forward through jump host: " + err.message,
+                  ),
+                );
+                return;
+              }
+
+              config.sock = stream;
+              client.connect(config);
+            },
+          );
+        } else {
+          client.connect(config);
+        }
+      } catch (err) {
+        clearTimeout(timeout);
+        reject(err);
+      }
+    });
+}
+
 async function withSshConnection<T>(
   host: SSHHostWithCredentials,
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const client = await connectionPool.getConnection(host);
-
-  try {
-    const result = await fn(client);
-    return result;
-  } finally {
-    connectionPool.releaseConnection(host, client);
-  }
+  const key = getPoolKey(host);
+  const factory = createSshFactory(host);
+  return withConnection(key, factory, fn);
 }
 
 async function collectMetrics(host: SSHHostWithCredentials): Promise<{
@@ -2180,7 +1986,7 @@ app.post("/host-updated", async (req, res) => {
   try {
     const host = await fetchHostById(hostId, userId);
     if (host) {
-      connectionPool.clearHostConnections(host);
+      connectionPool.clearKeyConnections(getPoolKey(host));
 
       await pollingManager.startPollingForHost(host);
       res.json({ message: "Host polling started" });
