@@ -1228,7 +1228,7 @@ style.innerHTML = `
 }
 
 .xterm {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1236,11 +1236,11 @@ style.innerHTML = `
 
 .xterm .xterm-screen {
   font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
-  font-variant-ligatures: contextual;
+  font-variant-ligatures: none;
 }
 
 .xterm .xterm-screen .xterm-char {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 `;
 document.head.appendChild(style);
