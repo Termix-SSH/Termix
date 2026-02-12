@@ -4,6 +4,7 @@ import { getDb } from "../db/index.js";
 import { networkTopology } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
+import { databaseLogger } from "../../utils/logger.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -83,7 +84,10 @@ router.get(
         return res.json(null);
       }
     } catch (error) {
-      console.error("Error fetching network topology:", error);
+      databaseLogger.error("Failed to fetch network topology", error, {
+        operation: "network_topology_fetch",
+        userId: (req as AuthenticatedRequest).userId,
+      });
       return res.status(500).json({
         error: "Failed to fetch network topology",
         details: (error as Error).message,
@@ -176,7 +180,10 @@ router.post(
 
       return res.json({ success: true });
     } catch (error) {
-      console.error("Error saving network topology:", error);
+      databaseLogger.error("Failed to save network topology", error, {
+        operation: "network_topology_save",
+        userId: (req as AuthenticatedRequest).userId,
+      });
       return res.status(500).json({
         error: "Failed to save network topology",
         details: (error as Error).message,

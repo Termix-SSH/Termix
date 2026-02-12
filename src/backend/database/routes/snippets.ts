@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { snippets, snippetFolders } from "../db/schema.js";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { authLogger } from "../../utils/logger.js";
+import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 
 const router = express.Router();
@@ -1043,9 +1043,8 @@ router.post(
       };
 
       const result = await db.insert(snippets).values(insertData).returning();
-
-      authLogger.success(`Snippet created: ${name} by user ${userId}`, {
-        operation: "snippet_create_success",
+      databaseLogger.info("Command snippet created", {
+        operation: "snippet_create",
         userId,
         snippetId: result[0].id,
         name,
@@ -1156,16 +1155,11 @@ router.put(
         .select()
         .from(snippets)
         .where(eq(snippets.id, parseInt(id)));
-
-      authLogger.success(
-        `Snippet updated: ${updated[0].name} by user ${userId}`,
-        {
-          operation: "snippet_update_success",
-          userId,
-          snippetId: parseInt(id),
-          name: updated[0].name,
-        },
-      );
+      databaseLogger.info("Command snippet updated", {
+        operation: "snippet_update",
+        userId,
+        snippetId: parseInt(id),
+      });
 
       res.json(updated[0]);
     } catch (err) {
@@ -1227,16 +1221,11 @@ router.delete(
       await db
         .delete(snippets)
         .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
-
-      authLogger.success(
-        `Snippet deleted: ${existing[0].name} by user ${userId}`,
-        {
-          operation: "snippet_delete_success",
-          userId,
-          snippetId: parseInt(id),
-          name: existing[0].name,
-        },
-      );
+      databaseLogger.info("Command snippet deleted", {
+        operation: "snippet_delete",
+        userId,
+        snippetId: parseInt(id),
+      });
 
       res.json({ success: true });
     } catch (err) {

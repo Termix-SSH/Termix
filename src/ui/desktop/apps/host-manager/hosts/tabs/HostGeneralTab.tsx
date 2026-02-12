@@ -118,10 +118,15 @@ export function HostGeneralTab({
           name="username"
           render={({ field }) => {
             const isCredentialAuth = authTab === "credential";
-            const hasCredential = !!form.watch("credentialId");
-            const overrideEnabled = !!form.watch("overrideCredentialUsername");
+            const credentialId = form.watch("credentialId");
+            const overrideEnabled = form.watch("overrideCredentialUsername");
+            const selectedCredential = credentials.find(
+              (c) => c.id === credentialId,
+            );
             const shouldDisable =
-              isCredentialAuth && hasCredential && !overrideEnabled;
+              isCredentialAuth &&
+              selectedCredential?.username &&
+              !overrideEnabled;
 
             return (
               <FormItem className="col-span-6">
@@ -131,6 +136,17 @@ export function HostGeneralTab({
                     placeholder={t("placeholders.username")}
                     disabled={shouldDisable}
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      if (
+                        isCredentialAuth &&
+                        selectedCredential &&
+                        !selectedCredential.username &&
+                        e.target.value.trim() !== ""
+                      ) {
+                        form.setValue("overrideCredentialUsername", true);
+                      }
+                    }}
                     onBlur={(e) => {
                       field.onChange(e.target.value.trim());
                       field.onBlur();
@@ -319,7 +335,8 @@ export function HostGeneralTab({
             | "password"
             | "key"
             | "credential"
-            | "none";
+            | "none"
+            | "opkssh";
           setAuthTab(newAuthType);
           form.setValue("authType", newAuthType);
         }}
@@ -353,6 +370,13 @@ export function HostGeneralTab({
             className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t("hosts.none")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="opkssh"
+            disabled={editingHost?.isShared}
+            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {t("hosts.opkssh")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="password">
@@ -558,6 +582,7 @@ export function HostGeneralTab({
                       onCredentialSelect={(credential) => {
                         if (
                           credential &&
+                          credential.username &&
                           !form.getValues("overrideCredentialUsername")
                         ) {
                           form.setValue("username", credential.username);
@@ -573,30 +598,36 @@ export function HostGeneralTab({
                 </FormItem>
               )}
             />
-            {form.watch("credentialId") && (
-              <FormField
-                control={form.control}
-                name="overrideCredentialUsername"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
-                    <div className="space-y-0.5">
-                      <FormLabel>
-                        {t("hosts.overrideCredentialUsername")}
-                      </FormLabel>
-                      <FormDescription>
-                        {t("hosts.overrideCredentialUsernameDesc")}
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
+            {form.watch("credentialId") &&
+              (() => {
+                const selectedCredential = credentials.find(
+                  (c) => c.id === form.watch("credentialId"),
+                );
+                return selectedCredential?.username ? (
+                  <FormField
+                    control={form.control}
+                    name="overrideCredentialUsername"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                        <div className="space-y-0.5">
+                          <FormLabel>
+                            {t("hosts.overrideCredentialUsername")}
+                          </FormLabel>
+                          <FormDescription>
+                            {t("hosts.overrideCredentialUsernameDesc")}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ) : null;
+              })()}
           </div>
         </TabsContent>
         <TabsContent value="none">
@@ -605,6 +636,24 @@ export function HostGeneralTab({
               <strong>{t("hosts.noneAuthTitle")}</strong>
               <div className="mt-2">{t("hosts.noneAuthDescription")}</div>
               <div className="mt-2 text-sm">{t("hosts.noneAuthDetails")}</div>
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+        <TabsContent value="opkssh">
+          <Alert className="mt-2">
+            <AlertDescription>
+              <strong>{t("hosts.opksshAuthTitle")}</strong>
+              <div className="mt-2">{t("hosts.opksshAuthDescription")}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() =>
+                  window.open("https://docs.termix.site/opkssh", "_blank")
+                }
+              >
+                {t("common.documentation")}
+              </Button>
             </AlertDescription>
           </Alert>
         </TabsContent>

@@ -51,11 +51,12 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
+    update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
+    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
     chown -R node:node /app && \
-    chmod 755 /app/data /app/uploads /app/nginx && \
+    chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx && \
     touch /app/nginx/nginx.conf && \
     chown node:node /app/nginx/nginx.conf
 
@@ -74,12 +75,10 @@ VOLUME ["/app/data"]
 
 EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:30001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null http://localhost:30001/health || exit 1
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-USER node
 
 CMD ["/entrypoint.sh"]

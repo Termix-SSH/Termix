@@ -23,7 +23,7 @@ export interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none";
+  authType: "password" | "key" | "credential" | "none" | "opkssh";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -95,7 +95,7 @@ export interface SSHHostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none";
+  authType: "password" | "key" | "credential" | "none" | "opkssh";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -150,7 +150,7 @@ export interface Credential {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;
@@ -170,7 +170,7 @@ export interface CredentialBackend {
   folder: string | null;
   tags: string;
   authType: "password" | "key";
-  username: string;
+  username: string | null;
   password: string | null;
   key: string;
   private_key?: string;
@@ -190,7 +190,7 @@ export interface CredentialData {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;
@@ -465,7 +465,7 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential" | "none";
+export type AuthType = "password" | "key" | "credential" | "none" | "opkssh";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
@@ -486,11 +486,13 @@ export interface ApiResponse<T = unknown> {
 
 export interface CredentialsManagerProps {
   onEditCredential?: (credential: Credential) => void;
+  onAddCredential?: () => void;
 }
 
 export interface CredentialEditorProps {
   editingCredential?: Credential | null;
   onFormSubmit?: () => void;
+  onBack?: () => void;
 }
 
 export interface CredentialViewerProps {
@@ -523,6 +525,7 @@ export interface SSHManagerHostEditorProps {
 
 export interface SSHManagerHostViewerProps {
   onEditHost?: (host: SSHHost) => void;
+  onAddHost?: () => void;
 }
 
 export interface HostProps {

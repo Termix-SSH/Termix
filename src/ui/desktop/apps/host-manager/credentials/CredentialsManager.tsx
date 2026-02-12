@@ -45,6 +45,9 @@ import {
   Server,
   User,
   ChevronsUpDown,
+  Terminal,
+  Copy,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -63,6 +66,7 @@ import type { Credential, CredentialsManagerProps } from "../../../../../types";
 
 export function CredentialsManager({
   onEditCredential,
+  onAddCredential,
 }: CredentialsManagerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
@@ -94,6 +98,9 @@ export function CredentialsManager({
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
   const [hostComboboxOpen, setHostComboboxOpen] = useState(false);
+  const [showCopyCommandDialog, setShowCopyCommandDialog] = useState(false);
+  const [copyCommandCredential, setCopyCommandCredential] =
+    useState<Credential | null>(null);
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -149,6 +156,40 @@ export function CredentialsManager({
     setSelectedHostId("");
     setHostComboboxOpen(false);
     setShowDeployDialog(true);
+  };
+
+  const handleCopyCommand = (credential: Credential) => {
+    if (credential.authType !== "key") {
+      toast.error(t("credentials.keyBasedOnlyForDeployment"));
+      return;
+    }
+    if (!credential.publicKey) {
+      toast.error(t("credentials.publicKeyRequiredForDeployment"));
+      return;
+    }
+    setCopyCommandCredential(credential);
+    setShowCopyCommandDialog(true);
+  };
+
+  const getDeployCommand = (credential: Credential): string => {
+    const publicKey = credential.publicKey?.trim() || "";
+    const comment = `${credential.name || credential.username}@Termix`;
+    const keyWithComment = publicKey.includes(" ")
+      ? `${publicKey.split(" ").slice(0, 2).join(" ")} ${comment}`
+      : `${publicKey} ${comment}`;
+    return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${keyWithComment}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+  };
+
+  const copyDeployCommand = async () => {
+    if (!copyCommandCredential) return;
+    try {
+      await navigator.clipboard.writeText(
+        getDeployCommand(copyCommandCredential),
+      );
+      toast.success(t("credentials.deployCommandCopied"));
+    } catch {
+      toast.error(t("credentials.failedToCopy"));
+    }
   };
 
   const performDeploy = async () => {
@@ -420,7 +461,7 @@ export function CredentialsManager({
   if (credentials.length === 0) {
     return (
       <div className="flex flex-col h-full min-h-0">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="text-xl font-semibold">
               {t("credentials.sshCredentials")}
@@ -434,6 +475,23 @@ export function CredentialsManager({
               {t("credentials.refresh")}
             </Button>
           </div>
+        </div>
+
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("placeholders.searchCredentials")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+              disabled
+            />
+          </div>
+          <Button variant="outline" className="h-9" onClick={onAddCredential}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("credentials.addCredential")}
+          </Button>
         </div>
 
         <div className="flex items-center justify-center flex-1">
@@ -471,14 +529,20 @@ export function CredentialsManager({
         </div>
       </div>
 
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t("placeholders.searchCredentials")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("placeholders.searchCredentials")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-9"
+          />
+        </div>
+        <Button variant="outline" className="h-9" onClick={onAddCredential}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("credentials.addCredential")}
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
@@ -675,24 +739,48 @@ export function CredentialsManager({
                                         </TooltipContent>
                                       </Tooltip>
                                       {credential.authType === "key" && (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeploy(credential);
-                                              }}
-                                              className="h-5 w-5 p-0 text-green-600 hover:text-green-700 hover:bg-green-500/10"
-                                            >
-                                              <Upload className="h-3 w-3" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>Deploy SSH key to host</p>
-                                          </TooltipContent>
-                                        </Tooltip>
+                                        <>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeploy(credential);
+                                                }}
+                                                className="h-5 w-5 p-0 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                                              >
+                                                <Upload className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Deploy SSH key to host</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleCopyCommand(credential);
+                                                }}
+                                                className="h-5 w-5 p-0 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-500/10"
+                                              >
+                                                <Terminal className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>
+                                                {t(
+                                                  "credentials.copyDeployCommand",
+                                                )}
+                                              </p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </>
                                       )}
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -989,6 +1077,106 @@ export function CredentialsManager({
                   </Button>
                 </div>
               </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={showCopyCommandDialog}
+        onOpenChange={setShowCopyCommandDialog}
+      >
+        <SheetContent className="w-[500px] max-w-[50vw] overflow-y-auto thin-scrollbar bg-canvas">
+          <div className="px-4 py-4">
+            <div className="space-y-3 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-1">
+                  <div className="text-lg font-semibold">
+                    {t("credentials.copyDeployCommand")}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {t("credentials.copyDeployCommandDescription")}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {copyCommandCredential && (
+                <>
+                  <div className="border rounded-lg p-3 bg-muted/20">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center">
+                      <Key className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {t("credentials.sourceCredential")}
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3 px-2 py-1">
+                        <div className="p-1.5 rounded bg-muted">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground">
+                            {t("common.name")}
+                          </div>
+                          <div className="text-sm font-medium">
+                            {copyCommandCredential.name ||
+                              copyCommandCredential.username}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3 px-2 py-1">
+                        <div className="p-1.5 rounded bg-muted">
+                          <Key className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-muted-foreground">
+                            {t("credentials.keyType")}
+                          </div>
+                          <div className="text-sm font-medium">
+                            {copyCommandCredential.keyType ||
+                              t("credentials.sshKey")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold flex items-center">
+                      <Terminal className="h-4 w-4 mr-2 text-muted-foreground" />
+                      Command
+                    </label>
+                    <pre className="text-xs bg-muted rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all select-all font-mono">
+                      {getDeployCommand(copyCommandCredential)}
+                    </pre>
+                  </div>
+
+                  <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-start space-x-2">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        {t("credentials.manualDeployInfo")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowCopyCommandDialog(false)}
+                        className="flex-1"
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                      <Button onClick={copyDeployCommand} className="flex-1">
+                        <Copy className="h-4 w-4 mr-2" />
+                        {t("credentials.copyDeployCommand")}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </SheetContent>

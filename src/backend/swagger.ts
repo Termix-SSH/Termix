@@ -2,6 +2,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 import path from "path";
 import { fileURLToPath } from "url";
 import { promises as fs } from "fs";
+import { systemLogger } from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,6 +126,10 @@ const swaggerOptions: swaggerJSDoc.Options = {
 
 async function generateOpenAPISpec() {
   try {
+    systemLogger.info("Generating OpenAPI specification", {
+      operation: "openapi_generate_start",
+    });
+
     const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
     const outputPath = path.join(projectRoot, "openapi.json");
@@ -134,8 +139,14 @@ async function generateOpenAPISpec() {
       JSON.stringify(swaggerSpec, null, 2),
       "utf-8",
     );
+
+    systemLogger.success("OpenAPI specification generated", {
+      operation: "openapi_generate_success",
+    });
   } catch (error) {
-    console.error("Failed to generate OpenAPI specification:", error);
+    systemLogger.error("Failed to generate OpenAPI specification", error, {
+      operation: "openapi_generation",
+    });
     process.exit(1);
   }
 }
