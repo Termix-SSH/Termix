@@ -617,8 +617,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } =
-            await import("./opkssh-auth.js");
+          const { startOPKSSHAuth, getRequestOrigin } = await import(
+            "./opkssh-auth.js"
+          );
           const db = getDb();
           const hostRow = await db
             .select()
@@ -846,7 +847,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
-    let authMethodNotAvailable = false;
+    const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(

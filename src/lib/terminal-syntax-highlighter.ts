@@ -113,7 +113,7 @@ const PATTERNS: HighlightPattern[] = [
 function hasExistingAnsiCodes(text: string): boolean {
   const ansiCount = (
     text.match(
-      /\x1b[\[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g,
+      /\x1b[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g,
     ) || []
   ).length;
   return ansiCount > MAX_ANSI_CODES;
