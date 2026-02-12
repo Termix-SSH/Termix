@@ -1,6 +1,22 @@
 #!/bin/sh
 set -e
 
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
+
+if [ "$(id -u)" = "0" ]; then
+    echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
+
+    groupmod -o -g "$PGID" node 2>/dev/null || true
+    usermod -o -u "$PUID" node 2>/dev/null || true
+
+    chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
+
+    echo "User node is now UID: $PUID, GID: $PGID"
+
+    exec gosu node:node "$0" "$@"
+fi
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
@@ -19,8 +35,26 @@ fi
 
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /app/nginx/nginx.conf
 
-mkdir -p /app/data /app/uploads
-chmod 755 /app/data /app/uploads 2>/dev/null || true
+mkdir -p /app/data /app/uploads /app/data/.opk
+chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
+
+if [ -w /app/data ]; then
+    echo "Data directory is writable"
+else
+    echo "WARNING: Data directory is not writable. OPKSSH may fail."
+    ls -ld /app/data
+fi
+
+if [ -w /app/data/.opk ]; then
+    echo "OPKSSH directory is writable"
+else
+    echo "WARNING: OPKSSH directory is not writable. OPKSSH authentication will fail."
+    ls -ld /app/data/.opk
+fi
+
+if [ ! -d "/app/opkssh" ]; then
+    echo "WARNING: OPKSSH binary directory not found at /app/opkssh"
+fi
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."

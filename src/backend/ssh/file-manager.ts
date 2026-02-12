@@ -12,6 +12,7 @@ import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -118,12 +119,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (origin.startsWith("https://")) {
         return callback(null, true);
@@ -244,6 +240,15 @@ async function createJumpHostChain(
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -270,6 +275,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -331,6 +337,8 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
   activeOperations: number;
   sudoPassword?: string;
+  sftp?: import("ssh2").SFTPWrapper;
+  poolKey?: string;
 }
 
 interface PendingTOTPSession {
@@ -392,6 +400,29 @@ function execWithSudo(
   });
 }
 
+function getSessionSftp(
+  session: SSHSession,
+): Promise<import("ssh2").SFTPWrapper> {
+  if (session.sftp) {
+    return Promise.resolve(session.sftp);
+  }
+  return new Promise((resolve, reject) => {
+    session.client.sftp((err, sftp) => {
+      if (err) {
+        return reject(err);
+      }
+      session.sftp = sftp;
+      sftp.on("error", () => {
+        session.sftp = undefined;
+      });
+      sftp.on("close", () => {
+        session.sftp = undefined;
+      });
+      resolve(sftp);
+    });
+  });
+}
+
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
   if (session) {
@@ -409,8 +440,14 @@ function cleanupSession(sessionId: string) {
     }
 
     try {
+      if (session.sftp) {
+        session.sftp.end();
+        session.sftp = undefined;
+      }
+    } catch {}
+    try {
       session.client.end();
-    } catch (error) {}
+    } catch {}
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -785,6 +822,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      hostId,
+      ip,
+      port,
+      null,
+      userId,
+      false,
+    ),
     env: {
       TERM: "xterm-256color",
       LANG: "en_US.UTF-8",
@@ -910,6 +955,92 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     connectionLogs.push(
       createConnectionLog("info", "sftp_auth", "Using password authentication"),
     );
+  } else if (resolvedCredentials.authType === "opkssh") {
+    try {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(userId, hostId);
+
+      if (!token) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "sftp_auth",
+            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
+          ),
+        );
+        return res.status(401).json({
+          error:
+            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
+          requiresOPKSSHAuth: true,
+          connectionLogs,
+        });
+      }
+
+      const { promises: fs } = await import("fs");
+      const path = await import("path");
+      const os = await import("os");
+
+      const tempDir = os.tmpdir();
+      const keyPath = path.join(tempDir, `opkssh-fm-${userId}-${hostId}`);
+      const certPath = `${keyPath}-cert.pub`;
+
+      await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
+      await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
+
+      config.privateKey = await fs.readFile(keyPath);
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using OPKSSH certificate authentication",
+        ),
+      );
+
+      setTimeout(async () => {
+        try {
+          const cleanupResults = await Promise.allSettled([
+            fs.unlink(keyPath),
+            fs.unlink(certPath),
+          ]);
+
+          cleanupResults.forEach((result, index) => {
+            if (result.status === "rejected") {
+              fileLogger.warn(`Failed to cleanup OPKSSH temp file`, {
+                operation: "opkssh_temp_cleanup_failed",
+                file: index === 0 ? "keyPath" : "certPath",
+                sessionId,
+                error: result.reason,
+              });
+            }
+          });
+        } catch (error) {
+          fileLogger.error("Failed to cleanup OPKSSH temp files", {
+            operation: "opkssh_temp_cleanup_error",
+            sessionId,
+            error,
+          });
+        }
+      }, 60000);
+    } catch (opksshError) {
+      fileLogger.error("OPKSSH authentication error for file manager", {
+        operation: "file_connect",
+        sessionId,
+        hostId,
+        error:
+          opksshError instanceof Error ? opksshError.message : "Unknown error",
+      });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "sftp_auth",
+          `OPKSSH authentication failed: ${opksshError instanceof Error ? opksshError.message : "Unknown error"}`,
+        ),
+      );
+      return res.status(500).json({
+        error: "OPKSSH authentication failed",
+        connectionLogs,
+      });
+    }
   } else if (resolvedCredentials.authType === "none") {
     connectionLogs.push(
       createConnectionLog(
@@ -968,6 +1099,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   client.on("ready", () => {
     if (responseSent) return;
     responseSent = true;
+    fileLogger.info("File manager SSH connection established", {
+      operation: "file_ssh_connected",
+      sessionId,
+      userId,
+      hostId,
+      ip,
+      port,
+      username,
+    });
     connectionLogs.push(
       createConnectionLog(
         "success",
@@ -1104,6 +1244,16 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           { errorCode: (err as any).code, errorLevel: (err as any).level },
         ),
       );
+    } else if (err.message.includes("verification failed")) {
+      errorStage = "handshake";
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          errorStage,
+          `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
+          { errorCode: (err as any).code, errorLevel: (err as any).level },
+        ),
+      );
     } else {
       connectionLogs.push(
         createConnectionLog(
@@ -1133,6 +1283,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   });
 
   client.on("close", () => {
+    fileLogger.info("File manager SSH connection closed", {
+      operation: "file_ssh_disconnected",
+      sessionId,
+      userId,
+      hostId,
+    });
     if (sshSessions[sessionId]) sshSessions[sessionId].isConnected = false;
     cleanupSession(sessionId);
   });
@@ -1892,6 +2048,12 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+  fileLogger.info("File manager disconnection requested", {
+    operation: "file_disconnect_request",
+    sessionId,
+    userId,
+  });
   cleanupSession(sessionId);
   res.json({ status: "success", message: "SSH connection disconnected" });
 });
@@ -2037,6 +2199,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const sshPath = decodeURIComponent((req.query.path as string) || "/");
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2048,18 +2211,16 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
-
   const trySFTP = () => {
     try {
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed for listFiles, trying fallback: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: sshPath,
+      });
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         sftp.readdir(sshPath, (readdirErr, list) => {
           if (readdirErr) {
             fileLogger.warn(
@@ -2120,6 +2281,17 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           }
 
           let resolved = 0;
+          let responded = false;
+
+          const sendResponse = () => {
+            if (responded) return;
+            responded = true;
+            sshConn.activeOperations--;
+            res.json({ files, path: sshPath });
+          };
+
+          const readlinkTimeout = setTimeout(sendResponse, 5000);
+
           for (const link of symlinks) {
             sftp.readlink(link.path, (linkErr, target) => {
               resolved++;
@@ -2127,13 +2299,19 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
                 files[link.index].linkTarget = target;
               }
               if (resolved === symlinks.length) {
-                sshConn.activeOperations--;
-                res.json({ files, path: sshPath });
+                clearTimeout(readlinkTimeout);
+                sendResponse();
               }
             });
           }
         });
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed for listFiles, trying fallback: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr: unknown) {
       const errMsg =
         sftpErr instanceof Error ? sftpErr.message : "Unknown error";
@@ -2502,6 +2680,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const filePath = decodeURIComponent(req.query.path as string);
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2515,6 +2694,12 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
     return res.status(400).json({ error: "File path is required" });
   }
 
+  fileLogger.info("Reading file", {
+    operation: "file_read",
+    sessionId,
+    userId,
+    path: filePath,
+  });
   sshConn.lastActive = Date.now();
 
   const MAX_READ_SIZE = 500 * 1024 * 1024;
@@ -2613,6 +2798,13 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
             }
 
             const isBinary = detectBinary(binaryData);
+            fileLogger.success("File read successfully", {
+              operation: "file_read_success",
+              sessionId,
+              userId,
+              path: filePath,
+              bytes: binaryData.length,
+            });
 
             if (isBinary) {
               const base64Content = binaryData.toString("base64");
@@ -2668,6 +2860,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   const { sessionId, path: filePath, content } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2685,19 +2878,27 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
     return res.status(400).json({ error: "File content is required" });
   }
 
+  const contentLength =
+    typeof content === "string" ? content.length : Buffer.byteLength(content);
+  fileLogger.info("Writing file", {
+    operation: "file_write",
+    sessionId,
+    userId,
+    path: filePath,
+    bytes: contentLength,
+  });
   sshConn.lastActive = Date.now();
 
   const trySFTP = () => {
     try {
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: filePath,
+      });
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
@@ -2743,6 +2944,13 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File written successfully", {
+            operation: "file_write_success",
+            sessionId,
+            userId,
+            path: filePath,
+            bytes: fileBuffer.length,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File written successfully",
@@ -2755,6 +2963,13 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File written successfully", {
+            operation: "file_write_success",
+            sessionId,
+            userId,
+            path: filePath,
+            bytes: fileBuffer.length,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File written successfully",
@@ -2775,10 +2990,16 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           );
           tryFallbackMethod();
         }
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed, trying fallback method: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr) {
       fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${sftpErr.message}`,
+        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
       );
       tryFallbackMethod();
     }
@@ -2913,6 +3134,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const { sessionId, path: filePath, content, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2938,18 +3160,25 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   const fullPath = filePath.endsWith("/")
     ? filePath + fileName
     : filePath + "/" + fileName;
+  const uploadStartTime = Date.now();
+  fileLogger.info("File upload started", {
+    operation: "file_upload_start",
+    sessionId,
+    userId,
+    path: fullPath,
+    bytes: contentSize,
+  });
 
   const trySFTP = () => {
     try {
-      sshConn.client.sftp((err, sftp) => {
-        if (err) {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-          return;
-        }
-
+      fileLogger.info("Opening SFTP channel", {
+        operation: "file_sftp_open",
+        sessionId,
+        userId,
+        path: fullPath,
+      });
+      getSessionSftp(sshConn)
+        .then((sftp) => {
         let fileBuffer;
         try {
           if (typeof content === "string") {
@@ -2993,6 +3222,14 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("finish", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File upload completed", {
+            operation: "file_upload_complete",
+            sessionId,
+            userId,
+            path: fullPath,
+            bytes: fileBuffer.length,
+            duration: Date.now() - uploadStartTime,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File uploaded successfully",
@@ -3005,6 +3242,14 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         writeStream.on("close", () => {
           if (hasError || hasFinished) return;
           hasFinished = true;
+          fileLogger.success("File upload completed", {
+            operation: "file_upload_complete",
+            sessionId,
+            userId,
+            path: fullPath,
+            bytes: fileBuffer.length,
+            duration: Date.now() - uploadStartTime,
+          });
           if (!res.headersSent) {
             res.json({
               message: "File uploaded successfully",
@@ -3021,14 +3266,20 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           if (hasError || hasFinished) return;
           hasError = true;
           fileLogger.warn(
-            `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
+            `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
           );
           tryFallbackMethod();
         }
-      });
+        })
+        .catch((err: Error) => {
+          fileLogger.warn(
+            `SFTP failed, trying fallback method: ${err.message}`,
+          );
+          tryFallbackMethod();
+        });
     } catch (sftpErr) {
       fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${sftpErr.message}`,
+        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
       );
       tryFallbackMethod();
     }
@@ -3376,6 +3627,7 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const { sessionId, path: folderPath, folderName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3394,6 +3646,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
   const fullPath = folderPath.endsWith("/")
     ? folderPath + folderName
     : folderPath + "/" + folderName;
+  fileLogger.info("Creating directory", {
+    operation: "file_mkdir",
+    sessionId,
+    userId,
+    path: fullPath,
+  });
   const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
   const createCommand = `mkdir -p '${escapedPath}' && echo "SUCCESS" && exit 0`;
@@ -3430,6 +3688,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 
     stream.on("close", (code) => {
       if (outputData.includes("SUCCESS")) {
+        fileLogger.success("Directory created successfully", {
+          operation: "file_mkdir_success",
+          sessionId,
+          userId,
+          path: fullPath,
+        });
         if (!res.headersSent) {
           res.json({
             message: "Folder created successfully",
@@ -3456,6 +3720,12 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
         return;
       }
 
+      fileLogger.success("Directory created successfully", {
+        operation: "file_mkdir_success",
+        sessionId,
+        userId,
+        path: fullPath,
+      });
       if (!res.headersSent) {
         res.json({
           message: "Folder created successfully",
@@ -3508,6 +3778,7 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const { sessionId, path: itemPath, isDirectory } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3521,6 +3792,13 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
     return res.status(400).json({ error: "Item path is required" });
   }
 
+  fileLogger.info("Deleting item", {
+    operation: "file_delete",
+    sessionId,
+    userId,
+    path: itemPath,
+    type: isDirectory ? "directory" : "file",
+  });
   sshConn.lastActive = Date.now();
   const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
 
@@ -3598,6 +3876,12 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
             }
 
             if (outputData.includes("SUCCESS") || code === 0) {
+              fileLogger.success("Item deleted successfully", {
+                operation: "file_delete_success",
+                sessionId,
+                userId,
+                path: itemPath,
+              });
               res.json({
                 message: "Item deleted successfully",
                 path: itemPath,
@@ -3663,6 +3947,7 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
   const { sessionId, oldPath, newName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3682,6 +3967,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 
   const oldDir = oldPath.substring(0, oldPath.lastIndexOf("/") + 1);
   const newPath = oldDir + newName;
+  fileLogger.info("Renaming item", {
+    operation: "file_rename",
+    sessionId,
+    userId,
+    from: oldPath,
+    to: newPath,
+  });
   const escapedOldPath = oldPath.replace(/'/g, "'\"'\"'");
   const escapedNewPath = newPath.replace(/'/g, "'\"'\"'");
 
@@ -3719,6 +4011,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 
     stream.on("close", (code) => {
       if (outputData.includes("SUCCESS")) {
+        fileLogger.success("Item renamed successfully", {
+          operation: "file_rename_success",
+          sessionId,
+          userId,
+          from: oldPath,
+          to: newPath,
+        });
         if (!res.headersSent) {
           res.json({
             message: "Item renamed successfully",
@@ -3746,6 +4045,13 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
         return;
       }
 
+      fileLogger.success("Item renamed successfully", {
+        operation: "file_rename_success",
+        sessionId,
+        userId,
+        from: oldPath,
+        to: newPath,
+      });
       if (!res.headersSent) {
         res.json({
           message: "Item renamed successfully",
@@ -3959,6 +4265,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
   const { sessionId, path: filePath, hostId, userId } = req.body;
+  const downloadStartTime = Date.now();
 
   if (!sessionId || !filePath) {
     fileLogger.warn("Missing download parameters", {
@@ -3968,6 +4275,13 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
     });
     return res.status(400).json({ error: "Missing download parameters" });
   }
+
+  fileLogger.info("File download started", {
+    operation: "file_download_start",
+    sessionId,
+    userId,
+    path: filePath,
+  });
 
   const sshConn = sshSessions[sessionId];
   if (!sshConn || !sshConn.isConnected) {
@@ -3983,13 +4297,15 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
 
   sshConn.lastActive = Date.now();
   scheduleSessionCleanup(sessionId);
+  fileLogger.info("Opening SFTP channel", {
+    operation: "file_sftp_open",
+    sessionId,
+    userId,
+    path: filePath,
+  });
 
-  sshConn.client.sftp((err, sftp) => {
-    if (err) {
-      fileLogger.error("SFTP connection failed for download:", err);
-      return res.status(500).json({ error: "SFTP connection failed" });
-    }
-
+  getSessionSftp(sshConn)
+    .then((sftp) => {
     sftp.stat(filePath, (statErr, stats) => {
       if (statErr) {
         fileLogger.error("File stat failed for download:", statErr);
@@ -4035,15 +4351,14 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
 
         const base64Content = data.toString("base64");
         const fileName = filePath.split("/").pop() || "download";
-
-        fileLogger.success("File downloaded successfully", {
-          operation: "file_download",
+        fileLogger.success("File download completed", {
+          operation: "file_download_complete",
           sessionId,
-          filePath,
-          fileName,
-          fileSize: stats.size,
-          hostId,
           userId,
+          hostId,
+          path: filePath,
+          bytes: stats.size,
+          duration: Date.now() - downloadStartTime,
         });
 
         res.json({
@@ -4055,7 +4370,11 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
         });
       });
     });
-  });
+    })
+    .catch((err) => {
+      fileLogger.error("SFTP connection failed for download:", err);
+      return res.status(500).json({ error: "SFTP connection failed" });
+    });
 });
 
 /**
