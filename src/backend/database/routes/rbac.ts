@@ -202,8 +202,9 @@ router.post(
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
 
-        const { SharedCredentialManager } =
-          await import("../../utils/shared-credential-manager.js");
+        const { SharedCredentialManager } = await import(
+          "../../utils/shared-credential-manager.js"
+        );
         const sharedCredManager = SharedCredentialManager.getInstance();
         if (targetType === "user") {
           await sharedCredManager.createSharedCredentialForUser(
@@ -244,8 +245,9 @@ router.post(
         expiresAt,
       });
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
 
       if (targetType === "user") {
@@ -983,8 +985,9 @@ router.post(
         .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
         .where(eq(hostAccess.roleId, roleId));
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
 
       for (const { host_access, ssh_data } of hostsSharedWithRole) {

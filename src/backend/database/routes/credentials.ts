@@ -606,8 +606,9 @@ router.put(
         userId,
       );
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.updateSharedCredentialsForOriginal(
         parseInt(id),
@@ -737,8 +738,9 @@ router.delete(
         }
       }
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 

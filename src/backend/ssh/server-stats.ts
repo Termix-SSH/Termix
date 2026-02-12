@@ -389,8 +389,36 @@ class SSHConnectionPool {
   private async createConnection(
     host: SSHHostWithCredentials,
   ): Promise<Client> {
-    return new Promise(async (resolve, reject) => {
-      const config = await buildSshConfig(host);
+    const config = await buildSshConfig(host);
+
+    let socks5Socket: any = null;
+    if (
+      host.useSocks5 &&
+      (host.socks5Host ||
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+    ) {
+      socks5Socket = await createSocks5Connection(host.ip, host.port, {
+        useSocks5: host.useSocks5,
+        socks5Host: host.socks5Host,
+        socks5Port: host.socks5Port,
+        socks5Username: host.socks5Username,
+        socks5Password: host.socks5Password,
+        socks5ProxyChain: host.socks5ProxyChain,
+      });
+      if (!socks5Socket) {
+        statsLogger.error("SOCKS5 socket is null", undefined, {
+          operation: "socks5_socket_null",
+          hostIp: host.ip,
+        });
+      }
+    }
+
+    let jumpClient: Client | null = null;
+    if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+      jumpClient = await createJumpHostChain(host.jumpHosts, host.userId);
+    }
+
+    return new Promise((resolve, reject) => {
       const client = new Client();
       const timeout = setTimeout(() => {
         client.end();
@@ -458,67 +486,13 @@ class SSHConnectionPool {
       );
 
       try {
-        if (
-          host.useSocks5 &&
-          (host.socks5Host ||
-            (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ) {
-          try {
-            const socks5Socket = await createSocks5Connection(
-              host.ip,
-              host.port,
-              {
-                useSocks5: host.useSocks5,
-                socks5Host: host.socks5Host,
-                socks5Port: host.socks5Port,
-                socks5Username: host.socks5Username,
-                socks5Password: host.socks5Password,
-                socks5ProxyChain: host.socks5ProxyChain,
-              },
-            );
-
-            if (socks5Socket) {
-              config.sock = socks5Socket;
-              client.connect(config);
-              return;
-            } else {
-              statsLogger.error("SOCKS5 socket is null", undefined, {
-                operation: "socks5_socket_null",
-                hostIp: host.ip,
-              });
-            }
-          } catch (socks5Error) {
-            clearTimeout(timeout);
-            statsLogger.error("SOCKS5 connection error", socks5Error, {
-              operation: "socks5_connection_error",
-              hostIp: host.ip,
-              errorMessage:
-                socks5Error instanceof Error ? socks5Error.message : "Unknown",
-            });
-            reject(
-              new Error(
-                "SOCKS5 proxy connection failed: " +
-                  (socks5Error instanceof Error
-                    ? socks5Error.message
-                    : "Unknown error"),
-              ),
-            );
-            return;
-          }
+        if (socks5Socket) {
+          config.sock = socks5Socket;
+          client.connect(config);
+          return;
         }
 
-        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-          const jumpClient = await createJumpHostChain(
-            host.jumpHosts,
-            host.userId,
-          );
-
-          if (!jumpClient) {
-            clearTimeout(timeout);
-            reject(new Error("Failed to establish jump host chain"));
-            return;
-          }
-
+        if (jumpClient) {
           jumpClient.forwardOut(
             "127.0.0.1",
             0,
@@ -527,7 +501,7 @@ class SSHConnectionPool {
             (err, stream) => {
               if (err) {
                 clearTimeout(timeout);
-                jumpClient.end();
+                jumpClient!.end();
                 reject(
                   new Error(
                     "Failed to forward through jump host: " + err.message,
@@ -1509,8 +1483,9 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,

@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import { globalIgnores } from "eslint/config";
 
 export default tseslint.config([
-  globalIgnores(["dist"]),
+  globalIgnores(["dist", "release", "Mobile"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -18,6 +18,14 @@ export default tseslint.config([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
+      "no-empty": "warn",
+      "no-control-regex": "off",
+      "react-refresh/only-export-components": "warn",
     },
   },
 ]);
