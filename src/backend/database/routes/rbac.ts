@@ -117,10 +117,12 @@ router.post(
         .limit(1);
 
       if (host.length === 0) {
-        databaseLogger.warn("Attempt to share host not owned by user", {
-          operation: "share_host",
+        databaseLogger.warn("Permission denied", {
+          operation: "rbac_permission_denied",
           userId,
-          hostId,
+          resource: "host",
+          resourceId: hostId,
+          action: "share",
         });
         return res.status(403).json({ error: "Not host owner" });
       }
@@ -218,6 +220,13 @@ router.post(
             userId,
           );
         }
+        databaseLogger.info("Permission granted", {
+          operation: "rbac_permission_grant",
+          adminId: userId,
+          hostId,
+          resource: "host",
+          action: "view",
+        });
 
         return res.json({
           success: true,
@@ -254,6 +263,13 @@ router.post(
           userId,
         );
       }
+      databaseLogger.success("Host shared successfully", {
+        operation: "rbac_host_share_success",
+        userId,
+        hostId,
+        targetUserId: targetType === "user" ? targetUserId : undefined,
+        permissionLevel,
+      });
 
       res.json({
         success: true,
@@ -328,6 +344,12 @@ router.delete(
       }
 
       await db.delete(hostAccess).where(eq(hostAccess.id, accessId));
+      databaseLogger.info("Permission revoked", {
+        operation: "rbac_permission_revoke",
+        adminId: userId,
+        hostId,
+        accessId,
+      });
 
       res.json({ success: true, message: "Access revoked" });
     } catch (error) {
@@ -990,6 +1012,13 @@ router.post(
       }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
+      databaseLogger.info("Role assigned to user", {
+        operation: "rbac_role_assign",
+        adminId: currentUserId,
+        targetUserId,
+        roleId,
+        roleName: role[0].name,
+      });
 
       res.json({
         success: true,
@@ -1082,6 +1111,12 @@ router.delete(
         );
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
+      databaseLogger.info("Role removed from user", {
+        operation: "rbac_role_remove",
+        adminId: req.userId!,
+        targetUserId,
+        roleId,
+      });
 
       res.json({
         success: true,

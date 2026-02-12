@@ -79,6 +79,7 @@ import {
   ArrowDownUp,
   Container,
   Link,
+  Plus,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -91,7 +92,10 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 const INITIAL_HOSTS_PER_FOLDER = 12;
 
-export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
+export function HostManagerViewer({
+  onEditHost,
+  onAddHost,
+}: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
   const { addTab } = useTabs();
@@ -859,7 +863,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     return (
       <TooltipProvider>
         <div className="flex flex-col h-full min-h-0">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
               <p className="text-muted-foreground">
@@ -926,6 +930,23 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
             onChange={handleJsonImport}
             className="hidden"
           />
+
+          <div className="flex gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("placeholders.searchHosts")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9"
+                disabled
+              />
+            </div>
+            <Button variant="outline" className="h-9" onClick={onAddHost}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("hosts.addHost")}
+            </Button>
+          </div>
 
           <div className="flex items-center justify-center flex-1">
             <div className="text-center">
@@ -1010,14 +1031,20 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           className="hidden"
         />
 
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("placeholders.searchHosts")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("placeholders.searchHosts")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <Button variant="outline" className="h-9" onClick={onAddHost}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("hosts.addHost")}
+          </Button>
         </div>
 
         <ScrollArea className="flex-1 min-h-0">

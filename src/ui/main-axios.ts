@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
+import { getBasePath } from "@/lib/base-path";
 import type {
   SSHHost,
   SSHHostData,
@@ -49,7 +50,7 @@ export interface AccessRecord {
   roleDisplayName: string | null;
   grantedBy: string;
   grantedByUsername: string;
-  permissionLevel: "view"; // Only view permission is supported
+  permissionLevel: "view";
   expiresAt: string | null;
   createdAt: string;
 }
@@ -472,7 +473,9 @@ function createApiInstance(
             toast.warning("Session expired. Please log in again.");
           }
 
-          dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
+          if (wasAuthenticated) {
+            dbHealthMonitor.reportSessionExpired();
+          }
 
           userWasAuthenticated = false;
         }
@@ -671,7 +674,7 @@ function getApiUrl(path: string, defaultPort: number): string {
     const url = `${protocol}://${apiHost}:${sslPort}${path}`;
     return url;
   } else {
-    return path;
+    return getBasePath() + path;
   }
 }
 

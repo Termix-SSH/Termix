@@ -1,6 +1,6 @@
 import { Client } from "ssh2";
 import type { WebSocket } from "ws";
-import { sshLogger } from "../utils/logger.js";
+import { sshLogger, authLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -210,6 +210,11 @@ export class SSHAuthManager {
         operation: "ssh_keyboard_interactive_totp_retry",
         hostId: this.context.hostId,
       });
+      authLogger.warn("TOTP verification failed for SSH session", {
+        operation: "terminal_totp_failed",
+        userId: this.context.userId,
+        hostId: this.context.hostId,
+      });
 
       this.sendLog("auth", "warning", "Invalid TOTP code");
 
@@ -262,6 +267,11 @@ export class SSHAuthManager {
     }, 180000);
 
     this.sendLog("auth", "info", "TOTP verification required");
+    authLogger.info("TOTP verification prompt sent to client", {
+      operation: "terminal_totp_prompt",
+      userId: this.context.userId,
+      hostId: this.context.hostId,
+    });
 
     this.context.ws.send(
       JSON.stringify({

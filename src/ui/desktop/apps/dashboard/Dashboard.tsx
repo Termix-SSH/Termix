@@ -72,6 +72,9 @@ export function Dashboard({
   const [totalServers, setTotalServers] = useState<number>(0);
   const [totalTunnels, setTotalTunnels] = useState<number>(0);
   const [totalCredentials, setTotalCredentials] = useState<number>(0);
+  const [updateCheckDisabled, setUpdateCheckDisabled] = useState<boolean>(
+    localStorage.getItem("disableUpdateCheck") === "true",
+  );
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
@@ -159,9 +162,10 @@ export function Dashboard({
         const uptimeInfo = await getUptime();
         setUptime(uptimeInfo.formatted);
 
-        const updateCheckDisabled =
+        const updateDisabled =
           localStorage.getItem("disableUpdateCheck") === "true";
-        if (!updateCheckDisabled) {
+        setUpdateCheckDisabled(updateDisabled);
+        if (!updateDisabled) {
           const versionInfo = await getVersionInfo();
           setVersionText(`v${versionInfo.localVersion}`);
           if (
@@ -170,6 +174,9 @@ export function Dashboard({
           ) {
             setVersionStatus(versionInfo.status);
           }
+        } else {
+          const versionInfo = await getVersionInfo();
+          setVersionText(`v${versionInfo.localVersion}`);
         }
 
         try {
@@ -243,6 +250,10 @@ export function Dashboard({
                   }
 
                   if (host.authType === "none") {
+                    return null;
+                  }
+
+                  if (host.authType === "opkssh") {
                     return null;
                   }
 
@@ -395,36 +406,40 @@ export function Dashboard({
   const handleAddHost = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, {
-        initialTab: "add_host",
-        hostConfig: undefined,
-      });
       setCurrentTab(sshManagerTab.id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-host"));
+      }, 100);
     } else {
       const id = addTab({
         type: "ssh_manager",
         title: "Host Manager",
-        initialTab: "add_host",
+        initialTab: "hosts",
       });
       setCurrentTab(id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-host"));
+      }, 100);
     }
   };
 
   const handleAddCredential = () => {
     const sshManagerTab = tabList.find((t) => t.type === "ssh_manager");
     if (sshManagerTab) {
-      updateTab(sshManagerTab.id, {
-        initialTab: "add_credential",
-        hostConfig: undefined,
-      });
       setCurrentTab(sshManagerTab.id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-credential"));
+      }, 100);
     } else {
       const id = addTab({
         type: "ssh_manager",
         title: "Host Manager",
-        initialTab: "add_credential",
+        initialTab: "credentials",
       });
       setCurrentTab(id);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("host-manager:add-credential"));
+      }, 100);
     }
   };
 
@@ -558,7 +573,7 @@ export function Dashboard({
                 <div
                   className="grid gap-4"
                   style={{
-                    gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(540px, 1fr))",
                     gridAutoRows: "minmax(300px, 1fr)",
                     minHeight: "100%",
                   }}
@@ -579,6 +594,7 @@ export function Dashboard({
                             totalServers={totalServers}
                             totalTunnels={totalTunnels}
                             totalCredentials={totalCredentials}
+                            updateCheckDisabled={updateCheckDisabled}
                           />
                         );
                       } else if (card.id === "recent_activity") {

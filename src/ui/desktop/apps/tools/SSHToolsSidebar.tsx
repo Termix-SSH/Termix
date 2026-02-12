@@ -709,7 +709,24 @@ export function SSHToolsSidebar({
     );
   };
 
-  const handleExecute = (snippet: Snippet) => {
+  const handleExecute = async (snippet: Snippet) => {
+    const confirmEnabled =
+      localStorage.getItem("confirmSnippetExecution") === "true";
+
+    if (confirmEnabled) {
+      const confirmed = await confirmWithToast(
+        t("snippets.confirmExecution", { name: snippet.name }),
+        undefined,
+        "default",
+        t("common.cancel"),
+        { confirmOnEnter: true, duration: 8000 },
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     if (selectedSnippetTabIds.length > 0) {
       selectedSnippetTabIds.forEach((tabId) => {
         const tab = tabs.find((t: TabData) => t.id === tabId);

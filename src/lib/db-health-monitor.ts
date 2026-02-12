@@ -6,6 +6,8 @@ class DatabaseHealthMonitor {
   private lastCheckTime: number = 0;
   private checkInProgress: boolean = false;
   private listeners: Map<string, EventListener[]> = new Map();
+  private consecutiveErrorTimer: ReturnType<typeof setTimeout> | null = null;
+  private confirmedUnhealthy: boolean = false;
 
   private constructor() {}
 
@@ -40,10 +42,13 @@ class DatabaseHealthMonitor {
     }
   }
 
-  reportDatabaseError(error: any, wasAuthenticated: boolean = false) {
+  reportSessionExpired() {
+    this.emit("session-expired", { timestamp: Date.now() });
+  }
+
+  reportDatabaseError(error: any, _wasAuthenticated: boolean = false) {
     const errorMessage = error?.response?.data?.error || error?.message || "";
     const errorCode = error?.response?.data?.code || error?.code;
-    const httpStatus = error?.response?.status;
 
     const isDatabaseError =
       errorMessage.toLowerCase().includes("database") ||
@@ -58,35 +63,44 @@ class DatabaseHealthMonitor {
       (errorMessage.toLowerCase().includes("network error") &&
         error?.response === undefined);
 
-    const isAuthenticationLost =
-      wasAuthenticated &&
-      httpStatus === 401 &&
-      (errorCode === "AUTH_REQUIRED" ||
-        errorCode === "SESSION_EXPIRED" ||
-        errorCode === "SESSION_NOT_FOUND" ||
-        errorMessage === "Missing authentication token" ||
-        errorMessage === "Invalid token" ||
-        errorMessage === "Authentication required");
+    if (!(isDatabaseError || isBackendUnreachable)) {
+      return;
+    }
 
-    if (
-      (isDatabaseError || isBackendUnreachable || isAuthenticationLost) &&
-      this.dbHealthy
-    ) {
-      this.dbHealthy = false;
-      this.emit("database-connection-lost", {
-        error: errorMessage || "Backend server unreachable",
-        code: errorCode,
-        timestamp: Date.now(),
-      });
+    if (this.dbHealthy && !this.consecutiveErrorTimer) {
+      this.consecutiveErrorTimer = setTimeout(() => {
+        this.consecutiveErrorTimer = null;
+        if (this.dbHealthy) {
+          this.dbHealthy = false;
+          this.confirmedUnhealthy = true;
+          this.emit("database-connection-lost", {
+            error: errorMessage || "Backend server unreachable",
+            code: errorCode,
+            timestamp: Date.now(),
+          });
+        }
+      }, 10000);
     }
   }
 
   reportDatabaseSuccess() {
-    if (!this.dbHealthy) {
+    this.clearErrorTimer();
+
+    if (this.confirmedUnhealthy) {
       this.dbHealthy = true;
+      this.confirmedUnhealthy = false;
       this.emit("database-connection-restored", {
         timestamp: Date.now(),
       });
+    } else if (!this.dbHealthy) {
+      this.dbHealthy = true;
+    }
+  }
+
+  private clearErrorTimer(): void {
+    if (this.consecutiveErrorTimer !== null) {
+      clearTimeout(this.consecutiveErrorTimer);
+      this.consecutiveErrorTimer = null;
     }
   }
 
@@ -96,8 +110,10 @@ class DatabaseHealthMonitor {
 
   reset() {
     this.dbHealthy = true;
+    this.confirmedUnhealthy = false;
     this.lastCheckTime = 0;
     this.checkInProgress = false;
+    this.clearErrorTimer();
   }
 }
 

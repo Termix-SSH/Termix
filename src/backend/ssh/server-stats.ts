@@ -23,6 +23,7 @@ import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -125,6 +126,15 @@ async function createJumpHostChain(
       const jumpClient = new Client();
       clients.push(jumpClient);
 
+      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
+        jumpHostConfig.id,
+        jumpHostConfig.ip,
+        jumpHostConfig.port || 22,
+        null,
+        userId,
+        true,
+      );
+
       const connected = await new Promise<boolean>((resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
@@ -151,6 +161,7 @@ async function createJumpHostChain(
           username: jumpHostConfig.username,
           tryKeyboard: true,
           readyTimeout: 30000,
+          hostVerifier: jumpHostVerifier,
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -379,7 +390,7 @@ class SSHConnectionPool {
     host: SSHHostWithCredentials,
   ): Promise<Client> {
     return new Promise(async (resolve, reject) => {
-      const config = buildSshConfig(host);
+      const config = await buildSshConfig(host);
       const client = new Client();
       const timeout = setTimeout(() => {
         client.end();
@@ -1023,6 +1034,20 @@ class PollingManager {
     const statusOnly = options?.statusOnly ?? false;
     const viewerUserId = options?.viewerUserId;
 
+    const enabledCollectors: string[] = [];
+    if (statsConfig.statusCheckEnabled) enabledCollectors.push("status");
+    if (!statusOnly && statsConfig.metricsEnabled) {
+      enabledCollectors.push(
+        "cpu",
+        "memory",
+        "disk",
+        "network",
+        "uptime",
+        "processes",
+        "system",
+      );
+    }
+
     const existingConfig = this.pollingConfigs.get(host.id);
 
     if (existingConfig) {
@@ -1150,12 +1175,10 @@ class PollingManager {
       const latestConfig = this.pollingConfigs.get(refreshedHost.id);
       if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
         const backoffInfo = pollingBackoff.getBackoffInfo(refreshedHost.id);
-        statsLogger.error("Failed to collect metrics for host", {
-          operation: "metrics_poll_failed",
+        statsLogger.error("Stats collector connection failed", error, {
+          operation: "stats_connect_failed",
           hostId: refreshedHost.id,
-          hostName: refreshedHost.name,
-          error: errorMessage,
-          backoff: backoffInfo,
+          retryInfo: backoffInfo,
         });
       }
     }
@@ -1172,6 +1195,7 @@ class PollingManager {
         clearInterval(config.metricsTimer);
         config.metricsTimer = undefined;
       }
+
       this.pollingConfigs.delete(hostId);
       if (clearData) {
         this.statusStore.delete(hostId);
@@ -1333,12 +1357,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -1530,7 +1549,15 @@ async function resolveHostCredentials(
           if (credentials.length > 0) {
             const credential = credentials[0];
             baseHost.credentialId = credential.id;
-            baseHost.authType = credential.auth_type || credential.authType;
+            baseHost.authType =
+              credential.auth_type ||
+              credential.authType ||
+              (credential.password
+                ? "password"
+                : credential.key ||
+                    (credential as Record<string, unknown>).private_key
+                  ? "key"
+                  : "none");
 
             if (!host.overrideCredentialUsername) {
               baseHost.username = credential.username;
@@ -1551,6 +1578,13 @@ async function resolveHostCredentials(
             }
           } else {
             addLegacyCredentials(baseHost, host);
+            if (baseHost.authType === "credential") {
+              baseHost.authType = baseHost.password
+                ? "password"
+                : baseHost.key
+                  ? "key"
+                  : "none";
+            }
           }
         }
       } catch (error) {
@@ -1558,6 +1592,13 @@ async function resolveHostCredentials(
           `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
         addLegacyCredentials(baseHost, host);
+        if (baseHost.authType === "credential") {
+          baseHost.authType = baseHost.password
+            ? "password"
+            : baseHost.key
+              ? "key"
+              : "none";
+        }
       }
     } else {
       addLegacyCredentials(baseHost, host);
@@ -1582,7 +1623,9 @@ function addLegacyCredentials(
   baseHost.keyType = host.keyType;
 }
 
-function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
+async function buildSshConfig(
+  host: SSHHostWithCredentials,
+): Promise<ConnectConfig> {
   const base: ConnectConfig = {
     host: host.ip,
     port: host.port,
@@ -1593,6 +1636,14 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      host.id,
+      host.ip,
+      host.port,
+      null,
+      host.userId || "",
+      false,
+    ),
     env: {
       TERM: "xterm-256color",
       LANG: "en_US.UTF-8",
@@ -1687,6 +1738,25 @@ function buildSshConfig(host: SSHHostWithCredentials): ConnectConfig {
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
   } else if (host.authType === "none") {
+  } else if (host.authType === "opkssh") {
+  } else if (host.authType === "credential") {
+    if (host.password) {
+      base.password = host.password;
+    } else if (host.key) {
+      const cleanKey = host.key
+        .trim()
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      (base as Record<string, unknown>).privateKey = Buffer.from(
+        cleanKey,
+        "utf8",
+      );
+      if (host.keyPassword) {
+        (base as Record<string, unknown>).passphrase = host.keyPassword;
+      }
+    } else {
+      throw new Error(`Credential for host ${host.ip} could not be resolved`);
+    }
   } else {
     throw new Error(
       `Unsupported authentication type '${host.authType}' for host ${host.ip}`,
@@ -1809,12 +1879,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           ports = await collectPortsMetrics(client);
-        } catch (e) {
-          statsLogger.debug("Failed to collect ports metrics", {
-            operation: "ports_metrics_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+        } catch (e) {}
 
         let firewall: {
           type: "iptables" | "nftables" | "none";
@@ -1842,12 +1907,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           firewall = await collectFirewallMetrics(client);
-        } catch (e) {
-          statsLogger.debug("Failed to collect firewall metrics", {
-            operation: "firewall_metrics_failed",
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+        } catch (e) {}
 
         const result = {
           cpu,
@@ -2349,7 +2409,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       return res.json({ success: true, connectionLogs });
     }
 
-    const config = buildSshConfig(host);
+    const config = await buildSshConfig(host);
     const client = new Client();
 
     const connectionPromise = new Promise<{
@@ -2522,6 +2582,15 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 "error",
                 errorStage,
                 `Authentication failed: ${errorMessage}`,
+              ),
+            );
+          } else if (errorMessage.includes("verification failed")) {
+            errorStage = "handshake";
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                errorStage,
+                `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
               ),
             );
           } else {
