@@ -118,6 +118,13 @@ export const sshData = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  hostKeyFingerprint: text("host_key_fingerprint"),
+  hostKeyType: text("host_key_type"),
+  hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
+  hostKeyFirstSeen: text("host_key_first_seen"),
+  hostKeyLastVerified: text("host_key_last_verified"),
+  hostKeyChangedCount: integer("host_key_changed_count").default(0),
+
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -192,7 +199,7 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   folder: text("folder"),
   tags: text("tags"),
   authType: text("auth_type").notNull(),
-  username: text("username").notNull(),
+  username: text("username"),
   password: text("password"),
   key: text("key", { length: 16384 }),
   private_key: text("private_key", { length: 16384 }),
@@ -490,4 +497,28 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
     .default(false),
   terminationReason: text("termination_reason"),
+});
+
+export const opksshTokens = sqliteTable("opkssh_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => sshData.id, { onDelete: "cascade" }),
+
+  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
+
+  email: text("email"),
+  sub: text("sub"),
+  issuer: text("issuer"),
+  audience: text("audience"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastUsed: text("last_used"),
 });

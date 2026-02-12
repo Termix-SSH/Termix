@@ -79,6 +79,7 @@ import {
   ArrowDownUp,
   Container,
   Link,
+  Plus,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -91,7 +92,10 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 const INITIAL_HOSTS_PER_FOLDER = 12;
 
-export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
+export function HostManagerViewer({
+  onEditHost,
+  onAddHost,
+}: SSHManagerHostViewerProps) {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
   const { addTab } = useTabs();
@@ -100,6 +104,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [importing, setImporting] = useState(false);
+  const overwriteRef = useRef(false);
   const [draggedHost, setDraggedHost] = useState<SSHHost | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
@@ -723,15 +728,14 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
         throw new Error(t("hosts.maxHostsAllowed"));
       }
 
-      const result = await bulkImportSSHHosts(hostsArray);
+      const result = await bulkImportSSHHosts(hostsArray, overwriteRef.current);
 
-      if (result.success > 0) {
-        toast.success(
-          t("hosts.importCompleted", {
-            success: result.success,
-            failed: result.failed,
-          }),
-        );
+      if (result.success > 0 || result.updated > 0) {
+        const parts: string[] = [];
+        if (result.success > 0) parts.push(`${result.success} ${t("hosts.importCreated")}`);
+        if (result.updated > 0) parts.push(`${result.updated} ${t("hosts.importUpdated")}`);
+        if (result.failed > 0) parts.push(`${result.failed} ${t("hosts.importFailedCount")}`);
+        toast.success(parts.join(", "));
         if (result.errors.length > 0) {
           toast.error(`Import errors: ${result.errors.join(", ")}`);
         }
@@ -859,7 +863,7 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
     return (
       <TooltipProvider>
         <div className="flex flex-col h-full min-h-0">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-xl font-semibold">{t("hosts.sshHosts")}</h2>
               <p className="text-muted-foreground">
@@ -867,31 +871,35 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="relative"
-                    onClick={() =>
-                      document.getElementById("json-import-input")?.click()
-                    }
                     disabled={importing}
                   >
                     {importing ? t("hosts.importing") : t("hosts.importJson")}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-sm">
-                  <div className="space-y-2">
-                    <p className="font-semibold text-sm">
-                      {t("hosts.importJsonTitle")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("hosts.importJsonDesc")}
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      overwriteRef.current = false;
+                      document.getElementById("json-import-input")?.click();
+                    }}
+                  >
+                    {t("hosts.importSkipExisting")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      overwriteRef.current = true;
+                      document.getElementById("json-import-input")?.click();
+                    }}
+                  >
+                    {t("hosts.importOverwriteExisting")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 variant="outline"
@@ -927,6 +935,23 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
             className="hidden"
           />
 
+          <div className="flex gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("placeholders.searchHosts")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9"
+                disabled
+              />
+            </div>
+            <Button variant="outline" className="h-9" onClick={onAddHost}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("hosts.addHost")}
+            </Button>
+          </div>
+
           <div className="flex items-center justify-center flex-1">
             <div className="text-center">
               <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -954,31 +979,35 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="relative"
-                  onClick={() =>
-                    document.getElementById("json-import-input")?.click()
-                  }
                   disabled={importing}
                 >
                   {importing ? t("hosts.importing") : t("hosts.importJson")}
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-sm">
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm">
-                    {t("hosts.importJsonTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("hosts.importJsonDesc")}
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    overwriteRef.current = false;
+                    document.getElementById("json-import-input")?.click();
+                  }}
+                >
+                  {t("hosts.importSkipExisting")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    overwriteRef.current = true;
+                    document.getElementById("json-import-input")?.click();
+                  }}
+                >
+                  {t("hosts.importOverwriteExisting")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button variant="outline" size="sm" onClick={handleDownloadSample}>
               {t("hosts.downloadSample")}
@@ -1010,14 +1039,20 @@ export function HostManagerViewer({ onEditHost }: SSHManagerHostViewerProps) {
           className="hidden"
         />
 
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("placeholders.searchHosts")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("placeholders.searchHosts")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <Button variant="outline" className="h-9" onClick={onAddHost}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("hosts.addHost")}
+          </Button>
         </div>
 
         <ScrollArea className="flex-1 min-h-0">

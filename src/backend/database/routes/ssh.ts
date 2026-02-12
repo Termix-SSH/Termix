@@ -28,7 +28,7 @@ import {
 } from "drizzle-orm";
 import type { Request, Response } from "express";
 import multer from "multer";
-import { sshLogger } from "../../utils/logger.js";
+import { sshLogger, databaseLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -374,6 +374,12 @@ router.post(
       socks5ProxyChain,
       overrideCredentialUsername,
     } = hostData;
+    databaseLogger.info("Creating SSH host", {
+      operation: "host_create",
+      userId,
+      name,
+      ip,
+    });
 
     if (
       !isNonEmptyString(userId) ||
@@ -509,19 +515,12 @@ router.post(
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
-
-      sshLogger.success(
-        `SSH host created: ${name} (${ip}:${port}) by user ${userId}`,
-        {
-          operation: "host_create_success",
-          userId,
-          hostId: createdHost.id as number,
-          name,
-          ip,
-          port,
-          authType: effectiveAuthType,
-        },
-      );
+      databaseLogger.success("SSH host created", {
+        operation: "host_create_success",
+        userId,
+        hostId: createdHost.id as number,
+        name,
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -857,6 +856,12 @@ router.put(
       socks5ProxyChain,
       overrideCredentialUsername,
     } = hostData;
+    databaseLogger.info("Updating SSH host", {
+      operation: "host_update",
+      userId,
+      hostId: parseInt(hostId),
+      changes: Object.keys(hostData),
+    });
 
     if (
       !isNonEmptyString(userId) ||
@@ -1088,19 +1093,11 @@ router.put(
 
       const resolvedHost =
         (await resolveHostCredentials(baseHost, userId)) || baseHost;
-
-      sshLogger.success(
-        `SSH host updated: ${name} (${ip}:${port}) by user ${userId}`,
-        {
-          operation: "host_update_success",
-          userId,
-          hostId: parseInt(hostId),
-          name,
-          ip,
-          port,
-          authType: effectiveAuthType,
-        },
-      );
+      databaseLogger.success("SSH host updated", {
+        operation: "host_update_success",
+        userId,
+        hostId: parseInt(hostId),
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -1530,6 +1527,11 @@ router.delete(
       });
       return res.status(400).json({ error: "Invalid userId or id" });
     }
+    databaseLogger.info("Deleting SSH host", {
+      operation: "host_delete",
+      userId,
+      hostId: parseInt(hostId),
+    });
     try {
       const hostToDelete = await db
         .select()
@@ -1582,17 +1584,11 @@ router.delete(
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
 
       const host = hostToDelete[0];
-      sshLogger.success(
-        `SSH host deleted: ${host.name} (${host.ip}:${host.port}) by user ${userId}`,
-        {
-          operation: "host_delete_success",
-          userId,
-          hostId: parseInt(hostId),
-          name: host.name,
-          ip: host.ip,
-          port: host.port,
-        },
-      );
+      databaseLogger.success("SSH host deleted", {
+        operation: "host_delete_success",
+        userId,
+        hostId: parseInt(hostId),
+      });
 
       try {
         const axios = (await import("axios")).default;
@@ -2373,7 +2369,6 @@ async function resolveHostCredentials(
           if (sharedCred) {
             const resolvedHost: Record<string, unknown> = {
               ...host,
-              authType: sharedCred.authType,
               password: sharedCred.password,
               key: sharedCred.key,
               keyPassword: sharedCred.keyPassword,
@@ -2420,7 +2415,6 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         const resolvedHost: Record<string, unknown> = {
           ...host,
-          authType: credential.auth_type || credential.authType,
           password: credential.password,
           key: credential.key,
           keyPassword: credential.key_password || credential.keyPassword,
@@ -2638,6 +2632,11 @@ router.put(
         .limit(1);
 
       if (existing.length > 0) {
+        databaseLogger.info("Updating SSH folder", {
+          operation: "folder_update",
+          userId,
+          folderId: existing[0].id,
+        });
         await db
           .update(sshFolders)
           .set({
@@ -2647,6 +2646,11 @@ router.put(
           })
           .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)));
       } else {
+        databaseLogger.info("Creating SSH folder", {
+          operation: "folder_create",
+          userId,
+          name,
+        });
         await db.insert(sshFolders).values({
           userId,
           name,
@@ -2705,6 +2709,11 @@ router.delete(
     if (!isNonEmptyString(userId) || !folderName) {
       return res.status(400).json({ error: "Invalid folder name" });
     }
+    databaseLogger.info("Deleting SSH folder", {
+      operation: "folder_delete",
+      userId,
+      folderId: folderName,
+    });
 
     try {
       const hostsToDelete = await db
@@ -2842,7 +2851,7 @@ router.post(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hosts } = req.body;
+    const { hosts, overwrite } = req.body;
 
     if (!Array.isArray(hosts) || hosts.length === 0) {
       return res
@@ -2858,9 +2867,30 @@ router.post(
 
     const results = {
       success: 0,
+      updated: 0,
+      skipped: 0,
       failed: 0,
       errors: [] as string[],
     };
+
+    // Build lookup map for dedup when overwrite is enabled
+    let existingHostMap: Map<string, { id: number }> | undefined;
+    if (overwrite) {
+      try {
+        const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
+          db.select().from(sshData).where(eq(sshData.userId, userId)),
+          "ssh_data",
+          userId,
+        );
+        existingHostMap = new Map();
+        for (const h of allHosts) {
+          const key = `${h.ip}:${h.port}:${h.username}`;
+          existingHostMap.set(key, { id: h.id as number });
+        }
+      } catch {
+        existingHostMap = undefined;
+      }
+    }
 
     for (let i = 0; i < hosts.length; i++) {
       const hostData = hosts[i];
@@ -2879,11 +2909,13 @@ router.post(
         }
 
         if (
-          !["password", "key", "credential", "none"].includes(hostData.authType)
+          !["password", "key", "credential", "none", "opkssh"].includes(
+            hostData.authType,
+          )
         ) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', or 'none'`,
+            `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', or 'opkssh'`,
           );
           continue;
         }
@@ -2970,12 +3002,26 @@ router.post(
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
             : 0,
-          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
 
-        await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
-        results.success++;
+        const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
+        const existing = existingHostMap?.get(lookupKey);
+
+        if (existing) {
+          await SimpleDBOps.update(
+            sshData,
+            "ssh_data",
+            eq(sshData.id, existing.id),
+            sshDataObj,
+            userId,
+          );
+          results.updated++;
+        } else {
+          sshDataObj.createdAt = new Date().toISOString();
+          await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
+          results.success++;
+        }
       } catch (error) {
         results.failed++;
         results.errors.push(
@@ -2985,8 +3031,10 @@ router.post(
     }
 
     res.json({
-      message: `Import completed: ${results.success} successful, ${results.failed} failed`,
+      message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
       success: results.success,
+      updated: results.updated,
+      skipped: results.skipped,
       failed: results.failed,
       errors: results.errors,
     });
@@ -3293,6 +3341,837 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/opkssh/token/{hostId}:
+ *   get:
+ *     summary: Get OPKSSH token status for a host
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: hostId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Host ID
+ *     responses:
+ *       200:
+ *         description: Token status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *                   description: Whether a valid token exists
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Token expiration timestamp
+ *                 email:
+ *                   type: string
+ *                   description: User email from OIDC identity
+ *       404:
+ *         description: No valid token found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  "/ssh/opkssh/token/:hostId",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const hostId = parseInt(
+      Array.isArray(req.params.hostId)
+        ? req.params.hostId[0]
+        : req.params.hostId,
+    );
+
+    if (!userId || isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const { opksshTokens } = await import("../db/schema.js");
+      const token = await db
+        .select()
+        .from(opksshTokens)
+        .where(
+          and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
+        )
+        .limit(1);
+
+      if (!token || token.length === 0) {
+        return res.status(404).json({ exists: false });
+      }
+
+      const tokenData = token[0];
+      const expiresAt = new Date(tokenData.expiresAt);
+
+      if (expiresAt < new Date()) {
+        await db
+          .delete(opksshTokens)
+          .where(
+            and(
+              eq(opksshTokens.userId, userId),
+              eq(opksshTokens.hostId, hostId),
+            ),
+          );
+        return res.status(404).json({ exists: false });
+      }
+
+      res.json({
+        exists: true,
+        expiresAt: tokenData.expiresAt,
+        email: tokenData.email,
+      });
+    } catch (error) {
+      sshLogger.error("Error retrieving OPKSSH token status", error, {
+        operation: "opkssh_token_status_error",
+        userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/opkssh/token/{hostId}:
+ *   delete:
+ *     summary: Delete OPKSSH token for a host
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: hostId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Host ID
+ *     responses:
+ *       200:
+ *         description: Token deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  "/ssh/opkssh/token/:hostId",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId;
+    const hostId = parseInt(
+      Array.isArray(req.params.hostId)
+        ? req.params.hostId[0]
+        : req.params.hostId,
+    );
+
+    if (!userId || isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    try {
+      const { deleteOPKSSHToken } = await import("../../ssh/opkssh-auth.js");
+      await deleteOPKSSHToken(userId, hostId);
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Error deleting OPKSSH token", error, {
+        operation: "opkssh_token_delete_error",
+        userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+function rewriteOPKSSHHtml(
+  html: string,
+  requestId: string,
+  routePrefix: "opkssh-chooser" | "opkssh-callback",
+): string {
+  const basePath = `/ssh/${routePrefix}/${requestId}`;
+
+  html = html.replace(/action=["']?\//g, `action="${basePath}/`);
+  html = html.replace(/href=["']?\//g, `href="${basePath}/`);
+  html = html.replace(/src=["']?\//g, `src="${basePath}/`);
+
+  html = html.replace(
+    /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `href="${basePath}/$1`,
+  );
+  html = html.replace(
+    /action=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `action="${basePath}/$1`,
+  );
+  html = html.replace(
+    /src=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
+    `src="${basePath}/$1`,
+  );
+
+  html = html.replace(
+    /(window\.location\.href\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(window\.location\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(fetch\(["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  html = html.replace(
+    /(location\.assign\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    /(location\.replace\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  html = html.replace(
+    /(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*url=)http:\/\/localhost:\d+\/([^"']+)(["'][^>]*>)/gi,
+    `$1${basePath}/$2$3`,
+  );
+
+  html = html.replace(
+    /(data-[\w-]+=["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    `$1${basePath}/$2$3`,
+  );
+
+  const baseTag = `<base href="${basePath}/">`;
+
+  if (html.includes("<base")) {
+    html = html.replace(/<base[^>]*>/i, baseTag);
+  } else {
+    html = html.replace(/<head>/i, `<head>${baseTag}`);
+  }
+
+  return html;
+}
+
+/**
+ * @openapi
+ * /opkssh-chooser/{requestId}:
+ *   get:
+ *     summary: Proxy OPKSSH provider chooser page and all related resources
+ *     tags: [SSH]
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authentication request ID
+ *     responses:
+ *       200:
+ *         description: Chooser page content
+ *       404:
+ *         description: Session not found
+ *       500:
+ *         description: Proxy error
+ */
+
+router.use(
+  "/opkssh-chooser/:requestId",
+  async (req: Request, res: Response) => {
+    const requestId = Array.isArray(req.params.requestId)
+      ? req.params.requestId[0]
+      : req.params.requestId;
+
+    try {
+      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const session = getActiveAuthSession(requestId);
+
+      if (!session) {
+        res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Session Not Found</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              .icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                color: #f87171;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Session Not Found</h1>
+              <p>This authentication session has expired or is invalid.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const axios = (await import("axios")).default;
+
+      const fullPath = req.originalUrl || req.url;
+      const pathAfterRequestId =
+        fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+      const targetPath = pathAfterRequestId || "/chooser";
+
+      if (!session.localPort || session.localPort === 0) {
+        sshLogger.error("OPKSSH session has no local port", {
+          operation: "opkssh_chooser_proxy",
+          requestId,
+          sessionStatus: session.status,
+        });
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Error</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Authentication Error</h1>
+              <p>Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
+
+      const response = await axios({
+        method: req.method,
+        url: targetUrl,
+        headers: {
+          ...req.headers,
+          host: `localhost:${session.localPort}`,
+        },
+        data: req.body,
+        timeout: 10000,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        responseType: "arraybuffer",
+      });
+
+      Object.entries(response.headers).forEach(([key, value]) => {
+        if (key.toLowerCase() === "transfer-encoding") {
+          return;
+        }
+        if (key.toLowerCase() === "location") {
+          const location = value as string;
+          if (location.startsWith("/")) {
+            res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${location}`);
+          } else {
+            const localhostMatch = location.match(
+              /^http:\/\/localhost:(\d+)(\/.*)?$/,
+            );
+            if (localhostMatch) {
+              const port = parseInt(localhostMatch[1], 10);
+              const path = localhostMatch[2] || "/";
+              if (session.callbackPort && port === session.callbackPort) {
+                res.setHeader(key, `/ssh/opkssh-callback/${requestId}${path}`);
+              } else if (port === session.localPort) {
+                res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${path}`);
+              } else {
+                const isCallback =
+                  path.includes("login") || path.includes("callback");
+                const prefix = isCallback
+                  ? "opkssh-callback"
+                  : "opkssh-chooser";
+                res.setHeader(key, `/ssh/${prefix}/${requestId}${path}`);
+              }
+            } else {
+              res.setHeader(key, value as string);
+            }
+          }
+        } else {
+          res.setHeader(key, value as string);
+        }
+      });
+
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("text/html")) {
+        const html = rewriteOPKSSHHtml(
+          response.data.toString("utf-8"),
+          requestId,
+          "opkssh-chooser",
+        );
+        res.status(response.status).send(html);
+      } else {
+        res.status(response.status).send(response.data);
+      }
+    } catch (error) {
+      sshLogger.error("Error proxying OPKSSH chooser", error, {
+        operation: "opkssh_chooser_proxy_error",
+        requestId,
+      });
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #18181b;
+              color: #fafafa;
+              padding: 1rem;
+            }
+            .container {
+              text-align: center;
+              background: #27272a;
+              padding: 3rem 2rem;
+              border-radius: 0.625rem;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              max-width: 400px;
+              width: 100%;
+            }
+            .icon {
+              font-size: 3rem;
+              margin-bottom: 1rem;
+              color: #f87171;
+            }
+            h1 {
+              color: #fafafa;
+              font-size: 1.5rem;
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+            }
+            p {
+              color: #9ca3af;
+              font-size: 0.95rem;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Error</h1>
+            <p>Failed to load authentication page. Please try again.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /opkssh-callback:
+ *   get:
+ *     summary: Static OAuth callback from OIDC provider for OPKSSH authentication
+ *     tags: [SSH]
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       404:
+ *         description: No active authentication session found
+ *       500:
+ *         description: Authentication failed
+ */
+router.get("/opkssh-callback", async (req: Request, res: Response) => {
+  try {
+    const { getActiveSessionsAll } = await import("../../ssh/opkssh-auth.js");
+
+    const allSessions = getActiveSessionsAll();
+    const session = allSessions[allSessions.length - 1];
+
+    if (!session) {
+      res.status(404).send("No active authentication session found");
+      return;
+    }
+
+    if (!session.callbackPort) {
+      res.status(503).send("OPKSSH callback listener not ready yet");
+      return;
+    }
+
+    const axios = (await import("axios")).default;
+    const queryString = req.url.includes("?")
+      ? req.url.substring(req.url.indexOf("?"))
+      : "";
+    const targetUrl = `http://localhost:${session.callbackPort}/login-callback${queryString}`;
+
+    sshLogger.info("Proxying OAuth callback to OPKSSH", {
+      operation: "opkssh_static_callback",
+      callbackPort: session.callbackPort,
+      targetUrl,
+    });
+
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers: {
+        ...req.headers,
+        host: `localhost:${session.callbackPort}`,
+      },
+      data: req.body,
+      timeout: 10000,
+      validateStatus: () => true,
+      maxRedirects: 0,
+      responseType: "arraybuffer",
+    });
+
+    Object.entries(response.headers).forEach(([key, value]) => {
+      if (key.toLowerCase() !== "transfer-encoding") {
+        res.setHeader(key, value as string);
+      }
+    });
+
+    res.status(response.status).send(response.data);
+  } catch (error) {
+    sshLogger.error("Error handling OPKSSH static callback", error, {
+      operation: "opkssh_static_callback_error",
+    });
+    res.status(500).send("Authentication callback failed");
+  }
+});
+
+/**
+ * @openapi
+ * /opkssh-callback/{requestId}:
+ *   get:
+ *     summary: OAuth callback from OIDC provider for OPKSSH authentication (handles all sub-paths)
+ *     tags: [SSH]
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authentication request ID
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       404:
+ *         description: Invalid authentication session
+ *       500:
+ *         description: Authentication failed
+ */
+router.use(
+  "/opkssh-callback/:requestId",
+  async (req: Request, res: Response) => {
+    const requestId = Array.isArray(req.params.requestId)
+      ? req.params.requestId[0]
+      : req.params.requestId;
+
+    try {
+      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const session = getActiveAuthSession(requestId);
+
+      if (!session) {
+        res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Session Not Found</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              .icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                color: #f87171;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+              p + p {
+                margin-top: 0.5rem;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Session Not Found</h1>
+              <p>Authentication session expired or invalid.</p>
+              <p>Please close this window and try again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const axios = (await import("axios")).default;
+      const fullPath = req.originalUrl || req.url;
+      const pathAfterRequestId =
+        fullPath.split(`/ssh/opkssh-callback/${requestId}`)[1] || "";
+      const targetPath = pathAfterRequestId || "/login-callback";
+
+      if (!session.callbackPort || session.callbackPort === 0) {
+        sshLogger.error("OPKSSH callback session has no callback port", {
+          operation: "opkssh_callback_proxy",
+          requestId,
+          sessionStatus: session.status,
+        });
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Error</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #18181b;
+                color: #fafafa;
+                padding: 1rem;
+              }
+              .container {
+                text-align: center;
+                background: #27272a;
+                padding: 3rem 2rem;
+                border-radius: 0.625rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                width: 100%;
+              }
+              h1 {
+                color: #fafafa;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 0.75rem;
+              }
+              p {
+                color: #9ca3af;
+                font-size: 0.95rem;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Callback Error</h1>
+              <p>OPKSSH callback listener not ready. Please try authenticating again.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      const targetUrl = `http://localhost:${session.callbackPort}${targetPath}`;
+
+      const response = await axios({
+        method: req.method,
+        url: targetUrl,
+        headers: {
+          ...req.headers,
+          host: `localhost:${session.callbackPort}`,
+        },
+        data: req.body,
+        timeout: 10000,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        responseType: "arraybuffer",
+      });
+
+      Object.entries(response.headers).forEach(([key, value]) => {
+        if (key.toLowerCase() === "transfer-encoding") {
+          return;
+        }
+        if (key.toLowerCase() === "location") {
+          const location = value as string;
+          if (location.startsWith("/")) {
+            res.setHeader(key, `/ssh/opkssh-callback/${requestId}${location}`);
+          } else {
+            res.setHeader(key, value as string);
+          }
+        } else {
+          res.setHeader(key, value as string);
+        }
+      });
+
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("text/html")) {
+        const html = rewriteOPKSSHHtml(
+          response.data.toString("utf-8"),
+          requestId,
+          "opkssh-callback",
+        );
+        res.status(response.status).send(html);
+      } else {
+        res.status(response.status).send(response.data);
+      }
+    } catch (error) {
+      sshLogger.error("Error handling OPKSSH OAuth callback", error, {
+        operation: "opkssh_oauth_callback_error",
+        requestId,
+      });
+
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #18181b;
+              color: #fafafa;
+              padding: 1rem;
+            }
+            .container {
+              text-align: center;
+              background: #27272a;
+              padding: 3rem 2rem;
+              border-radius: 0.625rem;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              max-width: 400px;
+              width: 100%;
+            }
+            .icon {
+              font-size: 3rem;
+              margin-bottom: 1rem;
+              color: #f87171;
+            }
+            h1 {
+              color: #fafafa;
+              font-size: 1.5rem;
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+            }
+            p {
+              color: #9ca3af;
+              font-size: 0.95rem;
+              line-height: 1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Error</h1>
+            <p>An unexpected error occurred. Please try again.</p>
+          </div>
+        </body>
+        </html>
+      `);
     }
   },
 );

@@ -51,11 +51,12 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu && \
+    update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
+    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
     chown -R node:node /app && \
-    chmod 755 /app/data /app/uploads /app/nginx && \
+    chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx && \
     touch /app/nginx/nginx.conf && \
     chown node:node /app/nginx/nginx.conf
 
@@ -79,7 +80,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-USER node
 
 CMD ["/entrypoint.sh"]
