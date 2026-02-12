@@ -1765,23 +1765,9 @@ if (frontendDist) {
   });
   app.use(express.static(frontendDist));
 
-  // SPA fallback: serve index.html for non-API routes
+  // SPA fallback: any GET that accepts HTML and wasn't handled by API routes
   app.use((req, res, next) => {
-    if (
-      req.method === "GET" &&
-      !req.path.startsWith("/users") &&
-      !req.path.startsWith("/ssh") &&
-      !req.path.startsWith("/alerts") &&
-      !req.path.startsWith("/credentials") &&
-      !req.path.startsWith("/snippets") &&
-      !req.path.startsWith("/terminal") &&
-      !req.path.startsWith("/network-topology") &&
-      !req.path.startsWith("/rbac") &&
-      !req.path.startsWith("/health") &&
-      !req.path.startsWith("/version") &&
-      !req.path.startsWith("/database") &&
-      !req.path.startsWith("/uploads")
-    ) {
+    if (req.method === "GET" && req.accepts("html")) {
       res.sendFile(path.join(frontendDist, "index.html"));
     } else {
       next();
