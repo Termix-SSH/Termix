@@ -5,6 +5,7 @@ const {
   ipcMain,
   dialog,
   Menu,
+  Tray,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -73,6 +74,8 @@ app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
 let backendProcess = null;
+let tray = null;
+let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
@@ -209,6 +212,48 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       mainWindow.show();
+    }
+  });
+}
+
+function createTray() {
+  const iconPath =
+    process.platform === "win32"
+      ? path.join(appRoot, "public", "icon.ico")
+      : path.join(appRoot, "public", "icons", "32x32.png");
+
+  tray = new Tray(iconPath);
+  tray.setToolTip("Termix");
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show Window",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    {
+      label: "Quit",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  tray.on("click", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
     }
   });
 }
@@ -353,6 +398,13 @@ function createWindow() {
 
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Frontend loaded successfully");
+  });
+
+  mainWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
   });
 
   mainWindow.on("closed", () => {
@@ -733,17 +785,22 @@ app.whenReady().then(async () => {
     await startBackendServer();
   }
 
+  createTray();
   createWindow();
 });
 
 app.on("window-all-closed", () => {
-  app.quit();
+  // Don't quit — backend stays alive, tray stays visible
 });
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
 });
 
 app.on("will-quit", () => {
