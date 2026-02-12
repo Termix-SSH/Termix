@@ -2358,8 +2358,9 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,

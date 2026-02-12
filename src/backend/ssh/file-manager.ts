@@ -1741,7 +1741,6 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
   });
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -1830,7 +1829,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
-  responseTimeout = setTimeout(() => {
+  const responseTimeout = setTimeout(() => {
     if (!responseSent) {
       responseSent = true;
       delete pendingTOTPSessions[sessionId];
@@ -1928,7 +1927,6 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
   }
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -2018,7 +2016,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
 
-  responseTimeout = setTimeout(() => {
+  const responseTimeout = setTimeout(() => {
     if (!responseSent) {
       responseSent = true;
       delete pendingTOTPSessions[sessionId];

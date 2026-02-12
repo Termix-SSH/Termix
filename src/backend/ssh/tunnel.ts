@@ -604,8 +604,9 @@ async function connectSSHTunnel(
         tunnelConfig.requestingUserId &&
         tunnelConfig.requestingUserId !== tunnelConfig.sourceUserId
       ) {
-        const { SharedCredentialManager } =
-          await import("../utils/shared-credential-manager.js");
+        const { SharedCredentialManager } = await import(
+          "../utils/shared-credential-manager.js"
+        );
         const sharedCredManager = SharedCredentialManager.getInstance();
 
         if (tunnelConfig.sourceHostId) {
