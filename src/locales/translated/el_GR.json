@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Διαπιστευτήρια",
     "credentialsViewer": "Προβολέας Πιστοποιητικών",
     "manageYourSSHCredentials": "Διαχειριστείτε τα SSH διαπιστευτήρια σας με ασφάλεια",
     "addCredential": "Προσθήκη Διαπιστευτηρίου",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Αυτό θα προσθέσει με ασφάλεια το δημόσιο κλειδί στο αρχείο ~/.ssh/authorized_keys του κεντρικού υπολογιστή του στόχου χωρίς να αντικαταστήσει τα υπάρχοντα κλειδιά. Η λειτουργία είναι αναστρέψιμη.",
     "chooseHostToDeploy": "Επιλέξτε έναν κεντρικό υπολογιστή για ανάπτυξη...",
     "deploying": "Εφαρμογή...",
+    "copyDeployCommand": "Αντιγραφή Εφαρμογής Εντολής",
+    "copyDeployCommandDescription": "Αντιγράψτε μια εντολή κελύφους για να προσθέσετε χειροκίνητα το δημόσιο κλειδί στο αρχείο authorized_keys ενός κεντρικού υπολογιστή. Χρήσιμο όταν η ταυτοποίηση κωδικού πρόσβασης είναι απενεργοποιημένη.",
+    "deployCommandCopied": "Η εντολή ανάπτυξης αντιγράφηκε στο πρόχειρο",
+    "manualDeployInfo": "Επικολλήστε αυτήν την εντολή στο τερματικό του κεντρικού υπολογιστή προορισμού (π.χ., κονσόλα Proxmox, IPMI ή φυσική πρόσβαση) για να προσθέσετε το SSH κλειδί.",
     "name": "Όνομα",
     "noHostsAvailable": "Δεν υπάρχουν διαθέσιμοι υπολογιστές",
     "noHostsMatchSearch": "Κανένας υπολογιστής δεν ταιριάζει με την αναζήτησή σας",
@@ -298,7 +303,9 @@
     "createFolder": "Δημιουργία Φακέλου",
     "editFolder": "Επεξεργασία Φακέλου",
     "editFolderDescription": "Προσαρμόστε το φάκελο αποκοπής",
-    "createFolderDescription": "Οργανώστε τα αποσπάσματα σας σε φακέλους"
+    "createFolderDescription": "Οργανώστε τα αποσπάσματα σας σε φακέλους",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Ιστορικό",
@@ -402,6 +409,7 @@
     "required": "Απαιτείται",
     "optional": "Προαιρετικό",
     "connect": "Σύνδεση",
+    "copied": "Copied",
     "connecting": "Σύνδεση...",
     "creating": "Δημιουργία...",
     "clear": "Εκκαθάριση",
@@ -494,6 +502,7 @@
     "checking": "Έλεγχος...",
     "checkingDatabase": "Έλεγχος σύνδεσης βάσης δεδομένων...",
     "checkingAuthentication": "Έλεγχος ταυτοποίησης...",
+    "backendReconnected": "Server connection restored",
     "actions": "Ενέργειες",
     "remove": "Αφαίρεση",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Διαχειριστής Υπολογιστών",
+    "hosts": "Hosts",
     "sshHosts": "SSH Hosts",
     "noHosts": "Δεν Υπάρχουν Υπολογιστές SSH",
     "noHostsMessage": "Δεν έχετε προσθέσει ακόμα κανένα SSH hosts. Κάντε κλικ στο κουμπί \"Προσθήκη Host\" για να ξεκινήσετε.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Αποτυχία εισαγωγής αρχείου JSON",
     "connectionDetails": "Λεπτομέρειες Σύνδεσης",
     "organization": "Οργανισμός",
-    "ipAddress": "Διεύθυνση IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "Θύρα",
     "name": "Όνομα",
     "username": "Όνομα Χρήστη",
@@ -915,6 +925,8 @@
     "key": "Κλειδί",
     "credential": "Διαπιστευτήριο",
     "none": "Κανένα",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Επιλέξτε Διαπιστευτήρια",
     "selectCredentialPlaceholder": "Επιλέξτε ένα πιστοποιητικό...",
     "credentialRequired": "Απαιτείται διαπιστευτήριο όταν χρησιμοποιείται έλεγχος ταυτότητας διαπιστευτηρίων",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Πληκτρολόγιο-Διαδραστική Ταυτοποίηση",
     "noneAuthDescription": "Αυτή η μέθοδος ταυτοποίησης θα χρησιμοποιεί τον διαδραστικό έλεγχο ταυτότητας πληκτρολογίου κατά τη σύνδεση με τον διακομιστή SSH.",
     "noneAuthDetails": "Ο διαδραστικός έλεγχος ταυτότητας πληκτρολογίου επιτρέπει στο διακομιστή να σας ζητά διαπιστευτήρια κατά τη διάρκεια της σύνδεσης. Αυτό είναι χρήσιμο για διακομιστές που απαιτούν έλεγχο ταυτότητας πολλαπλών παραγόντων ή αν δεν θέλετε να αποθηκεύσετε τα διαπιστευτήρια τοπικά.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Εξαναγκασμός Keyboard-Interactive",
     "forceKeyboardInteractiveDesc": "Δυνάμει της χρήσης διαδραστικού ελέγχου ταυτότητας πληκτρολογίου. Αυτό μερικές φορές απαιτείται για διακομιστές που χρησιμοποιούν έλεγχο ταυτότητας δύο παραγόντων (TOTP/2FA).",
     "overrideCredentialUsername": "Παράκαμψη Ονόματος Διαπιστευτηρίου Χρήστη",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Άνοιγμα σε περιηγητή",
     "warpgateContinue": "Έχω Ολοκληρώσει την Πιστοποίηση",
     "warpgateTimeout": "Λήξη χρονικού ορίου ταυτοποίησης. Παρακαλώ επανασύνδεση.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Εισαγωγή Κωδικού Πρόσβασης?",
     "sudoPasswordPopupHint": "Πατήστε Enter για εισαγωγή, Esc για απόρριψη",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Αυτόματη προσπάθεια ελέγχου ταυτότητας {{method}}...",
     "totpTimeout": "Λήξη χρονικού ορίου επαλήθευσης TOTP. Επανασύνδεση.",
     "passwordTimeout": "Λήξη χρονικού ορίου επαλήθευσης κωδικού πρόσβασης. Επανασύνδεση.",
-    "connectionRejected": "Η σύνδεση απορρίφθηκε από το διακομιστή. Παρακαλώ ελέγξτε τον έλεγχο ταυτότητας και τις ρυθμίσεις δικτύου."
+    "connectionRejected": "Η σύνδεση απορρίφθηκε από το διακομιστή. Παρακαλώ ελέγξτε τον έλεγχο ταυτότητας και τις ρυθμίσεις δικτύου.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Διαχειριστής Αρχείων",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Επιτυχής Επαναφορά Κωδικού Πρόσβασης",
     "passwordResetSuccessDesc": "Επιτυχής επαναφορά του κωδικού πρόσβασης. Μπορείτε τώρα να συνδεθείτε με το νέο κωδικό πρόσβασης."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Η σελίδα δεν βρέθηκε",
     "unauthorized": "Μη εξουσιοδοτημένη πρόσβαση",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Τερματικό",
     "hostSidebarSettings": "Κεντρικός Υπολογιστής & Πλαϊνή Μπάρα",
     "snippetsSettings": "Δείγματα",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Ενημερώσεις",
     "disableUpdateCheck": "Απενεργοποίηση Ελέγχου Ενημέρωσης",
     "disableUpdateCheckDesc": "Διακοπή ελέγχου για νέες εκδόσεις κατά την εκκίνηση και τον πίνακα ελέγχου. Μειώνει τα αιτήματα δικτύου.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
