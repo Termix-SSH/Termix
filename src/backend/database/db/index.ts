@@ -270,7 +270,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         folder TEXT,
         tags TEXT,
         auth_type TEXT NOT NULL,
-        username TEXT NOT NULL,
+        username TEXT,
         password TEXT,
         key TEXT,
         key_password TEXT,
@@ -414,9 +414,11 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM sessions").run();
+    sqlite
+      .prepare("DELETE FROM sessions WHERE expires_at < datetime('now')")
+      .run();
   } catch (e) {
-    databaseLogger.warn("Could not clear sessions on startup", {
+    databaseLogger.warn("Could not clear expired sessions on startup", {
       operation: "db_init_session_cleanup_failed",
       error: e,
     });
@@ -585,6 +587,13 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "socks5_password", "TEXT");
   addColumnIfNotExists("ssh_data", "socks5_proxy_chain", "TEXT");
 
+  addColumnIfNotExists("ssh_data", "host_key_fingerprint", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_type", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_algorithm", "TEXT DEFAULT 'sha256'");
+  addColumnIfNotExists("ssh_data", "host_key_first_seen", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_last_verified", "TEXT");
+  addColumnIfNotExists("ssh_data", "host_key_changed_count", "INTEGER DEFAULT 0");
+
   addColumnIfNotExists(
     "ssh_data",
     "show_terminal_in_sidebar",
@@ -618,6 +627,68 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
+
+  try {
+    const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }>;
+    const usernameCol = tableInfo.find((col) => col.name === "username");
+
+    if (usernameCol && usernameCol.notnull === 1) {
+      const tempTableName = "ssh_credentials_temp_migration";
+      const allColumns = tableInfo.map((col) => col.name).join(", ");
+
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          folder TEXT,
+          tags TEXT,
+          auth_type TEXT NOT NULL,
+          username TEXT,
+          password TEXT,
+          key TEXT,
+          key_password TEXT,
+          key_type TEXT,
+          usage_count INTEGER NOT NULL DEFAULT 0,
+          last_used TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          private_key TEXT,
+          public_key TEXT,
+          detected_key_type TEXT,
+          system_password TEXT,
+          system_key TEXT,
+          system_key_password TEXT,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+
+        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM ssh_credentials;
+
+        DROP TABLE ssh_credentials;
+
+        ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
+      `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
+
+      databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
+        operation: "schema_migration_username_nullable",
+      });
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate ssh_credentials username column", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
 
   addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
   addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
@@ -919,6 +990,37 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create shared_credentials table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM opkssh_tokens LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS opkssh_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          ssh_cert TEXT NOT NULL,
+          private_key TEXT NOT NULL,
+          email TEXT,
+          sub TEXT,
+          issuer TEXT,
+          audience TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          last_used TEXT,
+          UNIQUE(user_id, host_id),
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create opkssh_tokens table", {
         operation: "schema_migration",
         error: createError,
       });

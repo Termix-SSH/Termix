@@ -16,7 +16,7 @@ import type { SSHHost, HostManagerProps } from "../../../types/index";
 
 export function HostManager({
   isTopbarOpen,
-  initialTab = "host_viewer",
+  initialTab = "hosts",
   hostConfig,
   _updateTimestamp,
   rightSidebarOpen = false,
@@ -25,10 +25,18 @@ export function HostManager({
   updateTab,
 }: HostManagerProps): React.ReactElement {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(
+    initialTab === "host_viewer" || initialTab === "add_host"
+      ? "hosts"
+      : initialTab === "credentials" || initialTab === "add_credential"
+        ? "credentials"
+        : initialTab,
+  );
   const [editingHost, setEditingHost] = useState<SSHHost | null>(
     hostConfig || null,
   );
+  const [isAddingHost, setIsAddingHost] = useState(false);
+  const [isAddingCredential, setIsAddingCredential] = useState(false);
 
   useEffect(() => {}, [editingHost]);
 
@@ -42,52 +50,93 @@ export function HostManager({
   const lastProcessedHostIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
+    const handleAddHostEvent = () => {
+      setActiveTab("hosts");
+      setEditingHost(null);
+      setIsAddingHost(true);
+      setIsAddingCredential(false);
+    };
+
+    const handleAddCredentialEvent = () => {
+      setActiveTab("credentials");
+      setEditingCredential(null);
+      setIsAddingCredential(true);
+      setIsAddingHost(false);
+    };
+
+    window.addEventListener("host-manager:add-host", handleAddHostEvent);
+    window.addEventListener(
+      "host-manager:add-credential",
+      handleAddCredentialEvent,
+    );
+
+    return () => {
+      window.removeEventListener("host-manager:add-host", handleAddHostEvent);
+      window.removeEventListener(
+        "host-manager:add-credential",
+        handleAddCredentialEvent,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     if (_updateTimestamp !== undefined) {
-      if (initialTab && initialTab !== activeTab) {
-        setActiveTab(initialTab);
+      const normalizedTab =
+        initialTab === "host_viewer" || initialTab === "add_host"
+          ? "hosts"
+          : initialTab === "credentials" || initialTab === "add_credential"
+            ? "credentials"
+            : initialTab;
+
+      if (initialTab && normalizedTab !== activeTab) {
+        setActiveTab(normalizedTab);
       }
 
-      if (hostConfig && hostConfig.id !== editingHost?.id) {
+      if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
         setEditingHost(hostConfig);
+        setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
-      } else if (
-        !hostConfig &&
-        editingHost &&
-        editingHost.id !== lastProcessedHostIdRef.current
-      ) {
+      } else if (!hostConfig && editingHost) {
         setEditingHost(null);
-      }
-
-      if (initialTab !== "add_credential" && editingCredential) {
-        setEditingCredential(null);
+        setIsAddingHost(false);
       }
     } else {
       if (initialTab) {
-        setActiveTab(initialTab);
+        const normalizedTab =
+          initialTab === "host_viewer" || initialTab === "add_host"
+            ? "hosts"
+            : initialTab === "credentials" || initialTab === "add_credential"
+              ? "credentials"
+              : initialTab;
+        setActiveTab(normalizedTab);
       }
-      if (hostConfig) {
+      if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
         setEditingHost(hostConfig);
+        setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
       }
     }
-  }, [_updateTimestamp, initialTab, hostConfig?.id]);
+  }, [_updateTimestamp, initialTab, hostConfig]);
 
   const handleEditHost = (host: SSHHost) => {
     setEditingHost(host);
-    setActiveTab("add_host");
+    setIsAddingHost(false);
     lastProcessedHostIdRef.current = host.id;
+  };
 
-    if (updateTab && currentTabId !== undefined) {
-      updateTab(currentTabId, { initialTab: "add_host" });
-    }
+  const handleAddHost = () => {
+    setEditingHost(null);
+    setIsAddingHost(true);
+    lastProcessedHostIdRef.current = undefined;
   };
 
   const handleFormSubmit = () => {
     ignoreNextHostConfigChangeRef.current = true;
+    const savedHostId = editingHost?.id;
     setEditingHost(null);
-    setActiveTab("host_viewer");
+    setIsAddingHost(false);
     setTimeout(() => {
-      lastProcessedHostIdRef.current = undefined;
+      lastProcessedHostIdRef.current = savedHostId;
     }, 500);
   };
 
@@ -97,36 +146,30 @@ export function HostManager({
     username: string;
   }) => {
     setEditingCredential(credential);
-    setActiveTab("add_credential");
+    setIsAddingCredential(false);
+  };
 
-    if (updateTab && currentTabId !== undefined) {
-      updateTab(currentTabId, { initialTab: "add_credential" });
-    }
+  const handleAddCredential = () => {
+    setEditingCredential(null);
+    setIsAddingCredential(true);
   };
 
   const handleCredentialFormSubmit = () => {
     setEditingCredential(null);
-    setActiveTab("credentials");
+    setIsAddingCredential(false);
   };
 
   const handleTabChange = (value: string) => {
-    if (activeTab === "add_host" && value !== "add_host") {
+    if (activeTab !== value) {
       setEditingHost(null);
+      setEditingCredential(null);
+      setIsAddingHost(false);
+      setIsAddingCredential(false);
       lastProcessedHostIdRef.current = undefined;
 
-      // Clear hostConfig from tab data when leaving add_host tab
       if (updateTab && currentTabId !== undefined) {
         updateTab(currentTabId, { hostConfig: null });
       }
-    }
-    if (activeTab === "add_credential" && value !== "add_credential") {
-      setEditingCredential(null);
-    }
-
-    // Clear editing state when switching TO add_host tab (to ensure fresh state)
-    if (value === "add_host" && activeTab !== "add_host") {
-      setEditingHost(null);
-      lastProcessedHostIdRef.current = undefined;
     }
 
     setActiveTab(value);
@@ -164,76 +207,66 @@ export function HostManager({
           >
             <TabsList className="bg-elevated border-2 border-edge mt-1.5">
               <TabsTrigger
-                value="host_viewer"
+                value="hosts"
                 className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
               >
-                {t("hosts.hostViewer")}
+                {t("hosts.hosts")}
               </TabsTrigger>
-              <TabsTrigger
-                value="add_host"
-                className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
-              >
-                {editingHost
-                  ? editingHost.id
-                    ? t("hosts.editHost")
-                    : t("hosts.cloneHost")
-                  : t("hosts.addHost")}
-              </TabsTrigger>
-              <div className="h-6 w-px bg-border-base mx-1"></div>
               <TabsTrigger
                 value="credentials"
                 className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
               >
-                {t("credentials.credentialsViewer")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="add_credential"
-                className="bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
-              >
-                {editingCredential
-                  ? t("credentials.editCredential")
-                  : t("credentials.addCredential")}
+                {t("credentials.credentials")}
               </TabsTrigger>
             </TabsList>
             <TabsContent
-              value="host_viewer"
+              value="hosts"
               className="flex-1 flex flex-col h-full min-h-0"
             >
               <Separator className="p-0.25 -mt-0.5 mb-1" />
-              <HostManagerViewer onEditHost={handleEditHost} />
-            </TabsContent>
-            <TabsContent
-              value="add_host"
-              className="flex-1 flex flex-col h-full min-h-0"
-            >
-              <Separator className="p-0.25 -mt-0.5 mb-1" />
-              <div className="flex flex-col h-full min-h-0">
-                <HostManagerEditor
-                  editingHost={editingHost}
-                  onFormSubmit={handleFormSubmit}
+              {editingHost !== null || isAddingHost ? (
+                <div className="flex flex-col h-full min-h-0">
+                  <HostManagerEditor
+                    editingHost={editingHost}
+                    onFormSubmit={handleFormSubmit}
+                    onBack={() => {
+                      setEditingHost(null);
+                      setIsAddingHost(false);
+                      lastProcessedHostIdRef.current = undefined;
+                    }}
+                  />
+                </div>
+              ) : (
+                <HostManagerViewer
+                  onEditHost={handleEditHost}
+                  onAddHost={handleAddHost}
                 />
-              </div>
+              )}
             </TabsContent>
             <TabsContent
               value="credentials"
               className="flex-1 flex flex-col h-full min-h-0"
             >
               <Separator className="p-0.25 -mt-0.5 mb-1" />
-              <div className="flex flex-col h-full min-h-0 overflow-auto thin-scrollbar">
-                <CredentialsManager onEditCredential={handleEditCredential} />
-              </div>
-            </TabsContent>
-            <TabsContent
-              value="add_credential"
-              className="flex-1 flex flex-col h-full min-h-0"
-            >
-              <Separator className="p-0.25 -mt-0.5 mb-1" />
-              <div className="flex flex-col h-full min-h-0">
-                <CredentialEditor
-                  editingCredential={editingCredential}
-                  onFormSubmit={handleCredentialFormSubmit}
-                />
-              </div>
+              {editingCredential !== null || isAddingCredential ? (
+                <div className="flex flex-col h-full min-h-0">
+                  <CredentialEditor
+                    editingCredential={editingCredential}
+                    onFormSubmit={handleCredentialFormSubmit}
+                    onBack={() => {
+                      setEditingCredential(null);
+                      setIsAddingCredential(false);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col h-full min-h-0 overflow-auto thin-scrollbar">
+                  <CredentialsManager
+                    onEditCredential={handleEditCredential}
+                    onAddCredential={handleAddCredential}
+                  />
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
