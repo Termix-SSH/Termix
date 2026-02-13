@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "資格情報",
     "credentialsViewer": "資格情報ビューアー",
     "manageYourSSHCredentials": "SSH認証情報を安全に管理します",
     "addCredential": "証明書の追加",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "これにより、既存の鍵を上書きすることなく、公開鍵をホストの ~/.ssh/authorized_keys ファイルに安全に追加します。操作は取り消し可能です。",
     "chooseHostToDeploy": "デプロイするホストを選択してください...",
     "deploying": "デプロイ中...",
+    "copyDeployCommand": "デプロイコマンドをコピー",
+    "copyDeployCommandDescription": "シェルコマンドをコピーして、ホストの authorized_keys ファイルに公開鍵を手動で追加します。パスワード認証が無効になっている場合に便利です。",
+    "deployCommandCopied": "デプロイコマンドがクリップボードにコピーされました",
+    "manualDeployInfo": "SSHキーを追加するには、このコマンドをターゲットホストの端末(例:Proxmoxコンソール、IPMI、または物理アクセス)に貼り付けます。",
     "name": "名前",
     "noHostsAvailable": "利用可能なホストがありません",
     "noHostsMatchSearch": "検索条件に一致するホストがありません",
@@ -298,7 +303,9 @@
     "createFolder": "フォルダを作成",
     "editFolder": "フォルダを編集",
     "editFolderDescription": "スニペットフォルダをカスタマイズ",
-    "createFolderDescription": "スニペットをフォルダーに整理する"
+    "createFolderDescription": "スニペットをフォルダーに整理する",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "沿革",
@@ -402,6 +409,7 @@
     "required": "必須",
     "optional": "省略可能",
     "connect": "接続する",
+    "copied": "Copied",
     "connecting": "接続中...",
     "creating": "作成中...",
     "clear": "クリア",
@@ -494,6 +502,7 @@
     "checking": "確認しています...",
     "checkingDatabase": "データベース接続を確認しています...",
     "checkingAuthentication": "認証中char@@0",
+    "backendReconnected": "Server connection restored",
     "actions": "アクション",
     "remove": "削除",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "ホスト マネージャー",
+    "hosts": "Hosts",
     "sshHosts": "SSH ホスト",
     "noHosts": "SSHホストがありません",
     "noHostsMessage": "SSHホストはまだ追加されていません。「ホストを追加」をクリックして開始してください。",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON ファイルのインポートに失敗しました",
     "connectionDetails": "接続詳細",
     "organization": "組織",
-    "ipAddress": "IP アドレス",
+    "ipAddress": "IP Address or Hostname",
     "port": "ポート",
     "name": "名前",
     "username": "ユーザー名",
@@ -915,6 +925,8 @@
     "key": "キー",
     "credential": "資格情報",
     "none": "なし",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "証明書を選択",
     "selectCredentialPlaceholder": "資格情報を選択...",
     "credentialRequired": "資格情報認証を使用するには認証情報が必要です",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "キーボード対話型認証",
     "noneAuthDescription": "この認証方法は、SSH サーバーに接続する際にキーボード対話型認証を使用します。",
     "noneAuthDetails": "キーボード対話型認証により、サーバーは接続中に資格情報の入力を求めることができます。 これは、多要素認証を必要とするサーバーや、ローカルで資格情報を保存したくないサーバーに便利です。",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "キーボード対話を強制する",
     "forceKeyboardInteractiveDesc": "2要素認証(TOTP/2FA)を使用するサーバーでは、キーボード対話型認証を強制的に使用します。",
     "overrideCredentialUsername": "認証情報のユーザー名を上書きする",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "ブラウザで開く",
     "warpgateContinue": "認証を完了しました",
     "warpgateTimeout": "ワープゲート認証がタイムアウトしました。再接続してください。",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "パスワードを入力してください。",
     "sudoPasswordPopupHint": "Enterキーを押して挿入、Escキーで閉じる",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "{{method}} 認証を自動的に試みています...",
     "totpTimeout": "TOTP 認証がタイムアウトしました。再接続してください。",
     "passwordTimeout": "パスワードの検証がタイムアウトしました。再接続してください。",
-    "connectionRejected": "サーバーによって接続が拒否されました。認証とネットワーク設定を確認してください。"
+    "connectionRejected": "サーバーによって接続が拒否されました。認証とネットワーク設定を確認してください。",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "ファイルマネージャー",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "パスワードをリセットしました",
     "passwordResetSuccessDesc": "パスワードが正常にリセットされました。新しいパスワードでログインできるようになりました。"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "ページが見つかりません",
     "unauthorized": "権限のないアクセス",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "ターミナル",
     "hostSidebarSettings": "ホスト & サイドバー",
     "snippetsSettings": "Snippets",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "更新",
     "disableUpdateCheck": "アップデートチェックを無効にする",
     "disableUpdateCheckDesc": "起動時とダッシュボードで新しいバージョンの確認を停止します。ネットワークリクエストを削減します。",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
