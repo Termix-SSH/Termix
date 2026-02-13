@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Käyttäjätunnukset",
     "credentialsViewer": "Käyttöoikeustietojen Katselin",
     "manageYourSSHCredentials": "Hallitse SSH tunnuksiasi turvallisesti",
     "addCredential": "Lisää Käyttöoikeustieto",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Tämä lisää turvallisesti julkisen avaimen kohdetiedoston ~/.ssh/authorized_keys tiedostoon ilman olemassa olevien avainten korvaamista. Toiminto on palautettavissa.",
     "chooseHostToDeploy": "Valitse isäntä johon haluat ottaa käyttöön...",
     "deploying": "Otetaan Käyttöön...",
+    "copyDeployCommand": "Kopioi Deploy Komento",
+    "copyDeployCommandDescription": "Kopioi komento, jolla julkinen avain lisätään manuaalisesti isännän authorized_keys tiedostoon. Hyödyllinen, kun salasanan todennus on pois päältä.",
+    "deployCommandCopied": "Julkaise komento kopioitu leikepöydälle",
+    "manualDeployInfo": "Liitä tämä komento kohdeisännän päätteeseen (esim. Proxmox konsoli, IPMI tai fyysinen pääsy) lisätäksesi SSH avaimen.",
     "name": "Nimi",
     "noHostsAvailable": "Ei isäntiä saatavilla",
     "noHostsMatchSearch": "Yksikään isäntä ei vastaa hakuasi",
@@ -298,7 +303,9 @@
     "createFolder": "Luo Kansio",
     "editFolder": "Muokkaa Kansiota",
     "editFolderDescription": "Muokkaa snippet-kansiota",
-    "createFolderDescription": "Järjestä leikkeet kansioihin"
+    "createFolderDescription": "Järjestä leikkeet kansioihin",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Historia",
@@ -402,6 +409,7 @@
     "required": "Pakollinen",
     "optional": "Valinnainen",
     "connect": "Yhdistä",
+    "copied": "Copied",
     "connecting": "Yhdistetään...",
     "creating": "Luodaan...",
     "clear": "Tyhjennä",
@@ -494,6 +502,7 @@
     "checking": "Tarkistetaan...",
     "checkingDatabase": "Tarkistetaan tietokantayhteyttä...",
     "checkingAuthentication": "Tarkistetaan todennusta...",
+    "backendReconnected": "Server connection restored",
     "actions": "Toiminnot",
     "remove": "Poista",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Isäntälaitteen Hallinta",
+    "hosts": "Hosts",
     "sshHosts": "Ssh Isäntä",
     "noHosts": "Ei Ssh Isäntiä",
     "noHostsMessage": "Et ole vielä lisännyt yhtään SSH isäntää. Napsauta \"Lisää isäntä\" aloittaaksesi.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON-tiedoston tuonti epäonnistui",
     "connectionDetails": "Yhteyden Tiedot",
     "organization": "Organisaatio",
-    "ipAddress": "Ip Osoite",
+    "ipAddress": "IP Address or Hostname",
     "port": "Portti",
     "name": "Nimi",
     "username": "Käyttäjätunnus",
@@ -915,6 +925,8 @@
     "key": "Avain",
     "credential": "Käyttöoikeustiedot",
     "none": "Ei Mitään",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Valitse Käyttöoikeustieto",
     "selectCredentialPlaceholder": "Valitse käyttäjätunnus...",
     "credentialRequired": "Käyttöoikeustiedot vaaditaan, kun käytetään käyttöoikeustietojen todennusta",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Näppäimistöinteraktiivinen todennus",
     "noneAuthDescription": "Tämä todennusmenetelmä käyttää näppäimistöinteraktiivista todennusta yhdistettäessä SSH-palvelimeen.",
     "noneAuthDetails": "Näppäimistötodennus antaa palvelimen pyytää sinulta tunnistetietoja yhteyden muodostamisen aikana. Tämä on hyödyllistä palvelimilla, jotka vaativat monivaiheisen todennuksen tai jos et halua tallentaa tunnistetietoja paikallisesti.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Pakota näppäimistöinteraktiivinen",
     "forceKeyboardInteractiveDesc": "Pakottaa näppäimistöinteraktiivisen todennuksen käytön. Tätä vaaditaan joskus palvelimilla, jotka käyttävät kaksivaiheista todennusta (TOTP/2FA).",
     "overrideCredentialUsername": "Ohita tunnistetiedot Käyttäjätunnus",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Avaa selaimessa",
     "warpgateContinue": "Olen Suorittanut Todentamisen",
     "warpgateTimeout": "Warpgate autentikoinnin aikakatkaisu. Yhdistä uudelleen.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Syötä salasana?",
     "sudoPasswordPopupHint": "Lisää painamalla Enter, hylkää painamalla Esc",
     "sudoPasswordPopupConfirm": "Lisää",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Yritetään automaattisesti {{method}} todennusta...",
     "totpTimeout": "TOTP vahvistuksen aikakatkaisu. Yhdistä uudelleen.",
     "passwordTimeout": "Salasanan varmennuksen aikakatkaisu. Yhdistä uudelleen.",
-    "connectionRejected": "Palvelin hylkäsi yhteyden. Tarkista todennus ja verkon asetukset."
+    "connectionRejected": "Palvelin hylkäsi yhteyden. Tarkista todennus ja verkon asetukset.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Tiedostojen Hallinta",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Salasanan palautus onnistui",
     "passwordResetSuccessDesc": "Salasanasi on nollattu onnistuneesti. Voit nyt kirjautua sisään uudella salasanallasi."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Sivua ei löytynyt",
     "unauthorized": "Luvaton pääsy",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Pääte",
     "hostSidebarSettings": "Isäntä ja sivupalkki",
     "snippetsSettings": "Projekti",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Päivitykset",
     "disableUpdateCheck": "Poista Päivitystarkistus Käytöstä",
     "disableUpdateCheckDesc": "Lopeta uusien versioiden tarkistaminen käynnistettäessä ja hallintapaneelissa. Vähennä verkkopyyntöjä.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
