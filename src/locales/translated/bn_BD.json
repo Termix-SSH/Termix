@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "শংসাপত্র দর্শক",
     "manageYourSSHCredentials": "আপনার SSH শংসাপত্রগুলি নিরাপদে পরিচালনা করুন",
     "addCredential": "শংসাপত্র যোগ করুন",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "এটি বিদ্যমান কীগুলিকে ওভাররাইট না করেই টার্গেট হোস্টের ~/.ssh/authorized_keys ফাইলে নিরাপদে পাবলিক কী যুক্ত করবে। এই অপারেশনটি বিপরীতমুখী।",
     "chooseHostToDeploy": "স্থাপনের জন্য একটি হোস্ট বেছে নিন...",
     "deploying": "স্থাপন করা হচ্ছে...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "নাম",
     "noHostsAvailable": "কোনও হোস্ট উপলব্ধ নেই",
     "noHostsMatchSearch": "আপনার অনুসন্ধানের সাথে কোনও হোস্ট মেলেনি।",
@@ -298,7 +303,9 @@
     "createFolder": "ফোল্ডার তৈরি করুন",
     "editFolder": "ফোল্ডার সম্পাদনা করুন",
     "editFolderDescription": "আপনার স্নিপেট ফোল্ডারটি কাস্টমাইজ করুন",
-    "createFolderDescription": "আপনার স্নিপেটগুলিকে ফোল্ডারে সাজান"
+    "createFolderDescription": "আপনার স্নিপেটগুলিকে ফোল্ডারে সাজান",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "ইতিহাস",
@@ -402,6 +409,7 @@
     "required": "প্রয়োজনীয়",
     "optional": "ঐচ্ছিক",
     "connect": "সংযোগ করুন",
+    "copied": "Copied",
     "connecting": "সংযোগ করা হচ্ছে...",
     "creating": "তৈরি করা হচ্ছে...",
     "clear": "পরিষ্কার",
@@ -494,6 +502,7 @@
     "checking": "পরীক্ষা করা হচ্ছে...",
     "checkingDatabase": "ডাটাবেস সংযোগ পরীক্ষা করা হচ্ছে...",
     "checkingAuthentication": "প্রমাণীকরণ পরীক্ষা করা হচ্ছে...",
+    "backendReconnected": "Server connection restored",
     "actions": "কর্ম",
     "remove": "অপসারণ",
     "revoke": "প্রত্যাহার করুন",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "হোস্ট ম্যানেজার",
+    "hosts": "Hosts",
     "sshHosts": "SSH হোস্ট",
     "noHosts": "কোনও SSH হোস্ট নেই",
     "noHostsMessage": "আপনি এখনও কোনও SSH হোস্ট যোগ করেননি। শুরু করতে \"হোস্ট যোগ করুন\" এ ক্লিক করুন।",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON ফাইল আমদানি করা যায়নি",
     "connectionDetails": "সংযোগের বিবরণ",
     "organization": "সংগঠন",
-    "ipAddress": "আইপি ঠিকানা",
+    "ipAddress": "IP Address or Hostname",
     "port": "বন্দর",
     "name": "নাম",
     "username": "ব্যবহারকারীর নাম",
@@ -915,6 +925,8 @@
     "key": "চাবি",
     "credential": "পরিচয়পত্র",
     "none": "কোনটিই নয়",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "শংসাপত্র নির্বাচন করুন",
     "selectCredentialPlaceholder": "একটি শংসাপত্র বেছে নিন...",
     "credentialRequired": "শংসাপত্র প্রমাণীকরণ ব্যবহার করার সময় শংসাপত্র প্রয়োজন",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "কীবোর্ড-ইন্টারেক্টিভ প্রমাণীকরণ",
     "noneAuthDescription": "এই প্রমাণীকরণ পদ্ধতিটি SSH সার্ভারের সাথে সংযোগ করার সময় কীবোর্ড-ইন্টারেক্টিভ প্রমাণীকরণ ব্যবহার করবে।",
     "noneAuthDetails": "কীবোর্ড-ইন্টারেক্টিভ প্রমাণীকরণের মাধ্যমে সার্ভার সংযোগের সময় আপনাকে শংসাপত্রের জন্য অনুরোধ করতে পারে। এটি এমন সার্ভারগুলির জন্য কার্যকর যাদের মাল্টি-ফ্যাক্টর প্রমাণীকরণের প্রয়োজন হয় অথবা যদি আপনি স্থানীয়ভাবে শংসাপত্র সংরক্ষণ করতে না চান।",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "জোর করে কীবোর্ড-ইন্টারেক্টিভ",
     "forceKeyboardInteractiveDesc": "কীবোর্ড-ইন্টারেক্টিভ প্রমাণীকরণ ব্যবহার করতে বাধ্য করে। কখনও কখনও টু-ফ্যাক্টর প্রমাণীকরণ (TOTP/2FA) ব্যবহার করে এমন সার্ভারগুলির জন্য এটি প্রয়োজন হয়।",
     "overrideCredentialUsername": "শংসাপত্র ব্যবহারকারীর নাম ওভাররাইড করুন",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "ব্রাউজারে খুলুন",
     "warpgateContinue": "আমি প্রমাণীকরণ সম্পন্ন করেছি।",
     "warpgateTimeout": "ওয়ার্পগেট প্রমাণীকরণের সময়সীমা শেষ। অনুগ্রহ করে পুনরায় সংযোগ করুন।",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "পাসওয়ার্ড ঢোকাবেন?",
     "sudoPasswordPopupHint": "সন্নিবেশ করতে Enter টিপুন এবং খারিজ করতে Esc টিপুন",
     "sudoPasswordPopupConfirm": "ঢোকান",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "স্বয়ংক্রিয়ভাবে {{method}} প্রমাণীকরণ চেষ্টা করা হচ্ছে...",
     "totpTimeout": "TOTP যাচাইকরণের সময়সীমা শেষ। অনুগ্রহ করে পুনরায় সংযোগ করুন।",
     "passwordTimeout": "পাসওয়ার্ড যাচাইকরণের সময়সীমা শেষ। অনুগ্রহ করে পুনরায় সংযোগ করুন।",
-    "connectionRejected": "সার্ভার সংযোগ প্রত্যাখ্যান করেছে। অনুগ্রহ করে আপনার প্রমাণীকরণ এবং নেটওয়ার্ক কনফিগারেশন পরীক্ষা করুন।"
+    "connectionRejected": "সার্ভার সংযোগ প্রত্যাখ্যান করেছে। অনুগ্রহ করে আপনার প্রমাণীকরণ এবং নেটওয়ার্ক কনফিগারেশন পরীক্ষা করুন।",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "ফাইল ম্যানেজার",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "পাসওয়ার্ড রিসেট সফল হয়েছে",
     "passwordResetSuccessDesc": "আপনার পাসওয়ার্ড সফলভাবে রিসেট করা হয়েছে। আপনি এখন আপনার নতুন পাসওয়ার্ড দিয়ে লগ ইন করতে পারেন।"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "পৃষ্ঠাটি খুঁজে পাওয়া যায়নি",
     "unauthorized": "অননুমোদিত প্রবেশাধিকার",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "টার্মিনাল",
     "hostSidebarSettings": "হোস্ট এবং সাইডবার",
     "snippetsSettings": "স্নিপেটস",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "আপডেট",
     "disableUpdateCheck": "আপডেট চেক অক্ষম করুন",
     "disableUpdateCheckDesc": "স্টার্টআপ এবং ড্যাশবোর্ডে নতুন সংস্করণ পরীক্ষা করা বন্ধ করুন। নেটওয়ার্ক অনুরোধ হ্রাস করে।",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "০০০০০০",
-    "ipAddress": "১২৭.০.০.১",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "২২",
     "maxRetries": "৩",
     "retryInterval": "১০",
