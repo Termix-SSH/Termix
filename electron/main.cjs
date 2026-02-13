@@ -5,10 +5,61 @@ const {
   ipcMain,
   dialog,
   Menu,
+  Tray,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const https = require("https");
+const http = require("http");
+const { URL } = require("url");
+const { fork } = require("child_process");
+
+function httpFetch(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const isHttps = urlObj.protocol === "https:";
+    const client = isHttps ? https : http;
+
+    const requestOptions = {
+      method: options.method || "GET",
+      headers: options.headers || {},
+      timeout: options.timeout || 10000,
+    };
+
+    if (isHttps) {
+      requestOptions.rejectUnauthorized = false;
+      requestOptions.agent = new https.Agent({
+        rejectUnauthorized: false,
+        checkServerIdentity: () => undefined,
+      });
+    }
+
+    const req = client.request(url, requestOptions, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          text: () => Promise.resolve(data),
+          json: () => Promise.resolve(JSON.parse(data)),
+        });
+      });
+    });
+
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Request timeout"));
+    });
+
+    if (options.body) {
+      req.write(options.body);
+    }
+    req.end();
+  });
+}
 
 if (process.platform === "linux") {
   app.commandLine.appendSwitch("--ozone-platform-hint=auto");
@@ -22,9 +73,133 @@ app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
+let backendProcess = null;
+let tray = null;
+let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+
+function getBackendEntryPath() {
+  if (isDev) {
+    return path.join(appRoot, "dist", "backend", "backend", "starter.js");
+  }
+  // In production, backend is in app.asar.unpacked (fork can't read from asar)
+  const asarUnpacked = appRoot.replace("app.asar", "app.asar.unpacked");
+  return path.join(asarUnpacked, "dist", "backend", "backend", "starter.js");
+}
+
+function getBackendDataDir() {
+  const userDataPath = app.getPath("userData");
+  const dataDir = path.join(userDataPath, "server-data");
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  return dataDir;
+}
+
+function startBackendServer() {
+  return new Promise((resolve) => {
+    const entryPath = getBackendEntryPath();
+
+    if (!fs.existsSync(entryPath)) {
+      console.error("Backend entry not found:", entryPath);
+      resolve(false);
+      return;
+    }
+
+    const dataDir = getBackendDataDir();
+    console.log("Starting embedded backend server...");
+    console.log("Backend entry:", entryPath);
+    console.log("Data directory:", dataDir);
+
+    const cwd = isDev
+      ? appRoot
+      : appRoot.replace("app.asar", "app.asar.unpacked");
+
+    backendProcess = fork(entryPath, [], {
+      cwd: cwd,
+      env: {
+        ...process.env,
+        DATA_DIR: dataDir,
+        NODE_ENV: "production",
+        ELECTRON_EMBEDDED: "true",
+      },
+      stdio: ["pipe", "pipe", "pipe", "ipc"],
+    });
+
+    let resolved = false;
+    const readyTimeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.log("Backend ready timeout, proceeding anyway...");
+        resolve(true);
+      }
+    }, 15000);
+
+    backendProcess.stdout.on("data", (data) => {
+      const msg = data.toString().trim();
+      console.log("[backend]", msg);
+      if (!resolved && msg.includes("started successfully")) {
+        resolved = true;
+        clearTimeout(readyTimeout);
+        resolve(true);
+      }
+    });
+
+    backendProcess.stderr.on("data", (data) => {
+      console.error("[backend]", data.toString().trim());
+    });
+
+    backendProcess.on("exit", (code, signal) => {
+      console.log(
+        `Backend process exited with code ${code}, signal ${signal}`,
+      );
+      backendProcess = null;
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(readyTimeout);
+        resolve(false);
+      }
+    });
+
+    backendProcess.on("error", (err) => {
+      console.error("Failed to start backend process:", err);
+      backendProcess = null;
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(readyTimeout);
+        resolve(false);
+      }
+    });
+  });
+}
+
+function stopBackendServer() {
+  if (!backendProcess) return;
+
+  console.log("Stopping embedded backend server...");
+
+  // Use IPC for graceful shutdown (SIGTERM doesn't work on Windows)
+  try {
+    backendProcess.send({ type: "shutdown" });
+  } catch {
+    // IPC channel may already be closed
+  }
+
+  const forceKillTimeout = setTimeout(() => {
+    if (backendProcess) {
+      console.log("Force killing backend process...");
+      backendProcess.kill("SIGKILL");
+      backendProcess = null;
+    }
+  }, 5000);
+
+  backendProcess.on("exit", () => {
+    clearTimeout(forceKillTimeout);
+    backendProcess = null;
+  });
+}
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -37,6 +212,48 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       mainWindow.show();
+    }
+  });
+}
+
+function createTray() {
+  const iconPath =
+    process.platform === "win32"
+      ? path.join(appRoot, "public", "icon.ico")
+      : path.join(appRoot, "public", "icons", "32x32.png");
+
+  tray = new Tray(iconPath);
+  tray.setToolTip("Termix");
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show Window",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    {
+      label: "Quit",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  tray.on("click", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
     }
   });
 }
@@ -183,6 +400,13 @@ function createWindow() {
     console.log("Frontend loaded successfully");
   });
 
+  mainWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -215,65 +439,7 @@ async function fetchGitHubAPI(endpoint, cacheKey) {
   }
 
   try {
-    let fetch;
-    try {
-      fetch = globalThis.fetch || require("node-fetch");
-    } catch (e) {
-      const https = require("https");
-      const http = require("http");
-      const { URL } = require("url");
-
-      fetch = (url, options = {}) => {
-        return new Promise((resolve, reject) => {
-          const urlObj = new URL(url);
-          const isHttps = urlObj.protocol === "https:";
-          const client = isHttps ? https : http;
-
-          const requestOptions = {
-            method: options.method || "GET",
-            headers: options.headers || {},
-            timeout: options.timeout || 10000,
-          };
-
-          if (isHttps) {
-            requestOptions.rejectUnauthorized = false;
-            requestOptions.agent = new https.Agent({
-              rejectUnauthorized: false,
-              secureProtocol: "TLSv1_2_method",
-              checkServerIdentity: () => undefined,
-              ciphers: "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH",
-              honorCipherOrder: true,
-            });
-          }
-
-          const req = client.request(url, requestOptions, (res) => {
-            let data = "";
-            res.on("data", (chunk) => (data += chunk));
-            res.on("end", () => {
-              resolve({
-                ok: res.statusCode >= 200 && res.statusCode < 300,
-                status: res.statusCode,
-                text: () => Promise.resolve(data),
-                json: () => Promise.resolve(JSON.parse(data)),
-              });
-            });
-          });
-
-          req.on("error", reject);
-          req.on("timeout", () => {
-            req.destroy();
-            reject(new Error("Request timeout"));
-          });
-
-          if (options.body) {
-            req.write(options.body);
-          }
-          req.end();
-        });
-      };
-    }
-
-    const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
+    const response = await httpFetch(`${GITHUB_API_BASE}${endpoint}`, {
       headers: {
         Accept: "application/vnd.github+json",
         "User-Agent": "TermixElectronUpdateChecker/1.0",
@@ -358,6 +524,14 @@ ipcMain.handle("get-platform", () => {
   return process.platform;
 });
 
+ipcMain.handle("get-embedded-server-status", () => {
+  return {
+    running: backendProcess !== null && !backendProcess.killed,
+    embedded: !isDev,
+    dataDir: isDev ? null : getBackendDataDir(),
+  };
+});
+
 ipcMain.handle("get-server-config", () => {
   try {
     const userDataPath = app.getPath("userData");
@@ -435,65 +609,12 @@ ipcMain.handle("set-setting", (event, key, value) => {
 
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
-    const https = require("https");
-    const http = require("http");
-    const { URL } = require("url");
-
-    const fetch = (url, options = {}) => {
-      return new Promise((resolve, reject) => {
-        const urlObj = new URL(url);
-        const isHttps = urlObj.protocol === "https:";
-        const client = isHttps ? https : http;
-
-        const requestOptions = {
-          method: options.method || "GET",
-          headers: options.headers || {},
-          timeout: options.timeout || 10000,
-        };
-
-        if (isHttps) {
-          requestOptions.rejectUnauthorized = false;
-          requestOptions.agent = new https.Agent({
-            rejectUnauthorized: false,
-            secureProtocol: "TLSv1_2_method",
-            checkServerIdentity: () => undefined,
-            ciphers: "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH",
-            honorCipherOrder: true,
-          });
-        }
-
-        const req = client.request(url, requestOptions, (res) => {
-          let data = "";
-          res.on("data", (chunk) => (data += chunk));
-          res.on("end", () => {
-            resolve({
-              ok: res.statusCode >= 200 && res.statusCode < 300,
-              status: res.statusCode,
-              text: () => Promise.resolve(data),
-              json: () => Promise.resolve(JSON.parse(data)),
-            });
-          });
-        });
-
-        req.on("error", reject);
-        req.on("timeout", () => {
-          req.destroy();
-          reject(new Error("Request timeout"));
-        });
-
-        if (options.body) {
-          req.write(options.body);
-        }
-        req.end();
-      });
-    };
-
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
 
     const healthUrl = `${normalizedServerUrl}/health`;
 
     try {
-      const response = await fetch(healthUrl, {
+      const response = await httpFetch(healthUrl, {
         method: "GET",
         timeout: 10000,
       });
@@ -539,7 +660,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
 
     try {
       const versionUrl = `${normalizedServerUrl}/version`;
-      const response = await fetch(versionUrl, {
+      const response = await httpFetch(versionUrl, {
         method: "GET",
         timeout: 10000,
       });
@@ -656,13 +777,20 @@ function createMenu() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createMenu();
+
+  // Start embedded backend server (skip in dev mode, backend runs separately)
+  if (!isDev) {
+    await startBackendServer();
+  }
+
+  createTray();
   createWindow();
 });
 
 app.on("window-all-closed", () => {
-  app.quit();
+  // Don't quit — backend stays alive, tray stays visible
 });
 
 app.on("activate", () => {
@@ -671,8 +799,13 @@ app.on("activate", () => {
   }
 });
 
+app.on("before-quit", () => {
+  isQuitting = true;
+});
+
 app.on("will-quit", () => {
   console.log("App will quit...");
+  stopBackendServer();
 });
 
 process.on("uncaughtException", (error) => {
