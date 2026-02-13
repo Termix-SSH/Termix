@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Полномочия",
     "credentialsViewer": "Просмотр учетных данных",
     "manageYourSSHCredentials": "Безопасное управление учётными данными SSH",
     "addCredential": "Добавить учетные данные",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Это безопасно добавит публичный ключ к файлу ~/.ssh/authorized_keys целевого хоста без перезаписи существующих ключей. Операция может быть отменена.",
     "chooseHostToDeploy": "Выберите хост для развертывания...",
     "deploying": "Развертывание...",
+    "copyDeployCommand": "Копировать команду развертывания",
+    "copyDeployCommandDescription": "Скопируйте команду оболочки, чтобы вручную добавить открытый ключ в файл authorized_keys узла. Полезно, если отключена аутентификация пароля.",
+    "deployCommandCopied": "Команда развертывания скопирована в буфер обмена",
+    "manualDeployInfo": "Вставьте эту команду в терминал целевого хоста (например, консоль Proxmox, IPMI или физический доступ), чтобы добавить ключ SSH.",
     "name": "Наименование",
     "noHostsAvailable": "Нет хостов",
     "noHostsMatchSearch": "Нет хостов, соответствующих вашему запросу",
@@ -298,7 +303,9 @@
     "createFolder": "Создать папку",
     "editFolder": "Изменить папку",
     "editFolderDescription": "Настройка папки сниппетов",
-    "createFolderDescription": "Организовать ваши сниппеты в папках"
+    "createFolderDescription": "Организовать ваши сниппеты в папках",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "История",
@@ -402,6 +409,7 @@
     "required": "Требуется",
     "optional": "Опционально",
     "connect": "Подключиться",
+    "copied": "Copied",
     "connecting": "Подключение...",
     "creating": "Создание...",
     "clear": "Очистить",
@@ -494,6 +502,7 @@
     "checking": "Проверка...",
     "checkingDatabase": "Проверка подключения к базе данных...",
     "checkingAuthentication": "Проверка подлинности...",
+    "backendReconnected": "Server connection restored",
     "actions": "Действия",
     "remove": "Удалить",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Менеджер хостов",
+    "hosts": "Hosts",
     "sshHosts": "SSH хосты",
     "noHosts": "Нет SSH хостов",
     "noHostsMessage": "Вы еще не добавили ни одного хоста SSH. Нажмите \"Добавить хост\", чтобы начать.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Не удалось импортировать JSON файл",
     "connectionDetails": "Детали подключения",
     "organization": "Организация",
-    "ipAddress": "IP-адрес",
+    "ipAddress": "IP Address or Hostname",
     "port": "Порт",
     "name": "Наименование",
     "username": "Имя пользователя",
@@ -915,6 +925,8 @@
     "key": "Спецификация",
     "credential": "Полномочия",
     "none": "Нет",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Выберите учетные данные",
     "selectCredentialPlaceholder": "Выберите учетные данные...",
     "credentialRequired": "Учетные данные требуются при использовании аутентификации",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Клавиатура - Интерактивная аутентификация",
     "noneAuthDescription": "Этот метод аутентификации будет использовать интерактивную аутентификацию с клавиатурой при подключении к SSH серверу.",
     "noneAuthDetails": "Интерактивная аутентификация на клавиатуре позволяет серверу запрашивать учетные данные во время подключения. Это полезно для серверов, которые требуют многофакторной аутентификации или если вы не хотите сохранять учетные данные локально.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Интерактивная клавиатура",
     "forceKeyboardInteractiveDesc": "Принудительно использовать интерактивную аутентификацию с клавиатуры. Иногда требуется для серверов, использующих двухфакторную аутентификацию (TOTP/2FA).",
     "overrideCredentialUsername": "Переопределить имя пользователя",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Открыть в браузере",
     "warpgateContinue": "Я завершаю аутентификацию",
     "warpgateTimeout": "Тайм-аут аутентификации Warpgate. Пожалуйста, подключитесь снова.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Вставить пароль?",
     "sudoPasswordPopupHint": "Нажмите Enter для вставки, Esc для отключения",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Автоматически пытаться аутентификации {{method}}...",
     "totpTimeout": "Тайм-аут проверки TOTP. Пожалуйста, подключитесь снова.",
     "passwordTimeout": "Время ожидания подтверждения пароля истекло. Пожалуйста, подключитесь снова.",
-    "connectionRejected": "Соединение отклонено сервером. Проверьте вашу аутентификацию и конфигурацию сети."
+    "connectionRejected": "Соединение отклонено сервером. Проверьте вашу аутентификацию и конфигурацию сети.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Файловый менеджер",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Пароль успешно сброшен",
     "passwordResetSuccessDesc": "Ваш пароль был успешно сброшен. Теперь вы можете войти с новым паролем."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Страница не найдена",
     "unauthorized": "Неавторизованный доступ",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Терминал",
     "hostSidebarSettings": "Узел и боковая панель",
     "snippetsSettings": "Сниппеты",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Обновления",
     "disableUpdateCheck": "Отключить проверку обновлений",
     "disableUpdateCheckDesc": "Не проверять наличие новых версий при запуске и панели управления. Снижает сетевые запросы.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
