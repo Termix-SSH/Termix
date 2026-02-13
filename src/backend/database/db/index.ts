@@ -643,6 +643,7 @@ const migrateSchema = () => {
       const tempTableName = "ssh_credentials_temp_migration";
       const allColumns = tableInfo.map((col) => col.name).join(", ");
 
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
       sqlite.exec(`
         CREATE TABLE ${tempTableName} (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -676,6 +677,7 @@ const migrateSchema = () => {
 
         ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
       `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
 
       databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
         operation: "schema_migration_username_nullable",
