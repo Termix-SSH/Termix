@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Trình xem thông tin đăng nhập",
     "manageYourSSHCredentials": "Quản lý thông tin đăng nhập SSH của bạn một cách an toàn",
     "addCredential": "Thêm thông tin đăng nhập",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Thao tác này sẽ thêm khóa công khai một cách an toàn vào tệp ~/.ssh/authorized_keys của máy chủ đích mà không ghi đè lên các khóa hiện có. Thao tác này có thể đảo ngược.",
     "chooseHostToDeploy": "Chọn máy chủ để triển khai...",
     "deploying": "Đang triển khai...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Tên",
     "noHostsAvailable": "Hiện không có máy chủ nào khả dụng",
     "noHostsMatchSearch": "Không có máy chủ nào phù hợp với tìm kiếm của bạn",
@@ -298,7 +303,9 @@
     "createFolder": "Tạo thư mục",
     "editFolder": "Chỉnh sửa thư mục",
     "editFolderDescription": "Tùy chỉnh thư mục đoạn mã của bạn",
-    "createFolderDescription": "Sắp xếp các đoạn văn bản của bạn vào các thư mục."
+    "createFolderDescription": "Sắp xếp các đoạn văn bản của bạn vào các thư mục.",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Lịch sử",
@@ -402,6 +409,7 @@
     "required": "Yêu cầu",
     "optional": "Không bắt buộc",
     "connect": "Kết nối",
+    "copied": "Copied",
     "connecting": "Đang kết nối...",
     "creating": "Đang tạo...",
     "clear": "Thông thoáng",
@@ -494,6 +502,7 @@
     "checking": "Đang kiểm tra...",
     "checkingDatabase": "Kiểm tra kết nối cơ sở dữ liệu...",
     "checkingAuthentication": "Đang kiểm tra xác thực...",
+    "backendReconnected": "Server connection restored",
     "actions": "Hành động",
     "remove": "Di dời",
     "revoke": "Thu hồi",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Quản lý máy chủ",
+    "hosts": "Hosts",
     "sshHosts": "Máy chủ SSH",
     "noHosts": "Không có máy chủ SSH",
     "noHostsMessage": "Bạn chưa thêm bất kỳ máy chủ SSH nào. Nhấp vào \"Thêm máy chủ\" để bắt đầu.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Không thể nhập tệp JSON.",
     "connectionDetails": "Chi tiết kết nối",
     "organization": "Tổ chức",
-    "ipAddress": "Địa chỉ IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "Cảng",
     "name": "Tên",
     "username": "Tên người dùng",
@@ -915,6 +925,8 @@
     "key": "Chìa khóa",
     "credential": "Chứng chỉ",
     "none": "Không có",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Chọn thông tin xác thực",
     "selectCredentialPlaceholder": "Chọn một loại chứng chỉ...",
     "credentialRequired": "Cần có thông tin đăng nhập khi sử dụng phương thức xác thực bằng thông tin đăng nhập.",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Xác thực tương tác bàn phím",
     "noneAuthDescription": "Phương thức xác thực này sẽ sử dụng xác thực tương tác bàn phím khi kết nối với máy chủ SSH.",
     "noneAuthDetails": "Xác thực tương tác bàn phím cho phép máy chủ yêu cầu bạn nhập thông tin đăng nhập trong quá trình kết nối. Điều này hữu ích cho các máy chủ yêu cầu xác thực đa yếu tố hoặc nếu bạn không muốn lưu thông tin đăng nhập cục bộ.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Buộc tương tác bàn phím",
     "forceKeyboardInteractiveDesc": "Buộc sử dụng xác thực tương tác bàn phím. Điều này đôi khi cần thiết đối với các máy chủ sử dụng xác thực hai yếu tố (TOTP/2FA).",
     "overrideCredentialUsername": "Ghi đè tên người dùng xác thực",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Mở trong trình duyệt",
     "warpgateContinue": "Tôi đã hoàn tất xác thực.",
     "warpgateTimeout": "Lỗi xác thực Warpgate đã hết thời gian chờ. Vui lòng kết nối lại.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Nhập mật khẩu?",
     "sudoPasswordPopupHint": "Nhấn Enter để chèn, Esc để xóa",
     "sudoPasswordPopupConfirm": "Chèn",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Đang tự động thử xác thực {{method}} ...",
     "totpTimeout": "Đã hết thời gian xác thực TOTP. Vui lòng kết nối lại.",
     "passwordTimeout": "Đã hết thời gian xác thực mật khẩu. Vui lòng kết nối lại.",
-    "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra cấu hình xác thực và mạng của bạn."
+    "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra cấu hình xác thực và mạng của bạn.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Trình quản lý tập tin",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Đặt lại mật khẩu thành công",
     "passwordResetSuccessDesc": "Mật khẩu của bạn đã được đặt lại thành công. Giờ bạn có thể đăng nhập bằng mật khẩu mới."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Không tìm thấy trang",
     "unauthorized": "Truy cập trái phép",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Phần cuối",
     "hostSidebarSettings": "Máy chủ & Thanh bên",
     "snippetsSettings": "Những đoạn trích",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Cập nhật",
     "disableUpdateCheck": "Tắt kiểm tra cập nhật",
     "disableUpdateCheckDesc": "Ngừng kiểm tra các phiên bản mới khi khởi động và trên bảng điều khiển. Giảm số lượng yêu cầu mạng.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
