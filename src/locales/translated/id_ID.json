@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Penampil Kredensial",
     "manageYourSSHCredentials": "Kelola kredensial SSH Anda dengan aman.",
     "addCredential": "Tambahkan Kredensial",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Ini akan menambahkan kunci publik dengan aman ke file ~/.ssh/authorized_keys pada host target tanpa menimpa kunci yang sudah ada. Operasi ini dapat dibatalkan.",
     "chooseHostToDeploy": "Pilih host tempat untuk melakukan deployment...",
     "deploying": "Sedang melakukan penyebaran...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Nama",
     "noHostsAvailable": "Tidak ada tuan rumah yang tersedia.",
     "noHostsMatchSearch": "Tidak ada host yang sesuai dengan pencarian Anda.",
@@ -298,7 +303,9 @@
     "createFolder": "Buat Folder",
     "editFolder": "Edit Folder",
     "editFolderDescription": "Sesuaikan folder cuplikan Anda",
-    "createFolderDescription": "Susun cuplikan Anda ke dalam folder."
+    "createFolderDescription": "Susun cuplikan Anda ke dalam folder.",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Sejarah",
@@ -402,6 +409,7 @@
     "required": "Diperlukan",
     "optional": "Opsional",
     "connect": "Menghubungkan",
+    "copied": "Copied",
     "connecting": "Menghubungkan...",
     "creating": "Membuat...",
     "clear": "Jernih",
@@ -494,6 +502,7 @@
     "checking": "Sedang memeriksa...",
     "checkingDatabase": "Memeriksa koneksi basis data...",
     "checkingAuthentication": "Memeriksa autentikasi...",
+    "backendReconnected": "Server connection restored",
     "actions": "Tindakan",
     "remove": "Menghapus",
     "revoke": "Menarik kembali",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Manajer Host",
+    "hosts": "Hosts",
     "sshHosts": "Host SSH",
     "noHosts": "Tidak ada Host SSH",
     "noHostsMessage": "Anda belum menambahkan host SSH apa pun. Klik \"Tambah Host\" untuk memulai.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Gagal mengimpor file JSON",
     "connectionDetails": "Detail Koneksi",
     "organization": "Organisasi",
-    "ipAddress": "Alamat IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "Pelabuhan",
     "name": "Nama",
     "username": "Nama belakang",
@@ -915,6 +925,8 @@
     "key": "Kunci",
     "credential": "Mandat",
     "none": "Tidak ada",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Pilih Kredensial",
     "selectCredentialPlaceholder": "Pilih sertifikasi...",
     "credentialRequired": "Kredensial diperlukan saat menggunakan autentikasi kredensial.",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Otentikasi Interaktif Keyboard",
     "noneAuthDescription": "Metode autentikasi ini akan menggunakan autentikasi interaktif keyboard saat terhubung ke server SSH.",
     "noneAuthDetails": "Autentikasi interaktif keyboard memungkinkan server untuk meminta kredensial Anda selama koneksi. Ini berguna untuk server yang memerlukan autentikasi multi-faktor atau jika Anda tidak ingin menyimpan kredensial secara lokal.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Paksa Interaktif Keyboard",
     "forceKeyboardInteractiveDesc": "Memaksa penggunaan autentikasi interaktif keyboard. Ini terkadang diperlukan untuk server yang menggunakan Autentikasi Dua Faktor (TOTP/2FA).",
     "overrideCredentialUsername": "Ganti Nama Pengguna Kredensial",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Buka di Browser",
     "warpgateContinue": "Saya telah menyelesaikan otentikasi.",
     "warpgateTimeout": "Otentikasi Warpgate habis waktu. Silakan sambungkan kembali.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Masukkan kata sandi?",
     "sudoPasswordPopupHint": "Tekan Enter untuk memasukkan, Esc untuk menutup.",
     "sudoPasswordPopupConfirm": "Menyisipkan",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Mencoba otentikasi {{method}} secara otomatis...",
     "totpTimeout": "Waktu verifikasi TOTP habis. Silakan sambungkan kembali.",
     "passwordTimeout": "Waktu verifikasi kata sandi habis. Silakan sambungkan kembali.",
-    "connectionRejected": "Koneksi ditolak oleh server. Harap periksa otentikasi dan konfigurasi jaringan Anda."
+    "connectionRejected": "Koneksi ditolak oleh server. Harap periksa otentikasi dan konfigurasi jaringan Anda.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Pengelola File",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Reset Kata Sandi Berhasil",
     "passwordResetSuccessDesc": "Kata sandi Anda telah berhasil direset. Anda sekarang dapat masuk dengan kata sandi baru Anda."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Halaman tidak ditemukan",
     "unauthorized": "Akses tidak sah",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Host & Sidebar",
     "snippetsSettings": "Cuplikan",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Pembaruan",
     "disableUpdateCheck": "Nonaktifkan Pemeriksaan Pembaruan",
     "disableUpdateCheckDesc": "Hentikan pengecekan versi baru saat startup dan dasbor. Mengurangi permintaan jaringan.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
