@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Geloofsbriewe-kyker",
     "manageYourSSHCredentials": "Bestuur jou SSH-bewyse veilig",
     "addCredential": "Voeg geloofsbriewe by",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Dit sal die publieke sleutel veilig by die teikengasheer se ~/.ssh/authorized_keys-lêer voeg sonder om bestaande sleutels te oorskryf. Die bewerking is omkeerbaar.",
     "chooseHostToDeploy": "Kies 'n gasheer om na te ontplooi...",
     "deploying": "Implementeer tans...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Naam",
     "noHostsAvailable": "Geen gashere beskikbaar nie",
     "noHostsMatchSearch": "Geen gashere stem ooreen met jou soektog nie",
@@ -298,7 +303,9 @@
     "createFolder": "Skep vouer",
     "editFolder": "Wysig vouer",
     "editFolderDescription": "Pas jou brokkie-lêergids aan",
-    "createFolderDescription": "Organiseer jou brokkies in dopgehou"
+    "createFolderDescription": "Organiseer jou brokkies in dopgehou",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Geskiedenis",
@@ -402,6 +409,7 @@
     "required": "Vereis",
     "optional": "Opsioneel",
     "connect": "Verbind",
+    "copied": "Copied",
     "connecting": "Verbind...",
     "creating": "Skep...",
     "clear": "Duidelik",
@@ -494,6 +502,7 @@
     "checking": "Kontroleer...",
     "checkingDatabase": "Kontroleer databasisverbinding...",
     "checkingAuthentication": "Kontroleer tans verifikasie...",
+    "backendReconnected": "Server connection restored",
     "actions": "Aksies",
     "remove": "Verwyder",
     "revoke": "Herroep",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Gasheerbestuurder",
+    "hosts": "Hosts",
     "sshHosts": "SSH-gashere",
     "noHosts": "Geen SSH-gashere nie",
     "noHostsMessage": "Jy het nog geen SSH-gashere bygevoeg nie. Klik \"Voeg gasheer by\" om te begin.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Kon nie JSON-lêer invoer nie",
     "connectionDetails": "Verbindingsbesonderhede",
     "organization": "Organisasie",
-    "ipAddress": "IP-adres",
+    "ipAddress": "IP Address or Hostname",
     "port": "Hawe",
     "name": "Naam",
     "username": "Gebruikersnaam",
@@ -915,6 +925,8 @@
     "key": "Sleutel",
     "credential": "Geloofsbrief",
     "none": "Geen",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Kies geloofsbriewe",
     "selectCredentialPlaceholder": "Kies 'n geloofsbrief...",
     "credentialRequired": "Geloofsbriewe word vereis wanneer geloofsbriewe-verifikasie gebruik word",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Sleutelbord-Interaktiewe Verifikasie",
     "noneAuthDescription": "Hierdie verifikasiemetode sal sleutelbord-interaktiewe verifikasie gebruik wanneer daar aan die SSH-bediener gekoppel word.",
     "noneAuthDetails": "Sleutelbord-interaktiewe verifikasie laat die bediener toe om jou vir geloofsbriewe te vra tydens verbinding. Dit is nuttig vir bedieners wat multifaktor-verifikasie vereis of as jy nie geloofsbriewe plaaslik wil stoor nie.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Forseer sleutelbord-interaktief",
     "forceKeyboardInteractiveDesc": "Dwing die gebruik van sleutelbord-interaktiewe verifikasie af. Dit word soms vereis vir bedieners wat tweefaktor-verifikasie (TOTP/2FA) gebruik.",
     "overrideCredentialUsername": "Oorskryf geloofsbriewe gebruikersnaam",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Maak oop in blaaier",
     "warpgateContinue": "Ek het verifikasie voltooi",
     "warpgateTimeout": "Warpgate-verifikasietydverstryking. Koppel asseblief weer.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Wagwoord invoeg?",
     "sudoPasswordPopupHint": "Druk Enter om in te voeg, Esc om te verwerp",
     "sudoPasswordPopupConfirm": "Invoeg",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Probeer outomaties {{method}} verifikasie...",
     "totpTimeout": "TOTP-verifikasie het uitgeloop. Koppel asseblief weer aan.",
     "passwordTimeout": "Wagwoordverifikasie het uitgeloop. Koppel asseblief weer aan.",
-    "connectionRejected": "Verbinding deur bediener verwerp. Kontroleer asseblief u verifikasie en netwerkkonfigurasie."
+    "connectionRejected": "Verbinding deur bediener verwerp. Kontroleer asseblief u verifikasie en netwerkkonfigurasie.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Lêerbestuurder",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Wagwoordherstel suksesvol",
     "passwordResetSuccessDesc": "Jou wagwoord is suksesvol herstel. Jy kan nou met jou nuwe wagwoord aanmeld."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Bladsy nie gevind nie",
     "unauthorized": "Ongemagtigde toegang",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Terminaal",
     "hostSidebarSettings": "Gasheer en sybalk",
     "snippetsSettings": "Brokkies",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Opdaterings",
     "disableUpdateCheck": "Deaktiveer Opdateringskontrole",
     "disableUpdateCheckDesc": "Hou op om vir nuwe weergawes te kyk tydens opstart en op die dashboard. Verminder netwerkversoeke.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
