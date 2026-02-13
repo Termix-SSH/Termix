@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "מציג אישורים",
     "manageYourSSHCredentials": "נהל את פרטי ה-SSH שלך בצורה מאובטחת",
     "addCredential": "הוסף אישור",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "פעולה זו תוסיף בבטחה את המפתח הציבורי לקובץ ~/.ssh/authorized_keys של מארח היעד מבלי להחליף מפתחות קיימים. הפעולה היא הפיכה.",
     "chooseHostToDeploy": "בחר מארח לפריסה...",
     "deploying": "פריסה...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "שֵׁם",
     "noHostsAvailable": "אין מארחים זמינים",
     "noHostsMatchSearch": "אין מארחים התואמים את החיפוש שלך",
@@ -298,7 +303,9 @@
     "createFolder": "צור תיקייה",
     "editFolder": "עריכת תיקייה",
     "editFolderDescription": "התאם אישית את תיקיית הקטעים שלך",
-    "createFolderDescription": "ארגנו את הקטעים שלכם בתיקיות"
+    "createFolderDescription": "ארגנו את הקטעים שלכם בתיקיות",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "הִיסטוֹרִיָה",
@@ -402,6 +409,7 @@
     "required": "דָרוּשׁ",
     "optional": "אופציונלי",
     "connect": "לְחַבֵּר",
+    "copied": "Copied",
     "connecting": "מְקַשֵׁר...",
     "creating": "יוצר...",
     "clear": "בָּרוּר",
@@ -494,6 +502,7 @@
     "checking": "בודק...",
     "checkingDatabase": "בודק חיבור למסד הנתונים...",
     "checkingAuthentication": "בודק אימות...",
+    "backendReconnected": "Server connection restored",
     "actions": "פעולות",
     "remove": "לְהַסִיר",
     "revoke": "לְבַטֵל",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "מנהל מארח",
+    "hosts": "Hosts",
     "sshHosts": "מארחי SSH",
     "noHosts": "אין מארחי SSH",
     "noHostsMessage": "עדיין לא הוספת מארחי SSH. לחץ על \"הוסף מארח\" כדי להתחיל.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "ייבוא קובץ JSON נכשל",
     "connectionDetails": "פרטי חיבור",
     "organization": "אִרגוּן",
-    "ipAddress": "כתובת IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "נָמָל",
     "name": "שֵׁם",
     "username": "שם משתמש",
@@ -915,6 +925,8 @@
     "key": "מַפְתֵחַ",
     "credential": "תְעוּדָה",
     "none": "אַף לֹא אֶחָד",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "בחר אישור",
     "selectCredentialPlaceholder": "בחר אישור...",
     "credentialRequired": "נדרשת אישור בעת שימוש באימות אישורים",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "אימות אינטראקטיבי באמצעות מקלדת",
     "noneAuthDescription": "שיטת אימות זו תשתמש באימות אינטראקטיבי באמצעות מקלדת בעת התחברות לשרת SSH.",
     "noneAuthDetails": "אימות אינטראקטיבי באמצעות מקלדת מאפשר לשרת לבקש ממך אישורים במהלך החיבור. זה שימושי עבור שרתים הדורשים אימות רב-גורמי או אם אינך מעוניין לשמור אישורים באופן מקומי.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "כפיית מקלדת אינטראקטיבית",
     "forceKeyboardInteractiveDesc": "כופה שימוש באימות אינטראקטיבי באמצעות מקלדת. זה נדרש לעיתים עבור שרתים המשתמשים באימות דו-שלבי (TOTP/2FA).",
     "overrideCredentialUsername": "עקיפת שם משתמש של פרטי כניסה",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "פתח בדפדפן",
     "warpgateContinue": "סיימתי את האימות",
     "warpgateTimeout": "פסק זמן לאימות Warpgate. אנא התחבר מחדש.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "להכניס סיסמה?",
     "sudoPasswordPopupHint": "לחץ על Enter כדי להוסיף, Esc כדי לסגור",
     "sudoPasswordPopupConfirm": "לְהַכנִיס",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "מנסה אוטומטית אימות {{method}} ...",
     "totpTimeout": "פסק זמן לאימות TOTP. אנא התחבר מחדש.",
     "passwordTimeout": "פסק זמן לאימות סיסמה. אנא התחבר מחדש.",
-    "connectionRejected": "החיבור נדחה על ידי השרת. אנא בדוק את האימות ותצורת הרשת שלך."
+    "connectionRejected": "החיבור נדחה על ידי השרת. אנא בדוק את האימות ותצורת הרשת שלך.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "מנהל הקבצים",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "איפוס הסיסמה הצליח",
     "passwordResetSuccessDesc": "הסיסמה שלך אופסה בהצלחה. כעת תוכל להתחבר באמצעות הסיסמה החדשה שלך."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "הדף לא נמצא",
     "unauthorized": "גישה לא מורשית",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "מָסוֹף",
     "hostSidebarSettings": "מארח וסרגל צד",
     "snippetsSettings": "קטעי טקסט",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "עדכונים",
     "disableUpdateCheck": "השבתת בדיקת עדכונים",
     "disableUpdateCheckDesc": "הפסק לבדוק גרסאות חדשות בעת ההפעלה ובלוח המחוונים. מפחית בקשות רשת.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
