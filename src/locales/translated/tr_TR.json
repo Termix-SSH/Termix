@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Kimlik Bilgileri Görüntüleyici",
     "manageYourSSHCredentials": "SSH kimlik bilgilerinizi güvenli bir şekilde yönetin.",
     "addCredential": "Kimlik Bilgisi Ekle",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Bu işlem, mevcut anahtarların üzerine yazmadan, hedef sunucunun ~/.ssh/authorized_keys dosyasına genel anahtarı güvenli bir şekilde ekleyecektir. İşlem geri alınabilir.",
     "chooseHostToDeploy": "Dağıtım yapılacak sunucuyu seçin...",
     "deploying": "Dağıtıma başlanıyor...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "İsim",
     "noHostsAvailable": "Hiç ev sahibi mevcut değil.",
     "noHostsMatchSearch": "Arama kriterlerinize uyan ev sahibi bulunamadı.",
@@ -298,7 +303,9 @@
     "createFolder": "Klasör Oluştur",
     "editFolder": "Klasörü Düzenle",
     "editFolderDescription": "Kod parçacığı klasörünüzü özelleştirin.",
-    "createFolderDescription": "Kod parçacıklarınızı klasörler halinde düzenleyin."
+    "createFolderDescription": "Kod parçacıklarınızı klasörler halinde düzenleyin.",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Tarih",
@@ -402,6 +409,7 @@
     "required": "Gerekli",
     "optional": "İsteğe bağlı",
     "connect": "Bağlamak",
+    "copied": "Copied",
     "connecting": "Bağlanıyor...",
     "creating": "Oluşturuluyor...",
     "clear": "Temizlemek",
@@ -494,6 +502,7 @@
     "checking": "Kontrol ediliyor...",
     "checkingDatabase": "Veritabanı bağlantısı kontrol ediliyor...",
     "checkingAuthentication": "Kimlik doğrulama kontrol ediliyor...",
+    "backendReconnected": "Server connection restored",
     "actions": "Eylemler",
     "remove": "Kaldırmak",
     "revoke": "Geri çekmek",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Sunucu Yöneticisi",
+    "hosts": "Hosts",
     "sshHosts": "SSH Sunucuları",
     "noHosts": "SSH Sunucusu Yok",
     "noHostsMessage": "Henüz hiçbir SSH sunucusu eklemediniz. Başlamak için \"Sunucu Ekle\"ye tıklayın.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON dosyasını içe aktarma başarısız oldu.",
     "connectionDetails": "Bağlantı Ayrıntıları",
     "organization": "Organizasyon",
-    "ipAddress": "IP Adresi",
+    "ipAddress": "IP Address or Hostname",
     "port": "Liman",
     "name": "İsim",
     "username": "Kullanıcı adı",
@@ -915,6 +925,8 @@
     "key": "Anahtar",
     "credential": "Kimlik belgesi",
     "none": "Hiçbiri",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Kimlik Bilgisi Seçin",
     "selectCredentialPlaceholder": "Bir yeterlilik belgesi seçin...",
     "credentialRequired": "Kimlik doğrulama kullanılırken kimlik bilgisi gereklidir.",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Klavye Etkileşimli Kimlik Doğrulama",
     "noneAuthDescription": "Bu kimlik doğrulama yöntemi, SSH sunucusuna bağlanırken klavye etkileşimli kimlik doğrulamasını kullanacaktır.",
     "noneAuthDetails": "Klavyeyle etkileşimli kimlik doğrulama, sunucunun bağlantı sırasında sizden kimlik bilgilerini istemesine olanak tanır. Bu, çok faktörlü kimlik doğrulama gerektiren sunucular için veya kimlik bilgilerini yerel olarak kaydetmek istemiyorsanız kullanışlıdır.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Klavyeyle Etkileşimi Zorla",
     "forceKeyboardInteractiveDesc": "Klavyeyle etkileşimli kimlik doğrulama kullanımını zorunlu kılar. Bu, bazen İki Faktörlü Kimlik Doğrulama (TOTP/2FA) kullanan sunucular için gereklidir.",
     "overrideCredentialUsername": "Kimlik Bilgisi Kullanıcı Adını Geçersiz Kıl",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Tarayıcıda aç",
     "warpgateContinue": "Kimlik doğrulama işlemini tamamladım.",
     "warpgateTimeout": "Warpgate kimlik doğrulama zaman aşımı. Lütfen yeniden bağlanın.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Şifrenizi girin?",
     "sudoPasswordPopupHint": "Eklemek için Enter'a, silmek için Esc'ye basın.",
     "sudoPasswordPopupConfirm": "Sokmak",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Otomatik olarak {{method}} kimlik doğrulaması deneniyor...",
     "totpTimeout": "TOTP doğrulama zaman aşımına uğradı. Lütfen yeniden bağlanın.",
     "passwordTimeout": "Parola doğrulama zaman aşımına uğradı. Lütfen yeniden bağlanın.",
-    "connectionRejected": "Sunucu bağlantıyı reddetti. Lütfen kimlik doğrulama ve ağ yapılandırmanızı kontrol edin."
+    "connectionRejected": "Sunucu bağlantıyı reddetti. Lütfen kimlik doğrulama ve ağ yapılandırmanızı kontrol edin.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Dosya Yöneticisi",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Şifre Sıfırlama Başarılı",
     "passwordResetSuccessDesc": "Parolanız başarıyla sıfırlandı. Artık yeni parolanızla giriş yapabilirsiniz."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Sayfa bulunamadı.",
     "unauthorized": "Yetkisiz erişim",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "terminal",
     "hostSidebarSettings": "Sunucu ve Yan Menü",
     "snippetsSettings": "Kısa bölümler",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Güncellemeler",
     "disableUpdateCheck": "Güncelleme Kontrolünü Devre Dışı Bırak",
     "disableUpdateCheckDesc": "Başlangıçta ve kontrol panelinde yeni sürümleri kontrol etmeyi durdurun. Ağ isteklerini azaltır.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
