@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "자격 증명 뷰어",
     "manageYourSSHCredentials": "SSH 자격 증명을 안전하게 관리하세요",
     "addCredential": "자격 증명 추가",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "이렇게 하면 기존 키를 덮어쓰지 않고 대상 호스트의 ~/.ssh/authorized_keys 파일에 공개 키가 안전하게 추가됩니다. 이 작업은 되돌릴 수 있습니다.",
     "chooseHostToDeploy": "배포할 호스트를 선택하세요...",
     "deploying": "배포 중...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "이름",
     "noHostsAvailable": "호스트를 사용할 수 없습니다.",
     "noHostsMatchSearch": "검색 조건에 맞는 호스트가 없습니다.",
@@ -298,7 +303,9 @@
     "createFolder": "폴더 생성",
     "editFolder": "폴더 편집",
     "editFolderDescription": "스니펫 폴더를 사용자 지정하세요",
-    "createFolderDescription": "메모들을 폴더별로 정리하세요"
+    "createFolderDescription": "메모들을 폴더별로 정리하세요",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "역사",
@@ -402,6 +409,7 @@
     "required": "필수의",
     "optional": "선택 과목",
     "connect": "연결하다",
+    "copied": "Copied",
     "connecting": "연결 중...",
     "creating": "생성 중...",
     "clear": "분명한",
@@ -494,6 +502,7 @@
     "checking": "확인 중...",
     "checkingDatabase": "데이터베이스 연결을 확인하는 중...",
     "checkingAuthentication": "인증 상태를 확인하는 중...",
+    "backendReconnected": "Server connection restored",
     "actions": "행위",
     "remove": "제거하다",
     "revoke": "취소",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "호스트 관리자",
+    "hosts": "Hosts",
     "sshHosts": "SSH 호스트",
     "noHosts": "SSH 호스트 없음",
     "noHostsMessage": "아직 SSH 호스트를 추가하지 않았습니다. 시작하려면 \"호스트 추가\"를 클릭하세요.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON 파일을 가져오는 데 실패했습니다.",
     "connectionDetails": "연결 정보",
     "organization": "조직",
-    "ipAddress": "IP 주소",
+    "ipAddress": "IP Address or Hostname",
     "port": "포트",
     "name": "이름",
     "username": "사용자 이름",
@@ -915,6 +925,8 @@
     "key": "열쇠",
     "credential": "신임장",
     "none": "없음",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "자격증명을 선택하세요",
     "selectCredentialPlaceholder": "자격증을 선택하세요...",
     "credentialRequired": "자격 증명 인증을 사용할 때는 자격 증명이 필요합니다.",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "키보드 인터랙티브 인증",
     "noneAuthDescription": "이 인증 방식은 SSH 서버에 연결할 때 키보드 대화형 인증을 사용합니다.",
     "noneAuthDetails": "키보드 대화형 인증을 사용하면 서버에 연결하는 동안 자격 증명을 입력하라는 메시지가 표시됩니다. 이는 다단계 인증이 필요한 서버나 자격 증명을 로컬에 저장하지 않으려는 경우에 유용합니다.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "키보드 상호작용 강제 적용",
     "forceKeyboardInteractiveDesc": "키보드 입력 방식의 인증을 강제로 사용하게 합니다. 이는 2단계 인증(TOTP/2FA)을 사용하는 서버에서 필요한 경우가 있습니다.",
     "overrideCredentialUsername": "자격 증명 사용자 이름 재정의",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "브라우저에서 열기",
     "warpgateContinue": "인증이 완료되었습니다",
     "warpgateTimeout": "워프게이트 인증 시간 초과입니다. 다시 연결해 주세요.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "비밀번호를 입력하시겠습니까?",
     "sudoPasswordPopupHint": "Enter 키를 눌러 삽입하고, Esc 키를 눌러 닫습니다.",
     "sudoPasswordPopupConfirm": "끼워 넣다",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "{{method}} 인증을 자동으로 시도합니다...",
     "totpTimeout": "TOTP 인증 시간이 초과되었습니다. 다시 연결해 주세요.",
     "passwordTimeout": "비밀번호 인증 시간이 초과되었습니다. 다시 연결해 주세요.",
-    "connectionRejected": "서버에서 연결이 거부되었습니다. 인증 및 네트워크 구성을 확인하십시오."
+    "connectionRejected": "서버에서 연결이 거부되었습니다. 인증 및 네트워크 구성을 확인하십시오.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "파일 관리자",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "비밀번호 재설정 성공",
     "passwordResetSuccessDesc": "비밀번호가 성공적으로 재설정되었습니다. 이제 새 비밀번호로 로그인할 수 있습니다."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "페이지를 찾을 수 없습니다",
     "unauthorized": "무단 접근",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "터미널",
     "hostSidebarSettings": "호스트 및 사이드바",
     "snippetsSettings": "스니펫",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "업데이트",
     "disableUpdateCheck": "업데이트 확인 비활성화",
     "disableUpdateCheckDesc": "시작 시 및 대시보드에서 새 버전 확인을 중지합니다. 네트워크 요청이 줄어듭니다.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
