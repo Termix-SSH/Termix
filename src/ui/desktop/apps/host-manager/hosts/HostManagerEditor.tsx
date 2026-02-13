@@ -624,7 +624,6 @@ export function HostManagerEditor({
     };
 
     updateAuthFields();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authTab, credentials]);
 
   useEffect(() => {
@@ -810,7 +809,6 @@ export function HostManagerEditor({
 
       form.reset(defaultFormData as FormData);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingHost]);
 
   useEffect(() => {

@@ -49,6 +49,8 @@ import type { HostTerminalTabProps } from "./shared/tab-types";
 import React from "react";
 
 export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
+  const [snippetPopoverOpen, setSnippetPopoverOpen] = React.useState(false);
+
   return (
     <div className="space-y-1">
       <FormField
@@ -499,7 +501,6 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
               control={form.control}
               name="terminalConfig.startupSnippetId"
               render={({ field }) => {
-                const [open, setOpen] = React.useState(false);
                 const selectedSnippet = snippets.find(
                   (s) => s.id === field.value,
                 );
@@ -507,13 +508,16 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                 return (
                   <FormItem>
                     <FormLabel>{t("hosts.startupSnippet")}</FormLabel>
-                    <Popover open={open} onOpenChange={setOpen}>
+                    <Popover
+                      open={snippetPopoverOpen}
+                      onOpenChange={setSnippetPopoverOpen}
+                    >
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             role="combobox"
-                            aria-expanded={open}
+                            aria-expanded={snippetPopoverOpen}
                             className="w-full justify-between"
                           >
                             {selectedSnippet
@@ -541,7 +545,7 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                               value="none"
                               onSelect={() => {
                                 field.onChange(null);
-                                setOpen(false);
+                                setSnippetPopoverOpen(false);
                               }}
                             >
                               <Check
@@ -558,7 +562,7 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                                 value={`${snippet.name} ${snippet.content} ${snippet.id}`}
                                 onSelect={() => {
                                   field.onChange(snippet.id);
-                                  setOpen(false);
+                                  setSnippetPopoverOpen(false);
                                 }}
                               >
                                 <Check

@@ -846,7 +846,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
-    let authMethodNotAvailable = false;
+    const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(

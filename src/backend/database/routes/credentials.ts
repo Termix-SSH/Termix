@@ -57,7 +57,6 @@ function generateSSHKeyPair(
       options.cipher = "aes128-cbc";
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const keyPair = ssh2Utils.generateKeyPairSync(ssh2Type as any, options);
 
     return {
@@ -606,8 +605,9 @@ router.put(
         userId,
       );
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.updateSharedCredentialsForOriginal(
         parseInt(id),
@@ -737,8 +737,9 @@ router.delete(
         }
       }
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 
