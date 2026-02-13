@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "क्रेडेंशियल व्यूअर",
     "manageYourSSHCredentials": "अपने SSH क्रेडेंशियल्स को सुरक्षित रूप से प्रबंधित करें",
     "addCredential": "क्रेडेंशियल जोड़ें",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "इससे सार्वजनिक कुंजी सुरक्षित रूप से लक्ष्य होस्ट की ~/.ssh/authorized_keys फ़ाइल में जुड़ जाएगी, और मौजूदा कुंजियों को ओवरराइट नहीं किया जाएगा। यह प्रक्रिया प्रतिवर्ती है।",
     "chooseHostToDeploy": "परिनियोजन के लिए होस्ट चुनें...",
     "deploying": "तैनाती जारी है...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "नाम",
     "noHostsAvailable": "कोई होस्ट उपलब्ध नहीं है",
     "noHostsMatchSearch": "आपकी खोज से मेल खाने वाले कोई होस्ट नहीं हैं",
@@ -298,7 +303,9 @@
     "createFolder": "फ़ोल्डर बनाएँ",
     "editFolder": "फ़ोल्डर संपादित करें",
     "editFolderDescription": "अपने स्निपेट फ़ोल्डर को अनुकूलित करें",
-    "createFolderDescription": "अपने लेखों के अंशों को फ़ोल्डरों में व्यवस्थित करें।"
+    "createFolderDescription": "अपने लेखों के अंशों को फ़ोल्डरों में व्यवस्थित करें।",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "इतिहास",
@@ -402,6 +409,7 @@
     "required": "आवश्यक",
     "optional": "वैकल्पिक",
     "connect": "जोड़ना",
+    "copied": "Copied",
     "connecting": "कनेक्ट हो रहा है...",
     "creating": "सृजन...",
     "clear": "स्पष्ट",
@@ -494,6 +502,7 @@
     "checking": "जाँच चल रही है...",
     "checkingDatabase": "डेटाबेस कनेक्शन की जाँच की जा रही है...",
     "checkingAuthentication": "प्रमाणीकरण की जाँच की जा रही है...",
+    "backendReconnected": "Server connection restored",
     "actions": "कार्रवाई",
     "remove": "निकालना",
     "revoke": "रद्द करना",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "मेजबान प्रबंधक",
+    "hosts": "Hosts",
     "sshHosts": "एसएसएच होस्ट",
     "noHosts": "कोई एसएसएच होस्ट नहीं",
     "noHostsMessage": "आपने अभी तक कोई SSH होस्ट नहीं जोड़ा है। शुरू करने के लिए \"होस्ट जोड़ें\" पर क्लिक करें।",
@@ -836,7 +846,7 @@
     "failedToImportJson": "JSON फ़ाइल आयात करने में विफल",
     "connectionDetails": "कनेक्शन विवरण",
     "organization": "संगठन",
-    "ipAddress": "आईपी पता",
+    "ipAddress": "IP Address or Hostname",
     "port": "पत्तन",
     "name": "नाम",
     "username": "उपयोगकर्ता नाम",
@@ -915,6 +925,8 @@
     "key": "चाबी",
     "credential": "क्रेडेंशियल",
     "none": "कोई नहीं",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "क्रेडेंशियल चुनें",
     "selectCredentialPlaceholder": "एक प्रमाण पत्र चुनें...",
     "credentialRequired": "क्रेडेंशियल प्रमाणीकरण का उपयोग करते समय क्रेडेंशियल आवश्यक है।",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "कीबोर्ड-इंटरैक्टिव प्रमाणीकरण",
     "noneAuthDescription": "एसएसएच सर्वर से कनेक्ट करते समय यह प्रमाणीकरण विधि कीबोर्ड-इंटरैक्टिव प्रमाणीकरण का उपयोग करेगी।",
     "noneAuthDetails": "कीबोर्ड-इंटरैक्टिव प्रमाणीकरण सर्वर को कनेक्शन के दौरान आपसे क्रेडेंशियल मांगने की अनुमति देता है। यह उन सर्वरों के लिए उपयोगी है जिन्हें मल्टी-फैक्टर प्रमाणीकरण की आवश्यकता होती है या यदि आप क्रेडेंशियल को स्थानीय रूप से सहेजना नहीं चाहते हैं।",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "फ़ोर्स कीबोर्ड-इंटरैक्टिव",
     "forceKeyboardInteractiveDesc": "कीबोर्ड-आधारित प्रमाणीकरण को अनिवार्य बनाता है। यह कभी-कभी उन सर्वरों के लिए आवश्यक होता है जो दो-कारक प्रमाणीकरण (TOTP/2FA) का उपयोग करते हैं।",
     "overrideCredentialUsername": "क्रेडेंशियल उपयोगकर्ता नाम को ओवरराइड करें",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "ब्राउज़र में खोलें",
     "warpgateContinue": "मैंने प्रमाणीकरण पूरा कर लिया है",
     "warpgateTimeout": "वॉरपगेट प्रमाणीकरण में समय समाप्त हो गया है। कृपया पुनः कनेक्ट करें।",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "पासवर्ड डालें?",
     "sudoPasswordPopupHint": "सम्मिलित करने के लिए Enter दबाएँ, हटाने के लिए Esc दबाएँ",
     "sudoPasswordPopupConfirm": "डालना",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Automatically trying {{method}} authentication...",
     "totpTimeout": "टीओटीपी सत्यापन में समय समाप्त हो गया है। कृपया पुनः कनेक्ट करें।",
     "passwordTimeout": "पासवर्ड सत्यापन में समय समाप्त हो गया है। कृपया पुनः कनेक्ट करें।",
-    "connectionRejected": "सर्वर द्वारा कनेक्शन अस्वीकृत कर दिया गया है। कृपया अपनी प्रमाणीकरण और नेटवर्क कॉन्फ़िगरेशन की जाँच करें।"
+    "connectionRejected": "सर्वर द्वारा कनेक्शन अस्वीकृत कर दिया गया है। कृपया अपनी प्रमाणीकरण और नेटवर्क कॉन्फ़िगरेशन की जाँच करें।",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "फ़ाइल मैनेजर",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "पासवर्ड रीसेट सफल रहा",
     "passwordResetSuccessDesc": "आपका पासवर्ड सफलतापूर्वक रीसेट हो गया है। अब आप अपने नए पासवर्ड से लॉग इन कर सकते हैं।"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "पृष्ठ नहीं मिला",
     "unauthorized": "अनधिकृत पहुंच",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "टर्मिनल",
     "hostSidebarSettings": "होस्ट और साइडबार",
     "snippetsSettings": "स्निपेट्स",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "अपडेट",
     "disableUpdateCheck": "अपडेट जांच अक्षम करें",
     "disableUpdateCheckDesc": "स्टार्टअप और डैशबोर्ड पर नए संस्करणों की जाँच करना बंद करें। इससे नेटवर्क अनुरोध कम होते हैं।",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
