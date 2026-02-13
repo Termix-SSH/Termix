@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Прегледач акредитива",
     "manageYourSSHCredentials": "Безбедно управљајте својим SSH акредитивима",
     "addCredential": "Додај акредитив",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Ово ће безбедно додати јавни кључ у датотеку ~/.ssh/authorized_keys циљног хоста без преписивања постојећих кључева. Операција је реверзибилна.",
     "chooseHostToDeploy": "Изаберите хост за распоређивање...",
     "deploying": "Распоређивање...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Име",
     "noHostsAvailable": "Нема доступних хостова",
     "noHostsMatchSearch": "Ниједан хост не одговара вашој претрази",
@@ -298,7 +303,9 @@
     "createFolder": "Направи фасциклу",
     "editFolder": "Уреди фасциклу",
     "editFolderDescription": "Прилагодите своју фасциклу са фрагментима кода",
-    "createFolderDescription": "Организујте своје фрагменте у фасцикле"
+    "createFolderDescription": "Организујте своје фрагменте у фасцикле",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Историја",
@@ -402,6 +409,7 @@
     "required": "Обавезно",
     "optional": "Опционо",
     "connect": "Повежи се",
+    "copied": "Copied",
     "connecting": "Повезивање...",
     "creating": "Креирање...",
     "clear": "Јасно",
@@ -494,6 +502,7 @@
     "checking": "Провера...",
     "checkingDatabase": "Провера везе са базом података...",
     "checkingAuthentication": "Провера аутентификације...",
+    "backendReconnected": "Server connection restored",
     "actions": "Акције",
     "remove": "Уклони",
     "revoke": "Поништи",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Менаџер домаћина",
+    "hosts": "Hosts",
     "sshHosts": "SSH хостови",
     "noHosts": "Нема SSH хостова",
     "noHostsMessage": "Још нисте додали ниједан SSH хост. Кликните на „Додај хост“ да бисте започели.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Увоз JSON датотеке није успео",
     "connectionDetails": "Детаљи везе",
     "organization": "Организација",
-    "ipAddress": "ИП адреса",
+    "ipAddress": "IP Address or Hostname",
     "port": "Лука",
     "name": "Име",
     "username": "Корисничко име",
@@ -915,6 +925,8 @@
     "key": "Кључ",
     "credential": "Акредитив",
     "none": "Ниједан",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Изаберите акредитив",
     "selectCredentialPlaceholder": "Изаберите акредитив...",
     "credentialRequired": "Акредитив је потребан када се користи аутентификација акредитива",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Интерактивна аутентификација помоћу тастатуре",
     "noneAuthDescription": "Ова метода аутентификације ће користити интерактивну аутентификацију помоћу тастатуре приликом повезивања са SSH сервером.",
     "noneAuthDetails": "Интерактивна аутентификација помоћу тастатуре омогућава серверу да вас пита за акредитиве током повезивања. Ово је корисно за сервере који захтевају вишефакторску аутентификацију или ако не желите да локално чувате акредитиве.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Присилно интерактивно коришћење тастатуре",
     "forceKeyboardInteractiveDesc": "Приморава употребу интерактивне аутентификације помоћу тастатуре. Ово је понекад потребно за сервере који користе двофакторску аутентификацију (TOTP/2FA).",
     "overrideCredentialUsername": "Замени корисничко име за акредитиве",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Отвори у прегледачу",
     "warpgateContinue": "Завршио/ла сам аутентификацију",
     "warpgateTimeout": "Временско ограничење за аутентификацију Варпгејта је истекло. Молимо вас да се поново повежете.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Унети лозинку?",
     "sudoPasswordPopupHint": "Притисните Enter да бисте унели, Esc да бисте одбацили",
     "sudoPasswordPopupConfirm": "Уметни",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Аутоматски покушај {{method}} аутентификације...",
     "totpTimeout": "Временско ограничење за верификацију TOTP-а је истекло. Молимо вас да се поново повежете.",
     "passwordTimeout": "Временско ограничење за верификацију лозинке је истекло. Молимо вас да се поново повежете.",
-    "connectionRejected": "Сервер је одбио везу. Проверите аутентификацију и конфигурацију мреже."
+    "connectionRejected": "Сервер је одбио везу. Проверите аутентификацију и конфигурацију мреже.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Менаџер датотека",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Ресетовање лозинке је успешно",
     "passwordResetSuccessDesc": "Ваша лозинка је успешно ресетована. Сада се можете пријавити са новом лозинком."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Страница није пронађена",
     "unauthorized": "Неовлашћени приступ",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Терминал",
     "hostSidebarSettings": "Домаћин и бочна трака",
     "snippetsSettings": "Исечци",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Ажурирања",
     "disableUpdateCheck": "Онемогући проверу ажурирања",
     "disableUpdateCheckDesc": "Зауставите проверу нових верзија при покретању и на контролној табли. Смањује мрежне захтеве.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
