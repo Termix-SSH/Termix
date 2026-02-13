@@ -414,9 +414,11 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM sessions").run();
+    sqlite
+      .prepare("DELETE FROM sessions WHERE expires_at < datetime('now')")
+      .run();
   } catch (e) {
-    databaseLogger.warn("Could not clear sessions on startup", {
+    databaseLogger.warn("Could not clear expired sessions on startup", {
       operation: "db_init_session_cleanup_failed",
       error: e,
     });
