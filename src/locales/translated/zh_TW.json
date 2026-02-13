@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "憑證檢視器",
     "manageYourSSHCredentials": "安全地管理您的 SSH 憑證",
     "addCredential": "新增憑證",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "這將安全地將公鑰新增至目標主機的 ~/.ssh/authorized_keys 檔案中，而不會覆蓋現有金鑰。此操作可逆。",
     "chooseHostToDeploy": "選擇要部署到的主機…",
     "deploying": "正在部署…",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "姓名",
     "noHostsAvailable": "暫無可用主機",
     "noHostsMatchSearch": "沒有符合您搜尋條件的主機",
@@ -298,7 +303,9 @@
     "createFolder": "建立資料夾",
     "editFolder": "編輯資料夾",
     "editFolderDescription": "自訂程式碼片段資料夾",
-    "createFolderDescription": "將你的程式碼片段整理到資料夾中"
+    "createFolderDescription": "將你的程式碼片段整理到資料夾中",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "歷史",
@@ -402,6 +409,7 @@
     "required": "必需的",
     "optional": "選擇性",
     "connect": "連接",
+    "copied": "Copied",
     "connecting": "正在連接...",
     "creating": "正在建立…",
     "clear": "清除",
@@ -494,6 +502,7 @@
     "checking": "檢查...",
     "checkingDatabase": "正在檢查資料庫連線...",
     "checkingAuthentication": "正在檢查身份驗證...",
+    "backendReconnected": "Server connection restored",
     "actions": "行動",
     "remove": "消除",
     "revoke": "撤銷",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "主機管理器",
+    "hosts": "Hosts",
     "sshHosts": "SSH 主機",
     "noHosts": "無 SSH 主機",
     "noHostsMessage": "您尚未新增任何 SSH 主機。點選「新增主機」開始操作。",
@@ -836,7 +846,7 @@
     "failedToImportJson": "導入 JSON 檔案失敗",
     "connectionDetails": "連線詳情",
     "organization": "組織",
-    "ipAddress": "IP位址",
+    "ipAddress": "IP Address or Hostname",
     "port": "連接埠",
     "name": "姓名",
     "username": "使用者名稱",
@@ -915,6 +925,8 @@
     "key": "金鑰",
     "credential": "憑證",
     "none": "沒有",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "選擇憑證",
     "selectCredentialPlaceholder": "選擇一種憑證…",
     "credentialRequired": "使用憑證驗證時需要憑證。",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "鍵盤互動式驗證",
     "noneAuthDescription": "連接到 SSH 伺服器時，此身份驗證方法將使用鍵盤互動式身份驗證。",
     "noneAuthDetails": "鍵盤互動式驗證可讓伺服器在連線過程中提示您輸入憑證。這對於需要多因素身份驗證的伺服器或您不想在本地儲存憑證的情況非常有用。",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "強制鍵盤交互",
     "forceKeyboardInteractiveDesc": "強制使用鍵盤互動式身份驗證。對於使用雙重認證（TOTP/2FA）的伺服器，有時需要這樣做。",
     "overrideCredentialUsername": "覆蓋憑證使用者名稱",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "在瀏覽器中開啟",
     "warpgateContinue": "我已經完成身份驗證",
     "warpgateTimeout": "Warpgate身份驗證逾時，請重新連線。",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "輸入密碼？",
     "sudoPasswordPopupHint": "按 Enter 鍵插入，按 Esc 鍵關閉",
     "sudoPasswordPopupConfirm": "插入",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "正在自動嘗試 {{method}} 驗證...",
     "totpTimeout": "TOTP驗證逾時，請重新連線。",
     "passwordTimeout": "密碼驗證逾時，請重新連線。",
-    "connectionRejected": "伺服器拒絕連線。請檢查您的身份驗證和網路配置。"
+    "connectionRejected": "伺服器拒絕連線。請檢查您的身份驗證和網路配置。",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "檔案管理器",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "密碼重置成功",
     "passwordResetSuccessDesc": "您的密碼已成功重設。現在您可以使用新密碼登入。"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "頁面未找到",
     "unauthorized": "未經授權的訪問",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "終端機",
     "hostSidebarSettings": "主機和側邊欄",
     "snippetsSettings": "片段",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "更新",
     "disableUpdateCheck": "禁用更新檢查",
     "disableUpdateCheckDesc": "停止在啟動和控制面板中檢查新版本。減少網路請求。",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
