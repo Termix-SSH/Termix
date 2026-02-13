@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Преглед на идентификационни данни",
     "manageYourSSHCredentials": "Управлявайте сигурно вашите SSH идентификационни данни",
     "addCredential": "Добавяне на идентификационни данни",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Това безопасно ще добави публичния ключ към файла ~/.ssh/authorized_keys на целевия хост, без да презаписва съществуващите ключове. Операцията е обратима.",
     "chooseHostToDeploy": "Изберете хост, на който да се разположи...",
     "deploying": "Разгръщане...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Име",
     "noHostsAvailable": "Няма налични хостове",
     "noHostsMatchSearch": "Няма хостове, които да отговарят на вашето търсене",
@@ -298,7 +303,9 @@
     "createFolder": "Създаване на папка",
     "editFolder": "Редактиране на папка",
     "editFolderDescription": "Персонализирайте папката си с фрагменти",
-    "createFolderDescription": "Организирайте фрагментите си в папки"
+    "createFolderDescription": "Организирайте фрагментите си в папки",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "История",
@@ -402,6 +409,7 @@
     "required": "Задължително",
     "optional": "По избор",
     "connect": "Свържете се",
+    "copied": "Copied",
     "connecting": "Свързване...",
     "creating": "Създаване...",
     "clear": "Изчисти",
@@ -494,6 +502,7 @@
     "checking": "Проверка...",
     "checkingDatabase": "Проверка на връзката с базата данни...",
     "checkingAuthentication": "Проверка на удостоверяването...",
+    "backendReconnected": "Server connection restored",
     "actions": "Действия",
     "remove": "Премахване",
     "revoke": "Отмяна",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Мениджър на домакини",
+    "hosts": "Hosts",
     "sshHosts": "SSH хостове",
     "noHosts": "Няма SSH хостове",
     "noHostsMessage": "Все още не сте добавили SSH хостове. Кликнете върху „Добавяне на хост“, за да започнете.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Импортирането на JSON файл не бе успешно",
     "connectionDetails": "Детайли за връзката",
     "organization": "Организация",
-    "ipAddress": "IP адрес",
+    "ipAddress": "IP Address or Hostname",
     "port": "Порт",
     "name": "Име",
     "username": "Потребителско име",
@@ -915,6 +925,8 @@
     "key": "Ключ",
     "credential": "Пълномощия",
     "none": "Няма",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Изберете идентификационни данни",
     "selectCredentialPlaceholder": "Изберете удостоверение за самоличност...",
     "credentialRequired": "Изисква се удостоверяване на идентификационни данни при използване на удостоверяване с идентификационни данни",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Интерактивно удостоверяване с клавиатура",
     "noneAuthDescription": "Този метод за удостоверяване ще използва интерактивно удостоверяване с клавиатура при свързване към SSH сървъра.",
     "noneAuthDetails": "Интерактивното удостоверяване с клавиатура позволява на сървъра да ви пита за идентификационни данни по време на връзка. Това е полезно за сървъри, които изискват многофакторно удостоверяване или ако не искате да запазвате идентификационните данни локално.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Принудително интерактивно с клавиатура",
     "forceKeyboardInteractiveDesc": "Налага използването на интерактивно удостоверяване с клавиатура. Това понякога е необходимо за сървъри, които използват двуфакторно удостоверяване (TOTP/2FA).",
     "overrideCredentialUsername": "Замяна на потребителско име за идентификационни данни",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Отваряне в браузъра",
     "warpgateContinue": "Завърших удостоверяването",
     "warpgateTimeout": "Времето за изчакване за удостоверяване на Warpgate изтече. Моля, свържете се отново.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Въвеждане на парола?",
     "sudoPasswordPopupHint": "Натиснете Enter за вмъкване, Esc за отхвърляне",
     "sudoPasswordPopupConfirm": "Вмъкване",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Автоматичен опит за {{method}} удостоверяване...",
     "totpTimeout": "Времето за изчакване за проверка на TOTP изтече. Моля, свържете се отново.",
     "passwordTimeout": "Времето за изчакване за потвърждение на паролата изтече. Моля, свържете се отново.",
-    "connectionRejected": "Връзката е отхвърлена от сървъра. Моля, проверете удостоверяването и мрежовата си конфигурация."
+    "connectionRejected": "Връзката е отхвърлена от сървъра. Моля, проверете удостоверяването и мрежовата си конфигурация.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Файлов мениджър",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Успешно възстановяване на паролата",
     "passwordResetSuccessDesc": "Паролата ви е нулирана успешно. Вече можете да влезете с новата си парола."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Страницата не е намерена",
     "unauthorized": "Неоторизиран достъп",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Терминал",
     "hostSidebarSettings": "Хост и странична лента",
     "snippetsSettings": "Откъси",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Актуализации",
     "disableUpdateCheck": "Деактивиране на проверката за актуализации",
     "disableUpdateCheckDesc": "Спрете проверката за нови версии при стартиране и таблото за управление. Намалява мрежовите заявки.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
