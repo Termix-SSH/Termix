@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "Hitelesítő adatok megtekintője",
     "manageYourSSHCredentials": "SSH-hitelesítő adatainak biztonságos kezelése",
     "addCredential": "Hitelesítő adat hozzáadása",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Ez biztonságosan hozzáadja a nyilvános kulcsot a célgép ~/.ssh/authorized_keys fájljához a meglévő kulcsok felülírása nélkül. A művelet visszafordítható.",
     "chooseHostToDeploy": "Válasszon egy hosztot a telepítéshez...",
     "deploying": "Telepítés...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "Név",
     "noHostsAvailable": "Nincsenek elérhető házigazdák",
     "noHostsMatchSearch": "Nincsenek a keresésnek megfelelő házigazdák",
@@ -298,7 +303,9 @@
     "createFolder": "Mappa létrehozása",
     "editFolder": "Mappa szerkesztése",
     "editFolderDescription": "Kódrészlet mappa testreszabása",
-    "createFolderDescription": "Rendezd a kódrészleteket mappákba"
+    "createFolderDescription": "Rendezd a kódrészleteket mappákba",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Történelem",
@@ -402,6 +409,7 @@
     "required": "Kívánt",
     "optional": "Választható",
     "connect": "Csatlakozás",
+    "copied": "Copied",
     "connecting": "Kapcsolódás...",
     "creating": "Létrehozás...",
     "clear": "Világos",
@@ -494,6 +502,7 @@
     "checking": "Ellenőrzés...",
     "checkingDatabase": "Adatbázis-kapcsolat ellenőrzése...",
     "checkingAuthentication": "Hitelesítés ellenőrzése...",
+    "backendReconnected": "Server connection restored",
     "actions": "Műveletek",
     "remove": "Eltávolítás",
     "revoke": "Visszavonás",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Házigazda-kezelő",
+    "hosts": "Hosts",
     "sshHosts": "SSH-hosztok",
     "noHosts": "Nincsenek SSH-hosztok",
     "noHostsMessage": "Még nem adott hozzá SSH-hosztokat. Kattintson a „Hoszt hozzáadása” gombra a kezdéshez.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Nem sikerült importálni a JSON fájlt",
     "connectionDetails": "Kapcsolat részletei",
     "organization": "Szervezet",
-    "ipAddress": "IP-cím",
+    "ipAddress": "IP Address or Hostname",
     "port": "Kikötő",
     "name": "Név",
     "username": "Felhasználónév",
@@ -915,6 +925,8 @@
     "key": "Kulcsfontosságú",
     "credential": "Hitelesítő adat",
     "none": "Egyik sem",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Hitelesítő adat kiválasztása",
     "selectCredentialPlaceholder": "Válasszon hitelesítő adatlapot...",
     "credentialRequired": "Hitelesítő adat szükséges hitelesítő adat alapú hitelesítéshez",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Billentyűzet-interaktív hitelesítés",
     "noneAuthDescription": "Ez a hitelesítési módszer billentyűzet-interaktív hitelesítést használ az SSH-kiszolgálóhoz való csatlakozáskor.",
     "noneAuthDetails": "A billentyűzet-interaktív hitelesítés lehetővé teszi, hogy a szerver kérje a hitelesítő adatokat a csatlakozás során. Ez olyan szervereknél hasznos, amelyek többtényezős hitelesítést igényelnek, vagy ha nem szeretné helyben menteni a hitelesítő adatokat.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Kényszerítse a billentyűzet interaktivitását",
     "forceKeyboardInteractiveDesc": "Kényszeríti a billentyűzet-interaktív hitelesítés használatát. Ez néha szükséges a kétfaktoros hitelesítést (TOTP/2FA) használó szervereknél.",
     "overrideCredentialUsername": "Hitelesítő adat felülírása Felhasználónév",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Megnyitás böngészőben",
     "warpgateContinue": "Befejeztem a hitelesítést",
     "warpgateTimeout": "Warpgate hitelesítési időtúllépés. Kérjük, csatlakozzon újra.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Jelszó beszúrása?",
     "sudoPasswordPopupHint": "Nyomja meg az Enter billentyűt a beszúráshoz, az Esc billentyűt az elvetéshez",
     "sudoPasswordPopupConfirm": "Beszúrás",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Automatikusan megpróbáljuk a {{method}} hitelesítést...",
     "totpTimeout": "TOTP ellenőrzési időtúllépés. Kérjük, csatlakozzon újra.",
     "passwordTimeout": "Jelszó-ellenőrzési időtúllépés. Kérjük, csatlakozzon újra.",
-    "connectionRejected": "A szerver elutasította a kapcsolatot. Kérjük, ellenőrizze a hitelesítést és a hálózati konfigurációt."
+    "connectionRejected": "A szerver elutasította a kapcsolatot. Kérjük, ellenőrizze a hitelesítést és a hálózati konfigurációt.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Fájlkezelő",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Jelszó visszaállítása sikeres",
     "passwordResetSuccessDesc": "Jelszava sikeresen visszaállításra került. Most már bejelentkezhet új jelszavával."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Az oldal nem található",
     "unauthorized": "Jogosulatlan hozzáférés",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Terminál",
     "hostSidebarSettings": "Gazdagép és oldalsáv",
     "snippetsSettings": "Kódrészletek",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Frissítések",
     "disableUpdateCheck": "Frissítésellenőrzés letiltása",
     "disableUpdateCheckDesc": "Új verziók keresésének leállítása indításkor és az irányítópulton. Csökkenti a hálózati kérések számát.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
