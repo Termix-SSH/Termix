@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "โปรแกรมดูข้อมูลประจำตัว",
     "manageYourSSHCredentials": "จัดการข้อมูลประจำตัว SSH ของคุณอย่างปลอดภัย",
     "addCredential": "เพิ่มข้อมูลรับรอง",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "การดำเนินการนี้จะเพิ่มคีย์สาธารณะลงในไฟล์ ~/.ssh/authorized_keys ของโฮสต์เป้าหมายอย่างปลอดภัยโดยไม่เขียนทับคีย์ที่มีอยู่ การดำเนินการนี้สามารถย้อนกลับได้",
     "chooseHostToDeploy": "เลือกโฮสต์ที่จะใช้ในการติดตั้ง...",
     "deploying": "กำลังติดตั้ง...",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "ชื่อ",
     "noHostsAvailable": "ไม่มีโฮสต์ให้บริการ",
     "noHostsMatchSearch": "ไม่พบโฮสต์ใดตรงกับผลการค้นหาของคุณ",
@@ -298,7 +303,9 @@
     "createFolder": "สร้างโฟลเดอร์",
     "editFolder": "แก้ไขโฟลเดอร์",
     "editFolderDescription": "ปรับแต่งโฟลเดอร์โค้ดสั้นของคุณ",
-    "createFolderDescription": "จัดระเบียบข้อความย่อของคุณลงในโฟลเดอร์"
+    "createFolderDescription": "จัดระเบียบข้อความย่อของคุณลงในโฟลเดอร์",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "ประวัติศาสตร์",
@@ -402,6 +409,7 @@
     "required": "ที่จำเป็น",
     "optional": "ไม่จำเป็น",
     "connect": "เชื่อมต่อ",
+    "copied": "Copied",
     "connecting": "กำลังเชื่อมต่อ...",
     "creating": "กำลังสร้าง...",
     "clear": "ชัดเจน",
@@ -494,6 +502,7 @@
     "checking": "กำลังตรวจสอบ...",
     "checkingDatabase": "กำลังตรวจสอบการเชื่อมต่อฐานข้อมูล...",
     "checkingAuthentication": "กำลังตรวจสอบการยืนยันตัวตน...",
+    "backendReconnected": "Server connection restored",
     "actions": "การกระทำ",
     "remove": "ลบ",
     "revoke": "ถอน",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "ผู้จัดการโฮสต์",
+    "hosts": "Hosts",
     "sshHosts": "โฮสต์ SSH",
     "noHosts": "ไม่มีโฮสต์ SSH",
     "noHostsMessage": "คุณยังไม่ได้เพิ่มโฮสต์ SSH ใดๆ คลิก \"เพิ่มโฮสต์\" เพื่อเริ่มต้น",
@@ -836,7 +846,7 @@
     "failedToImportJson": "ไม่สามารถนำเข้าไฟล์ JSON ได้",
     "connectionDetails": "รายละเอียดการเชื่อมต่อ",
     "organization": "องค์กร",
-    "ipAddress": "ที่อยู่ IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "ท่าเรือ",
     "name": "ชื่อ",
     "username": "ชื่อผู้ใช้",
@@ -915,6 +925,8 @@
     "key": "สำคัญ",
     "credential": "ใบรับรอง",
     "none": "ไม่มี",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "เลือกข้อมูลประจำตัว",
     "selectCredentialPlaceholder": "เลือกข้อมูลประจำตัว...",
     "credentialRequired": "จำเป็นต้องระบุข้อมูลประจำตัวเมื่อใช้การตรวจสอบสิทธิ์ด้วยข้อมูลประจำตัว",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "การตรวจสอบสิทธิ์แบบโต้ตอบด้วยแป้นพิมพ์",
     "noneAuthDescription": "วิธีการยืนยันตัวตนนี้จะใช้การยืนยันตัวตนผ่านแป้นพิมพ์เมื่อเชื่อมต่อกับเซิร์ฟเวอร์ SSH",
     "noneAuthDetails": "การตรวจสอบสิทธิ์แบบโต้ตอบด้วยแป้นพิมพ์ช่วยให้เซิร์ฟเวอร์แจ้งให้คุณป้อนข้อมูลประจำตัวระหว่างการเชื่อมต่อ ซึ่งมีประโยชน์สำหรับเซิร์ฟเวอร์ที่ต้องการการตรวจสอบสิทธิ์แบบหลายปัจจัย หรือหากคุณไม่ต้องการบันทึกข้อมูลประจำตัวไว้ในเครื่อง",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "แป้นพิมพ์แบบอินเทอร์แอคทีฟของ Force",
     "forceKeyboardInteractiveDesc": "บังคับให้ใช้การตรวจสอบสิทธิ์แบบโต้ตอบผ่านแป้นพิมพ์ ซึ่งบางครั้งจำเป็นสำหรับเซิร์ฟเวอร์ที่ใช้การตรวจสอบสิทธิ์แบบสองปัจจัย (TOTP/2FA)",
     "overrideCredentialUsername": "แทนที่ชื่อผู้ใช้ข้อมูลประจำตัว",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "เปิดในเบราว์เซอร์",
     "warpgateContinue": "ฉันทำการยืนยันตัวตนเสร็จเรียบร้อยแล้ว",
     "warpgateTimeout": "การตรวจสอบสิทธิ์ผ่านวาร์ปหมดเวลา โปรดเชื่อมต่อใหม่อีกครั้ง",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "ใส่รหัสผ่าน?",
     "sudoPasswordPopupHint": "กด Enter เพื่อแทรก กด Esc เพื่อปิด",
     "sudoPasswordPopupConfirm": "แทรก",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "กำลังลองยืนยันตัวตน {{method}} โดยอัตโนมัติ...",
     "totpTimeout": "การยืนยัน TOTP หมดเวลา โปรดเชื่อมต่อใหม่อีกครั้ง",
     "passwordTimeout": "การตรวจสอบรหัสผ่านหมดเวลา โปรดเชื่อมต่อใหม่อีกครั้ง",
-    "connectionRejected": "เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ โปรดตรวจสอบการยืนยันตัวตนและการกำหนดค่าเครือข่ายของคุณ"
+    "connectionRejected": "เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ โปรดตรวจสอบการยืนยันตัวตนและการกำหนดค่าเครือข่ายของคุณ",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "ตัวจัดการไฟล์",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "การรีเซ็ตรหัสผ่านสำเร็จ",
     "passwordResetSuccessDesc": "รหัสผ่านของคุณถูกรีเซ็ตสำเร็จแล้ว คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ของคุณได้แล้ว"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "ไม่พบหน้าเว็บ",
     "unauthorized": "การเข้าถึงโดยไม่ได้รับอนุญาต",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "เทอร์มินัล",
     "hostSidebarSettings": "โฮสต์และแถบด้านข้าง",
     "snippetsSettings": "เศษเสี้ยว",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "การอัปเดต",
     "disableUpdateCheck": "ปิดใช้งานการตรวจสอบการอัปเดต",
     "disableUpdateCheckDesc": "หยุดการตรวจสอบเวอร์ชันใหม่เมื่อเริ่มต้นระบบและบนแดชบอร์ด ช่วยลดจำนวนการร้องขอเครือข่าย",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
