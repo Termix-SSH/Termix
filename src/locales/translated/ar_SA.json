@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "وثائق التفويض",
     "credentialsViewer": "عارض وثائق التفويض",
     "manageYourSSHCredentials": "إدارة بيانات اعتماد SSH الخاصة بك بشكل آمن",
     "addCredential": "إضافة بيانات اعتماد",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "سيؤدي هذا بأمان إلى إضافة المفتاح العمومي إلى ملف المضيف الهدف ~/.ssh/authorized_keyys دون الكتابة فوق المفاتيح الموجودة. العملية قابلة للرجوع عنها.",
     "chooseHostToDeploy": "اختر مضيف ليقوم بنشره إلى...",
     "deploying": "النشر...",
+    "copyDeployCommand": "نسخ أمر النشر",
+    "copyDeployCommandDescription": "نسخ أمر Shell لإضافة المفتاح العام يدوياً إلى ملف مفتاح_مفاتيح مضيف مضيف. مفيد عندما يتم تعطيل مصادقة كلمة المرور.",
+    "deployCommandCopied": "نشر أمر نسخ إلى الحافظة",
+    "manualDeployInfo": "قم بلصق هذا الأمر في محطة المضيف المستهدفة (مثل وحدة تحكم Proxmox أو IPMI، أو الوصول المادي) لإضافة مفتاح SSH.",
     "name": "الاسم",
     "noHostsAvailable": "لا يوجد مضيفين متاحين",
     "noHostsMatchSearch": "لا يوجد مضيف يطابق بحثك",
@@ -298,7 +303,9 @@
     "createFolder": "إنشاء مجلد",
     "editFolder": "تعديل المجلد",
     "editFolderDescription": "تخصيص مجلد كتلة الكود",
-    "createFolderDescription": "تنظيم كتل الكتل في مجلدات"
+    "createFolderDescription": "تنظيم كتل الكتل في مجلدات",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "التاريخ",
@@ -402,6 +409,7 @@
     "required": "مطلوب",
     "optional": "اختياري",
     "connect": "الاتصال",
+    "copied": "Copied",
     "connecting": "جاري الاتصال...",
     "creating": "إنشاء...",
     "clear": "مسح",
@@ -494,6 +502,7 @@
     "checking": "يتحقق...",
     "checkingDatabase": "التحقق من اتصال قاعدة البيانات...",
     "checkingAuthentication": "التحقق من المصادقة...",
+    "backendReconnected": "Server connection restored",
     "actions": "الإجراءات",
     "remove": "إزالة",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "مدير المضيف",
+    "hosts": "Hosts",
     "sshHosts": "مضيفي SSH",
     "noHosts": "لا يوجد مضيفين SSH",
     "noHostsMessage": "لم تقم بإضافة أي مضيف SSH حتى الآن. انقر فوق \"إضافة مضيف\" للبدء.",
@@ -836,7 +846,7 @@
     "failedToImportJson": "فشل استيراد ملف JSON",
     "connectionDetails": "تفاصيل الاتصال",
     "organization": "المنظمة",
-    "ipAddress": "عنوان IP",
+    "ipAddress": "IP Address or Hostname",
     "port": "المنفذ",
     "name": "الاسم",
     "username": "اسم المستخدم",
@@ -915,6 +925,8 @@
     "key": "المفتاح",
     "credential": "بيانات",
     "none": "لا",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "حدد بيانات الاعتماد",
     "selectCredentialPlaceholder": "اختر بيانات الاعتماد...",
     "credentialRequired": "الاعتماد مطلوب عند استخدام مصادقة الاعتماد",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "المصادقة التفاعلية على لوحة المفاتيح",
     "noneAuthDescription": "طريقة المصادقة هذه ستستخدم مصادقة لوحة المفاتيح التفاعلية عند الاتصال بخادم SSH.",
     "noneAuthDetails": "المصادقة التفاعلية بلوحة المفاتيح تسمح للخادم بمطالبتك للحصول على بيانات الاعتماد أثناء الاتصال. هذا مفيد للخوادم التي تتطلب مصادقة متعددة العناصر أو إذا كنت لا تريد حفظ بيانات الاعتماد محلياً.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "تفعيل لوحة المفاتيح",
     "forceKeyboardInteractiveDesc": "يفرض استخدام مصادقة لوحة المفاتيح التفاعلية. هذا مطلوب أحيانا للخوادم التي تستخدم المصادقة الثنائية (TOTP/2FA).",
     "overrideCredentialUsername": "تجاوز اسم المستخدم",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "فتح في المتصفح",
     "warpgateContinue": "لقد أكملت المصادقة",
     "warpgateTimeout": "انتهت مهلة مصادقة التحذير. الرجاء إعادة الاتصال.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "إدراج كلمة المرور؟",
     "sudoPasswordPopupHint": "اضغط Enter للإدراج ، Esc للإلغاء",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "جرب مصادقة {{method}} تلقائياً...",
     "totpTimeout": "انتهت مهلة التحقق من TOTP. الرجاء إعادة الاتصال.",
     "passwordTimeout": "انتهت مهلة التحقق من كلمة المرور. الرجاء إعادة الاتصال.",
-    "connectionRejected": "تم رفض الاتصال بواسطة الخادم. الرجاء التحقق من المصادقة الخاصة بك وتكوين الشبكة."
+    "connectionRejected": "تم رفض الاتصال بواسطة الخادم. الرجاء التحقق من المصادقة الخاصة بك وتكوين الشبكة.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "مدير الملفات",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "تم إعادة تعيين كلمة المرور بنجاح",
     "passwordResetSuccessDesc": "تم إعادة تعيين كلمة المرور الخاصة بك بنجاح. يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "لم يتم العثور على الصفحة",
     "unauthorized": "الوصول غير المصرح به",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "المحطة",
     "hostSidebarSettings": "المضيف و الشريط الجانبي",
     "snippetsSettings": "كتل الكود",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "التحديثات",
     "disableUpdateCheck": "تعطيل التحقق من التحديث",
     "disableUpdateCheckDesc": "إيقاف التحقق من الإصدارات الجديدة عند بدء التشغيل و لوحة التحكم. يقلل من طلبات الشبكة.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
