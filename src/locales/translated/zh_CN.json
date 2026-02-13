@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Credentials",
     "credentialsViewer": "凭证查看器",
     "manageYourSSHCredentials": "安全地管理您的 SSH 凭证",
     "addCredential": "添加凭证",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "这将安全地将公钥添加到目标主机的 ~/.ssh/authorized_keys 文件中，而不会覆盖现有密钥。此操作可逆。",
     "chooseHostToDeploy": "选择要部署到的主机……",
     "deploying": "正在部署……",
+    "copyDeployCommand": "Copy Deploy Command",
+    "copyDeployCommandDescription": "Copy a shell command to manually add the public key to a host's authorized_keys file. Useful when password authentication is disabled.",
+    "deployCommandCopied": "Deploy command copied to clipboard",
+    "manualDeployInfo": "Paste this command in the target host's terminal (e.g., Proxmox console, IPMI, or physical access) to add the SSH key.",
     "name": "名称",
     "noHostsAvailable": "暂无可用主机",
     "noHostsMatchSearch": "没有符合您搜索条件的主机",
@@ -298,7 +303,9 @@
     "createFolder": "创建文件夹",
     "editFolder": "编辑文件夹",
     "editFolderDescription": "自定义代码片段文件夹",
-    "createFolderDescription": "将你的代码片段归类到文件夹中"
+    "createFolderDescription": "将你的代码片段归类到文件夹中",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "历史",
@@ -402,6 +409,7 @@
     "required": "必需的",
     "optional": "选修的",
     "connect": "连接",
+    "copied": "Copied",
     "connecting": "正在连接...",
     "creating": "正在创建……",
     "clear": "清除",
@@ -494,6 +502,7 @@
     "checking": "检查...",
     "checkingDatabase": "正在检查数据库连接...",
     "checkingAuthentication": "正在检查认证...",
+    "backendReconnected": "Server connection restored",
     "actions": "激活",
     "remove": "移除",
     "revoke": "撤销",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "主机管理",
+    "hosts": "Hosts",
     "sshHosts": "SSH主机",
     "noHosts": "无 SSH 主机",
     "noHostsMessage": "您尚未添加任何 SSH 主机。点击“添加主机”开始操作。",
@@ -836,7 +846,7 @@
     "failedToImportJson": "导入 JSON 文件失败",
     "connectionDetails": "连接详情",
     "organization": "组织",
-    "ipAddress": "IP地址",
+    "ipAddress": "IP Address or Hostname",
     "port": "端口",
     "name": "名称",
     "username": "用户名",
@@ -915,6 +925,8 @@
     "key": "密钥",
     "credential": "凭证",
     "none": "无",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "选择凭证",
     "selectCredentialPlaceholder": "选择一种凭证……",
     "credentialRequired": "使用凭证身份验证时需要凭证。",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "键盘交互认证",
     "noneAuthDescription": "连接到 SSH 服务器时，此身份验证方法将使用键盘交互式身份验证。",
     "noneAuthDetails": "键盘交互式身份验证允许服务器在连接过程中提示您输入凭证。这对于需要多因素身份验证的服务器或您不想在本地保存凭证的情况非常有用。",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "强制键盘交互",
     "forceKeyboardInteractiveDesc": "强制使用键盘交互式身份验证。对于使用双因素身份验证（TOTP/2FA）的服务器，有时需要这样做。",
     "overrideCredentialUsername": "覆盖凭证用户名",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "在浏览器中打开",
     "warpgateContinue": "我已经完成身份验证",
     "warpgateTimeout": "Warpgate身份验证超时，请重新连接。",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "输入密码？",
     "sudoPasswordPopupHint": "按 Enter 键插入，按 Esc 键关闭",
     "sudoPasswordPopupConfirm": "确认",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "正在自动尝试 {{method}} 身份验证...",
     "totpTimeout": "TOTP验证超时，请重新连接。",
     "passwordTimeout": "密码验证超时，请重新连接。",
-    "connectionRejected": "服务器拒绝连接。请检查您的身份验证和网络配置。"
+    "connectionRejected": "服务器拒绝连接。请检查您的身份验证和网络配置。",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "文件管理器",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "密码重置成功",
     "passwordResetSuccessDesc": "您的密码已成功重置。您现在可以使用新密码登录。"
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "页面未找到",
     "unauthorized": "未经授权的访问",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "终端",
     "hostSidebarSettings": "主机和侧边栏",
     "snippetsSettings": "代码片段",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "更新",
     "disableUpdateCheck": "禁用更新检查",
     "disableUpdateCheckDesc": "停止在启动和控制面板中检查新版本。减少网络请求。",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
