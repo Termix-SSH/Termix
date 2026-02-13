@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Дані доступу",
     "credentialsViewer": "Переглядач облікових даних",
     "manageYourSSHCredentials": "Безпечно керувати вашими обліковими даними SSH",
     "addCredential": "Додати",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Це безпечно додасть відкритий ключ до цільового хоста ~/.ssh/authorized_keys файл без перезапису існуючих ключів. Операція незворотна.",
     "chooseHostToDeploy": "Виберіть хост для розгортання...",
     "deploying": "Розгортання...",
+    "copyDeployCommand": "Скопіювати Команду Розгортання",
+    "copyDeployCommandDescription": "Скопіювати команду оболонки в ручне додавання відкритого ключа в файл authorized_keys. Корисно, коли автентифікація пароля вимкнена.",
+    "deployCommandCopied": "Команда розгортання скопійована до буферу обміну",
+    "manualDeployInfo": "Вставити цю команду в терміналі цільового хоста (наприклад, консоль Proxmox, IPMI або фізичний доступ), щоб додати SSH ключ.",
     "name": "Ім'я",
     "noHostsAvailable": "Немає доступних хостів",
     "noHostsMatchSearch": "Немає хостів, які відповідають вашому пошуку",
@@ -298,7 +303,9 @@
     "createFolder": "Створити теку",
     "editFolder": "Змінити теку",
     "editFolderDescription": "Налаштуйте вашу теку зі сніпетом",
-    "createFolderDescription": "Організуйте ваші сніпети у папки"
+    "createFolderDescription": "Організуйте ваші сніпети у папки",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Історія",
@@ -402,6 +409,7 @@
     "required": "Обов'язково",
     "optional": "За бажанням",
     "connect": "Підключитися",
+    "copied": "Copied",
     "connecting": "З’єднання...",
     "creating": "Створюю...",
     "clear": "Очистити",
@@ -494,6 +502,7 @@
     "checking": "Перевірка...",
     "checkingDatabase": "Перевірка підключення до бази даних...",
     "checkingAuthentication": "Перевірка автентифікації...",
+    "backendReconnected": "Server connection restored",
     "actions": "Дії",
     "remove": "Видалити",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Менеджер хостів",
+    "hosts": "Hosts",
     "sshHosts": "SSH хости",
     "noHosts": "Немає SSH хостів",
     "noHostsMessage": "Ви ще не додали жодного SSH хоста. Натисніть \"Додати хоста\".",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Не вдалося імпортувати файл JSON",
     "connectionDetails": "Відомості про підключення",
     "organization": "Організація",
-    "ipAddress": "IP-адреса",
+    "ipAddress": "IP Address or Hostname",
     "port": "Порт",
     "name": "Ім'я",
     "username": "Ім'я користувача",
@@ -915,6 +925,8 @@
     "key": "Ключ",
     "credential": "Облікові дані",
     "none": "Без ефекту",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Оберіть облікові дані",
     "selectCredentialPlaceholder": "Виберіть облікові дані...",
     "credentialRequired": "Обліковий запис потрібен під час використання аутентифікації облікових даних",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Клавіатура-інтерактивна автентифікація",
     "noneAuthDescription": "Цей метод автентифікації використовуватиме клавіатурну інтерактивну автентифікацію при підключенні до SSH сервера.",
     "noneAuthDetails": "Увімкнута інтерактивна клавіатура дозволяє серверу підводити Ваші дані під час підключення. Це корисно для серверів, які потребують багатофакторної аутентифікації або якщо ви не хочете зберегти облікові дані локально.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Примусова інтерактивна клавіатура",
     "forceKeyboardInteractiveDesc": "Вказує використання клавіатури для автентифікації. Іноді це потрібно для серверів, які використовують двофакторну автентифікацію (TOTP/2FA).",
     "overrideCredentialUsername": "Перевизначити ім'я користувача",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Відкрити у браузері",
     "warpgateContinue": "Я вже завершив автентифікацію",
     "warpgateTimeout": "Тайм-аут аутентифікації warpgate будь ласка перепід'єднайтеся.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Введіть пароль?",
     "sudoPasswordPopupHint": "Натисніть Enter, щоб вставити, Esc для відхилення",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Автоматично пробує автентифікацію {{method}}...",
     "totpTimeout": "Таймаут перевірки TOTP. Будь ласка, під'єднайтеся.",
     "passwordTimeout": "Час очікування підтвердження пароля. Будь ласка, під'єднайтеся.",
-    "connectionRejected": "З'єднання відхилено сервером. Будь ласка, перевірте налаштування аутентифікації та мережі."
+    "connectionRejected": "З'єднання відхилено сервером. Будь ласка, перевірте налаштування аутентифікації та мережі.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Файловий менеджер",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Пароль успішно скинуто",
     "passwordResetSuccessDesc": "Ваш пароль успішно скинуто. Тепер ви можете увійти в систему, використовуючи новий пароль."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Сторінка не знайдена",
     "unauthorized": "Неавторизований доступ",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Термінал",
     "hostSidebarSettings": "Хост і бічна панель",
     "snippetsSettings": "Сніпети",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Оновлення",
     "disableUpdateCheck": "Вимкнути перевірку оновлень",
     "disableUpdateCheckDesc": "Зупинити перевірку для нових версій при запуску і панелі керування. Зменшує запити на мережі.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
