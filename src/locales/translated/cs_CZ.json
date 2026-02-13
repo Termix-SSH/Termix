@@ -1,5 +1,6 @@
 {
   "credentials": {
+    "credentials": "Pověření",
     "credentialsViewer": "Prohlížeč přihlašovacích údajů",
     "manageYourSSHCredentials": "Bezpečná správa přihlašovacích údajů SSH",
     "addCredential": "Přidat pověření",
@@ -99,6 +100,10 @@
     "deploymentProcessDescription": "Toto bezpečně přidá veřejný klíč do souboru ~/.ssh/authorized_keys bez přepsání existujících klíčů. Operace je vratná.",
     "chooseHostToDeploy": "Vyberte hostitele pro nasazení...",
     "deploying": "Nasazování...",
+    "copyDeployCommand": "Kopírovat příkaz pro nasazení",
+    "copyDeployCommandDescription": "Zkopírujte příkaz shell do manuálního přidání veřejného klíče do souboru autorized_keys. Užitečné, pokud je heslo vypnuto.",
+    "deployCommandCopied": "Příkaz nasazení zkopírován do schránky",
+    "manualDeployInfo": "Vložte tento příkaz do terminálu cílového hostitele (např. Proxmox konzola, IPMI nebo fyzický přístup) pro přidání SSH klíče.",
     "name": "Název",
     "noHostsAvailable": "Nejsou k dispozici žádní hostitelé",
     "noHostsMatchSearch": "Žádné hostitele neodpovídají vašemu hledání",
@@ -298,7 +303,9 @@
     "createFolder": "Vytvořit složku",
     "editFolder": "Upravit složku",
     "editFolderDescription": "Přizpůsobit složku snippetu",
-    "createFolderDescription": "Uspořádat úryvky do složek"
+    "createFolderDescription": "Uspořádat úryvky do složek",
+    "confirmExecution": "Execute \"{{name}}\"?",
+    "confirmExecutionDesc": "Are you sure you want to execute this snippet?"
   },
   "commandHistory": {
     "title": "Historie",
@@ -402,6 +409,7 @@
     "required": "Požadováno",
     "optional": "Nepovinné",
     "connect": "Připojit",
+    "copied": "Copied",
     "connecting": "Připojování...",
     "creating": "Vytváření...",
     "clear": "Vyčistit",
@@ -494,6 +502,7 @@
     "checking": "Kontroluje...",
     "checkingDatabase": "Kontrola připojení k databázi...",
     "checkingAuthentication": "Kontrola ověřování...",
+    "backendReconnected": "Server connection restored",
     "actions": "Akce",
     "remove": "Odebrat",
     "revoke": "Revoke",
@@ -806,6 +815,7 @@
   },
   "hosts": {
     "title": "Manažer serveru",
+    "hosts": "Hosts",
     "sshHosts": "SSH hostitelé",
     "noHosts": "Žádné SSH hostitele",
     "noHostsMessage": "Zatím jste nepřidali žádné SSH hostitele. Chcete-li začít, klikněte na \"Přidat hostitele\".",
@@ -836,7 +846,7 @@
     "failedToImportJson": "Nepodařilo se importovat soubor JSON",
     "connectionDetails": "Detaily připojení",
     "organization": "Organizace",
-    "ipAddress": "IP adresa",
+    "ipAddress": "IP Address or Hostname",
     "port": "Přístav",
     "name": "Název",
     "username": "Uživatelské jméno",
@@ -915,6 +925,8 @@
     "key": "Klíč",
     "credential": "Pověření",
     "none": "Nic",
+    "opkssh": "OPKSSH",
+    "opksshAuthDescription": "Prompts you for OPKSSH web-auth upon every connect. Your auth token will last for 24 hours until it must be renewed.",
     "selectCredential": "Vybrat pověření",
     "selectCredentialPlaceholder": "Zvolte přihlašovací údaje...",
     "credentialRequired": "Při použití ověření pověření je vyžadováno pověření",
@@ -1083,6 +1095,7 @@
     "noneAuthTitle": "Klávesnice – interaktivní ověření",
     "noneAuthDescription": "Tato metoda ověřování bude při připojování k serveru SSH používat klávesnice-interaktivní ověřování.",
     "noneAuthDetails": "Klávesnice - interaktivní autentizace umožňuje serveru požádat vás o přihlašovací údaje při připojení. Toto je užitečné pro servery, které vyžadují vícefázové autentifikaci, nebo pokud nechcete lokálně ukládat přihlašovací údaje.",
+    "opksshAuthTitle": "OPKSSH Authentication",
     "forceKeyboardInteractive": "Vynutit interaktivní klávesnici",
     "forceKeyboardInteractiveDesc": "Vynucuje použití klávesnice interaktivní autentizace. To je někdy nutné u serverů, které používají dvoufaktorové ověřování (TOTP/2FA).",
     "overrideCredentialUsername": "Přepsat pověření uživatelské jméno",
@@ -1316,6 +1329,15 @@
     "warpgateOpenBrowser": "Otevřít v prohlížeči",
     "warpgateContinue": "Dokončil jsem ověření",
     "warpgateTimeout": "Časový limit autentizace Warpgate vypršel. Připojte se.",
+    "opksshAuthRequired": "OPKSSH Authentication Required",
+    "opksshAuthDescription": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "opksshAuthUrl": "Authentication URL",
+    "opksshOpenBrowser": "Open Browser to Authenticate",
+    "opksshWaitingForAuth": "Waiting for authentication in browser...",
+    "opksshAuthenticating": "Processing authentication...",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Vložit heslo?",
     "sudoPasswordPopupHint": "Stiskněte Enter pro vložení, Esc pro zamítnutí",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1337,7 +1359,8 @@
     "automaticFallback": "Automaticky zkouším {{method}} autentizaci...",
     "totpTimeout": "Časový limit ověřování TOTP. Připojte se znovu.",
     "passwordTimeout": "Časový limit ověření hesla vypršel. Připojte se znovu.",
-    "connectionRejected": "Připojení odmítnuto serverem. Zkontrolujte prosím ověření a nastavení sítě."
+    "connectionRejected": "Připojení odmítnuto serverem. Zkontrolujte prosím ověření a nastavení sítě.",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
   },
   "fileManager": {
     "title": "Správce souborů",
@@ -1934,6 +1957,20 @@
     "passwordResetSuccess": "Obnovení hesla úspěšné",
     "passwordResetSuccessDesc": "Vaše heslo bylo úspěšně obnoveno. Nyní se můžete přihlásit svým novým heslem."
   },
+  "hostKey": {
+    "verifyNewHost": "Verify SSH Host Key",
+    "keyChangedWarning": "SSH Host Key Changed",
+    "firstConnectionTitle": "First time connecting to this host",
+    "firstConnectionDescription": "The authenticity of this host cannot be established. Verify the fingerprint matches what you expect.",
+    "keyChangedDescription": "The host key for this server has changed since your last connection. This could indicate a security issue.",
+    "previousKey": "Previous Key",
+    "newFingerprint": "New Fingerprint",
+    "fingerprint": "Fingerprint",
+    "verifyInstructions": "If you trust this host, click Accept to continue and save this fingerprint for future connections.",
+    "securityWarning": "Security Warning",
+    "acceptAndContinue": "Accept & Continue",
+    "acceptNewKey": "Accept New Key & Continue"
+  },
   "errors": {
     "notFound": "Stránka nenalezena",
     "unauthorized": "Neoprávněný přístup",
@@ -2026,6 +2063,8 @@
     "terminalSettings": "Terminál",
     "hostSidebarSettings": "Hostitel & postranní panel",
     "snippetsSettings": "Výstřižky bloků",
+    "confirmSnippetExecution": "Confirm Snippet Execution",
+    "confirmSnippetExecutionDesc": "Show confirmation dialog before executing snippets",
     "updateSettings": "Aktualizace",
     "disableUpdateCheck": "Zakázat kontrolu aktualizací",
     "disableUpdateCheckDesc": "Zastavit kontrolu nových verzí na startu a řídicím panelu. Sníží síťové požadavky.",
@@ -2046,7 +2085,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "127.0.0.1",
+    "ipAddress": "192.168.1.1 or example.com",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
