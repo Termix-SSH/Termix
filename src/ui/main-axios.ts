@@ -121,6 +121,7 @@ interface AuthResponse {
   data_unlocked?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
+  rememberMe?: boolean;
 }
 
 interface UserInfo {
@@ -2330,9 +2331,14 @@ export async function registerUser(
 export async function loginUser(
   username: string,
   password: string,
+  rememberMe: boolean = false,
 ): Promise<AuthResponse> {
   try {
-    const response = await authApi.post("/users/login", { username, password });
+    const response = await authApi.post("/users/login", {
+      username,
+      password,
+      rememberMe,
+    });
 
     const hasToken = response.data.token;
 
@@ -2369,6 +2375,7 @@ export async function loginUser(
       username: response.data.username,
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
+      rememberMe: response.data.rememberMe,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
       data_unlocked: response.data.data_unlocked,
@@ -2778,11 +2785,13 @@ export async function disableTOTP(
 export async function verifyTOTPLogin(
   temp_token: string,
   totp_code: string,
+  rememberMe: boolean = false,
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/totp/verify-login", {
       temp_token,
       totp_code,
+      rememberMe,
     });
 
     const hasToken = response.data.token;
