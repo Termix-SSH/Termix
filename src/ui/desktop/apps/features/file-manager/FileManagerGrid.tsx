@@ -17,6 +17,7 @@ import {
   ChevronRight,
   RefreshCw,
   ArrowUp,
+  ArrowDown,
   FileSymlink,
   Move,
   GitCompare,
@@ -95,6 +96,9 @@ interface FileManagerGridProps {
   onCancelCreate?: () => void;
   onNewFile?: () => void;
   onNewFolder?: () => void;
+  sortBy?: "name" | "modified" | "size";
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (field: "name" | "modified" | "size") => void;
 }
 
 const getFileTypeColor = (file: FileItem): string => {
@@ -215,6 +219,9 @@ export function FileManagerGrid({
   onCancelCreate,
   onNewFile,
   onNewFolder,
+  sortBy,
+  sortOrder,
+  onSortChange,
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -1128,6 +1135,48 @@ export function FileManagerGrid({
             </div>
           ) : (
             <div className="space-y-1">
+              <div className="flex items-center gap-3 p-2 border-b border-edge text-xs text-muted-foreground font-medium sticky top-0 bg-card z-10">
+                <div className="flex-shrink-0 w-5" />
+                <div
+                  className="flex-1 min-w-0 flex items-center gap-1 cursor-pointer hover:text-foreground"
+                  onClick={() => onSortChange?.("name")}
+                >
+                  {t("fileManager.name")}
+                  {sortBy === "name" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    ))}
+                </div>
+                <div
+                  className="flex-shrink-0 w-32 flex items-center gap-1 cursor-pointer hover:text-foreground"
+                  onClick={() => onSortChange?.("modified")}
+                >
+                  {t("fileManager.modified")}
+                  {sortBy === "modified" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    ))}
+                </div>
+                <div
+                  className="flex-shrink-0 w-16 flex items-center gap-1 cursor-pointer hover:text-foreground justify-end"
+                  onClick={() => onSortChange?.("size")}
+                >
+                  {t("fileManager.size")}
+                  {sortBy === "size" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    ))}
+                </div>
+                <div className="flex-shrink-0 w-20 text-right">
+                  {t("fileManager.permissions")}
+                </div>
+              </div>
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
@@ -1202,6 +1251,9 @@ export function FileManagerGrid({
                           → {file.linkTarget}
                         </p>
                       )}
+                    </div>
+
+                    <div className="flex-shrink-0 w-32">
                       {file.modified && (
                         <p className="text-xs text-muted-foreground">
                           {file.modified}
@@ -1209,7 +1261,7 @@ export function FileManagerGrid({
                       )}
                     </div>
 
-                    <div className="flex-shrink-0 text-right">
+                    <div className="flex-shrink-0 w-16 text-right">
                       {file.type === "file" &&
                         file.size !== undefined &&
                         file.size !== null && (
