@@ -1648,6 +1648,45 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return false;
         }
 
+        if (
+          ((e.ctrlKey &&
+            e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            e.key.toLowerCase() === "c") ||
+            (e.ctrlKey &&
+              !e.shiftKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              e.key === "Insert")) &&
+          terminal.hasSelection()
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          const selection = terminal.getSelection();
+          if (selection) {
+            writeTextToClipboard(selection);
+          }
+          return false;
+        }
+
+        if (
+          e.shiftKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key === "Insert"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          readTextFromClipboard().then((pasteText) => {
+            if (pasteText && webSocketRef.current?.readyState === 1) {
+              terminal.paste(pasteText);
+            }
+          });
+          return false;
+        }
+
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
           const key = e.key.toLowerCase();
           const blockedKeys = ["w", "t", "n", "q"];
