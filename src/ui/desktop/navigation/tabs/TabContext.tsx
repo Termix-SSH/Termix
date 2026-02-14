@@ -202,7 +202,7 @@ export function TabProvider({ children }: TabProviderProps) {
     setAllSplitScreenTab((prev) => {
       if (prev.includes(tabId)) {
         return prev.filter((id) => id !== tabId);
-      } else if (prev.length < 4) {
+      } else if (prev.length < 6) {
         return [...prev, tabId];
       }
       return prev;

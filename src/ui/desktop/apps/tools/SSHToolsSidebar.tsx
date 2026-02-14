@@ -223,7 +223,7 @@ export function SSHToolsSidebar({
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
 
-  const [splitMode, setSplitMode] = useState<"none" | "2" | "3" | "4">("none");
+  const [splitMode, setSplitMode] = useState<"none" | "2" | "3" | "4" | "5" | "6">("none");
   const [splitAssignments, setSplitAssignments] = useState<Map<number, number>>(
     new Map(),
   );
@@ -977,7 +977,7 @@ export function SSHToolsSidebar({
     }
   };
 
-  const handleSplitModeChange = (mode: "none" | "2" | "3" | "4") => {
+  const handleSplitModeChange = (mode: "none" | "2" | "3" | "4" | "5" | "6") => {
     setSplitMode(mode);
 
     if (mode === "none") {
@@ -1731,23 +1731,29 @@ export function SSHToolsSidebar({
                         value={splitMode}
                         onValueChange={(value) =>
                           handleSplitModeChange(
-                            value as "none" | "2" | "3" | "4",
+                            value as "none" | "2" | "3" | "4" | "5" | "6",
                           )
                         }
                         className="w-full"
                       >
-                        <TabsList className="w-full grid grid-cols-4">
+                        <TabsList className="w-full grid grid-cols-3 grid-rows-2">
                           <TabsTrigger value="none">
                             {t("splitScreen.none")}
                           </TabsTrigger>
                           <TabsTrigger value="2">
-                            {t("splitScreen.twoSplit")}{" "}
+                            {t("splitScreen.twoSplit")}
                           </TabsTrigger>
                           <TabsTrigger value="3">
-                            {t("splitScreen.threeSplit")}{" "}
+                            {t("splitScreen.threeSplit")}
                           </TabsTrigger>
                           <TabsTrigger value="4">
-                            {t("splitScreen.fourSplit")}{" "}
+                            {t("splitScreen.fourSplit")}
+                          </TabsTrigger>
+                          <TabsTrigger value="5">
+                            {t("splitScreen.fiveSplit")}
+                          </TabsTrigger>
+                          <TabsTrigger value="6">
+                            {t("splitScreen.sixSplit")}
                           </TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -1807,8 +1813,8 @@ export function SSHToolsSidebar({
                               className={`grid gap-2 mt-2 ${
                                 splitMode === "2"
                                   ? "grid-cols-2"
-                                  : splitMode === "3"
-                                    ? "grid-cols-2 grid-rows-2"
+                                  : splitMode === "5" || splitMode === "6"
+                                    ? "grid-cols-3 grid-rows-2"
                                     : "grid-cols-2 grid-rows-2"
                               }`}
                             >
