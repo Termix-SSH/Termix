@@ -8,6 +8,9 @@ jobs:
   lint-and-build:
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
