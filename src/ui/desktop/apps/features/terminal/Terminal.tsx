@@ -190,6 +190,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isConnectingRef = useRef(false);
     const onTitleChangeRef = useRef(onTitleChange);
     onTitleChangeRef.current = onTitleChange;
+    const wasConnectedRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -699,6 +700,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       isConnectingRef.current = true;
       connectionAttemptIdRef.current++;
+      wasConnectedRef.current = false;
 
       if (!isReconnectingRef.current) {
         reconnectAttempts.current = 0;
@@ -930,6 +932,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setIsConnecting(false);
           } else if (msg.type === "connected") {
             opksshFailedRef.current = false;
+            wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
             isConnectingRef.current = false;
@@ -1014,12 +1017,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.clear();
             }
             setIsConnecting(false);
-            if (
-              onClose &&
-              !connectionErrorRef.current &&
-              !opksshFailedRef.current
-            ) {
-              onClose();
+            if (wasConnectedRef.current) {
+              wasConnectedRef.current = false;
+              if (
+                onClose &&
+                !connectionErrorRef.current &&
+                !opksshFailedRef.current
+              ) {
+                onClose();
+              }
+            } else if (!connectionErrorRef.current) {
+              updateConnectionError(
+                msg.message || t("terminal.connectionRejected"),
+              );
             }
           } else if (msg.type === "totp_required") {
             setTotpRequired(true);
