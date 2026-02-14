@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { Textarea } from "@/components/ui/textarea.tsx";
 import { updateOIDCConfig, disableOIDCConfig } from "@/ui/main-axios.ts";
 
 interface OIDCSettingsTabProps {
@@ -21,6 +22,7 @@ interface OIDCSettingsTabProps {
     name_path: string;
     scopes: string;
     userinfo_url: string;
+    allowed_users: string;
   };
   setOidcConfig: React.Dispatch<
     React.SetStateAction<{
@@ -33,6 +35,7 @@ interface OIDCSettingsTabProps {
       name_path: string;
       scopes: string;
       userinfo_url: string;
+      allowed_users: string;
     }>
   >;
 }
@@ -103,6 +106,7 @@ export function OIDCSettingsTab({
             name_path: "",
             scopes: "",
             userinfo_url: "",
+            allowed_users: "",
           };
           setOidcConfig(emptyConfig);
           setOidcError(null);
@@ -298,6 +302,21 @@ export function OIDCSettingsTab({
               handleOIDCConfigChange("userinfo_url", e.target.value)
             }
             placeholder="https://your-provider.com/application/o/userinfo/"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="allowed_users">{t("admin.allowedUsers")}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t("admin.allowedUsersDescription")}
+          </p>
+          <Textarea
+            id="allowed_users"
+            value={oidcConfig.allowed_users}
+            onChange={(e) =>
+              handleOIDCConfigChange("allowed_users", e.target.value)
+            }
+            placeholder={t("placeholders.allowedUsers")}
+            rows={3}
           />
         </div>
         <div className="flex gap-2 pt-2">

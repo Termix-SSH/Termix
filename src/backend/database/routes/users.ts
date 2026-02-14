@@ -54,6 +54,7 @@ function getOIDCConfigFromEnv(): {
   identifier_path: string;
   name_path: string;
   scopes: string;
+  allowed_users: string;
 } | null {
   const client_id = process.env.OIDC_CLIENT_ID;
   const client_secret = process.env.OIDC_CLIENT_SECRET;
@@ -81,7 +82,38 @@ function getOIDCConfigFromEnv(): {
     identifier_path: process.env.OIDC_IDENTIFIER_PATH || "sub",
     name_path: process.env.OIDC_NAME_PATH || "name",
     scopes: process.env.OIDC_SCOPES || "openid email profile",
+    allowed_users: process.env.OIDC_ALLOWED_USERS || "",
   };
+}
+
+function isOIDCUserAllowed(
+  allowedUsers: string,
+  identifier: string,
+  email?: string,
+): boolean {
+  if (!allowedUsers || !allowedUsers.trim()) return true;
+  const patterns = allowedUsers
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (patterns.length === 0) return true;
+
+  const values = [
+    identifier,
+    ...(email && email !== identifier ? [email] : []),
+  ];
+  for (const pattern of patterns) {
+    if (pattern === "*") return true;
+    for (const value of values) {
+      if (!value) continue;
+      if (pattern.toLowerCase().startsWith("@")) {
+        if (value.toLowerCase().endsWith(pattern.toLowerCase())) return true;
+      } else {
+        if (value.toLowerCase() === pattern.toLowerCase()) return true;
+      }
+    }
+  }
+  return false;
 }
 
 async function verifyOIDCToken(
@@ -467,6 +499,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
       identifier_path,
       name_path,
       scopes,
+      allowed_users,
     } = req.body;
 
     const isDisableRequest =
@@ -524,6 +557,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         identifier_path,
         name_path,
         scopes: scopes || "openid email profile",
+        allowed_users: allowed_users || "",
       };
 
       let encryptedConfig;
@@ -1040,6 +1074,27 @@ router.get("/oidc/callback", async (req, res) => {
         .prepare("SELECT COUNT(*) as count FROM users")
         .get();
       isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
+
+      if (!isFirstUser && config.allowed_users) {
+        const email = userInfo.email as string | undefined;
+        if (!isOIDCUserAllowed(config.allowed_users, identifier, email)) {
+          authLogger.warn("OIDC user not in allowed list", {
+            operation: "oidc_user_not_allowed",
+            identifier,
+            email,
+          });
+          let frontendUrl = (redirectUri as string).replace(
+            "/users/oidc/callback",
+            "",
+          );
+          if (frontendUrl.includes("localhost")) {
+            frontendUrl = "http://localhost:5173";
+          }
+          const redirectUrl = new URL(frontendUrl);
+          redirectUrl.searchParams.set("error", "user_not_allowed");
+          return res.redirect(redirectUrl.toString());
+        }
+      }
 
       if (!isFirstUser) {
         try {
