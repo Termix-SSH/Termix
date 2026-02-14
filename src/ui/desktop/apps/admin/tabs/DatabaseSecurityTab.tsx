@@ -31,15 +31,22 @@ export function DatabaseSecurityTab({
     [currentUser?.is_oidc],
   );
 
-  const handleExportDatabase = async () => {
-    if (!showPasswordInput) {
-      setShowPasswordInput(true);
-      return;
-    }
+  const requiresExportPassword = React.useMemo(
+    () => !currentUser?.is_oidc,
+    [currentUser?.is_oidc],
+  );
 
-    if (!exportPassword.trim()) {
-      toast.error(t("admin.passwordRequired"));
-      return;
+  const handleExportDatabase = async () => {
+    if (requiresExportPassword) {
+      if (!showPasswordInput) {
+        setShowPasswordInput(true);
+        return;
+      }
+
+      if (!exportPassword.trim()) {
+        toast.error(t("admin.passwordRequired"));
+        return;
+      }
     }
 
     setExportLoading(true);
@@ -65,7 +72,9 @@ export function DatabaseSecurityTab({
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ password: exportPassword }),
+        body: JSON.stringify(
+          requiresExportPassword ? { password: exportPassword } : {},
+        ),
       });
 
       if (response.ok) {
@@ -211,7 +220,7 @@ export function DatabaseSecurityTab({
             <p className="text-xs text-muted-foreground">
               {t("admin.exportDescription")}
             </p>
-            {showPasswordInput && (
+            {showPasswordInput && requiresExportPassword && (
               <div className="space-y-2">
                 <Label htmlFor="export-password">Password</Label>
                 <PasswordInput
@@ -234,11 +243,11 @@ export function DatabaseSecurityTab({
             >
               {exportLoading
                 ? t("admin.exporting")
-                : showPasswordInput
+                : showPasswordInput && requiresExportPassword
                   ? t("admin.confirmExport")
                   : t("admin.export")}
             </Button>
-            {showPasswordInput && (
+            {showPasswordInput && requiresExportPassword && (
               <Button
                 variant="outline"
                 onClick={() => {
