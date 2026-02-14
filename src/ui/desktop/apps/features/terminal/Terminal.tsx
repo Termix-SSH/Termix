@@ -1648,6 +1648,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return false;
         }
 
+        if (
+          ((e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) ||
+            (e.metaKey && !e.ctrlKey && !e.altKey)) &&
+          e.key.toLowerCase() === "c"
+        ) {
+          const selection = terminal.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            writeTextToClipboard(selection);
+            return false;
+          }
+        }
+
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
           const key = e.key.toLowerCase();
           const blockedKeys = ["w", "t", "n", "q"];
