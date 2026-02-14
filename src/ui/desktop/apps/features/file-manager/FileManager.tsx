@@ -48,6 +48,7 @@ import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/Connection
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import {
   listSSHFiles,
+  resolveSSHPath,
   uploadSSHFile,
   downloadSSHFile,
   createSSHFile,
@@ -489,15 +490,24 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return false;
       }
 
-      currentLoadingPathRef.current = path;
+      let resolvedPath = path;
+      if (path.includes("$") || path.startsWith("~")) {
+        resolvedPath = await resolveSSHPath(sshSessionId, path);
+        if (resolvedPath !== path) {
+          setCurrentPath(resolvedPath);
+          lastPathChangeRef.current = resolvedPath;
+        }
+      }
+
+      currentLoadingPathRef.current = resolvedPath;
       setIsLoading(true);
 
       setCreateIntent(null);
 
       try {
-        const response = await listSSHFiles(sshSessionId, path);
+        const response = await listSSHFiles(sshSessionId, resolvedPath);
 
-        if (currentLoadingPathRef.current !== path) {
+        if (currentLoadingPathRef.current !== resolvedPath) {
           return false;
         }
 
@@ -509,7 +519,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         clearSelection();
         return true;
       } catch (error: unknown) {
-        if (currentLoadingPathRef.current === path) {
+        if (currentLoadingPathRef.current === resolvedPath) {
           const axiosError = error as {
             response?: {
               status?: number;
@@ -524,7 +534,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
           if (axiosError.response?.data?.needsSudo) {
             if (!sudoDialogOpen) {
-              setPendingSudoOperation({ type: "navigate", path });
+              setPendingSudoOperation({ type: "navigate", path: resolvedPath });
               setSudoDialogOpen(true);
             }
 
@@ -560,7 +570,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         }
         return false;
       } finally {
-        if (currentLoadingPathRef.current === path) {
+        if (currentLoadingPathRef.current === resolvedPath) {
           setIsLoading(false);
           currentLoadingPathRef.current = "";
         }

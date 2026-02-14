@@ -441,9 +441,13 @@ export function FileManagerGrid({
   const confirmEditingPath = () => {
     const trimmedPath = editPathValue.trim();
     if (trimmedPath) {
-      const normalizedPath = trimmedPath.startsWith("/")
+      const needsExpansion =
+        trimmedPath.startsWith("~") || trimmedPath.includes("$");
+      const normalizedPath = needsExpansion
         ? trimmedPath
-        : "/" + trimmedPath;
+        : trimmedPath.startsWith("/")
+          ? trimmedPath
+          : "/" + trimmedPath;
       onPathChange(normalizedPath);
     }
     setIsEditingPath(false);
