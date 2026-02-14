@@ -1718,7 +1718,13 @@
     "write": "Write",
     "execute": "Execute",
     "permissionsChangedSuccessfully": "Permissions changed successfully",
-    "failedToChangePermissions": "Failed to change permissions"
+    "failedToChangePermissions": "Failed to change permissions",
+    "name": "Name",
+    "sortByName": "Name",
+    "sortByDate": "Date Modified",
+    "sortBySize": "Size",
+    "ascending": "Ascending",
+    "descending": "Descending"
   },
   "tunnel": {
     "noTunnelsConfigured": "No Tunnels Configured",
