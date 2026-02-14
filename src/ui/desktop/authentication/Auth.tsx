@@ -626,6 +626,8 @@ export function Auth({
     if (error) {
       if (error === "registration_disabled") {
         toast.error(t("messages.registrationDisabled"));
+      } else if (error === "user_not_allowed") {
+        toast.error(t("messages.userNotAllowed"));
       } else {
         toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
       }
