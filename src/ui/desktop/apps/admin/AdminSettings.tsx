@@ -61,6 +61,7 @@ export function AdminSettings({
     name_path: "name",
     scopes: "openid email profile",
     userinfo_url: "",
+    allowed_users: "",
   });
 
   const [users, setUsers] = React.useState<
