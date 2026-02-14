@@ -772,15 +772,7 @@ router.get("/oidc/authorize", async (req, res) => {
     const state = nanoid();
     const nonce = nanoid();
 
-    let origin =
-      req.get("Origin") ||
-      req.get("Referer")?.replace(/\/[^/]*$/, "") ||
-      "http://localhost:5173";
-
-    if (origin.includes("localhost")) {
-      origin = "http://localhost:30001";
-    }
-
+    const origin = `${req.protocol}://${req.get("Host")}`;
     const redirectUri = `${origin}/users/oidc/callback`;
 
     db.$client
