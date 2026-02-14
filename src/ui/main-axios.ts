@@ -1615,6 +1615,20 @@ export async function identifySSHSymlink(
   }
 }
 
+export async function resolveSSHPath(
+  sessionId: string,
+  path: string,
+): Promise<string> {
+  try {
+    const response = await fileManagerApi.get("/ssh/resolvePath", {
+      params: { sessionId, path },
+    });
+    return response.data?.resolvedPath || path;
+  } catch {
+    return path;
+  }
+}
+
 export async function readSSHFile(
   sessionId: string,
   path: string,
