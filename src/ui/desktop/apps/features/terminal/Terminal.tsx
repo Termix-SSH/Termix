@@ -76,6 +76,7 @@ interface SSHTerminalProps {
   showTitle?: boolean;
   splitScreen?: boolean;
   onClose?: () => void;
+  onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
 }
@@ -87,6 +88,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
+      onTitleChange,
       initialPath,
       executeCommand,
     },
@@ -185,6 +187,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
+    const onTitleChangeRef = useRef(onTitleChange);
+    onTitleChangeRef.current = onTitleChange;
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -1535,6 +1539,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
+      const titleDisposable = terminal.onTitleChange((title) => {
+        onTitleChangeRef.current?.(title);
+      });
+
       fitAddonRef.current?.fit();
       if (terminal.cols < 10 || terminal.rows < 3) {
         requestAnimationFrame(() => {
@@ -1599,6 +1607,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       return () => {
         isFittingRef.current = false;
         resizeObserver.disconnect();
+        titleDisposable.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
