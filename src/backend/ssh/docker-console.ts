@@ -235,6 +235,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   let sshSession: SSHSession | null = null;
 
+  const wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, 30000);
+
   ws.on("message", async (data) => {
     try {
       const message = JSON.parse(data.toString());
@@ -608,6 +614,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
+    clearInterval(wsPingInterval);
     sshLogger.info("Docker console disconnected", {
       operation: "docker_console_disconnect",
       sessionId,
