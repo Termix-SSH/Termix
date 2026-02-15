@@ -71,6 +71,19 @@ function createWindow() {
     show: true,
   });
 
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      if (
+        permission === "clipboard-read" ||
+        permission === "clipboard-sanitized-write"
+      ) {
+        callback(true);
+        return;
+      }
+      callback(true);
+    },
+  );
+
   if (process.platform !== "darwin") {
     mainWindow.setMenuBarVisibility(false);
   }
