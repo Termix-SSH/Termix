@@ -1,0 +1,23 @@
+name: Scan Git repo for vulnerabilities
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  scan-code:
+    name: Scan repo
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: "fs"
+          format: "table"

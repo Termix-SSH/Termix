@@ -60,7 +60,7 @@ export function ElectronServerConfig({
     setError(null);
 
     try {
-      let normalizedUrl = serverUrl.trim();
+      const normalizedUrl = serverUrl.trim();
 
       if (
         !normalizedUrl.startsWith("http://") &&

@@ -8,10 +8,10 @@
   "type": "module",
   "scripts": {
     "clean": "npx prettier . --write",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
     "type-check": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.node.json",
@@ -73,7 +73,7 @@
     "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.2.0",
-    "body-parser": "^1.20.2",
+    "body-parser": "^2.2.1",
     "chalk": "^4.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -140,6 +140,7 @@
     "@types/ssh2": "^1.15.5",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "baseline-browser-mapping": "^2.9.19",
     "concurrently": "^9.2.1",
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
@@ -154,6 +155,10 @@
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0",
     "vite": "^7.1.5"
+  },
+  "overrides": {
+    "glob": "^11.1.0",
+    "prismjs": "^1.30.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
