@@ -88,5 +88,9 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
     IS_ELECTRON: boolean;
+    electronClipboard?: {
+      writeText(text: string): void;
+      readText(): string;
+    };
   }
 }
