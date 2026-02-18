@@ -1041,43 +1041,6 @@ router.get("/oidc/callback", async (req, res) => {
         .get();
       isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
 
-      if (!isFirstUser) {
-        try {
-          const regRow = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'allow_registration'",
-            )
-            .get();
-          if (regRow && (regRow as Record<string, unknown>).value !== "true") {
-            authLogger.warn(
-              "OIDC user attempted to register when registration is disabled",
-              {
-                operation: "oidc_registration_disabled",
-                identifier,
-                name,
-              },
-            );
-
-            let frontendUrl = (redirectUri as string).replace(
-              "/users/oidc/callback",
-              "",
-            );
-            if (frontendUrl.includes("localhost")) {
-              frontendUrl = "http://localhost:5173";
-            }
-            const redirectUrl = new URL(frontendUrl);
-            redirectUrl.searchParams.set("error", "registration_disabled");
-
-            return res.redirect(redirectUrl.toString());
-          }
-        } catch (e) {
-          authLogger.warn("Failed to check registration status during OIDC", {
-            operation: "oidc_registration_check",
-            error: e,
-          });
-        }
-      }
-
       const id = nanoid();
       await db.insert(users).values({
         id,

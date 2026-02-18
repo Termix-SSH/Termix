@@ -9,6 +9,7 @@ import {
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
@@ -76,6 +77,7 @@ interface SSHTerminalProps {
   showTitle?: boolean;
   splitScreen?: boolean;
   onClose?: () => void;
+  onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
 }
@@ -87,6 +89,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
+      onTitleChange,
       initialPath,
       executeCommand,
     },
@@ -185,6 +188,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
+    const onTitleChangeRef = useRef(onTitleChange);
+    onTitleChangeRef.current = onTitleChange;
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -1521,7 +1526,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       const fitAddon = new FitAddon();
-      const clipboardAddon = new ClipboardAddon();
+      const clipboardProvider = new RobustClipboardProvider();
+      const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
       const webLinksAddon = new WebLinksAddon();
 
@@ -1534,6 +1540,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+
+      const titleDisposable = terminal.onTitleChange((title) => {
+        onTitleChangeRef.current?.(title);
+      });
 
       fitAddonRef.current?.fit();
       if (terminal.cols < 10 || terminal.rows < 3) {
@@ -1599,6 +1609,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       return () => {
         isFittingRef.current = false;
         resizeObserver.disconnect();
+        titleDisposable.dispose();
+        clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
