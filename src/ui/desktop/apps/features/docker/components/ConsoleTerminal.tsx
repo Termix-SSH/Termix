@@ -2,6 +2,7 @@ import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/ui/button.tsx";
 import {
@@ -48,7 +49,8 @@ export function ConsoleTerminal({
     if (!terminal) return;
 
     const fitAddon = new FitAddon();
-    const clipboardAddon = new ClipboardAddon();
+    const clipboardProvider = new RobustClipboardProvider();
+    const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
     const webLinksAddon = new WebLinksAddon();
 
     fitAddonRef.current = fitAddon;
@@ -97,6 +99,7 @@ export function ConsoleTerminal({
 
     return () => {
       window.removeEventListener("resize", resizeHandler);
+      clipboardProvider.dispose();
 
       if (wsRef.current) {
         try {
