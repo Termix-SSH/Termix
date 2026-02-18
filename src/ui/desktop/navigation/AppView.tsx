@@ -37,6 +37,39 @@ interface TabData {
   [key: string]: unknown;
 }
 
+type LayoutNode =
+  | number // leaf: index into layoutTabs[]
+  | { direction: "horizontal" | "vertical"; children: LayoutNode[] };
+
+const SPLIT_LAYOUTS: Record<number, LayoutNode> = {
+  2: { direction: "horizontal", children: [0, 1] },
+  3: {
+    direction: "vertical",
+    children: [{ direction: "horizontal", children: [0, 1] }, 2],
+  },
+  4: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1] },
+      { direction: "horizontal", children: [2, 3] },
+    ],
+  },
+  5: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1] },
+      { direction: "horizontal", children: [2, 3, 4] },
+    ],
+  },
+  6: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1, 2] },
+      { direction: "horizontal", children: [3, 4, 5] },
+    ],
+  },
+};
+
 interface TerminalViewProps {
   isTopbarOpen?: boolean;
   rightSidebarOpen?: boolean;
@@ -419,6 +452,9 @@ export function AppView({
       .filter((t): t is TabData => t !== null && t !== undefined);
     if (allSplitScreenTab.length === 0) return null;
 
+    const layout = SPLIT_LAYOUTS[layoutTabs.length];
+    if (!layout) return null;
+
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
@@ -432,270 +468,97 @@ export function AppView({
       onResize: scheduleMeasureAndFit,
     };
 
-    if (layoutTabs.length === 2) {
-      const [a, b] = layoutTabs;
-      return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="horizontal"
-            className="h-full w-full"
-            {...commonGroupProps}
+    const renderNode = (
+      node: LayoutNode,
+      path: string,
+      siblingCount: number,
+      orderIndex: number,
+      isRoot: boolean,
+    ): React.ReactNode => {
+      const defaultSize = Math.round(100 / siblingCount);
+
+      if (typeof node === "number") {
+        const tab = layoutTabs[node];
+        if (!tab) return null;
+        return (
+          <ResizablePanel
+            key={`panel-${tab.id}`}
+            id={`panel-${tab.id}`}
+            defaultSize={defaultSize}
+            minSize={20}
+            className="!overflow-hidden h-full w-full"
+            order={orderIndex}
           >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id={`panel-${a.id}`}
-              order={1}
+            <div
+              ref={(el) => {
+                panelRefs.current[String(tab.id)] = el;
+              }}
+              className="h-full w-full flex flex-col relative"
             >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(a.id)] = el;
-                }}
-                className="h-full w-full flex flex-col bg-transparent relative"
-              >
-                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {a.title}
-                </div>
+              <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                {tab.title}
+                {node === 1 && <ResetButton onClick={handleReset} />}
               </div>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id={`panel-${b.id}`}
-              order={2}
-            >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(b.id)] = el;
-                }}
-                className="h-full w-full flex flex-col bg-transparent relative"
-              >
-                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {b.title}
-                  <ResetButton onClick={handleReset} />
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
+            </div>
+          </ResizablePanel>
+        );
+      }
+
+      const groupKey = isRoot ? String(resetKey) : `${path}-${resetKey}`;
+      const groupId = isRoot
+        ? `main-${node.direction}`
+        : `group-${path}`;
+
+      const groupContent = (
+        <ResizablePrimitive.PanelGroup
+          key={groupKey}
+          direction={node.direction}
+          className="h-full w-full"
+          id={groupId}
+          {...commonGroupProps}
+        >
+          {node.children.flatMap((child, i) => {
+            const childPath = isRoot ? String(i) : `${path}-${i}`;
+            const panel = renderNode(
+              child,
+              childPath,
+              node.children.length,
+              i + 1,
+              false,
+            );
+            if (i === 0) return [panel];
+            return [
+              <ResizableHandle
+                key={`handle-${childPath}`}
+                style={handleStyle}
+              />,
+              panel,
+            ];
+          })}
+        </ResizablePrimitive.PanelGroup>
       );
-    }
-    if (layoutTabs.length === 3) {
-      const [a, b, c] = layoutTabs;
+
+      if (isRoot) return groupContent;
+
       return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="vertical"
-            className="h-full w-full"
-            id="main-vertical"
-            {...commonGroupProps}
-          >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="top-panel"
-              order={1}
-            >
-              <ResizablePanelGroup
-                key={`top-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="top-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${a.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(a.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {a.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${b.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(b.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {b.title}
-                      <ResetButton onClick={handleReset} />
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="bottom-panel"
-              order={2}
-            >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(c.id)] = el;
-                }}
-                className="h-full w-full flex flex-col relative"
-              >
-                <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {c.title}
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
+        <ResizablePanel
+          key={`container-${path}`}
+          id={`container-${path}`}
+          defaultSize={defaultSize}
+          minSize={20}
+          className="!overflow-hidden h-full w-full"
+          order={orderIndex}
+        >
+          {groupContent}
+        </ResizablePanel>
       );
-    }
-    if (layoutTabs.length === 4) {
-      const [a, b, c, d] = layoutTabs;
-      return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="vertical"
-            className="h-full w-full"
-            id="main-vertical"
-            {...commonGroupProps}
-          >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="top-panel"
-              order={1}
-            >
-              <ResizablePanelGroup
-                key={`top-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="top-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${a.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(a.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {a.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${b.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(b.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {b.title}
-                      <ResetButton onClick={handleReset} />
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="bottom-panel"
-              order={2}
-            >
-              <ResizablePanelGroup
-                key={`bottom-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="bottom-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${c.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(c.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {c.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${d.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(d.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {d.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
-      );
-    }
-    return null;
+    };
+
+    return (
+      <div className="absolute inset-0 z-[10] pointer-events-none">
+        {renderNode(layout, "", 1, 1, true)}
+      </div>
+    );
   };
 
   const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
