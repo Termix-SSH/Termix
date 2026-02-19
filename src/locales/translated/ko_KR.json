@@ -2302,7 +2302,7 @@
     "loadingServerStats": "서버 통계 불러오는 중...",
     "noServerData": "서버 데이터가 없습니다.",
     "cpu": "CPU",
-    "ram": "숫양",
+    "ram": "RAM",
     "notAvailable": "해당 없음",
     "customizeLayout": "대시보드 맞춤 설정",
     "dashboardSettings": "대시보드 설정",
