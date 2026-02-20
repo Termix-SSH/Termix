@@ -374,7 +374,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isAwaitingAuthCredentials = false;
   let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
+  const wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, 30000);
+
   ws.on("close", () => {
+    clearInterval(wsPingInterval);
     sshLogger.info("Terminal WebSocket disconnected", {
       operation: "terminal_ws_disconnect",
       sessionId,
