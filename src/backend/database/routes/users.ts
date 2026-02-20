@@ -1248,7 +1248,7 @@ router.get("/oidc/callback", async (req, res) => {
  *         description: Login failed.
  */
 router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, rememberMe } = req.body;
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
   authLogger.info("User login request received", {
     operation: "user_login_request",
@@ -1400,10 +1400,12 @@ router.post("/login", async (req, res) => {
         success: true,
         requires_totp: true,
         temp_token: tempToken,
+        rememberMe: !!rememberMe,
       });
     }
 
     const token = await authManager.generateJWTToken(userRecord.id, {
+      rememberMe: !!rememberMe,
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
     });
@@ -1433,7 +1435,9 @@ router.post("/login", async (req, res) => {
     }
 
     const maxAge =
-      deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+      rememberMe ||
+      deviceInfo.type === "desktop" ||
+      deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
 
@@ -3044,7 +3048,7 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
  *         description: TOTP verification failed.
  */
 router.post("/totp/verify-login", async (req, res) => {
-  const { temp_token, totp_code } = req.body;
+  const { temp_token, totp_code, rememberMe } = req.body;
 
   if (!temp_token || !totp_code) {
     return res.status(400).json({ error: "Token and TOTP code are required" });
@@ -3167,6 +3171,7 @@ router.post("/totp/verify-login", async (req, res) => {
 
     const deviceInfo = parseUserAgent(req);
     const token = await authManager.generateJWTToken(userRecord.id, {
+      rememberMe: !!rememberMe,
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
     });
@@ -3196,7 +3201,9 @@ router.post("/totp/verify-login", async (req, res) => {
     }
 
     const maxAge =
-      deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+      rememberMe ||
+      deviceInfo.type === "desktop" ||
+      deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : 7 * 24 * 60 * 60 * 1000;
 

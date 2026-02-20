@@ -199,6 +199,7 @@ class AuthManager {
     options: {
       expiresIn?: string;
       pendingTOTP?: boolean;
+      rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
     } = {},
@@ -207,7 +208,11 @@ class AuthManager {
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
-      if (options.deviceType === "desktop" || options.deviceType === "mobile") {
+      if (
+        options.rememberMe ||
+        options.deviceType === "desktop" ||
+        options.deviceType === "mobile"
+      ) {
         expiresIn = "30d";
       } else {
         expiresIn = "7d";
