@@ -563,6 +563,8 @@ export function Auth({
       let errorMessage: string;
       if (error === "registration_disabled") {
         errorMessage = t("messages.registrationDisabled");
+      } else if (error === "user_not_allowed") {
+        errorMessage = t("messages.userNotAllowed");
       } else {
         errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
       }
