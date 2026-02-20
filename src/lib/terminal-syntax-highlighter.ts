@@ -120,7 +120,7 @@ function hasExistingAnsiCodes(text: string): boolean {
 }
 
 function hasIncompleteAnsiSequence(text: string): boolean {
-  return /\x1b(?:\[(?:[0-9;]*)?)?$/.test(text);
+  return /\x1b(?:\[(?:[0-9;?>=!]*)?)?$/.test(text);
 }
 
 interface TextSegment {
@@ -130,7 +130,7 @@ interface TextSegment {
 
 function parseAnsiSegments(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
-  const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;]*[@-~])/g;
+  const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
   let lastIndex = 0;
   let match;
 
