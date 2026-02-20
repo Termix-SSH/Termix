@@ -595,21 +595,41 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
     const { password } = req.body;
-
-    if (!password) {
-      return res.status(400).json({
-        error: "Password required for export",
-        code: "PASSWORD_REQUIRED",
-      });
-    }
     const deviceInfo = parseUserAgent(req);
-    const unlocked = await authManager.authenticateUser(
-      userId,
-      password,
-      deviceInfo.type,
-    );
-    if (!unlocked) {
-      return res.status(401).json({ error: "Invalid password" });
+
+    const user = await getDb().select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isOidcUser = !!user[0].is_oidc;
+
+    if (!isOidcUser) {
+      if (!password) {
+        return res.status(400).json({
+          error: "Password required for export",
+          code: "PASSWORD_REQUIRED",
+        });
+      }
+
+      const unlocked = await authManager.authenticateUser(
+        userId,
+        password,
+        deviceInfo.type,
+      );
+      if (!unlocked) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+    } else if (!DataCrypto.getUserDataKey(userId)) {
+      const oidcUnlocked = await authManager.authenticateOIDCUser(
+        userId,
+        deviceInfo.type,
+      );
+      if (!oidcUnlocked) {
+        return res.status(403).json({
+          error: "Failed to unlock user data with SSO credentials",
+        });
+      }
     }
 
     apiLogger.info("Exporting user data as SQLite", {
@@ -620,11 +640,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     const userDataKey = DataCrypto.getUserDataKey(userId);
     if (!userDataKey) {
       throw new Error("User data not unlocked");
-    }
-
-    const user = await getDb().select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      throw new Error(`User not found: ${userId}`);
     }
 
     const tempDir =
