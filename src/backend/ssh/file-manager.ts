@@ -2622,6 +2622,98 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
 
 /**
  * @openapi
+ * /ssh/file_manager/ssh/resolvePath:
+ *   get:
+ *     summary: Resolve a path with environment variables
+ *     description: Expands environment variables and ~ in a path via the SSH session.
+ *     tags:
+ *       - File Manager
+ *     parameters:
+ *       - in: query
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The resolved absolute path.
+ *       400:
+ *         description: Missing required parameters.
+ *       500:
+ *         description: Failed to resolve path.
+ */
+app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
+  const sessionId = req.query.sessionId as string;
+  const sshConn = sshSessions[sessionId];
+  const rawPath = decodeURIComponent(req.query.path as string);
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Session ID is required" });
+  }
+
+  if (!sshConn?.isConnected) {
+    return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!rawPath) {
+    return res.status(400).json({ error: "Path is required" });
+  }
+
+  sshConn.lastActive = Date.now();
+
+  let expandPath = rawPath;
+  if (expandPath.startsWith("~")) {
+    expandPath = "$HOME" + expandPath.substring(1);
+  }
+
+  const escapedPath = expandPath.replace(/"/g, '\\"');
+  const command = `echo "${escapedPath}"`;
+
+  sshConn.client.exec(command, (err, stream) => {
+    if (err) {
+      fileLogger.error("SSH resolvePath error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    let data = "";
+    let errorData = "";
+
+    stream.on("data", (chunk: Buffer) => {
+      data += chunk.toString();
+    });
+
+    stream.stderr.on("data", (chunk: Buffer) => {
+      errorData += chunk.toString();
+    });
+
+    stream.on("close", (code) => {
+      if (code !== 0) {
+        fileLogger.error(
+          `SSH resolvePath command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+        );
+        return res.json({ resolvedPath: rawPath });
+      }
+
+      const resolved = data.trim();
+      res.json({ resolvedPath: resolved || rawPath });
+    });
+
+    stream.on("error", (streamErr) => {
+      fileLogger.error("SSH resolvePath stream error:", streamErr);
+      if (!res.headersSent) {
+        res.json({ resolvedPath: rawPath });
+      }
+    });
+  });
+});
+
+/**
+ * @openapi
  * /ssh/file_manager/ssh/readFile:
  *   get:
  *     summary: Read a file
