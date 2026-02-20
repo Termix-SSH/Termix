@@ -24,6 +24,9 @@ import {
   sharedCredentials,
   auditLogs,
   sessionRecordings,
+  networkTopology,
+  dashboardPreferences,
+  opksshTokens,
 } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -231,6 +234,14 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(sshData).where(eq(sshData.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
+
+    await db
+      .delete(networkTopology)
+      .where(eq(networkTopology.userId, userId));
+    await db
+      .delete(dashboardPreferences)
+      .where(eq(dashboardPreferences.userId, userId));
+    await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
 
     db.$client
       .prepare("DELETE FROM settings WHERE key LIKE ?")
