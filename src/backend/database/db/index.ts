@@ -1155,13 +1155,6 @@ async function saveMemoryDatabaseToFile() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    try {
-      const sessionCount = memoryDatabase
-        .prepare("SELECT COUNT(*) as count FROM sessions")
-        .get() as { count: number };
-    } catch (countError) {
-    }
-
     if (enableFileEncryption) {
       await DatabaseFileEncryption.encryptDatabaseFromBuffer(
         buffer,
@@ -1170,6 +1163,8 @@ async function saveMemoryDatabaseToFile() {
     } else {
       fs.writeFileSync(dbPath, buffer);
     }
+
+    DatabaseSaveTrigger.markClean();
   } catch (error) {
     databaseLogger.error("Failed to save in-memory database", error, {
       operation: "memory_db_save_failed",
@@ -1185,7 +1180,11 @@ async function handlePostInitFileEncryption() {
     if (memoryDatabase) {
       await saveMemoryDatabaseToFile();
 
-      setInterval(saveMemoryDatabaseToFile, 15 * 1000);
+      setInterval(() => {
+        if (DatabaseSaveTrigger.isDirty) {
+          saveMemoryDatabaseToFile();
+        }
+      }, 5 * 60 * 1000);
 
       DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
