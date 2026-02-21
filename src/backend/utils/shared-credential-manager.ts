@@ -362,9 +362,9 @@ class SharedCredentialManager {
       key: cred.key
         ? this.decryptField(cred.key, ownerDEK, credentialId, "key")
         : undefined,
-      keyPassword: cred.key_password
+      keyPassword: cred.keyPassword
         ? this.decryptField(
-            cred.key_password,
+            cred.keyPassword,
             ownerDEK,
             credentialId,
             "key_password",

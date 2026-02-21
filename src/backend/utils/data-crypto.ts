@@ -131,7 +131,7 @@ class DataCrypto {
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || null,
+            updatedRecord.keyPassword || null,
             updatedRecord.key_type || null,
             updatedRecord.autostart_password || null,
             updatedRecord.autostart_key || null,
@@ -171,9 +171,9 @@ class DataCrypto {
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || null,
-            updatedRecord.private_key || null,
-            updatedRecord.public_key || null,
+            updatedRecord.keyPassword || null,
+            updatedRecord.privateKey || null,
+            updatedRecord.publicKey || null,
             updatedRecord.key_type || null,
             record.id,
           );
@@ -207,10 +207,10 @@ class DataCrypto {
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
-            updatedRecord.totp_secret || null,
-            updatedRecord.totp_backup_codes || null,
-            updatedRecord.client_secret || null,
-            updatedRecord.oidc_identifier || null,
+            updatedRecord.totpSecret || null,
+            updatedRecord.totpBackupCodes || null,
+            updatedRecord.clientSecret || null,
+            updatedRecord.oidcIdentifier || null,
             userId,
           );
 
@@ -500,9 +500,9 @@ class DataCrypto {
       );
     }
 
-    if (record.key_password && typeof record.key_password === "string") {
+    if (record.keyPassword && typeof record.keyPassword === "string") {
       systemEncrypted.systemKeyPassword = FieldCrypto.encryptField(
-        record.key_password as string,
+        record.keyPassword as string,
         systemKey,
         recordId as string,
         "key_password",

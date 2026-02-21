@@ -434,14 +434,14 @@ router.get(
       if (credential.key) {
         output.key = credential.key;
       }
-      if (credential.private_key) {
-        output.privateKey = credential.private_key;
+      if (credential.privateKey) {
+        output.privateKey = credential.privateKey;
       }
-      if (credential.public_key) {
-        output.publicKey = credential.public_key;
+      if (credential.publicKey) {
+        output.publicKey = credential.publicKey;
       }
-      if (credential.key_password) {
-        output.keyPassword = credential.key_password;
+      if (credential.keyPassword) {
+        output.keyPassword = credential.keyPassword;
       }
 
       res.json(output);
@@ -564,13 +564,13 @@ router.put(
               error: `Invalid SSH key: ${keyInfo.error}`,
             });
           }
-          updateFields.private_key = keyInfo.privateKey;
-          updateFields.public_key = keyInfo.publicKey;
+          updateFields.privateKey = keyInfo.privateKey;
+          updateFields.publicKey = keyInfo.publicKey;
           updateFields.detectedKeyType = keyInfo.keyType;
         }
       }
       if (updateData.keyPassword !== undefined) {
-        updateFields.key_password = updateData.keyPassword || null;
+        updateFields.keyPassword = updateData.keyPassword || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -956,7 +956,7 @@ function formatCredentialOutput(
         : [],
     authType: credential.authType,
     username: credential.username || null,
-    publicKey: credential.public_key,
+    publicKey: credential.publicKey,
     keyType: credential.keyType,
     detectedKeyType: credential.detectedKeyType,
     usageCount: credential.usageCount || 0,
@@ -1508,7 +1508,7 @@ async function deploySSHKeyToHost(
   hostConfig: Record<string, unknown>,
   credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  const publicKey = credData.public_key as string;
+  const publicKey = credData.publicKey as string;
   return new Promise((resolve) => {
     const conn = new Client();
 
@@ -1934,7 +1934,7 @@ router.post(
         });
       }
 
-      const publicKey = credData.public_key;
+      const publicKey = credData.publicKey;
       if (!publicKey) {
         return res.status(400).json({
           success: false,
@@ -1996,8 +1996,8 @@ router.post(
             if (cred.authType === "password") {
               hostConfig.password = cred.password;
             } else if (cred.authType === "key") {
-              hostConfig.privateKey = cred.private_key || cred.key;
-              hostConfig.keyPassword = cred.key_password;
+              hostConfig.privateKey = cred.privateKey || cred.key;
+              hostConfig.keyPassword = cred.keyPassword;
             }
           } else {
             return res.status(400).json({

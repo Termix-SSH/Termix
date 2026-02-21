@@ -97,8 +97,8 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key: credential.private_key as string | undefined,
-          keyPassword: credential.key_password as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
           keyType: credential.keyType as string | undefined,
           authType: credential.authType as string | undefined,
         } as JumpHostConfig;
@@ -1214,7 +1214,7 @@ async function resolveHostCredentials(
               (credential.password
                 ? "password"
                 : credential.key ||
-                    (credential as Record<string, unknown>).private_key
+                    (credential as Record<string, unknown>).privateKey
                   ? "key"
                   : "none");
 
@@ -1228,8 +1228,8 @@ async function resolveHostCredentials(
             if (credential.key) {
               baseHost.key = credential.key;
             }
-            if (credential.key_password) {
-              baseHost.keyPassword = credential.key_password;
+            if (credential.keyPassword) {
+              baseHost.keyPassword = credential.keyPassword;
             }
             if (credential.keyType) {
               baseHost.keyType = credential.keyType;
@@ -1277,7 +1277,7 @@ function addLegacyCredentials(
 ): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
-  baseHost.keyPassword = host.key_password || null;
+  baseHost.keyPassword = host.keyPassword || null;
   baseHost.keyType = host.keyType;
 }
 

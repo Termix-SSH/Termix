@@ -168,8 +168,8 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key: credential.private_key as string | undefined,
-          keyPassword: credential.key_password as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
           keyType: credential.keyType as string | undefined,
           authType: credential.authType as string | undefined,
         } as JumpHostConfig;
@@ -630,7 +630,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
       password: host.password,
       sshKey: host.key,
-      keyPassword: host.key_password,
+      keyPassword: host.keyPassword,
       authType: host.authType,
     };
 
@@ -693,8 +693,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
           const credential = credentials[0];
           resolvedCredentials = {
             password: credential.password as string | undefined,
-            sshKey: credential.private_key as string | undefined,
-            keyPassword: credential.key_password as string | undefined,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
             authType: credential.authType as string | undefined,
           };
         }

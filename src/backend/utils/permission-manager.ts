@@ -279,7 +279,7 @@ class PermissionManager {
   async isAdmin(userId: string): Promise<boolean> {
     try {
       const user = await db
-        .select({ isAdmin: users.is_admin })
+        .select({ isAdmin: users.isAdmin })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);

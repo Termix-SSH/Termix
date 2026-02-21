@@ -657,8 +657,8 @@ async function connectSSHTunnel(
             const credential = credentials[0];
             resolvedSourceCredentials = {
               password: credential.password as string | undefined,
-              sshKey: credential.private_key as string | undefined,
-              keyPassword: credential.key_password as string | undefined,
+              sshKey: credential.privateKey as string | undefined,
+              keyPassword: credential.keyPassword as string | undefined,
               keyType: credential.keyType as string | undefined,
               authMethod: credential.authType as string,
             };
@@ -742,8 +742,8 @@ async function connectSSHTunnel(
           const credential = credentials[0];
           resolvedEndpointCredentials = {
             password: credential.password as string | undefined,
-            sshKey: credential.private_key as string | undefined,
-            keyPassword: credential.key_password as string | undefined,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
             keyType: credential.keyType as string | undefined,
             authMethod: credential.authType as string,
           };
@@ -1341,8 +1341,8 @@ async function killRemoteTunnelByMarker(
           const credential = credentials[0];
           resolvedSourceCredentials = {
             password: credential.password as string | undefined,
-            sshKey: credential.private_key as string | undefined,
-            keyPassword: credential.key_password as string | undefined,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
             keyType: credential.keyType as string | undefined,
             authMethod: credential.authType as string,
           };
