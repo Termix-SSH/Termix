@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import {
   Client,
+  type ClientChannel,
   type PseudoTtyOptions,
 } from "ssh2";
 import { parse as parseUrl } from "url";
@@ -14,6 +15,7 @@ import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSHAuthManager } from "./auth-manager.js";
+import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
 interface ConnectToHostData {
@@ -65,10 +67,24 @@ const userCrypto = UserCrypto.getInstance();
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<JumpHostConfig | null> {
   sshLogger.info("Resolving jump host", {
     operation: "terminal_jumphost_resolve",
     userId,
@@ -109,17 +125,17 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
+          password: credential.password as string | undefined,
           key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+          keyType: (credential.key_type || credential.keyType) as string | undefined,
+          authType: (credential.auth_type || credential.authType) as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     sshLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -699,7 +715,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           hostId: number;
           cols?: number;
           rows?: number;
-          hostConfig?: Record<string, unknown>;
+          hostConfig?: ConnectToHostData["hostConfig"];
         };
 
         resetConnectionState();
@@ -709,7 +725,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows: completedData.rows || 24,
           hostConfig:
             completedData.hostConfig ||
-            ({ id: completedData.hostId, userId } as unknown as ConnectToHostData["hostConfig"]),
+            ({ id: completedData.hostId, ip: "", port: 22, username: "", userId } as ConnectToHostData["hostConfig"]),
         };
 
         handleConnectToHost(reconnectConfig).catch((error) => {
@@ -851,7 +867,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
-    let resolvedCredentials = { password, key, keyPassword, keyType, authType };
+    let resolvedCredentials = { username, password, key, keyPassword, keyType, authType };
     const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
@@ -872,6 +888,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
+            username: (credential.username as string | undefined) || username,
             password: credential.password as string | undefined,
             key: (credential.private_key ||
               credential.privateKey ||
@@ -1441,7 +1458,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           instructionsLang,
           prompts,
           finish,
-          resolvedCredentials as Parameters<typeof sshAuthManager.handleKeyboardInteractive>[5],
+          resolvedCredentials as unknown as Parameters<typeof sshAuthManager.handleKeyboardInteractive>[5],
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -1676,7 +1693,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
         (hostConfig.socks5ProxyChain &&
-          (hostConfig.socks5ProxyChain as unknown[]).length > 0))
+          (hostConfig.socks5ProxyChain as ProxyNode[]).length > 0))
     ) {
       try {
         const socks5Socket = await createSocks5Connection(ip, port, {
@@ -1685,7 +1702,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Port: hostConfig.socks5Port,
           socks5Username: hostConfig.socks5Username,
           socks5Password: hostConfig.socks5Password,
-          socks5ProxyChain: hostConfig.socks5ProxyChain as unknown[],
+          socks5ProxyChain: hostConfig.socks5ProxyChain as ProxyNode[],
         });
 
         if (socks5Socket) {

@@ -129,7 +129,7 @@ async function createJumpHostChain(
       }
     }
 
-    let resolvedCredentials: Record<string, unknown> = {
+    let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
       password: jumpHost.password,
       sshKey: jumpHost.key,
       keyPassword: jumpHost.keyPassword,
@@ -154,11 +154,11 @@ async function createJumpHostChain(
       if (credentials.length > 0) {
         const credential = credentials[0];
         resolvedCredentials = {
-          password: credential.password,
+          password: credential.password as string | undefined,
           sshKey:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          authType: credential.auth_type || credential.authType,
+            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+          authType: (credential.auth_type || credential.authType) as string | undefined,
         };
       }
     }
@@ -292,7 +292,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           try {
-            let resolvedCredentials: Record<string, unknown> = {
+            let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
               password: hostConfig.password,
               sshKey: hostConfig.key,
               keyPassword: hostConfig.keyPassword,
@@ -317,14 +317,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
               if (credentials.length > 0) {
                 const credential = credentials[0];
                 resolvedCredentials = {
-                  password: credential.password,
+                  password: credential.password as string | undefined,
                   sshKey:
-                    credential.private_key ||
+                    (credential.private_key ||
                     credential.privateKey ||
-                    credential.key,
+                    credential.key) as string | undefined,
                   keyPassword:
-                    credential.key_password || credential.keyPassword,
-                  authType: credential.auth_type || credential.authType,
+                    (credential.key_password || credential.keyPassword) as string | undefined,
+                  authType: (credential.auth_type || credential.authType) as string | undefined,
                 };
               }
             }
@@ -564,7 +564,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         case "resize": {
           if (sshSession && sshSession.stream) {
             const { cols, rows } = message.data;
-            sshSession.stream.setWindow(rows, cols);
+            sshSession.stream.setWindow(rows, cols, rows, cols);
           }
           break;
         }

@@ -9,7 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../../types/index.js";
+import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
@@ -153,10 +153,24 @@ app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<JumpHostConfig | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -192,17 +206,17 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
+          password: credential.password as string | undefined,
           key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+          keyType: (credential.key_type || credential.keyType) as string | undefined,
+          authType: (credential.auth_type || credential.authType) as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     fileLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -1206,7 +1220,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `DNS resolution failed: ${err.message}`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1219,7 +1233,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `TCP connection failed: ${err.message}`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1232,7 +1246,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `SSH handshake failed: ${err.message}`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1245,7 +1259,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `Authentication failed: ${err.message}`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     } else if (err.message.includes("verification failed")) {
@@ -1255,7 +1269,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     } else {
@@ -1264,7 +1278,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           "error",
           `SSH connection failed: ${err.message}`,
-          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
+          { errorCode: (err as unknown as Record<string, unknown>).code, errorLevel: (err as unknown as Record<string, unknown>).level },
         ),
       );
     }
@@ -1514,7 +1528,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
   if (
     useSocks5 &&
-    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as unknown[]).length > 0))
+    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
   ) {
     connectionLogs.push(
       createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy", {
@@ -1529,7 +1543,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         socks5Port,
         socks5Username,
         socks5Password,
-        socks5ProxyChain: socks5ProxyChain as unknown[],
+        socks5ProxyChain: socks5ProxyChain as ProxyNode[],
       });
 
       if (socks5Socket) {
@@ -2028,19 +2042,6 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
       .status(401)
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
-
-  const responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      fileLogger.warn("Warpgate verification timeout", {
-        operation: "file_warpgate_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "Warpgate verification timeout" });
-    }
-  }, 60000);
 
   session.finish([""]);
 });
