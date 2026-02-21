@@ -2844,6 +2844,127 @@ router.delete(
  *       400:
  *         description: Invalid request body.
  */
+
+/**
+ * @swagger
+ * /ssh/bulk-update:
+ *   patch:
+ *     summary: Bulk update partial fields on multiple SSH hosts
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostIds:
+ *                 type: array
+ *                 items:
+ *                   type: number
+ *               updates:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Bulk update completed.
+ *       400:
+ *         description: Invalid request body.
+ */
+router.patch(
+  "/bulk-update",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { hostIds, updates } = req.body;
+
+    if (!Array.isArray(hostIds) || hostIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "hostIds array is required and must not be empty" });
+    }
+
+    if (hostIds.length > 1000) {
+      return res
+        .status(400)
+        .json({ error: "Maximum 1000 hosts allowed per bulk update" });
+    }
+
+    if (!updates || typeof updates !== "object" || Object.keys(updates).length === 0) {
+      return res
+        .status(400)
+        .json({ error: "updates object is required and must contain at least one field" });
+    }
+
+    try {
+      // Ownership check: only update hosts belonging to this user
+      const ownedHosts = await db
+        .select({ id: sshData.id, statsConfig: sshData.statsConfig })
+        .from(sshData)
+        .where(and(inArray(sshData.id, hostIds), eq(sshData.userId, userId)));
+
+      const ownedIds = ownedHosts.map((h) => h.id);
+      const unauthorizedIds = hostIds.filter((id: number) => !ownedIds.includes(id));
+
+      if (ownedIds.length === 0) {
+        return res.status(404).json({ error: "No matching hosts found" });
+      }
+
+      const errors: string[] = [];
+      if (unauthorizedIds.length > 0) {
+        errors.push(`${unauthorizedIds.length} host(s) not found or not owned`);
+      }
+
+      // Build simple field updates
+      const simpleUpdates: Record<string, unknown> = {};
+      if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
+      if (typeof updates.folder === "string") simpleUpdates.folder = updates.folder || null;
+      if (typeof updates.enableTerminal === "boolean") simpleUpdates.enableTerminal = updates.enableTerminal;
+      if (typeof updates.enableTunnel === "boolean") simpleUpdates.enableTunnel = updates.enableTunnel;
+      if (typeof updates.enableFileManager === "boolean") simpleUpdates.enableFileManager = updates.enableFileManager;
+      if (typeof updates.enableDocker === "boolean") simpleUpdates.enableDocker = updates.enableDocker;
+
+      // Apply simple field updates in one query
+      if (Object.keys(simpleUpdates).length > 0) {
+        await db
+          .update(sshData)
+          .set(simpleUpdates)
+          .where(and(inArray(sshData.id, ownedIds), eq(sshData.userId, userId)));
+      }
+
+      // Handle statsConfig merge per-host (stored as JSON string)
+      if (updates.statsConfig && typeof updates.statsConfig === "object") {
+        for (const host of ownedHosts) {
+          try {
+            const existing = host.statsConfig
+              ? JSON.parse(host.statsConfig as string)
+              : {};
+            const merged = { ...existing, ...updates.statsConfig };
+            await db
+              .update(sshData)
+              .set({ statsConfig: JSON.stringify(merged) })
+              .where(and(eq(sshData.id, host.id), eq(sshData.userId, userId)));
+          } catch (e) {
+            errors.push(`Failed to update statsConfig for host ${host.id}`);
+          }
+        }
+      }
+
+      DatabaseSaveTrigger.triggerSave("bulk_update");
+
+      return res.json({
+        updated: ownedIds.length,
+        failed: unauthorizedIds.length,
+        errors,
+      });
+    } catch (error) {
+      sshLogger.error("Failed to bulk update hosts:", error);
+      return res.status(500).json({ error: "Failed to bulk update hosts" });
+    }
+  },
+);
+
 router.post(
   "/bulk-import",
   authenticateJWT,

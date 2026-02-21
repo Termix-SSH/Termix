@@ -1131,6 +1131,18 @@ export async function bulkImportSSHHosts(hosts: SSHHostData[], overwrite = false
   }
 }
 
+export async function bulkUpdateSSHHosts(
+  hostIds: number[],
+  updates: Record<string, unknown>,
+): Promise<{ updated: number; failed: number; errors: string[] }> {
+  try {
+    const response = await sshHostApi.patch("/bulk-update", { hostIds, updates });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "bulk update SSH hosts");
+  }
+}
+
 export async function deleteSSHHost(
   hostId: number,
 ): Promise<Record<string, unknown>> {
