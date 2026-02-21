@@ -1055,10 +1055,9 @@ router.put(
           hostRecord[0].credentialId !== null &&
           sshDataObj.credentialId === null
         ) {
-          const revokedShares = await db
+          await db
             .delete(hostAccess)
-            .where(eq(hostAccess.hostId, Number(hostId)))
-            .returning({ id: hostAccess.id, userId: hostAccess.userId });
+            .where(eq(hostAccess.hostId, Number(hostId)));
         }
       }
 
@@ -1264,7 +1263,7 @@ router.get(
       const ownHosts = rawData.filter((row) => row.userId === userId);
       const sharedHosts = rawData.filter((row) => row.userId !== userId);
 
-      let decryptedOwnHosts: any[] = [];
+      let decryptedOwnHosts: Record<string, unknown>[] = [];
       try {
         decryptedOwnHosts = await SimpleDBOps.select(
           Promise.resolve(ownHosts),
@@ -1583,7 +1582,6 @@ router.delete(
         .delete(sshData)
         .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
 
-      const host = hostToDelete[0];
       databaseLogger.success("SSH host deleted", {
         operation: "host_delete_success",
         userId,

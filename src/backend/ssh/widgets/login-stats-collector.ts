@@ -1,6 +1,5 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import { statsLogger } from "../../utils/logger.js";
 
 export interface LoginRecord {
   user: string;
@@ -53,7 +52,7 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
               parsedTime = isNaN(date.getTime())
                 ? new Date().toISOString()
                 : date.toISOString();
-            } catch (e) {
+            } catch {
               parsedTime = new Date().toISOString();
             }
 
@@ -70,7 +69,9 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {}
+  } catch {
+    // expected
+  }
 
   try {
     const failedOut = await execCommand(
@@ -111,7 +112,7 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
           parsedTime = isNaN(date.getTime())
             ? new Date().toISOString()
             : date.toISOString();
-        } catch (e) {
+        } catch {
           parsedTime = new Date().toISOString();
         }
 
@@ -126,7 +127,9 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {}
+  } catch {
+    // expected
+  }
 
   return {
     recentLogins: recentLogins.slice(0, 10),

@@ -66,15 +66,14 @@ class PermissionManager {
   private async cleanupExpiredAccess(): Promise<void> {
     try {
       const now = new Date().toISOString();
-      const result = await db
+      await db
         .delete(hostAccess)
         .where(
           and(
             sql`${hostAccess.expiresAt} IS NOT NULL`,
             sql`${hostAccess.expiresAt} <= ${now}`,
           ),
-        )
-        .returning({ id: hostAccess.id });
+        );
     } catch (error) {
       databaseLogger.error("Failed to cleanup expired host access", error, {
         operation: "host_access_cleanup_failed",
@@ -383,7 +382,7 @@ class PermissionManager {
         });
       }
 
-      (req as any).hostAccessInfo = accessInfo;
+      (req as unknown as { hostAccessInfo: HostAccessInfo }).hostAccessInfo = accessInfo;
 
       next();
     };

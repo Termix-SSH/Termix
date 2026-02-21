@@ -233,7 +233,9 @@ IP.3 = 0.0.0.0
     let envContent = "";
     try {
       envContent = await fs.readFile(this.ENV_FILE, "utf8");
-    } catch (error) {}
+    } catch {
+      // expected - env file may not exist yet
+    }
 
     let updatedContent = envContent;
     let hasChanges = false;

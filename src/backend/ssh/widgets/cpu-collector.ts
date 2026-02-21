@@ -77,7 +77,7 @@ export async function collectCpuMetrics(client: Client): Promise<{
 
     const coresNum = Number((coresOut.stdout || "").trim());
     cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
-  } catch (e) {
+  } catch {
     cpuPercent = null;
     cores = null;
     loadTriplet = null;

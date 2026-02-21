@@ -731,7 +731,7 @@ router.post(
           reject(err);
         });
 
-        const config: any = {
+        const config: Record<string, unknown> = {
           host: host.ip,
           port: host.port,
           username: host.username,

@@ -3,7 +3,6 @@ import { db } from "../database/db/index.js";
 import { sshData } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
-import crypto from "crypto";
 
 interface HostKeyVerificationData {
   scenario: "new" | "changed";

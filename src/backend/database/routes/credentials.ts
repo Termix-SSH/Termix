@@ -614,7 +614,6 @@ router.put(
         userId,
       );
 
-      const credential = updated[0];
       authLogger.success("SSH credential updated", {
         operation: "credential_update_success",
         userId,
@@ -751,7 +750,6 @@ router.delete(
           ),
         );
 
-      const credential = credentialToDelete[0];
       authLogger.success("SSH credential deleted", {
         operation: "credential_delete_success",
         userId,
