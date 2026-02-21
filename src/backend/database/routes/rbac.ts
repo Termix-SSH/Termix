@@ -7,11 +7,10 @@ import {
   users,
   roles,
   userRoles,
-  auditLogs,
   sharedCredentials,
 } from "../db/schema.js";
 import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -859,10 +858,9 @@ router.delete(
         permissionManager.invalidateUserPermissionCache(userId);
       }
 
-      const deletedHostAccess = await db
+      await db
         .delete(hostAccess)
-        .where(eq(hostAccess.roleId, roleId))
-        .returning({ id: hostAccess.id });
+        .where(eq(hostAccess.roleId, roleId));
 
       await db.delete(roles).where(eq(roles.id, roleId));
 

@@ -6,7 +6,7 @@ import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { statsLogger, sshLogger } from "../utils/logger.js";
+import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
@@ -33,7 +33,7 @@ function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ): Omit<LogEntry, "id" | "timestamp"> {
   return {
     type,
@@ -46,7 +46,7 @@ function createConnectionLog(
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -159,7 +159,7 @@ async function createJumpHostChain(
           resolve(false);
         });
 
-        const connectConfig: any = {
+        const connectConfig: Record<string, unknown> = {
           host: jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
@@ -272,7 +272,9 @@ function cleanupMetricsSession(sessionId: string) {
 
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     clearTimeout(session.timeout);
     delete metricsSessions[sessionId];
   }
@@ -343,7 +345,9 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch (error) {}
+        } catch {
+          // expected
+        }
       }
     }
 
@@ -649,7 +653,7 @@ class PollingManager {
       parsed = statsConfigStr;
     } else {
       try {
-        let temp: any = JSON.parse(statsConfigStr);
+        let temp: unknown = JSON.parse(statsConfigStr);
 
         if (typeof temp === "string") {
           temp = JSON.parse(temp);
@@ -775,7 +779,7 @@ class PollingManager {
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
-    } catch (error) {
+    } catch {
       const statusEntry: StatusEntry = {
         status: "offline",
         lastChecked: new Date().toISOString(),
@@ -802,7 +806,6 @@ class PollingManager {
     const hasExistingMetrics = this.metricsStore.has(refreshedHost.id);
 
     if (hasExistingMetrics && pollingBackoff.shouldSkip(host.id)) {
-      const backoffInfo = pollingBackoff.getBackoffInfo(host.id);
       return;
     }
 
@@ -814,9 +817,6 @@ class PollingManager {
       });
       pollingBackoff.reset(refreshedHost.id);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-
       pollingBackoff.recordFailure(refreshedHost.id);
 
       const latestConfig = this.pollingConfigs.get(refreshedHost.id);
@@ -1385,7 +1385,9 @@ async function buildSshConfig(
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
   } else if (host.authType === "none") {
+    // no credentials needed
   } else if (host.authType === "opkssh") {
+    // handled externally
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1421,10 +1423,59 @@ function getPoolKey(host: SSHHostWithCredentials): string {
 }
 
 function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
-  return () =>
-    new Promise(async (resolve, reject) => {
-      const config = await buildSshConfig(host);
-      const client = new Client();
+  return async () => {
+    const config = await buildSshConfig(host);
+    const client = new Client();
+
+    let socks5Socket: import("net").Socket | null = null;
+    if (
+      host.useSocks5 &&
+      (host.socks5Host ||
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+    ) {
+      try {
+        socks5Socket = await createSocks5Connection(
+          host.ip,
+          host.port,
+          {
+            useSocks5: host.useSocks5,
+            socks5Host: host.socks5Host,
+            socks5Port: host.socks5Port,
+            socks5Username: host.socks5Username,
+            socks5Password: host.socks5Password,
+            socks5ProxyChain: host.socks5ProxyChain,
+          },
+        );
+
+        if (!socks5Socket) {
+          statsLogger.error("SOCKS5 socket is null", undefined, {
+            operation: "socks5_socket_null",
+            hostIp: host.ip,
+          });
+        }
+      } catch (socks5Error) {
+        throw new Error(
+          "SOCKS5 proxy connection failed: " +
+            (socks5Error instanceof Error
+              ? socks5Error.message
+              : "Unknown error"),
+        );
+      }
+    }
+
+    let jumpClient: Client | null = null;
+    if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+      jumpClient = await createJumpHostChain(
+        host.jumpHosts,
+        host.userId,
+      );
+
+      if (!jumpClient) {
+        throw new Error("Failed to establish jump host chain");
+      }
+    }
+
+    return new Promise<Client>((resolve, reject) => {
       const timeout = setTimeout(() => {
         client.end();
         reject(new Error("SSH connection timeout"));
@@ -1490,91 +1541,36 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         },
       );
 
-      try {
-        if (
-          host.useSocks5 &&
-          (host.socks5Host ||
-            (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ) {
-          try {
-            const socks5Socket = await createSocks5Connection(
-              host.ip,
-              host.port,
-              {
-                useSocks5: host.useSocks5,
-                socks5Host: host.socks5Host,
-                socks5Port: host.socks5Port,
-                socks5Username: host.socks5Username,
-                socks5Password: host.socks5Password,
-                socks5ProxyChain: host.socks5ProxyChain,
-              },
-            );
-
-            if (socks5Socket) {
-              config.sock = socks5Socket;
-              client.connect(config);
+      if (socks5Socket) {
+        config.sock = socks5Socket;
+        client.connect(config);
+      } else if (jumpClient) {
+        jumpClient.forwardOut(
+          "127.0.0.1",
+          0,
+          host.ip,
+          host.port,
+          (err, stream) => {
+            if (err) {
+              clearTimeout(timeout);
+              jumpClient!.end();
+              reject(
+                new Error(
+                  "Failed to forward through jump host: " + err.message,
+                ),
+              );
               return;
-            } else {
-              statsLogger.error("SOCKS5 socket is null", undefined, {
-                operation: "socks5_socket_null",
-                hostIp: host.ip,
-              });
             }
-          } catch (socks5Error) {
-            clearTimeout(timeout);
-            reject(
-              new Error(
-                "SOCKS5 proxy connection failed: " +
-                  (socks5Error instanceof Error
-                    ? socks5Error.message
-                    : "Unknown error"),
-              ),
-            );
-            return;
-          }
-        }
 
-        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-          const jumpClient = await createJumpHostChain(
-            host.jumpHosts,
-            host.userId,
-          );
-
-          if (!jumpClient) {
-            clearTimeout(timeout);
-            reject(new Error("Failed to establish jump host chain"));
-            return;
-          }
-
-          jumpClient.forwardOut(
-            "127.0.0.1",
-            0,
-            host.ip,
-            host.port,
-            (err, stream) => {
-              if (err) {
-                clearTimeout(timeout);
-                jumpClient.end();
-                reject(
-                  new Error(
-                    "Failed to forward through jump host: " + err.message,
-                  ),
-                );
-                return;
-              }
-
-              config.sock = stream;
-              client.connect(config);
-            },
-          );
-        } else {
-          client.connect(config);
-        }
-      } catch (err) {
-        clearTimeout(timeout);
-        reject(err);
+            config.sock = stream;
+            client.connect(config);
+          },
+        );
+      } else {
+        client.connect(config);
       }
     });
+  };
 }
 
 async function withSshConnection<T>(
@@ -1667,7 +1663,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           login_stats = await collectLoginStats(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         let ports: {
           source: "ss" | "netstat" | "none";
@@ -1685,7 +1683,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           ports = await collectPortsMetrics(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         let firewall: {
           type: "iptables" | "nftables" | "none";
@@ -1713,7 +1713,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           firewall = await collectFirewallMetrics(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         const result = {
           cpu,
@@ -1790,7 +1792,9 @@ function tcpPing(
     const cleanup = () => {
       try {
         socket.destroy();
-      } catch {}
+      } catch {
+        // expected
+      }
     };
 
     socket.setTimeout(timeoutMs);
@@ -1809,7 +1813,9 @@ function tcpPing(
           // Complete SSH identification exchange gracefully
           try {
             socket.end("SSH-2.0-TermixHealthCheck\r\n");
-          } catch {}
+          } catch {
+            // expected
+          }
           setTimeout(cleanup, 200);
         } else {
           cleanup();
@@ -2643,7 +2649,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     return res.status(408).json({ error: "TOTP session timeout" });
   }
 
@@ -2656,7 +2664,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     return res.status(429).json({ error: "Too many TOTP attempts" });
   }
 
@@ -2744,7 +2754,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
       delete pendingTOTPSessions[sessionId];
       try {
         session.client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
     }
 
     res.status(401).json({

@@ -8,7 +8,7 @@ import {
   hostAccess,
   dashboardPreferences,
 } from "./database/db/schema.js";
-import { eq, and, desc, or, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -85,9 +85,6 @@ app.use(authManager.createAuthMiddleware());
  */
 app.get("/uptime", async (req, res) => {
   try {
-    const startTime = Date.now();
-    const userId = (req as AuthenticatedRequest).userId;
-
     const uptimeMs = Date.now() - serverStartTime;
     const uptimeSeconds = Math.floor(uptimeMs / 1000);
     const days = Math.floor(uptimeSeconds / 86400);
@@ -296,7 +293,7 @@ app.post("/activity/log", async (req, res) => {
 
     if (allActivities.length > 100) {
       const toDelete = allActivities.slice(100);
-      for (const activity of toDelete) {
+      for (let i = 0; i < toDelete.length; i++) {
         await SimpleDBOps.delete(recentActivity, "recent_activity", userId);
       }
     }

@@ -51,7 +51,7 @@ const cleanupInProgress = new Set<string>();
 export function getRequestOrigin(req: IncomingMessage): string {
   const protoHeader =
     req.headers["x-forwarded-proto"] ||
-    ((req.socket as any).encrypted ? "https" : "http");
+    ((req.socket as unknown as { encrypted?: boolean }).encrypted ? "https" : "http");
   const proto =
     typeof protoHeader === "string"
       ? protoHeader.split(",")[0].trim()
@@ -235,7 +235,6 @@ export async function startOPKSSHAuth(
   try {
     const binaryPath = OPKSSHBinaryManager.getBinaryPath();
     const configPath = getOPKConfigPath();
-    const configDir = path.dirname(configPath);
 
     const args = [
       "login",
@@ -784,7 +783,7 @@ export function getActiveSessionsAll(): OPKSSHAuthSession[] {
   return Array.from(activeAuthSessions.values());
 }
 
-export async function getUserIdFromRequest(req: any): Promise<string | null> {
+export async function getUserIdFromRequest(req: { cookies?: Record<string, string>; headers: Record<string, string | undefined> }): Promise<string | null> {
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");
     const authManager = AuthManager.getInstance();
@@ -797,7 +796,7 @@ export async function getUserIdFromRequest(req: any): Promise<string | null> {
 
     const decoded = await authManager.verifyJWTToken(token);
     return decoded?.userId || null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

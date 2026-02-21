@@ -3,7 +3,6 @@ import {
   sharedCredentials,
   sshCredentials,
   hostAccess,
-  users,
   userRoles,
   sshData,
 } from "../database/db/schema.js";
@@ -293,10 +292,9 @@ class SharedCredentialManager {
     credentialId: number,
   ): Promise<void> {
     try {
-      const result = await db
+      await db
         .delete(sharedCredentials)
-        .where(eq(sharedCredentials.originalCredentialId, credentialId))
-        .returning({ id: sharedCredentials.id });
+        .where(eq(sharedCredentials.originalCredentialId, credentialId));
     } catch (error) {
       databaseLogger.error("Failed to delete shared credentials", error, {
         operation: "delete_shared_credentials",
@@ -534,7 +532,7 @@ class SharedCredentialManager {
         recordId.toString(),
         fieldName,
       );
-    } catch (error) {
+    } catch {
       databaseLogger.warn("Field decryption failed, returning as-is", {
         operation: "decrypt_field",
         fieldName,

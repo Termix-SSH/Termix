@@ -6,7 +6,7 @@ import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, sshData } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { fileLogger, sshLogger } from "../utils/logger.js";
+import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -18,7 +18,7 @@ function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ): Omit<LogEntry, "id" | "timestamp"> {
   return {
     type,
@@ -156,7 +156,7 @@ app.use(authManager.createAuthMiddleware());
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -269,7 +269,7 @@ async function createJumpHostChain(
           resolve(false);
         });
 
-        const connectConfig: any = {
+        const connectConfig: Record<string, unknown> = {
           host: jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
@@ -444,10 +444,14 @@ function cleanupSession(sessionId: string) {
         session.sftp.end();
         session.sftp = undefined;
       }
-    } catch {}
+    } catch {
+      // expected
+    }
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -657,8 +661,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     credentialId,
-    userProvidedPassword,
-    forceKeyboardInteractive,
     jumpHosts,
     useSocks5,
     socks5Host,
@@ -723,7 +725,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   if (pendingTOTPSessions[sessionId]) {
     try {
       pendingTOTPSessions[sessionId].client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     delete pendingTOTPSessions[sessionId];
   }
 
@@ -1202,7 +1206,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `DNS resolution failed: ${err.message}`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1215,7 +1219,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `TCP connection failed: ${err.message}`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1228,7 +1232,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `SSH handshake failed: ${err.message}`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     } else if (
@@ -1241,7 +1245,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `Authentication failed: ${err.message}`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     } else if (err.message.includes("verification failed")) {
@@ -1251,7 +1255,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           errorStage,
           `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     } else {
@@ -1260,7 +1264,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "error",
           "error",
           `SSH connection failed: ${err.message}`,
-          { errorCode: (err as any).code, errorLevel: (err as any).level },
+          { errorCode: (err as Record<string, unknown>).code, errorLevel: (err as Record<string, unknown>).level },
         ),
       );
     }
@@ -1293,8 +1297,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   });
 
-  let keyboardInteractiveResponded = false;
-
   client.on(
     "keyboard-interactive",
     (
@@ -1322,8 +1324,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         if (urlMatch) {
           if (responseSent) return;
           responseSent = true;
-
-          keyboardInteractiveResponded = true;
 
           connectionLogs.push(
             createConnectionLog(
@@ -1392,8 +1392,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           finish(responses);
           return;
         }
-
-        keyboardInteractiveResponded = true;
 
         connectionLogs.push(
           createConnectionLog(
@@ -1476,8 +1474,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             return;
           }
 
-          keyboardInteractiveResponded = true;
-
           pendingTOTPSessions[sessionId] = {
             client,
             finish,
@@ -1518,7 +1514,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
   if (
     useSocks5 &&
-    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
+    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as unknown[]).length > 0))
   ) {
     connectionLogs.push(
       createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy", {
@@ -1533,7 +1529,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         socks5Port,
         socks5Username,
         socks5Password,
-        socks5ProxyChain: socks5ProxyChain as any,
+        socks5ProxyChain: socks5ProxyChain as unknown[],
       });
 
       if (socks5Socket) {
@@ -1718,7 +1714,9 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     fileLogger.warn("TOTP session timeout before code submission", {
       operation: "file_totp_verify",
       sessionId,
@@ -1914,7 +1912,9 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     fileLogger.warn("Warpgate session timeout before completion", {
       operation: "file_warpgate_verify",
       sessionId,
@@ -1927,6 +1927,19 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
   }
 
   let responseSent = false;
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      fileLogger.warn("Warpgate verification timeout", {
+        operation: "file_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -5106,7 +5119,7 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {});
+    stream.on("data", () => { /* consume stdout */ });
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();
@@ -5318,7 +5331,7 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
 
     let errorOutput = "";
 
-    stream.on("data", (data: Buffer) => {});
+    stream.on("data", () => { /* consume stdout */ });
 
     stream.stderr.on("data", (data: Buffer) => {
       errorOutput += data.toString();

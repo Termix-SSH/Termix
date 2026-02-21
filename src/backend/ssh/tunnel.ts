@@ -6,7 +6,7 @@ import { ChildProcess } from "child_process";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type {
   SSHHost,
   TunnelConfig,
@@ -16,7 +16,7 @@ import type {
   AuthenticatedRequest,
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
-import { tunnelLogger, sshLogger } from "../utils/logger.js";
+import { tunnelLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";
@@ -804,7 +804,9 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch (error) {}
+      } catch {
+        // expected
+      }
 
       activeTunnels.delete(tunnelName);
 
@@ -998,7 +1000,9 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch (error) {}
+          } catch {
+            // expected
+          }
           tunnelVerifications.delete(tunnelName);
         }
 
@@ -1386,127 +1390,124 @@ async function killRemoteTunnelByMarker(
 
   const poolKey = `tunnel:${tunnelConfig.sourceUserId}:${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}:${tunnelConfig.sourceUsername}`;
 
-  const factory = (): Promise<Client> =>
-    new Promise(async (resolve, reject) => {
-      const conn = new Client();
-      const connOptions: Record<string, unknown> = {
-        host: tunnelConfig.sourceIP,
-        port: tunnelConfig.sourceSSHPort,
-        username: tunnelConfig.sourceUsername,
-        keepaliveInterval: 30000,
-        keepaliveCountMax: 3,
-        readyTimeout: 60000,
-        tcpKeepAlive: true,
-        tcpKeepAliveInitialDelay: 15000,
-        algorithms: {
-          kex: [
-            "diffie-hellman-group14-sha256",
-            "diffie-hellman-group14-sha1",
-            "diffie-hellman-group1-sha1",
-            "diffie-hellman-group-exchange-sha256",
-            "diffie-hellman-group-exchange-sha1",
-            "ecdh-sha2-nistp256",
-            "ecdh-sha2-nistp384",
-            "ecdh-sha2-nistp521",
-          ],
-          cipher: [
-            "aes128-ctr",
-            "aes192-ctr",
-            "aes256-ctr",
-            "aes128-gcm@openssh.com",
-            "aes256-gcm@openssh.com",
-            "aes128-cbc",
-            "aes192-cbc",
-            "aes256-cbc",
-            "3des-cbc",
-          ],
-          hmac: [
-            "hmac-sha2-256-etm@openssh.com",
-            "hmac-sha2-512-etm@openssh.com",
-            "hmac-sha2-256",
-            "hmac-sha2-512",
-            "hmac-sha1",
-            "hmac-md5",
-          ],
-          compress: ["none", "zlib@openssh.com", "zlib"],
-        },
-      };
+  const factory = async (): Promise<Client> => {
+    const connOptions: Record<string, unknown> = {
+      host: tunnelConfig.sourceIP,
+      port: tunnelConfig.sourceSSHPort,
+      username: tunnelConfig.sourceUsername,
+      keepaliveInterval: 30000,
+      keepaliveCountMax: 3,
+      readyTimeout: 60000,
+      tcpKeepAlive: true,
+      tcpKeepAliveInitialDelay: 15000,
+      algorithms: {
+        kex: [
+          "diffie-hellman-group14-sha256",
+          "diffie-hellman-group14-sha1",
+          "diffie-hellman-group1-sha1",
+          "diffie-hellman-group-exchange-sha256",
+          "diffie-hellman-group-exchange-sha1",
+          "ecdh-sha2-nistp256",
+          "ecdh-sha2-nistp384",
+          "ecdh-sha2-nistp521",
+        ],
+        cipher: [
+          "aes128-ctr",
+          "aes192-ctr",
+          "aes256-ctr",
+          "aes128-gcm@openssh.com",
+          "aes256-gcm@openssh.com",
+          "aes128-cbc",
+          "aes192-cbc",
+          "aes256-cbc",
+          "3des-cbc",
+        ],
+        hmac: [
+          "hmac-sha2-256-etm@openssh.com",
+          "hmac-sha2-512-etm@openssh.com",
+          "hmac-sha2-256",
+          "hmac-sha2-512",
+          "hmac-sha1",
+          "hmac-md5",
+        ],
+        compress: ["none", "zlib@openssh.com", "zlib"],
+      },
+    };
 
-      if (
-        resolvedSourceCredentials.authMethod === "key" &&
-        resolvedSourceCredentials.sshKey
-      ) {
-        const cleanKey = resolvedSourceCredentials.sshKey
-          .trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-        connOptions.privateKey = Buffer.from(cleanKey, "utf8");
-        if (resolvedSourceCredentials.keyPassword) {
-          connOptions.passphrase = resolvedSourceCredentials.keyPassword;
-        }
-        if (
-          resolvedSourceCredentials.keyType &&
-          resolvedSourceCredentials.keyType !== "auto"
-        ) {
-          connOptions.privateKeyType = resolvedSourceCredentials.keyType;
-        }
-      } else {
-        connOptions.password = resolvedSourceCredentials.password;
+    if (
+      resolvedSourceCredentials.authMethod === "key" &&
+      resolvedSourceCredentials.sshKey
+    ) {
+      const cleanKey = resolvedSourceCredentials.sshKey
+        .trim()
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      connOptions.privateKey = Buffer.from(cleanKey, "utf8");
+      if (resolvedSourceCredentials.keyPassword) {
+        connOptions.passphrase = resolvedSourceCredentials.keyPassword;
       }
+      if (
+        resolvedSourceCredentials.keyType &&
+        resolvedSourceCredentials.keyType !== "auto"
+      ) {
+        connOptions.privateKeyType = resolvedSourceCredentials.keyType;
+      }
+    } else {
+      connOptions.password = resolvedSourceCredentials.password;
+    }
 
+    if (
+      tunnelConfig.useSocks5 &&
+      (tunnelConfig.socks5Host ||
+        (tunnelConfig.socks5ProxyChain &&
+          tunnelConfig.socks5ProxyChain.length > 0))
+    ) {
+      try {
+        const socks5Socket = await createSocks5Connection(
+          tunnelConfig.sourceIP,
+          tunnelConfig.sourceSSHPort,
+          {
+            useSocks5: tunnelConfig.useSocks5,
+            socks5Host: tunnelConfig.socks5Host,
+            socks5Port: tunnelConfig.socks5Port,
+            socks5Username: tunnelConfig.socks5Username,
+            socks5Password: tunnelConfig.socks5Password,
+            socks5ProxyChain: tunnelConfig.socks5ProxyChain,
+          },
+        );
+
+        if (socks5Socket) {
+          connOptions.sock = socks5Socket;
+        } else {
+          throw new Error("Failed to create SOCKS5 connection");
+        }
+      } catch (socks5Error) {
+        tunnelLogger.error(
+          "SOCKS5 connection failed for killing tunnel",
+          socks5Error,
+          {
+            operation: "socks5_connect_kill",
+            tunnelName,
+            proxyHost: tunnelConfig.socks5Host,
+            proxyPort: tunnelConfig.socks5Port || 1080,
+          },
+        );
+        throw new Error(
+          "SOCKS5 proxy connection failed: " +
+            (socks5Error instanceof Error
+              ? socks5Error.message
+              : "Unknown error"),
+        );
+      }
+    }
+
+    return new Promise<Client>((resolve, reject) => {
+      const conn = new Client();
       conn.on("ready", () => resolve(conn));
       conn.on("error", (err) => reject(err));
-
-      if (
-        tunnelConfig.useSocks5 &&
-        (tunnelConfig.socks5Host ||
-          (tunnelConfig.socks5ProxyChain &&
-            tunnelConfig.socks5ProxyChain.length > 0))
-      ) {
-        try {
-          const socks5Socket = await createSocks5Connection(
-            tunnelConfig.sourceIP,
-            tunnelConfig.sourceSSHPort,
-            {
-              useSocks5: tunnelConfig.useSocks5,
-              socks5Host: tunnelConfig.socks5Host,
-              socks5Port: tunnelConfig.socks5Port,
-              socks5Username: tunnelConfig.socks5Username,
-              socks5Password: tunnelConfig.socks5Password,
-              socks5ProxyChain: tunnelConfig.socks5ProxyChain,
-            },
-          );
-
-          if (socks5Socket) {
-            connOptions.sock = socks5Socket;
-            conn.connect(connOptions);
-          } else {
-            reject(new Error("Failed to create SOCKS5 connection"));
-          }
-        } catch (socks5Error) {
-          tunnelLogger.error(
-            "SOCKS5 connection failed for killing tunnel",
-            socks5Error,
-            {
-              operation: "socks5_connect_kill",
-              tunnelName,
-              proxyHost: tunnelConfig.socks5Host,
-              proxyPort: tunnelConfig.socks5Port || 1080,
-            },
-          );
-          reject(
-            new Error(
-              "SOCKS5 proxy connection failed: " +
-                (socks5Error instanceof Error
-                  ? socks5Error.message
-                  : "Unknown error"),
-            ),
-          );
-        }
-      } else {
-        conn.connect(connOptions);
-      }
+      conn.connect(connOptions);
     });
+  };
 
   const execCommand = (
     client: Client,
@@ -1733,7 +1734,7 @@ app.post(
       if (pendingTunnelOperations.has(tunnelName)) {
         try {
           await pendingTunnelOperations.get(tunnelName);
-        } catch (error) {
+        } catch {
           tunnelLogger.warn(`Previous tunnel operation failed`, { tunnelName });
         }
       }

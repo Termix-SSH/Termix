@@ -1791,12 +1791,8 @@ if (frontendDist) {
 }
 
 app.use(
-  (
-    err: unknown,
-    req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
       method: req.method,
@@ -1865,13 +1861,17 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       res.json({
