@@ -616,8 +616,10 @@ interface StatsConfig {
   enabledWidgets: string[];
   statusCheckEnabled: boolean;
   statusCheckInterval: number;
+  useGlobalStatusInterval?: boolean;
   metricsEnabled: boolean;
   metricsInterval: number;
+  useGlobalMetricsInterval?: boolean;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -656,6 +658,28 @@ class PollingManager {
     }, 60000);
   }
 
+  private getGlobalDefaults(): { statusCheckInterval: number; metricsInterval: number } {
+    try {
+      const db = getDb();
+      const statusRow = db.$client
+        .prepare("SELECT value FROM settings WHERE key = 'global_status_check_interval'")
+        .get() as { value: string } | undefined;
+      const metricsRow = db.$client
+        .prepare("SELECT value FROM settings WHERE key = 'global_metrics_interval'")
+        .get() as { value: string } | undefined;
+
+      return {
+        statusCheckInterval: statusRow ? parseInt(statusRow.value, 10) || DEFAULT_STATS_CONFIG.statusCheckInterval : DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: metricsRow ? parseInt(metricsRow.value, 10) || DEFAULT_STATS_CONFIG.metricsInterval : DEFAULT_STATS_CONFIG.metricsInterval,
+      };
+    } catch {
+      return {
+        statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: DEFAULT_STATS_CONFIG.metricsInterval,
+      };
+    }
+  }
+
   parseStatsConfig(statsConfigStr?: string | StatsConfig): StatsConfig {
     if (!statsConfigStr) {
       return DEFAULT_STATS_CONFIG;
@@ -687,6 +711,15 @@ class PollingManager {
     }
 
     const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
+
+    // Apply global defaults when per-host override is not explicitly set
+    const globalDefaults = this.getGlobalDefaults();
+    if (result.useGlobalStatusInterval !== false) {
+      result.statusCheckInterval = globalDefaults.statusCheckInterval;
+    }
+    if (result.useGlobalMetricsInterval !== false) {
+      result.metricsInterval = globalDefaults.metricsInterval;
+    }
 
     return result;
   }
@@ -2957,6 +2990,103 @@ app.post("/metrics/unregister-viewer", async (req, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ error: "Failed to unregister viewer" });
+  }
+});
+
+/**
+ * @openapi
+ * /global-settings:
+ *   get:
+ *     summary: Get global monitoring defaults
+ *     tags:
+ *       - Stats
+ *     responses:
+ *       200:
+ *         description: Global monitoring settings.
+ */
+app.get("/global-settings", async (_req, res) => {
+  try {
+    const db = getDb();
+    const statusRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'global_status_check_interval'")
+      .get() as { value: string } | undefined;
+    const metricsRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'global_metrics_interval'")
+      .get() as { value: string } | undefined;
+
+    res.json({
+      statusCheckInterval: statusRow ? parseInt(statusRow.value, 10) : DEFAULT_STATS_CONFIG.statusCheckInterval,
+      metricsInterval: metricsRow ? parseInt(metricsRow.value, 10) : DEFAULT_STATS_CONFIG.metricsInterval,
+    });
+  } catch (error) {
+    statsLogger.error("Failed to fetch global settings", {
+      operation: "global_settings_fetch_error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to fetch global settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /global-settings:
+ *   post:
+ *     summary: Update global monitoring defaults
+ *     tags:
+ *       - Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               statusCheckInterval:
+ *                 type: integer
+ *               metricsInterval:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Settings saved.
+ *       400:
+ *         description: Invalid parameters.
+ */
+app.post("/global-settings", async (req, res) => {
+  const { statusCheckInterval, metricsInterval } = req.body;
+
+  if (
+    statusCheckInterval !== undefined &&
+    (typeof statusCheckInterval !== "number" || statusCheckInterval < 5 || statusCheckInterval > 3600)
+  ) {
+    return res.status(400).json({ error: "statusCheckInterval must be between 5 and 3600 seconds" });
+  }
+  if (
+    metricsInterval !== undefined &&
+    (typeof metricsInterval !== "number" || metricsInterval < 5 || metricsInterval > 3600)
+  ) {
+    return res.status(400).json({ error: "metricsInterval must be between 5 and 3600 seconds" });
+  }
+
+  try {
+    const db = getDb();
+    if (statusCheckInterval !== undefined) {
+      db.$client
+        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('global_status_check_interval', ?)")
+        .run(String(statusCheckInterval));
+    }
+    if (metricsInterval !== undefined) {
+      db.$client
+        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('global_metrics_interval', ?)")
+        .run(String(metricsInterval));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    statsLogger.error("Failed to save global settings", {
+      operation: "global_settings_save_error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to save global settings" });
   }
 });
 
