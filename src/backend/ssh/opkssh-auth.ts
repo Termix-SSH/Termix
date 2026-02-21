@@ -51,7 +51,9 @@ const cleanupInProgress = new Set<string>();
 export function getRequestOrigin(req: IncomingMessage): string {
   const protoHeader =
     req.headers["x-forwarded-proto"] ||
-    ((req.socket as unknown as { encrypted?: boolean }).encrypted ? "https" : "http");
+    ((req.socket as unknown as { encrypted?: boolean }).encrypted
+      ? "https"
+      : "http");
   const proto =
     typeof protoHeader === "string"
       ? protoHeader.split(",")[0].trim()
@@ -239,6 +241,7 @@ export async function startOPKSSHAuth(
     const args = [
       "login",
       "--print-key",
+      "--disable-browser-open",
       `--config-path=${configPath}`,
       `--remote-redirect-uri=${remoteRedirectUri}`,
     ];
@@ -283,7 +286,10 @@ export async function startOPKSSHAuth(
     opksshProcess.stderr?.on("data", async (data) => {
       const stderr = data.toString();
 
-      if (stderr.includes("Opening browser to")) {
+      if (
+        stderr.includes("Opening browser to") ||
+        stderr.includes("Open your browser to:")
+      ) {
         handleOPKSSHOutput(requestId, stderr);
       }
 
@@ -370,7 +376,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   session.stdoutBuffer += output;
 
   const chooserUrlMatch = session.stdoutBuffer.match(
-    /Opening browser to http:\/\/localhost:(\d+)\/chooser/,
+    /(?:Opening browser to|Open your browser to:)\s*http:\/\/localhost:(\d+)\/chooser/,
   );
   if (chooserUrlMatch && session.status === "starting") {
     const actualPort = parseInt(chooserUrlMatch[1], 10);
@@ -783,7 +789,10 @@ export function getActiveSessionsAll(): OPKSSHAuthSession[] {
   return Array.from(activeAuthSessions.values());
 }
 
-export async function getUserIdFromRequest(req: { cookies?: Record<string, string>; headers: Record<string, string | undefined> }): Promise<string | null> {
+export async function getUserIdFromRequest(req: {
+  cookies?: Record<string, string>;
+  headers: Record<string, string | undefined>;
+}): Promise<string | null> {
   try {
     const { AuthManager } = await import("../utils/auth-manager.js");
     const authManager = AuthManager.getInstance();

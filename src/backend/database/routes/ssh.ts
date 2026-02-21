@@ -2356,9 +2356,8 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } = await import(
-            "../../utils/shared-credential-manager.js"
-          );
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -3857,15 +3856,27 @@ router.use(
  */
 router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
-    const { getActiveSessionsAll } = await import("../../ssh/opkssh-auth.js");
+    const { getUserIdFromRequest, getActiveSessionsForUser } =
+      await import("../../ssh/opkssh-auth.js");
 
-    const allSessions = getActiveSessionsAll();
-    const session = allSessions[allSessions.length - 1];
+    const userId = await getUserIdFromRequest({
+      cookies: req.cookies,
+      headers: req.headers as Record<string, string | undefined>,
+    });
 
-    if (!session) {
+    if (!userId) {
+      res.status(401).send("Unauthorized - no valid session");
+      return;
+    }
+
+    const userSessions = getActiveSessionsForUser(userId);
+
+    if (userSessions.length === 0) {
       res.status(404).send("No active authentication session found");
       return;
     }
+
+    const session = userSessions[userSessions.length - 1];
 
     if (!session.callbackPort) {
       res.status(503).send("OPKSSH callback listener not ready yet");
