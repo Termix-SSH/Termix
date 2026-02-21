@@ -10,7 +10,7 @@ import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
-import type { SSHHost } from "../../types/index.js";
+import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
@@ -114,10 +114,24 @@ function scheduleSessionCleanup(sessionId: string) {
   }
 }
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<JumpHostConfig | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -153,17 +167,17 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
+          password: credential.password as string | undefined,
           key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+          keyType: (credential.key_type || credential.keyType) as string | undefined,
+          authType: (credential.auth_type || credential.authType) as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     sshLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -614,7 +628,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       delete pendingTOTPSessions[sessionId];
     }
 
-    let resolvedCredentials: Record<string, unknown> = {
+    let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
       password: host.password,
       sshKey: host.key,
       keyPassword: host.keyPassword,
@@ -679,11 +693,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
-            password: credential.password,
+            password: credential.password as string | undefined,
             sshKey:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            authType: credential.auth_type || credential.authType,
+              (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+            keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+            authType: (credential.auth_type || credential.authType) as string | undefined,
           };
         }
       }
@@ -1284,7 +1298,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     if (
       useSocks5 &&
-      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as unknown[]).length > 0))
+      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
     ) {
       try {
         connectionLogs.push(
@@ -1299,7 +1313,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
             socks5Port,
             socks5Username,
             socks5Password,
-            socks5ProxyChain: socks5ProxyChain as unknown[],
+            socks5ProxyChain: socks5ProxyChain as ProxyNode[],
           },
         );
 
@@ -1646,19 +1660,6 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
-  const responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("TOTP verification timeout", {
-        operation: "docker_totp_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "TOTP verification timeout" });
-    }
-  }, 60000);
-
   session.finish(responses);
 });
 
@@ -1845,19 +1846,6 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       .status(401)
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
-
-  const responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("Warpgate verification timeout", {
-        operation: "docker_warpgate_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "Warpgate verification timeout" });
-    }
-  }, 60000);
 
   session.finish([""]);
 });

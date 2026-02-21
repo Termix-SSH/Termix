@@ -43,10 +43,24 @@ function createConnectionLog(
   };
 }
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<JumpHostConfig | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -82,17 +96,17 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
+          password: credential.password as string | undefined,
           key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
+          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
+          keyType: (credential.key_type || credential.keyType) as string | undefined,
+          authType: (credential.auth_type || credential.authType) as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     statsLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -659,7 +673,7 @@ class PollingManager {
           temp = JSON.parse(temp);
         }
 
-        parsed = temp;
+        parsed = temp as StatsConfig;
       } catch (error) {
         statsLogger.warn(
           `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
