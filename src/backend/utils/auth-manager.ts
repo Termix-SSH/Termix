@@ -154,8 +154,9 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
+      const { getSqlite, saveMemoryDatabaseToFile } = await import(
+        "../database/db/index.js"
+      );
 
       const sqlite = getSqlite();
 
@@ -170,8 +171,9 @@ class AuthManager {
       }
 
       try {
-        const { CredentialSystemEncryptionMigration } =
-          await import("./credential-system-encryption-migration.js");
+        const { CredentialSystemEncryptionMigration } = await import(
+          "./credential-system-encryption-migration.js"
+        );
         const credMigration = new CredentialSystemEncryptionMigration();
         const credResult = await credMigration.migrateUserCredentials(userId);
 
@@ -252,8 +254,9 @@ class AuthManager {
         });
 
         try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -345,9 +348,15 @@ class AuthManager {
     }
   }
 
-  invalidateJWTToken(token: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateJWTToken(_token: string): void {
+    // expected - no-op, JWT tokens are stateless
+  }
 
-  invalidateUserTokens(userId: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateUserTokens(_userId: string): void {
+    // expected - no-op, handled by session management
+  }
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
@@ -359,8 +368,9 @@ class AuthManager {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -417,8 +427,9 @@ class AuthManager {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -459,8 +470,9 @@ class AuthManager {
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
+        const { saveMemoryDatabaseToFile } = await import(
+          "../database/db/index.js"
+        );
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -493,7 +505,7 @@ class AuthManager {
     }
   }
 
-  async getAllSessions(): Promise<any[]> {
+  async getAllSessions(): Promise<Record<string, unknown>[]> {
     try {
       const allSessions = await db.select().from(sessions);
       return allSessions;
@@ -505,7 +517,7 @@ class AuthManager {
     }
   }
 
-  async getUserSessions(userId: string): Promise<any[]> {
+  async getUserSessions(userId: string): Promise<Record<string, unknown>[]> {
     try {
       const userSessions = await db
         .select()
@@ -605,8 +617,9 @@ class AuthManager {
               .where(eq(sessions.id, payload.sessionId))
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } =
-                    await import("../database/db/index.js");
+                  const { saveMemoryDatabaseToFile } = await import(
+                    "../database/db/index.js"
+                  );
                   await saveMemoryDatabaseToFile();
 
                   const remainingSessions = await db
@@ -750,8 +763,9 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
 
         try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
+          const { saveMemoryDatabaseToFile } = await import(
+            "../database/db/index.js"
+          );
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -773,6 +787,7 @@ class AuthManager {
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
         } else {
+          // expected - other sessions still active, keep user crypto state
         }
       } catch (error) {
         databaseLogger.error("Failed to delete session on logout", error, {

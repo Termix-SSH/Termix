@@ -1,6 +1,5 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import { statsLogger } from "../../utils/logger.js";
 
 export async function collectProcessesMetrics(client: Client): Promise<{
   total: number | null;
@@ -54,7 +53,9 @@ export async function collectProcessesMetrics(client: Client): Promise<{
 
     const runningCount2 = Number(runningCount.stdout.trim());
     runningProcesses = Number.isFinite(runningCount2) ? runningCount2 : null;
-  } catch (e) {}
+  } catch {
+    // expected
+  }
 
   return {
     total: totalProcesses,

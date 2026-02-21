@@ -52,7 +52,9 @@ class SystemCrypto {
             },
           );
         }
-      } catch (fileError) {}
+      } catch {
+      // expected - env file may not exist
+    }
 
       await this.generateAndGuideUser();
     } catch (error) {
@@ -78,12 +80,6 @@ class SystemCrypto {
       const envKey = process.env.DATABASE_KEY;
       if (envKey && envKey.length >= 64) {
         this.databaseKey = Buffer.from(envKey, "hex");
-        const keyFingerprint = crypto
-          .createHash("sha256")
-          .update(this.databaseKey)
-          .digest("hex")
-          .substring(0, 16);
-
         return;
       }
 
@@ -93,17 +89,13 @@ class SystemCrypto {
         if (dbKeyMatch && dbKeyMatch[1] && dbKeyMatch[1].length >= 64) {
           this.databaseKey = Buffer.from(dbKeyMatch[1], "hex");
           process.env.DATABASE_KEY = dbKeyMatch[1];
-
-          const keyFingerprint = crypto
-            .createHash("sha256")
-            .update(this.databaseKey)
-            .digest("hex")
-            .substring(0, 16);
-
           return;
         } else {
+          // expected - key not found or invalid length in env file
         }
-      } catch (fileError) {}
+      } catch {
+        // expected - env file may not exist
+      }
 
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
@@ -141,7 +133,9 @@ class SystemCrypto {
           process.env.INTERNAL_AUTH_TOKEN = tokenMatch[1];
           return;
         }
-      } catch (error) {}
+      } catch {
+        // expected - env file may not exist
+      }
 
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {
@@ -178,7 +172,9 @@ class SystemCrypto {
           process.env.CREDENTIAL_SHARING_KEY = csKeyMatch[1];
           return;
         }
-      } catch (fileError) {}
+      } catch {
+        // expected - env file may not exist
+      }
 
       await this.generateAndGuideCredentialSharingKey();
     } catch (error) {

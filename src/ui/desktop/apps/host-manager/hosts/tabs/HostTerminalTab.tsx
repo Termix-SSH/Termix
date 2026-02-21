@@ -49,6 +49,7 @@ import type { HostTerminalTabProps } from "./shared/tab-types";
 import React from "react";
 
 export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
+  const [snippetPopoverOpen, setSnippetPopoverOpen] = React.useState(false);
   return (
     <div className="space-y-1">
       <FormField
@@ -499,7 +500,8 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
               control={form.control}
               name="terminalConfig.startupSnippetId"
               render={({ field }) => {
-                const [open, setOpen] = React.useState(false);
+                const open = snippetPopoverOpen;
+                const setOpen = setSnippetPopoverOpen;
                 const selectedSnippet = snippets.find(
                   (s) => s.id === field.value,
                 );

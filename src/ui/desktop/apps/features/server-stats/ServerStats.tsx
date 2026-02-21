@@ -337,8 +337,6 @@ function ServerStatsInner({
     }
 
     let cancelled = false;
-    let intervalId: number | undefined;
-
     const fetchStatus = async () => {
       try {
         const res = await getServerStatusById(currentHostConfig?.id);
@@ -364,14 +362,14 @@ function ServerStatsInner({
     };
 
     fetchStatus();
-    intervalId = window.setInterval(
+    const intervalId = window.setInterval(
       fetchStatus,
       statsConfig.statusCheckInterval * 1000,
     );
 
     return () => {
       cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
+      window.clearInterval(intervalId);
     };
   }, [
     currentHostConfig?.id,
@@ -386,8 +384,6 @@ function ServerStatsInner({
 
     let cancelled = false;
     let pollingIntervalId: number | undefined;
-    let debounceTimeout: NodeJS.Timeout | undefined;
-
     if (isActuallyVisible && !metrics) {
       setIsLoadingMetrics(true);
       setShowStatsUI(true);
@@ -539,7 +535,7 @@ function ServerStatsInner({
       }
     };
 
-    debounceTimeout = setTimeout(() => {
+    const debounceTimeout = setTimeout(() => {
       if (isActuallyVisible) {
         if (!hasConnectionError) {
           startMetrics();
@@ -551,7 +547,7 @@ function ServerStatsInner({
 
     return () => {
       cancelled = true;
-      if (debounceTimeout) clearTimeout(debounceTimeout);
+      clearTimeout(debounceTimeout);
       if (pollingIntervalId) window.clearInterval(pollingIntervalId);
       if (currentHostConfig?.id) {
         stopMetricsPolling(currentHostConfig.id).catch(() => {});

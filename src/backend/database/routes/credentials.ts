@@ -606,15 +606,15 @@ router.put(
         userId,
       );
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.updateSharedCredentialsForOriginal(
         parseInt(id),
         userId,
       );
 
-      const credential = updated[0];
       authLogger.success("SSH credential updated", {
         operation: "credential_update_success",
         userId,
@@ -737,8 +737,9 @@ router.delete(
         }
       }
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 
@@ -751,7 +752,6 @@ router.delete(
           ),
         );
 
-      const credential = credentialToDelete[0];
       authLogger.success("SSH credential deleted", {
         operation: "credential_delete_success",
         userId,

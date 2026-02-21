@@ -28,13 +28,13 @@ import {
   dashboardPreferences,
   opksshTokens,
 } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import type { Request, Response } from "express";
-import { authLogger, databaseLogger } from "../../utils/logger.js";
+import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
@@ -172,6 +172,7 @@ async function verifyOIDCToken(
           );
         }
       } else {
+        // expected - non-ok response, try next URL
       }
     } catch {
       continue;
@@ -752,7 +753,7 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
         } else {
           config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
         }
-      } catch (decryptError) {
+      } catch {
         authLogger.warn("Failed to decrypt OIDC config for admin", {
           operation: "oidc_config_decrypt_failed",
           userId,
@@ -766,7 +767,7 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
           "base64",
         ).toString("utf8");
         config.client_secret = decoded;
-      } catch (decodeError) {
+      } catch {
         authLogger.warn("Failed to decode OIDC config for admin", {
           operation: "oidc_config_decode_failed",
           userId,
@@ -1440,7 +1441,9 @@ router.post("/login", async (req, res) => {
       if (kekSalt.length === 0) {
         await authManager.registerUser(userRecord.id, password);
       }
-    } catch (error) {}
+    } catch {
+      // expected - KEK salt registration may fail for existing users
+    }
 
     const deviceInfo = parseUserAgent(req);
 
@@ -1463,8 +1466,9 @@ router.post("/login", async (req, res) => {
     }
 
     try {
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
     } catch (error) {
@@ -1562,7 +1566,9 @@ router.post("/logout", authenticateJWT, async (req, res) => {
         try {
           const payload = await authManager.verifyJWTToken(token);
           sessionId = payload?.sessionId;
-        } catch (error) {}
+        } catch {
+          // expected - token verification may fail during logout
+        }
       }
 
       await authManager.logoutUser(userId, sessionId);

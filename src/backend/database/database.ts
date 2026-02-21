@@ -877,24 +877,24 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.autostartKey || null,
           decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
-          Boolean(decrypted.overrideCredentialUsername) ? 1 : 0,
-          Boolean(decrypted.enableTerminal) ? 1 : 0,
-          Boolean(decrypted.enableTunnel) ? 1 : 0,
+          decrypted.overrideCredentialUsername ? 1 : 0,
+          decrypted.enableTerminal ? 1 : 0,
+          decrypted.enableTunnel ? 1 : 0,
           decrypted.tunnelConnections || null,
           decrypted.jumpHosts || null,
-          Boolean(decrypted.enableFileManager) ? 1 : 0,
-          Boolean(decrypted.enableDocker) ? 1 : 0,
-          Boolean(decrypted.showTerminalInSidebar) ? 1 : 0,
-          Boolean(decrypted.showFileManagerInSidebar) ? 1 : 0,
-          Boolean(decrypted.showTunnelInSidebar) ? 1 : 0,
-          Boolean(decrypted.showDockerInSidebar) ? 1 : 0,
-          Boolean(decrypted.showServerStatsInSidebar) ? 1 : 0,
+          decrypted.enableFileManager ? 1 : 0,
+          decrypted.enableDocker ? 1 : 0,
+          decrypted.showTerminalInSidebar ? 1 : 0,
+          decrypted.showFileManagerInSidebar ? 1 : 0,
+          decrypted.showTunnelInSidebar ? 1 : 0,
+          decrypted.showDockerInSidebar ? 1 : 0,
+          decrypted.showServerStatsInSidebar ? 1 : 0,
           decrypted.defaultPath || null,
           decrypted.statsConfig || null,
           decrypted.terminalConfig || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
-          Boolean(decrypted.useSocks5) ? 1 : 0,
+          decrypted.useSocks5 ? 1 : 0,
           decrypted.socks5Host || null,
           decrypted.socks5Port || null,
           decrypted.socks5Username || null,
@@ -1791,12 +1791,8 @@ if (frontendDist) {
 }
 
 app.use(
-  (
-    err: unknown,
-    req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
       method: req.method,
@@ -1865,13 +1861,17 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       res.json({

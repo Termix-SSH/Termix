@@ -1,9 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import {
   Client,
-  type ClientChannel,
   type PseudoTtyOptions,
-  type ConnectConfig,
 } from "ssh2";
 import { parse as parseUrl } from "url";
 import axios from "axios";
@@ -70,7 +68,7 @@ const userConnections = new Map<string, Set<WebSocket>>();
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   sshLogger.info("Resolving jump host", {
     operation: "terminal_jumphost_resolve",
     userId,
@@ -201,7 +199,7 @@ async function createJumpHostChain(
           resolve(false);
         });
 
-        const connectConfig: any = {
+        const connectConfig: Record<string, unknown> = {
           host: jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
@@ -586,7 +584,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentialsData.password) {
           credentialsData.hostConfig.password = credentialsData.password;
           credentialsData.hostConfig.authType = "password";
-          (credentialsData.hostConfig as any).userProvidedPassword = true;
+          (credentialsData.hostConfig as Record<string, unknown>).userProvidedPassword = true;
         } else if (credentialsData.sshKey) {
           credentialsData.hostConfig.key = credentialsData.sshKey;
           credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
@@ -624,8 +622,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } =
-            await import("./opkssh-auth.js");
+          const { startOPKSSHAuth, getRequestOrigin } = await import(
+            "./opkssh-auth.js"
+          );
           const db = getDb();
           const hostRow = await db
             .select()
@@ -700,7 +699,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           hostId: number;
           cols?: number;
           rows?: number;
-          hostConfig?: any;
+          hostConfig?: Record<string, unknown>;
         };
 
         resetConnectionState();
@@ -710,7 +709,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows: completedData.rows || 24,
           hostConfig:
             completedData.hostConfig ||
-            ({ id: completedData.hostId, userId } as any),
+            ({ id: completedData.hostId, userId } as unknown as ConnectToHostData["hostConfig"]),
         };
 
         handleConnectToHost(reconnectConfig).catch((error) => {
@@ -765,7 +764,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       stage: string,
       level: string,
       message: string,
-      details?: Record<string, any>,
+      details?: Record<string, unknown>,
     ) => {
       ws.send(
         JSON.stringify({
@@ -853,7 +852,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }, 120000);
 
     let resolvedCredentials = { password, key, keyPassword, keyType, authType };
-    let authMethodNotAvailable = false;
+    const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(
@@ -1206,7 +1205,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (sshConn) {
           try {
             sshConn.end();
-          } catch (e) {}
+          } catch {
+            // expected
+          }
           sshConn = null;
         }
         resetConnectionState();
@@ -1243,7 +1244,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (sshConn) {
           try {
             sshConn.end();
-          } catch (e) {}
+          } catch {
+            // expected
+          }
           sshConn = null;
         }
         resetConnectionState();
@@ -1268,7 +1271,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (sshConn) {
           try {
             sshConn.end();
-          } catch (e) {}
+          } catch {
+            // expected
+          }
           sshConn = null;
         }
         resetConnectionState();
@@ -1436,7 +1441,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           instructionsLang,
           prompts,
           finish,
-          resolvedCredentials as any,
+          resolvedCredentials as Parameters<typeof sshAuthManager.handleKeyboardInteractive>[5],
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -1451,7 +1456,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     );
 
-    const connectConfig: any = {
+    const connectConfig: Record<string, unknown> = {
       host: ip,
       port,
       username,
@@ -1534,6 +1539,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
 
     if (resolvedCredentials.authType === "none") {
+      // no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(
@@ -1670,7 +1676,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
         (hostConfig.socks5ProxyChain &&
-          (hostConfig.socks5ProxyChain as any).length > 0))
+          (hostConfig.socks5ProxyChain as unknown[]).length > 0))
     ) {
       try {
         const socks5Socket = await createSocks5Connection(ip, port, {
@@ -1679,7 +1685,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Port: hostConfig.socks5Port,
           socks5Username: hostConfig.socks5Username,
           socks5Password: hostConfig.socks5Password,
-          socks5ProxyChain: hostConfig.socks5ProxyChain as any,
+          socks5ProxyChain: hostConfig.socks5ProxyChain as unknown[],
         });
 
         if (socks5Socket) {
