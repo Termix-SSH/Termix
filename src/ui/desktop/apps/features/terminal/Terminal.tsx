@@ -1287,11 +1287,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const tabId = hostConfig.id ?? "default";
             localStorage.removeItem(`termix_session_${tabId}`);
             sessionIdRef.current = null;
-            // Connect fresh
+            // Use current terminal dimensions instead of stale closure values
+            const currentCols = terminal?.cols ?? cols;
+            const currentRows = terminal?.rows ?? rows;
             ws.send(
               JSON.stringify({
                 type: "connectToHost",
-                data: { cols, rows, hostConfig, initialPath, executeCommand },
+                data: { cols: currentCols, rows: currentRows, hostConfig, initialPath, executeCommand },
               }),
             );
           } else if (msg.type === "sessionTakenOver") {

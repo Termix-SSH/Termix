@@ -2424,6 +2424,8 @@ export async function logoutUser(): Promise<{
 
     return response.data;
   } catch (error) {
+    clearTermixSessionStorage();
+
     if (isElectron()) {
       localStorage.removeItem("jwt");
       electronSettingsCache.delete("jwt");

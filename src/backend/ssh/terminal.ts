@@ -500,6 +500,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           currentSessionId = attachData.sessionId;
           sshStream = session.sshStream;
           sshConn = session.sshConn;
+          isConnecting = false;
           isConnected = true;
           // Replay buffered output
           const buffered = sessionManager.flushBuffer(session);
@@ -1053,6 +1054,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
               "SSH connection was closed before terminal could be created",
           }),
         );
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1075,6 +1081,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }),
         );
         isShellInitializing = false;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1160,15 +1171,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
             sessionManager.attachWs(currentSessionId, userId, ws);
           }
 
+          // Capture sessionId at bind time to prevent cross-session data leakage
+          const boundSessionId = currentSessionId;
+
           stream.on("data", (data: Buffer) => {
             try {
               const utf8String = data.toString("utf-8");
-              const session = sessionManager.getSession(currentSessionId);
+              const session = sessionManager.getSession(boundSessionId);
               if (session?.attachedWs?.readyState === WebSocket.OPEN) {
                 session.attachedWs.send(JSON.stringify({ type: "data", data: utf8String }));
               } else if (session) {
-                // Buffer output while detached
-                sessionManager.bufferOutput(currentSessionId!, utf8String);
+                sessionManager.bufferOutput(boundSessionId!, utf8String);
               }
             } catch (error) {
               sshLogger.error("Error encoding terminal data", error, {
@@ -1177,17 +1190,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 dataLength: data.length,
               });
               const fallback = data.toString("latin1");
-              const session = sessionManager.getSession(currentSessionId);
+              const session = sessionManager.getSession(boundSessionId);
               if (session?.attachedWs?.readyState === WebSocket.OPEN) {
                 session.attachedWs.send(JSON.stringify({ type: "data", data: fallback }));
               } else if (session) {
-                sessionManager.bufferOutput(currentSessionId!, fallback);
+                sessionManager.bufferOutput(boundSessionId!, fallback);
               }
             }
           });
 
           stream.on("close", () => {
-            const session = sessionManager.getSession(currentSessionId);
+            const session = sessionManager.getSession(boundSessionId);
             if (session?.attachedWs?.readyState === WebSocket.OPEN) {
               session.attachedWs.send(
                 JSON.stringify({
@@ -1196,10 +1209,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 }),
               );
             }
-            // Destroy the session since SSH stream is gone
-            if (currentSessionId) {
-              sessionManager.destroySession(currentSessionId);
-              currentSessionId = null;
+            if (boundSessionId) {
+              sessionManager.destroySession(boundSessionId);
+              if (currentSessionId === boundSessionId) {
+                currentSessionId = null;
+              }
             }
           });
 
@@ -1211,7 +1225,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               port,
               username,
             });
-            const session = sessionManager.getSession(currentSessionId);
+            const session = sessionManager.getSession(boundSessionId);
             if (session?.attachedWs?.readyState === WebSocket.OPEN) {
               session.attachedWs.send(
                 JSON.stringify({
@@ -1331,16 +1345,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
         })();
 
-        clearTimeout(connectionTimeout);
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch {
-            // expected
-          }
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
 
         sendLog(
           "auth",
@@ -1369,17 +1378,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "error",
           "Server does not support keyboard-interactive authentication",
         );
-        clearTimeout(connectionTimeout);
         isAwaitingAuthCredentials = true;
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch {
-            // expected
-          }
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1396,17 +1400,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         !isKeyboardInteractive &&
         !keyboardInteractiveResponded
       ) {
-        clearTimeout(connectionTimeout);
         isAwaitingAuthCredentials = true;
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch {
-            // expected
-          }
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",

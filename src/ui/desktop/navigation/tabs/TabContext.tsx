@@ -82,7 +82,6 @@ export function TabProvider({ children }: TabProviderProps) {
           restored.push(restoredTab);
           if (tab.id > maxId) maxId = tab.id;
         }
-        // Will set nextTabId after state init
         if (restored.length > 1) return restored;
       }
     } catch { /* ignore corrupt data */ }
@@ -91,20 +90,21 @@ export function TabProvider({ children }: TabProviderProps) {
   const [currentTab, setCurrentTab] = useState<number>(() => {
     try {
       const saved = localStorage.getItem("termix_currentTab");
-      if (saved) return parseInt(saved, 10) || 1;
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        // Validate against restored tabs
+        if (parsed && tabs.some(t => t.id === parsed)) return parsed;
+      }
     } catch { /* ignore */ }
     return 1;
   });
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
-  const nextTabId = useRef(2);
-
-  // Initialize nextTabId from restored tabs (on mount only)
-  React.useEffect(() => {
+  const [initialMaxId] = useState(() => {
     let maxId = 1;
     tabs.forEach(tab => { if (tab.id > maxId) maxId = tab.id; });
-    nextTabId.current = maxId + 1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return maxId + 1;
+  });
+  const nextTabId = useRef(initialMaxId);
 
   // Save tabs to localStorage on change
   useEffect(() => {

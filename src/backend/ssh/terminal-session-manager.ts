@@ -153,6 +153,12 @@ class TerminalSessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
+    // Clear any existing detach timeout to prevent leaks on double-detach
+    if (session.detachTimeout) {
+      clearTimeout(session.detachTimeout);
+      session.detachTimeout = null;
+    }
+
     session.attachedWs = null;
     session.lastDetachedAt = Date.now();
 
@@ -269,30 +275,28 @@ class TerminalSessionManager {
   }
 
   private healthCheck(): void {
+    // Collect IDs to destroy first to avoid mutating Map during iteration
+    const toDestroy: string[] = [];
     for (const [id, session] of this.sessions) {
       if (!session.isConnected) continue;
 
-      // Check if SSH connection is still alive
       if (session.sshConn) {
-        // ssh2 Client doesn't expose a direct "alive" check,
-        // but if the connection emitted close/error, the handlers in terminal.ts
-        // will call destroySession. We just verify the conn object still exists.
-        // If stream ended while detached, clean up.
         if (session.sshStream && session.attachedWs === null) {
-          // Check if stream is still readable
           if (session.sshStream.destroyed) {
             sshLogger.info("SSH stream destroyed while detached, cleaning up", {
               operation: "session_health_check",
               sessionId: id,
               userId: session.userId,
             });
-            this.destroySession(id);
+            toDestroy.push(id);
           }
         }
       } else {
-        // Connection object is gone
-        this.destroySession(id);
+        toDestroy.push(id);
       }
+    }
+    for (const id of toDestroy) {
+      this.destroySession(id);
     }
   }
 
