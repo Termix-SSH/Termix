@@ -97,11 +97,10 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key:
-            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
-          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
-          keyType: (credential.key_type || credential.keyType) as string | undefined,
-          authType: (credential.auth_type || credential.authType) as string | undefined,
+          key: credential.private_key as string | undefined,
+          keyPassword: credential.key_password as string | undefined,
+          keyType: credential.keyType as string | undefined,
+          authType: credential.authType as string | undefined,
         } as JumpHostConfig;
       }
     }
@@ -1211,7 +1210,6 @@ async function resolveHostCredentials(
             const credential = credentials[0];
             baseHost.credentialId = credential.id;
             baseHost.authType =
-              credential.auth_type ||
               credential.authType ||
               (credential.password
                 ? "password"
@@ -1230,12 +1228,11 @@ async function resolveHostCredentials(
             if (credential.key) {
               baseHost.key = credential.key;
             }
-            if (credential.key_password || credential.keyPassword) {
-              baseHost.keyPassword =
-                credential.key_password || credential.keyPassword;
+            if (credential.key_password) {
+              baseHost.keyPassword = credential.key_password;
             }
-            if (credential.key_type || credential.keyType) {
-              baseHost.keyType = credential.key_type || credential.keyType;
+            if (credential.keyType) {
+              baseHost.keyType = credential.keyType;
             }
           } else {
             addLegacyCredentials(baseHost, host);
@@ -1280,7 +1277,7 @@ function addLegacyCredentials(
 ): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
-  baseHost.keyPassword = host.key_password || host.keyPassword || null;
+  baseHost.keyPassword = host.key_password || null;
   baseHost.keyType = host.keyType;
 }
 

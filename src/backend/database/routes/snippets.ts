@@ -675,7 +675,7 @@ router.post(
 
         if (credResult.length > 0) {
           const cred = credResult[0];
-          authType = (cred.auth_type || cred.authType || authType) as string;
+          authType = (cred.authType || authType) as string;
           password = (cred.password || undefined) as string | undefined;
           privateKey = (cred.private_key || cred.key || undefined) as
             | string

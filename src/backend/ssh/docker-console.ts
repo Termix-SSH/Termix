@@ -132,7 +132,7 @@ async function createJumpHostChain(
     let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
       password: jumpHost.password,
       sshKey: jumpHost.key,
-      keyPassword: jumpHost.keyPassword,
+      keyPassword: jumpHost.key_password,
       authType: jumpHost.authType,
     };
 
@@ -155,10 +155,9 @@ async function createJumpHostChain(
         const credential = credentials[0];
         resolvedCredentials = {
           password: credential.password as string | undefined,
-          sshKey:
-            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
-          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
-          authType: (credential.auth_type || credential.authType) as string | undefined,
+          sshKey: credential.private_key as string | undefined,
+          keyPassword: credential.key_password as string | undefined,
+          authType: credential.authType as string | undefined,
         };
       }
     }
@@ -318,13 +317,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 const credential = credentials[0];
                 resolvedCredentials = {
                   password: credential.password as string | undefined,
-                  sshKey:
-                    (credential.private_key ||
-                    credential.privateKey ||
-                    credential.key) as string | undefined,
-                  keyPassword:
-                    (credential.key_password || credential.keyPassword) as string | undefined,
-                  authType: (credential.auth_type || credential.authType) as string | undefined,
+                  sshKey: credential.private_key as string | undefined,
+                  keyPassword: credential.key_password as string | undefined,
+                  authType: credential.authType as string | undefined,
                 };
               }
             }
