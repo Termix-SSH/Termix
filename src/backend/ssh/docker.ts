@@ -535,8 +535,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
     const host = hosts[0] as unknown as SSHHost;
 
     if (host.userId !== userId) {
-      const { PermissionManager } =
-        await import("../utils/permission-manager.js");
+      const { PermissionManager } = await import(
+        "../utils/permission-manager.js"
+      );
       const permissionManager = PermissionManager.getInstance();
       const accessInfo = await permissionManager.canAccessHost(
         userId,
@@ -636,8 +637,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       if (userId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id,
@@ -1644,6 +1646,19 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("TOTP verification timeout", {
+        operation: "docker_totp_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
+
   session.finish(responses);
 });
 
@@ -1830,6 +1845,19 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       .status(401)
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("Warpgate verification timeout", {
+        operation: "docker_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
 
   session.finish([""]);
 });

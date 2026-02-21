@@ -18,9 +18,7 @@ export function getProxyAgent(targetUrl?: string): Agent | undefined {
       const trimmed = entry.trim().toLowerCase();
       if (!trimmed) continue;
 
-      const normalized = trimmed
-        .replace(/^\*\./, "")
-        .replace(/^\./, "");
+      const normalized = trimmed.replace(/^\*\./, "").replace(/^\./, "");
 
       if (hostname === normalized || hostname.endsWith(`.${normalized}`)) {
         return undefined;
