@@ -24,7 +24,7 @@ class SSHConnectionPool {
 
   private isConnectionHealthy(client: Client): boolean {
     try {
-      const sock = (client as any)._sock;
+      const sock = (client as unknown as { _sock?: { destroyed?: boolean; writable?: boolean } })._sock;
       if (sock && (sock.destroyed || !sock.writable)) {
         return false;
       }
@@ -49,7 +49,9 @@ class SSHConnectionPool {
         });
         try {
           available.client.end();
-        } catch {}
+        } catch {
+        // expected
+      }
         connections = connections.filter((c) => c !== available);
         this.connections.set(key, connections);
       } else {
@@ -88,7 +90,9 @@ class SSHConnectionPool {
           if (!this.isConnectionHealthy(avail.client)) {
             try {
               avail.client.end();
-            } catch {}
+            } catch {
+        // expected
+      }
             const filtered = conns.filter((c) => c !== avail);
             this.connections.set(key, filtered);
             factory().then((client) => {
@@ -142,7 +146,9 @@ class SSHConnectionPool {
     for (const conn of connections) {
       try {
         conn.client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
     }
     this.connections.delete(key);
   }
@@ -156,13 +162,17 @@ class SSHConnectionPool {
         if (!conn.inUse && now - conn.lastUsed > maxAge) {
           try {
             conn.client.end();
-          } catch {}
+          } catch {
+        // expected
+      }
           return false;
         }
         if (!this.isConnectionHealthy(conn.client)) {
           try {
             conn.client.end();
-          } catch {}
+          } catch {
+        // expected
+      }
           return false;
         }
         return true;
@@ -181,7 +191,9 @@ class SSHConnectionPool {
       for (const conn of connections) {
         try {
           conn.client.end();
-        } catch {}
+        } catch {
+        // expected
+      }
       }
     }
     this.connections.clear();

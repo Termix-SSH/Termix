@@ -27,7 +27,7 @@ export async function collectMemoryMetrics(client: Client): Promise<{
       usedGiB = kibToGiB(usedKb);
       totalGiB = kibToGiB(totalKb);
     }
-  } catch (e) {
+  } catch {
     memPercent = null;
     usedGiB = null;
     totalGiB = null;

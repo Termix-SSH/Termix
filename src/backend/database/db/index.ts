@@ -37,10 +37,11 @@ async function initializeDatabaseAsync(): Promise<void> {
         memoryDatabase = new Database(decryptedBuffer);
 
         try {
-          const sessionCount = memoryDatabase
+          memoryDatabase
             .prepare("SELECT COUNT(*) as count FROM sessions")
             .get() as { count: number };
-        } catch (countError) {
+        } catch {
+          // expected - sessions table may not exist yet
         }
       } else {
         const migration = new DatabaseMigration(dataDir);
@@ -1033,23 +1034,15 @@ const migrateSchema = () => {
     try {
       const validSystemRoles = ['admin', 'user'];
       const unwantedRoleNames = ['superAdmin', 'powerUser', 'readonly', 'member'];
-      let deletedCount = 0;
-
       const deleteByName = sqlite.prepare("DELETE FROM roles WHERE name = ?");
       for (const roleName of unwantedRoleNames) {
-        const result = deleteByName.run(roleName);
-        if (result.changes > 0) {
-          deletedCount += result.changes;
-        }
+        deleteByName.run(roleName);
       }
 
       const deleteOldSystemRole = sqlite.prepare("DELETE FROM roles WHERE name = ? AND is_system = 1");
       for (const role of existingRoles) {
         if (role.is_system === 1 && !validSystemRoles.includes(role.name) && !unwantedRoleNames.includes(role.name)) {
-          const result = deleteOldSystemRole.run(role.name);
-          if (result.changes > 0) {
-            deletedCount += result.changes;
-          }
+          deleteOldSystemRole.run(role.name);
         }
       }
     } catch (cleanupError) {
@@ -1107,7 +1100,7 @@ const migrateSchema = () => {
         for (const admin of adminUsers) {
           try {
             insertUserRole.run(admin.id, adminRole.id);
-          } catch (error) {
+          } catch {
             // Ignore duplicate errors
           }
         }
@@ -1122,7 +1115,7 @@ const migrateSchema = () => {
         for (const user of normalUsers) {
           try {
             insertUserRole.run(user.id, userRole.id);
-          } catch (error) {
+          } catch {
             // Ignore duplicate errors
           }
         }
@@ -1156,10 +1149,11 @@ async function saveMemoryDatabaseToFile() {
     }
 
     try {
-      const sessionCount = memoryDatabase
+      memoryDatabase
         .prepare("SELECT COUNT(*) as count FROM sessions")
         .get() as { count: number };
-    } catch (countError) {
+    } catch {
+      // expected - sessions table may not exist yet
     }
 
     if (enableFileEncryption) {
@@ -1254,15 +1248,18 @@ async function cleanupDatabase() {
         try {
           fs.unlinkSync(path.join(tempDir, file));
         } catch {
+          // expected - file cleanup best effort
         }
       }
 
       try {
         fs.rmdirSync(tempDir);
       } catch {
+        // expected - dir cleanup best effort
       }
     }
   } catch {
+    // expected - temp dir cleanup best effort
   }
 }
 
@@ -1271,6 +1268,7 @@ process.on("exit", () => {
     try {
       sqlite.close();
     } catch {
+      // expected - database may already be closed
     }
   }
 });

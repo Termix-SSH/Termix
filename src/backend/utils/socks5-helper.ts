@@ -86,7 +86,6 @@ async function createProxyChainConnection(
     throw new Error("Proxy chain is empty");
   }
 
-  const chainPath = proxyChain.map((p) => `${p.host}:${p.port}`).join(" → ");
   try {
     const info = await SocksClient.createConnectionChain({
       proxies: proxyChain.map((p) => ({

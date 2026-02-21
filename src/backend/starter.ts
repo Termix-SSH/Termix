@@ -22,7 +22,9 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch (error) {}
+    } catch {
+      // expected - env file may not exist
+    }
 
     systemLogger.info("Termix backend initialization started", {
       operation: "backend_init_start",

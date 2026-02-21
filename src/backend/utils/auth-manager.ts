@@ -345,9 +345,15 @@ class AuthManager {
     }
   }
 
-  invalidateJWTToken(token: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateJWTToken(_token: string): void {
+    // expected - no-op, JWT tokens are stateless
+  }
 
-  invalidateUserTokens(userId: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateUserTokens(_userId: string): void {
+    // expected - no-op, handled by session management
+  }
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
@@ -493,7 +499,7 @@ class AuthManager {
     }
   }
 
-  async getAllSessions(): Promise<any[]> {
+  async getAllSessions(): Promise<Record<string, unknown>[]> {
     try {
       const allSessions = await db.select().from(sessions);
       return allSessions;
@@ -505,7 +511,7 @@ class AuthManager {
     }
   }
 
-  async getUserSessions(userId: string): Promise<any[]> {
+  async getUserSessions(userId: string): Promise<Record<string, unknown>[]> {
     try {
       const userSessions = await db
         .select()
@@ -773,6 +779,7 @@ class AuthManager {
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
         } else {
+          // expected - other sessions still active, keep user crypto state
         }
       } catch (error) {
         databaseLogger.error("Failed to delete session on logout", error, {

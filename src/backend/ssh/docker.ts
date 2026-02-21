@@ -3,7 +3,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
-import type { ClientChannel } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -11,7 +10,7 @@ import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
-import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
+import type { SSHHost } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
@@ -21,7 +20,7 @@ function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ): Omit<LogEntry, "id" | "timestamp"> {
   return {
     type,
@@ -43,7 +42,7 @@ interface SSHSession {
 interface PendingTOTPSession {
   client: SSHClient;
   finish: (responses: string[]) => void;
-  config: any;
+  config: Record<string, unknown>;
   createdAt: number;
   sessionId: string;
   hostId?: number;
@@ -70,7 +69,9 @@ setInterval(() => {
     if (now - session.createdAt > 180000) {
       try {
         session.client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
       delete pendingTOTPSessions[sessionId];
     }
   });
@@ -94,7 +95,9 @@ function cleanupSession(sessionId: string) {
 
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -114,7 +117,7 @@ function scheduleSessionCleanup(sessionId: string) {
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -233,7 +236,7 @@ async function createJumpHostChain(
           resolve(false);
         });
 
-        const connectConfig: any = {
+        const connectConfig: Record<string, unknown> = {
           host: jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
@@ -450,7 +453,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
     userProvidedPassword,
     userProvidedSshKey,
     userProvidedKeyPassword,
-    forceKeyboardInteractive,
     useSocks5,
     socks5Host,
     socks5Port,
@@ -458,7 +460,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     socks5Password,
     socks5ProxyChain,
   } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
@@ -605,11 +607,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
     if (pendingTOTPSessions[sessionId]) {
       try {
         pendingTOTPSessions[sessionId].client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
       delete pendingTOTPSessions[sessionId];
     }
 
-    let resolvedCredentials: any = {
+    let resolvedCredentials: Record<string, unknown> = {
       password: host.password,
       sshKey: host.key,
       keyPassword: host.keyPassword,
@@ -685,7 +689,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     const client = new SSHClient();
 
-    const config: any = {
+    const config: Record<string, unknown> = {
       host: host.ip,
       port: host.port || 22,
       username: host.username,
@@ -706,6 +710,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     };
 
     if (resolvedCredentials.authType === "none") {
+      // no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (resolvedCredentials.password) {
         config.password = resolvedCredentials.password;
@@ -871,8 +876,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
     }
 
     let responseSent = false;
-    let keyboardInteractiveResponded = false;
-
     connectionLogs.push(
       createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
     );
@@ -1089,8 +1092,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
             if (responseSent) return;
             responseSent = true;
 
-            keyboardInteractiveResponded = true;
-
             pendingTOTPSessions[sessionId] = {
               client,
               finish,
@@ -1157,8 +1158,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
             finish(responses);
             return;
           }
-
-          keyboardInteractiveResponded = true;
 
           pendingTOTPSessions[sessionId] = {
             client,
@@ -1244,8 +1243,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
               return;
             }
 
-            keyboardInteractiveResponded = true;
-
             pendingTOTPSessions[sessionId] = {
               client,
               finish,
@@ -1285,7 +1282,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     if (
       useSocks5 &&
-      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
+      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as unknown[]).length > 0))
     ) {
       try {
         connectionLogs.push(
@@ -1300,7 +1297,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
             socks5Port,
             socks5Username,
             socks5Password,
-            socks5ProxyChain: socks5ProxyChain as any,
+            socks5ProxyChain: socks5ProxyChain as unknown[],
           },
         );
 
@@ -1489,7 +1486,7 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
  */
 app.post("/docker/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     sshLogger.error("TOTP verification rejected: no authenticated user", {
@@ -1521,7 +1518,9 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     sshLogger.warn("TOTP session timeout before code submission", {
       operation: "docker_totp_verify",
       sessionId,
@@ -1544,7 +1543,19 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   });
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("TOTP verification timeout", {
+        operation: "docker_totp_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -1633,19 +1644,6 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
-  responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("TOTP verification timeout", {
-        operation: "docker_totp_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "TOTP verification timeout" });
-    }
-  }, 60000);
-
   session.finish(responses);
 });
 
@@ -1679,7 +1677,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
  */
 app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   const { sessionId } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     sshLogger.error("Warpgate verification rejected: no authenticated user", {
@@ -1715,7 +1713,9 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     sshLogger.warn("Warpgate session timeout before completion", {
       operation: "docker_warpgate_verify",
       sessionId,
@@ -1728,7 +1728,19 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   }
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("Warpgate verification timeout", {
+        operation: "docker_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -1818,19 +1830,6 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       .status(401)
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
-
-  responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("Warpgate verification timeout", {
-        operation: "docker_warpgate_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "Warpgate verification timeout" });
-    }
-  }, 60000);
 
   session.finish([""]);
 });
@@ -1941,7 +1940,7 @@ app.get("/docker/ssh/status", async (req, res) => {
  */
 app.get("/docker/validate/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2020,7 +2019,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
           code: "DOCKER_ERROR",
         });
       }
-    } catch (installError) {
+    } catch {
       session.activeOperations--;
       return res.json({
         available: false,
@@ -2073,7 +2072,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const all = req.query.all !== "false";
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2115,7 +2114,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
       .map((line) => {
         try {
           return JSON.parse(line);
-        } catch (e) {
+        } catch {
           sshLogger.warn("Failed to parse container line", {
             operation: "parse_container",
             line,
@@ -2174,7 +2173,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
  */
 app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   const { sessionId, containerId } = req.params;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2269,7 +2268,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/start",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2369,7 +2368,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/stop",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2469,7 +2468,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/restart",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2569,7 +2568,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/pause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2669,7 +2668,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/unpause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2774,7 +2773,7 @@ app.delete(
   async (req, res) => {
     const { sessionId, containerId } = req.params;
     const force = req.query.force === "true";
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2902,7 +2901,7 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const timestamps = req.query.timestamps === "true";
   const since = req.query.since as string;
   const until = req.query.until as string;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -3011,7 +3010,7 @@ app.get(
   "/docker/containers/:sessionId/:containerId/stats",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });

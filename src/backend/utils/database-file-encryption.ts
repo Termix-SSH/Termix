@@ -327,7 +327,9 @@ class DatabaseFileEncryption {
             fs.accessSync(envPath, fs.constants.R_OK);
             envFileReadable = true;
           }
-        } catch (error) {}
+        } catch {
+          // expected - env file access check may fail
+        }
 
         databaseLogger.error(
           "Database decryption authentication failed - possible causes: wrong DATABASE_KEY, corrupted files, or interrupted write",
@@ -581,7 +583,9 @@ class DatabaseFileEncryption {
         try {
           fs.accessSync(envPath, fs.constants.R_OK);
           result.environment.envFileReadable = true;
-        } catch (error) {}
+        } catch {
+          // expected - env file access check may fail
+        }
       }
 
       if (
