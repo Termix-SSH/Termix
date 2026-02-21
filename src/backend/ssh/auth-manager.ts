@@ -76,10 +76,10 @@ export class SSHAuthManager {
         resolvedCredentials = {
           username: (cred.username as string) || hostConfig.username,
           password: (cred.password as string) || undefined,
-          key: cred.privateKey
-            ? Buffer.from(cred.privateKey as string)
+          key: cred.private_key
+            ? Buffer.from(cred.private_key as string)
             : undefined,
-          keyPassword: (cred.passphrase as string) || undefined,
+          keyPassword: (cred.key_password as string) || undefined,
           authType: (cred.authType as string) || "none",
         };
       }

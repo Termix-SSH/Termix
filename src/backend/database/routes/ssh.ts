@@ -682,16 +682,10 @@ router.post(
         const cred = credentials[0];
 
         resolvedPassword = cred.password as string | undefined;
-        resolvedKey = (cred.private_key || cred.privateKey || cred.key) as
-          | string
-          | undefined;
-        resolvedKeyPassword = (cred.key_password || cred.keyPassword) as
-          | string
-          | undefined;
-        resolvedKeyType = (cred.key_type || cred.keyType) as string | undefined;
-        resolvedAuthType = (cred.auth_type || cred.authType) as
-          | string
-          | undefined;
+        resolvedKey = cred.private_key as string | undefined;
+        resolvedKeyPassword = cred.key_password as string | undefined;
+        resolvedKeyType = cred.keyType as string | undefined;
+        resolvedAuthType = cred.authType as string | undefined;
 
         if (!overrideCredentialUsername) {
           resolvedUsername = cred.username as string;
@@ -2415,8 +2409,8 @@ async function resolveHostCredentials(
           ...host,
           password: credential.password,
           key: credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
+          keyPassword: credential.key_password,
+          keyType: credential.keyType,
         };
 
         if (!host.overrideCredentialUsername) {
@@ -2958,7 +2952,7 @@ router.post(
           credentialId:
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
-          keyPassword:
+          key_password:
             hostData.authType === "key"
               ? hostData.keyPassword || hostData.key_password || null
               : null,

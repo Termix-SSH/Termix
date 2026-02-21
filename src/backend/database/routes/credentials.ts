@@ -841,7 +841,7 @@ router.post(
         .set({
           credentialId: parseInt(credentialId),
           username: (credential.username as string) || "",
-          authType: (credential.auth_type || credential.authType) as string,
+          authType: credential.authType as string,
           password: null,
           key: null,
           key_password: null,
@@ -954,15 +954,15 @@ function formatCredentialOutput(
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
-    authType: credential.authType || credential.auth_type,
+    authType: credential.authType,
     username: credential.username || null,
-    publicKey: credential.public_key || credential.publicKey,
-    keyType: credential.key_type || credential.keyType,
-    detectedKeyType: credential.detected_key_type || credential.detectedKeyType,
-    usageCount: credential.usage_count || credential.usageCount || 0,
-    lastUsed: credential.last_used || credential.lastUsed,
-    createdAt: credential.created_at || credential.createdAt,
-    updatedAt: credential.updated_at || credential.updatedAt,
+    publicKey: credential.public_key,
+    keyType: credential.keyType,
+    detectedKeyType: credential.detectedKeyType,
+    usageCount: credential.usageCount || 0,
+    lastUsed: credential.lastUsed,
+    createdAt: credential.createdAt,
+    updatedAt: credential.updatedAt,
   };
 }
 
@@ -1990,15 +1990,14 @@ router.post(
           if (hostCredential && hostCredential.length > 0) {
             const cred = hostCredential[0];
 
-            hostConfig.authType = cred.auth_type || cred.authType;
+            hostConfig.authType = cred.authType;
             hostConfig.username = cred.username;
 
-            if ((cred.auth_type || cred.authType) === "password") {
+            if (cred.authType === "password") {
               hostConfig.password = cred.password;
-            } else if ((cred.auth_type || cred.authType) === "key") {
-              hostConfig.privateKey =
-                cred.private_key || cred.privateKey || cred.key;
-              hostConfig.keyPassword = cred.key_password || cred.keyPassword;
+            } else if (cred.authType === "key") {
+              hostConfig.privateKey = cred.private_key || cred.key;
+              hostConfig.keyPassword = cred.key_password;
             }
           } else {
             return res.status(400).json({
