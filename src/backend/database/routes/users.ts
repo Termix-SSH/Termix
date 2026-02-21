@@ -1247,6 +1247,16 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
+    try {
+      const { SharedCredentialManager } = await import(
+        "../../utils/shared-credential-manager.js"
+      );
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
+    } catch {
+      // expected - re-encryption may fail if no pending credentials
+    }
+
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
