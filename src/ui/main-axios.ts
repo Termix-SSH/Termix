@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
+import { clearTermixSessionStorage } from "@/ui/desktop/navigation/tabs/TabContext";
 import type {
   SSHHost,
   SSHHostData,
@@ -2407,6 +2408,8 @@ export async function logoutUser(): Promise<{
 }> {
   try {
     const response = await authApi.post("/users/logout");
+
+    clearTermixSessionStorage();
 
     if (isElectron()) {
       localStorage.removeItem("jwt");
