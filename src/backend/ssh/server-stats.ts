@@ -173,7 +173,7 @@ async function createJumpHostChain(
         });
 
         const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip,
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -1320,7 +1320,7 @@ async function buildSshConfig(
   host: SSHHostWithCredentials,
 ): Promise<ConnectConfig> {
   const base: ConnectConfig = {
-    host: host.ip,
+    host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
     port: host.port,
     username: host.username,
     tryKeyboard: true,
