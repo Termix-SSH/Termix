@@ -1210,24 +1210,26 @@ async function resolveHostCredentials(
             userId,
           );
 
-          baseHost.credentialId = host.credentialId;
-          baseHost.authType = sharedCred.authType;
+          if (sharedCred) {
+            baseHost.credentialId = host.credentialId;
+            baseHost.authType = sharedCred.authType;
 
-          if (!host.overrideCredentialUsername) {
-            baseHost.username = sharedCred.username;
-          }
+            if (!host.overrideCredentialUsername) {
+              baseHost.username = sharedCred.username;
+            }
 
-          if (sharedCred.password) {
-            baseHost.password = sharedCred.password;
-          }
-          if (sharedCred.key) {
-            baseHost.key = sharedCred.key;
-          }
-          if (sharedCred.keyPassword) {
-            baseHost.keyPassword = sharedCred.keyPassword;
-          }
-          if (sharedCred.keyType) {
-            baseHost.keyType = sharedCred.keyType;
+            if (sharedCred.password) {
+              baseHost.password = sharedCred.password;
+            }
+            if (sharedCred.key) {
+              baseHost.key = sharedCred.key;
+            }
+            if (sharedCred.keyPassword) {
+              baseHost.keyPassword = sharedCred.keyPassword;
+            }
+            if (sharedCred.keyType) {
+              baseHost.keyType = sharedCred.keyType;
+            }
           }
         } else {
           const credentials = await SimpleDBOps.select(
