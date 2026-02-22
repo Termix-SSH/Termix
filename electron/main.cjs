@@ -620,6 +620,25 @@ ipcMain.handle("set-setting", (event, key, value) => {
   }
 });
 
+ipcMain.handle("clear-session-cookies", async () => {
+  try {
+    const ses = mainWindow?.webContents?.session;
+    if (ses) {
+      const cookies = await ses.cookies.get({});
+      for (const cookie of cookies) {
+        const scheme = cookie.secure ? "https" : "http";
+        const domain = cookie.domain?.startsWith(".")
+          ? cookie.domain.slice(1)
+          : cookie.domain || "localhost";
+        const url = `${scheme}://${domain}${cookie.path || "/"}`;
+        await ses.cookies.remove(url, cookie.name);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to clear session cookies:", error);
+  }
+});
+
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");

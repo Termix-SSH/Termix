@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
 
+  clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
+
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });
 

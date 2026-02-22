@@ -462,6 +462,12 @@ function createApiInstance(
 
           if (isElectron()) {
             electronSettingsCache.delete("jwt");
+            const electronAPI = (
+              window as unknown as {
+                electronAPI?: { clearSessionCookies?: () => Promise<void> };
+              }
+            ).electronAPI;
+            electronAPI?.clearSessionCookies?.().catch(() => {});
           }
 
           if (typeof window !== "undefined") {
@@ -2411,6 +2417,12 @@ export async function logoutUser(): Promise<{
     if (isElectron()) {
       localStorage.removeItem("jwt");
       electronSettingsCache.delete("jwt");
+      const electronAPI = (
+        window as unknown as {
+          electronAPI?: { clearSessionCookies?: () => Promise<void> };
+        }
+      ).electronAPI;
+      electronAPI?.clearSessionCookies?.().catch(() => {});
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
@@ -2424,6 +2436,12 @@ export async function logoutUser(): Promise<{
     if (isElectron()) {
       localStorage.removeItem("jwt");
       electronSettingsCache.delete("jwt");
+      const electronAPI = (
+        window as unknown as {
+          electronAPI?: { clearSessionCookies?: () => Promise<void> };
+        }
+      ).electronAPI;
+      electronAPI?.clearSessionCookies?.().catch(() => {});
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
