@@ -761,6 +761,67 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                 {t("hosts.addVariable")}
               </Button>
             </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <label className="text-sm font-medium">
+                {t("hosts.keepaliveSettings")}
+              </label>
+              <FormDescription>
+                {t("hosts.keepaliveSettingsDesc")}
+              </FormDescription>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="terminalConfig.keepaliveInterval"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("hosts.keepaliveInterval")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={300000}
+                          placeholder="30000"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : Number(val));
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("hosts.keepaliveIntervalDesc")}
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="terminalConfig.keepaliveCountMax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("hosts.keepaliveCountMax")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="3"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? undefined : Number(val));
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("hosts.keepaliveCountMaxDesc")}
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

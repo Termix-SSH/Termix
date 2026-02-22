@@ -395,6 +395,8 @@ export interface TerminalConfig {
   autoMosh: boolean;
   moshCommand: string;
   sudoPasswordAutoFill: boolean;
+  keepaliveInterval?: number;
+  keepaliveCountMax?: number;
 }
 
 // ============================================================================
