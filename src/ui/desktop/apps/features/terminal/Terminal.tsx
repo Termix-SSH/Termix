@@ -46,6 +46,7 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import { toast } from "sonner";
 
 interface HostConfig {
   id?: number;
@@ -1423,26 +1424,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
     }
 
-    async function writeTextToClipboard(text: string): Promise<void> {
+    async function writeTextToClipboard(text: string): Promise<boolean> {
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(text);
-          return;
+          return true;
         }
-      } catch (error) {
-        console.error("Terminal operation failed:", error);
+      } catch {
+        // fall through to legacy method
       }
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
       try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
         document.execCommand("copy");
-      } finally {
         document.body.removeChild(textarea);
+        return true;
+      } catch {
+        toast.error(t("terminal.clipboardWriteFailed"));
+        return false;
       }
     }
 
@@ -1451,8 +1455,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
-      } catch (error) {
-        console.error("Terminal operation failed:", error);
+      } catch {
+        toast.error(t("terminal.clipboardReadFailed"));
       }
       return "";
     }
@@ -1736,6 +1740,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           });
           return false;
+        }
+
+        if (
+          e.ctrlKey &&
+          !e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "c" &&
+          terminal.hasSelection()
+        ) {
+          const selection = terminal.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            writeTextToClipboard(selection);
+            terminal.clearSelection();
+            return false;
+          }
         }
 
         if (
