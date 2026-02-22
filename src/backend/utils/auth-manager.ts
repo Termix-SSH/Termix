@@ -729,7 +729,7 @@ class AuthManager {
           .from(users)
           .where(eq(users.id, payload.userId));
 
-        if (!user || user.length === 0 || !user[0].is_admin) {
+        if (!user || user.length === 0 || !user[0].isAdmin) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {

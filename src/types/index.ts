@@ -173,9 +173,9 @@ export interface CredentialBackend {
   username: string | null;
   password: string | null;
   key: string;
-  private_key?: string;
-  public_key?: string;
-  key_password: string | null;
+  privateKey?: string;
+  publicKey?: string;
+  keyPassword: string | null;
   keyType?: string;
   detectedKeyType: string;
   usageCount: number;

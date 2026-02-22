@@ -79,7 +79,7 @@ export class SSHAuthManager {
           key: cred.privateKey
             ? Buffer.from(cred.privateKey as string)
             : undefined,
-          keyPassword: (cred.passphrase as string) || undefined,
+          keyPassword: (cred.keyPassword as string) || undefined,
           authType: (cred.authType as string) || "none",
         };
       }

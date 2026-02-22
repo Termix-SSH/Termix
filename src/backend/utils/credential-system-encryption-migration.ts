@@ -59,9 +59,9 @@ export class CredentialSystemEncryptionMigration {
               )
             : null;
 
-          const plainKeyPassword = cred.key_password
+          const plainKeyPassword = cred.keyPassword
             ? FieldCrypto.decryptField(
-                cred.key_password,
+                cred.keyPassword,
                 userDEK,
                 cred.id.toString(),
                 "key_password",

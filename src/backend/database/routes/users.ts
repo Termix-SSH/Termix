@@ -389,20 +389,20 @@ router.post("/create", async (req, res) => {
     await db.insert(users).values({
       id,
       username,
-      password_hash,
-      is_admin: isFirstUser,
-      is_oidc: false,
-      client_id: "",
-      client_secret: "",
-      issuer_url: "",
-      authorization_url: "",
-      token_url: "",
-      identifier_path: "",
-      name_path: "",
+      passwordHash: password_hash,
+      isAdmin: isFirstUser,
+      isOidc: false,
+      clientId: "",
+      clientSecret: "",
+      issuerUrl: "",
+      authorizationUrl: "",
+      tokenUrl: "",
+      identifierPath: "",
+      namePath: "",
       scopes: "openid email profile",
-      totp_secret: null,
-      totp_enabled: false,
-      totp_backup_codes: null,
+      totpSecret: null,
+      totpEnabled: false,
+      totpBackupCodes: null,
     });
 
     try {
@@ -497,7 +497,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -649,7 +649,7 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -1070,7 +1070,7 @@ router.get("/oidc/callback", async (req, res) => {
     let user = await db
       .select()
       .from(users)
-      .where(eq(users.oidc_identifier, identifier));
+      .where(eq(users.oidcIdentifier, identifier));
 
     let isFirstUser = false;
     if (!user || user.length === 0) {
@@ -1141,17 +1141,17 @@ router.get("/oidc/callback", async (req, res) => {
       await db.insert(users).values({
         id,
         username: name,
-        password_hash: "",
-        is_admin: isFirstUser,
-        is_oidc: true,
-        oidc_identifier: identifier,
-        client_id: String(config.client_id),
-        client_secret: String(config.client_secret),
-        issuer_url: String(config.issuer_url),
-        authorization_url: String(config.authorization_url),
-        token_url: String(config.token_url),
-        identifier_path: String(config.identifier_path),
-        name_path: String(config.name_path),
+        passwordHash: "",
+        isAdmin: isFirstUser,
+        isOidc: true,
+        oidcIdentifier: identifier,
+        clientId: String(config.client_id),
+        clientSecret: String(config.client_secret),
+        issuerUrl: String(config.issuer_url),
+        authorizationUrl: String(config.authorization_url),
+        tokenUrl: String(config.token_url),
+        identifierPath: String(config.identifier_path),
+        namePath: String(config.name_path),
         scopes: String(config.scopes),
       });
 
@@ -1224,7 +1224,7 @@ router.get("/oidc/callback", async (req, res) => {
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
       const isDualAuth =
-        user[0].password_hash && user[0].password_hash.trim() !== "";
+        user[0].passwordHash && user[0].passwordHash.trim() !== "";
 
       if (!isDualAuth) {
         await db
@@ -1403,8 +1403,8 @@ router.post("/login", async (req, res) => {
     const userRecord = user[0];
 
     if (
-      userRecord.is_oidc &&
-      (!userRecord.password_hash || userRecord.password_hash.trim() === "")
+      userRecord.isOidc &&
+      (!userRecord.passwordHash || userRecord.passwordHash.trim() === "")
     ) {
       authLogger.warn("OIDC-only user attempted traditional login", {
         operation: "user_login",
@@ -1416,7 +1416,7 @@ router.post("/login", async (req, res) => {
         .json({ error: "This user uses external authentication" });
     }
 
-    const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+    const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
     if (!isMatch) {
       loginRateLimiter.recordFailedAttempt(clientIp, username);
       authLogger.warn(`Login failed: incorrect password`, {
@@ -1448,7 +1448,7 @@ router.post("/login", async (req, res) => {
     const deviceInfo = parseUserAgent(req);
 
     let dataUnlocked = false;
-    if (userRecord.is_oidc) {
+    if (userRecord.isOidc) {
       dataUnlocked = await authManager.authenticateOIDCUser(
         userRecord.id,
         deviceInfo.type,
@@ -1479,7 +1479,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    if (userRecord.totp_enabled) {
+    if (userRecord.totpEnabled) {
       const tempToken = await authManager.generateJWTToken(userRecord.id, {
         pendingTOTP: true,
         expiresIn: "10m",
@@ -1510,7 +1510,7 @@ router.post("/login", async (req, res) => {
 
     const response: Record<string, unknown> = {
       success: true,
-      is_admin: !!userRecord.is_admin,
+      is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
     };
 
@@ -1619,17 +1619,17 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     }
 
     const hasPassword =
-      user[0].password_hash && user[0].password_hash.trim() !== "";
-    const hasOidc = user[0].is_oidc && user[0].oidc_identifier;
+      user[0].passwordHash && user[0].passwordHash.trim() !== "";
+    const hasOidc = user[0].isOidc && user[0].oidcIdentifier;
     const isDualAuth = hasPassword && hasOidc;
 
     res.json({
       userId: user[0].id,
       username: user[0].username,
-      is_admin: !!user[0].is_admin,
-      is_oidc: !!user[0].is_oidc,
+      is_admin: !!user[0].isAdmin,
+      is_oidc: !!user[0].isOidc,
       is_dual_auth: isDualAuth,
-      totp_enabled: !!user[0].totp_enabled,
+      totp_enabled: !!user[0].totpEnabled,
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);
@@ -1687,7 +1687,7 @@ router.get("/count", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user[0] || !user[0].is_admin) {
+    if (!user[0] || !user[0].isAdmin) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1785,7 +1785,7 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -1861,7 +1861,7 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -1939,7 +1939,7 @@ router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -2007,14 +2007,14 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    if (userRecord.is_oidc) {
+    if (userRecord.isOidc) {
       return res.status(403).json({
         error:
           "Cannot delete external authentication accounts through this endpoint",
       });
     }
 
-    const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+    const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
     if (!isMatch) {
       authLogger.warn(
         `Incorrect password provided for account deletion: ${userRecord.username}`,
@@ -2022,7 +2022,7 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    if (userRecord.is_admin) {
+    if (userRecord.isAdmin) {
       const adminCount = db.$client
         .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
         .get();
@@ -2108,7 +2108,7 @@ router.post("/initiate-reset", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user[0].is_oidc) {
+    if (user[0].isOidc) {
       return res.status(403).json({
         error: "Password reset not available for external authentication users",
       });
@@ -2376,7 +2376,7 @@ router.post("/complete-reset", async (req, res) => {
 
         await db
           .update(users)
-          .set({ password_hash })
+          .set({ passwordHash: password_hash })
           .where(eq(users.id, userId));
         authManager.logoutUser(userId);
         authLogger.success(
@@ -2404,7 +2404,7 @@ router.post("/complete-reset", async (req, res) => {
     } else {
       await db
         .update(users)
-        .set({ password_hash })
+        .set({ passwordHash: password_hash })
         .where(eq(users.username, username));
 
       try {
@@ -2438,9 +2438,9 @@ router.post("/complete-reset", async (req, res) => {
         await db
           .update(users)
           .set({
-            totp_enabled: false,
-            totp_secret: null,
-            totp_backup_codes: null,
+            totpEnabled: false,
+            totpSecret: null,
+            totpBackupCodes: null,
           })
           .where(eq(users.id, userId));
 
@@ -2536,7 +2536,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     return res.status(404).json({ error: "User not found" });
   }
 
-  const isMatch = await bcrypt.compare(oldPassword, user[0].password_hash);
+  const isMatch = await bcrypt.compare(oldPassword, user[0].passwordHash);
   if (!isMatch) {
     authLogger.warn("Password change failed - old password incorrect", {
       operation: "password_change_failed",
@@ -2559,7 +2559,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 
   const saltRounds = parseInt(process.env.SALT || "10", 10);
   const password_hash = await bcrypt.hash(newPassword, saltRounds);
-  await db.update(users).set({ password_hash }).where(eq(users.id, userId));
+  await db.update(users).set({ passwordHash: password_hash }).where(eq(users.id, userId));
 
   authManager.logoutUser(userId);
   authLogger.success("Password changed successfully", {
@@ -2590,7 +2590,7 @@ router.get("/list", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].is_admin) {
+    if (!user || user.length === 0 || !user[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -2598,9 +2598,9 @@ router.get("/list", authenticateJWT, async (req, res) => {
       .select({
         id: users.id,
         username: users.username,
-        is_admin: users.is_admin,
-        is_oidc: users.is_oidc,
-        password_hash: users.password_hash,
+        isAdmin: users.isAdmin,
+        isOidc: users.isOidc,
+        passwordHash: users.passwordHash,
       })
       .from(users);
 
@@ -2650,7 +2650,7 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
 
   try {
     const adminUser = await db.select().from(users).where(eq(users.id, userId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -2662,13 +2662,13 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (targetUser[0].is_admin) {
+    if (targetUser[0].isAdmin) {
       return res.status(400).json({ error: "User is already an admin" });
     }
 
     await db
       .update(users)
-      .set({ is_admin: true })
+      .set({ isAdmin: true })
       .where(eq(users.username, username));
 
     try {
@@ -2733,7 +2733,7 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
 
   try {
     const adminUser = await db.select().from(users).where(eq(users.id, userId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -2751,13 +2751,13 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (!targetUser[0].is_admin) {
+    if (!targetUser[0].isAdmin) {
       return res.status(400).json({ error: "User is not an admin" });
     }
 
     await db
       .update(users)
-      .set({ is_admin: false })
+      .set({ isAdmin: false })
       .where(eq(users.username, username));
 
     try {
@@ -2812,7 +2812,7 @@ router.post("/totp/setup", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    if (userRecord.totp_enabled) {
+    if (userRecord.totpEnabled) {
       return res.status(400).json({ error: "TOTP is already enabled" });
     }
 
@@ -2823,7 +2823,7 @@ router.post("/totp/setup", authenticateJWT, async (req, res) => {
 
     await db
       .update(users)
-      .set({ totp_secret: secret.base32 })
+      .set({ totpSecret: secret.base32 })
       .where(eq(users.id, userId));
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
@@ -2883,16 +2883,16 @@ router.post("/totp/enable", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    if (userRecord.totp_enabled) {
+    if (userRecord.totpEnabled) {
       return res.status(400).json({ error: "TOTP is already enabled" });
     }
 
-    if (!userRecord.totp_secret) {
+    if (!userRecord.totpSecret) {
       return res.status(400).json({ error: "TOTP setup not initiated" });
     }
 
     const verified = speakeasy.totp.verify({
-      secret: userRecord.totp_secret,
+      secret: userRecord.totpSecret,
       encoding: "base32",
       token: totp_code,
       window: 2,
@@ -2909,8 +2909,8 @@ router.post("/totp/enable", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({
-        totp_enabled: true,
-        totp_backup_codes: JSON.stringify(backupCodes),
+        totpEnabled: true,
+        totpBackupCodes: JSON.stringify(backupCodes),
       })
       .where(eq(users.id, userId));
     authLogger.info("Two-factor authentication enabled", {
@@ -2975,18 +2975,18 @@ router.post("/totp/disable", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    if (!userRecord.totp_enabled) {
+    if (!userRecord.totpEnabled) {
       return res.status(400).json({ error: "TOTP is not enabled" });
     }
 
-    if (password && !userRecord.is_oidc) {
-      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+    if (password && !userRecord.isOidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
       if (!isMatch) {
         return res.status(401).json({ error: "Incorrect password" });
       }
     } else if (totp_code) {
       const verified = speakeasy.totp.verify({
-        secret: userRecord.totp_secret!,
+        secret: userRecord.totpSecret!,
         encoding: "base32",
         token: totp_code,
         window: 2,
@@ -3002,9 +3002,9 @@ router.post("/totp/disable", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({
-        totp_enabled: false,
-        totp_secret: null,
-        totp_backup_codes: null,
+        totpEnabled: false,
+        totpSecret: null,
+        totpBackupCodes: null,
       })
       .where(eq(users.id, userId));
     authLogger.info("Two-factor authentication disabled", {
@@ -3066,18 +3066,18 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
 
     const userRecord = user[0];
 
-    if (!userRecord.totp_enabled) {
+    if (!userRecord.totpEnabled) {
       return res.status(400).json({ error: "TOTP is not enabled" });
     }
 
-    if (password && !userRecord.is_oidc) {
-      const isMatch = await bcrypt.compare(password, userRecord.password_hash);
+    if (password && !userRecord.isOidc) {
+      const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
       if (!isMatch) {
         return res.status(401).json({ error: "Incorrect password" });
       }
     } else if (totp_code) {
       const verified = speakeasy.totp.verify({
-        secret: userRecord.totp_secret!,
+        secret: userRecord.totpSecret!,
         encoding: "base32",
         token: totp_code,
         window: 2,
@@ -3096,7 +3096,7 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
 
     await db
       .update(users)
-      .set({ totp_backup_codes: JSON.stringify(backupCodes) })
+      .set({ totpBackupCodes: JSON.stringify(backupCodes) })
       .where(eq(users.id, userId));
 
     res.json({ backup_codes: backupCodes });
@@ -3176,7 +3176,7 @@ router.post("/totp/verify-login", async (req, res) => {
 
     loginRateLimiter.recordFailedTOTPAttempt(userRecord.id);
 
-    if (!userRecord.totp_enabled || !userRecord.totp_secret) {
+    if (!userRecord.totpEnabled || !userRecord.totpSecret) {
       return res.status(400).json({ error: "TOTP not enabled for this user" });
     }
 
@@ -3189,7 +3189,7 @@ router.post("/totp/verify-login", async (req, res) => {
     }
 
     const totpSecret = LazyFieldEncryption.safeGetFieldValue(
-      userRecord.totp_secret,
+      userRecord.totpSecret,
       userDataKey,
       userRecord.id,
       "totp_secret",
@@ -3199,9 +3199,9 @@ router.post("/totp/verify-login", async (req, res) => {
       await db
         .update(users)
         .set({
-          totp_enabled: false,
-          totp_secret: null,
-          totp_backup_codes: null,
+          totpEnabled: false,
+          totpSecret: null,
+          totpBackupCodes: null,
         })
         .where(eq(users.id, userRecord.id));
 
@@ -3221,8 +3221,8 @@ router.post("/totp/verify-login", async (req, res) => {
     if (!verified) {
       let backupCodes = [];
       try {
-        backupCodes = userRecord.totp_backup_codes
-          ? JSON.parse(userRecord.totp_backup_codes)
+        backupCodes = userRecord.totpBackupCodes
+          ? JSON.parse(userRecord.totpBackupCodes)
           : [];
       } catch {
         backupCodes = [];
@@ -3253,7 +3253,7 @@ router.post("/totp/verify-login", async (req, res) => {
       backupCodes.splice(backupIndex, 1);
       await db
         .update(users)
-        .set({ totp_backup_codes: JSON.stringify(backupCodes) })
+        .set({ totpBackupCodes: JSON.stringify(backupCodes) })
         .where(eq(users.id, userRecord.id));
     }
 
@@ -3279,11 +3279,11 @@ router.post("/totp/verify-login", async (req, res) => {
 
     const response: Record<string, unknown> = {
       success: true,
-      is_admin: !!userRecord.is_admin,
+      is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
       userId: userRecord.id,
-      is_oidc: !!userRecord.is_oidc,
-      totp_enabled: !!userRecord.totp_enabled,
+      is_oidc: !!userRecord.isOidc,
+      totp_enabled: !!userRecord.totpEnabled,
     };
 
     if (isElectron) {
@@ -3345,7 +3345,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
   try {
     const adminUser = await db.select().from(users).where(eq(users.id, userId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -3361,7 +3361,7 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (targetUser[0].is_admin) {
+    if (targetUser[0].isAdmin) {
       const adminCount = db.$client
         .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
         .get();
@@ -3518,7 +3518,7 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
     const userRecord = user[0];
     let sessionList;
 
-    if (userRecord.is_admin) {
+    if (userRecord.isAdmin) {
       sessionList = await authManager.getAllSessions();
 
       const enrichedSessions = await Promise.all(
@@ -3604,7 +3604,7 @@ router.delete("/sessions/:sessionId", authenticateJWT, async (req, res) => {
 
     const session = sessionRecords[0];
 
-    if (!userRecord.is_admin && session.userId !== userId) {
+    if (!userRecord.isAdmin && session.userId !== userId) {
       return res
         .status(403)
         .json({ error: "Not authorized to revoke this session" });
@@ -3671,7 +3671,7 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
     const userRecord = user[0];
 
     let revokeUserId = userId;
-    if (targetUserId && userRecord.is_admin) {
+    if (targetUserId && userRecord.isAdmin) {
       revokeUserId = targetUserId;
     } else if (targetUserId && targetUserId !== userId) {
       return res.status(403).json({
@@ -3758,7 +3758,7 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       .select()
       .from(users)
       .where(eq(users.id, adminUserId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -3772,7 +3772,7 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
 
     const oidcUser = oidcUserRecords[0];
 
-    if (!oidcUser.is_oidc) {
+    if (!oidcUser.isOidc) {
       return res.status(400).json({
         error: "Source user is not an OIDC user",
       });
@@ -3788,13 +3788,13 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
 
     const targetUser = targetUserRecords[0];
 
-    if (targetUser.is_oidc || !targetUser.password_hash) {
+    if (targetUser.isOidc || !targetUser.passwordHash) {
       return res.status(400).json({
         error: "Target user must be a password-based account",
       });
     }
 
-    if (targetUser.client_id && targetUser.oidc_identifier) {
+    if (targetUser.clientId && targetUser.oidcIdentifier) {
       return res.status(400).json({
         error: "Target user already has OIDC authentication configured",
       });
@@ -3812,15 +3812,15 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({
-        is_oidc: true,
-        oidc_identifier: oidcUser.oidc_identifier,
-        client_id: oidcUser.client_id,
-        client_secret: oidcUser.client_secret,
-        issuer_url: oidcUser.issuer_url,
-        authorization_url: oidcUser.authorization_url,
-        token_url: oidcUser.token_url,
-        identifier_path: oidcUser.identifier_path,
-        name_path: oidcUser.name_path,
+        isOidc: true,
+        oidcIdentifier: oidcUser.oidcIdentifier,
+        clientId: oidcUser.clientId,
+        clientSecret: oidcUser.clientSecret,
+        issuerUrl: oidcUser.issuerUrl,
+        authorizationUrl: oidcUser.authorizationUrl,
+        tokenUrl: oidcUser.tokenUrl,
+        identifierPath: oidcUser.identifierPath,
+        namePath: oidcUser.namePath,
         scopes: oidcUser.scopes || "openid email profile",
       })
       .where(eq(users.id, targetUser.id));
@@ -3839,15 +3839,15 @@ router.post("/link-oidc-to-password", authenticateJWT, async (req, res) => {
       await db
         .update(users)
         .set({
-          is_oidc: false,
-          oidc_identifier: null,
-          client_id: "",
-          client_secret: "",
-          issuer_url: "",
-          authorization_url: "",
-          token_url: "",
-          identifier_path: "",
-          name_path: "",
+          isOidc: false,
+          oidcIdentifier: null,
+          clientId: "",
+          clientSecret: "",
+          issuerUrl: "",
+          authorizationUrl: "",
+          tokenUrl: "",
+          identifierPath: "",
+          namePath: "",
           scopes: "openid email profile",
         })
         .where(eq(users.id, targetUser.id));
@@ -3953,7 +3953,7 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
       .from(users)
       .where(eq(users.id, adminUserId));
 
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].is_admin) {
+    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
       authLogger.warn("Non-admin attempted to unlink OIDC from password", {
         operation: "unlink_oidc_unauthorized",
         adminUserId,
@@ -3977,13 +3977,13 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
 
     const targetUser = targetUserRecords[0];
 
-    if (!targetUser.is_oidc) {
+    if (!targetUser.isOidc) {
       return res.status(400).json({
         error: "User does not have OIDC authentication enabled",
       });
     }
 
-    if (!targetUser.password_hash || targetUser.password_hash === "") {
+    if (!targetUser.passwordHash || targetUser.passwordHash === "") {
       return res.status(400).json({
         error:
           "Cannot unlink OIDC from a user without password authentication. This would leave the user unable to login.",
@@ -4000,15 +4000,15 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({
-        is_oidc: false,
-        oidc_identifier: null,
-        client_id: "",
-        client_secret: "",
-        issuer_url: "",
-        authorization_url: "",
-        token_url: "",
-        identifier_path: "",
-        name_path: "",
+        isOidc: false,
+        oidcIdentifier: null,
+        clientId: "",
+        clientSecret: "",
+        issuerUrl: "",
+        authorizationUrl: "",
+        tokenUrl: "",
+        identifierPath: "",
+        namePath: "",
         scopes: "openid email profile",
       })
       .where(eq(users.id, targetUser.id));

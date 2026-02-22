@@ -606,7 +606,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isOidcUser = !!user[0].is_oidc;
+    const isOidcUser = !!user[0].isOidc;
 
     if (!isOidcUser) {
       if (!password) {
@@ -824,20 +824,20 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userRecord.id,
         userRecord.username,
         "[EXPORTED_USER_NO_PASSWORD]",
-        userRecord.is_admin ? 1 : 0,
-        userRecord.is_oidc ? 1 : 0,
-        userRecord.oidc_identifier || null,
-        userRecord.client_id || null,
-        userRecord.client_secret || null,
-        userRecord.issuer_url || null,
-        userRecord.authorization_url || null,
-        userRecord.token_url || null,
-        userRecord.identifier_path || null,
-        userRecord.name_path || null,
+        userRecord.isAdmin ? 1 : 0,
+        userRecord.isOidc ? 1 : 0,
+        userRecord.oidcIdentifier || null,
+        userRecord.clientId || null,
+        userRecord.clientSecret || null,
+        userRecord.issuerUrl || null,
+        userRecord.authorizationUrl || null,
+        userRecord.tokenUrl || null,
+        userRecord.identifierPath || null,
+        userRecord.namePath || null,
         userRecord.scopes || null,
-        userRecord.totp_secret || null,
-        userRecord.totp_enabled ? 1 : 0,
-        userRecord.totp_backup_codes || null,
+        userRecord.totpSecret || null,
+        userRecord.totpEnabled ? 1 : 0,
+        userRecord.totpBackupCodes || null,
       );
 
       const sshHosts = await getDb()
@@ -870,7 +870,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.forceKeyboardInteractive || null,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.key_password || null,
+          decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.sudoPassword || null,
           decrypted.autostartPassword || null,
@@ -932,9 +932,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.username,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.private_key || null,
-          decrypted.public_key || null,
-          decrypted.key_password || null,
+          decrypted.privateKey || null,
+          decrypted.publicKey || null,
+          decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.detectedKeyType || null,
           decrypted.usageCount || 0,
@@ -1154,7 +1154,7 @@ app.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isOidcUser = !!userRecords[0].is_oidc;
+      const isOidcUser = !!userRecords[0].isOidc;
 
       if (!isOidcUser) {
         if (!password) {
@@ -1525,7 +1525,7 @@ app.post(
           .select()
           .from(users)
           .where(eq(users.id, userId));
-        if (targetUser.length > 0 && targetUser[0].is_admin) {
+        if (targetUser.length > 0 && targetUser[0].isAdmin) {
           try {
             const importedSettings = importDb
               .prepare("SELECT * FROM settings")

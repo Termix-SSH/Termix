@@ -126,11 +126,10 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key:
-            (credential.private_key || credential.privateKey || credential.key) as string | undefined,
-          keyPassword: (credential.key_password || credential.keyPassword) as string | undefined,
-          keyType: (credential.key_type || credential.keyType) as string | undefined,
-          authType: (credential.auth_type || credential.authType) as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
+          keyType: credential.keyType as string | undefined,
+          authType: credential.authType as string | undefined,
         } as JumpHostConfig;
       }
     }
@@ -890,18 +889,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
           resolvedCredentials = {
             username: (credential.username as string | undefined) || username,
             password: credential.password as string | undefined,
-            key: (credential.private_key ||
-              credential.privateKey ||
-              credential.key) as string | undefined,
-            keyPassword: (credential.key_password || credential.keyPassword) as
-              | string
-              | undefined,
-            keyType: (credential.key_type || credential.keyType) as
-              | string
-              | undefined,
-            authType: (credential.auth_type || credential.authType) as
-              | string
-              | undefined,
+            key: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
+            keyType: credential.keyType as string | undefined,
+            authType: credential.authType as string | undefined,
           };
         } else {
           sshLogger.warn(`No credentials found for host ${id}`, {

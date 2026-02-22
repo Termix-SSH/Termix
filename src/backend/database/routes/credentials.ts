@@ -434,14 +434,14 @@ router.get(
       if (credential.key) {
         output.key = credential.key;
       }
-      if (credential.private_key) {
-        output.privateKey = credential.private_key;
+      if (credential.privateKey) {
+        output.privateKey = credential.privateKey;
       }
-      if (credential.public_key) {
-        output.publicKey = credential.public_key;
+      if (credential.publicKey) {
+        output.publicKey = credential.publicKey;
       }
-      if (credential.key_password) {
-        output.keyPassword = credential.key_password;
+      if (credential.keyPassword) {
+        output.keyPassword = credential.keyPassword;
       }
 
       res.json(output);
@@ -564,13 +564,13 @@ router.put(
               error: `Invalid SSH key: ${keyInfo.error}`,
             });
           }
-          updateFields.private_key = keyInfo.privateKey;
-          updateFields.public_key = keyInfo.publicKey;
+          updateFields.privateKey = keyInfo.privateKey;
+          updateFields.publicKey = keyInfo.publicKey;
           updateFields.detectedKeyType = keyInfo.keyType;
         }
       }
       if (updateData.keyPassword !== undefined) {
-        updateFields.key_password = updateData.keyPassword || null;
+        updateFields.keyPassword = updateData.keyPassword || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -841,7 +841,7 @@ router.post(
         .set({
           credentialId: parseInt(credentialId),
           username: (credential.username as string) || "",
-          authType: (credential.auth_type || credential.authType) as string,
+          authType: credential.authType as string,
           password: null,
           key: null,
           key_password: null,
@@ -954,15 +954,15 @@ function formatCredentialOutput(
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
-    authType: credential.authType || credential.auth_type,
+    authType: credential.authType,
     username: credential.username || null,
-    publicKey: credential.public_key || credential.publicKey,
-    keyType: credential.key_type || credential.keyType,
-    detectedKeyType: credential.detected_key_type || credential.detectedKeyType,
-    usageCount: credential.usage_count || credential.usageCount || 0,
-    lastUsed: credential.last_used || credential.lastUsed,
-    createdAt: credential.created_at || credential.createdAt,
-    updatedAt: credential.updated_at || credential.updatedAt,
+    publicKey: credential.publicKey,
+    keyType: credential.keyType,
+    detectedKeyType: credential.detectedKeyType,
+    usageCount: credential.usageCount || 0,
+    lastUsed: credential.lastUsed,
+    createdAt: credential.createdAt,
+    updatedAt: credential.updatedAt,
   };
 }
 
@@ -1508,7 +1508,7 @@ async function deploySSHKeyToHost(
   hostConfig: Record<string, unknown>,
   credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  const publicKey = credData.public_key as string;
+  const publicKey = credData.publicKey as string;
   return new Promise((resolve) => {
     const conn = new Client();
 
@@ -1934,7 +1934,7 @@ router.post(
         });
       }
 
-      const publicKey = credData.public_key;
+      const publicKey = credData.publicKey;
       if (!publicKey) {
         return res.status(400).json({
           success: false,
@@ -1990,15 +1990,14 @@ router.post(
           if (hostCredential && hostCredential.length > 0) {
             const cred = hostCredential[0];
 
-            hostConfig.authType = cred.auth_type || cred.authType;
+            hostConfig.authType = cred.authType;
             hostConfig.username = cred.username;
 
-            if ((cred.auth_type || cred.authType) === "password") {
+            if (cred.authType === "password") {
               hostConfig.password = cred.password;
-            } else if ((cred.auth_type || cred.authType) === "key") {
-              hostConfig.privateKey =
-                cred.private_key || cred.privateKey || cred.key;
-              hostConfig.keyPassword = cred.key_password || cred.keyPassword;
+            } else if (cred.authType === "key") {
+              hostConfig.privateKey = cred.privateKey || cred.key;
+              hostConfig.keyPassword = cred.keyPassword;
             }
           } else {
             return res.status(400).json({

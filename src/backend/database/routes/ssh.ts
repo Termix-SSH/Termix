@@ -251,7 +251,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         username: host.username,
         password: host.autostartPassword || host.password,
         key: host.autostartKey || host.key,
-        keyPassword: host.autostartKeyPassword || host.key_password,
+        keyPassword: host.autostartKeyPassword || host.keyPassword,
         autostartPassword: host.autostartPassword,
         autostartKey: host.autostartKey,
         autostartKeyPassword: host.autostartKeyPassword,
@@ -444,7 +444,7 @@ router.post(
     if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
@@ -481,13 +481,13 @@ router.post(
       }
 
       sshDataObj.key = key || null;
-      sshDataObj.key_password = keyPassword || null;
+      sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
 
@@ -682,16 +682,10 @@ router.post(
         const cred = credentials[0];
 
         resolvedPassword = cred.password as string | undefined;
-        resolvedKey = (cred.private_key || cred.privateKey || cred.key) as
-          | string
-          | undefined;
-        resolvedKeyPassword = (cred.key_password || cred.keyPassword) as
-          | string
-          | undefined;
-        resolvedKeyType = (cred.key_type || cred.keyType) as string | undefined;
-        resolvedAuthType = (cred.auth_type || cred.authType) as
-          | string
-          | undefined;
+        resolvedKey = cred.privateKey as string | undefined;
+        resolvedKeyPassword = cred.keyPassword as string | undefined;
+        resolvedKeyType = cred.keyType as string | undefined;
+        resolvedAuthType = cred.authType as string | undefined;
 
         if (!overrideCredentialUsername) {
           resolvedUsername = cred.username as string;
@@ -929,7 +923,7 @@ router.put(
         sshDataObj.password = password;
       }
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
@@ -969,7 +963,7 @@ router.put(
         sshDataObj.key = key;
       }
       if (keyPassword !== undefined) {
-        sshDataObj.key_password = keyPassword || null;
+        sshDataObj.keyPassword = keyPassword || null;
       }
       if (keyType) {
         sshDataObj.keyType = keyType;
@@ -978,7 +972,7 @@ router.put(
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
-      sshDataObj.key_password = null;
+      sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
 
@@ -1188,7 +1182,7 @@ router.get(
           authType: sshData.authType,
           password: sshData.password,
           key: sshData.key,
-          keyPassword: sshData.key_password,
+          keyPassword: sshData.keyPassword,
           keyType: sshData.keyType,
           enableTerminal: sshData.enableTerminal,
           enableTunnel: sshData.enableTunnel,
@@ -1446,7 +1440,7 @@ router.get(
         authType: resolvedHost.authType,
         password: resolvedHost.password || null,
         key: resolvedHost.key || null,
-        keyPassword: resolvedHost.key_password || null,
+        keyPassword: resolvedHost.keyPassword || null,
         keyType: resolvedHost.keyType || null,
         folder: resolvedHost.folder,
         tags:
@@ -2415,8 +2409,8 @@ async function resolveHostCredentials(
           ...host,
           password: credential.password,
           key: credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
+          keyPassword: credential.keyPassword,
+          keyType: credential.keyType,
         };
 
         if (!host.overrideCredentialUsername) {
@@ -2427,14 +2421,7 @@ async function resolveHostCredentials(
       }
     }
 
-    const result = { ...host };
-    if (host.key_password !== undefined) {
-      if (result.keyPassword === undefined) {
-        result.keyPassword = host.key_password;
-      }
-      delete result.key_password;
-    }
-    return result;
+    return { ...host };
   } catch (error) {
     sshLogger.warn(
       `Failed to resolve credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -2844,6 +2831,127 @@ router.delete(
  *       400:
  *         description: Invalid request body.
  */
+
+/**
+ * @swagger
+ * /ssh/bulk-update:
+ *   patch:
+ *     summary: Bulk update partial fields on multiple SSH hosts
+ *     tags: [SSH]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostIds:
+ *                 type: array
+ *                 items:
+ *                   type: number
+ *               updates:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Bulk update completed.
+ *       400:
+ *         description: Invalid request body.
+ */
+router.patch(
+  "/bulk-update",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { hostIds, updates } = req.body;
+
+    if (!Array.isArray(hostIds) || hostIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "hostIds array is required and must not be empty" });
+    }
+
+    if (hostIds.length > 1000) {
+      return res
+        .status(400)
+        .json({ error: "Maximum 1000 hosts allowed per bulk update" });
+    }
+
+    if (!updates || typeof updates !== "object" || Object.keys(updates).length === 0) {
+      return res
+        .status(400)
+        .json({ error: "updates object is required and must contain at least one field" });
+    }
+
+    try {
+      // Ownership check: only update hosts belonging to this user
+      const ownedHosts = await db
+        .select({ id: sshData.id, statsConfig: sshData.statsConfig })
+        .from(sshData)
+        .where(and(inArray(sshData.id, hostIds), eq(sshData.userId, userId)));
+
+      const ownedIds = ownedHosts.map((h) => h.id);
+      const unauthorizedIds = hostIds.filter((id: number) => !ownedIds.includes(id));
+
+      if (ownedIds.length === 0) {
+        return res.status(404).json({ error: "No matching hosts found" });
+      }
+
+      const errors: string[] = [];
+      if (unauthorizedIds.length > 0) {
+        errors.push(`${unauthorizedIds.length} host(s) not found or not owned`);
+      }
+
+      // Build simple field updates
+      const simpleUpdates: Record<string, unknown> = {};
+      if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
+      if (typeof updates.folder === "string") simpleUpdates.folder = updates.folder || null;
+      if (typeof updates.enableTerminal === "boolean") simpleUpdates.enableTerminal = updates.enableTerminal;
+      if (typeof updates.enableTunnel === "boolean") simpleUpdates.enableTunnel = updates.enableTunnel;
+      if (typeof updates.enableFileManager === "boolean") simpleUpdates.enableFileManager = updates.enableFileManager;
+      if (typeof updates.enableDocker === "boolean") simpleUpdates.enableDocker = updates.enableDocker;
+
+      // Apply simple field updates in one query
+      if (Object.keys(simpleUpdates).length > 0) {
+        await db
+          .update(sshData)
+          .set(simpleUpdates)
+          .where(and(inArray(sshData.id, ownedIds), eq(sshData.userId, userId)));
+      }
+
+      // Handle statsConfig merge per-host (stored as JSON string)
+      if (updates.statsConfig && typeof updates.statsConfig === "object") {
+        for (const host of ownedHosts) {
+          try {
+            const existing = host.statsConfig
+              ? JSON.parse(host.statsConfig as string)
+              : {};
+            const merged = { ...existing, ...updates.statsConfig };
+            await db
+              .update(sshData)
+              .set({ statsConfig: JSON.stringify(merged) })
+              .where(and(eq(sshData.id, host.id), eq(sshData.userId, userId)));
+          } catch (e) {
+            errors.push(`Failed to update statsConfig for host ${host.id}`);
+          }
+        }
+      }
+
+      DatabaseSaveTrigger.triggerSave("bulk_update");
+
+      return res.json({
+        updated: ownedIds.length,
+        failed: unauthorizedIds.length,
+        errors,
+      });
+    } catch (error) {
+      sshLogger.error("Failed to bulk update hosts:", error);
+      return res.status(500).json({ error: "Failed to bulk update hosts" });
+    }
+  },
+);
+
 router.post(
   "/bulk-import",
   authenticateJWT,
@@ -2960,7 +3068,7 @@ router.post(
           key: hostData.authType === "key" ? hostData.key : null,
           keyPassword:
             hostData.authType === "key"
-              ? hostData.keyPassword || hostData.key_password || null
+              ? hostData.keyPassword || null
               : null,
           keyType:
             hostData.authType === "key" ? hostData.keyType || "auto" : null,
@@ -3165,7 +3273,7 @@ router.post(
                     ...tunnel,
                     endpointPassword: decryptedEndpoint.password || null,
                     endpointKey: decryptedEndpoint.key || null,
-                    endpointKeyPassword: decryptedEndpoint.key_password || null,
+                    endpointKeyPassword: decryptedEndpoint.keyPassword || null,
                     endpointAuthType: endpointHost.authType,
                   };
                 }
@@ -3188,7 +3296,7 @@ router.post(
         .set({
           autostartPassword: decryptedConfig.password || null,
           autostartKey: decryptedConfig.key || null,
-          autostartKeyPassword: decryptedConfig.key_password || null,
+          autostartKeyPassword: decryptedConfig.keyPassword || null,
           tunnelConnections: updatedTunnelConnections,
         })
         .where(eq(sshData.id, sshConfigId));
