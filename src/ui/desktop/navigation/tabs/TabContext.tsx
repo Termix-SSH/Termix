@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useState,
+  useEffect,
   useRef,
   type ReactNode,
 } from "react";
@@ -47,14 +48,72 @@ interface TabProviderProps {
   children: ReactNode;
 }
 
+export function clearTermixSessionStorage() {
+  localStorage.removeItem("termix_tabs");
+  localStorage.removeItem("termix_currentTab");
+  // Clear all session keys
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith("termix_session_")) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+}
+
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>(() => [
-    { id: 1, type: "home", title: "Home" },
-  ]);
-  const [currentTab, setCurrentTab] = useState<number>(1);
+  const [tabs, setTabs] = useState<Tab[]>(() => {
+    try {
+      const saved = localStorage.getItem("termix_tabs");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Tab[];
+        const restored: Tab[] = [{ id: 1, type: "home", title: "Home" }];
+        let maxId = 1;
+        for (const tab of parsed) {
+          if (tab.type === "home") continue;
+          const restoredTab: Tab = {
+            ...tab,
+            terminalRef: tab.type === "terminal"
+              ? React.createRef<{ disconnect?: () => void }>()
+              : undefined,
+          };
+          restored.push(restoredTab);
+          if (tab.id > maxId) maxId = tab.id;
+        }
+        if (restored.length > 1) return restored;
+      }
+    } catch { /* ignore corrupt data */ }
+    return [{ id: 1, type: "home", title: "Home" }];
+  });
+  const [currentTab, setCurrentTab] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("termix_currentTab");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        // Validate against restored tabs
+        if (parsed && tabs.some(t => t.id === parsed)) return parsed;
+      }
+    } catch { /* ignore */ }
+    return 1;
+  });
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
-  const nextTabId = useRef(2);
+  const [initialMaxId] = useState(() => {
+    let maxId = 1;
+    tabs.forEach(tab => { if (tab.id > maxId) maxId = tab.id; });
+    return maxId + 1;
+  });
+  const nextTabId = useRef(initialMaxId);
+
+  // Save tabs to localStorage on change
+  useEffect(() => {
+    const serializable = tabs
+      .filter(t => t.type !== "home")
+      .map(({ terminalRef, ...rest }) => rest);
+    localStorage.setItem("termix_tabs", JSON.stringify(serializable));
+    localStorage.setItem("termix_currentTab", String(currentTab));
+  }, [tabs, currentTab]);
 
   React.useEffect(() => {
     setTabs((prev) =>
