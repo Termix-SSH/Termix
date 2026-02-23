@@ -1404,6 +1404,30 @@ app.post("/docker/ssh/connect", async (req, res) => {
             client.connect(config);
         },
       );
+      } catch (jumpError) {
+        sshLogger.error("Jump host chain connection failed", jumpError, {
+          operation: "docker_jump_chain",
+          sessionId,
+          hostId,
+        });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            `Jump host chain failed: ${jumpError instanceof Error ? jumpError.message : "Unknown error"}`,
+          ),
+        );
+        if (!responseSent) {
+          responseSent = true;
+          return res.status(500).json({
+            error:
+              "Jump host chain failed: " +
+              (jumpError instanceof Error ? jumpError.message : "Unknown error"),
+            connectionLogs,
+          });
+        }
+        return;
+      }
     } else if (proxyConfig) {
       connectionLogs.push(
         createConnectionLog("info", "proxy", "Connecting via proxy"),
