@@ -521,6 +521,7 @@ function isDev(): boolean {
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let configuredServerUrl: string | null = null;
+let embeddedMode = false;
 
 export interface ServerConfig {
   serverUrl: string;
@@ -665,11 +666,39 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
+export async function getEmbeddedServerStatus(): Promise<{
+  running: boolean;
+  embedded: boolean;
+  dataDir: string | null;
+} | null> {
+  if (!isElectron()) return null;
+
+  try {
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: { invoke: (channel: string, ...args: unknown[]) => Promise<unknown> };
+        }
+    ).electronAPI?.invoke("get-embedded-server-status");
+    return result as { running: boolean; embedded: boolean; dataDir: string | null } | null;
+  } catch {
+    return null;
+  }
+}
+
+export function isEmbeddedMode(): boolean {
+  return embeddedMode;
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
 
   if (electronMode) {
+    if (embeddedMode && !configuredServerUrl) {
+      return `http://localhost:${defaultPort}${path}`;
+    }
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
       const url = `${baseUrl}${path}`;
@@ -742,8 +771,11 @@ export let dockerApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
-    getServerConfig()
-      .then((config) => {
+    Promise.all([getServerConfig(), getEmbeddedServerStatus()])
+      .then(([config, status]) => {
+        if (status?.embedded && status?.running) {
+          embeddedMode = true;
+        }
         if (config?.serverUrl) {
           configuredServerUrl = config.serverUrl;
           (
@@ -754,6 +786,8 @@ function initializeApp() {
                 configuredServerUrl?: string;
               }
           ).configuredServerUrl = configuredServerUrl;
+        } else if (embeddedMode) {
+          // Embedded backend running, no remote server needed
         } else {
           console.warn("No server URL in config");
         }

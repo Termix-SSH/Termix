@@ -32,6 +32,8 @@ import {
   verifyTOTPLogin,
   getServerConfig,
   isElectron,
+  getEmbeddedServerStatus,
+  isEmbeddedMode,
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
@@ -748,7 +750,18 @@ export function Auth({
 
       if (isElectron()) {
         try {
-          const config = await getServerConfig();
+          const [config, status] = await Promise.all([
+            getServerConfig(),
+            getEmbeddedServerStatus(),
+          ]);
+
+          if (status?.embedded && status?.running && !config?.serverUrl) {
+            // Embedded backend running, no remote server needed
+            setCurrentServerUrl("");
+            setShowServerConfig(false);
+            return;
+          }
+
           setCurrentServerUrl(config?.serverUrl || "");
           setShowServerConfig(!config || !config.serverUrl);
         } catch {
