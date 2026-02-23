@@ -10,7 +10,7 @@ import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
-import { createSocks5Connection } from "../utils/socks5-helper.js";
+import { createSocks5Connection, type SOCKS5Config } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
@@ -233,6 +233,7 @@ async function resolveJumpHost(
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  socks5Config?: SOCKS5Config | null,
 ): Promise<SSHClient | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -242,17 +243,40 @@ async function createJumpHostChain(
   const clients: SSHClient[] = [];
 
   try {
+    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> = [];
     for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      const config = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      jumpHostConfigs.push(config);
+    }
 
-      if (!jumpHostConfig) {
+    const totalHops = jumpHostConfigs.length;
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         fileLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
+          hopIndex: i,
+          totalHops,
         });
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    // If proxy config provided, create proxy socket to first jump host
+    let proxySocket: import("net").Socket | null = null;
+    if (socks5Config?.useSocks5) {
+      const firstHop = jumpHostConfigs[0]!;
+      proxySocket = await createSocks5Connection(
+        firstHop.ip,
+        firstHop.port || 22,
+        socks5Config,
+      );
+    }
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i]!;
 
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
@@ -278,10 +302,14 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          fileLogger.error(`Jump host ${i + 1} connection failed`, err, {
+          fileLogger.error(`Jump host ${i + 1}/${totalHops} connection failed`, err, {
             operation: "jump_host_connect",
             hostId: jumpHostConfig.id,
             ip: jumpHostConfig.ip,
+            hopIndex: i,
+            totalHops,
+            previousHop: i > 0 ? jumpHostConfigs[i - 1]?.ip : (proxySocket ? "proxy" : "direct"),
+            usedProxySocket: i === 0 && !!proxySocket,
           });
           resolve(false);
         });
@@ -324,6 +352,9 @@ async function createJumpHostChain(
               jumpClient.connect(connectConfig);
             },
           );
+        } else if (proxySocket) {
+          connectConfig.sock = proxySocket;
+          jumpClient.connect(connectConfig);
         } else {
           jumpClient.connect(connectConfig);
         }
@@ -1528,76 +1559,28 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     },
   );
 
-  if (
-    useSocks5 &&
-    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
-  ) {
-    connectionLogs.push(
-      createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy", {
-        proxyHost: socks5Host,
-        proxyPort: socks5Port || 1080,
-      }),
-    );
-    try {
-      const socks5Socket = await createSocks5Connection(ip, port, {
+  // Unified proxy + jump host pipeline
+  const proxyConfig: SOCKS5Config | null = (useSocks5 &&
+    (socks5Host || (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0)))
+    ? {
         useSocks5,
         socks5Host,
         socks5Port,
         socks5Username,
         socks5Password,
         socks5ProxyChain: socks5ProxyChain as ProxyNode[],
-      });
+      }
+    : null;
 
-      if (socks5Socket) {
+  const hasJumpHosts = jumpHosts && jumpHosts.length > 0 && userId;
+
+  if (hasJumpHosts) {
+    try {
+      if (proxyConfig) {
         connectionLogs.push(
-          createConnectionLog(
-            "success",
-            "proxy",
-            "SOCKS5 proxy connected successfully",
-          ),
-        );
-        config.sock = socks5Socket;
-        client.connect(config);
-        return;
-      } else {
-        fileLogger.error("SOCKS5 socket is null for SFTP", undefined, {
-          operation: "sftp_socks5_socket_null",
-          sessionId,
-        });
-        connectionLogs.push(
-          createConnectionLog(
-            "error",
-            "proxy",
-            "SOCKS5 socket creation returned null",
-          ),
+          createConnectionLog("info", "proxy", "Connecting via proxy + jump hosts"),
         );
       }
-    } catch (socks5Error) {
-      fileLogger.error("SOCKS5 connection failed", socks5Error, {
-        operation: "socks5_connect",
-        sessionId,
-        hostId,
-        proxyHost: socks5Host,
-        proxyPort: socks5Port || 1080,
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "proxy",
-          `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
-        ),
-      );
-      return res.status(500).json({
-        error:
-          "SOCKS5 proxy connection failed: " +
-          (socks5Error instanceof Error
-            ? socks5Error.message
-            : "Unknown error"),
-        connectionLogs,
-      });
-    }
-  } else if (jumpHosts && jumpHosts.length > 0 && userId) {
-    try {
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -1605,7 +1588,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           `Connecting via ${jumpHosts.length} jump host(s)`,
         ),
       );
-      const jumpClient = await createJumpHostChain(jumpHosts, userId);
+      const jumpClient = await createJumpHostChain(jumpHosts, userId, proxyConfig);
 
       if (!jumpClient) {
         fileLogger.error("Failed to establish jump host chain", {
@@ -1667,6 +1650,44 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
       return res.status(500).json({
         error: "Failed to connect through jump hosts",
+        connectionLogs,
+      });
+    }
+  } else if (proxyConfig) {
+    connectionLogs.push(
+      createConnectionLog("info", "proxy", "Connecting via proxy", {
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      }),
+    );
+    try {
+      const proxySocket = await createSocks5Connection(ip, port, proxyConfig);
+      if (proxySocket) {
+        connectionLogs.push(
+          createConnectionLog("success", "proxy", "Proxy connected successfully"),
+        );
+        config.sock = proxySocket;
+      }
+      client.connect(config);
+    } catch (proxyError) {
+      fileLogger.error("Proxy connection failed", proxyError, {
+        operation: "proxy_connect",
+        sessionId,
+        hostId,
+        proxyHost: socks5Host,
+        proxyPort: socks5Port || 1080,
+      });
+      connectionLogs.push(
+        createConnectionLog(
+          "error",
+          "proxy",
+          `Proxy connection failed: ${proxyError instanceof Error ? proxyError.message : "Unknown error"}`,
+        ),
+      );
+      return res.status(500).json({
+        error:
+          "Proxy connection failed: " +
+          (proxyError instanceof Error ? proxyError.message : "Unknown error"),
         connectionLogs,
       });
     }

@@ -22,7 +22,7 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
-import { createSocks5Connection } from "../utils/socks5-helper.js";
+import { createSocks5Connection, type SOCKS5Config } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import {
   connectionPool,
@@ -119,6 +119,7 @@ async function resolveJumpHost(
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  socks5Config?: SOCKS5Config | null,
 ): Promise<Client | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -128,17 +129,40 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
+    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> = [];
     for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      const config = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      jumpHostConfigs.push(config);
+    }
 
-      if (!jumpHostConfig) {
+    const totalHops = jumpHostConfigs.length;
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         statsLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
+          hopIndex: i,
+          totalHops,
         });
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    // If proxy config provided, create proxy socket to first jump host
+    let proxySocket: import("net").Socket | null = null;
+    if (socks5Config?.useSocks5) {
+      const firstHop = jumpHostConfigs[0]!;
+      proxySocket = await createSocks5Connection(
+        firstHop.ip,
+        firstHop.port || 22,
+        socks5Config,
+      );
+    }
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i]!;
 
       const jumpClient = new Client();
       clients.push(jumpClient);
@@ -164,10 +188,14 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          statsLogger.error(`Jump host ${i + 1} connection failed`, err, {
+          statsLogger.error(`Jump host ${i + 1}/${totalHops} connection failed`, err, {
             operation: "jump_host_connect",
             hostId: jumpHostConfig.id,
             ip: jumpHostConfig.ip,
+            hopIndex: i,
+            totalHops,
+            previousHop: i > 0 ? jumpHostConfigs[i - 1]?.ip : (proxySocket ? "proxy" : "direct"),
+            usedProxySocket: i === 0 && !!proxySocket,
           });
           resolve(false);
         });
@@ -210,6 +238,9 @@ async function createJumpHostChain(
               jumpClient.connect(connectConfig);
             },
           );
+        } else if (proxySocket) {
+          connectConfig.sock = proxySocket;
+          jumpClient.connect(connectConfig);
         } else {
           jumpClient.connect(connectConfig);
         }
@@ -1477,51 +1508,50 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     const config = await buildSshConfig(host);
     const client = new Client();
 
-    let socks5Socket: import("net").Socket | null = null;
-    if (
-      host.useSocks5 &&
+    // Unified proxy + jump host pipeline
+    const proxyConfig: SOCKS5Config | null = (host.useSocks5 &&
       (host.socks5Host ||
-        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-    ) {
-      try {
-        socks5Socket = await createSocks5Connection(
-          host.ip,
-          host.port,
-          {
-            useSocks5: host.useSocks5,
-            socks5Host: host.socks5Host,
-            socks5Port: host.socks5Port,
-            socks5Username: host.socks5Username,
-            socks5Password: host.socks5Password,
-            socks5ProxyChain: host.socks5ProxyChain,
-          },
-        );
-
-        if (!socks5Socket) {
-          statsLogger.error("SOCKS5 socket is null", undefined, {
-            operation: "socks5_socket_null",
-            hostIp: host.ip,
-          });
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0)))
+      ? {
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
         }
-      } catch (socks5Error) {
-        throw new Error(
-          "SOCKS5 proxy connection failed: " +
-            (socks5Error instanceof Error
-              ? socks5Error.message
-              : "Unknown error"),
-        );
-      }
-    }
+      : null;
+
+    const hasJumpHosts = host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
 
     let jumpClient: Client | null = null;
-    if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+    if (hasJumpHosts) {
       jumpClient = await createJumpHostChain(
-        host.jumpHosts,
-        host.userId,
+        host.jumpHosts!,
+        host.userId!,
+        proxyConfig,
       );
 
       if (!jumpClient) {
         throw new Error("Failed to establish jump host chain");
+      }
+    } else if (proxyConfig) {
+      try {
+        const proxySocket = await createSocks5Connection(
+          host.ip,
+          host.port,
+          proxyConfig,
+        );
+        if (proxySocket) {
+          config.sock = proxySocket;
+        }
+      } catch (proxyError) {
+        throw new Error(
+          "Proxy connection failed: " +
+            (proxyError instanceof Error
+              ? proxyError.message
+              : "Unknown error"),
+        );
       }
     }
 
@@ -1591,10 +1621,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         },
       );
 
-      if (socks5Socket) {
-        config.sock = socks5Socket;
-        client.connect(config);
-      } else if (jumpClient) {
+      if (jumpClient) {
         jumpClient.forwardOut(
           "127.0.0.1",
           0,

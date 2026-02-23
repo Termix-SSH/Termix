@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Controller } from "react-hook-form";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -37,9 +37,11 @@ import { Separator } from "@/components/ui/separator.tsx";
 import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
-import { Plus, X, Upload, AlertCircle } from "lucide-react";
+import { Plus, X, Upload, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import type { HostGeneralTabProps } from "./shared/tab-types";
 import { JumpHostItem } from "./shared/JumpHostItem";
+import { testProxyConnection } from "@/ui/main-axios";
+import { toast } from "sonner";
 
 export function HostGeneralTab({
   form,
@@ -70,6 +72,88 @@ export function HostGeneralTab({
   credentials,
   t,
 }: HostGeneralTabProps) {
+  const [proxyTesting, setProxyTesting] = useState(false);
+
+  const handleTestProxy = async () => {
+    setProxyTesting(true);
+    try {
+      const chain = form.watch("socks5ProxyChain") || [];
+      const host = form.watch("socks5Host");
+      const port = form.watch("socks5Port");
+
+      let result;
+      if (proxyMode === "chain" && chain.length > 0) {
+        result = await testProxyConnection({ proxyChain: chain });
+      } else if (host) {
+        result = await testProxyConnection({
+          singleProxy: {
+            host,
+            port: port || 1080,
+            type: 5,
+            username: form.watch("socks5Username") || undefined,
+            password: form.watch("socks5Password") || undefined,
+          },
+        });
+      } else {
+        toast.error(t("hosts.proxyTestFailed", { error: "No proxy configured" }));
+        setProxyTesting(false);
+        return;
+      }
+
+      if (result.success) {
+        toast.success(t("hosts.proxyTestSuccess", { latency: result.latencyMs ?? 0 }));
+      } else {
+        toast.error(t("hosts.proxyTestFailed", { error: result.error || "Unknown error" }));
+      }
+    } catch (err) {
+      toast.error(t("hosts.proxyTestFailed", { error: err instanceof Error ? err.message : "Unknown error" }));
+    } finally {
+      setProxyTesting(false);
+    }
+  };
+
+  // Build connection path for visualization
+  const buildConnectionPath = () => {
+    const parts: string[] = [t("hosts.connectionPath") === "Connection Path" ? "You" : "You"];
+    const useSocks5 = form.watch("useSocks5");
+    const jumpHosts = form.watch("jumpHosts") || [];
+
+    if (useSocks5) {
+      if (proxyMode === "chain") {
+        const chain = form.watch("socks5ProxyChain") || [];
+        chain.forEach((node: any, i: number) => {
+          if (node.host) {
+            const typeLabel = node.type === "http" ? "HTTP" : `SOCKS${node.type}`;
+            parts.push(`${typeLabel} ${node.host}:${node.port}`);
+          }
+        });
+      } else {
+        const host = form.watch("socks5Host");
+        const port = form.watch("socks5Port") || 1080;
+        if (host) {
+          parts.push(`SOCKS5 ${host}:${port}`);
+        }
+      }
+    }
+
+    if (jumpHosts.length > 0 && hosts) {
+      jumpHosts.forEach((jh: any) => {
+        const found = hosts.find((h: any) => h.id === jh.hostId);
+        if (found) {
+          parts.push(`Jump: ${found.name || found.ip}`);
+        }
+      });
+    }
+
+    const ip = form.watch("ip");
+    const port = form.watch("port");
+    if (ip) {
+      parts.push(`${ip}:${port || 22}`);
+    }
+
+    return parts;
+  };
+
   return (
     <div className="pt-2">
       <FormLabel className="mb-3 font-bold">
@@ -1029,7 +1113,7 @@ export function HostGeneralTab({
                             {
                               host: "",
                               port: 1080,
-                              type: 5 as 4 | 5,
+                              type: 5 as 4 | 5 | "http",
                               username: "",
                               password: "",
                             },
@@ -1135,7 +1219,7 @@ export function HostGeneralTab({
                                 const newChain = [...currentChain];
                                 newChain[index] = {
                                   ...newChain[index],
-                                  type: parseInt(value) as 4 | 5,
+                                  type: value === "http" ? "http" as const : (parseInt(value) as 4 | 5),
                                 };
                                 form.setValue("socks5ProxyChain", newChain);
                               }}
@@ -1149,6 +1233,9 @@ export function HostGeneralTab({
                                 </SelectItem>
                                 <SelectItem value="5">
                                   {t("hosts.socks5")}
+                                </SelectItem>
+                                <SelectItem value="http">
+                                  {t("hosts.httpConnect")}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -1212,6 +1299,54 @@ export function HostGeneralTab({
                     )}
                   </div>
                 )}
+
+                <Separator className="my-2" />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={proxyTesting}
+                  onClick={handleTestProxy}
+                >
+                  {proxyTesting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t("hosts.testingProxy")}
+                    </>
+                  ) : (
+                    t("hosts.testProxy")
+                  )}
+                </Button>
+
+                {(() => {
+                  const path = buildConnectionPath();
+                  if (path.length <= 2) return null;
+                  return (
+                    <div className="mt-3 p-3 border rounded-lg bg-muted/30">
+                      <FormLabel className="text-xs text-muted-foreground mb-2 block">
+                        {t("hosts.connectionPath")}
+                      </FormLabel>
+                      <div className="flex items-center flex-wrap gap-1 text-xs">
+                        {path.map((part, i) => (
+                          <React.Fragment key={i}>
+                            {i > 0 && (
+                              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                            <span className={cn(
+                              "px-2 py-0.5 rounded",
+                              i === 0 ? "bg-primary/10 text-primary" :
+                              i === path.length - 1 ? "bg-green-500/10 text-green-600 dark:text-green-400" :
+                              "bg-muted text-muted-foreground"
+                            )}>
+                              {part}
+                            </span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </AccordionContent>
