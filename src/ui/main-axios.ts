@@ -691,6 +691,14 @@ export function isEmbeddedMode(): boolean {
   return embeddedMode;
 }
 
+export function setEmbeddedMode(value: boolean): void {
+  embeddedMode = value;
+  if (value) {
+    configuredServerUrl = null;
+    initializeApiInstances();
+  }
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
