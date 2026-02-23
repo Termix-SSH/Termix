@@ -999,11 +999,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1078,11 +1075,8 @@ export async function updateSSHHost(
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
