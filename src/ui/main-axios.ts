@@ -14,6 +14,7 @@ import type {
   DockerStats,
   DockerLogOptions,
   DockerValidation,
+  ProxyNode,
 } from "../types/index.js";
 
 // ============================================================================
@@ -1226,6 +1227,32 @@ export async function getAutoStartStatus(): Promise<{
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch autostart status");
+  }
+}
+
+// ============================================================================
+// PROXY CONNECTIVITY TEST
+// ============================================================================
+
+export async function testProxyConnection(options: {
+  singleProxy?: {
+    host: string;
+    port: number;
+    type?: 4 | 5 | "http";
+    username?: string;
+    password?: string;
+  };
+  proxyChain?: ProxyNode[];
+  testTarget?: { host: string; port: number };
+}): Promise<{ success: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const response = await sshHostApi.post("/db/proxy/test", options);
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response?.data?.error) {
+      return { success: false, error: error.response.data.error };
+    }
+    handleApiError(error, "test proxy connection");
   }
 }
 
