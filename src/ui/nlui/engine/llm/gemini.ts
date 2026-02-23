@@ -18,6 +18,7 @@ interface GeminiPart {
   text?: string;
   functionCall?: { name: string; args?: Record<string, unknown> };
   functionResponse?: { name: string; response: Record<string, unknown> };
+  thoughtSignature?: string;
 }
 
 interface GeminiTool {
@@ -138,7 +139,9 @@ export class GeminiClient implements LLMClientInterface {
             for (const tc of m.tool_calls) {
               let args: Record<string, unknown> | undefined;
               try { args = JSON.parse(tc.function.arguments); } catch { /* empty */ }
-              parts.push({ functionCall: { name: tc.function.name, args } });
+              const part: GeminiPart = { functionCall: { name: tc.function.name, args } };
+              if (tc.thoughtSignature) part.thoughtSignature = tc.thoughtSignature;
+              parts.push(part);
             }
           }
           if (parts.length > 0) {
@@ -211,11 +214,13 @@ export class GeminiClient implements LLMClientInterface {
                 ? JSON.stringify(part.functionCall.args)
                 : '{}';
               if (!assembled.tool_calls) assembled.tool_calls = [];
-              assembled.tool_calls.push({
+              const tc: import('../types').ToolCall = {
                 id: `gemini_${tcIndex}`,
                 type: 'function',
                 function: { name: part.functionCall.name, arguments: argsStr },
-              });
+              };
+              if (part.thoughtSignature) tc.thoughtSignature = part.thoughtSignature;
+              assembled.tool_calls.push(tc);
               tcIndex++;
             }
           }
@@ -256,11 +261,13 @@ export class GeminiClient implements LLMClientInterface {
             ? JSON.stringify(part.functionCall.args)
             : '{}';
           if (!assembled.tool_calls) assembled.tool_calls = [];
-          assembled.tool_calls.push({
+          const tc: import('../types').ToolCall = {
             id: `gemini_${i}`,
             type: 'function',
             function: { name: part.functionCall.name, arguments: argsStr },
-          });
+          };
+          if (part.thoughtSignature) tc.thoughtSignature = part.thoughtSignature;
+          assembled.tool_calls.push(tc);
         }
       }
     }

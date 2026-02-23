@@ -41,6 +41,7 @@ export function useAIEngine() {
           targets: [
             {
               name: "termix",
+              baseURL: backendBase,
               spec: `${backendBase}/openapi.json`,
               auth: { type: "bearer" },
               description: "Termix SSH Server Manager API — manages SSH hosts, credentials, tunnels, file operations, Docker containers, and server monitoring.",

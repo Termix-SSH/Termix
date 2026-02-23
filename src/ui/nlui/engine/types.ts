@@ -11,6 +11,8 @@ export interface ToolCall {
   id: string;
   type: 'function';
   function: { name: string; arguments: string };
+  /** Gemini 3+ thought signature — must be echoed back in subsequent requests */
+  thoughtSignature?: string;
 }
 
 export interface Tool {
