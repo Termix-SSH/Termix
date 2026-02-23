@@ -75,12 +75,24 @@ export function AISettingsTab(): React.ReactElement {
     setTesting(true);
     try {
       const base = apiBase.replace(/\/+$/, "");
-      const headers: Record<string, string> = {};
       const testKey = apiKey || "";
-      if (testKey) {
-        headers["Authorization"] = `Bearer ${testKey}`;
+      const isGemini = base.includes("googleapis.com") && !base.includes("/openai");
+
+      let url: string;
+      const headers: Record<string, string> = {};
+
+      if (isGemini) {
+        // Gemini uses ?key= query param authentication
+        url = `${base}/models?key=${testKey}`;
+      } else {
+        // OpenAI-compatible uses Bearer token
+        url = `${base}/models`;
+        if (testKey) {
+          headers["Authorization"] = `Bearer ${testKey}`;
+        }
       }
-      const resp = await fetch(`${base}/models`, { headers });
+
+      const resp = await fetch(url, { headers });
       if (resp.ok) {
         toast.success(t("admin.llmTestSuccess"));
       } else {
