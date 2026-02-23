@@ -42,6 +42,11 @@ interface ConnectToHostData {
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    terminalConfig?: {
+      keepaliveInterval?: number;
+      keepaliveCountMax?: number;
+      [key: string]: unknown;
+    };
   };
   initialPath?: string;
   executeCommand?: string;
@@ -1598,13 +1603,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     );
 
+    const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
+    const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
+
     const connectConfig: Record<string, unknown> = {
       host: ip,
       port,
       username,
       tryKeyboard: true,
-      keepaliveInterval: 30000,
-      keepaliveCountMax: 3,
+      keepaliveInterval: typeof hostKeepaliveInterval === "number" ? hostKeepaliveInterval : 30000,
+      keepaliveCountMax: typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
