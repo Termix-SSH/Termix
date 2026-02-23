@@ -4177,6 +4177,59 @@ export async function getContainerStats(
   }
 }
 
+// ============================================================================
+// LLM Configuration (AI Assistant)
+// ============================================================================
+
+export interface LLMConfigResponse {
+  apiBase: string;
+  apiKeyMasked?: string;
+  model: string;
+  stream: boolean;
+  language: string;
+}
+
+export interface LLMConfigFull {
+  apiBase: string;
+  apiKey: string;
+  model: string;
+  stream: boolean;
+  language: string;
+}
+
+export async function getLLMConfig(): Promise<LLMConfigResponse> {
+  try {
+    const response = await authApi.get("/users/llm-config");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "get LLM config");
+  }
+}
+
+export async function getLLMConfigKey(): Promise<LLMConfigFull> {
+  try {
+    const response = await authApi.get("/users/llm-config/key");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "get LLM config key");
+  }
+}
+
+export async function updateLLMConfig(config: {
+  apiBase?: string;
+  apiKey?: string;
+  model?: string;
+  stream?: boolean;
+  language?: string;
+}): Promise<LLMConfigResponse> {
+  try {
+    const response = await authApi.patch("/users/llm-config", config);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update LLM config");
+  }
+}
+
 export interface DashboardLayout {
   cards: Array<{ id: string; enabled: boolean; order: number }>;
 }

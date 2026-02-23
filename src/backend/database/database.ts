@@ -1767,6 +1767,42 @@ app.use("/terminal", terminalRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 
+// OpenAPI spec endpoint for NLUI AI engine
+let cachedOpenAPISpec: Record<string, unknown> | null = null;
+app.get("/openapi.json", async (_req, res) => {
+  try {
+    if (cachedOpenAPISpec) {
+      return res.json(cachedOpenAPISpec);
+    }
+    // Try to load pre-generated spec from project root
+    const specPaths = [
+      path.join(__dirname, "../../../openapi.json"),
+      path.join(__dirname, "../../openapi.json"),
+      path.join(process.cwd(), "openapi.json"),
+    ];
+    for (const specPath of specPaths) {
+      if (fs.existsSync(specPath)) {
+        const content = fs.readFileSync(specPath, "utf-8");
+        cachedOpenAPISpec = JSON.parse(content);
+        return res.json(cachedOpenAPISpec);
+      }
+    }
+    // Generate on-the-fly using swagger-jsdoc if available
+    try {
+      const swaggerJSDoc = (await import("swagger-jsdoc")).default;
+      const { swaggerOptions } = await import("../swagger.js");
+      cachedOpenAPISpec = swaggerJSDoc(swaggerOptions) as Record<string, unknown>;
+      return res.json(cachedOpenAPISpec);
+    } catch {
+      // swagger-jsdoc not available or source files not found
+    }
+    res.status(404).json({ error: "OpenAPI spec not available" });
+  } catch (err) {
+    databaseLogger.error("Failed to serve OpenAPI spec", err);
+    res.status(500).json({ error: "Failed to generate OpenAPI spec" });
+  }
+});
+
 // Serve frontend static files (for Electron embedded mode and standalone deployment)
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),        // dev: from dist/backend/backend/ → dist/

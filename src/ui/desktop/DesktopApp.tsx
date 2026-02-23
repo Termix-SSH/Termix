@@ -20,6 +20,7 @@ import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
+import { AIChatWidget } from "@/ui/nlui/AIChatWidget";
 
 function AppContent({
   onAuthStateChange,
@@ -605,6 +606,8 @@ function AppContent({
           )}
         </div>
       )}
+
+      {isAuthenticated && <AIChatWidget />}
 
       <Toaster
         position="bottom-right"
