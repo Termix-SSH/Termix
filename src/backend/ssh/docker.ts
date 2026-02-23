@@ -250,7 +250,7 @@ async function createJumpHostChain(
         });
 
         const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip,
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -704,7 +704,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     const client = new SSHClient();
 
     const config: Record<string, unknown> = {
-      host: host.ip,
+      host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
       port: host.port || 22,
       username: host.username,
       tryKeyboard: true,
