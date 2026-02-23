@@ -2857,6 +2857,13 @@
     "welcome": "Ask me anything about your Termix servers, hosts, tunnels, or configurations.",
     "newChat": "New Chat",
     "loading": "Initializing AI engine...",
-    "close": "Close"
+    "close": "Close",
+    "welcomeSubtitle": "I can help you manage hosts, check server stats, configure tunnels, and more.",
+    "minimize": "Minimize",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "exampleHosts": "Show me all my hosts",
+    "exampleStats": "What's the CPU usage on my servers?",
+    "exampleTunnel": "Help me set up a tunnel"
   }
 }

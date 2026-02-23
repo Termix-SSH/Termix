@@ -34,6 +34,7 @@ interface AIChatPanelProps {
   engine: NLUIEngine;
   onClose: () => void;
   onMinimize: () => void;
+  onDragStart?: (e: React.MouseEvent) => void;
 }
 
 interface DisplayMessage {
@@ -94,7 +95,7 @@ function NluiTable({ data }: { data: Record<string, unknown>[] }) {
   if (!data.length) return null;
   const cols = Object.keys(data[0]);
   return (
-    <div className="border border-edge rounded my-1.5 overflow-hidden max-h-60 overflow-y-auto thin-scrollbar">
+    <div className="border border-edge rounded my-1.5 max-h-60 overflow-auto thin-scrollbar">
       <Table className="text-xs">
         <TableHeader>
           <TableRow>
@@ -121,7 +122,7 @@ function NluiKV({ data }: { data: Record<string, unknown> }) {
   const entries = Object.entries(data);
   if (!entries.length) return null;
   return (
-    <div className="bg-surface rounded border border-edge p-2.5 my-1.5 text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+    <div className="bg-surface rounded border border-edge p-2.5 my-1.5 text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 min-w-0 overflow-hidden">
       {entries.map(([k, v]) => (
         <React.Fragment key={k}>
           <span className="text-muted-foreground font-medium">{k}</span>
@@ -178,7 +179,7 @@ function renderMarkdown(raw: string): React.ReactNode {
 
       const code = body;
       result.push(
-        <div key={i} className="group relative my-1.5">
+        <div key={i} className="group relative my-1.5 max-w-full">
           <pre className="p-2 bg-surface border border-edge rounded text-[11px] overflow-x-auto thin-scrollbar">
             {code}
           </pre>
@@ -252,6 +253,7 @@ export function AIChatPanel({
   engine,
   onClose,
   onMinimize,
+  onDragStart,
 }: AIChatPanelProps): React.ReactElement {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -404,7 +406,13 @@ export function AIChatPanel({
   return (
     <div className="flex flex-col h-full bg-canvas rounded-lg border-2 border-edge shadow-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-elevated border-b border-edge">
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 py-2 bg-elevated border-b border-edge",
+          onDragStart && "cursor-grab active:cursor-grabbing",
+        )}
+        onMouseDown={onDragStart}
+      >
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span className="font-semibold text-sm">{t("ai.title")}</span>
@@ -453,7 +461,8 @@ export function AIChatPanel({
       </div>
 
       {/* Messages */}
-      <ScrollArea ref={scrollRef} className="flex-1 min-h-0 px-3 py-2">
+      <ScrollArea ref={scrollRef} className="flex-1 min-h-0">
+       <div className="overflow-hidden px-3 py-2">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center py-12 px-4 animate-in fade-in duration-300">
             <Sparkles className="h-8 w-8 text-primary mb-3" />
@@ -523,7 +532,7 @@ export function AIChatPanel({
                   key={idx}
                   className="group flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-200"
                 >
-                  <div className="relative bg-elevated rounded-lg px-3 py-2 max-w-[85%] text-sm border border-edge">
+                  <div className="relative bg-elevated rounded-lg px-3 py-2 max-w-[85%] min-w-0 overflow-hidden text-sm border border-edge">
                     {renderMarkdown(msg.content)}
                     <CopyButton
                       text={msg.content}
@@ -599,6 +608,7 @@ export function AIChatPanel({
             </div>
           )}
         </div>
+       </div>
       </ScrollArea>
 
       {/* Input */}

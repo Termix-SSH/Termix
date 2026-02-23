@@ -90,6 +90,9 @@ export function buildTools(
   const paths = doc.paths as Record<string, Record<string, unknown>> | undefined;
   if (!paths) return { tools, endpoints };
 
+  // Build tag → x-server URL map from spec tags (for multi-service routing)
+  const tagServerMap = buildTagServerMap(doc, baseURL);
+
   for (const [path, pathItem] of Object.entries(paths)) {
     if (!pathItem || typeof pathItem !== 'object') continue;
 
@@ -112,6 +115,10 @@ export function buildTools(
 
       const { schema, paramInfos } = buildParams(doc, op);
 
+      // Resolve baseURL: per-operation server > tag x-server > fallback baseURL
+      const opTags = op.tags as string[] | undefined;
+      const resolvedBase = resolveBaseURL(opTags, tagServerMap, baseURL);
+
       tools.push({
         type: 'function',
         function: { name: toolName, description, parameters: schema },
@@ -120,7 +127,7 @@ export function buildTools(
       endpoints.set(toolName, {
         targetName: sanitizedTarget,
         targetDisplayName: targetName,
-        baseURL,
+        baseURL: resolvedBase,
         method: method.toUpperCase(),
         path,
         auth,
@@ -133,6 +140,49 @@ export function buildTools(
   tools.push(buildSetAuthTool(targetName, auth));
 
   return { tools, endpoints };
+}
+
+/**
+ * Build a tag name → server URL map from the spec's tags array.
+ * Reads the `x-server` extension on each tag definition.
+ * Falls back to replacing the port in baseURL to keep hostname/protocol consistent.
+ */
+function buildTagServerMap(doc: Record<string, unknown>, baseURL: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const tags = doc.tags as Array<Record<string, unknown>> | undefined;
+  if (!tags) return map;
+
+  for (const tag of tags) {
+    const name = tag.name as string | undefined;
+    const xServer = tag['x-server'] as string | undefined;
+    if (!name || !xServer) continue;
+
+    // Replace the host:port of the x-server URL with the actual baseURL's host
+    // so it works in non-localhost environments (e.g., remote servers)
+    try {
+      const specUrl = new URL(xServer);
+      const actualBase = new URL(baseURL);
+      specUrl.protocol = actualBase.protocol;
+      specUrl.hostname = actualBase.hostname;
+      map.set(name, specUrl.toString().replace(/\/+$/, ''));
+    } catch {
+      map.set(name, xServer.replace(/\/+$/, ''));
+    }
+  }
+  return map;
+}
+
+function resolveBaseURL(
+  opTags: string[] | undefined,
+  tagServerMap: Map<string, string>,
+  fallback: string,
+): string {
+  if (!opTags?.length) return fallback;
+  for (const tag of opTags) {
+    const url = tagServerMap.get(tag);
+    if (url) return url;
+  }
+  return fallback;
 }
 
 export function buildSetAuthTool(targetName: string, auth: AuthConfig): Tool {

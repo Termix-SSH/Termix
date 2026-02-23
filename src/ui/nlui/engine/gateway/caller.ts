@@ -42,7 +42,9 @@ export class GatewayCaller implements Executor {
         delete args[p.name];
       }
     }
-    const fullURL = new URL(urlPath, ep.baseURL.replace(/\/+$/, '') + '/');
+    // Strip leading '/' so new URL() treats it as relative to the base path, not the origin
+    const relPath = urlPath.replace(/^\/+/, '');
+    const fullURL = new URL(relPath, ep.baseURL.replace(/\/+$/, '') + '/');
 
     // Query parameters
     for (const p of ep.params) {
@@ -90,6 +92,7 @@ export class GatewayCaller implements Executor {
       method: ep.method,
       headers,
       body: body ?? undefined,
+      credentials: 'include',
     });
 
     const respText = await resp.text();
