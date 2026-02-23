@@ -62,6 +62,11 @@ function schemaToMap(doc: Record<string, unknown>, schema: Record<string, unknow
     m.items = schemaToMap(doc, schema.items as Record<string, unknown>);
   }
 
+  // Gemini requires `items` for array types
+  if (m.type === 'array' && !m.items) {
+    m.items = { type: 'string' };
+  }
+
   return m;
 }
 

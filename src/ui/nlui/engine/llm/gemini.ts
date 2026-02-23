@@ -48,7 +48,7 @@ export class GeminiClient implements LLMClientInterface {
   constructor(config: LLMClientConfig) {
     this.apiBase = config.apiBase.replace(/\/+$/, '');
     this.apiKey = config.apiKey;
-    this.model = config.model;
+    this.model = config.model.replace(/^models\//, '').trim();
     this.stream = config.stream ?? true;
   }
 
@@ -74,7 +74,7 @@ export class GeminiClient implements LLMClientInterface {
 
     if (!resp.ok) {
       const text = await resp.text();
-      throw new Error(`Gemini API error ${resp.status}: ${text}`);
+      throw new Error(`Gemini API error ${resp.status} [model=${this.model}, url=${url.replace(/key=[^&]+/, 'key=***')}]: ${text}`);
     }
 
     if (this.stream) {
