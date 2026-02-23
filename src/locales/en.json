@@ -374,7 +374,11 @@
     "warning": "Warning",
     "notValidatedWarning": "URL not validated - ensure it's correct",
     "changeServer": "Change Server",
-    "mustIncludeProtocol": "Server URL must start with http:// or https://"
+    "mustIncludeProtocol": "Server URL must start with http:// or https://",
+    "useEmbedded": "Use Local Server",
+    "embeddedDesc": "Run Termix with the built-in local server (no remote server needed)",
+    "embeddedConnecting": "Connecting to local server...",
+    "embeddedNotReady": "Local server is not ready yet. Please wait a moment and try again."
   },
   "versionCheck": {
     "error": "Version Check Error",
@@ -473,6 +477,7 @@
     "confirm": "Confirm",
     "yes": "Yes",
     "no": "No",
+    "or": "OR",
     "ok": "OK",
     "enabled": "Enabled",
     "disabled": "Disabled",

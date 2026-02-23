@@ -800,6 +800,10 @@ export function Auth({
           onServerConfigured={() => {
             window.location.reload();
           }}
+          onUseEmbedded={() => {
+            setShowServerConfig(false);
+            setCurrentServerUrl("");
+          }}
           onCancel={() => {
             setShowServerConfig(false);
           }}
