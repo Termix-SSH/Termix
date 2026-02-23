@@ -966,6 +966,14 @@ export function HostManagerEditor({
 
     if (errorFields.length === 0) return;
 
+    const firstErrorField = errorFields[0];
+    const firstError = errors[firstErrorField as keyof typeof errors];
+    const errorMessage =
+      firstError && typeof firstError === "object" && "message" in firstError
+        ? (firstError.message as string)
+        : t("hosts.failedToSaveHost");
+    toast.error(errorMessage);
+
     for (const tab of TAB_PRIORITY) {
       const hasErrorInTab = errorFields.some((field) => {
         const baseField = field.split(".")[0].split("[")[0];
