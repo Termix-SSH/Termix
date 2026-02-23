@@ -830,7 +830,21 @@
     "passwordMinLength": "Password must be at least 6 characters",
     "currentRoles": "Current Roles",
     "noRolesAssigned": "No roles assigned",
-    "assignNewRole": "Assign New Role"
+    "assignNewRole": "Assign New Role",
+    "aiAssistant": "AI Assistant",
+    "aiDescription": "Configure the LLM provider for the AI assistant. All authenticated users can use the assistant once configured.",
+    "llmApiBase": "API Base URL",
+    "llmApiKey": "API Key",
+    "llmApiKeySet": "Current key",
+    "llmModel": "Model",
+    "llmStream": "Enable streaming responses",
+    "llmLanguage": "AI Language",
+    "llmTestConnection": "Test Connection",
+    "llmTestSuccess": "Connection successful — LLM provider is reachable",
+    "llmTestFailed": "Connection failed",
+    "llmTestNoBase": "Please enter an API Base URL first",
+    "llmSaved": "AI configuration saved",
+    "llmSaveFailed": "Failed to save AI configuration"
   },
   "hosts": {
     "title": "Host Manager",
@@ -2812,5 +2826,18 @@
   "theme": {
     "switchToLight": "Switch to Light",
     "switchToDark": "Switch to Dark"
+  },
+  "ai": {
+    "title": "Termix AI",
+    "placeholder": "Ask anything about your servers...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "toolCall": "Calling",
+    "toolResult": "Result",
+    "noConfig": "AI not configured. Ask your admin to set up the LLM provider in Admin Settings.",
+    "welcome": "Ask me anything about your Termix servers, hosts, tunnels, or configurations.",
+    "newChat": "New Chat",
+    "loading": "Initializing AI engine...",
+    "close": "Close"
   }
 }

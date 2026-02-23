@@ -4061,4 +4061,158 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
   }
 });
 
+// ============================================================================
+// LLM Configuration (AI Assistant)
+// ============================================================================
+
+/**
+ * @openapi
+ * /users/llm-config:
+ *   get:
+ *     summary: Get LLM configuration
+ *     description: Returns the global LLM configuration. API key is masked for non-admin users.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: LLM configuration.
+ *       500:
+ *         description: Failed to get LLM configuration.
+ */
+router.get("/llm-config", authenticateJWT, async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'llm_config'")
+      .get() as { value: string } | undefined;
+
+    if (!row) {
+      return res.json({ apiBase: "", apiKey: "", model: "", stream: true, language: "en" });
+    }
+
+    const config = JSON.parse(row.value);
+    // Mask API key for display
+    if (config.apiKey) {
+      const key = config.apiKey;
+      config.apiKeyMasked = key.length > 8
+        ? key.slice(0, 4) + "****" + key.slice(-4)
+        : "****";
+      delete config.apiKey;
+    }
+    res.json(config);
+  } catch (err) {
+    authLogger.error("Failed to get LLM config", err);
+    res.status(500).json({ error: "Failed to get LLM configuration" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/llm-config/key:
+ *   get:
+ *     summary: Get full LLM API key
+ *     description: Returns the full API key for engine initialization. Requires authentication.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Full LLM configuration with API key.
+ *       500:
+ *         description: Failed to get LLM configuration.
+ */
+router.get("/llm-config/key", authenticateJWT, async (req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'llm_config'")
+      .get() as { value: string } | undefined;
+
+    if (!row) {
+      return res.json({ apiBase: "", apiKey: "", model: "", stream: true, language: "en" });
+    }
+
+    res.json(JSON.parse(row.value));
+  } catch (err) {
+    authLogger.error("Failed to get LLM config key", err);
+    res.status(500).json({ error: "Failed to get LLM configuration" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/llm-config:
+ *   patch:
+ *     summary: Update LLM configuration
+ *     description: Updates the global LLM configuration. Admin only.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               apiBase:
+ *                 type: string
+ *               apiKey:
+ *                 type: string
+ *               model:
+ *                 type: string
+ *               stream:
+ *                 type: boolean
+ *               language:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: LLM configuration updated.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to update LLM configuration.
+ */
+router.patch("/llm-config", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Merge with existing config
+    const existingRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'llm_config'")
+      .get() as { value: string } | undefined;
+
+    const existing = existingRow ? JSON.parse(existingRow.value) : {};
+    const { apiBase, apiKey, model, stream, language } = req.body;
+
+    const updated = {
+      ...existing,
+      ...(apiBase !== undefined && { apiBase }),
+      ...(apiKey !== undefined && { apiKey }),
+      ...(model !== undefined && { model }),
+      ...(stream !== undefined && { stream }),
+      ...(language !== undefined && { language }),
+    };
+
+    db.$client
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('llm_config', ?)")
+      .run(JSON.stringify(updated));
+
+    // Return masked version
+    const response = { ...updated };
+    if (response.apiKey) {
+      const key = response.apiKey;
+      response.apiKeyMasked = key.length > 8
+        ? key.slice(0, 4) + "****" + key.slice(-4)
+        : "****";
+      delete response.apiKey;
+    }
+
+    res.json(response);
+  } catch (err) {
+    authLogger.error("Failed to update LLM config", err);
+    res.status(500).json({ error: "Failed to update LLM configuration" });
+  }
+});
+
 export default router;

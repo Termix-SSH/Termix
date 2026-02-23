@@ -7,7 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
-import { Shield, Users, Database, Clock } from "lucide-react";
+import { Shield, Users, Database, Clock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -28,6 +28,7 @@ import { OIDCSettingsTab } from "@/ui/desktop/apps/admin/tabs/OIDCSettingsTab.ts
 import { UserManagementTab } from "@/ui/desktop/apps/admin/tabs/UserManagementTab.tsx";
 import { SessionManagementTab } from "@/ui/desktop/apps/admin/tabs/SessionManagementTab.tsx";
 import { DatabaseSecurityTab } from "@/ui/desktop/apps/admin/tabs/DatabaseSecurityTab.tsx";
+import { AISettingsTab } from "@/ui/desktop/apps/admin/tabs/AISettingsTab.tsx";
 import { CreateUserDialog } from "./dialogs/CreateUserDialog.tsx";
 import { UserEditDialog } from "./dialogs/UserEditDialog.tsx";
 import { LinkAccountDialog } from "./dialogs/LinkAccountDialog.tsx";
@@ -384,6 +385,13 @@ export function AdminSettings({
                 <Database className="h-4 w-4" />
                 {t("admin.databaseSecurity")}
               </TabsTrigger>
+              <TabsTrigger
+                value="ai"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
+                <Zap className="h-4 w-4" />
+                {t("admin.aiAssistant")}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="registration" className="space-y-6">
@@ -435,6 +443,10 @@ export function AdminSettings({
 
             <TabsContent value="security" className="space-y-6">
               <DatabaseSecurityTab currentUser={currentUser} />
+            </TabsContent>
+
+            <TabsContent value="ai" className="space-y-6">
+              <AISettingsTab />
             </TabsContent>
           </Tabs>
         </div>
