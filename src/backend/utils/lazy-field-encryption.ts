@@ -204,7 +204,8 @@ export class LazyFieldEncryption {
     let needsUpdate = false;
 
     for (const fieldName of sensitiveFields) {
-      const fieldValue = record[fieldName];
+      const column = this.propertyToColumn(fieldName);
+      const fieldValue = record[column] ?? record[fieldName];
 
       if (fieldValue) {
         try {
@@ -217,7 +218,7 @@ export class LazyFieldEncryption {
             );
 
           if (wasPlaintext || wasLegacyEncryption) {
-            updatedRecord[fieldName] = encrypted;
+            updatedRecord[column] = encrypted;
             migratedFields.push(fieldName);
             needsUpdate = true;
           }
@@ -238,13 +239,19 @@ export class LazyFieldEncryption {
     keyPassword: "key_password",
     privateKey: "private_key",
     publicKey: "public_key",
+    sudoPassword: "sudo_password",
+    autostartPassword: "autostart_password",
+    autostartKey: "autostart_key",
+    autostartKeyPassword: "autostart_key_password",
     totpSecret: "totp_secret",
     totpBackupCodes: "totp_backup_codes",
+    clientSecret: "client_secret",
+    oidcIdentifier: "oidc_identifier",
   };
 
   static getSensitiveFieldsForTable(tableName: string): string[] {
     const sensitiveFieldsMap: Record<string, string[]> = {
-      ssh_data: ["password", "key", "keyPassword"],
+      ssh_data: ["password", "key", "keyPassword", "sudoPassword", "autostartPassword", "autostartKey", "autostartKeyPassword"],
       ssh_credentials: [
         "password",
         "key",

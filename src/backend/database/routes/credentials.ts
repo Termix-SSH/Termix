@@ -225,9 +225,9 @@ router.post(
         username: username?.trim() || null,
         password: plainPassword,
         key: plainKey,
-        private_key: keyInfo?.privateKey || plainKey,
-        public_key: keyInfo?.publicKey || null,
-        key_password: plainKeyPassword,
+        privateKey: keyInfo?.privateKey || plainKey,
+        publicKey: keyInfo?.publicKey || null,
+        keyPassword: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
         usageCount: 0,
@@ -706,7 +706,7 @@ router.delete(
             credentialId: null,
             password: null,
             key: null,
-            key_password: null,
+            keyPassword: null,
             authType: "password",
           })
           .where(
@@ -844,7 +844,7 @@ router.post(
           authType: credential.authType as string,
           password: null,
           key: null,
-          key_password: null,
+          keyPassword: null,
           keyType: null,
           updatedAt: new Date().toISOString(),
         })
