@@ -82,7 +82,7 @@ export interface QuickActionData {
 export interface ProxyNode {
   host: string;
   port: number;
-  type: 4 | 5;
+  type: 4 | 5 | "http";
   username?: string;
   password?: string;
 }
