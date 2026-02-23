@@ -62,9 +62,39 @@ export function ElectronServerConfig({
   const checkEmbeddedBackend = async () => {
     try {
       const status = await getEmbeddedServerStatus();
-      setEmbeddedAvailable(!!status?.embedded && !!status?.running);
+      // Show button if embedded backend exists, even if not yet running.
+      // The actual health probe in handleUseEmbedded() will verify connectivity.
+      setEmbeddedAvailable(!!status?.embedded);
     } catch {
-      setEmbeddedAvailable(false);
+      // This component only renders in Electron mode, so default to showing the button.
+      setEmbeddedAvailable(true);
+    }
+  };
+
+  const probeBackend = async (): Promise<boolean> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch("http://localhost:30001/health", {
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      return res.ok;
+    } catch {
+      clearTimeout(timer);
+    }
+    // Fallback: /version
+    const controller2 = new AbortController();
+    const timer2 = setTimeout(() => controller2.abort(), 3000);
+    try {
+      await fetch("http://localhost:30001/version", {
+        signal: controller2.signal,
+      });
+      clearTimeout(timer2);
+      return true;
+    } catch {
+      clearTimeout(timer2);
+      return false;
     }
   };
 
@@ -73,43 +103,24 @@ export function ElectronServerConfig({
     setError(null);
 
     try {
-      // Verify the embedded backend is reachable
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      try {
-        const response = await fetch("http://localhost:30001/health", {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          throw new Error(`Health check returned ${response.status}`);
+      // Retry up to 10 times (~30s) — backend may still be starting
+      const maxRetries = 10;
+      for (let i = 0; i < maxRetries; i++) {
+        if (await probeBackend()) {
+          setEmbeddedMode(true);
+          if (onUseEmbedded) {
+            onUseEmbedded();
+          } else {
+            onServerConfigured("embedded://localhost");
+          }
+          return;
         }
-      } catch (fetchError) {
-        clearTimeout(timeout);
-        // Health endpoint might not exist, try a basic connection
-        try {
-          const controller2 = new AbortController();
-          const timeout2 = setTimeout(() => controller2.abort(), 5000);
-          await fetch("http://localhost:30001/version", {
-            signal: controller2.signal,
-          });
-          clearTimeout(timeout2);
-        } catch {
-          throw new Error(
-            t("serverConfig.embeddedNotReady"),
-          );
+        // Wait before next retry (skip wait on last attempt)
+        if (i < maxRetries - 1) {
+          await new Promise((r) => setTimeout(r, 2000));
         }
       }
-
-      setEmbeddedMode(true);
-
-      if (onUseEmbedded) {
-        onUseEmbedded();
-      } else {
-        onServerConfigured("embedded://localhost");
-      }
+      setError(t("serverConfig.embeddedNotReady"));
     } catch (err) {
       setError(
         err instanceof Error
