@@ -315,7 +315,7 @@ async function createJumpHostChain(
         });
 
         const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip,
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -864,7 +864,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const config: Record<string, unknown> = {
-    host: ip,
+    host: ip?.replace(/^\[|\]$/g, "") || ip,
     port,
     username,
     tryKeyboard: true,

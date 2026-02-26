@@ -165,7 +165,7 @@ async function createJumpHostChain(
     const client = new SSHClient();
 
     const config: Record<string, unknown> = {
-      host: jumpHost.ip,
+      host: jumpHost.ip?.replace(/^\[|\]$/g, "") || jumpHost.ip,
       port: jumpHost.port || 22,
       username: jumpHost.username,
       tryKeyboard: true,
@@ -327,7 +327,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             const client = new SSHClient();
 
             const config: Record<string, unknown> = {
-              host: hostConfig.ip,
+              host: hostConfig.ip?.replace(/^\[|\]$/g, "") || hostConfig.ip,
               port: hostConfig.port || 22,
               username: hostConfig.username,
               tryKeyboard: true,

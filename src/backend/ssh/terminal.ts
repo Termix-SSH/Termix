@@ -244,7 +244,7 @@ async function createJumpHostChain(
         });
 
         const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip,
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -862,7 +862,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
-      ip,
+      ip: rawIp,
       port,
       username,
       password,
@@ -872,6 +872,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
+    const ip = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
     sshLogger.info("Resolving SSH host configuration", {
       operation: "terminal_host_resolve",
       sessionId,
@@ -1496,6 +1497,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       } else if (err.message.includes("ECONNREFUSED")) {
         errorMessage =
           "SSH error: Connection refused. The server may not be running or the port may be incorrect.";
+      } else if (err.message.includes("ENETUNREACH")) {
+        const isIPv6 = ip && ip.includes(":");
+        errorMessage = isIPv6
+          ? "SSH error: Network unreachable. IPv6 may not be available in this environment. If running in Docker, enable IPv6 in the Docker daemon and network configuration."
+          : "SSH error: Network unreachable. Check your network configuration and routing.";
       } else if (err.message.includes("ETIMEDOUT")) {
         errorMessage =
           "SSH error: Connection timed out. Check your network connection and server availability.";

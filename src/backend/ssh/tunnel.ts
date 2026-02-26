@@ -1108,7 +1108,7 @@ async function connectSSHTunnel(
   });
 
   const connOptions: Record<string, unknown> = {
-    host: tunnelConfig.sourceIP,
+    host: tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
     tryKeyboard: true,
@@ -1378,7 +1378,7 @@ async function killRemoteTunnelByMarker(
 
   const factory = async (): Promise<Client> => {
     const connOptions: Record<string, unknown> = {
-      host: tunnelConfig.sourceIP,
+      host: tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
       port: tunnelConfig.sourceSSHPort,
       username: tunnelConfig.sourceUsername,
       keepaliveInterval: 30000,
