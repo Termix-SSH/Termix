@@ -5,22 +5,16 @@
   "directories": {
     "output": "release"
   },
+  "asar": false,
   "files": [
     "dist/**/*",
     "electron/**/*",
     "public/**/*",
-    "!**/node_modules/**/*",
     "!src/**/*",
     "!*.md",
     "!tsconfig*.json",
     "!vite.config.ts",
     "!eslint.config.js"
-  ],
-  "asarUnpack": [
-    "node_modules/node-fetch/**/*",
-    "node_modules/better-sqlite3/**/*",
-    "node_modules/ssh2/**/*",
-    "dist/**/*"
   ],
   "extraMetadata": {
     "main": "electron/main.cjs"
@@ -121,7 +115,7 @@
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
     "hardenedRuntime": false,
     "gatekeeperAssess": false,
-    "asarUnpack": ["**/*.node"],
+    "asar": false,
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "artifactName": "termix_macos_${arch}_mas.${ext}",

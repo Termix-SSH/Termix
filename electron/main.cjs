@@ -15,6 +15,25 @@ const http = require("http");
 const { URL } = require("url");
 const { fork } = require("child_process");
 
+// File logger for debugging GUI-launched app (stdout goes nowhere when launched from Finder)
+const logFile = path.join(
+  app.getPath("userData"),
+  "termix-main.log",
+);
+function logToFile(...args) {
+  const timestamp = new Date().toISOString();
+  const msg = args
+    .map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a)))
+    .join(" ");
+  const line = `[${timestamp}] ${msg}\n`;
+  try {
+    fs.appendFileSync(logFile, line);
+  } catch {
+    // ignore
+  }
+  console.log(...args);
+}
+
 function httpFetch(url, options = {}) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
@@ -102,20 +121,25 @@ function startBackendServer() {
   return new Promise((resolve) => {
     const entryPath = getBackendEntryPath();
 
+    logToFile("isDev:", isDev, "appRoot:", appRoot);
+    logToFile("app.isPackaged:", app.isPackaged);
+    logToFile("process.env.NODE_ENV:", process.env.NODE_ENV);
+
     if (!fs.existsSync(entryPath)) {
-      console.error("Backend entry not found:", entryPath);
+      logToFile("Backend entry not found:", entryPath);
       resolve(false);
       return;
     }
 
     const dataDir = getBackendDataDir();
-    console.log("Starting embedded backend server...");
-    console.log("Backend entry:", entryPath);
-    console.log("Data directory:", dataDir);
+    logToFile("Starting embedded backend server...");
+    logToFile("Backend entry:", entryPath);
+    logToFile("Data directory:", dataDir);
 
     const cwd = isDev
       ? appRoot
       : appRoot.replace("app.asar", "app.asar.unpacked");
+    logToFile("Backend cwd:", cwd);
 
     backendProcess = fork(entryPath, [], {
       cwd: cwd,
@@ -128,33 +152,34 @@ function startBackendServer() {
       stdio: ["pipe", "pipe", "pipe", "ipc"],
     });
 
+    logToFile("Backend process spawned, pid:", backendProcess.pid);
+
     let resolved = false;
     const readyTimeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        console.log("Backend ready timeout, proceeding anyway...");
+        logToFile("Backend ready timeout (15s), proceeding anyway...");
         resolve(true);
       }
     }, 15000);
 
     backendProcess.stdout.on("data", (data) => {
       const msg = data.toString().trim();
-      console.log("[backend]", msg);
+      logToFile("[backend]", msg);
       if (!resolved && msg.includes("started successfully")) {
         resolved = true;
         clearTimeout(readyTimeout);
+        logToFile("Backend ready signal received");
         resolve(true);
       }
     });
 
     backendProcess.stderr.on("data", (data) => {
-      console.error("[backend]", data.toString().trim());
+      logToFile("[backend:stderr]", data.toString().trim());
     });
 
     backendProcess.on("exit", (code, signal) => {
-      console.log(
-        `Backend process exited with code ${code}, signal ${signal}`,
-      );
+      logToFile(`Backend process exited with code ${code}, signal ${signal}`);
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -164,7 +189,7 @@ function startBackendServer() {
     });
 
     backendProcess.on("error", (err) => {
-      console.error("Failed to start backend process:", err);
+      logToFile("Failed to start backend process:", err.message);
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -217,45 +242,61 @@ if (!gotTheLock) {
 }
 
 function createTray() {
-  const iconPath =
-    process.platform === "win32"
-      ? path.join(appRoot, "public", "icon.ico")
-      : path.join(appRoot, "public", "icons", "32x32.png");
+  try {
+    const { nativeImage } = require("electron");
 
-  tray = new Tray(iconPath);
-  tray.setToolTip("Termix");
+    let trayIcon;
+    if (process.platform === "darwin") {
+      // macOS: use 16x16 Template image for menu bar
+      const iconPath = path.join(appRoot, "public", "icons", "16x16.png");
+      trayIcon = nativeImage.createFromPath(iconPath);
+      trayIcon.setTemplateImage(true);
+    } else if (process.platform === "win32") {
+      trayIcon = path.join(appRoot, "public", "icon.ico");
+    } else {
+      trayIcon = path.join(appRoot, "public", "icons", "32x32.png");
+    }
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: "Show Window",
-      click: () => {
-        if (mainWindow) {
+    tray = new Tray(trayIcon);
+    tray.setToolTip("Termix");
+
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: "Show Window",
+        click: () => {
+          if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        },
+      },
+      {
+        label: "Quit",
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        },
+      },
+    ]);
+
+    tray.setContextMenu(contextMenu);
+
+    tray.on("click", () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide();
+        } else {
           mainWindow.show();
           mainWindow.focus();
         }
-      },
-    },
-    {
-      label: "Quit",
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setContextMenu(contextMenu);
-
-  tray.on("click", () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
       }
-    }
-  });
+    });
+
+    console.log("System tray created successfully");
+  } catch (err) {
+    console.error("Failed to create system tray:", err);
+    // Tray is non-critical; app still works without it
+  }
 }
 
 function createWindow() {
@@ -414,7 +455,7 @@ function createWindow() {
   });
 
   mainWindow.on("close", (event) => {
-    if (!isQuitting) {
+    if (!isQuitting && tray && !tray.isDestroyed()) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -810,19 +851,28 @@ function createMenu() {
 }
 
 app.whenReady().then(async () => {
+  logToFile("=== App ready ===");
+  logToFile("isDev:", isDev, "platform:", process.platform, "arch:", process.arch);
   createMenu();
 
   // Start embedded backend server (skip in dev mode, backend runs separately)
   if (!isDev) {
-    await startBackendServer();
+    const result = await startBackendServer();
+    logToFile("startBackendServer result:", result);
+  } else {
+    logToFile("Skipping embedded backend (isDev=true)");
   }
 
   createTray();
   createWindow();
+  logToFile("=== Startup complete ===");
 });
 
 app.on("window-all-closed", () => {
-  // Don't quit — backend stays alive, tray stays visible
+  // If tray exists, keep backend alive; otherwise quit normally
+  if (!tray || tray.isDestroyed()) {
+    app.quit();
+  }
 });
 
 app.on("activate", () => {

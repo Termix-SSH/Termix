@@ -14,6 +14,7 @@ import type {
   DockerStats,
   DockerLogOptions,
   DockerValidation,
+  ProxyNode,
 } from "../types/index.js";
 
 // ============================================================================
@@ -520,6 +521,7 @@ function isDev(): boolean {
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let configuredServerUrl: string | null = null;
+let embeddedMode = false;
 
 export interface ServerConfig {
   serverUrl: string;
@@ -664,11 +666,47 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
+export async function getEmbeddedServerStatus(): Promise<{
+  running: boolean;
+  embedded: boolean;
+  dataDir: string | null;
+} | null> {
+  if (!isElectron()) return null;
+
+  try {
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: { invoke: (channel: string, ...args: unknown[]) => Promise<unknown> };
+        }
+    ).electronAPI?.invoke("get-embedded-server-status");
+    return result as { running: boolean; embedded: boolean; dataDir: string | null } | null;
+  } catch {
+    return null;
+  }
+}
+
+export function isEmbeddedMode(): boolean {
+  return embeddedMode;
+}
+
+export function setEmbeddedMode(value: boolean): void {
+  embeddedMode = value;
+  if (value) {
+    configuredServerUrl = null;
+    initializeApiInstances();
+  }
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
 
   if (electronMode) {
+    if (embeddedMode && !configuredServerUrl) {
+      return `http://localhost:${defaultPort}${path}`;
+    }
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
       const url = `${baseUrl}${path}`;
@@ -741,8 +779,11 @@ export let dockerApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
-    getServerConfig()
-      .then((config) => {
+    Promise.all([getServerConfig(), getEmbeddedServerStatus()])
+      .then(([config, status]) => {
+        if (status?.embedded && status?.running) {
+          embeddedMode = true;
+        }
         if (config?.serverUrl) {
           configuredServerUrl = config.serverUrl;
           (
@@ -753,6 +794,8 @@ function initializeApp() {
                 configuredServerUrl?: string;
               }
           ).configuredServerUrl = configuredServerUrl;
+        } else if (embeddedMode) {
+          // Embedded backend running, no remote server needed
         } else {
           console.warn("No server URL in config");
         }
@@ -999,11 +1042,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1078,11 +1118,8 @@ export async function updateSSHHost(
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1226,6 +1263,32 @@ export async function getAutoStartStatus(): Promise<{
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch autostart status");
+  }
+}
+
+// ============================================================================
+// PROXY CONNECTIVITY TEST
+// ============================================================================
+
+export async function testProxyConnection(options: {
+  singleProxy?: {
+    host: string;
+    port: number;
+    type?: 4 | 5 | "http";
+    username?: string;
+    password?: string;
+  };
+  proxyChain?: ProxyNode[];
+  testTarget?: { host: string; port: number };
+}): Promise<{ success: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const response = await sshHostApi.post("/db/proxy/test", options);
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response?.data?.error) {
+      return { success: false, error: error.response.data.error };
+    }
+    handleApiError(error, "test proxy connection");
   }
 }
 

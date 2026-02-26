@@ -7,19 +7,23 @@ import { useTranslation } from "react-i18next";
 import {
   getServerConfig,
   saveServerConfig,
+  getEmbeddedServerStatus,
+  setEmbeddedMode,
   type ServerConfig,
 } from "@/ui/main-axios.ts";
-import { Server } from "lucide-react";
+import { Server, Monitor, Loader2 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
 interface ServerConfigProps {
   onServerConfigured: (serverUrl: string) => void;
+  onUseEmbedded?: () => void;
   onCancel?: () => void;
   isFirstTime?: boolean;
 }
 
 export function ElectronServerConfig({
   onServerConfigured,
+  onUseEmbedded,
   onCancel,
   isFirstTime = false,
 }: ServerConfigProps) {
@@ -27,7 +31,11 @@ export function ElectronServerConfig({
   const { theme } = useTheme();
   const [serverUrl, setServerUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [embeddedLoading, setEmbeddedLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [embeddedAvailable, setEmbeddedAvailable] = useState<boolean | null>(
+    null,
+  );
 
   const isDarkMode =
     theme === "dark" ||
@@ -37,6 +45,7 @@ export function ElectronServerConfig({
 
   useEffect(() => {
     loadServerConfig();
+    checkEmbeddedBackend();
   }, []);
 
   const loadServerConfig = async () => {
@@ -47,6 +56,79 @@ export function ElectronServerConfig({
       }
     } catch (error) {
       console.error("Server config operation failed:", error);
+    }
+  };
+
+  const checkEmbeddedBackend = async () => {
+    try {
+      const status = await getEmbeddedServerStatus();
+      // Show button if embedded backend exists, even if not yet running.
+      // The actual health probe in handleUseEmbedded() will verify connectivity.
+      setEmbeddedAvailable(!!status?.embedded);
+    } catch {
+      // This component only renders in Electron mode, so default to showing the button.
+      setEmbeddedAvailable(true);
+    }
+  };
+
+  const probeBackend = async (): Promise<boolean> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch("http://localhost:30001/health", {
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      return res.ok;
+    } catch {
+      clearTimeout(timer);
+    }
+    // Fallback: /version
+    const controller2 = new AbortController();
+    const timer2 = setTimeout(() => controller2.abort(), 3000);
+    try {
+      await fetch("http://localhost:30001/version", {
+        signal: controller2.signal,
+      });
+      clearTimeout(timer2);
+      return true;
+    } catch {
+      clearTimeout(timer2);
+      return false;
+    }
+  };
+
+  const handleUseEmbedded = async () => {
+    setEmbeddedLoading(true);
+    setError(null);
+
+    try {
+      // Retry up to 10 times (~30s) — backend may still be starting
+      const maxRetries = 10;
+      for (let i = 0; i < maxRetries; i++) {
+        if (await probeBackend()) {
+          setEmbeddedMode(true);
+          if (onUseEmbedded) {
+            onUseEmbedded();
+          } else {
+            onServerConfigured("embedded://localhost");
+          }
+          return;
+        }
+        // Wait before next retry (skip wait on last attempt)
+        if (i < maxRetries - 1) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+      setError(t("serverConfig.embeddedNotReady"));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("serverConfig.embeddedNotReady"),
+      );
+    } finally {
+      setEmbeddedLoading(false);
     }
   };
 
@@ -120,17 +202,54 @@ export function ElectronServerConfig({
               {t("serverConfig.description")}
             </p>
           </div>
+
+          {/* Embedded Server Button */}
+          {embeddedAvailable !== false && (
+            <div className="space-y-2">
+              <Button
+                type="button"
+                className="w-full h-11 text-base font-semibold"
+                onClick={handleUseEmbedded}
+                disabled={embeddedLoading || loading}
+              >
+                {embeddedLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{t("serverConfig.embeddedConnecting")}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Monitor className="w-4 h-4" />
+                    <span>{t("serverConfig.useEmbedded")}</span>
+                  </div>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                {t("serverConfig.embeddedDesc")}
+              </p>
+            </div>
+          )}
+
+          {embeddedAvailable !== false && (
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">{t("common.or") || "OR"}</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          )}
+
+          {/* Remote Server Configuration */}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
               <Input
                 id="server-url"
                 type="text"
-                placeholder="http://localhost:30001 or https://your-server.com"
+                placeholder="https://your-server.com"
                 value={serverUrl}
                 onChange={(e) => handleUrlChange(e.target.value)}
                 className="w-full h-10"
-                disabled={loading}
+                disabled={loading || embeddedLoading}
               />
             </div>
 
@@ -148,16 +267,17 @@ export function ElectronServerConfig({
                   variant="outline"
                   className="flex-1"
                   onClick={onCancel}
-                  disabled={loading}
+                  disabled={loading || embeddedLoading}
                 >
                   Cancel
                 </Button>
               )}
               <Button
                 type="button"
+                variant="outline"
                 className={onCancel && !isFirstTime ? "flex-1" : "w-full"}
                 onClick={handleSaveConfig}
-                disabled={loading || !serverUrl.trim()}
+                disabled={loading || embeddedLoading || !serverUrl.trim()}
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
