@@ -394,6 +394,8 @@ export function HostManagerEditor({
           moshCommand: z.string(),
           sudoPasswordAutoFill: z.boolean(),
           sudoPassword: z.string().optional(),
+          keepaliveInterval: z.number().min(0).max(300000).optional(),
+          keepaliveCountMax: z.number().min(0).max(100).optional(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
