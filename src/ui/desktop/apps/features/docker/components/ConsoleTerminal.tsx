@@ -78,7 +78,29 @@ export function ConsoleTerminal({
           .then((text) => {
             if (text) terminal.paste(text);
           })
-          .catch(() => {});
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
+        return false;
+      }
+
+      if (
+        e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.toLowerCase() === "c" &&
+        terminal.hasSelection()
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selection = terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
+          terminal.clearSelection();
+        }
         return false;
       }
 
@@ -99,7 +121,9 @@ export function ConsoleTerminal({
         e.stopPropagation();
         const selection = terminal.getSelection();
         if (selection) {
-          navigator.clipboard.writeText(selection).catch(() => {});
+          navigator.clipboard.writeText(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
         }
         return false;
       }
@@ -118,7 +142,9 @@ export function ConsoleTerminal({
           .then((text) => {
             if (text) terminal.paste(text);
           })
-          .catch(() => {});
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
         return false;
       }
 
