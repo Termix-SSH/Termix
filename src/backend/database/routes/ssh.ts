@@ -426,8 +426,16 @@ router.post(
       showDockerInSidebar: showDockerInSidebar ? 1 : 0,
       showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
-      terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
+      statsConfig: statsConfig
+        ? typeof statsConfig === "string"
+          ? statsConfig
+          : JSON.stringify(statsConfig)
+        : null,
+      terminalConfig: terminalConfig
+        ? typeof terminalConfig === "string"
+          ? terminalConfig
+          : JSON.stringify(terminalConfig)
+        : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
       sudoPassword: sudoPassword || null,
@@ -903,8 +911,16 @@ router.put(
       showDockerInSidebar: showDockerInSidebar ? 1 : 0,
       showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig ? JSON.stringify(statsConfig) : null,
-      terminalConfig: terminalConfig ? JSON.stringify(terminalConfig) : null,
+      statsConfig: statsConfig
+        ? typeof statsConfig === "string"
+          ? statsConfig
+          : JSON.stringify(statsConfig)
+        : null,
+      terminalConfig: terminalConfig
+        ? typeof terminalConfig === "string"
+          ? terminalConfig
+          : JSON.stringify(terminalConfig)
+        : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       notes: notes || null,
       sudoPassword: sudoPassword || null,
