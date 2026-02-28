@@ -9,7 +9,10 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import { createSocks5Connection, type SOCKS5Config } from "../utils/socks5-helper.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
 import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
@@ -257,15 +260,24 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          sshLogger.error(`Jump host ${i + 1}/${totalHops} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-            hopIndex: i,
-            totalHops,
-            previousHop: i > 0 ? jumpHostConfigs[i - 1]?.ip : (proxySocket ? "proxy" : "direct"),
-            usedProxySocket: i === 0 && !!proxySocket,
-          });
+          sshLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
@@ -575,9 +587,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
     const host = hosts[0] as unknown as SSHHost;
 
     if (host.userId !== userId) {
-      const { PermissionManager } = await import(
-        "../utils/permission-manager.js"
-      );
+      const { PermissionManager } =
+        await import("../utils/permission-manager.js");
       const permissionManager = PermissionManager.getInstance();
       const accessInfo = await permissionManager.canAccessHost(
         userId,
@@ -654,7 +665,12 @@ app.post("/docker/ssh/connect", async (req, res) => {
       delete pendingTOTPSessions[sessionId];
     }
 
-    let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
+    let resolvedCredentials: {
+      password?: string;
+      sshKey?: string;
+      keyPassword?: string;
+      authType?: string;
+    } = {
       password: host.password,
       sshKey: host.key,
       keyPassword: host.keyPassword,
@@ -677,9 +693,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       if (userId !== ownerId) {
         try {
-          const { SharedCredentialManager } = await import(
-            "../utils/shared-credential-manager.js"
-          );
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id,
@@ -1322,17 +1337,19 @@ app.post("/docker/ssh/connect", async (req, res) => {
     );
 
     // Unified proxy + jump host pipeline
-    const proxyConfig: SOCKS5Config | null = (useSocks5 &&
-      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0)))
-      ? {
-          useSocks5,
-          socks5Host,
-          socks5Port,
-          socks5Username,
-          socks5Password,
-          socks5ProxyChain: socks5ProxyChain as ProxyNode[],
-        }
-      : null;
+    const proxyConfig: SOCKS5Config | null =
+      useSocks5 &&
+      (socks5Host ||
+        (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
+        ? {
+            useSocks5,
+            socks5Host,
+            socks5Port,
+            socks5Username,
+            socks5Password,
+            socks5ProxyChain: socks5ProxyChain as ProxyNode[],
+          }
+        : null;
 
     const hasJumpHosts = host.jumpHosts && host.jumpHosts.length > 0;
 
@@ -1340,7 +1357,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
       try {
         if (proxyConfig) {
           connectionLogs.push(
-            createConnectionLog("info", "proxy", "Connecting via proxy + jump hosts"),
+            createConnectionLog(
+              "info",
+              "proxy",
+              "Connecting via proxy + jump hosts",
+            ),
           );
         }
         connectionLogs.push(
@@ -1402,8 +1423,34 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
             config.sock = stream;
             client.connect(config);
-        },
-      );
+          },
+        );
+      } catch (jumpError) {
+        sshLogger.error("Jump host connection failed", jumpError, {
+          operation: "docker_jump_connect",
+          sessionId,
+          hostId,
+        });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "jump",
+            `Jump host connection failed: ${jumpError instanceof Error ? jumpError.message : "Unknown error"}`,
+          ),
+        );
+        if (!responseSent) {
+          responseSent = true;
+          return res.status(500).json({
+            error:
+              "Jump host connection failed: " +
+              (jumpError instanceof Error
+                ? jumpError.message
+                : "Unknown error"),
+            connectionLogs,
+          });
+        }
+        return;
+      }
     } else if (proxyConfig) {
       connectionLogs.push(
         createConnectionLog("info", "proxy", "Connecting via proxy"),
@@ -1436,7 +1483,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
           return res.status(500).json({
             error:
               "Proxy connection failed: " +
-              (proxyError instanceof Error ? proxyError.message : "Unknown error"),
+              (proxyError instanceof Error
+                ? proxyError.message
+                : "Unknown error"),
             connectionLogs,
           });
         }
