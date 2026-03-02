@@ -223,7 +223,9 @@ export function SSHToolsSidebar({
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
 
-  const [splitMode, setSplitMode] = useState<"none" | "2" | "3" | "4" | "5" | "6">("none");
+  const [splitMode, setSplitMode] = useState<
+    "none" | "2" | "3" | "4" | "5" | "6"
+  >("none");
   const [splitAssignments, setSplitAssignments] = useState<Map<number, number>>(
     new Map(),
   );
@@ -977,7 +979,9 @@ export function SSHToolsSidebar({
     }
   };
 
-  const handleSplitModeChange = (mode: "none" | "2" | "3" | "4" | "5" | "6") => {
+  const handleSplitModeChange = (
+    mode: "none" | "2" | "3" | "4" | "5" | "6",
+  ) => {
     setSplitMode(mode);
 
     if (mode === "none") {
@@ -1736,23 +1740,23 @@ export function SSHToolsSidebar({
                         }
                         className="w-full"
                       >
-                        <TabsList className="w-full grid grid-cols-3 grid-rows-2">
-                          <TabsTrigger value="none">
+                        <TabsList className="w-full grid grid-cols-3 grid-rows-2 h-auto gap-2 p-2">
+                          <TabsTrigger value="none" className="h-10">
                             {t("splitScreen.none")}
                           </TabsTrigger>
-                          <TabsTrigger value="2">
+                          <TabsTrigger value="2" className="h-10">
                             {t("splitScreen.twoSplit")}
                           </TabsTrigger>
-                          <TabsTrigger value="3">
+                          <TabsTrigger value="3" className="h-10">
                             {t("splitScreen.threeSplit")}
                           </TabsTrigger>
-                          <TabsTrigger value="4">
+                          <TabsTrigger value="4" className="h-10">
                             {t("splitScreen.fourSplit")}
                           </TabsTrigger>
-                          <TabsTrigger value="5">
+                          <TabsTrigger value="5" className="h-10">
                             {t("splitScreen.fiveSplit")}
                           </TabsTrigger>
-                          <TabsTrigger value="6">
+                          <TabsTrigger value="6" className="h-10">
                             {t("splitScreen.sixSplit")}
                           </TabsTrigger>
                         </TabsList>
