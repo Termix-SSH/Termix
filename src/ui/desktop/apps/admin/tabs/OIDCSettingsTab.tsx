@@ -141,6 +141,7 @@ export function OIDCSettingsTab({
       name_path: "",
       scopes: "",
       userinfo_url: "",
+      allowed_users: "",
     };
     setOidcConfig(emptyConfig);
     setOidcError(null);

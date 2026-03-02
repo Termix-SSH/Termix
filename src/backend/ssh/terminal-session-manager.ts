@@ -13,6 +13,7 @@ export interface TerminalSession {
   userId: string;
   hostId: number;
   hostName: string;
+  tabInstanceId?: string;
 
   sshConn: Client | null;
   sshStream: ClientChannel | null;
@@ -38,7 +39,10 @@ class TerminalSessionManager {
   private healthCheckTimer: NodeJS.Timeout | null = null;
 
   private constructor() {
-    this.healthCheckTimer = setInterval(() => this.healthCheck(), HEALTH_CHECK_INTERVAL_MS);
+    this.healthCheckTimer = setInterval(
+      () => this.healthCheck(),
+      HEALTH_CHECK_INTERVAL_MS,
+    );
   }
 
   static getInstance(): TerminalSessionManager {
@@ -48,13 +52,24 @@ class TerminalSessionManager {
     return TerminalSessionManager.instance;
   }
 
-  createSession(userId: string, hostId: number, hostName: string, cols: number, rows: number): string {
+  createSession(
+    userId: string,
+    hostId: number,
+    hostName: string,
+    cols: number,
+    rows: number,
+    tabInstanceId?: string,
+  ): string {
     const userSessions = this.getUserSessions(userId);
     if (userSessions.length >= MAX_SESSIONS_PER_USER) {
       // Destroy the oldest detached session
       const detached = userSessions
-        .filter(s => s.attachedWs === null)
-        .sort((a, b) => (a.lastDetachedAt ?? a.createdAt) - (b.lastDetachedAt ?? b.createdAt));
+        .filter((s) => s.attachedWs === null)
+        .sort(
+          (a, b) =>
+            (a.lastDetachedAt ?? a.createdAt) -
+            (b.lastDetachedAt ?? b.createdAt),
+        );
       if (detached.length > 0) {
         this.destroySession(detached[0].id);
       }
@@ -66,6 +81,7 @@ class TerminalSessionManager {
       userId,
       hostId,
       hostName,
+      tabInstanceId,
       sshConn: null,
       sshStream: null,
       jumpClient: null,
@@ -114,20 +130,49 @@ class TerminalSessionManager {
     session.isConnected = true;
   }
 
-  attachWs(sessionId: string, userId: string, ws: WebSocket): TerminalSession | null {
+  attachWs(
+    sessionId: string,
+    userId: string,
+    ws: WebSocket,
+    tabInstanceId?: string,
+  ): TerminalSession | null {
     const session = this.sessions.get(sessionId);
     if (!session || session.userId !== userId) return null;
     if (!session.isConnected) return null;
 
-    // If another WS is attached, detach it silently
+    // Validate tab instance ownership
+    if (
+      session.tabInstanceId &&
+      tabInstanceId &&
+      session.tabInstanceId !== tabInstanceId
+    ) {
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "sessionExpired",
+            sessionId,
+            message: "Session belongs to a different tab instance",
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+
+    // If another WS is attached, detach it
     if (session.attachedWs && session.attachedWs !== ws) {
       try {
-        session.attachedWs.send(JSON.stringify({
-          type: "sessionTakenOver",
-          sessionId,
-          message: "Session was attached from another tab",
-        }));
-      } catch { /* ignore */ }
+        session.attachedWs.send(
+          JSON.stringify({
+            type: "sessionTakenOver",
+            sessionId,
+            message: "Session was attached from another tab",
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
       session.attachedWs = null;
     }
 
@@ -191,17 +236,29 @@ class TerminalSessionManager {
     }
 
     if (session.sshStream) {
-      try { session.sshStream.end(); } catch { /* ignore */ }
+      try {
+        session.sshStream.end();
+      } catch {
+        /* ignore */
+      }
       session.sshStream = null;
     }
 
     if (session.sshConn) {
-      try { session.sshConn.end(); } catch { /* ignore */ }
+      try {
+        session.sshConn.end();
+      } catch {
+        /* ignore */
+      }
       session.sshConn = null;
     }
 
     if (session.jumpClient) {
-      try { session.jumpClient.end(); } catch { /* ignore */ }
+      try {
+        session.jumpClient.end();
+      } catch {
+        /* ignore */
+      }
       session.jumpClient = null;
     }
 
@@ -242,7 +299,10 @@ class TerminalSessionManager {
     session.outputBuffer.push(data);
     session.outputBufferBytes += data.length;
 
-    while (session.outputBufferBytes > MAX_BUFFER_BYTES && session.outputBuffer.length > 0) {
+    while (
+      session.outputBufferBytes > MAX_BUFFER_BYTES &&
+      session.outputBuffer.length > 0
+    ) {
       const removed = session.outputBuffer.shift();
       if (removed) session.outputBufferBytes -= removed.length;
     }
@@ -260,7 +320,9 @@ class TerminalSessionManager {
     try {
       const db = getDb();
       const row = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'")
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+        )
         .get() as { value: string } | undefined;
       if (row) {
         const minutes = parseInt(row.value, 10);
@@ -300,7 +362,10 @@ class TerminalSessionManager {
     }
   }
 
-  private async cleanupOpksshFiles(tempFiles: { keyPath: string; certPath: string }): Promise<void> {
+  private async cleanupOpksshFiles(tempFiles: {
+    keyPath: string;
+    certPath: string;
+  }): Promise<void> {
     try {
       const { promises: fs } = await import("fs");
       const results = await Promise.allSettled([

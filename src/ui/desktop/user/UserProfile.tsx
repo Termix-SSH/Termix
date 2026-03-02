@@ -146,6 +146,13 @@ export function UserProfile({
       const saved = localStorage.getItem("confirmSnippetExecution");
       return saved !== null ? saved === "true" : false;
     });
+  const [
+    enableTerminalSessionPersistence,
+    setEnableTerminalSessionPersistence,
+  ] = useState<boolean>(() => {
+    const saved = localStorage.getItem("enableTerminalSessionPersistence");
+    return saved === "true";
+  });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
@@ -238,6 +245,14 @@ export function UserProfile({
   const handleConfirmSnippetExecutionToggle = (enabled: boolean) => {
     setConfirmSnippetExecution(enabled);
     localStorage.setItem("confirmSnippetExecution", enabled.toString());
+  };
+
+  const handleTerminalSessionPersistenceToggle = (enabled: boolean) => {
+    setEnableTerminalSessionPersistence(enabled);
+    localStorage.setItem(
+      "enableTerminalSessionPersistence",
+      enabled.toString(),
+    );
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -605,6 +620,23 @@ export function UserProfile({
                       <Switch
                         checked={commandPaletteShortcutEnabled}
                         onCheckedChange={handleCommandPaletteShortcutToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.enableTerminalSessionPersistence")}{" "}
+                          <span className="text-xs text-yellow-500 font-semibold">
+                            (BETA)
+                          </span>
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.enableTerminalSessionPersistenceDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={enableTerminalSessionPersistence}
+                        onCheckedChange={handleTerminalSessionPersistenceToggle}
                       />
                     </div>
                   </div>

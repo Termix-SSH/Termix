@@ -59,7 +59,7 @@ export function clearTermixSessionStorage() {
       keysToRemove.push(key);
     }
   }
-  keysToRemove.forEach(k => localStorage.removeItem(k));
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
 }
 
 export function TabProvider({ children }: TabProviderProps) {
@@ -75,16 +75,19 @@ export function TabProvider({ children }: TabProviderProps) {
           if (tab.type === "home") continue;
           const restoredTab: Tab = {
             ...tab,
-            terminalRef: tab.type === "terminal"
-              ? React.createRef<{ disconnect?: () => void }>()
-              : undefined,
+            terminalRef:
+              tab.type === "terminal"
+                ? React.createRef<{ disconnect?: () => void }>()
+                : undefined,
           };
           restored.push(restoredTab);
           if (tab.id > maxId) maxId = tab.id;
         }
         if (restored.length > 1) return restored;
       }
-    } catch { /* ignore corrupt data */ }
+    } catch {
+      /* ignore corrupt data */
+    }
     return [{ id: 1, type: "home", title: "Home" }];
   });
   const [currentTab, setCurrentTab] = useState<number>(() => {
@@ -93,15 +96,19 @@ export function TabProvider({ children }: TabProviderProps) {
       if (saved) {
         const parsed = parseInt(saved, 10);
         // Validate against restored tabs
-        if (parsed && tabs.some(t => t.id === parsed)) return parsed;
+        if (parsed && tabs.some((t) => t.id === parsed)) return parsed;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return 1;
   });
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const [initialMaxId] = useState(() => {
     let maxId = 1;
-    tabs.forEach(tab => { if (tab.id > maxId) maxId = tab.id; });
+    tabs.forEach((tab) => {
+      if (tab.id > maxId) maxId = tab.id;
+    });
     return maxId + 1;
   });
   const nextTabId = useRef(initialMaxId);
@@ -109,7 +116,7 @@ export function TabProvider({ children }: TabProviderProps) {
   // Save tabs to localStorage on change
   useEffect(() => {
     const serializable = tabs
-      .filter(t => t.type !== "home")
+      .filter((t) => t.type !== "home")
       .map(({ terminalRef, ...rest }) => rest);
     localStorage.setItem("termix_tabs", JSON.stringify(serializable));
     localStorage.setItem("termix_currentTab", String(currentTab));
@@ -196,6 +203,7 @@ export function TabProvider({ children }: TabProviderProps) {
     }
 
     const id = nextTabId.current++;
+    const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const needsUniqueTitle =
       tabData.type === "terminal" ||
       tabData.type === "server_stats" ||
@@ -208,11 +216,18 @@ export function TabProvider({ children }: TabProviderProps) {
     const newTab: Tab = {
       ...tabData,
       id,
+      instanceId,
       title: effectiveTitle,
       terminalRef:
         tabData.type === "terminal"
           ? React.createRef<{ disconnect?: () => void }>()
           : undefined,
+      hostConfig: tabData.hostConfig
+        ? {
+            ...tabData.hostConfig,
+            instanceId,
+          }
+        : undefined,
     };
     setTabs((prev) => [...prev, newTab]);
     setCurrentTab(id);

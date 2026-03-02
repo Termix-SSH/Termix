@@ -71,6 +71,8 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 30,
+  useGlobalStatusInterval: true,
   metricsEnabled: true,
   metricsInterval: 30,
+  useGlobalMetricsInterval: true,
 };

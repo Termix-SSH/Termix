@@ -75,7 +75,7 @@ export function HostStatisticsTab({
                   <FormItem className="flex flex-row items-center gap-2 space-y-0">
                     <FormControl>
                       <Switch
-                        checked={field.value !== false}
+                        checked={field.value ?? true}
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
@@ -98,7 +98,9 @@ export function HostStatisticsTab({
                     const handleIntervalChange = (value: string) => {
                       const numValue = parseInt(value) || 0;
                       const seconds =
-                        statusIntervalUnit === "minutes" ? numValue * 60 : numValue;
+                        statusIntervalUnit === "minutes"
+                          ? numValue * 60
+                          : numValue;
                       field.onChange(seconds);
                     };
 
@@ -110,7 +112,9 @@ export function HostStatisticsTab({
                             <Input
                               type="number"
                               value={displayValue}
-                              onChange={(e) => handleIntervalChange(e.target.value)}
+                              onChange={(e) =>
+                                handleIntervalChange(e.target.value)
+                              }
                               className="flex-1"
                             />
                           </FormControl>
@@ -181,7 +185,7 @@ export function HostStatisticsTab({
                   <FormItem className="flex flex-row items-center gap-2 space-y-0">
                     <FormControl>
                       <Switch
-                        checked={field.value !== false}
+                        checked={field.value ?? true}
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
@@ -218,7 +222,9 @@ export function HostStatisticsTab({
                             <Input
                               type="number"
                               value={displayValue}
-                              onChange={(e) => handleIntervalChange(e.target.value)}
+                              onChange={(e) =>
+                                handleIntervalChange(e.target.value)
+                              }
                               className="flex-1"
                             />
                           </FormControl>

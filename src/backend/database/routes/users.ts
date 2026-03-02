@@ -268,9 +268,7 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(sshData).where(eq(sshData.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
-    await db
-      .delete(networkTopology)
-      .where(eq(networkTopology.userId, userId));
+    await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
     await db
       .delete(dashboardPreferences)
       .where(eq(dashboardPreferences.userId, userId));
@@ -1194,7 +1192,7 @@ router.get("/oidc/callback", async (req, res) => {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
-            : 7 * 24 * 60 * 60 * 1000;
+            : 2 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -1223,6 +1221,28 @@ router.get("/oidc/callback", async (req, res) => {
 
       user = await db.select().from(users).where(eq(users.id, id));
     } else {
+      if (config.allowed_users) {
+        const email = userInfo.email as string | undefined;
+        if (!isOIDCUserAllowed(config.allowed_users, identifier, email)) {
+          authLogger.warn("OIDC user not in allowed list (existing user)", {
+            operation: "oidc_user_not_allowed_existing",
+            identifier,
+            email,
+            userId: user[0].id,
+          });
+          let frontendUrl = (redirectUri as string).replace(
+            "/users/oidc/callback",
+            "",
+          );
+          if (frontendUrl.includes("localhost")) {
+            frontendUrl = "http://localhost:5173";
+          }
+          const redirectUrl = new URL(frontendUrl);
+          redirectUrl.searchParams.set("error", "user_not_allowed");
+          return res.redirect(redirectUrl.toString());
+        }
+      }
+
       const isDualAuth =
         user[0].passwordHash && user[0].passwordHash.trim() !== "";
 
@@ -1248,9 +1268,8 @@ router.get("/oidc/callback", async (req, res) => {
     }
 
     try {
-      const { SharedCredentialManager } = await import(
-        "../../utils/shared-credential-manager.js"
-      );
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
     } catch {
@@ -1283,7 +1302,7 @@ router.get("/oidc/callback", async (req, res) => {
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+        : 2 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
@@ -1476,9 +1495,8 @@ router.post("/login", async (req, res) => {
     }
 
     try {
-      const { SharedCredentialManager } = await import(
-        "../../utils/shared-credential-manager.js"
-      );
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
     } catch (error) {
@@ -1532,12 +1550,7 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge =
-      rememberMe ||
-      deviceInfo.type === "desktop" ||
-      deviceInfo.type === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -2569,7 +2582,10 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 
   const saltRounds = parseInt(process.env.SALT || "10", 10);
   const password_hash = await bcrypt.hash(newPassword, saltRounds);
-  await db.update(users).set({ passwordHash: password_hash }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ passwordHash: password_hash })
+    .where(eq(users.id, userId));
 
   authManager.logoutUser(userId);
   authLogger.success("Password changed successfully", {
@@ -3300,12 +3316,7 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge =
-      rememberMe ||
-      deviceInfo.type === "desktop" ||
-      deviceInfo.type === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))

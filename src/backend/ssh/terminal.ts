@@ -1,9 +1,5 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import {
-  Client,
-  type ClientChannel,
-  type PseudoTtyOptions,
-} from "ssh2";
+import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
 import { parse as parseUrl } from "url";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
@@ -13,7 +9,10 @@ import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
-import { createSocks5Connection, type SOCKS5Config } from "../utils/socks5-helper.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
 import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
@@ -24,6 +23,7 @@ interface ConnectToHostData {
   rows: number;
   hostConfig: {
     id: number;
+    instanceId?: string;
     ip: string;
     port: number;
     username: string;
@@ -231,15 +231,24 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          sshLogger.error(`Jump host ${i + 1}/${totalHops} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-            hopIndex: i,
-            totalHops,
-            previousHop: i > 0 ? jumpHostConfigs[i - 1]?.ip : (proxySocket ? "proxy" : "direct"),
-            usedProxySocket: i === 0 && !!proxySocket,
-          });
+          sshLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
@@ -524,8 +533,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       case "attachSession": {
-        const attachData = data as { sessionId: string; cols: number; rows: number };
-        const session = sessionManager.attachWs(attachData.sessionId, userId, ws);
+        const attachData = data as {
+          sessionId: string;
+          cols: number;
+          rows: number;
+          tabInstanceId?: string;
+        };
+        const session = sessionManager.attachWs(
+          attachData.sessionId,
+          userId,
+          ws,
+          attachData.tabInstanceId,
+        );
         if (session) {
           currentSessionId = attachData.sessionId;
           sshStream = session.sshStream;
@@ -538,31 +557,56 @@ wss.on("connection", async (ws: WebSocket, req) => {
             ws.send(JSON.stringify({ type: "data", data: buffered }));
           }
           // Resize if needed
-          if (attachData.cols !== session.cols || attachData.rows !== session.rows) {
-            session.sshStream?.setWindow(attachData.rows, attachData.cols, attachData.rows, attachData.cols);
+          if (
+            attachData.cols !== session.cols ||
+            attachData.rows !== session.rows
+          ) {
+            session.sshStream?.setWindow(
+              attachData.rows,
+              attachData.cols,
+              attachData.rows,
+              attachData.cols,
+            );
             session.cols = attachData.cols;
             session.rows = attachData.rows;
           }
-          ws.send(JSON.stringify({ type: "sessionAttached", sessionId: attachData.sessionId }));
-          ws.send(JSON.stringify({ type: "connected", message: "Session reattached" }));
+          ws.send(
+            JSON.stringify({
+              type: "sessionAttached",
+              sessionId: attachData.sessionId,
+            }),
+          );
+          ws.send(
+            JSON.stringify({
+              type: "connected",
+              message: "Session reattached",
+            }),
+          );
         } else {
-          ws.send(JSON.stringify({ type: "sessionExpired", sessionId: attachData.sessionId }));
+          ws.send(
+            JSON.stringify({
+              type: "sessionExpired",
+              sessionId: attachData.sessionId,
+            }),
+          );
         }
         break;
       }
 
       case "listSessions": {
         const sessions = sessionManager.getUserSessions(userId);
-        ws.send(JSON.stringify({
-          type: "sessionList",
-          sessions: sessions.map(s => ({
-            id: s.id,
-            hostId: s.hostId,
-            hostName: s.hostName,
-            createdAt: s.createdAt,
-            lastDetachedAt: s.lastDetachedAt,
-          })),
-        }));
+        ws.send(
+          JSON.stringify({
+            type: "sessionList",
+            sessions: sessions.map((s) => ({
+              id: s.id,
+              hostId: s.hostId,
+              hostName: s.hostName,
+              createdAt: s.createdAt,
+              lastDetachedAt: s.lastDetachedAt,
+            })),
+          }),
+        );
         break;
       }
 
@@ -584,7 +628,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       case "input": {
         const inputData = data as string;
-        const inputStream = sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+        const inputStream =
+          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
         if (inputStream) {
           if (inputData === "\t") {
             inputStream.write(inputData);
@@ -697,7 +742,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentialsData.password) {
           credentialsData.hostConfig.password = credentialsData.password;
           credentialsData.hostConfig.authType = "password";
-          (credentialsData.hostConfig as Record<string, unknown>).userProvidedPassword = true;
+          (
+            credentialsData.hostConfig as Record<string, unknown>
+          ).userProvidedPassword = true;
         } else if (credentialsData.sshKey) {
           credentialsData.hostConfig.key = credentialsData.sshKey;
           credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
@@ -741,9 +788,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } = await import(
-            "./opkssh-auth.js"
-          );
+          const { startOPKSSHAuth, getRequestOrigin } =
+            await import("./opkssh-auth.js");
           const db = getDb();
           const hostRow = await db
             .select()
@@ -828,7 +874,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows: completedData.rows || 24,
           hostConfig:
             completedData.hostConfig ||
-            ({ id: completedData.hostId, ip: "", port: 22, username: "", userId } as ConnectToHostData["hostConfig"]),
+            ({
+              id: completedData.hostId,
+              ip: "",
+              port: 22,
+              username: "",
+              userId,
+            } as ConnectToHostData["hostConfig"]),
         };
 
         handleConnectToHost(reconnectConfig).catch((error) => {
@@ -954,8 +1006,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     // Create session early for persistence tracking
     const hostDisplayName = `${username}@${ip}:${port}`;
-    currentSessionId = sessionManager.createSession(userId, id, hostDisplayName, data.cols, data.rows);
-    ws.send(JSON.stringify({ type: "sessionCreated", sessionId: currentSessionId }));
+    const tabInstanceId = hostConfig.instanceId;
+    currentSessionId = sessionManager.createSession(
+      userId,
+      id,
+      hostDisplayName,
+      data.cols,
+      data.rows,
+      tabInstanceId,
+    );
+    ws.send(
+      JSON.stringify({ type: "sessionCreated", sessionId: currentSessionId }),
+    );
 
     sendLog("dns", "info", `Starting address resolution of ${ip}`);
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
@@ -980,7 +1042,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
-    let resolvedCredentials = { username, password, key, keyPassword, keyType, authType };
+    let resolvedCredentials = {
+      username,
+      password,
+      key,
+      keyPassword,
+      keyType,
+      authType,
+    };
     const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
@@ -1190,7 +1259,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           // Register SSH state with session manager for persistence
           if (currentSessionId) {
-            sessionManager.setSSHState(currentSessionId, sshConn!, stream, lastJumpClient, opksshTempFiles);
+            sessionManager.setSSHState(
+              currentSessionId,
+              sshConn!,
+              stream,
+              lastJumpClient,
+              opksshTempFiles,
+            );
             sessionManager.attachWs(currentSessionId, userId, ws);
           }
 
@@ -1202,7 +1277,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const utf8String = data.toString("utf-8");
               const session = sessionManager.getSession(boundSessionId);
               if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-                session.attachedWs.send(JSON.stringify({ type: "data", data: utf8String }));
+                session.attachedWs.send(
+                  JSON.stringify({ type: "data", data: utf8String }),
+                );
               } else if (session) {
                 sessionManager.bufferOutput(boundSessionId!, utf8String);
               }
@@ -1215,7 +1292,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const fallback = data.toString("latin1");
               const session = sessionManager.getSession(boundSessionId);
               if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-                session.attachedWs.send(JSON.stringify({ type: "data", data: fallback }));
+                session.attachedWs.send(
+                  JSON.stringify({ type: "data", data: fallback }),
+                );
               } else if (session) {
                 sessionManager.bufferOutput(boundSessionId!, fallback);
               }
@@ -1614,7 +1693,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
           instructionsLang,
           prompts,
           finish,
-          resolvedCredentials as unknown as Parameters<typeof sshAuthManager.handleKeyboardInteractive>[5],
+          resolvedCredentials as unknown as Parameters<
+            typeof sshAuthManager.handleKeyboardInteractive
+          >[5],
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -1637,8 +1718,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       port,
       username,
       tryKeyboard: true,
-      keepaliveInterval: typeof hostKeepaliveInterval === "number" ? hostKeepaliveInterval : 30000,
-      keepaliveCountMax: typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
+      keepaliveInterval:
+        typeof hostKeepaliveInterval === "number"
+          ? hostKeepaliveInterval
+          : 30000,
+      keepaliveCountMax:
+        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
@@ -1850,21 +1935,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     // Unified proxy + jump host pipeline: proxy config is passed to jump host chain
     // so it can create the proxy socket to the first jump host internally
-    const proxyConfig: SOCKS5Config | null = (hostConfig.useSocks5 &&
+    const proxyConfig: SOCKS5Config | null =
+      hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
         (hostConfig.socks5ProxyChain &&
-          (hostConfig.socks5ProxyChain as ProxyNode[]).length > 0)))
-      ? {
-          useSocks5: hostConfig.useSocks5,
-          socks5Host: hostConfig.socks5Host,
-          socks5Port: hostConfig.socks5Port,
-          socks5Username: hostConfig.socks5Username,
-          socks5Password: hostConfig.socks5Password,
-          socks5ProxyChain: hostConfig.socks5ProxyChain as ProxyNode[],
-        }
-      : null;
+          (hostConfig.socks5ProxyChain as ProxyNode[]).length > 0))
+        ? {
+            useSocks5: hostConfig.useSocks5,
+            socks5Host: hostConfig.socks5Host,
+            socks5Port: hostConfig.socks5Port,
+            socks5Username: hostConfig.socks5Username,
+            socks5Password: hostConfig.socks5Password,
+            socks5ProxyChain: hostConfig.socks5ProxyChain as ProxyNode[],
+          }
+        : null;
 
-    const hasJumpHosts = hostConfig.jumpHosts &&
+    const hasJumpHosts =
+      hostConfig.jumpHosts &&
       hostConfig.jumpHosts.length > 0 &&
       hostConfig.userId;
 
@@ -1920,7 +2007,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sendLog(
             "handshake",
             "info",
-            "Starting SSH session through jump host" + (proxyConfig ? " (via proxy)" : ""),
+            "Starting SSH session through jump host" +
+              (proxyConfig ? " (via proxy)" : ""),
           );
           sendLog("auth", "info", `Authenticating as ${username}`);
           sshLogger.info("Initiating SSH connection", {
@@ -2016,7 +2104,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   function handleResize(data: ResizeData) {
-    const resizeStream = sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+    const resizeStream =
+      sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
     if (resizeStream && resizeStream.setWindow) {
       resizeStream.setWindow(data.rows, data.cols, data.rows, data.cols);
       const session = sessionManager.getSession(currentSessionId);

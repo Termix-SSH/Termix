@@ -99,7 +99,7 @@ class AuthManager {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+        : 2 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateOIDCUser(
       userId,
@@ -121,7 +121,7 @@ class AuthManager {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+        : 2 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateUser(
       userId,
@@ -154,9 +154,8 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { getSqlite, saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
 
       const sqlite = getSqlite();
 
@@ -171,9 +170,8 @@ class AuthManager {
       }
 
       try {
-        const { CredentialSystemEncryptionMigration } = await import(
-          "./credential-system-encryption-migration.js"
-        );
+        const { CredentialSystemEncryptionMigration } =
+          await import("./credential-system-encryption-migration.js");
         const credMigration = new CredentialSystemEncryptionMigration();
         const credResult = await credMigration.migrateUserCredentials(userId);
 
@@ -210,17 +208,13 @@ class AuthManager {
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
-      if (
-        options.rememberMe ||
-        options.deviceType === "desktop" ||
-        options.deviceType === "mobile"
-      ) {
+      if (options.rememberMe) {
         expiresIn = "30d";
       } else {
-        expiresIn = "7d";
+        expiresIn = "2h";
       }
     } else if (!expiresIn) {
-      expiresIn = "7d";
+      expiresIn = "2h";
     }
 
     const payload: JWTPayload = { userId };
@@ -254,9 +248,8 @@ class AuthManager {
         });
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -284,7 +277,7 @@ class AuthManager {
 
   private parseExpiresIn(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) return 7 * 24 * 60 * 60 * 1000;
+    if (!match) return 2 * 60 * 60 * 1000;
 
     const value = parseInt(match[1]);
     const unit = match[2];
@@ -299,7 +292,7 @@ class AuthManager {
       case "d":
         return value * 24 * 60 * 60 * 1000;
       default:
-        return 7 * 24 * 60 * 60 * 1000;
+        return 2 * 60 * 60 * 1000;
     }
   }
 
@@ -368,9 +361,8 @@ class AuthManager {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -427,9 +419,8 @@ class AuthManager {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -470,9 +461,8 @@ class AuthManager {
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -535,7 +525,7 @@ class AuthManager {
 
   getSecureCookieOptions(
     req: RequestWithHeaders,
-    maxAge: number = 7 * 24 * 60 * 60 * 1000,
+    maxAge: number = 2 * 60 * 60 * 1000,
   ) {
     return {
       httpOnly: false,
@@ -617,9 +607,8 @@ class AuthManager {
               .where(eq(sessions.id, payload.sessionId))
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } = await import(
-                    "../database/db/index.js"
-                  );
+                  const { saveMemoryDatabaseToFile } =
+                    await import("../database/db/index.js");
                   await saveMemoryDatabaseToFile();
 
                   const remainingSessions = await db
@@ -763,9 +752,8 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(

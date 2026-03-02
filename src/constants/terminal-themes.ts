@@ -762,6 +762,8 @@ export const DEFAULT_TERMINAL_CONFIG = {
   autoMosh: false,
   moshCommand: "mosh-server new -s -l LANG=en_US.UTF-8",
   sudoPasswordAutoFill: false,
+  keepaliveInterval: undefined as number | undefined,
+  keepaliveCountMax: undefined as number | undefined,
 };
 
 export type TerminalConfigType = typeof DEFAULT_TERMINAL_CONFIG;

@@ -50,6 +50,7 @@ import { toast } from "sonner";
 
 interface HostConfig {
   id?: number;
+  instanceId?: string;
   ip: string;
   port: number;
   username: string;
@@ -818,14 +819,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         currentHostConfigRef.current = hostConfig;
 
         // Session persistence: try to reattach existing session
-        const tabId = hostConfig.id ?? "default";
-        const savedSessionId = localStorage.getItem(`termix_session_${tabId}`);
+        const persistenceEnabled =
+          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+        const tabId = hostConfig.instanceId
+          ? `${hostConfig.id}_${hostConfig.instanceId}`
+          : `${hostConfig.id}_${Date.now()}`;
+        const savedSessionId = persistenceEnabled
+          ? localStorage.getItem(`termix_session_${tabId}`)
+          : null;
         if (savedSessionId && !isReconnectingRef.current) {
           sessionIdRef.current = savedSessionId;
           ws.send(
             JSON.stringify({
               type: "attachSession",
-              data: { sessionId: savedSessionId, cols, rows },
+              data: {
+                sessionId: savedSessionId,
+                cols,
+                rows,
+                tabInstanceId: hostConfig.instanceId,
+              },
             }),
           );
         } else {
@@ -1262,8 +1274,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "sessionCreated") {
             // Store session ID for reconnection
             sessionIdRef.current = msg.sessionId;
-            const tabId = hostConfig.id ?? "default";
-            localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
+            const persistenceEnabled =
+              localStorage.getItem("enableTerminalSessionPersistence") ===
+              "true";
+            if (persistenceEnabled && hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
+            }
           } else if (msg.type === "sessionAttached") {
             // Reattach succeeded — same effect as "connected"
             opksshFailedRef.current = false;
@@ -1285,8 +1302,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             });
           } else if (msg.type === "sessionExpired") {
             // Saved session expired — clear and start fresh
-            const tabId = hostConfig.id ?? "default";
-            localStorage.removeItem(`termix_session_${tabId}`);
+            if (hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.removeItem(`termix_session_${tabId}`);
+            }
             sessionIdRef.current = null;
             // Use current terminal dimensions instead of stale closure values
             const currentCols = terminal?.cols ?? cols;
@@ -1304,11 +1323,31 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }),
             );
           } else if (msg.type === "sessionTakenOver") {
-            // Another tab took over our session
+            // Session was attached by another tab, clear local storage and reconnect
+            if (sessionIdRef.current && hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.removeItem(`termix_session_${tabId}`);
+              sessionIdRef.current = null;
+            }
+
+            // Clear terminal and show reconnecting state
+            if (terminal) {
+              terminal.clear();
+            }
             setIsConnected(false);
-            setIsConnecting(false);
-            shouldNotReconnectRef.current = true;
-            updateConnectionError(t("terminal.connectionRejected"));
+            setIsConnecting(true);
+
+            // Send connection log
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.sessionTakenOver"),
+            });
+
+            // Reconnect with new session
+            const cols = terminal?.cols || 80;
+            const rows = terminal?.rows || 24;
+            connectToHost(cols, rows);
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1714,11 +1753,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
         }
+
+        // Clear localStorage when persistence is disabled
+        const persistenceEnabled =
+          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+        if (
+          !persistenceEnabled &&
+          sessionIdRef.current &&
+          hostConfig.instanceId
+        ) {
+          const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+          localStorage.removeItem(`termix_session_${tabId}`);
+        }
+
         // Close WS without sending explicit disconnect — backend will detach
         // the session for later reattachment instead of destroying it
         webSocketRef.current?.close();
       };
-    }, []);
+    }, [hostConfig.id, hostConfig.instanceId]);
 
     useEffect(() => {
       if (!terminal) return;

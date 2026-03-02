@@ -346,8 +346,10 @@ export function HostManagerEditor({
             ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
+          useGlobalStatusInterval: z.boolean().default(true),
           metricsEnabled: z.boolean().default(true),
           metricsInterval: z.number().min(5).max(3600).default(30),
+          useGlobalMetricsInterval: z.boolean().default(true),
         })
         .default({
           enabledWidgets: [
@@ -363,8 +365,10 @@ export function HostManagerEditor({
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
+          useGlobalStatusInterval: true,
           metricsEnabled: true,
           metricsInterval: 30,
+          useGlobalMetricsInterval: true,
         }),
       terminalConfig: z
         .object({

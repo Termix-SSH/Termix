@@ -1459,7 +1459,8 @@
     "totpTimeout": "TOTP verification timeout. Please reconnect.",
     "passwordTimeout": "Password verification timeout. Please reconnect.",
     "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
-    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled."
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
+    "sessionTakenOver": "Session was opened in another tab. Reconnecting..."
   },
   "fileManager": {
     "title": "File Manager",
@@ -2190,7 +2191,9 @@
     "appearanceDesc": "Select the color theme for the application",
     "terminalSyntaxHighlightingDesc": "Automatically highlight commands, paths, IPs, and log levels in terminal output",
     "enableCommandPaletteShortcut": "Enable Command Palette Shortcut",
-    "enableCommandPaletteShortcutDesc": "Double-tap left Shift to open the Command Palette for quick access to hosts"
+    "enableCommandPaletteShortcutDesc": "Double-tap left Shift to open the Command Palette for quick access to hosts",
+    "enableTerminalSessionPersistence": "Persistent Terminal Sessions",
+    "enableTerminalSessionPersistenceDesc": "Maintain SSH connections when switching tabs or closing the browser (may be unstable)"
   },
   "user": {
     "failedToLoadVersionInfo": "Failed to load version information"

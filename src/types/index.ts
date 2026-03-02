@@ -405,6 +405,7 @@ export interface TerminalConfig {
 
 export interface TabContextTab {
   id: number;
+  instanceId?: string;
   type:
     | "home"
     | "terminal"
