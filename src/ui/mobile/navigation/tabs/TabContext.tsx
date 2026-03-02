@@ -22,7 +22,7 @@ const TabContext = createContext<TabContextType | undefined>(undefined);
 
 export function useTabs() {
   const context = useContext(TabContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useTabs must be used within a TabProvider");
   }
   return context;
