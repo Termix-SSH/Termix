@@ -137,8 +137,33 @@ class TerminalSessionManager {
     tabInstanceId?: string,
   ): TerminalSession | null {
     const session = this.sessions.get(sessionId);
-    if (!session || session.userId !== userId) return null;
-    if (!session.isConnected) return null;
+    if (!session) {
+      sshLogger.warn("Session not found for attachment", {
+        operation: "session_attach_not_found",
+        sessionId,
+        userId,
+      });
+      return null;
+    }
+    if (session.userId !== userId) {
+      sshLogger.warn("Session userId mismatch", {
+        operation: "session_attach_user_mismatch",
+        sessionId,
+        expectedUserId: session.userId,
+        providedUserId: userId,
+      });
+      return null;
+    }
+    if (!session.isConnected) {
+      sshLogger.warn("Session not connected", {
+        operation: "session_attach_not_connected",
+        sessionId,
+        userId,
+        createdAt: session.createdAt,
+        elapsed: Date.now() - session.createdAt,
+      });
+      return null;
+    }
 
     // Validate tab instance ownership
     if (
@@ -146,6 +171,12 @@ class TerminalSessionManager {
       tabInstanceId &&
       session.tabInstanceId !== tabInstanceId
     ) {
+      sshLogger.warn("Tab instance mismatch", {
+        operation: "session_attach_instance_mismatch",
+        sessionId,
+        sessionInstanceId: session.tabInstanceId,
+        providedInstanceId: tabInstanceId,
+      });
       try {
         ws.send(
           JSON.stringify({

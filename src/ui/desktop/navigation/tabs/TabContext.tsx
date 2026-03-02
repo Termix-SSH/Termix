@@ -65,6 +65,18 @@ export function clearTermixSessionStorage() {
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>(() => {
+    // Check if persistence is enabled (always enabled for mobile/Electron)
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const isElectron =
+      typeof window !== "undefined" && !!(window as any).electronAPI;
+    const persistenceEnabled =
+      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+    const shouldRestore = isMobile || isElectron || persistenceEnabled;
+
+    if (!shouldRestore) {
+      return [{ id: 1, type: "home", title: "Home" }];
+    }
+
     try {
       const saved = localStorage.getItem("termix_tabs");
       if (saved) {
@@ -79,6 +91,12 @@ export function TabProvider({ children }: TabProviderProps) {
               tab.type === "terminal"
                 ? React.createRef<{ disconnect?: () => void }>()
                 : undefined,
+            hostConfig: tab.hostConfig
+              ? {
+                  ...tab.hostConfig,
+                  instanceId: tab.instanceId,
+                }
+              : undefined,
           };
           restored.push(restoredTab);
           if (tab.id > maxId) maxId = tab.id;
@@ -115,11 +133,25 @@ export function TabProvider({ children }: TabProviderProps) {
 
   // Save tabs to localStorage on change
   useEffect(() => {
-    const serializable = tabs
-      .filter((t) => t.type !== "home")
-      .map(({ terminalRef, ...rest }) => rest);
-    localStorage.setItem("termix_tabs", JSON.stringify(serializable));
-    localStorage.setItem("termix_currentTab", String(currentTab));
+    // Check if persistence is enabled (always enabled for mobile/Electron)
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const isElectron =
+      typeof window !== "undefined" && !!(window as any).electronAPI;
+    const persistenceEnabled =
+      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+    const shouldSave = isMobile || isElectron || persistenceEnabled;
+
+    if (shouldSave) {
+      const serializable = tabs
+        .filter((t) => t.type !== "home")
+        .map(({ terminalRef, ...rest }) => rest);
+      localStorage.setItem("termix_tabs", JSON.stringify(serializable));
+      localStorage.setItem("termix_currentTab", String(currentTab));
+    } else {
+      // Clear saved tabs when persistence is disabled
+      localStorage.removeItem("termix_tabs");
+      localStorage.removeItem("termix_currentTab");
+    }
   }, [tabs, currentTab]);
 
   React.useEffect(() => {

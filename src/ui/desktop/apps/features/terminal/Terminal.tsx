@@ -183,6 +183,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     // Session persistence
     const sessionIdRef = useRef<string | null>(null);
+    const sessionAttachTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isAttachingSessionRef = useRef<boolean>(false);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
@@ -641,7 +643,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       isReconnectingRef.current = true;
 
-      if (terminal) {
+      if (terminal && !isAttachingSessionRef.current) {
         terminal.clear();
       }
 
@@ -829,6 +831,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           : null;
         if (savedSessionId && !isReconnectingRef.current) {
           sessionIdRef.current = savedSessionId;
+          isAttachingSessionRef.current = true;
+
+          // Set timeout for session attachment (5 seconds)
+          sessionAttachTimeoutRef.current = setTimeout(() => {
+            if (!isConnected && isConnecting) {
+              isAttachingSessionRef.current = false;
+              addLog({
+                type: "warning",
+                stage: "connection",
+                message: t("terminal.sessionAttachTimeout"),
+              });
+
+              // Clear saved session and create new connection
+              if (hostConfig.instanceId) {
+                const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+                localStorage.removeItem(`termix_session_${tabId}`);
+              }
+              sessionIdRef.current = null;
+
+              // Clear terminal before new connection
+              if (terminal) {
+                terminal.clear();
+              }
+
+              // Send new connection request
+              ws.send(
+                JSON.stringify({
+                  type: "connectToHost",
+                  data: { cols, rows, hostConfig, initialPath, executeCommand },
+                }),
+              );
+            }
+          }, 5000);
+
           ws.send(
             JSON.stringify({
               type: "attachSession",
@@ -841,6 +877,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }),
           );
         } else {
+          isAttachingSessionRef.current = false;
           ws.send(
             JSON.stringify({
               type: "connectToHost",
@@ -975,6 +1012,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
+            }
+            if (sessionAttachTimeoutRef.current) {
+              clearTimeout(sessionAttachTimeoutRef.current);
+              sessionAttachTimeoutRef.current = null;
             }
             if (reconnectAttempts.current > 0) {
               addLog({
@@ -1283,15 +1324,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionAttached") {
             // Reattach succeeded — same effect as "connected"
+            isAttachingSessionRef.current = false;
             opksshFailedRef.current = false;
             wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
             isConnectingRef.current = false;
+            shouldNotReconnectRef.current = false;
             updateConnectionError(null);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
+            }
+            if (sessionAttachTimeoutRef.current) {
+              clearTimeout(sessionAttachTimeoutRef.current);
+              sessionAttachTimeoutRef.current = null;
+            }
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = null;
             }
             reconnectAttempts.current = 0;
             isReconnectingRef.current = false;
@@ -1302,26 +1353,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             });
           } else if (msg.type === "sessionExpired") {
             // Saved session expired — clear and start fresh
+            isAttachingSessionRef.current = false;
+            if (sessionAttachTimeoutRef.current) {
+              clearTimeout(sessionAttachTimeoutRef.current);
+              sessionAttachTimeoutRef.current = null;
+            }
             if (hostConfig.instanceId) {
               const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
               localStorage.removeItem(`termix_session_${tabId}`);
             }
             sessionIdRef.current = null;
-            // Use current terminal dimensions instead of stale closure values
-            const currentCols = terminal?.cols ?? cols;
-            const currentRows = terminal?.rows ?? rows;
-            ws.send(
-              JSON.stringify({
-                type: "connectToHost",
-                data: {
-                  cols: currentCols,
-                  rows: currentRows,
-                  hostConfig,
-                  initialPath,
-                  executeCommand,
-                },
-              }),
-            );
+
+            addLog({
+              type: "info",
+              stage: "connection",
+              message: "Session expired, reconnecting...",
+            });
+
+            // Close WebSocket and trigger reconnection with new session
+            // Don't clear terminal - let reconnection happen naturally
+            if (webSocketRef.current) {
+              webSocketRef.current.close();
+            }
           } else if (msg.type === "sessionTakenOver") {
             // Session was attached by another tab, clear local storage and reconnect
             if (sessionIdRef.current && hostConfig.instanceId) {
@@ -1752,6 +1805,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
+        }
+        if (sessionAttachTimeoutRef.current) {
+          clearTimeout(sessionAttachTimeoutRef.current);
+          sessionAttachTimeoutRef.current = null;
         }
 
         // Clear localStorage when persistence is disabled

@@ -539,6 +539,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows: number;
           tabInstanceId?: string;
         };
+        sshLogger.info("Attempting to attach session", {
+          operation: "terminal_attach_session",
+          sessionId: attachData.sessionId,
+          tabInstanceId: attachData.tabInstanceId,
+          userId,
+        });
         const session = sessionManager.attachWs(
           attachData.sessionId,
           userId,
@@ -546,6 +552,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
           attachData.tabInstanceId,
         );
         if (session) {
+          sshLogger.info("Session attached successfully", {
+            operation: "terminal_attach_success",
+            sessionId: attachData.sessionId,
+          });
           currentSessionId = attachData.sessionId;
           sshStream = session.sshStream;
           sshConn = session.sshConn;
@@ -583,6 +593,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }),
           );
         } else {
+          sshLogger.warn("Session attachment failed", {
+            operation: "terminal_attach_failed",
+            sessionId: attachData.sessionId,
+            tabInstanceId: attachData.tabInstanceId,
+            userId,
+          });
           ws.send(
             JSON.stringify({
               type: "sessionExpired",
