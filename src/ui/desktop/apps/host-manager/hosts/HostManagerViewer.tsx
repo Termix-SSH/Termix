@@ -124,7 +124,9 @@ export function HostManagerViewer({
     new Set(),
   );
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedHostIds, setSelectedHostIds] = useState<Set<number>>(new Set());
+  const [selectedHostIds, setSelectedHostIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const { getStatus } = useServerStatus();
   const dragCounter = useRef(0);
@@ -778,9 +780,12 @@ export function HostManagerViewer({
 
       if (result.success > 0 || result.updated > 0) {
         const parts: string[] = [];
-        if (result.success > 0) parts.push(`${result.success} ${t("hosts.importCreated")}`);
-        if (result.updated > 0) parts.push(`${result.updated} ${t("hosts.importUpdated")}`);
-        if (result.failed > 0) parts.push(`${result.failed} ${t("hosts.importFailedCount")}`);
+        if (result.success > 0)
+          parts.push(`${result.success} ${t("hosts.importCreated")}`);
+        if (result.updated > 0)
+          parts.push(`${result.updated} ${t("hosts.importUpdated")}`);
+        if (result.failed > 0)
+          parts.push(`${result.failed} ${t("hosts.importFailedCount")}`);
         toast.success(parts.join(", "));
         if (result.errors.length > 0) {
           toast.error(`Import errors: ${result.errors.join(", ")}`);
@@ -919,11 +924,7 @@ export function HostManagerViewer({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={importing}
-                  >
+                  <Button variant="outline" size="sm" disabled={importing}>
                     {importing ? t("hosts.importing") : t("hosts.importJson")}
                   </Button>
                 </DropdownMenuTrigger>
@@ -1027,11 +1028,7 @@ export function HostManagerViewer({
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={importing}
-                >
+                <Button variant="outline" size="sm" disabled={importing}>
                   {importing ? t("hosts.importing") : t("hosts.importJson")}
                 </Button>
               </DropdownMenuTrigger>
@@ -1227,30 +1224,39 @@ export function HostManagerViewer({
                         <Badge variant="secondary" className="text-xs">
                           {folderHosts.length}
                         </Badge>
-                        {selectionMode && (() => {
-                          const selectableIds = folderHosts
-                            .filter((h) => !(h as any).isShared)
-                            .map((h) => h.id);
-                          const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedHostIds.has(id));
-                          return (
-                            <Checkbox
-                              checked={allSelected}
-                              onCheckedChange={(checked) => {
-                                setSelectedHostIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (checked) {
-                                    selectableIds.forEach((id) => next.add(id));
-                                  } else {
-                                    selectableIds.forEach((id) => next.delete(id));
-                                  }
-                                  return next;
-                                });
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="ml-1"
-                            />
-                          );
-                        })()}
+                        {selectionMode &&
+                          (() => {
+                            const selectableIds = folderHosts
+                              .filter((h) => !(h as any).isShared)
+                              .map((h) => h.id);
+                            const allSelected =
+                              selectableIds.length > 0 &&
+                              selectableIds.every((id) =>
+                                selectedHostIds.has(id),
+                              );
+                            return (
+                              <Checkbox
+                                checked={allSelected}
+                                onCheckedChange={(checked) => {
+                                  setSelectedHostIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) {
+                                      selectableIds.forEach((id) =>
+                                        next.add(id),
+                                      );
+                                    } else {
+                                      selectableIds.forEach((id) =>
+                                        next.delete(id),
+                                      );
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="ml-1"
+                              />
+                            );
+                          })()}
                         {folder !== t("hosts.uncategorized") && (
                           <div className="flex items-center gap-1 ml-auto">
                             <Tooltip>
@@ -1316,25 +1322,32 @@ export function HostManagerViewer({
                                     : ""
                                 }`}
                                 onClick={() => {
-                                  if (selectionMode && !(host as any).isShared) {
+                                  if (
+                                    selectionMode &&
+                                    !(host as any).isShared
+                                  ) {
                                     toggleHostSelection(host.id);
                                   } else {
                                     handleEdit(host);
                                   }
                                 }}
                               >
-                                {selectionMode && !(host as any).isShared && (
-                                  <div className="absolute top-2 left-2 z-10">
-                                    <Checkbox
-                                      checked={selectedHostIds.has(host.id)}
-                                      onCheckedChange={() => toggleHostSelection(host.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                  </div>
-                                )}
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1">
+                                      {selectionMode &&
+                                        !(host as any).isShared && (
+                                          <Checkbox
+                                            checked={selectedHostIds.has(
+                                              host.id,
+                                            )}
+                                            onCheckedChange={() =>
+                                              toggleHostSelection(host.id)
+                                            }
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="bg-background border-2 mr-1 flex-shrink-0"
+                                          />
+                                        )}
                                       {(() => {
                                         const statsConfig = (() => {
                                           try {
@@ -1862,101 +1875,211 @@ export function HostManagerViewer({
         )}
 
         {selectionMode && selectedHostIds.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border rounded-lg shadow-xl px-4 py-2 flex items-center gap-3">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-popover border border-border rounded-lg shadow-xl px-4 py-3 flex items-center gap-2 max-w-[90vw]">
             <span className="text-sm font-medium whitespace-nowrap">
               {t("hosts.selectedCount", { count: selectedHostIds.size })}
             </span>
             <div className="w-px h-6 bg-border" />
 
-            {/* Monitoring dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={bulkUpdating}>
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
                   {t("hosts.bulkMonitoring")}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <ChevronDown className="h-3 w-3 ml-1.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ statsConfig: { statusCheckEnabled: true } })}>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({
+                      statsConfig: { statusCheckEnabled: true },
+                    })
+                  }
+                >
+                  <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
                   {t("hosts.enableStatusCheck")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ statsConfig: { statusCheckEnabled: false } })}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({
+                      statsConfig: { statusCheckEnabled: false },
+                    })
+                  }
+                >
+                  <X className="h-3.5 w-3.5 mr-2 text-red-500" />
                   {t("hosts.disableStatusCheck")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ statsConfig: { metricsEnabled: true } })}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({ statsConfig: { metricsEnabled: true } })
+                  }
+                >
+                  <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
                   {t("hosts.enableMetrics")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ statsConfig: { metricsEnabled: false } })}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({ statsConfig: { metricsEnabled: false } })
+                  }
+                >
+                  <X className="h-3.5 w-3.5 mr-2 text-red-500" />
                   {t("hosts.disableMetrics")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Features dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={bulkUpdating}>
+                  <Layers className="h-3.5 w-3.5 mr-1.5" />
                   {t("hosts.bulkFeatures")}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <ChevronDown className="h-3 w-3 ml-1.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableTerminal: true })}>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({
+                      enableTerminal: true,
+                      enableFileManager: true,
+                      enableTunnel: true,
+                      enableDocker: true,
+                    })
+                  }
+                >
+                  <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
+                  {t("hosts.enableAllFeatures")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    handleBulkUpdate({
+                      enableTerminal: false,
+                      enableFileManager: false,
+                      enableTunnel: false,
+                      enableDocker: false,
+                    })
+                  }
+                >
+                  <X className="h-3.5 w-3.5 mr-2 text-red-500" />
+                  {t("hosts.disableAllFeatures")}
+                </DropdownMenuItem>
+                <div className="h-px bg-border my-1" />
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableTerminal: true })}
+                >
+                  <Terminal className="h-3.5 w-3.5 mr-2" />
                   {t("hosts.bulkEnableTerminal")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableTerminal: false })}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableTerminal: false })}
+                >
+                  <Terminal className="h-3.5 w-3.5 mr-2 opacity-30" />
                   {t("hosts.bulkDisableTerminal")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableTunnel: true })}>
-                  {t("hosts.bulkEnableTunnel")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableTunnel: false })}>
-                  {t("hosts.bulkDisableTunnel")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableFileManager: true })}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableFileManager: true })}
+                >
+                  <FolderOpen className="h-3.5 w-3.5 mr-2" />
                   {t("hosts.bulkEnableFileManager")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableFileManager: false })}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableFileManager: false })}
+                >
+                  <FolderOpen className="h-3.5 w-3.5 mr-2 opacity-30" />
                   {t("hosts.bulkDisableFileManager")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableDocker: true })}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableTunnel: true })}
+                >
+                  <Network className="h-3.5 w-3.5 mr-2" />
+                  {t("hosts.bulkEnableTunnel")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableTunnel: false })}
+                >
+                  <Network className="h-3.5 w-3.5 mr-2 opacity-30" />
+                  {t("hosts.bulkDisableTunnel")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableDocker: true })}
+                >
+                  <Container className="h-3.5 w-3.5 mr-2" />
                   {t("hosts.bulkEnableDocker")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ enableDocker: false })}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ enableDocker: false })}
+                >
+                  <Container className="h-3.5 w-3.5 mr-2 opacity-30" />
                   {t("hosts.bulkDisableDocker")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Move Folder dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={bulkUpdating}>
+                  <Folder className="h-3.5 w-3.5 mr-1.5" />
                   {t("hosts.bulkMoveFolder")}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  <ChevronDown className="h-3 w-3 ml-1.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleBulkUpdate({ folder: "" })}>
+              <DropdownMenuContent
+                align="center"
+                className="max-h-[300px] overflow-y-auto"
+              >
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ folder: "" })}
+                >
+                  <FolderOpen className="h-3.5 w-3.5 mr-2" />
                   {t("hosts.uncategorized")}
                 </DropdownMenuItem>
                 {Object.keys(hostsByFolder)
                   .filter((f) => f !== t("hosts.uncategorized"))
-                  .map((f) => (
-                    <DropdownMenuItem key={f} onClick={() => handleBulkUpdate({ folder: f })}>
-                      {f}
-                    </DropdownMenuItem>
-                  ))}
+                  .map((f) => {
+                    const FolderIcon = getFolderIcon(f);
+                    const folderColor = getFolderColor(f);
+                    return (
+                      <DropdownMenuItem
+                        key={f}
+                        onClick={() => handleBulkUpdate({ folder: f })}
+                      >
+                        <FolderIcon
+                          className="h-3.5 w-3.5 mr-2"
+                          style={
+                            folderColor ? { color: folderColor } : undefined
+                          }
+                        />
+                        {f}
+                      </DropdownMenuItem>
+                    );
+                  })}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" size="sm" disabled={bulkUpdating} onClick={() => handleBulkUpdate({ pin: true })}>
-              <Pin className="h-3 w-3 mr-1" />
-              {t("hosts.bulkPin")}
-            </Button>
-            <Button variant="outline" size="sm" disabled={bulkUpdating} onClick={() => handleBulkUpdate({ pin: false })}>
-              {t("hosts.bulkUnpin")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={bulkUpdating}>
+                  <Pin className="h-3.5 w-3.5 mr-1.5" />
+                  {t("hosts.pin")}
+                  <ChevronDown className="h-3 w-3 ml-1.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ pin: true })}
+                >
+                  <Pin className="h-3.5 w-3.5 mr-2 text-yellow-500" />
+                  {t("hosts.bulkPin")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkUpdate({ pin: false })}
+                >
+                  <Pin className="h-3.5 w-3.5 mr-2 opacity-30" />
+                  {t("hosts.bulkUnpin")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="w-px h-6 bg-border" />
             <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
