@@ -14,7 +14,8 @@
     "!*.md",
     "!tsconfig*.json",
     "!vite.config.ts",
-    "!eslint.config.js"
+    "!eslint.config.js",
+    "!node_modules/@napi-rs/canvas*/**/*"
   ],
   "extraMetadata": {
     "main": "electron/main.cjs"
