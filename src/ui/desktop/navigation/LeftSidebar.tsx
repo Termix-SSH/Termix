@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isElectron, logoutUser } from "@/ui/main-axios.ts";
-import { ElectronServerConfig } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 
 import {
   Sidebar,
@@ -98,7 +97,6 @@ export function LeftSidebar({
     const saved = localStorage.getItem("leftSidebarOpen");
     return saved !== null ? JSON.parse(saved) : true;
   });
-  const [showServerConfig, setShowServerConfig] = useState(false);
 
   const {
     tabs: tabList,
@@ -601,14 +599,6 @@ export function LeftSidebar({
                           <span>{t("admin.title")}</span>
                         </DropdownMenuItem>
                       )}
-                      {isElectron() && (
-                        <DropdownMenuItem
-                          className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
-                          onClick={() => setShowServerConfig(true)}
-                        >
-                          <span>{t("serverConfig.changeServer")}</span>
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem
                         className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                         onClick={onLogout || handleLogout}
@@ -664,13 +654,6 @@ export function LeftSidebar({
         >
           <ChevronRight size={10} />
         </div>
-      )}
-
-      {showServerConfig && (
-        <ElectronServerConfig
-          onServerConfigured={() => window.location.reload()}
-          onCancel={() => setShowServerConfig(false)}
-        />
       )}
     </div>
   );

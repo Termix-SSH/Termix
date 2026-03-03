@@ -13,7 +13,8 @@ export interface TerminalSession {
   userId: string;
   hostId: number;
   hostName: string;
-  tabInstanceId?: string;
+  tabInstanceId?: string; // Original tab instance that created session
+  attachedTabInstanceId?: string; // Current tab instance attached (may differ for split-screen)
 
   sshConn: Client | null;
   sshStream: ClientChannel | null;
@@ -72,6 +73,22 @@ class TerminalSessionManager {
         );
       if (detached.length > 0) {
         this.destroySession(detached[0].id);
+      }
+    }
+
+    // Per-tab-instance limit: prevent refresh spam by destroying old sessions for same tab
+    if (tabInstanceId) {
+      const tabSessions = userSessions.filter(
+        (s) => s.tabInstanceId === tabInstanceId,
+      );
+      if (tabSessions.length > 0) {
+        // Tab already has a session - destroy old one before creating new
+        sshLogger.warn("Tab instance already has session, destroying old", {
+          operation: "session_tab_duplicate_cleanup",
+          existingSessionId: tabSessions[0].id,
+          tabInstanceId,
+        });
+        this.destroySession(tabSessions[0].id);
       }
     }
 
@@ -165,14 +182,21 @@ class TerminalSessionManager {
       return null;
     }
 
-    // Validate tab instance ownership
+    // Allow attachment if session is detached OR if tab instance matches original creator
+    // This supports split-screen terminals with different instanceIds
+    const isDetached =
+      !session.attachedWs || session.attachedWs.readyState !== WebSocket.OPEN;
+    const isOriginalTab = session.tabInstanceId === tabInstanceId;
+
     if (
+      !isDetached &&
+      !isOriginalTab &&
       session.tabInstanceId &&
-      tabInstanceId &&
-      session.tabInstanceId !== tabInstanceId
+      tabInstanceId
     ) {
-      sshLogger.warn("Tab instance mismatch", {
-        operation: "session_attach_instance_mismatch",
+      // Session is actively attached to a different tab instance
+      sshLogger.warn("Session actively attached to different tab instance", {
+        operation: "session_attach_instance_conflict",
         sessionId,
         sessionInstanceId: session.tabInstanceId,
         providedInstanceId: tabInstanceId,
@@ -189,6 +213,23 @@ class TerminalSessionManager {
         /* ignore */
       }
       return null;
+    }
+
+    // Log if attaching to different tab instance (split-screen scenario)
+    if (
+      session.tabInstanceId &&
+      tabInstanceId &&
+      session.tabInstanceId !== tabInstanceId
+    ) {
+      sshLogger.info(
+        "Session attached to different tab instance (split-screen)",
+        {
+          operation: "session_attach_split_screen",
+          originalInstanceId: session.tabInstanceId,
+          newInstanceId: tabInstanceId,
+          sessionId,
+        },
+      );
     }
 
     // If another WS is attached, detach it
@@ -214,12 +255,14 @@ class TerminalSessionManager {
     }
 
     session.attachedWs = ws;
+    session.attachedTabInstanceId = tabInstanceId; // Track current attachment
     session.lastDetachedAt = null;
 
     sshLogger.info("WebSocket attached to session", {
       operation: "session_attach",
       sessionId,
       userId,
+      tabInstanceId,
     });
 
     return session;
@@ -347,6 +390,12 @@ class TerminalSessionManager {
     return data;
   }
 
+  // Get buffer without clearing (for session reattachment)
+  getBuffer(session: TerminalSession): string | null {
+    if (session.outputBuffer.length === 0) return null;
+    return session.outputBuffer.join("");
+  }
+
   private getTimeoutMs(): number {
     try {
       const db = getDb();
@@ -370,24 +419,46 @@ class TerminalSessionManager {
   private healthCheck(): void {
     // Collect IDs to destroy first to avoid mutating Map during iteration
     const toDestroy: string[] = [];
+    const now = Date.now();
+    const GRACE_PERIOD_MS = 10_000; // 10 seconds grace period for reattachment
+
     for (const [id, session] of this.sessions) {
       if (!session.isConnected) continue;
 
-      if (session.sshConn) {
-        if (session.sshStream && session.attachedWs === null) {
-          if (session.sshStream.destroyed) {
-            sshLogger.info("SSH stream destroyed while detached, cleaning up", {
-              operation: "session_health_check",
+      // Skip sessions actively attached
+      if (
+        session.attachedWs &&
+        session.attachedWs.readyState === WebSocket.OPEN
+      ) {
+        continue;
+      }
+
+      // If stream destroyed WHILE DETACHED, only destroy if past grace period
+      if (session.sshStream?.destroyed) {
+        const detachedDuration = session.lastDetachedAt
+          ? now - session.lastDetachedAt
+          : 0;
+
+        if (detachedDuration > GRACE_PERIOD_MS) {
+          sshLogger.info(
+            "SSH stream destroyed during detach window, cleaning up",
+            {
+              operation: "session_health_check_stream_destroyed",
               sessionId: id,
               userId: session.userId,
-            });
-            toDestroy.push(id);
-          }
+              detachedFor: detachedDuration,
+            },
+          );
+          toDestroy.push(id);
         }
-      } else {
+      }
+
+      // Destroy if sshConn is null (connection lost)
+      if (!session.sshConn) {
         toDestroy.push(id);
       }
     }
+
     for (const id of toDestroy) {
       this.destroySession(id);
     }

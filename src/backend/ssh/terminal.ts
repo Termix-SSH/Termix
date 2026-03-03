@@ -544,6 +544,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sessionId: attachData.sessionId,
           tabInstanceId: attachData.tabInstanceId,
           userId,
+          requestedCols: attachData.cols,
+          requestedRows: attachData.rows,
         });
         const session = sessionManager.attachWs(
           attachData.sessionId,
@@ -552,17 +554,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
           attachData.tabInstanceId,
         );
         if (session) {
-          sshLogger.info("Session attached successfully", {
+          sshLogger.success("Session attached successfully", {
             operation: "terminal_attach_success",
             sessionId: attachData.sessionId,
+            sessionCreatedAt: session.createdAt,
+            wasDetached: !!session.lastDetachedAt,
+            detachedDuration: session.lastDetachedAt
+              ? Date.now() - session.lastDetachedAt
+              : 0,
           });
           currentSessionId = attachData.sessionId;
           sshStream = session.sshStream;
           sshConn = session.sshConn;
           isConnecting = false;
           isConnected = true;
-          // Replay buffered output
-          const buffered = sessionManager.flushBuffer(session);
+          // Replay buffered output (without clearing buffer for future reattachments)
+          const buffered = sessionManager.getBuffer(session);
           if (buffered) {
             ws.send(JSON.stringify({ type: "data", data: buffered }));
           }
@@ -580,6 +587,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             session.cols = attachData.cols;
             session.rows = attachData.rows;
           }
+
           ws.send(
             JSON.stringify({
               type: "sessionAttached",
@@ -593,12 +601,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }),
           );
         } else {
-          sshLogger.warn("Session attachment failed", {
-            operation: "terminal_attach_failed",
-            sessionId: attachData.sessionId,
-            tabInstanceId: attachData.tabInstanceId,
-            userId,
-          });
+          sshLogger.warn(
+            "Session attachment failed - will create new connection",
+            {
+              operation: "terminal_attach_failed",
+              sessionId: attachData.sessionId,
+              tabInstanceId: attachData.tabInstanceId,
+              userId,
+              reason: "session_not_found_or_invalid",
+            },
+          );
           ws.send(
             JSON.stringify({
               type: "sessionExpired",
@@ -1020,21 +1032,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = true;
     sshConn = new Client();
 
-    // Create session early for persistence tracking
-    const hostDisplayName = `${username}@${ip}:${port}`;
-    const tabInstanceId = hostConfig.instanceId;
-    currentSessionId = sessionManager.createSession(
-      userId,
-      id,
-      hostDisplayName,
-      data.cols,
-      data.rows,
-      tabInstanceId,
-    );
-    ws.send(
-      JSON.stringify({ type: "sessionCreated", sessionId: currentSessionId }),
-    );
-
     sendLog("dns", "info", `Starting address resolution of ${ip}`);
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
@@ -1138,6 +1135,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sendLog("handshake", "success", "SSH handshake completed");
       sendLog("auth", "success", `Authentication successful for ${username}`);
       sendLog("connected", "success", "Connection established");
+
+      // Create session after SSH handshake completes (before shell creation)
+      const hostDisplayName = `${username}@${ip}:${port}`;
+      const tabInstanceId = hostConfig.instanceId;
+      currentSessionId = sessionManager.createSession(
+        userId,
+        id,
+        hostDisplayName,
+        data.cols,
+        data.rows,
+        tabInstanceId,
+      );
+
+      sshLogger.info("Terminal session created after SSH ready", {
+        operation: "terminal_session_created",
+        sessionId: currentSessionId,
+        userId,
+        hostId: id,
+        tabInstanceId,
+        ip,
+        port,
+      });
 
       const conn = sshConn;
 
@@ -1283,6 +1302,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
               opksshTempFiles,
             );
             sessionManager.attachWs(currentSessionId, userId, ws);
+
+            // Notify frontend that session is now ready for persistence
+            ws.send(
+              JSON.stringify({
+                type: "sessionCreated",
+                sessionId: currentSessionId,
+              }),
+            );
+
+            sshLogger.info("Session ready for persistence", {
+              operation: "session_ready",
+              sessionId: currentSessionId,
+              userId,
+              hostId: id,
+            });
           }
 
           // Capture sessionId at bind time to prevent cross-session data leakage
@@ -1292,12 +1326,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
             try {
               const utf8String = data.toString("utf-8");
               const session = sessionManager.getSession(boundSessionId);
-              if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-                session.attachedWs.send(
-                  JSON.stringify({ type: "data", data: utf8String }),
-                );
-              } else if (session) {
+              if (session) {
+                // Always buffer output for session persistence (up to MAX_BUFFER_BYTES)
                 sessionManager.bufferOutput(boundSessionId!, utf8String);
+
+                // Send to attached WebSocket if available
+                if (session.attachedWs?.readyState === WebSocket.OPEN) {
+                  session.attachedWs.send(
+                    JSON.stringify({ type: "data", data: utf8String }),
+                  );
+                }
               }
             } catch (error) {
               sshLogger.error("Error encoding terminal data", error, {
@@ -1307,12 +1345,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
               });
               const fallback = data.toString("latin1");
               const session = sessionManager.getSession(boundSessionId);
-              if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-                session.attachedWs.send(
-                  JSON.stringify({ type: "data", data: fallback }),
-                );
-              } else if (session) {
+              if (session) {
+                // Always buffer output for session persistence (up to MAX_BUFFER_BYTES)
                 sessionManager.bufferOutput(boundSessionId!, fallback);
+
+                // Send to attached WebSocket if available
+                if (session.attachedWs?.readyState === WebSocket.OPEN) {
+                  session.attachedWs.send(
+                    JSON.stringify({ type: "data", data: fallback }),
+                  );
+                }
               }
             }
           });

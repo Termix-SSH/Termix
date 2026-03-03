@@ -111,7 +111,7 @@ export function ElectronServerConfig({
           if (onUseEmbedded) {
             onUseEmbedded();
           } else {
-            onServerConfigured("embedded://localhost");
+            onServerConfigured("http://localhost:30001");
           }
           return;
         }
@@ -123,9 +123,7 @@ export function ElectronServerConfig({
       setError(t("serverConfig.embeddedNotReady"));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t("serverConfig.embeddedNotReady"),
+        err instanceof Error ? err.message : t("serverConfig.embeddedNotReady"),
       );
     } finally {
       setEmbeddedLoading(false);
@@ -208,7 +206,8 @@ export function ElectronServerConfig({
             <div className="space-y-2">
               <Button
                 type="button"
-                className="w-full h-11 text-base font-semibold"
+                variant="outline"
+                className="w-full"
                 onClick={handleUseEmbedded}
                 disabled={embeddedLoading || loading}
               >
@@ -218,9 +217,12 @@ export function ElectronServerConfig({
                     <span>{t("serverConfig.embeddedConnecting")}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <Monitor className="w-4 h-4" />
                     <span>{t("serverConfig.useEmbedded")}</span>
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded border border-yellow-500/30">
+                      BETA
+                    </span>
                   </div>
                 )}
               </Button>
@@ -233,7 +235,9 @@ export function ElectronServerConfig({
           {embeddedAvailable !== false && (
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">{t("common.or") || "OR"}</span>
+              <span className="text-xs text-muted-foreground">
+                {t("common.or") || "OR"}
+              </span>
               <div className="h-px flex-1 bg-border" />
             </div>
           )}

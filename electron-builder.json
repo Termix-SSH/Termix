@@ -21,7 +21,7 @@
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
-  "npmRebuild": true,
+  "npmRebuild": false,
   "win": {
     "target": [
       {

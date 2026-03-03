@@ -85,8 +85,10 @@ export function TabProvider({ children }: TabProviderProps) {
         let maxId = 1;
         for (const tab of parsed) {
           if (tab.type === "home") continue;
+          // Preserve instanceId from saved tab - critical for session lookup
           const restoredTab: Tab = {
             ...tab,
+            instanceId: tab.instanceId, // Preserve instanceId for session persistence
             terminalRef:
               tab.type === "terminal"
                 ? React.createRef<{ disconnect?: () => void }>()
@@ -142,6 +144,7 @@ export function TabProvider({ children }: TabProviderProps) {
     const shouldSave = isMobile || isElectron || persistenceEnabled;
 
     if (shouldSave) {
+      // Serialize tabs, preserving instanceId for session persistence
       const serializable = tabs
         .filter((t) => t.type !== "home")
         .map(({ terminalRef, ...rest }) => rest);
@@ -359,13 +362,19 @@ export function TabProvider({ children }: TabProviderProps) {
           if (tab.type === "ssh_manager") {
             return {
               ...tab,
-              hostConfig: newHostConfig,
+              hostConfig: {
+                ...newHostConfig,
+                instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+              },
             };
           }
 
           return {
             ...tab,
-            hostConfig: newHostConfig,
+            hostConfig: {
+              ...newHostConfig,
+              instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+            },
             title: newHostConfig.name?.trim()
               ? newHostConfig.name
               : t("nav.hostTabTitle", {

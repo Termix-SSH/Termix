@@ -103,9 +103,9 @@ function getBackendEntryPath() {
   if (isDev) {
     return path.join(appRoot, "dist", "backend", "backend", "starter.js");
   }
-  // In production, backend is in app.asar.unpacked (fork can't read from asar)
-  const asarUnpacked = appRoot.replace("app.asar", "app.asar.unpacked");
-  return path.join(asarUnpacked, "dist", "backend", "backend", "starter.js");
+  // In production, asar is disabled (asar: false in electron-builder.json)
+  // so backend is directly in appRoot/dist
+  return path.join(appRoot, "dist", "backend", "backend", "starter.js");
 }
 
 function getBackendDataDir() {
@@ -135,19 +135,32 @@ function startBackendServer() {
     logToFile("Starting embedded backend server...");
     logToFile("Backend entry:", entryPath);
     logToFile("Data directory:", dataDir);
+    logToFile("Backend cwd:", appRoot);
 
-    const cwd = isDev
-      ? appRoot
-      : appRoot.replace("app.asar", "app.asar.unpacked");
-    logToFile("Backend cwd:", cwd);
+    // Verify all required paths exist
+    logToFile("Checking paths...");
+    logToFile("  entryPath exists:", fs.existsSync(entryPath));
+    logToFile("  dataDir exists:", fs.existsSync(dataDir));
+    logToFile("  appRoot exists:", fs.existsSync(appRoot));
+
+    // List contents of dist directory
+    const distPath = path.join(appRoot, "dist");
+    if (fs.existsSync(distPath)) {
+      logToFile("  dist directory contents:", fs.readdirSync(distPath));
+      const backendPath = path.join(distPath, "backend");
+      if (fs.existsSync(backendPath)) {
+        logToFile("  dist/backend contents:", fs.readdirSync(backendPath));
+      }
+    }
 
     backendProcess = fork(entryPath, [], {
-      cwd: cwd,
+      cwd: appRoot,
       env: {
         ...process.env,
         DATA_DIR: dataDir,
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
+        PORT: "30001",
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
     });
@@ -855,12 +868,12 @@ app.whenReady().then(async () => {
   logToFile("isDev:", isDev, "platform:", process.platform, "arch:", process.arch);
   createMenu();
 
-  // Start embedded backend server (skip in dev mode, backend runs separately)
+  // Start embedded backend server (skip in dev mode, backend runs separately via npm run dev:backend)
   if (!isDev) {
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
   } else {
-    logToFile("Skipping embedded backend (isDev=true)");
+    logToFile("Skipping embedded backend (isDev=true) - expecting separate dev:backend process");
   }
 
   createTray();

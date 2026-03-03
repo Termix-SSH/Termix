@@ -183,7 +183,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     // Session persistence
     const sessionIdRef = useRef<string | null>(null);
-    const sessionAttachTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
 
     const isVisibleRef = useRef<boolean>(false);
@@ -203,6 +202,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isReconnectingRef.current = false;
       isConnectingRef.current = false;
       reconnectAttempts.current = 0;
+      wasConnectedRef.current = false;
+      isAttachingSessionRef.current = false;
 
       return () => {};
     }, [hostConfig.id]);
@@ -696,7 +697,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (terminal && hostConfig) {
-          terminal.clear();
+          // Don't clear if we just successfully attached a session
+          if (!isAttachingSessionRef.current) {
+            terminal.clear();
+          }
           const cols = terminal.cols;
           const rows = terminal.rows;
           connectToHost(cols, rows);
@@ -833,38 +837,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           sessionIdRef.current = savedSessionId;
           isAttachingSessionRef.current = true;
 
-          // Set timeout for session attachment (5 seconds)
-          sessionAttachTimeoutRef.current = setTimeout(() => {
-            if (!isConnected && isConnecting) {
-              isAttachingSessionRef.current = false;
-              addLog({
-                type: "warning",
-                stage: "connection",
-                message: t("terminal.sessionAttachTimeout"),
-              });
-
-              // Clear saved session and create new connection
-              if (hostConfig.instanceId) {
-                const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
-                localStorage.removeItem(`termix_session_${tabId}`);
-              }
-              sessionIdRef.current = null;
-
-              // Clear terminal before new connection
-              if (terminal) {
-                terminal.clear();
-              }
-
-              // Send new connection request
-              ws.send(
-                JSON.stringify({
-                  type: "connectToHost",
-                  data: { cols, rows, hostConfig, initialPath, executeCommand },
-                }),
-              );
-            }
-          }, 5000);
-
+          // Backend will validate and send sessionExpired if attachment fails
           ws.send(
             JSON.stringify({
               type: "attachSession",
@@ -1012,10 +985,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
-            }
-            if (sessionAttachTimeoutRef.current) {
-              clearTimeout(sessionAttachTimeoutRef.current);
-              sessionAttachTimeoutRef.current = null;
             }
             if (reconnectAttempts.current > 0) {
               addLog({
@@ -1336,16 +1305,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
-            if (sessionAttachTimeoutRef.current) {
-              clearTimeout(sessionAttachTimeoutRef.current);
-              sessionAttachTimeoutRef.current = null;
-            }
             if (reconnectTimeoutRef.current) {
               clearTimeout(reconnectTimeoutRef.current);
               reconnectTimeoutRef.current = null;
             }
             reconnectAttempts.current = 0;
             isReconnectingRef.current = false;
+
+            // Log activity for session reattachment
+            logTerminalActivity();
+
             addLog({
               type: "success",
               stage: "connection",
@@ -1354,24 +1323,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "sessionExpired") {
             // Saved session expired — clear and start fresh
             isAttachingSessionRef.current = false;
-            if (sessionAttachTimeoutRef.current) {
-              clearTimeout(sessionAttachTimeoutRef.current);
-              sessionAttachTimeoutRef.current = null;
-            }
+            shouldNotReconnectRef.current = false; // Allow reconnection
             if (hostConfig.instanceId) {
               const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
               localStorage.removeItem(`termix_session_${tabId}`);
             }
             sessionIdRef.current = null;
 
-            addLog({
-              type: "info",
-              stage: "connection",
-              message: "Session expired, reconnecting...",
-            });
-
+            // Silent auto-reconnection (no user-visible message)
             // Close WebSocket and trigger reconnection with new session
-            // Don't clear terminal - let reconnection happen naturally
             if (webSocketRef.current) {
               webSocketRef.current.close();
             }
@@ -1469,8 +1429,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
+        // Don't show "connection rejected" if we're handling session expiry/reattachment
         if (
-          !isConnected &&
+          !wasConnectedRef.current &&
+          !isAttachingSessionRef.current &&
           event.wasClean &&
           (event.code === 1005 || event.code === 1000)
         ) {
@@ -1791,41 +1753,64 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
     }, [xtermRef, terminal, hostConfig, isDarkMode]);
 
+    // Track mount state to prevent StrictMode double-cleanup
+    const isMountedRef = useRef(false);
+
+    // Component unmount cleanup - only runs when hostConfig changes or component fully unmounts
     useEffect(() => {
+      // Mark as mounted
+      isMountedRef.current = true;
+
+      // This effect runs on mount and tracks the current host ID
+      const currentHostId = hostConfig.id;
+      const currentInstanceId = hostConfig.instanceId;
+
+      // Return cleanup function
       return () => {
-        isUnmountingRef.current = true;
-        shouldNotReconnectRef.current = true;
-        isReconnectingRef.current = false;
-        setIsConnecting(false);
-        if (reconnectTimeoutRef.current)
-          clearTimeout(reconnectTimeoutRef.current);
-        if (connectionTimeoutRef.current)
-          clearTimeout(connectionTimeoutRef.current);
-        if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
-        }
-        if (sessionAttachTimeoutRef.current) {
-          clearTimeout(sessionAttachTimeoutRef.current);
-          sessionAttachTimeoutRef.current = null;
+        // Skip cleanup if not actually mounted (StrictMode's first fake unmount)
+        if (!isMountedRef.current) {
+          return;
         }
 
-        // Clear localStorage when persistence is disabled
-        const persistenceEnabled =
-          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+        // Only run cleanup if the host actually changed
         if (
-          !persistenceEnabled &&
-          sessionIdRef.current &&
-          hostConfig.instanceId
+          currentHostIdRef.current !== currentHostId &&
+          currentHostIdRef.current !== null
         ) {
-          const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
-          localStorage.removeItem(`termix_session_${tabId}`);
-        }
+          isUnmountingRef.current = true;
+          shouldNotReconnectRef.current = true;
+          isReconnectingRef.current = false;
+          setIsConnecting(false);
+          if (reconnectTimeoutRef.current)
+            clearTimeout(reconnectTimeoutRef.current);
+          if (connectionTimeoutRef.current)
+            clearTimeout(connectionTimeoutRef.current);
+          if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
+          if (pingIntervalRef.current) {
+            clearInterval(pingIntervalRef.current);
+            pingIntervalRef.current = null;
+          }
 
-        // Close WS without sending explicit disconnect — backend will detach
-        // the session for later reattachment instead of destroying it
-        webSocketRef.current?.close();
+          // Clear localStorage when persistence is disabled
+          const persistenceEnabled =
+            localStorage.getItem("enableTerminalSessionPersistence") === "true";
+          if (
+            !persistenceEnabled &&
+            sessionIdRef.current &&
+            currentInstanceId
+          ) {
+            const tabId = `${currentHostId}_${currentInstanceId}`;
+            localStorage.removeItem(`termix_session_${tabId}`);
+          }
+
+          // Close WS without sending explicit disconnect — backend will detach
+          // the session for later reattachment instead of destroying it
+          if (webSocketRef.current) {
+            webSocketRef.current.close();
+          }
+
+          isMountedRef.current = false;
+        }
       };
     }, [hostConfig.id, hostConfig.instanceId]);
 
@@ -2128,6 +2113,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       if (shouldNotReconnectRef.current) {
+        return;
+      }
+
+      // If WebSocket already exists and is open, don't create another one
+      // This handles the case where a detached tab becomes visible
+      if (
+        webSocketRef.current &&
+        (webSocketRef.current.readyState === WebSocket.OPEN ||
+          webSocketRef.current.readyState === WebSocket.CONNECTING)
+      ) {
         return;
       }
 
