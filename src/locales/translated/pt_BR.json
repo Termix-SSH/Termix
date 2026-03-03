@@ -2631,19 +2631,19 @@
     "memoryUsage": "Memória Utilizada",
     "usedLimit": "Usado / Limite",
     "percentage": "Porcentagem",
-    "networkIo": "I/O de rede",
-    "input": "Input",
+    "networkIo": "Entrada e Saída de rede",
+    "input": "Entrada",
     "output": "Saída",
-    "blockIo": "Bloco I/O",
+    "blockIo": "Bloco de E/S",
     "read": "Lido",
     "write": "Salvar",
-    "pids": "PIDs",
+    "pids": "Identificadores de Processos",
     "containerInformation": "Informação do contêiner",
     "name": "Nome:",
     "id": "ID",
     "state": "Estado:",
     "disconnectedFromContainer": "Desconectado do contêiner",
-    "containerMustBeRunning": "O contêiner deve estar em execução para acessar o console",
+    "containerMustBeRunning": "O contêiner precisa estar em execução para acessar o console",
     "authenticationRequired": "Autenticação requerida",
     "connectedTo": "Conectado a {{containerName}}",
     "disconnected": "Desconectado",
@@ -2683,15 +2683,15 @@
       "totpVerifying": "Verificação TOTP necessária",
       "sessionEstablished": "Sessão de métricas estabelecida",
       "collecting": "Coletando métricas do servidor",
-      "heartbeat": "Mantendo a conexão viva",
+      "heartbeat": "Mantendo a conexão ativa",
       "stopped": "Coleção de métricas parada",
-      "error": "Coleção de métricas falhou: {{error}}"
+      "error": "Falha na coleta de métricas: {{error}}"
     }
   },
   "sftp": {
     "log": {
       "connecting": "Conectando ao servidor SFTP...",
-      "jumpHost": "Conectando via host pulo {{host}}...",
+      "jumpHost": "Conectando via servidor de salto {{host}}...",
       "connected": "Conexão SFTP estabelecida",
       "authFailed": "Falha na autenticação",
       "error": "Operação SFTP falhou: {{error}}"
