@@ -153,7 +153,7 @@ channel, however, response times may be longer.
 
 # Screenshots
 
-[![YouTube](./repo-images/YouTube.png)](https://youtu.be/8OYCPwS7ciA)
+[![YouTube](./repo-images/YouTube.png)](https://youtu.be/sjKIqfCK0NY)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
