@@ -15,7 +15,10 @@
     "!tsconfig*.json",
     "!vite.config.ts",
     "!eslint.config.js",
-    "!node_modules/@napi-rs/canvas*/**/*"
+    "!node_modules/@napi-rs/canvas*/**/*",
+    "!node_modules/@rollup/rollup-darwin-*/**/*",
+    "!node_modules/@rollup/rollup-linux-*/**/*",
+    "!node_modules/@rollup/rollup-win32-*/**/*"
   ],
   "extraMetadata": {
     "main": "electron/main.cjs"

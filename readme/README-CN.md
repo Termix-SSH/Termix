@@ -1,7 +1,7 @@
 # 仓库统计
 
 <p align="center">
-  <a href="README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
+  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
   <img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文 ·
   <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
   <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
@@ -23,7 +23,7 @@
 <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
 
 <p align="center">
-  <img src="./repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
+  <img src="../repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
   <br>
   <small style="color: #666;">2025年9月1日获得</small>
 </p>
@@ -31,7 +31,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=./repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
+    <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
 如果你愿意，可以在这里支持这个项目！\
@@ -41,7 +41,7 @@
 
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=./public/icon.svg style="width: 250px; height: 250px;">  </a>
+    <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
 Termix 是一个开源、永久免费、自托管的一体化服务器管理平台。它提供了一个基于网页的解决方案，通过一个直观的界面管理你的服务器和基础设施。Termix
@@ -68,8 +68,9 @@ Termix 是一个开源、永久免费、自托管的一体化服务器管理平�
 - **命令历史** - 自动完成并查看以前运行的 SSH 命令
 - **快速连接** - 无需保存连接数据即可连接到服务器
 - **命令面板** - 双击左 Shift 键可快速使用键盘访问 SSH 连接
-- **SSH 功能丰富** - 支持跳板机、Warpgate、基于 TOTP 的连接、SOCKS5、密码自动填充等。
+- **SSH 功能丰富** - 支持跳板机、Warpgate、基于 TOTP 的连接、SOCKS5、主机密钥验证、密码自动填充、[OPKSSH](https://github.com/openpubkey/opkssh)等。
 - **网络图** - 自定义您的仪表板，根据您的 SSH 连接可视化您的家庭实验室，支持状态显示
+- **持久标签页** - 如果在用户配置文件中启用，SSH 会话和标签页在设备/刷新后保持打开状态
 
 # 计划功能
 
@@ -135,6 +136,10 @@ volumes:
   <a href="https://www.blacksmith.sh/">
     <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.cloudflare.com/">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+  </a>
 </p>
 
 # 支持
@@ -145,36 +150,36 @@ volumes:
 
 # 展示
 
-[![](https://utfs.io/f/nGnSqDveMsqxqiKJF5EnObSopHatulx93N0E1KVsP7hvjMfF)](https://www.youtube.com/watch?v=j1_I1mkhUkE)
+[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
 
 <p align="center">
-  <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
-  <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
+  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
+  <img src="../repo-images/Image%202.png" width="400" alt="Termix Demo 2"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
-  <img src="./repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
+  <img src="../repo-images/Image%203.png" width="400" alt="Termix Demo 3"/>
+  <img src="../repo-images/Image%204.png" width="400" alt="Termix Demo 4"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
-  <img src="./repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
+  <img src="../repo-images/Image%205.png" width="400" alt="Termix Demo 5"/>
+  <img src="../repo-images/Image%206.png" width="400" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
-  <img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
+  <img src="../repo-images/Image%207.png" width="400" alt="Termix Demo 7"/>
+  <img src="../repo-images/Image%208.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
+  <img src="../repo-images/Image%209.png" width="400" alt="Termix Demo 9"/>
+  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
-  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
+  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
+  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 某些视频和图像可能已过时或可能无法完美展示功能。

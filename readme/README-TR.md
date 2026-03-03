@@ -1,7 +1,7 @@
 # Repo İstatistikleri
 
 <p align="center">
-  <a href="README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
+  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
   <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
   <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
   <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
@@ -23,7 +23,7 @@
 <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
 
 <p align="center">
-  <img src="./repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
+  <img src="../repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
   <br>
   <small style="color: #666;">1 Eylül 2025'te kazanıldı</small>
 </p>
@@ -31,7 +31,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=./repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
+    <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
 Projeyi desteklemek isterseniz, buradan destek olabilirsiniz!\
@@ -41,7 +41,7 @@ Projeyi desteklemek isterseniz, buradan destek olabilirsiniz!\
 
 <p align="center">
   <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=./public/icon.svg style="width: 250px; height: 250px;">  </a>
+    <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
 Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındırabileceğiniz hepsi bir arada sunucu yönetim platformudur. Sunucularınızı ve altyapınızı tek bir sezgisel arayüz üzerinden yönetmek için çok platformlu bir çözüm sunar. Termix, SSH terminal erişimi, SSH tünelleme yetenekleri, uzak dosya yönetimi ve daha birçok araç sağlar. Termix, tüm platformlarda kullanılabilen Termius'un mükemmel ücretsiz ve kendi barındırmalı alternatifidir.
@@ -69,6 +69,7 @@ Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındıra
 - **Komut Paleti** - Sol shift tuşuna iki kez basarak SSH bağlantılarına klavyenizle hızlıca erişin
 - **SSH Zengin Özellikler** - Atlama ana bilgisayarları, Warpgate, TOTP tabanlı bağlantılar, SOCKS5, ana bilgisayar anahtar doğrulama, otomatik şifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh) vb. destekler.
 - **Ağ Grafiği** - Kontrol panelinizi, SSH bağlantılarınıza dayalı olarak ev laboratuvarınızı durum desteğiyle görselleştirmek için özelleştirin
+- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
 
 # Planlanan Özellikler
 
@@ -134,6 +135,10 @@ volumes:
   <a href="https://www.blacksmith.sh/">
     <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.cloudflare.com/">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+  </a>
 </p>
 
 # Destek
@@ -143,36 +148,36 @@ Lütfen sorununuzu mümkün olduğunca ayrıntılı yazın, tercihen İngilizce 
 
 # Ekran Görüntüleri
 
-[![YouTube](./repo-images/YouTube.png)](https://youtu.be/8OYCPwS7ciA)
+[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
 
 <p align="center">
-  <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
-  <img src="./repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
+  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
+  <img src="../repo-images/Image%202.png" width="400" alt="Termix Demo 2"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
-  <img src="./repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
+  <img src="../repo-images/Image%203.png" width="400" alt="Termix Demo 3"/>
+  <img src="../repo-images/Image%204.png" width="400" alt="Termix Demo 4"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
-  <img src="./repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
+  <img src="../repo-images/Image%205.png" width="400" alt="Termix Demo 5"/>
+  <img src="../repo-images/Image%206.png" width="400" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
-  <img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
+  <img src="../repo-images/Image%207.png" width="400" alt="Termix Demo 7"/>
+  <img src="../repo-images/Image%208.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
+  <img src="../repo-images/Image%209.png" width="400" alt="Termix Demo 9"/>
+  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
-  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
+  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
+  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 Bazı videolar ve görseller güncel olmayabilir veya özellikleri tam olarak yansıtmayabilir.
