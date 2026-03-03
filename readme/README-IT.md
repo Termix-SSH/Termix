@@ -48,7 +48,7 @@ Termix è una piattaforma di gestione server tutto-in-uno, open-source, per semp
 
 # Funzionalità
 
-- **Accesso Terminale SSH** - Terminale completo con supporto schermo diviso (fino a 4 pannelli) con un sistema di schede in stile browser. Include il supporto per la personalizzazione del terminale, inclusi temi, font e altri componenti comuni
+- **Accesso Terminale SSH** - Terminale completo con supporto schermo divIPA (fino a 4 pannelli) con un sistema di schede in stile browser. Include il supporto per la personalizzazione del terminale, inclusi temi, font e altri componenti comuni
 - **Gestione Tunnel SSH** - Crea e gestisci tunnel SSH con riconnessione automatica e monitoraggio dello stato, con supporto per connessioni -l o -r
 - **Gestore File Remoto** - Gestisci i file direttamente sui server remoti con supporto per la visualizzazione e la modifica di codice, immagini, audio e video. Carica, scarica, rinomina, elimina e sposta file senza problemi con supporto sudo.
 - **Gestione Docker** - Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Non è stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
@@ -96,7 +96,7 @@ Dispositivi Supportati:
   - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
-  - ISO
+  - IPA
 - Android (v7.0+)
   - Google Play Store
   - APK
@@ -143,7 +143,7 @@ volumes:
 
 # Supporto
 
-Se hai bisogno di aiuto o vuoi richiedere una funzionalità per Termix, visita la pagina [Segnalazioni](https://github.com/Termix-SSH/Support/issues), accedi e premi `New Issue`.
+Se hai bIPAgno di aiuto o vuoi richiedere una funzionalità per Termix, visita la pagina [Segnalazioni](https://github.com/Termix-SSH/Support/issues), accedi e premi `New Issue`.
 Per favore, sii il più dettagliato possibile nella tua segnalazione, preferibilmente scritta in inglese. Puoi anche unirti al server [Discord](https://discord.gg/jVQGdvHDrf) e visitare il canale di supporto, tuttavia i tempi di risposta potrebbero essere più lunghi.
 
 # Screenshot

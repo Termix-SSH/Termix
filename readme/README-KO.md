@@ -96,7 +96,7 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
   - Homebrew
 - iOS/iPadOS (v15.1 이상)
   - Apple App Store
-  - ISO
+  - IPA
 - Android (v7.0 이상)
   - Google Play Store
   - APK

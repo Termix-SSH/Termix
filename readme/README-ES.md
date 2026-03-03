@@ -56,7 +56,7 @@ Termix es una plataforma de gestión de servidores todo en uno, de código abier
 - **Estadísticas del Servidor** - Vea el uso de CPU, memoria y disco junto con red, tiempo de actividad, información del sistema, firewall, monitor de puertos en la mayoría de los servidores basados en Linux
 - **Dashboard** - Vea la información del servidor de un vistazo en su dashboard
 - **RBAC** - Cree roles y comparta hosts entre usuarios/roles
-- **Autenticación de Usuarios** - Gestión segura de usuarios con controles de administrador y soporte para OIDC y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permisos. Vincule sus cuentas OIDC/Locales entre sí.
+- **Autenticación de Usuarios** - Gestión segura de usuarios con controles de administrador y soporte para OIDC y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permIPAs. Vincule sus cuentas OIDC/Locales entre sí.
 - **Cifrado de Base de Datos** - Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentación](https://docs.termix.site/security) para más información.
 - **Exportación/Importación de Datos** - Exporte e importe hosts SSH, credenciales y datos del gestor de archivos
 - **Configuración Automática de SSL** - Generación y gestión integrada de certificados SSL con redirecciones HTTPS
@@ -96,7 +96,7 @@ Dispositivos soportados:
   - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
-  - ISO
+  - IPA
 - Android (v7.0+)
   - Google Play Store
   - APK

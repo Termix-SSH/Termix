@@ -96,7 +96,7 @@ Thiết Bị Được Hỗ Trợ:
   - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
-  - ISO
+  - IPA
 - Android (v7.0+)
   - Google Play Store
   - APK
