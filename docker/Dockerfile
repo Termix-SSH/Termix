@@ -6,8 +6,7 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 
 COPY package*.json ./
 
-RUN rm -rf node_modules package-lock.json && \
-    npm install --ignore-scripts --force && \
+RUN npm ci --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
