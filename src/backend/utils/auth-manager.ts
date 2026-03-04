@@ -5,7 +5,7 @@ import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
-import { sessions } from "../database/db/schema.js";
+import { sessions, trustedDevices } from "../database/db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
@@ -817,6 +817,121 @@ class AuthManager {
       userId,
       newPassword,
     );
+  }
+
+  /**
+   * Check if device is trusted for TOTP bypass
+   */
+  async isTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+  ): Promise<boolean> {
+    try {
+      const device = await db
+        .select()
+        .from(trustedDevices)
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        )
+        .limit(1);
+
+      if (!device || device.length === 0) {
+        return false;
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(device[0].expiresAt);
+
+      if (now > expiresAt) {
+        await this.removeTrustedDevice(userId, deviceFingerprint);
+        return false;
+      }
+
+      await db
+        .update(trustedDevices)
+        .set({ lastUsedAt: now.toISOString() })
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        );
+
+      return true;
+    } catch (error) {
+      authLogger.error("Failed to check trusted device", { userId, error });
+      return false;
+    }
+  }
+
+  /**
+   * Add device to trusted list for TOTP bypass
+   */
+  async addTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+    deviceType: string,
+    deviceInfo: string,
+  ): Promise<void> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const existingDevice = await db
+      .select()
+      .from(trustedDevices)
+      .where(
+        and(
+          eq(trustedDevices.userId, userId),
+          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+        ),
+      )
+      .limit(1);
+
+    if (existingDevice && existingDevice.length > 0) {
+      await db
+        .update(trustedDevices)
+        .set({
+          expiresAt: expiresAt.toISOString(),
+          lastUsedAt: now.toISOString(),
+        })
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        );
+    } else {
+      await db.insert(trustedDevices).values({
+        id: nanoid(),
+        userId,
+        deviceFingerprint,
+        deviceType,
+        deviceInfo,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        lastUsedAt: now.toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Remove trusted device
+   */
+  async removeTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+  ): Promise<void> {
+    await db
+      .delete(trustedDevices)
+      .where(
+        and(
+          eq(trustedDevices.userId, userId),
+          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+        ),
+      );
   }
 }
 

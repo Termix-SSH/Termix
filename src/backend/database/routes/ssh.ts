@@ -2894,10 +2894,17 @@ router.patch(
         .json({ error: "Maximum 1000 hosts allowed per bulk update" });
     }
 
-    if (!updates || typeof updates !== "object" || Object.keys(updates).length === 0) {
+    if (
+      !updates ||
+      typeof updates !== "object" ||
+      Object.keys(updates).length === 0
+    ) {
       return res
         .status(400)
-        .json({ error: "updates object is required and must contain at least one field" });
+        .json({
+          error:
+            "updates object is required and must contain at least one field",
+        });
     }
 
     try {
@@ -2908,7 +2915,9 @@ router.patch(
         .where(and(inArray(sshData.id, hostIds), eq(sshData.userId, userId)));
 
       const ownedIds = ownedHosts.map((h) => h.id);
-      const unauthorizedIds = hostIds.filter((id: number) => !ownedIds.includes(id));
+      const unauthorizedIds = hostIds.filter(
+        (id: number) => !ownedIds.includes(id),
+      );
 
       if (ownedIds.length === 0) {
         return res.status(404).json({ error: "No matching hosts found" });
@@ -2922,18 +2931,25 @@ router.patch(
       // Build simple field updates
       const simpleUpdates: Record<string, unknown> = {};
       if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
-      if (typeof updates.folder === "string") simpleUpdates.folder = updates.folder || null;
-      if (typeof updates.enableTerminal === "boolean") simpleUpdates.enableTerminal = updates.enableTerminal;
-      if (typeof updates.enableTunnel === "boolean") simpleUpdates.enableTunnel = updates.enableTunnel;
-      if (typeof updates.enableFileManager === "boolean") simpleUpdates.enableFileManager = updates.enableFileManager;
-      if (typeof updates.enableDocker === "boolean") simpleUpdates.enableDocker = updates.enableDocker;
+      if (typeof updates.folder === "string")
+        simpleUpdates.folder = updates.folder || null;
+      if (typeof updates.enableTerminal === "boolean")
+        simpleUpdates.enableTerminal = updates.enableTerminal;
+      if (typeof updates.enableTunnel === "boolean")
+        simpleUpdates.enableTunnel = updates.enableTunnel;
+      if (typeof updates.enableFileManager === "boolean")
+        simpleUpdates.enableFileManager = updates.enableFileManager;
+      if (typeof updates.enableDocker === "boolean")
+        simpleUpdates.enableDocker = updates.enableDocker;
 
       // Apply simple field updates in one query
       if (Object.keys(simpleUpdates).length > 0) {
         await db
           .update(sshData)
           .set(simpleUpdates)
-          .where(and(inArray(sshData.id, ownedIds), eq(sshData.userId, userId)));
+          .where(
+            and(inArray(sshData.id, ownedIds), eq(sshData.userId, userId)),
+          );
       }
 
       // Handle statsConfig merge per-host (stored as JSON string)
@@ -3083,9 +3099,7 @@ router.post(
             hostData.authType === "credential" ? hostData.credentialId : null,
           key: hostData.authType === "key" ? hostData.key : null,
           keyPassword:
-            hostData.authType === "key"
-              ? hostData.keyPassword || null
-              : null,
+            hostData.authType === "key" ? hostData.keyPassword || null : null,
           keyType:
             hostData.authType === "key" ? hostData.keyType || "auto" : null,
           pin: hostData.pin || false,
@@ -3625,9 +3639,17 @@ function rewriteOPKSSHHtml(
 ): string {
   const basePath = `/ssh/${routePrefix}/${requestId}`;
 
-  html = html.replace(/action=["']?\//g, `action="${basePath}/`);
-  html = html.replace(/href=["']?\//g, `href="${basePath}/`);
-  html = html.replace(/src=["']?\//g, `src="${basePath}/`);
+  const attrPatterns = ["action", "href", "src"];
+  for (const attr of attrPatterns) {
+    html = html.replace(
+      new RegExp(`${attr}="(/[^"]*)`, "g"),
+      `${attr}="${basePath}$1`,
+    );
+    html = html.replace(
+      new RegExp(`${attr}='(/[^']*)`, "g"),
+      `${attr}='${basePath}$1`,
+    );
+  }
 
   html = html.replace(
     /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
@@ -3677,10 +3699,36 @@ function rewriteOPKSSHHtml(
   const baseTag = `<base href="${basePath}/">`;
 
   if (html.includes("<base")) {
+    sshLogger.info("Replacing existing base tag", {
+      operation: "opkssh_html_rewrite_base_tag",
+      requestId,
+      basePath,
+    });
     html = html.replace(/<base[^>]*>/i, baseTag);
-  } else {
+  } else if (html.includes("<head>")) {
+    sshLogger.info("Inserting base tag into head", {
+      operation: "opkssh_html_rewrite_base_tag_insert",
+      requestId,
+      basePath,
+    });
     html = html.replace(/<head>/i, `<head>${baseTag}`);
+  } else {
+    sshLogger.warn("No <head> tag found, wrapping HTML", {
+      operation: "opkssh_html_rewrite_no_head",
+      requestId,
+      htmlLength: html.length,
+      htmlPreview: html.substring(0, 200),
+    });
+    html = `<!DOCTYPE html><html><head>${baseTag}</head><body>${html}</body></html>`;
   }
+
+  sshLogger.info("HTML rewrite complete", {
+    operation: "opkssh_html_rewrite_complete",
+    requestId,
+    routePrefix,
+    hasBaseTag: html.includes("<base href="),
+    staticAssetCount: (html.match(/\/static\//g) || []).length,
+  });
 
   return html;
 }
@@ -3714,11 +3762,29 @@ router.use(
       ? req.params.requestId[0]
       : req.params.requestId;
 
+    const fullPath = req.originalUrl || req.url;
+    const pathAfterRequestIdTemp =
+      fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+
+    sshLogger.info("OPKSSH chooser proxy request", {
+      operation: "opkssh_chooser_proxy_request",
+      requestId,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      fullPath,
+      pathAfterRequestId: pathAfterRequestIdTemp,
+      method: req.method,
+    });
+
     try {
       const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
       const session = getActiveAuthSession(requestId);
 
       if (!session) {
+        sshLogger.error("Session not found for chooser request", {
+          operation: "opkssh_chooser_session_not_found",
+          requestId,
+        });
         res.status(404).send(`
           <!DOCTYPE html>
           <html>
@@ -3841,6 +3907,14 @@ router.use(
 
       const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
 
+      sshLogger.info("Proxying to OPKSSH chooser", {
+        operation: "opkssh_chooser_proxy_request_to_opkssh",
+        requestId,
+        targetUrl,
+        localPort: session.localPort,
+        targetPath,
+      });
+
       const response = await axios({
         method: req.method,
         url: targetUrl,
@@ -3853,6 +3927,15 @@ router.use(
         validateStatus: () => true,
         maxRedirects: 0,
         responseType: "arraybuffer",
+      });
+
+      sshLogger.info("OPKSSH chooser response received", {
+        operation: "opkssh_chooser_proxy_response",
+        requestId,
+        statusCode: response.status,
+        contentType: response.headers["content-type"],
+        contentLength: response.headers["content-length"],
+        hasLocation: !!response.headers.location,
       });
 
       Object.entries(response.headers).forEach(([key, value]) => {
@@ -3980,6 +4063,19 @@ router.use(
  */
 router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
+    sshLogger.info("OAuth callback received", {
+      operation: "opkssh_static_callback_received",
+      url: req.url,
+      originalUrl: req.originalUrl,
+      query: req.query,
+      headers: {
+        host: req.headers.host,
+        "x-forwarded-proto": req.headers["x-forwarded-proto"],
+        "x-forwarded-host": req.headers["x-forwarded-host"],
+        "x-forwarded-port": req.headers["x-forwarded-port"],
+      },
+    });
+
     const { getUserIdFromRequest, getActiveSessionsForUser } =
       await import("../../ssh/opkssh-auth.js");
 
@@ -3988,14 +4084,44 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       headers: req.headers as Record<string, string | undefined>,
     });
 
+    sshLogger.info("User ID resolved", {
+      operation: "opkssh_callback_user_lookup",
+      userId: userId || "null",
+      hasCookies: !!req.cookies?.jwt,
+      cookieKeys: Object.keys(req.cookies || {}),
+    });
+
     if (!userId) {
+      sshLogger.error("No userId from callback request", {
+        operation: "opkssh_callback_unauthorized",
+        cookies: Object.keys(req.cookies || {}),
+        headers: Object.keys(req.headers),
+      });
       res.status(401).send("Unauthorized - no valid session");
       return;
     }
 
     const userSessions = getActiveSessionsForUser(userId);
 
+    sshLogger.info("Active sessions for user", {
+      operation: "opkssh_callback_session_lookup",
+      userId,
+      sessionCount: userSessions.length,
+      sessions: userSessions.map((s) => ({
+        requestId: s.requestId,
+        status: s.status,
+        hasCallbackPort: !!s.callbackPort,
+        callbackPort: s.callbackPort,
+        hasLocalPort: !!s.localPort,
+        localPort: s.localPort,
+      })),
+    });
+
     if (userSessions.length === 0) {
+      sshLogger.error("No active sessions for callback", {
+        operation: "opkssh_callback_no_sessions",
+        userId,
+      });
       res.status(404).send("No active authentication session found");
       return;
     }
@@ -4003,6 +4129,13 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
     const session = userSessions[userSessions.length - 1];
 
     if (!session.callbackPort) {
+      sshLogger.error("Session callback port not ready", {
+        operation: "opkssh_callback_port_not_ready",
+        userId,
+        requestId: session.requestId,
+        sessionStatus: session.status,
+        hasLocalPort: !!session.localPort,
+      });
       res.status(503).send("OPKSSH callback listener not ready yet");
       return;
     }
@@ -4015,8 +4148,11 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
 
     sshLogger.info("Proxying OAuth callback to OPKSSH", {
       operation: "opkssh_static_callback",
+      userId,
+      requestId: session.requestId,
       callbackPort: session.callbackPort,
       targetUrl,
+      queryParams: Object.keys(req.query),
     });
 
     const response = await axios({
@@ -4033,6 +4169,16 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       responseType: "arraybuffer",
     });
 
+    sshLogger.info("OPKSSH callback response received", {
+      operation: "opkssh_static_callback_response",
+      userId,
+      requestId: session.requestId,
+      statusCode: response.status,
+      contentType: response.headers["content-type"],
+      hasLocation: !!response.headers.location,
+      location: response.headers.location,
+    });
+
     Object.entries(response.headers).forEach(([key, value]) => {
       if (key.toLowerCase() !== "transfer-encoding") {
         res.setHeader(key, value as string);
@@ -4043,6 +4189,8 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   } catch (error) {
     sshLogger.error("Error handling OPKSSH static callback", error, {
       operation: "opkssh_static_callback_error",
+      url: req.url,
+      originalUrl: req.originalUrl,
     });
     res.status(500).send("Authentication callback failed");
   }
@@ -4363,9 +4511,8 @@ router.post(
     try {
       const { singleProxy, proxyChain, testTarget } = req.body;
 
-      const { testProxyConnectivity } = await import(
-        "../../utils/proxy-helper.js"
-      );
+      const { testProxyConnectivity } =
+        await import("../../utils/proxy-helper.js");
 
       const result = await testProxyConnectivity({
         singleProxy,

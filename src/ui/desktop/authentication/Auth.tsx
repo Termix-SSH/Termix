@@ -686,7 +686,9 @@ export function Auth({
             window.location.pathname,
           );
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Failed to get user info after OIDC callback:", err);
+          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);

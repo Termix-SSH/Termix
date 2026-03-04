@@ -47,6 +47,23 @@ export const sessions = sqliteTable("sessions", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const trustedDevices = sqliteTable("trusted_devices", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  deviceFingerprint: text("device_fingerprint").notNull(),
+  deviceType: text("device_type").notNull(),
+  deviceInfo: text("device_info").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastUsedAt: text("last_used_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const sshData = sqliteTable("ssh_data", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")

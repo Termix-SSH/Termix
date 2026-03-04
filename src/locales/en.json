@@ -1358,7 +1358,9 @@
     "bulkUpdateSuccess": "Updated {{count}} host(s) successfully",
     "bulkUpdateFailed": "Bulk update failed",
     "selectAll": "Select all",
-    "deselectAll": "Deselect all"
+    "deselectAll": "Deselect all",
+    "useGlobalStatusDefault": "Use Global Default (Status)",
+    "useGlobalMetricsDefault": "Use Global Default (Metrics)"
   },
   "terminal": {
     "title": "Split Screen",

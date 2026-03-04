@@ -38,7 +38,10 @@ import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
-import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import {
+  parseUserAgent,
+  generateDeviceFingerprint,
+} from "../../utils/user-agent-parser.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 
 const authManager = AuthManager.getInstance();
@@ -817,7 +820,16 @@ router.get("/oidc/authorize", async (req, res) => {
     const nonce = nanoid();
 
     const origin = `${req.protocol}://${req.get("Host")}`;
-    const redirectUri = `${origin}/users/oidc/callback`;
+    const backendCallbackUri = `${origin}/users/oidc/callback`;
+
+    const referer = req.get("Referer");
+    let frontendOrigin;
+    if (referer) {
+      const refererUrl = new URL(referer);
+      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
+    } else {
+      frontendOrigin = origin;
+    }
 
     db.$client
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
@@ -825,11 +837,22 @@ router.get("/oidc/authorize", async (req, res) => {
 
     db.$client
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_redirect_${state}`, redirectUri);
+      .run(`oidc_backend_callback_${state}`, backendCallbackUri);
+
+    db.$client
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+      .run(`oidc_frontend_origin_${state}`, frontendOrigin);
+
+    authLogger.info("OIDC authorization initiated", {
+      operation: "oidc_authorize",
+      backendCallbackUri,
+      frontendOrigin,
+      referer,
+    });
 
     const authUrl = new URL(config.authorization_url);
     authUrl.searchParams.set("client_id", config.client_id);
-    authUrl.searchParams.set("redirect_uri", redirectUri);
+    authUrl.searchParams.set("redirect_uri", backendCallbackUri);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("scope", config.scopes);
     authUrl.searchParams.set("state", state);
@@ -867,15 +890,23 @@ router.get("/oidc/callback", async (req, res) => {
     return res.status(400).json({ error: "Code and state are required" });
   }
 
-  const storedRedirectRow = db.$client
+  const storedBackendCallbackRow = db.$client
     .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_redirect_${state}`);
-  if (!storedRedirectRow) {
+    .get(`oidc_backend_callback_${state}`);
+  const storedFrontendOriginRow = db.$client
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(`oidc_frontend_origin_${state}`);
+
+  if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
     return res
       .status(400)
-      .json({ error: "Invalid state parameter - redirect URI not found" });
+      .json({ error: "Invalid state parameter - redirect URIs not found" });
   }
-  const redirectUri = (storedRedirectRow as Record<string, unknown>)
+
+  const backendCallbackUri = (
+    storedBackendCallbackRow as Record<string, unknown>
+  ).value as string;
+  const frontendOrigin = (storedFrontendOriginRow as Record<string, unknown>)
     .value as string;
 
   try {
@@ -885,13 +916,6 @@ router.get("/oidc/callback", async (req, res) => {
     if (!storedNonce) {
       return res.status(400).json({ error: "Invalid state parameter" });
     }
-
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_state_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_redirect_${state}`);
 
     const envConfig = getOIDCConfigFromEnv();
     let config;
@@ -910,6 +934,12 @@ router.get("/oidc/callback", async (req, res) => {
       );
     }
 
+    authLogger.info("OIDC token exchange attempt", {
+      operation: "oidc_token_exchange",
+      backendCallbackUri,
+      frontendOrigin,
+    });
+
     const tokenResponse = await fetch(config.token_url, {
       method: "POST",
       headers: {
@@ -921,21 +951,36 @@ router.get("/oidc/callback", async (req, res) => {
         client_id: config.client_id,
         client_secret: config.client_secret,
         code: code,
-        redirect_uri: redirectUri,
+        redirect_uri: backendCallbackUri,
       }),
     });
 
     if (!tokenResponse.ok) {
-      authLogger.error(
-        "OIDC token exchange failed",
-        await tokenResponse.text(),
-      );
+      const errorText = await tokenResponse.text();
+      authLogger.error("OIDC token exchange failed", {
+        operation: "oidc_token_exchange_failed",
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        backendCallbackUri,
+        frontendOrigin,
+        errorResponse: errorText,
+      });
       return res
         .status(400)
         .json({ error: "Failed to exchange authorization code" });
     }
 
     const tokenData = (await tokenResponse.json()) as Record<string, unknown>;
+
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_state_${state}`);
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_backend_callback_${state}`);
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_frontend_origin_${state}`);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1085,14 +1130,7 @@ router.get("/oidc/callback", async (req, res) => {
             identifier,
             email,
           });
-          let frontendUrl = (redirectUri as string).replace(
-            "/users/oidc/callback",
-            "",
-          );
-          if (frontendUrl.includes("localhost")) {
-            frontendUrl = "http://localhost:5173";
-          }
-          const redirectUrl = new URL(frontendUrl);
+          const redirectUrl = new URL(frontendOrigin);
           redirectUrl.searchParams.set("error", "user_not_allowed");
           return res.redirect(redirectUrl.toString());
         }
@@ -1115,14 +1153,7 @@ router.get("/oidc/callback", async (req, res) => {
               },
             );
 
-            let frontendUrl = (redirectUri as string).replace(
-              "/users/oidc/callback",
-              "",
-            );
-            if (frontendUrl.includes("localhost")) {
-              frontendUrl = "http://localhost:5173";
-            }
-            const redirectUrl = new URL(frontendUrl);
+            const redirectUrl = new URL(frontendOrigin);
             redirectUrl.searchParams.set("error", "registration_disabled");
 
             return res.redirect(redirectUrl.toString());
@@ -1230,14 +1261,7 @@ router.get("/oidc/callback", async (req, res) => {
             email,
             userId: user[0].id,
           });
-          let frontendUrl = (redirectUri as string).replace(
-            "/users/oidc/callback",
-            "",
-          );
-          if (frontendUrl.includes("localhost")) {
-            frontendUrl = "http://localhost:5173";
-          }
-          const redirectUrl = new URL(frontendUrl);
+          const redirectUrl = new URL(frontendOrigin);
           redirectUrl.searchParams.set("error", "user_not_allowed");
           return res.redirect(redirectUrl.toString());
         }
@@ -1287,16 +1311,7 @@ router.get("/oidc/callback", async (req, res) => {
       username: userRecord.username,
     });
 
-    let frontendUrl = (redirectUri as string).replace(
-      "/users/oidc/callback",
-      "",
-    );
-
-    if (frontendUrl.includes("localhost")) {
-      frontendUrl = "http://localhost:5173";
-    }
-
-    const redirectUrl = new URL(frontendUrl);
+    const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
     const maxAge =
@@ -1312,16 +1327,7 @@ router.get("/oidc/callback", async (req, res) => {
   } catch (err) {
     authLogger.error("OIDC callback failed", err);
 
-    let frontendUrl = (redirectUri as string).replace(
-      "/users/oidc/callback",
-      "",
-    );
-
-    if (frontendUrl.includes("localhost")) {
-      frontendUrl = "http://localhost:5173";
-    }
-
-    const redirectUrl = new URL(frontendUrl);
+    const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("error", "OIDC authentication failed");
 
     res.redirect(redirectUrl.toString());
@@ -1508,16 +1514,30 @@ router.post("/login", async (req, res) => {
     }
 
     if (userRecord.totpEnabled) {
-      const tempToken = await authManager.generateJWTToken(userRecord.id, {
-        pendingTOTP: true,
-        expiresIn: "10m",
-      });
-      return res.json({
-        success: true,
-        requires_totp: true,
-        temp_token: tempToken,
-        rememberMe: !!rememberMe,
-      });
+      const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
+
+      const isTrusted = rememberMe
+        ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+        : false;
+
+      if (isTrusted) {
+        authLogger.info("TOTP bypassed for trusted device", {
+          operation: "totp_bypass",
+          userId: userRecord.id,
+          deviceFingerprint,
+        });
+      } else {
+        const tempToken = await authManager.generateJWTToken(userRecord.id, {
+          pendingTOTP: true,
+          expiresIn: "10m",
+        });
+        return res.json({
+          success: true,
+          requires_totp: true,
+          temp_token: tempToken,
+          rememberMe: !!rememberMe,
+        });
+      }
     }
 
     const token = await authManager.generateJWTToken(userRecord.id, {
@@ -3286,6 +3306,22 @@ router.post("/totp/verify-login", async (req, res) => {
     loginRateLimiter.resetTOTPAttempts(userRecord.id);
 
     const deviceInfo = parseUserAgent(req);
+
+    if (rememberMe) {
+      const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
+      await authManager.addTrustedDevice(
+        userRecord.id,
+        deviceFingerprint,
+        deviceInfo.type,
+        deviceInfo.deviceInfo,
+      );
+      authLogger.info("Device automatically trusted via Remember Me", {
+        operation: "totp_auto_trust",
+        userId: userRecord.id,
+        deviceType: deviceInfo.type,
+      });
+    }
+
     const token = await authManager.generateJWTToken(userRecord.id, {
       rememberMe: !!rememberMe,
       deviceType: deviceInfo.type,

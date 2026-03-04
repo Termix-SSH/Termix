@@ -57,8 +57,12 @@ else
     ls -ld /app/data/.opk
 fi
 
-if [ ! -d "/app/opkssh" ]; then
-    echo "WARNING: OPKSSH binary directory not found at /app/opkssh"
+OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
+if [ ! -d "$OPKSSH_DIR" ]; then
+    echo "WARNING: OPKSSH binary directory not found at $OPKSSH_DIR"
+    echo "OPKSSH will be downloaded automatically on first use."
+else
+    echo "OPKSSH binary directory found at $OPKSSH_DIR"
 fi
 
 if [ "$ENABLE_SSL" = "true" ]; then
