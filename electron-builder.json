@@ -106,7 +106,9 @@
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.inherit.plist",
     "type": "distribution",
-    "minimumSystemVersion": "10.15"
+    "minimumSystemVersion": "10.15",
+    "mergeASARs": false,
+    "singleArchFiles": "node_modules/@tailwindcss/oxide-*/**/*"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
