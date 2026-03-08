@@ -655,7 +655,7 @@ router.post(
 
       let password = host.password;
       let privateKey = host.key;
-      let passphrase = host.key_password;
+      let passphrase = host.keyPassword;
       let authType = host.authType;
 
       if (host.credentialId) {
@@ -675,12 +675,12 @@ router.post(
 
         if (credResult.length > 0) {
           const cred = credResult[0];
-          authType = (cred.auth_type || cred.authType || authType) as string;
+          authType = (cred.authType || authType) as string;
           password = (cred.password || undefined) as string | undefined;
-          privateKey = (cred.private_key || cred.key || undefined) as
+          privateKey = (cred.privateKey || cred.key || undefined) as
             | string
             | undefined;
-          passphrase = (cred.key_password || undefined) as string | undefined;
+          passphrase = (cred.keyPassword || undefined) as string | undefined;
         }
       }
 
@@ -731,7 +731,7 @@ router.post(
           reject(err);
         });
 
-        const config: any = {
+        const config: Record<string, unknown> = {
           host: host.ip,
           port: host.port,
           username: host.username,

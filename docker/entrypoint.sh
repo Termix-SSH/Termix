@@ -5,16 +5,21 @@ PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
 if [ "$(id -u)" = "0" ]; then
-    echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
+    if [ "$PUID" = "0" ]; then
+        echo "Running as root (PUID=0, PGID=$PGID)"
+        chown -R root:root /app/data /app/uploads /app/nginx 2>/dev/null || true
+    else
+        echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
 
-    groupmod -o -g "$PGID" node 2>/dev/null || true
-    usermod -o -u "$PUID" node 2>/dev/null || true
+        groupmod -o -g "$PGID" node 2>/dev/null || true
+        usermod -o -u "$PUID" node 2>/dev/null || true
 
-    chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
+        chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
 
-    echo "User node is now UID: $PUID, GID: $PGID"
+        echo "User node is now UID: $PUID, GID: $PGID"
 
-    exec gosu node:node "$0" "$@"
+        exec gosu node:node "$0" "$@"
+    fi
 fi
 
 export PORT=${PORT:-8080}
@@ -52,8 +57,12 @@ else
     ls -ld /app/data/.opk
 fi
 
-if [ ! -d "/app/opkssh" ]; then
-    echo "WARNING: OPKSSH binary directory not found at /app/opkssh"
+OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
+if [ ! -d "$OPKSSH_DIR" ]; then
+    echo "WARNING: OPKSSH binary directory not found at $OPKSSH_DIR"
+    echo "OPKSSH will be downloaded automatically on first use."
+else
+    echo "OPKSSH binary directory found at $OPKSSH_DIR"
 fi
 
 if [ "$ENABLE_SSL" = "true" ]; then

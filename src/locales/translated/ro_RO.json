@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Acreditări",
     "credentialsViewer": "Vizualizare acreditări",
     "manageYourSSHCredentials": "Gestionează credențialele SSH în siguranță",
     "addCredential": "Adaugă acreditare",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Acest lucru va adăuga în siguranță cheia publică la fișierul ~/.ssh/Autorized_keys al gazdei țintă, fără a suprascrie cheile existente. Operația este reversibilă.",
     "chooseHostToDeploy": "Alege o gazdă pentru a o implementa...",
     "deploying": "Desfășurare...",
-    "copyDeployCommand": "Copiază comanda de lansare",
-    "copyDeployCommandDescription": "Copiați o comandă shell pentru a adăuga manual cheia publică la fișierul cu chei autorizate. Useful când autentificarea cu parolă este dezactivată.",
-    "deployCommandCopied": "Lansează comanda copiată în clipboard",
-    "manualDeployInfo": "Lipiți această comandă în terminalul gazdei țintă (de exemplu, consola Proxmox, IPMI, sau acces fizic) pentru a adăuga cheia SSH.",
     "name": "Nume",
     "noHostsAvailable": "Nu sunt gazde disponibile",
     "noHostsMatchSearch": "Nicio gazdă nu se potrivește cu căutarea ta",
@@ -303,9 +298,7 @@
     "createFolder": "Creare folder",
     "editFolder": "Editare dosar",
     "editFolderDescription": "Personalizați folderul dvs. snippet",
-    "createFolderDescription": "Organizați fragmentele în dosare",
-    "confirmExecution": "Execută \"{{name}}\"?",
-    "confirmExecutionDesc": "Ești sigur că vrei să execuți acest snippet?"
+    "createFolderDescription": "Organizați fragmentele în dosare"
   },
   "commandHistory": {
     "title": "Istoric",
@@ -409,7 +402,6 @@
     "required": "Necesar",
     "optional": "Opţional",
     "connect": "Conectează-te",
-    "copied": "Copiat",
     "connecting": "Conectare...",
     "creating": "Creare...",
     "clear": "Curăță",
@@ -502,7 +494,6 @@
     "checking": "Verificare...",
     "checkingDatabase": "Verificare conexiune la baza de date...",
     "checkingAuthentication": "Verificare autentificare...",
-    "backendReconnected": "Conexiune server restaurată",
     "actions": "Acțiuni",
     "remove": "Elimină",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Manager Gazdă",
-    "hosts": "Gazde",
     "sshHosts": "Gazde SSH",
     "noHosts": "Fără gazde SSH",
     "noHostsMessage": "Nu ai adăugat încă nicio gazdă SSH. Apasă pe \"Adaugă Gazdă\" pentru a începe.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Nu s-a putut importa fișierul JSON",
     "connectionDetails": "Detalii conexiune",
     "organization": "Organizație",
-    "ipAddress": "Adresă IP sau nume gazdă",
+    "ipAddress": "Adresă IP",
     "port": "Portul",
     "name": "Nume",
     "username": "Nume",
@@ -925,8 +915,6 @@
     "key": "Cheie",
     "credential": "Acreditări",
     "none": "Niciunul",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Vă promite pentru OPKSSH web auth la fiecare conectare. Token-ul de autentificare va dura 24 de ore până va trebui reînnoit.",
     "selectCredential": "Selectare acreditare",
     "selectCredentialPlaceholder": "Alege o acreditare...",
     "credentialRequired": "Acreditarea este necesară atunci când se utilizează autentificarea acreditărilor",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Autentificare tastatură-interactivă",
     "noneAuthDescription": "Această metodă de autentificare va utiliza autentificarea interactivă a tastaturii la conectarea la serverul SSH.",
     "noneAuthDetails": "Autentificarea interactivă tastatură permite serverului să vă solicite acreditări în timpul conectării. Acest lucru este util pentru serverele care necesită autentificare multi-factor sau dacă nu doriţi să salvaţi acreditările la nivel local.",
-    "opksshAuthTitle": "Autentificare OPKSSH",
     "forceKeyboardInteractive": "Forțează tastatura- interactivă",
     "forceKeyboardInteractiveDesc": "Forțează utilizarea autentificării interactive a tastaturii. Acest lucru este uneori necesar pentru serverele care utilizează autentificarea în doi pași (TOTP/2FA).",
     "overrideCredentialUsername": "Suprascrie utilizatorul de acreditare",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Deschide în browser",
     "warpgateContinue": "Am finalizat autentificarea",
     "warpgateTimeout": "Autentificare la curbură expirată. Te rugăm să te reconectezi.",
-    "opksshAuthRequired": "Autentificare OPKSSH necesară",
-    "opksshAuthDescription": "Finalizați autentificarea în browser-ul dvs. pentru a continua. Această sesiune va rămâne valabilă 24 de ore.",
-    "opksshAuthUrl": "URL autentificare",
-    "opksshOpenBrowser": "Deschide browser-ul pentru autentificare",
-    "opksshWaitingForAuth": "Se așteaptă autentificarea în browser...",
-    "opksshAuthenticating": "Se procesează autentificarea...",
-    "opksshTimeout": "Autentificarea a expirat. Încercați din nou.",
-    "opksshAuthFailed": "Autentificare eșuată. Te rugăm să verifici acreditările și să încerci din nou.",
-    "opksshConfigMissing": "Configurația OPKSSH nu a fost găsită. Vă rugăm să creați ~/.opk/config.yml cu setările furnizorului OIDC. Vedeți documentația: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Introduceți parola?",
     "sudoPasswordPopupHint": "Apăsați Enter pentru inserare, Esc pentru a respinge",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Se încearcă autentificarea {{method}}...",
     "totpTimeout": "Verificare TOTP expirată. Te rugăm să te reconectezi.",
     "passwordTimeout": "Verificarea parolei a expirat. Vă rugăm să vă reconectați.",
-    "connectionRejected": "Conexiune respinsă de server. Verificați autentificarea și configurarea rețelei.",
-    "hostKeyRejected": "Verificarea cheii gazdă SSH a fost respinsă. Conexiune anulată."
+    "connectionRejected": "Conexiune respinsă de server. Verificați autentificarea și configurarea rețelei."
   },
   "fileManager": {
     "title": "Manager fişiere",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Resetare parola reusita",
     "passwordResetSuccessDesc": "Parola ta a fost resetată cu succes. Acum te poți autentifica cu noua parolă."
   },
-  "hostKey": {
-    "verifyNewHost": "Verificare cheie gazdă SSH",
-    "keyChangedWarning": "Cheie gazdă SSH schimbată",
-    "firstConnectionTitle": "Conectare pentru prima dată la această gazdă",
-    "firstConnectionDescription": "Autenticitatea acestui gazdă nu poate fi stabilită. Verificați ca amprenta să corespundă cu ceea ce așteptați.",
-    "keyChangedDescription": "Cheia gazdă a acestui server s-a schimbat de la ultima conexiune. Aceasta ar putea indica o problemă de securitate.",
-    "previousKey": "Cheie anterioară",
-    "newFingerprint": "Amprentă nouă",
-    "fingerprint": "Amprentă",
-    "verifyInstructions": "Dacă aveți încredere în această gazdă, faceți clic pe Accept pentru a continua și a salva amprenta pentru conexiunile viitoare.",
-    "securityWarning": "Avertizare de securitate",
-    "acceptAndContinue": "Acceptați și continuați",
-    "acceptNewKey": "Acceptați o nouă cheie și continuați"
-  },
   "errors": {
     "notFound": "Pagina nu a fost găsită",
     "unauthorized": "Acces neautorizat",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Găzduire și bară laterală",
     "snippetsSettings": "Snippet-uri",
-    "confirmSnippetExecution": "Confirmare execuție snippet",
-    "confirmSnippetExecutionDesc": "Arată dialog de confirmare înainte de a executa fragmente",
     "updateSettings": "Actualizări",
     "disableUpdateCheck": "Dezactivează verificarea actualizării",
     "disableUpdateCheckDesc": "Opriți verificarea de noi versiuni la pornire și tablou de bord. Reduce cererile de rețea.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 sau exemplu.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

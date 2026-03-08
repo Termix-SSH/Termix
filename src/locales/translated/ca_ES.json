@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Credencials",
     "credentialsViewer": "Visualitzador de credencials",
     "manageYourSSHCredentials": "Gestiona les teves credencials SSH de manera segura",
     "addCredential": "Afegeix credencials",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Això afegirà de manera segura la clau pública al fitxer ~/.ssh/authorized_keys de l'amfitrió de destinació sense sobreescriure les claus existents. L'operació és reversible.",
     "chooseHostToDeploy": "Trieu un amfitrió on implementar...",
     "deploying": "S'està desplegant...",
-    "copyDeployCommand": "Copia l'ordre de desplegament",
-    "copyDeployCommandDescription": "Copia una ordre de shell per afegir manualment la clau pública al fitxer authorized_keys d'un host. Útil quan l'autenticació amb contrasenya està desactivada.",
-    "deployCommandCopied": "L'ordre de desplegament s'ha copiat al porta-retalls",
-    "manualDeployInfo": "Enganxeu aquesta ordre al terminal de l'amfitrió de destinació (per exemple, la consola de Proxmox, IPMI o l'accés físic) per afegir la clau SSH.",
     "name": "Nom",
     "noHostsAvailable": "No hi ha amfitrions disponibles",
     "noHostsMatchSearch": "No hi ha amfitrions que coincideixin amb la teva cerca",
@@ -303,9 +298,7 @@
     "createFolder": "Crea una carpeta",
     "editFolder": "Edita la carpeta",
     "editFolderDescription": "Personalitza la carpeta de fragments",
-    "createFolderDescription": "Organitza els teus fragments en carpetes",
-    "confirmExecution": "Executar \"{{name}}\"?",
-    "confirmExecutionDesc": "Esteu segur que voleu executar aquest fragment?"
+    "createFolderDescription": "Organitza els teus fragments en carpetes"
   },
   "commandHistory": {
     "title": "Història",
@@ -409,7 +402,6 @@
     "required": "Obligatori",
     "optional": "Opcional",
     "connect": "Connecta",
-    "copied": "Copiat",
     "connecting": "Connectant...",
     "creating": "Creant...",
     "clear": "Clar",
@@ -502,7 +494,6 @@
     "checking": "S'està revisant...",
     "checkingDatabase": "S'està comprovant la connexió a la base de dades...",
     "checkingAuthentication": "S'està comprovant l'autenticació...",
-    "backendReconnected": "Connexió al servidor restaurada",
     "actions": "Accions",
     "remove": "Elimina",
     "revoke": "Revocar",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Gestor d'amfitrions",
-    "hosts": "Amfitrions",
     "sshHosts": "Amfitrions SSH",
     "noHosts": "Sense amfitrions SSH",
     "noHostsMessage": "Encara no has afegit cap amfitrió SSH. Fes clic a \"Afegeix amfitrió\" per començar.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "No s'ha pogut importar el fitxer JSON",
     "connectionDetails": "Detalls de la connexió",
     "organization": "Organització",
-    "ipAddress": "Adreça IP o nom d'amfitrió",
+    "ipAddress": "Adreça IP",
     "port": "Port",
     "name": "Nom",
     "username": "Nom d'usuari",
@@ -925,8 +915,6 @@
     "key": "Clau",
     "credential": "Credencial",
     "none": "Cap",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Et demana l'autenticació web OPKSSH cada vegada que et connectes. El teu testimoni d'autenticació durarà 24 hores fins que s'hagi de renovar.",
     "selectCredential": "Selecciona la credencial",
     "selectCredentialPlaceholder": "Trieu una credencial...",
     "credentialRequired": "Cal tenir credencials quan s'utilitza l'autenticació de credencials",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Autenticació interactiva amb teclat",
     "noneAuthDescription": "Aquest mètode d'autenticació utilitzarà l'autenticació interactiva del teclat quan es connecti al servidor SSH.",
     "noneAuthDetails": "L'autenticació interactiva amb teclat permet que el servidor us demani credencials durant la connexió. Això és útil per a servidors que requereixen autenticació multifactor o si no voleu desar les credencials localment.",
-    "opksshAuthTitle": "Autenticació OPKSSH",
     "forceKeyboardInteractive": "Forçar la interacció del teclat",
     "forceKeyboardInteractiveDesc": "Força l'ús de l'autenticació interactiva amb teclat. De vegades, això és necessari per a servidors que utilitzen l'autenticació de dos factors (TOTP/2FA).",
     "overrideCredentialUsername": "Substitueix les credencials i el nom d'usuari",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Obre al navegador",
     "warpgateContinue": "He completat l'autenticació",
     "warpgateTimeout": "Temps d'espera d'autenticació de Warpgate. Si us plau, torneu a connectar-vos.",
-    "opksshAuthRequired": "Cal autenticació OPKSSH",
-    "opksshAuthDescription": "Completeu l'autenticació al navegador per continuar. Aquesta sessió serà vàlida durant 24 hores.",
-    "opksshAuthUrl": "URL d'autenticació",
-    "opksshOpenBrowser": "Obre el navegador per autenticar-te",
-    "opksshWaitingForAuth": "Esperant l'autenticació al navegador...",
-    "opksshAuthenticating": "Processant l'autenticació...",
-    "opksshTimeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar.",
-    "opksshAuthFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
-    "opksshConfigMissing": "No s'ha trobat la configuració d'OPKSSH. Si us plau, creeu ~/.opk/config.yml amb la configuració del vostre proveïdor OIDC. Vegeu la documentació: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Voleu inserir la contrasenya?",
     "sudoPasswordPopupHint": "Premeu Intro per inserir, Esc per tancar",
     "sudoPasswordPopupConfirm": "Insereix",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Intentant automàticament l'autenticació {{method}} ...",
     "totpTimeout": "Temps d'espera de verificació TOTP superat. Si us plau, torneu a connectar-vos.",
     "passwordTimeout": "Temps d'espera de verificació de la contrasenya. Si us plau, torneu a connectar-vos.",
-    "connectionRejected": "Connexió rebutjada pel servidor. Si us plau, comproveu l'autenticació i la configuració de xarxa.",
-    "hostKeyRejected": "Verificació de la clau de l'amfitrió SSH rebutjada. Connexió cancel·lada."
+    "connectionRejected": "Connexió rebutjada pel servidor. Si us plau, comproveu l'autenticació i la configuració de xarxa."
   },
   "fileManager": {
     "title": "Gestor de fitxers",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Restabliment de la contrasenya correcte",
     "passwordResetSuccessDesc": "La teva contrasenya s'ha restablert correctament. Ara pots iniciar la sessió amb la nova contrasenya."
   },
-  "hostKey": {
-    "verifyNewHost": "Verifica la clau d'amfitrió SSH",
-    "keyChangedWarning": "Clau d'amfitrió SSH canviada",
-    "firstConnectionTitle": "Primera vegada que em connecto a aquest amfitrió",
-    "firstConnectionDescription": "No es pot establir l'autenticitat d'aquest amfitrió. Verifiqueu que l'empremta digital coincideixi amb el que espereu.",
-    "keyChangedDescription": "La clau d'amfitrió d'aquest servidor ha canviat des de la vostra última connexió. Això podria indicar un problema de seguretat.",
-    "previousKey": "Clau anterior",
-    "newFingerprint": "Nova empremta digital",
-    "fingerprint": "Empremta digital",
-    "verifyInstructions": "Si confieu en aquest amfitrió, feu clic a Accepta per continuar i desar aquesta empremta digital per a futures connexions.",
-    "securityWarning": "Avís de seguretat",
-    "acceptAndContinue": "Accepta i continua",
-    "acceptNewKey": "Accepta la clau nova i continua"
-  },
   "errors": {
     "notFound": "Pàgina no trobada",
     "unauthorized": "Accés no autoritzat",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Amfitrió i barra lateral",
     "snippetsSettings": "Fragments",
-    "confirmSnippetExecution": "Confirma l'execució del fragment",
-    "confirmSnippetExecutionDesc": "Mostra el diàleg de confirmació abans d'executar fragments",
     "updateSettings": "Actualitzacions",
     "disableUpdateCheck": "Desactiva la comprovació d'actualitzacions",
     "disableUpdateCheckDesc": "Deixa de comprovar si hi ha noves versions a l'inici i al tauler de control. Redueix les sol·licituds de xarxa.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 o example.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

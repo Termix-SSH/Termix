@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Anmeldedaten",
     "credentialsViewer": "Zugangsdaten-Betrachter",
     "manageYourSSHCredentials": "SSH Zugangsdaten sicher verwalten",
     "addCredential": "Zugangsdaten hinzufügen",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Dies fügt den öffentlichen Schlüssel sicher zur Datei ~/.ssh/authorized_keys des Zielservers hinzu, ohne vorhandene Schlüssel zu überschreiben. Die Operation ist reversibel.",
     "chooseHostToDeploy": "Wählen Sie einen Host für den sie bereitstellen soll...",
     "deploying": "Verteilen...",
-    "copyDeployCommand": "Deploy-Befehl kopieren",
-    "copyDeployCommandDescription": "Kopieren Sie einen Shell-Befehl, um den öffentlichen Schlüssel manuell zu der Datei authorized_keys eines Hosts hinzuzufügen. Nützlich, wenn die Passwort-Authentifizierung deaktiviert ist.",
-    "deployCommandCopied": "Deploy-Befehl in Zwischenablage kopiert",
-    "manualDeployInfo": "Fügen Sie diesen Befehl in das Terminal des Ziel-Hosts ein (z.B. Proxmox-Konsole, IPMI oder physikalischer Zugang), um den SSH-Schlüssel hinzuzufügen.",
     "name": "Name",
     "noHostsAvailable": "Keine Hosts verfügbar",
     "noHostsMatchSearch": "Keine Hosts entsprechen Ihrer Suche",
@@ -303,9 +298,7 @@
     "createFolder": "Ordner erstellen",
     "editFolder": "Ordner bearbeiten",
     "editFolderDescription": "Passen Sie Ihren Snippet Ordner an",
-    "createFolderDescription": "Organisieren Sie Ihre Snippets in Ordner",
-    "confirmExecution": "\"{{name}} \"ausführen?",
-    "confirmExecutionDesc": "Sind Sie sicher, dass Sie dieses Snippet ausführen möchten?"
+    "createFolderDescription": "Organisieren Sie Ihre Snippets in Ordner"
   },
   "commandHistory": {
     "title": "Verlauf",
@@ -409,7 +402,6 @@
     "required": "Benötigt",
     "optional": "Optional",
     "connect": "Verbinden",
-    "copied": "Kopiert",
     "connecting": "Verbinden...",
     "creating": "Erstellen...",
     "clear": "Leeren",
@@ -502,7 +494,6 @@
     "checking": "Überprüfen...",
     "checkingDatabase": "Überprüfe Datenbankverbindung...",
     "checkingAuthentication": "Authentifizierung wird überprüft...",
-    "backendReconnected": "Serververbindung wiederhergestellt",
     "actions": "Aktionen",
     "remove": "Entfernen",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Host-Manager",
-    "hosts": "Hosts",
     "sshHosts": "SSH-Hosts",
     "noHosts": "Keine SSH-Hosts",
     "noHostsMessage": "Sie haben noch keine SSH-Hosts hinzugefügt. Klicken Sie auf \"Host hinzufügen\", um loszulegen.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Import der JSON-Datei fehlgeschlagen",
     "connectionDetails": "Verbindungsdetails",
     "organization": "Organisation",
-    "ipAddress": "IP-Adresse oder Hostname",
+    "ipAddress": "IP-Adresse",
     "port": "Port",
     "name": "Name",
     "username": "Benutzername",
@@ -925,8 +915,6 @@
     "key": "Schlüssel",
     "credential": "Anmeldedaten",
     "none": "Keine",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Fordern Sie bei jeder Verbindung nach OPKSSH web-auth an. Ihr Auth-Token hält 24 Stunden an, bis es erneuert werden muss.",
     "selectCredential": "Anmeldeinformationen auswählen",
     "selectCredentialPlaceholder": "Anmeldedaten auswählen...",
     "credentialRequired": "Anmeldeinformationen werden benötigt, wenn die Anmeldeinformationen verwendet werden",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Tastatur-Interaktive Authentifizierung",
     "noneAuthDescription": "Diese Authentifizierungsmethode verwendet die Tastatur-interaktive Authentifizierung bei der Verbindung zum SSH-Server.",
     "noneAuthDetails": "Die interaktive Keyboard-Authentifizierung erlaubt es dem Server, Sie während der Verbindung nach Anmeldeinformationen zu fragen. Dies ist nützlich für Server, die Multi-Faktor-Authentifizierung benötigen oder wenn Sie nicht lokal Anmeldedaten speichern möchten.",
-    "opksshAuthTitle": "OPKSSH Authentifizierung",
     "forceKeyboardInteractive": "Tastatur-Interaktiv erzwingen",
     "forceKeyboardInteractiveDesc": "Erzwingt die Verwendung von Tastatur-interaktiver Authentifizierung. Dies wird manchmal für Server benötigt, die eine Zwei-Faktor-Authentifizierung verwenden (TOTP/2FA).",
     "overrideCredentialUsername": "Benutzername überschreiben",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Im Browser öffnen",
     "warpgateContinue": "Ich habe die Authentifizierung abgeschlossen",
     "warpgateTimeout": "Warpgate Authentifizierungs-Timeout. Bitte verbinden Sie sich erneut.",
-    "opksshAuthRequired": "OPKSSH Authentifizierung erforderlich",
-    "opksshAuthDescription": "Vollständige Authentifizierung in Ihrem Browser, um fortzufahren. Diese Sitzung bleibt 24 Stunden gültig.",
-    "opksshAuthUrl": "Authentifizierungs-URL",
-    "opksshOpenBrowser": "Browser zum Authentifizieren öffnen",
-    "opksshWaitingForAuth": "Warte auf Authentifizierung im Browser...",
-    "opksshAuthenticating": "Authentifizierung wird verarbeitet...",
-    "opksshTimeout": "Timeout der Authentifizierung. Bitte versuchen Sie es erneut.",
-    "opksshAuthFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten und versuchen Sie es erneut.",
-    "opksshConfigMissing": "OPKSSH Konfiguration nicht gefunden. Bitte erstellen Sie ~/.opk/config.yml mit Ihren OIDC Providereinstellungen. Siehe Dokumentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Passwort einfügen?",
     "sudoPasswordPopupHint": "Drücken Sie die Eingabetaste, Esc zum Verwerfen",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Automatisch {{method}} Authentifizierung...",
     "totpTimeout": "TOTP-Verifizierungs-Timeout. Bitte erneut verbinden.",
     "passwordTimeout": "Timeout zur Passwortüberprüfung. Bitte erneut verbinden.",
-    "connectionRejected": "Verbindung vom Server abgelehnt. Bitte überprüfen Sie Ihre Authentifizierung und Netzwerkkonfiguration.",
-    "hostKeyRejected": "Überprüfung des SSH-Host-Schlüssels abgelehnt. Verbindung abgebrochen."
+    "connectionRejected": "Verbindung vom Server abgelehnt. Bitte überprüfen Sie Ihre Authentifizierung und Netzwerkkonfiguration."
   },
   "fileManager": {
     "title": "Datei-Manager",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Passwort erfolgreich zurückgesetzt",
     "passwordResetSuccessDesc": "Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit Ihrem neuen Passwort anmelden."
   },
-  "hostKey": {
-    "verifyNewHost": "SSH-Hostschlüssel überprüfen",
-    "keyChangedWarning": "SSH-Hostschlüssel geändert",
-    "firstConnectionTitle": "Verbindung zu diesem Host zum ersten Mal",
-    "firstConnectionDescription": "Die Authentizität dieses Hosts kann nicht festgestellt werden. Überprüfen Sie den Fingerabdruck mit dem, was Sie erwarten.",
-    "keyChangedDescription": "Der Host-Schlüssel für diesen Server hat sich seit Ihrer letzten Verbindung geändert. Dies könnte auf ein Sicherheitsproblem hinweisen.",
-    "previousKey": "Vorheriger Schlüssel",
-    "newFingerprint": "Neuer Fingerabdruck",
-    "fingerprint": "Fingerabdruck",
-    "verifyInstructions": "Wenn Sie diesem Host vertrauen, klicken Sie auf Akzeptieren, um fortzufahren und den Fingerabdruck für zukünftige Verbindungen zu speichern.",
-    "securityWarning": "Sicherheitswarnung",
-    "acceptAndContinue": "Akzeptieren & fortfahren",
-    "acceptNewKey": "Neuen Schlüssel akzeptieren & fortfahren"
-  },
   "errors": {
     "notFound": "Seite nicht gefunden",
     "unauthorized": "Unberechtigter Zugriff",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Host & Seitenleiste",
     "snippetsSettings": "Schnipsel",
-    "confirmSnippetExecution": "Snippet Ausführung bestätigen",
-    "confirmSnippetExecutionDesc": "Bestätigungsdialog vor dem Ausführen von Snippets anzeigen",
     "updateSettings": "Updates",
     "disableUpdateCheck": "Updateprüfung deaktivieren",
     "disableUpdateCheckDesc": "Stoppt die Suche nach neuen Versionen beim Start und Dashboard. Reduziert Netzwerkanfragen.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 oder beispiel.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

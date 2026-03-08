@@ -53,8 +53,10 @@ export interface StatsConfig {
   enabledWidgets: WidgetType[];
   statusCheckEnabled: boolean;
   statusCheckInterval: number;
+  useGlobalStatusInterval?: boolean;
   metricsEnabled: boolean;
   metricsInterval: number;
+  useGlobalMetricsInterval?: boolean;
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -69,6 +71,8 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 30,
+  useGlobalStatusInterval: true,
   metricsEnabled: true,
   metricsInterval: 30,
+  useGlobalMetricsInterval: true,
 };

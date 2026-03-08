@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "وثائق التفويض",
     "credentialsViewer": "عارض وثائق التفويض",
     "manageYourSSHCredentials": "إدارة بيانات اعتماد SSH الخاصة بك بشكل آمن",
     "addCredential": "إضافة بيانات اعتماد",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "سيؤدي هذا بأمان إلى إضافة المفتاح العمومي إلى ملف المضيف الهدف ~/.ssh/authorized_keyys دون الكتابة فوق المفاتيح الموجودة. العملية قابلة للرجوع عنها.",
     "chooseHostToDeploy": "اختر مضيف ليقوم بنشره إلى...",
     "deploying": "النشر...",
-    "copyDeployCommand": "نسخ أمر النشر",
-    "copyDeployCommandDescription": "نسخ أمر Shell لإضافة المفتاح العام يدوياً إلى ملف مفتاح_مفاتيح مضيف مضيف. مفيد عندما يتم تعطيل مصادقة كلمة المرور.",
-    "deployCommandCopied": "نشر أمر نسخ إلى الحافظة",
-    "manualDeployInfo": "قم بلصق هذا الأمر في محطة المضيف المستهدفة (مثل وحدة تحكم Proxmox أو IPMI، أو الوصول المادي) لإضافة مفتاح SSH.",
     "name": "الاسم",
     "noHostsAvailable": "لا يوجد مضيفين متاحين",
     "noHostsMatchSearch": "لا يوجد مضيف يطابق بحثك",
@@ -303,9 +298,7 @@
     "createFolder": "إنشاء مجلد",
     "editFolder": "تعديل المجلد",
     "editFolderDescription": "تخصيص مجلد كتلة الكود",
-    "createFolderDescription": "تنظيم كتل الكتل في مجلدات",
-    "confirmExecution": "تنفيذ \"{{name}}\"؟",
-    "confirmExecutionDesc": "هل أنت متأكد من أنك تريد تنفيذ كتلة الكود هذه؟"
+    "createFolderDescription": "تنظيم كتل الكتل في مجلدات"
   },
   "commandHistory": {
     "title": "التاريخ",
@@ -409,7 +402,6 @@
     "required": "مطلوب",
     "optional": "اختياري",
     "connect": "الاتصال",
-    "copied": "منسوخ",
     "connecting": "جاري الاتصال...",
     "creating": "إنشاء...",
     "clear": "مسح",
@@ -502,7 +494,6 @@
     "checking": "يتحقق...",
     "checkingDatabase": "التحقق من اتصال قاعدة البيانات...",
     "checkingAuthentication": "التحقق من المصادقة...",
-    "backendReconnected": "تم استعادة اتصال الخادم",
     "actions": "الإجراءات",
     "remove": "إزالة",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "مدير المضيف",
-    "hosts": "المضيفون",
     "sshHosts": "مضيفي SSH",
     "noHosts": "لا يوجد مضيفين SSH",
     "noHostsMessage": "لم تقم بإضافة أي مضيف SSH حتى الآن. انقر فوق \"إضافة مضيف\" للبدء.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "فشل استيراد ملف JSON",
     "connectionDetails": "تفاصيل الاتصال",
     "organization": "المنظمة",
-    "ipAddress": "عنوان IP أو اسم المضيف",
+    "ipAddress": "عنوان IP",
     "port": "المنفذ",
     "name": "الاسم",
     "username": "اسم المستخدم",
@@ -925,8 +915,6 @@
     "key": "المفتاح",
     "credential": "بيانات",
     "none": "لا",
-    "opkssh": "فتح",
-    "opksshAuthDescription": "يمنحك الحصول على مصادقة ويب OPKSSH عند كل اتصال. رمز المصادقة الخاص بك سوف يستمر لمدة 24 ساعة حتى يجب تجديده.",
     "selectCredential": "حدد بيانات الاعتماد",
     "selectCredentialPlaceholder": "اختر بيانات الاعتماد...",
     "credentialRequired": "الاعتماد مطلوب عند استخدام مصادقة الاعتماد",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "المصادقة التفاعلية على لوحة المفاتيح",
     "noneAuthDescription": "طريقة المصادقة هذه ستستخدم مصادقة لوحة المفاتيح التفاعلية عند الاتصال بخادم SSH.",
     "noneAuthDetails": "المصادقة التفاعلية بلوحة المفاتيح تسمح للخادم بمطالبتك للحصول على بيانات الاعتماد أثناء الاتصال. هذا مفيد للخوادم التي تتطلب مصادقة متعددة العناصر أو إذا كنت لا تريد حفظ بيانات الاعتماد محلياً.",
-    "opksshAuthTitle": "المصادقة المفتوحة",
     "forceKeyboardInteractive": "تفعيل لوحة المفاتيح",
     "forceKeyboardInteractiveDesc": "يفرض استخدام مصادقة لوحة المفاتيح التفاعلية. هذا مطلوب أحيانا للخوادم التي تستخدم المصادقة الثنائية (TOTP/2FA).",
     "overrideCredentialUsername": "تجاوز اسم المستخدم",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "فتح في المتصفح",
     "warpgateContinue": "لقد أكملت المصادقة",
     "warpgateTimeout": "انتهت مهلة مصادقة التحذير. الرجاء إعادة الاتصال.",
-    "opksshAuthRequired": "المصادقة مفتوحة مطلوبة",
-    "opksshAuthDescription": "أكمل المصادقة في المتصفح الخاص بك للمتابعة. ستبقى هذه الجلسة صالحة لمدة 24 ساعة.",
-    "opksshAuthUrl": "رابط المصادقة",
-    "opksshOpenBrowser": "فتح المتصفح للمصادقة",
-    "opksshWaitingForAuth": "في انتظار المصادقة في المتصفح...",
-    "opksshAuthenticating": "جاري معالجة المصادقة...",
-    "opksshTimeout": "انتهت مهلة المصادقة. الرجاء المحاولة مرة أخرى.",
-    "opksshAuthFailed": "فشلت المصادقة. الرجاء التحقق من بيانات الاعتماد الخاصة بك وحاول مرة أخرى.",
-    "opksshConfigMissing": "لم يتم العثور على تكوين الفتح. الرجاء إنشاء ~/.opk/config.yml مع إعدادات موفر OIDC. انظر الوثائق: https://github.com/openpubkey/opkssh#config.",
     "sudoPasswordPopupTitle": "إدراج كلمة المرور؟",
     "sudoPasswordPopupHint": "اضغط Enter للإدراج ، Esc للإلغاء",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "جرب مصادقة {{method}} تلقائياً...",
     "totpTimeout": "انتهت مهلة التحقق من TOTP. الرجاء إعادة الاتصال.",
     "passwordTimeout": "انتهت مهلة التحقق من كلمة المرور. الرجاء إعادة الاتصال.",
-    "connectionRejected": "تم رفض الاتصال بواسطة الخادم. الرجاء التحقق من المصادقة الخاصة بك وتكوين الشبكة.",
-    "hostKeyRejected": "تم رفض التحقق من مفتاح المضيف SSH. تم إلغاء الاتصال."
+    "connectionRejected": "تم رفض الاتصال بواسطة الخادم. الرجاء التحقق من المصادقة الخاصة بك وتكوين الشبكة."
   },
   "fileManager": {
     "title": "مدير الملفات",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "تم إعادة تعيين كلمة المرور بنجاح",
     "passwordResetSuccessDesc": "تم إعادة تعيين كلمة المرور الخاصة بك بنجاح. يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة."
   },
-  "hostKey": {
-    "verifyNewHost": "التحقق من مفتاح استضافة SSH",
-    "keyChangedWarning": "تم تغيير مفتاح المضيف SSH",
-    "firstConnectionTitle": "أول مرة تتصل بهذا المضيف",
-    "firstConnectionDescription": "لا يمكن إنشاء صحة هذا المضيف. تحقق من بصمة الإصبع تطابق ما تتوقعه.",
-    "keyChangedDescription": "مفتاح المضيف لهذا الخادم قد تغير منذ الاتصال الأخير. يمكن أن يشير هذا إلى مشكلة أمنية.",
-    "previousKey": "المفتاح السابق",
-    "newFingerprint": "بصمة جديدة",
-    "fingerprint": "بصمة",
-    "verifyInstructions": "إذا كنت تثق بهذا المضيف، انقر فوق قبول للمتابعة وحفظ بصمة الإصبع هذه للاتصال في المستقبل.",
-    "securityWarning": "تحذير الأمان",
-    "acceptAndContinue": "قبول ومتابعة",
-    "acceptNewKey": "قبول المفتاح الجديد ومتابعة"
-  },
   "errors": {
     "notFound": "لم يتم العثور على الصفحة",
     "unauthorized": "الوصول غير المصرح به",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "المحطة",
     "hostSidebarSettings": "المضيف و الشريط الجانبي",
     "snippetsSettings": "كتل الكود",
-    "confirmSnippetExecution": "تأكيد تنفيذ كتلة الكود",
-    "confirmSnippetExecutionDesc": "إظهار مربع حوار التأكيد قبل تنفيذ كتل الكود",
     "updateSettings": "التحديثات",
     "disableUpdateCheck": "تعطيل التحقق من التحديث",
     "disableUpdateCheckDesc": "إيقاف التحقق من الإصدارات الجديدة عند بدء التشغيل و لوحة التحكم. يقلل من طلبات الشبكة.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1-1 أو مثال.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

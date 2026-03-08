@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Label } from "@/components/ui/label.tsx";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import {
   Tabs,
@@ -31,6 +32,8 @@ import {
   verifyTOTPLogin,
   getServerConfig,
   isElectron,
+  getEmbeddedServerStatus,
+  isEmbeddedMode,
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
@@ -101,6 +104,7 @@ export function Auth({
   const [localUsername, setLocalUsername] = useState("");
   const [password, setPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
@@ -267,7 +271,7 @@ export function Auth({
     try {
       let res;
       if (tab === "login") {
-        res = await loginUser(localUsername, password);
+        res = await loginUser(localUsername, password, rememberMe);
       } else {
         if (password !== signupConfirmPassword) {
           toast.error(t("errors.passwordMismatch"));
@@ -281,7 +285,7 @@ export function Auth({
         }
 
         await registerUser(localUsername, password);
-        res = await loginUser(localUsername, password);
+        res = await loginUser(localUsername, password, rememberMe);
       }
 
       if (res.requires_totp) {
@@ -494,7 +498,7 @@ export function Auth({
     setTotpLoading(true);
 
     try {
-      const res = await verifyTOTPLogin(totpTempToken, totpCode);
+      const res = await verifyTOTPLogin(totpTempToken, totpCode, rememberMe);
 
       if (!res || !res.success) {
         throw new Error(t("errors.loginFailed"));
@@ -626,6 +630,8 @@ export function Auth({
     if (error) {
       if (error === "registration_disabled") {
         toast.error(t("messages.registrationDisabled"));
+      } else if (error === "user_not_allowed") {
+        toast.error(t("messages.userNotAllowed"));
       } else {
         toast.error(`${t("errors.oidcAuthFailed")}: ${error}`);
       }
@@ -680,7 +686,9 @@ export function Auth({
             window.location.pathname,
           );
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Failed to get user info after OIDC callback:", err);
+          toast.error(t("errors.failedUserInfo"));
           setInternalLoggedIn(false);
           setLoggedIn(false);
           setIsAdmin(false);
@@ -744,7 +752,17 @@ export function Auth({
 
       if (isElectron()) {
         try {
-          const config = await getServerConfig();
+          const [config, status] = await Promise.all([
+            getServerConfig(),
+            getEmbeddedServerStatus(),
+          ]);
+
+          if (status?.embedded && status?.running && !config?.serverUrl) {
+            setCurrentServerUrl("");
+            setShowServerConfig(false);
+            return;
+          }
+
           setCurrentServerUrl(config?.serverUrl || "");
           setShowServerConfig(!config || !config.serverUrl);
         } catch {
@@ -782,6 +800,10 @@ export function Auth({
         <ServerConfigComponent
           onServerConfigured={() => {
             window.location.reload();
+          }}
+          onUseEmbedded={() => {
+            setShowServerConfig(false);
+            setCurrentServerUrl("");
           }}
           onCancel={() => {
             setShowServerConfig(false);
@@ -1431,6 +1453,24 @@ export function Auth({
                                 disabled={loading || loggedIn}
                               />
                             </div>
+                            {tab === "login" && (
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="rememberMe"
+                                  checked={rememberMe}
+                                  onCheckedChange={(checked) =>
+                                    setRememberMe(checked === true)
+                                  }
+                                  disabled={loading || loggedIn}
+                                />
+                                <Label
+                                  htmlFor="rememberMe"
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {t("auth.rememberMe")}
+                                </Label>
+                              </div>
+                            )}
                             {tab === "signup" && (
                               <div className="flex flex-col gap-2">
                                 <Label htmlFor="signup-confirm-password">

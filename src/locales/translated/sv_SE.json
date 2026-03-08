@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Användaruppgifter",
     "credentialsViewer": "Visning av användaruppgifter",
     "manageYourSSHCredentials": "Hantera dina SSH-uppgifter säkert",
     "addCredential": "Lägg till autentiseringsuppgifter",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Detta kommer säkert att lägga till den publika nyckeln till målvärdens ~/.ssh/authorized_keys fil utan att skriva över befintliga nycklar. Åtgärden är vändbar.",
     "chooseHostToDeploy": "Välj en värd att distribuera till...",
     "deploying": "Utrustar...",
-    "copyDeployCommand": "Kopiera distribuera kommando",
-    "copyDeployCommandDescription": "Kopiera ett skalkommando för att manuellt lägga till den offentliga nyckeln till en värds authorized_keys-fil. Användbar när lösenordsautentisering är inaktiverad.",
-    "deployCommandCopied": "Distributionskommandot kopierat till urklipp",
-    "manualDeployInfo": "Klistra in detta kommando i målvärdens terminal (t.ex. Proxmox-konsol, IPMI eller fysisk åtkomst) för att lägga till SSH-tangenten.",
     "name": "Namn",
     "noHostsAvailable": "Inga tillgängliga värdar",
     "noHostsMatchSearch": "Inga värdar matchar din sökning",
@@ -303,9 +298,7 @@
     "createFolder": "Skapa mapp",
     "editFolder": "Redigera mapp",
     "editFolderDescription": "Anpassa din textmodul-mapp",
-    "createFolderDescription": "Organisera dina textmoduler i mappar",
-    "confirmExecution": "Kör \"{{name}}\"?",
-    "confirmExecutionDesc": "Är du säker på att du vill köra denna snippet?"
+    "createFolderDescription": "Organisera dina textmoduler i mappar"
   },
   "commandHistory": {
     "title": "Historik",
@@ -409,7 +402,6 @@
     "required": "Krävs",
     "optional": "Valfri",
     "connect": "Anslut",
-    "copied": "Kopierad",
     "connecting": "Ansluter...",
     "creating": "Skapar...",
     "clear": "Rensa",
@@ -502,7 +494,6 @@
     "checking": "Kontrollerar...",
     "checkingDatabase": "Kontrollerar databasanslutning...",
     "checkingAuthentication": "Kontrollerar autentisering...",
-    "backendReconnected": "Serveranslutning återställd",
     "actions": "Åtgärder",
     "remove": "Radera",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Värdhanterare",
-    "hosts": "Värdar",
     "sshHosts": "SSH värdar",
     "noHosts": "Inga SSH-värdar",
     "noHostsMessage": "Du har inte lagt till några SSH-värdar än. Klicka på \"Lägg till värd\" för att komma igång.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Det gick inte att importera JSON-fil",
     "connectionDetails": "Kontaktuppgifter",
     "organization": "Organisation",
-    "ipAddress": "IP-adress eller värdnamn",
+    "ipAddress": "IP-adress",
     "port": "Port",
     "name": "Namn",
     "username": "Användarnamn",
@@ -925,8 +915,6 @@
     "key": "Nyckel",
     "credential": "Uppgifter",
     "none": "Ingen",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Fråga dig för OPKSSH web-auth vid varje anslutning. Din auth token kommer att pågå i 24 timmar tills den måste förnyas.",
     "selectCredential": "Välj referens",
     "selectCredentialPlaceholder": "Välj en inloggning...",
     "credentialRequired": "Uppgifter krävs när autentisering används",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Tangentbord-Interaktiv autentisering",
     "noneAuthDescription": "Denna autentiseringsmetod kommer att använda tangentbord-interaktiv autentisering när du ansluter till SSH-servern.",
     "noneAuthDetails": "Tangentbord-interaktiv autentisering gör det möjligt för servern att fråga dig om autentiseringsuppgifter under anslutningen. Detta är användbart för servrar som kräver multi-faktor autentisering eller om du inte vill spara uppgifter lokalt.",
-    "opksshAuthTitle": "OPKSSH autentisering",
     "forceKeyboardInteractive": "Tvinga interaktiv tangentbord",
     "forceKeyboardInteractiveDesc": "Tvingar användning av tangentbords-interaktiv autentisering. Detta krävs ibland för servrar som använder tvåfaktorsautentisering (TOTP/2FA).",
     "overrideCredentialUsername": "Åsidosätt Användarnamn",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Öppna i webbläsare",
     "warpgateContinue": "Jag har slutfört autentisering",
     "warpgateTimeout": "Warpgate-autentiserings-timeout. Vänligen återanslut.",
-    "opksshAuthRequired": "OPKSSH-autentisering krävs",
-    "opksshAuthDescription": "Fullständig autentisering i din webbläsare för att fortsätta. Denna session kommer att förbli giltig i 24 timmar.",
-    "opksshAuthUrl": "URL för autentisering",
-    "opksshOpenBrowser": "Öppna webbläsaren för att autentisera",
-    "opksshWaitingForAuth": "Väntar på autentisering i webbläsaren...",
-    "opksshAuthenticating": "Bearbetar autentisering...",
-    "opksshTimeout": "Autentisering gick ut. Försök igen.",
-    "opksshAuthFailed": "Autentisering misslyckades. Kontrollera dina uppgifter och försök igen.",
-    "opksshConfigMissing": "OPKSSH-konfigurationen hittades inte. Vänligen skapa ~/.opk/config.yml med dina OIDC-leverantörsinställningar. Se dokumentation: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Infoga lösenord?",
     "sudoPasswordPopupHint": "Tryck Enter för att infoga Esc för att avfärda",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Försöker automatiskt {{method}} autentisering...",
     "totpTimeout": "TOTP-verifiering timeout. Vänligen återanslut.",
     "passwordTimeout": "Lösenordsverifiering är avklarad. Vänligen återanslut.",
-    "connectionRejected": "Anslutning avvisad av servern. Kontrollera din autentisering och nätverkskonfiguration.",
-    "hostKeyRejected": "Verifiering av SSH-värdnyckel avvisad. Anslutningen avbröts."
+    "connectionRejected": "Anslutning avvisad av servern. Kontrollera din autentisering och nätverkskonfiguration."
   },
   "fileManager": {
     "title": "Filhanterare",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Lösenordsåterställning lyckades",
     "passwordResetSuccessDesc": "Ditt lösenord har återställts. Du kan nu logga in med ditt nya lösenord."
   },
-  "hostKey": {
-    "verifyNewHost": "Verifiera SSH-värdnyckel",
-    "keyChangedWarning": "SSH Värdnyckel ändrad",
-    "firstConnectionTitle": "Första gången du ansluter till denna värd",
-    "firstConnectionDescription": "Autenticiteten hos denna värd kan inte fastställas. Kontrollera att fingeravtrycket matchar det du förväntar dig.",
-    "keyChangedDescription": "Värdnyckeln för denna server har ändrats sedan din senaste anslutning. Detta kan indikera ett säkerhetsproblem.",
-    "previousKey": "Föregående nyckel",
-    "newFingerprint": "Nytt fingeravtryck",
-    "fingerprint": "Fingeravtryck",
-    "verifyInstructions": "Om du litar på detta värd, klicka på Acceptera för att fortsätta och spara detta fingeravtryck för framtida anslutningar.",
-    "securityWarning": "Varning för säkerhet",
-    "acceptAndContinue": "Godkänn och fortsätt",
-    "acceptNewKey": "Acceptera ny nyckel och fortsätt"
-  },
   "errors": {
     "notFound": "Sidan hittades inte",
     "unauthorized": "Obehörig åtkomst",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Värd och sidofält",
     "snippetsSettings": "Textmoduler",
-    "confirmSnippetExecution": "Bekräfta utförande av textmodulen",
-    "confirmSnippetExecutionDesc": "Visa bekräftelsedialog innan du utför textmoduler",
     "updateSettings": "Uppdateringar",
     "disableUpdateCheck": "Inaktivera uppdateringskontroll",
     "disableUpdateCheckDesc": "Sluta leta efter nya versioner vid uppstart och instrumentbräda. Minskar nätverksförfrågningar.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 eller exempel.se",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

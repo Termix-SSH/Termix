@@ -5,24 +5,27 @@
   "directories": {
     "output": "release"
   },
+  "asar": false,
   "files": [
     "dist/**/*",
     "electron/**/*",
     "public/**/*",
-    "!**/node_modules/**/*",
     "!src/**/*",
     "!*.md",
     "!tsconfig*.json",
     "!vite.config.ts",
-    "!eslint.config.js"
+    "!eslint.config.js",
+    "!node_modules/@napi-rs/canvas*/**/*",
+    "!node_modules/@rollup/rollup-darwin-*/**/*",
+    "!node_modules/@rollup/rollup-linux-*/**/*",
+    "!node_modules/@rollup/rollup-win32-*/**/*"
   ],
-  "asarUnpack": ["node_modules/node-fetch/**/*"],
   "extraMetadata": {
     "main": "electron/main.cjs"
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,
-  "npmRebuild": true,
+  "npmRebuild": false,
   "win": {
     "target": [
       {
@@ -103,7 +106,9 @@
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.inherit.plist",
     "type": "distribution",
-    "minimumSystemVersion": "10.15"
+    "minimumSystemVersion": "10.15",
+    "mergeASARs": false,
+    "singleArchFiles": "node_modules/@tailwindcss/oxide-*/**/*"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
@@ -116,7 +121,7 @@
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
     "hardenedRuntime": false,
     "gatekeeperAssess": false,
-    "asarUnpack": ["**/*.node"],
+    "asar": false,
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "artifactName": "termix_macos_${arch}_mas.${ext}",

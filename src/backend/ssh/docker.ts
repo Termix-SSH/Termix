@@ -3,15 +3,17 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
-import type { ClientChannel } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import { createSocks5Connection } from "../utils/socks5-helper.js";
-import type { AuthenticatedRequest, SSHHost } from "../../types/index.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
+import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
@@ -21,7 +23,7 @@ function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ): Omit<LogEntry, "id" | "timestamp"> {
   return {
     type,
@@ -43,7 +45,7 @@ interface SSHSession {
 interface PendingTOTPSession {
   client: SSHClient;
   finish: (responses: string[]) => void;
-  config: any;
+  config: Record<string, unknown>;
   createdAt: number;
   sessionId: string;
   hostId?: number;
@@ -70,7 +72,9 @@ setInterval(() => {
     if (now - session.createdAt > 180000) {
       try {
         session.client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
       delete pendingTOTPSessions[sessionId];
     }
   });
@@ -94,7 +98,9 @@ function cleanupSession(sessionId: string) {
 
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     clearTimeout(session.timeout);
     delete sshSessions[sessionId];
   }
@@ -111,10 +117,24 @@ function scheduleSessionCleanup(sessionId: string) {
   }
 }
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<JumpHostConfig | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -150,17 +170,16 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
-          key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+          password: credential.password as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
+          keyType: credential.keyType as string | undefined,
+          authType: credential.authType as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     sshLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -174,6 +193,7 @@ async function resolveJumpHost(
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  socks5Config?: SOCKS5Config | null,
 ): Promise<SSHClient | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -187,19 +207,33 @@ async function createJumpHostChain(
       jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
     );
 
+    const totalHops = jumpHostConfigs.length;
+
     for (let i = 0; i < jumpHostConfigs.length; i++) {
       if (!jumpHostConfigs[i]) {
         sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
+          hopIndex: i,
+          totalHops,
         });
         clients.forEach((c) => c.end());
         return null;
       }
     }
 
+    let proxySocket: import("net").Socket | null = null;
+    if (socks5Config?.useSocks5) {
+      const firstHop = jumpHostConfigs[0]!;
+      proxySocket = await createSocks5Connection(
+        firstHop.ip,
+        firstHop.port || 22,
+        socks5Config,
+      );
+    }
+
     for (let i = 0; i < jumpHostConfigs.length; i++) {
-      const jumpHostConfig = jumpHostConfigs[i];
+      const jumpHostConfig = jumpHostConfigs[i]!;
 
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
@@ -225,16 +259,29 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          sshLogger.error(`Jump host ${i + 1} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-          });
+          sshLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
-        const connectConfig: any = {
-          host: jumpHostConfig.ip,
+        const connectConfig: Record<string, unknown> = {
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -271,6 +318,9 @@ async function createJumpHostChain(
               jumpClient.connect(connectConfig);
             },
           );
+        } else if (proxySocket) {
+          connectConfig.sock = proxySocket;
+          jumpClient.connect(connectConfig);
         } else {
           jumpClient.connect(connectConfig);
         }
@@ -411,6 +461,10 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
@@ -450,7 +504,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
     userProvidedPassword,
     userProvidedSshKey,
     userProvidedKeyPassword,
-    forceKeyboardInteractive,
     useSocks5,
     socks5Host,
     socks5Port,
@@ -458,7 +511,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     socks5Password,
     socks5ProxyChain,
   } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
@@ -533,8 +586,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
     const host = hosts[0] as unknown as SSHHost;
 
     if (host.userId !== userId) {
-      const { PermissionManager } =
-        await import("../utils/permission-manager.js");
+      const { PermissionManager } = await import(
+        "../utils/permission-manager.js"
+      );
       const permissionManager = PermissionManager.getInstance();
       const accessInfo = await permissionManager.canAccessHost(
         userId,
@@ -605,11 +659,18 @@ app.post("/docker/ssh/connect", async (req, res) => {
     if (pendingTOTPSessions[sessionId]) {
       try {
         pendingTOTPSessions[sessionId].client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
       delete pendingTOTPSessions[sessionId];
     }
 
-    let resolvedCredentials: any = {
+    let resolvedCredentials: {
+      password?: string;
+      sshKey?: string;
+      keyPassword?: string;
+      authType?: string;
+    } = {
       password: host.password,
       sshKey: host.key,
       keyPassword: host.keyPassword,
@@ -632,8 +693,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
       if (userId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id,
@@ -673,11 +735,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
-            password: credential.password,
-            sshKey:
-              credential.private_key || credential.privateKey || credential.key,
-            keyPassword: credential.key_password || credential.keyPassword,
-            authType: credential.auth_type || credential.authType,
+            password: credential.password as string | undefined,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
+            authType: credential.authType as string | undefined,
           };
         }
       }
@@ -685,8 +746,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     const client = new SSHClient();
 
-    const config: any = {
-      host: host.ip,
+    const config: Record<string, unknown> = {
+      host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
       port: host.port || 22,
       username: host.username,
       tryKeyboard: true,
@@ -706,6 +767,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     };
 
     if (resolvedCredentials.authType === "none") {
+      // no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (resolvedCredentials.password) {
         config.password = resolvedCredentials.password;
@@ -871,8 +933,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
     }
 
     let responseSent = false;
-    let keyboardInteractiveResponded = false;
-
     connectionLogs.push(
       createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
     );
@@ -1089,8 +1149,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
             if (responseSent) return;
             responseSent = true;
 
-            keyboardInteractiveResponded = true;
-
             pendingTOTPSessions[sessionId] = {
               client,
               finish,
@@ -1157,8 +1215,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
             finish(responses);
             return;
           }
-
-          keyboardInteractiveResponded = true;
 
           pendingTOTPSessions[sessionId] = {
             client,
@@ -1244,8 +1300,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
               return;
             }
 
-            keyboardInteractiveResponded = true;
-
             pendingTOTPSessions[sessionId] = {
               client,
               finish,
@@ -1283,121 +1337,160 @@ app.post("/docker/ssh/connect", async (req, res) => {
       },
     );
 
-    if (
+    const proxyConfig: SOCKS5Config | null =
       useSocks5 &&
-      (socks5Host || (socks5ProxyChain && (socks5ProxyChain as any).length > 0))
-    ) {
-      try {
-        connectionLogs.push(
-          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
-        );
-        const socks5Socket = await createSocks5Connection(
-          host.ip,
-          host.port || 22,
-          {
+      (socks5Host ||
+        (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
+        ? {
             useSocks5,
             socks5Host,
             socks5Port,
             socks5Username,
             socks5Password,
-            socks5ProxyChain: socks5ProxyChain as any,
-          },
+            socks5ProxyChain: socks5ProxyChain as ProxyNode[],
+          }
+        : null;
+
+    const hasJumpHosts = host.jumpHosts && host.jumpHosts.length > 0;
+
+    if (hasJumpHosts) {
+      try {
+        if (proxyConfig) {
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "proxy",
+              "Connecting via proxy + jump hosts",
+            ),
+          );
+        }
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "jump",
+            `Connecting via ${host.jumpHosts!.length} jump host(s)`,
+          ),
+        );
+        const jumpClient = await createJumpHostChain(
+          host.jumpHosts as Array<{ hostId: number }>,
+          userId,
+          proxyConfig,
         );
 
-        if (socks5Socket) {
-          config.sock = socks5Socket;
-          client.connect(config);
-          return;
+        if (!jumpClient) {
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "jump",
+              "Failed to establish jump host chain",
+            ),
+          );
+          return res.status(500).json({
+            error: "Failed to establish jump host chain",
+            connectionLogs,
+          });
         }
-      } catch (socks5Error) {
-        sshLogger.error("SOCKS5 connection failed", socks5Error, {
-          operation: "docker_socks5_connect",
+
+        jumpClient.forwardOut(
+          "127.0.0.1",
+          0,
+          host.ip,
+          host.port || 22,
+          (err, stream) => {
+            if (err) {
+              sshLogger.error("Failed to forward through jump host", err, {
+                operation: "docker_jump_forward",
+                sessionId,
+                hostId,
+              });
+              connectionLogs.push(
+                createConnectionLog(
+                  "error",
+                  "jump",
+                  `Failed to forward through jump host: ${err.message}`,
+                ),
+              );
+              jumpClient.end();
+              if (!responseSent) {
+                responseSent = true;
+                return res.status(500).json({
+                  error: "Failed to forward through jump host: " + err.message,
+                  connectionLogs,
+                });
+              }
+              return;
+            }
+
+            config.sock = stream;
+            client.connect(config);
+          },
+        );
+      } catch (jumpError) {
+        sshLogger.error("Jump host connection failed", jumpError, {
+          operation: "docker_jump_connect",
           sessionId,
           hostId,
-          proxyHost: socks5Host,
-          proxyPort: socks5Port || 1080,
         });
         connectionLogs.push(
           createConnectionLog(
             "error",
-            "proxy",
-            `SOCKS5 proxy connection failed: ${socks5Error instanceof Error ? socks5Error.message : "Unknown error"}`,
+            "jump",
+            `Jump host connection failed: ${jumpError instanceof Error ? jumpError.message : "Unknown error"}`,
           ),
         );
         if (!responseSent) {
           responseSent = true;
           return res.status(500).json({
             error:
-              "SOCKS5 proxy connection failed: " +
-              (socks5Error instanceof Error
-                ? socks5Error.message
+              "Jump host connection failed: " +
+              (jumpError instanceof Error
+                ? jumpError.message
                 : "Unknown error"),
             connectionLogs,
           });
         }
         return;
       }
-    } else if (host.jumpHosts && host.jumpHosts.length > 0) {
+    } else if (proxyConfig) {
       connectionLogs.push(
-        createConnectionLog(
-          "info",
-          "jump",
-          `Connecting via ${host.jumpHosts.length} jump host(s)`,
-        ),
+        createConnectionLog("info", "proxy", "Connecting via proxy"),
       );
-      const jumpClient = await createJumpHostChain(
-        host.jumpHosts as Array<{ hostId: number }>,
-        userId,
-      );
-
-      if (!jumpClient) {
+      try {
+        const proxySocket = await createSocks5Connection(
+          host.ip,
+          host.port || 22,
+          proxyConfig,
+        );
+        if (proxySocket) {
+          config.sock = proxySocket;
+        }
+        client.connect(config);
+      } catch (proxyError) {
+        sshLogger.error("Proxy connection failed", proxyError, {
+          operation: "docker_proxy_connect",
+          sessionId,
+          hostId,
+        });
         connectionLogs.push(
           createConnectionLog(
             "error",
-            "jump",
-            "Failed to establish jump host chain",
+            "proxy",
+            `Proxy connection failed: ${proxyError instanceof Error ? proxyError.message : "Unknown error"}`,
           ),
         );
-        return res.status(500).json({
-          error: "Failed to establish jump host chain",
-          connectionLogs,
-        });
+        if (!responseSent) {
+          responseSent = true;
+          return res.status(500).json({
+            error:
+              "Proxy connection failed: " +
+              (proxyError instanceof Error
+                ? proxyError.message
+                : "Unknown error"),
+            connectionLogs,
+          });
+        }
+        return;
       }
-
-      jumpClient.forwardOut(
-        "127.0.0.1",
-        0,
-        host.ip,
-        host.port || 22,
-        (err, stream) => {
-          if (err) {
-            sshLogger.error("Failed to forward through jump host", err, {
-              operation: "docker_jump_forward",
-              sessionId,
-              hostId,
-            });
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                "jump",
-                `Failed to forward through jump host: ${err.message}`,
-              ),
-            );
-            jumpClient.end();
-            if (!responseSent) {
-              responseSent = true;
-              return res.status(500).json({
-                error: "Failed to forward through jump host: " + err.message,
-                connectionLogs,
-              });
-            }
-            return;
-          }
-
-          config.sock = stream;
-          client.connect(config);
-        },
-      );
     } else {
       client.connect(config);
     }
@@ -1489,7 +1582,7 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
  */
 app.post("/docker/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     sshLogger.error("TOTP verification rejected: no authenticated user", {
@@ -1521,7 +1614,9 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     sshLogger.warn("TOTP session timeout before code submission", {
       operation: "docker_totp_verify",
       sessionId,
@@ -1544,7 +1639,19 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
   });
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("TOTP verification timeout", {
+        operation: "docker_totp_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "TOTP verification timeout" });
+    }
+  }, 60000);
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -1633,19 +1740,6 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     res.status(401).json({ status: "error", message: "Invalid TOTP code" });
   });
 
-  responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("TOTP verification timeout", {
-        operation: "docker_totp_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "TOTP verification timeout" });
-    }
-  }, 60000);
-
   session.finish(responses);
 });
 
@@ -1679,7 +1773,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
  */
 app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   const { sessionId } = req.body;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     sshLogger.error("Warpgate verification rejected: no authenticated user", {
@@ -1715,7 +1809,9 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     sshLogger.warn("Warpgate session timeout before completion", {
       operation: "docker_warpgate_verify",
       sessionId,
@@ -1728,7 +1824,19 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   }
 
   let responseSent = false;
-  let responseTimeout: NodeJS.Timeout;
+
+  const responseTimeout = setTimeout(() => {
+    if (!responseSent) {
+      responseSent = true;
+      delete pendingTOTPSessions[sessionId];
+      sshLogger.warn("Warpgate verification timeout", {
+        operation: "docker_warpgate_verify",
+        sessionId,
+        userId,
+      });
+      res.status(408).json({ error: "Warpgate verification timeout" });
+    }
+  }, 60000);
 
   session.client.once("ready", () => {
     if (responseSent) return;
@@ -1818,19 +1926,6 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       .status(401)
       .json({ status: "error", message: "Warpgate authentication failed" });
   });
-
-  responseTimeout = setTimeout(() => {
-    if (!responseSent) {
-      responseSent = true;
-      delete pendingTOTPSessions[sessionId];
-      sshLogger.warn("Warpgate verification timeout", {
-        operation: "docker_warpgate_verify",
-        sessionId,
-        userId,
-      });
-      res.status(408).json({ error: "Warpgate verification timeout" });
-    }
-  }, 60000);
 
   session.finish([""]);
 });
@@ -1941,7 +2036,7 @@ app.get("/docker/ssh/status", async (req, res) => {
  */
 app.get("/docker/validate/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2020,7 +2115,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
           code: "DOCKER_ERROR",
         });
       }
-    } catch (installError) {
+    } catch {
       session.activeOperations--;
       return res.json({
         available: false,
@@ -2073,7 +2168,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const all = req.query.all !== "false";
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2115,7 +2210,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
       .map((line) => {
         try {
           return JSON.parse(line);
-        } catch (e) {
+        } catch {
           sshLogger.warn("Failed to parse container line", {
             operation: "parse_container",
             line,
@@ -2174,7 +2269,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
  */
 app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   const { sessionId, containerId } = req.params;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2269,7 +2364,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/start",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2369,7 +2464,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/stop",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2469,7 +2564,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/restart",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2569,7 +2664,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/pause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2669,7 +2764,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/unpause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2774,7 +2869,7 @@ app.delete(
   async (req, res) => {
     const { sessionId, containerId } = req.params;
     const force = req.query.force === "true";
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2902,7 +2997,7 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const timestamps = req.query.timestamps === "true";
   const since = req.query.since as string;
   const until = req.query.until as string;
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -3011,7 +3106,7 @@ app.get(
   "/docker/containers/:sessionId/:containerId/stats",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as any).userId;
+    const userId = (req as unknown as { userId: string }).userId;
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });

@@ -380,13 +380,14 @@ export function LeftSidebar({
       for (const [field, value] of Object.entries(fieldMatches)) {
         switch (field) {
           case "tag":
-          case "tags":
+          case "tags": {
             const tags = Array.isArray(h.tags) ? h.tags : [];
             const hasMatchingTag = tags.some((tag) =>
               tag.toLowerCase().includes(value),
             );
             if (!hasMatchingTag) return false;
             break;
+          }
           case "name":
             if (!(h.name || "").toLowerCase().includes(value)) return false;
             break;

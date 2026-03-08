@@ -9,6 +9,7 @@ import {
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
@@ -978,7 +979,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       const fitAddon = new FitAddon();
-      const clipboardAddon = new ClipboardAddon();
+      const clipboardProvider = new RobustClipboardProvider();
+      const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
       const webLinksAddon = new WebLinksAddon();
 
@@ -1046,6 +1048,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       return () => {
         resizeObserver.disconnect();
+        clipboardProvider.dispose();
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         if (pingIntervalRef.current) {
@@ -1225,7 +1228,7 @@ style.innerHTML = `
 }
 
 .xterm {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1233,11 +1236,11 @@ style.innerHTML = `
 
 .xterm .xterm-screen {
   font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
-  font-variant-ligatures: contextual;
+  font-variant-ligatures: none;
 }
 
 .xterm .xterm-screen .xterm-char {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 `;
 document.head.appendChild(style);

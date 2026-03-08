@@ -6,7 +6,7 @@ import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { sshData, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { statsLogger, sshLogger } from "../utils/logger.js";
+import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
@@ -22,14 +22,18 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
-import { createSocks5Connection } from "../utils/socks5-helper.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ): Omit<LogEntry, "id" | "timestamp"> {
   return {
     type,
@@ -39,10 +43,24 @@ function createConnectionLog(
   };
 }
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<JumpHostConfig | null> {
   try {
     const hosts = await SimpleDBOps.select(
       getDb()
@@ -78,17 +96,16 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
-          key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+          password: credential.password as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
+          keyType: credential.keyType as string | undefined,
+          authType: credential.authType as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     statsLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -102,6 +119,7 @@ async function resolveJumpHost(
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  socks5Config?: SOCKS5Config | null,
 ): Promise<Client | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -111,17 +129,40 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
+    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> =
+      [];
     for (let i = 0; i < jumpHosts.length; i++) {
-      const jumpHostConfig = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      const config = await resolveJumpHost(jumpHosts[i].hostId, userId);
+      jumpHostConfigs.push(config);
+    }
 
-      if (!jumpHostConfig) {
+    const totalHops = jumpHostConfigs.length;
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      if (!jumpHostConfigs[i]) {
         statsLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
+          hopIndex: i,
+          totalHops,
         });
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    let proxySocket: import("net").Socket | null = null;
+    if (socks5Config?.useSocks5) {
+      const firstHop = jumpHostConfigs[0]!;
+      proxySocket = await createSocks5Connection(
+        firstHop.ip,
+        firstHop.port || 22,
+        socks5Config,
+      );
+    }
+
+    for (let i = 0; i < jumpHostConfigs.length; i++) {
+      const jumpHostConfig = jumpHostConfigs[i]!;
 
       const jumpClient = new Client();
       clients.push(jumpClient);
@@ -147,16 +188,29 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          statsLogger.error(`Jump host ${i + 1} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-          });
+          statsLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
-        const connectConfig: any = {
-          host: jumpHostConfig.ip,
+        const connectConfig: Record<string, unknown> = {
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -193,6 +247,9 @@ async function createJumpHostChain(
               jumpClient.connect(connectConfig);
             },
           );
+        } else if (proxySocket) {
+          connectConfig.sock = proxySocket;
+          jumpClient.connect(connectConfig);
         } else {
           jumpClient.connect(connectConfig);
         }
@@ -214,13 +271,6 @@ async function createJumpHostChain(
     clients.forEach((c) => c.end());
     return null;
   }
-}
-
-interface PooledConnection {
-  client: Client;
-  lastUsed: number;
-  inUse: boolean;
-  hostKey: string;
 }
 
 interface MetricsSession {
@@ -275,7 +325,9 @@ function cleanupMetricsSession(sessionId: string) {
 
     try {
       session.client.end();
-    } catch (error) {}
+    } catch {
+      // expected
+    }
     clearTimeout(session.timeout);
     delete metricsSessions[sessionId];
   }
@@ -297,355 +349,6 @@ function scheduleMetricsSessionCleanup(sessionId: string) {
 
 function getSessionKey(hostId: number, userId: string): string {
   return `${userId}:${hostId}`;
-}
-
-class SSHConnectionPool {
-  private connections = new Map<string, PooledConnection[]>();
-  private maxConnectionsPerHost = 3;
-  private connectionTimeout = 30000;
-  private cleanupInterval: NodeJS.Timeout;
-
-  constructor() {
-    this.cleanupInterval = setInterval(
-      () => {
-        this.cleanup();
-      },
-      2 * 60 * 1000,
-    );
-  }
-
-  private getHostKey(host: SSHHostWithCredentials): string {
-    const socks5Key = host.useSocks5
-      ? `:socks5:${host.socks5Host}:${host.socks5Port}:${JSON.stringify(host.socks5ProxyChain || [])}`
-      : "";
-    return `${host.ip}:${host.port}:${host.username}${socks5Key}`;
-  }
-
-  private isConnectionHealthy(client: Client): boolean {
-    try {
-      const sock = (client as any)._sock;
-      if (sock && (sock.destroyed || !sock.writable)) {
-        return false;
-      }
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async getConnection(host: SSHHostWithCredentials): Promise<Client> {
-    const hostKey = this.getHostKey(host);
-    let connections = this.connections.get(hostKey) || [];
-
-    const available = connections.find((conn) => !conn.inUse);
-    if (available) {
-      if (!this.isConnectionHealthy(available.client)) {
-        statsLogger.warn("Removing unhealthy connection from pool", {
-          operation: "remove_dead_connection",
-          hostKey,
-        });
-        try {
-          available.client.end();
-        } catch (error) {
-          // Ignore cleanup errors
-        }
-        connections = connections.filter((c) => c !== available);
-        this.connections.set(hostKey, connections);
-      } else {
-        available.inUse = true;
-        available.lastUsed = Date.now();
-        return available.client;
-      }
-    }
-
-    if (connections.length < this.maxConnectionsPerHost) {
-      const client = await this.createConnection(host);
-      const pooled: PooledConnection = {
-        client,
-        lastUsed: Date.now(),
-        inUse: true,
-        hostKey,
-      };
-      connections.push(pooled);
-      this.connections.set(hostKey, connections);
-      return client;
-    }
-
-    return new Promise((resolve) => {
-      const checkAvailable = () => {
-        const available = connections.find((conn) => !conn.inUse);
-        if (available) {
-          available.inUse = true;
-          available.lastUsed = Date.now();
-          resolve(available.client);
-        } else {
-          setTimeout(checkAvailable, 100);
-        }
-      };
-      checkAvailable();
-    });
-  }
-
-  private async createConnection(
-    host: SSHHostWithCredentials,
-  ): Promise<Client> {
-    const config = await buildSshConfig(host);
-    return new Promise(async (resolve, reject) => {
-      const client = new Client();
-      const timeout = setTimeout(() => {
-        client.end();
-        reject(new Error("SSH connection timeout"));
-      }, this.connectionTimeout);
-
-      client.on("ready", () => {
-        clearTimeout(timeout);
-        resolve(client);
-      });
-
-      client.on("error", (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      });
-
-      client.on(
-        "keyboard-interactive",
-        (
-          name: string,
-          instructions: string,
-          instructionsLang: string,
-          prompts: Array<{ prompt: string; echo: boolean }>,
-          finish: (responses: string[]) => void,
-        ) => {
-          const totpPromptIndex = prompts.findIndex((p) =>
-            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-              p.prompt,
-            ),
-          );
-
-          if (totpPromptIndex !== -1) {
-            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            pendingTOTPSessions[sessionId] = {
-              client,
-              finish,
-              config,
-              createdAt: Date.now(),
-              sessionId,
-              hostId: host.id,
-              userId: host.userId!,
-              prompts: prompts.map((p) => ({
-                prompt: p.prompt,
-                echo: p.echo ?? false,
-              })),
-              totpPromptIndex,
-              resolvedPassword: host.password,
-              totpAttempts: 0,
-            };
-
-            return;
-          } else if (host.password) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt)) {
-                return host.password || "";
-              }
-              return "";
-            });
-            finish(responses);
-          } else {
-            finish(prompts.map(() => ""));
-          }
-        },
-      );
-
-      try {
-        if (
-          host.useSocks5 &&
-          (host.socks5Host ||
-            (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ) {
-          try {
-            const socks5Socket = await createSocks5Connection(
-              host.ip,
-              host.port,
-              {
-                useSocks5: host.useSocks5,
-                socks5Host: host.socks5Host,
-                socks5Port: host.socks5Port,
-                socks5Username: host.socks5Username,
-                socks5Password: host.socks5Password,
-                socks5ProxyChain: host.socks5ProxyChain,
-              },
-            );
-
-            if (socks5Socket) {
-              config.sock = socks5Socket;
-              client.connect(config);
-              return;
-            } else {
-              statsLogger.error("SOCKS5 socket is null", undefined, {
-                operation: "socks5_socket_null",
-                hostIp: host.ip,
-              });
-            }
-          } catch (socks5Error) {
-            clearTimeout(timeout);
-            statsLogger.error("SOCKS5 connection error", socks5Error, {
-              operation: "socks5_connection_error",
-              hostIp: host.ip,
-              errorMessage:
-                socks5Error instanceof Error ? socks5Error.message : "Unknown",
-            });
-            reject(
-              new Error(
-                "SOCKS5 proxy connection failed: " +
-                  (socks5Error instanceof Error
-                    ? socks5Error.message
-                    : "Unknown error"),
-              ),
-            );
-            return;
-          }
-        }
-
-        if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-          const jumpClient = await createJumpHostChain(
-            host.jumpHosts,
-            host.userId,
-          );
-
-          if (!jumpClient) {
-            clearTimeout(timeout);
-            reject(new Error("Failed to establish jump host chain"));
-            return;
-          }
-
-          jumpClient.forwardOut(
-            "127.0.0.1",
-            0,
-            host.ip,
-            host.port,
-            (err, stream) => {
-              if (err) {
-                clearTimeout(timeout);
-                jumpClient.end();
-                reject(
-                  new Error(
-                    "Failed to forward through jump host: " + err.message,
-                  ),
-                );
-                return;
-              }
-
-              config.sock = stream;
-              client.connect(config);
-            },
-          );
-        } else {
-          client.connect(config);
-        }
-      } catch (err) {
-        clearTimeout(timeout);
-        reject(err);
-      }
-    });
-  }
-
-  releaseConnection(host: SSHHostWithCredentials, client: Client): void {
-    const hostKey = this.getHostKey(host);
-    const connections = this.connections.get(hostKey) || [];
-    const pooled = connections.find((conn) => conn.client === client);
-    if (pooled) {
-      pooled.inUse = false;
-      pooled.lastUsed = Date.now();
-    }
-  }
-
-  clearHostConnections(host: SSHHostWithCredentials): void {
-    const hostKey = this.getHostKey(host);
-    const connections = this.connections.get(hostKey) || [];
-
-    for (const conn of connections) {
-      try {
-        conn.client.end();
-      } catch (error) {
-        statsLogger.error("Error closing connection during cleanup", error, {
-          operation: "clear_connection_error",
-        });
-      }
-    }
-
-    this.connections.delete(hostKey);
-  }
-
-  private cleanup(): void {
-    const now = Date.now();
-    const maxAge = 10 * 60 * 1000;
-    let totalCleaned = 0;
-    let totalUnhealthy = 0;
-
-    for (const [hostKey, connections] of this.connections.entries()) {
-      const activeConnections = connections.filter((conn) => {
-        if (!conn.inUse && now - conn.lastUsed > maxAge) {
-          try {
-            conn.client.end();
-          } catch (error) {}
-          totalCleaned++;
-          return false;
-        }
-        if (!this.isConnectionHealthy(conn.client)) {
-          statsLogger.warn("Removing unhealthy connection during cleanup", {
-            operation: "cleanup_unhealthy",
-            hostKey,
-            inUse: conn.inUse,
-          });
-          try {
-            conn.client.end();
-          } catch (error) {}
-          totalUnhealthy++;
-          return false;
-        }
-        return true;
-      });
-
-      if (activeConnections.length === 0) {
-        this.connections.delete(hostKey);
-      } else {
-        this.connections.set(hostKey, activeConnections);
-      }
-    }
-  }
-
-  clearAllConnections(): void {
-    for (const [hostKey, connections] of this.connections.entries()) {
-      for (const conn of connections) {
-        try {
-          conn.client.end();
-        } catch (error) {
-          statsLogger.error(
-            "Error closing connection during full cleanup",
-            error,
-            {
-              operation: "clear_all_error",
-              hostKey,
-            },
-          );
-        }
-      }
-    }
-    this.connections.clear();
-  }
-
-  destroy(): void {
-    clearInterval(this.cleanupInterval);
-    for (const connections of this.connections.values()) {
-      for (const conn of connections) {
-        try {
-          conn.client.end();
-        } catch (error) {}
-      }
-    }
-    this.connections.clear();
-  }
 }
 
 class RequestQueue {
@@ -695,7 +398,9 @@ class RequestQueue {
       if (request) {
         try {
           await request();
-        } catch (error) {}
+        } catch {
+          // expected
+        }
       }
     }
 
@@ -898,7 +603,6 @@ class PollingBackoff {
   }
 }
 
-const connectionPool = new SSHConnectionPool();
 const requestQueue = new RequestQueue();
 const metricsCache = new MetricsCache();
 const authFailureTracker = new AuthFailureTracker();
@@ -951,14 +655,16 @@ interface StatsConfig {
   enabledWidgets: string[];
   statusCheckEnabled: boolean;
   statusCheckInterval: number;
+  useGlobalStatusInterval?: boolean;
   metricsEnabled: boolean;
   metricsInterval: number;
+  useGlobalMetricsInterval?: boolean;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
   enabledWidgets: ["cpu", "memory", "disk", "network", "uptime", "system"],
   statusCheckEnabled: true,
-  statusCheckInterval: 30,
+  statusCheckInterval: 60,
   metricsEnabled: true,
   metricsInterval: 30,
 };
@@ -991,6 +697,41 @@ class PollingManager {
     }, 60000);
   }
 
+  private getGlobalDefaults(): {
+    statusCheckInterval: number;
+    metricsInterval: number;
+  } {
+    try {
+      const db = getDb();
+      const statusRow = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
+        )
+        .get() as { value: string } | undefined;
+      const metricsRow = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
+        )
+        .get() as { value: string } | undefined;
+
+      return {
+        statusCheckInterval: statusRow
+          ? parseInt(statusRow.value, 10) ||
+            DEFAULT_STATS_CONFIG.statusCheckInterval
+          : DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: metricsRow
+          ? parseInt(metricsRow.value, 10) ||
+            DEFAULT_STATS_CONFIG.metricsInterval
+          : DEFAULT_STATS_CONFIG.metricsInterval,
+      };
+    } catch {
+      return {
+        statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: DEFAULT_STATS_CONFIG.metricsInterval,
+      };
+    }
+  }
+
   parseStatsConfig(statsConfigStr?: string | StatsConfig): StatsConfig {
     if (!statsConfigStr) {
       return DEFAULT_STATS_CONFIG;
@@ -1002,13 +743,13 @@ class PollingManager {
       parsed = statsConfigStr;
     } else {
       try {
-        let temp: any = JSON.parse(statsConfigStr);
+        let temp: unknown = JSON.parse(statsConfigStr);
 
         if (typeof temp === "string") {
           temp = JSON.parse(temp);
         }
 
-        parsed = temp;
+        parsed = temp as StatsConfig;
       } catch (error) {
         statsLogger.warn(
           `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1022,6 +763,14 @@ class PollingManager {
     }
 
     const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
+
+    const globalDefaults = this.getGlobalDefaults();
+    if (result.useGlobalStatusInterval !== false) {
+      result.statusCheckInterval = globalDefaults.statusCheckInterval;
+    }
+    if (result.useGlobalMetricsInterval !== false) {
+      result.metricsInterval = globalDefaults.metricsInterval;
+    }
 
     return result;
   }
@@ -1128,7 +877,7 @@ class PollingManager {
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
-    } catch (error) {
+    } catch {
       const statusEntry: StatusEntry = {
         status: "offline",
         lastChecked: new Date().toISOString(),
@@ -1155,7 +904,6 @@ class PollingManager {
     const hasExistingMetrics = this.metricsStore.has(refreshedHost.id);
 
     if (hasExistingMetrics && pollingBackoff.shouldSkip(host.id)) {
-      const backoffInfo = pollingBackoff.getBackoffInfo(host.id);
       return;
     }
 
@@ -1167,9 +915,6 @@ class PollingManager {
       });
       pollingBackoff.reset(refreshedHost.id);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-
       pollingBackoff.recordFailure(refreshedHost.id);
 
       const latestConfig = this.pollingConfigs.get(refreshedHost.id);
@@ -1385,8 +1130,13 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 app.use(authManager.createAuthMiddleware());
+const requireAdmin = authManager.createAdminMiddleware();
 
 async function fetchAllHosts(
   userId: string,
@@ -1509,32 +1259,35 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
             userId,
           );
 
-          baseHost.credentialId = host.credentialId;
-          baseHost.authType = sharedCred.authType;
+          if (sharedCred) {
+            baseHost.credentialId = host.credentialId;
+            baseHost.authType = sharedCred.authType;
 
-          if (!host.overrideCredentialUsername) {
-            baseHost.username = sharedCred.username;
-          }
+            if (!host.overrideCredentialUsername) {
+              baseHost.username = sharedCred.username;
+            }
 
-          if (sharedCred.password) {
-            baseHost.password = sharedCred.password;
-          }
-          if (sharedCred.key) {
-            baseHost.key = sharedCred.key;
-          }
-          if (sharedCred.keyPassword) {
-            baseHost.keyPassword = sharedCred.keyPassword;
-          }
-          if (sharedCred.keyType) {
-            baseHost.keyType = sharedCred.keyType;
+            if (sharedCred.password) {
+              baseHost.password = sharedCred.password;
+            }
+            if (sharedCred.key) {
+              baseHost.key = sharedCred.key;
+            }
+            if (sharedCred.keyPassword) {
+              baseHost.keyPassword = sharedCred.keyPassword;
+            }
+            if (sharedCred.keyType) {
+              baseHost.keyType = sharedCred.keyType;
+            }
           }
         } else {
           const credentials = await SimpleDBOps.select(
@@ -1550,12 +1303,11 @@ async function resolveHostCredentials(
             const credential = credentials[0];
             baseHost.credentialId = credential.id;
             baseHost.authType =
-              credential.auth_type ||
               credential.authType ||
               (credential.password
                 ? "password"
                 : credential.key ||
-                    (credential as Record<string, unknown>).private_key
+                    (credential as Record<string, unknown>).privateKey
                   ? "key"
                   : "none");
 
@@ -1569,12 +1321,11 @@ async function resolveHostCredentials(
             if (credential.key) {
               baseHost.key = credential.key;
             }
-            if (credential.key_password || credential.keyPassword) {
-              baseHost.keyPassword =
-                credential.key_password || credential.keyPassword;
+            if (credential.keyPassword) {
+              baseHost.keyPassword = credential.keyPassword;
             }
-            if (credential.key_type || credential.keyType) {
-              baseHost.keyType = credential.key_type || credential.keyType;
+            if (credential.keyType) {
+              baseHost.keyType = credential.keyType;
             }
           } else {
             addLegacyCredentials(baseHost, host);
@@ -1619,7 +1370,7 @@ function addLegacyCredentials(
 ): void {
   baseHost.password = host.password || null;
   baseHost.key = host.key || null;
-  baseHost.keyPassword = host.key_password || host.keyPassword || null;
+  baseHost.keyPassword = host.keyPassword || null;
   baseHost.keyType = host.keyType;
 }
 
@@ -1627,7 +1378,7 @@ async function buildSshConfig(
   host: SSHHostWithCredentials,
 ): Promise<ConnectConfig> {
   const base: ConnectConfig = {
-    host: host.ip,
+    host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
     port: host.port,
     username: host.username,
     tryKeyboard: true,
@@ -1738,7 +1489,9 @@ async function buildSshConfig(
       throw new Error(`Invalid SSH key format for host ${host.ip}`);
     }
   } else if (host.authType === "none") {
+    // no credentials needed
   } else if (host.authType === "opkssh") {
+    // handled externally
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1766,18 +1519,168 @@ async function buildSshConfig(
   return base;
 }
 
+function getPoolKey(host: SSHHostWithCredentials): string {
+  const socks5Key = host.useSocks5
+    ? `:socks5:${host.socks5Host}:${host.socks5Port}`
+    : "";
+  return `stats:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
+}
+
+function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
+  return async () => {
+    const config = await buildSshConfig(host);
+    const client = new Client();
+
+    const proxyConfig: SOCKS5Config | null =
+      host.useSocks5 &&
+      (host.socks5Host ||
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+        ? {
+            useSocks5: host.useSocks5,
+            socks5Host: host.socks5Host,
+            socks5Port: host.socks5Port,
+            socks5Username: host.socks5Username,
+            socks5Password: host.socks5Password,
+            socks5ProxyChain: host.socks5ProxyChain,
+          }
+        : null;
+
+    const hasJumpHosts =
+      host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
+
+    let jumpClient: Client | null = null;
+    if (hasJumpHosts) {
+      jumpClient = await createJumpHostChain(
+        host.jumpHosts!,
+        host.userId!,
+        proxyConfig,
+      );
+
+      if (!jumpClient) {
+        throw new Error("Failed to establish jump host chain");
+      }
+    } else if (proxyConfig) {
+      try {
+        const proxySocket = await createSocks5Connection(
+          host.ip,
+          host.port,
+          proxyConfig,
+        );
+        if (proxySocket) {
+          config.sock = proxySocket;
+        }
+      } catch (proxyError) {
+        throw new Error(
+          "Proxy connection failed: " +
+            (proxyError instanceof Error
+              ? proxyError.message
+              : "Unknown error"),
+        );
+      }
+    }
+
+    return new Promise<Client>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        client.end();
+        reject(new Error("SSH connection timeout"));
+      }, 30000);
+
+      client.on("ready", () => {
+        clearTimeout(timeout);
+        resolve(client);
+      });
+
+      client.on("error", (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+
+      client.on(
+        "keyboard-interactive",
+        (
+          _name: string,
+          _instructions: string,
+          _instructionsLang: string,
+          prompts: Array<{ prompt: string; echo: boolean }>,
+          finish: (responses: string[]) => void,
+        ) => {
+          const totpPromptIndex = prompts.findIndex((p) =>
+            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
+              p.prompt,
+            ),
+          );
+
+          if (totpPromptIndex !== -1) {
+            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            pendingTOTPSessions[sessionId] = {
+              client,
+              finish,
+              config,
+              createdAt: Date.now(),
+              sessionId,
+              hostId: host.id,
+              userId: host.userId!,
+              prompts: prompts.map((p) => ({
+                prompt: p.prompt,
+                echo: p.echo ?? false,
+              })),
+              totpPromptIndex,
+              resolvedPassword: host.password,
+              totpAttempts: 0,
+            };
+
+            return;
+          } else if (host.password) {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt)) {
+                return host.password || "";
+              }
+              return "";
+            });
+            finish(responses);
+          } else {
+            finish(prompts.map(() => ""));
+          }
+        },
+      );
+
+      if (jumpClient) {
+        jumpClient.forwardOut(
+          "127.0.0.1",
+          0,
+          host.ip,
+          host.port,
+          (err, stream) => {
+            if (err) {
+              clearTimeout(timeout);
+              jumpClient!.end();
+              reject(
+                new Error(
+                  "Failed to forward through jump host: " + err.message,
+                ),
+              );
+              return;
+            }
+
+            config.sock = stream;
+            client.connect(config);
+          },
+        );
+      } else {
+        client.connect(config);
+      }
+    });
+  };
+}
+
 async function withSshConnection<T>(
   host: SSHHostWithCredentials,
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const client = await connectionPool.getConnection(host);
-
-  try {
-    const result = await fn(client);
-    return result;
-  } finally {
-    connectionPool.releaseConnection(host, client);
-  }
+  const key = getPoolKey(host);
+  const factory = createSshFactory(host);
+  return withConnection(key, factory, fn);
 }
 
 async function collectMetrics(host: SSHHostWithCredentials): Promise<{
@@ -1861,7 +1764,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           login_stats = await collectLoginStats(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         let ports: {
           source: "ss" | "netstat" | "none";
@@ -1879,7 +1784,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           ports = await collectPortsMetrics(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         let firewall: {
           type: "iptables" | "nftables" | "none";
@@ -1907,7 +1814,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         };
         try {
           firewall = await collectFirewallMetrics(client);
-        } catch (e) {}
+        } catch {
+          // expected
+        }
 
         const result = {
           cpu,
@@ -1975,20 +1884,52 @@ function tcpPing(
     const socket = new net.Socket();
     let settled = false;
 
-    const onDone = (result: boolean) => {
+    const finish = (result: boolean) => {
       if (settled) return;
       settled = true;
+      resolve(result);
+    };
+
+    const cleanup = () => {
       try {
         socket.destroy();
-      } catch (error) {}
-      resolve(result);
+      } catch {
+        // expected
+      }
     };
 
     socket.setTimeout(timeoutMs);
 
-    socket.once("connect", () => onDone(true));
-    socket.once("timeout", () => onDone(false));
-    socket.once("error", () => onDone(false));
+    socket.once("connect", () => {
+      const dataTimeout = setTimeout(() => {
+        cleanup();
+        finish(true);
+      }, 2000);
+
+      socket.once("data", (data) => {
+        clearTimeout(dataTimeout);
+        if (data.toString().startsWith("SSH-")) {
+          try {
+            socket.end("SSH-2.0-TermixHealthCheck\r\n");
+          } catch {
+            // expected
+          }
+          setTimeout(cleanup, 200);
+        } else {
+          cleanup();
+        }
+        finish(true);
+      });
+    });
+
+    socket.once("timeout", () => {
+      cleanup();
+      finish(false);
+    });
+    socket.once("error", () => {
+      cleanup();
+      finish(false);
+    });
     socket.connect(port, host);
   });
 }
@@ -2180,7 +2121,7 @@ app.post("/host-updated", async (req, res) => {
   try {
     const host = await fetchHostById(hostId, userId);
     if (host) {
-      connectionPool.clearHostConnections(host);
+      connectionPool.clearKeyConnections(getPoolKey(host));
 
       await pollingManager.startPollingForHost(host);
       res.json({ message: "Host polling started" });
@@ -2806,7 +2747,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     return res.status(408).json({ error: "TOTP session timeout" });
   }
 
@@ -2819,7 +2762,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
     delete pendingTOTPSessions[sessionId];
     try {
       session.client.end();
-    } catch {}
+    } catch {
+      // expected
+    }
     return res.status(429).json({ error: "Too many TOTP attempts" });
   }
 
@@ -2907,7 +2852,9 @@ app.post("/metrics/connect-totp", async (req, res) => {
       delete pendingTOTPSessions[sessionId];
       try {
         session.client.end();
-      } catch {}
+      } catch {
+        // expected
+      }
     }
 
     res.status(401).json({
@@ -3094,6 +3041,157 @@ app.post("/metrics/unregister-viewer", async (req, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ error: "Failed to unregister viewer" });
+  }
+});
+
+/**
+ * @openapi
+ * /global-settings:
+ *   get:
+ *     summary: Get global monitoring defaults
+ *     tags:
+ *       - Stats
+ *     responses:
+ *       200:
+ *         description: Global monitoring settings.
+ *       403:
+ *         description: Requires admin privileges.
+ */
+app.get("/global-settings", requireAdmin, async (_req, res) => {
+  try {
+    const db = getDb();
+
+    try {
+      db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
+    } catch (tableError) {
+      statsLogger.warn("Settings table does not exist, using defaults", {
+        operation: "global_settings_table_check",
+        error:
+          tableError instanceof Error ? tableError.message : String(tableError),
+      });
+      return res.json({
+        statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: DEFAULT_STATS_CONFIG.metricsInterval,
+      });
+    }
+
+    const statusRow = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
+      )
+      .get() as { value: string } | undefined;
+    const metricsRow = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
+      )
+      .get() as { value: string } | undefined;
+
+    res.json({
+      statusCheckInterval: statusRow
+        ? parseInt(statusRow.value, 10)
+        : DEFAULT_STATS_CONFIG.statusCheckInterval,
+      metricsInterval: metricsRow
+        ? parseInt(metricsRow.value, 10)
+        : DEFAULT_STATS_CONFIG.metricsInterval,
+    });
+  } catch (error) {
+    statsLogger.error("Failed to fetch global settings", {
+      operation: "global_settings_fetch_error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to fetch global settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /global-settings:
+ *   post:
+ *     summary: Update global monitoring defaults
+ *     tags:
+ *       - Stats
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               statusCheckInterval:
+ *                 type: integer
+ *               metricsInterval:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Settings saved.
+ *       400:
+ *         description: Invalid parameters.
+ *       403:
+ *         description: Requires admin privileges.
+ */
+app.post("/global-settings", requireAdmin, async (req, res) => {
+  const { statusCheckInterval, metricsInterval } = req.body;
+
+  if (
+    statusCheckInterval !== undefined &&
+    (typeof statusCheckInterval !== "number" ||
+      statusCheckInterval < 5 ||
+      statusCheckInterval > 3600)
+  ) {
+    return res.status(400).json({
+      error: "statusCheckInterval must be between 5 and 3600 seconds",
+    });
+  }
+  if (
+    metricsInterval !== undefined &&
+    (typeof metricsInterval !== "number" ||
+      metricsInterval < 5 ||
+      metricsInterval > 3600)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "metricsInterval must be between 5 and 3600 seconds" });
+  }
+
+  try {
+    const db = getDb();
+
+    try {
+      db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
+    } catch (tableError) {
+      statsLogger.error("Settings table does not exist, cannot save settings", {
+        operation: "global_settings_table_check",
+        error:
+          tableError instanceof Error ? tableError.message : String(tableError),
+      });
+      return res.status(500).json({
+        error:
+          "Database settings table is missing. Please check database initialization.",
+      });
+    }
+
+    if (statusCheckInterval !== undefined) {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_status_check_interval', ?)",
+        )
+        .run(String(statusCheckInterval));
+    }
+    if (metricsInterval !== undefined) {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_metrics_interval', ?)",
+        )
+        .run(String(metricsInterval));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    statsLogger.error("Failed to save global settings", {
+      operation: "global_settings_save_error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: "Failed to save global settings" });
   }
 });
 

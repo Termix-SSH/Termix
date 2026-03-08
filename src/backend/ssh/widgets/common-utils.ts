@@ -1,4 +1,4 @@
-import type { Client } from "ssh2";
+import type { Client, ClientChannel } from "ssh2";
 
 export function execCommand(
   client: Client,
@@ -11,7 +11,7 @@ export function execCommand(
 }> {
   return new Promise((resolve, reject) => {
     let settled = false;
-    let stream: any = null;
+    let stream: ClientChannel | null = null;
 
     const timeout = setTimeout(() => {
       if (!settled) {
@@ -30,8 +30,8 @@ export function execCommand(
             stream.stderr.removeAllListeners();
           }
           stream.destroy();
-        } catch (error) {
-          // Ignore cleanup errors
+        } catch {
+          // expected - cleanup errors ignored
         }
       }
     };

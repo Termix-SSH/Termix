@@ -1,6 +1,5 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import { statsLogger } from "../../utils/logger.js";
 
 export async function collectNetworkMetrics(client: Client): Promise<{
   interfaces: Array<{
@@ -68,7 +67,9 @@ export async function collectNetworkMetrics(client: Client): Promise<{
         txBytes: null,
       });
     }
-  } catch (e) {}
+  } catch {
+    // expected
+  }
 
   return { interfaces };
 }

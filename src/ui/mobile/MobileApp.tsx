@@ -1,4 +1,11 @@
-import React, { useState, useEffect, type FC } from "react";
+import React, {
+  useState,
+  useEffect,
+  Component,
+  type FC,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { Terminal } from "@/ui/mobile/apps/terminal/Terminal.tsx";
 import { TerminalKeyboard } from "@/ui/mobile/apps/terminal/TerminalKeyboard.tsx";
 import { BottomNavbar } from "@/ui/mobile/navigation/BottomNavbar.tsx";
@@ -226,10 +233,48 @@ const AppContent: FC = () => {
   );
 };
 
+class TabErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorCount: number }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorCount: 0 };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      return { hasError: true };
+    }
+    throw error;
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      console.warn(
+        "TabProvider mounting race condition detected, recovering...",
+      );
+      this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
+      setTimeout(() => {
+        this.setState({ hasError: false });
+      }, 0);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
 export const MobileApp: FC = () => {
   return (
     <TabProvider>
-      <AppContent />
+      <TabErrorBoundary>
+        <AppContent />
+      </TabErrorBoundary>
     </TabProvider>
   );
 };

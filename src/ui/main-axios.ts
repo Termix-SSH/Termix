@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
+import { clearTermixSessionStorage } from "@/ui/desktop/navigation/tabs/TabContext";
 import type {
   SSHHost,
   SSHHostData,
@@ -13,6 +14,7 @@ import type {
   DockerStats,
   DockerLogOptions,
   DockerValidation,
+  ProxyNode,
 } from "../types/index.js";
 
 // ============================================================================
@@ -121,6 +123,7 @@ interface AuthResponse {
   data_unlocked?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
+  rememberMe?: boolean;
 }
 
 interface UserInfo {
@@ -461,6 +464,12 @@ function createApiInstance(
 
           if (isElectron()) {
             electronSettingsCache.delete("jwt");
+            const electronAPI = (
+              window as unknown as {
+                electronAPI?: { clearSessionCookies?: () => Promise<void> };
+              }
+            ).electronAPI;
+            electronAPI?.clearSessionCookies?.().catch(() => {});
           }
 
           if (typeof window !== "undefined") {
@@ -512,6 +521,7 @@ function isDev(): boolean {
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let configuredServerUrl: string | null = null;
+let embeddedMode = false;
 
 export interface ServerConfig {
   serverUrl: string;
@@ -656,11 +666,53 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
+export async function getEmbeddedServerStatus(): Promise<{
+  running: boolean;
+  embedded: boolean;
+  dataDir: string | null;
+} | null> {
+  if (!isElectron()) return null;
+
+  try {
+    const result = await (
+      window as Window &
+        typeof globalThis & {
+          IS_ELECTRON?: boolean;
+          electronAPI?: {
+            invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+          };
+        }
+    ).electronAPI?.invoke("get-embedded-server-status");
+    return result as {
+      running: boolean;
+      embedded: boolean;
+      dataDir: string | null;
+    } | null;
+  } catch {
+    return null;
+  }
+}
+
+export function isEmbeddedMode(): boolean {
+  return embeddedMode;
+}
+
+export function setEmbeddedMode(value: boolean): void {
+  embeddedMode = value;
+  if (value) {
+    configuredServerUrl = null;
+    initializeApiInstances();
+  }
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
 
   if (electronMode) {
+    if (embeddedMode && !configuredServerUrl) {
+      return `http://localhost:${defaultPort}${path}`;
+    }
     if (configuredServerUrl) {
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
       const url = `${baseUrl}${path}`;
@@ -733,8 +785,11 @@ export let dockerApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
-    getServerConfig()
-      .then((config) => {
+    Promise.all([getServerConfig(), getEmbeddedServerStatus()])
+      .then(([config, status]) => {
+        if (status?.embedded && status?.running) {
+          embeddedMode = true;
+        }
         if (config?.serverUrl) {
           configuredServerUrl = config.serverUrl;
           (
@@ -745,6 +800,8 @@ function initializeApp() {
                 configuredServerUrl?: string;
               }
           ).configuredServerUrl = configuredServerUrl;
+        } else if (embeddedMode) {
+          // Embedded backend running, no remote server needed
         } else {
           console.warn("No server URL in config");
         }
@@ -991,11 +1048,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1070,11 +1124,8 @@ export async function updateSSHHost(
       tunnelConnections: hostData.tunnelConnections || [],
       jumpHosts: hostData.jumpHosts || [],
       quickActions: hostData.quickActions || [],
-      statsConfig: hostData.statsConfig
-        ? typeof hostData.statsConfig === "string"
-          ? hostData.statsConfig
-          : JSON.stringify(hostData.statsConfig)
-        : null,
+      sudoPassword: hostData.sudoPassword || null,
+      statsConfig: hostData.statsConfig || null,
       terminalConfig: hostData.terminalConfig || null,
       forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
       notes: hostData.notes || "",
@@ -1114,17 +1165,40 @@ export async function updateSSHHost(
   }
 }
 
-export async function bulkImportSSHHosts(hosts: SSHHostData[]): Promise<{
+export async function bulkImportSSHHosts(
+  hosts: SSHHostData[],
+  overwrite = false,
+): Promise<{
   message: string;
   success: number;
+  updated: number;
+  skipped: number;
   failed: number;
   errors: string[];
 }> {
   try {
-    const response = await sshHostApi.post("/bulk-import", { hosts });
+    const response = await sshHostApi.post("/bulk-import", {
+      hosts,
+      overwrite,
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk import SSH hosts");
+  }
+}
+
+export async function bulkUpdateSSHHosts(
+  hostIds: number[],
+  updates: Record<string, unknown>,
+): Promise<{ updated: number; failed: number; errors: string[] }> {
+  try {
+    const response = await sshHostApi.patch("/bulk-update", {
+      hostIds,
+      updates,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "bulk update SSH hosts");
   }
 }
 
@@ -1204,6 +1278,32 @@ export async function getAutoStartStatus(): Promise<{
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch autostart status");
+  }
+}
+
+// ============================================================================
+// PROXY CONNECTIVITY TEST
+// ============================================================================
+
+export async function testProxyConnection(options: {
+  singleProxy?: {
+    host: string;
+    port: number;
+    type?: 4 | 5 | "http";
+    username?: string;
+    password?: string;
+  };
+  proxyChain?: ProxyNode[];
+  testTarget?: { host: string; port: number };
+}): Promise<{ success: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const response = await sshHostApi.post("/db/proxy/test", options);
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response?.data?.error) {
+      return { success: false, error: error.response.data.error };
+    }
+    handleApiError(error, "test proxy connection");
   }
 }
 
@@ -1612,6 +1712,20 @@ export async function identifySSHSymlink(
     return response.data;
   } catch (error) {
     handleApiError(error, "identify SSH symlink");
+  }
+}
+
+export async function resolveSSHPath(
+  sessionId: string,
+  path: string,
+): Promise<string> {
+  try {
+    const response = await fileManagerApi.get("/ssh/resolvePath", {
+      params: { sessionId, path },
+    });
+    return response.data?.resolvedPath || path;
+  } catch {
+    return path;
   }
 }
 
@@ -2309,6 +2423,33 @@ export async function notifyHostCreatedOrUpdated(
 }
 
 // ============================================================================
+// GLOBAL MONITORING SETTINGS
+// ============================================================================
+
+export async function getGlobalMonitoringSettings(): Promise<{
+  statusCheckInterval: number;
+  metricsInterval: number;
+}> {
+  try {
+    const response = await statsApi.get("/global-settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch global monitoring settings");
+  }
+}
+
+export async function updateGlobalMonitoringSettings(settings: {
+  statusCheckInterval?: number;
+  metricsInterval?: number;
+}): Promise<void> {
+  try {
+    await statsApi.post("/global-settings", settings);
+  } catch (error) {
+    handleApiError(error, "update global monitoring settings");
+  }
+}
+
+// ============================================================================
 // AUTHENTICATION
 // ============================================================================
 
@@ -2330,9 +2471,14 @@ export async function registerUser(
 export async function loginUser(
   username: string,
   password: string,
+  rememberMe: boolean = false,
 ): Promise<AuthResponse> {
   try {
-    const response = await authApi.post("/users/login", { username, password });
+    const response = await authApi.post("/users/login", {
+      username,
+      password,
+      rememberMe,
+    });
 
     const hasToken = response.data.token;
 
@@ -2369,6 +2515,7 @@ export async function loginUser(
       username: response.data.username,
       requires_totp: response.data.requires_totp,
       temp_token: response.data.temp_token,
+      rememberMe: response.data.rememberMe,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
       data_unlocked: response.data.data_unlocked,
@@ -2385,9 +2532,17 @@ export async function logoutUser(): Promise<{
   try {
     const response = await authApi.post("/users/logout");
 
+    clearTermixSessionStorage();
+
     if (isElectron()) {
       localStorage.removeItem("jwt");
       electronSettingsCache.delete("jwt");
+      const electronAPI = (
+        window as unknown as {
+          electronAPI?: { clearSessionCookies?: () => Promise<void> };
+        }
+      ).electronAPI;
+      electronAPI?.clearSessionCookies?.().catch(() => {});
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
@@ -2398,9 +2553,17 @@ export async function logoutUser(): Promise<{
 
     return response.data;
   } catch (error) {
+    clearTermixSessionStorage();
+
     if (isElectron()) {
       localStorage.removeItem("jwt");
       electronSettingsCache.delete("jwt");
+      const electronAPI = (
+        window as unknown as {
+          electronAPI?: { clearSessionCookies?: () => Promise<void> };
+        }
+      ).electronAPI;
+      electronAPI?.clearSessionCookies?.().catch(() => {});
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
@@ -2778,11 +2941,13 @@ export async function disableTOTP(
 export async function verifyTOTPLogin(
   temp_token: string,
   totp_code: string,
+  rememberMe: boolean = false,
 ): Promise<AuthResponse> {
   try {
     const response = await authApi.post("/users/totp/verify-login", {
       temp_token,
       totp_code,
+      rememberMe,
     });
 
     const hasToken = response.data.token;

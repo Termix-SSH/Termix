@@ -346,8 +346,10 @@ export function HostManagerEditor({
             ]),
           statusCheckEnabled: z.boolean().default(true),
           statusCheckInterval: z.number().min(5).max(3600).default(30),
+          useGlobalStatusInterval: z.boolean().default(true),
           metricsEnabled: z.boolean().default(true),
           metricsInterval: z.number().min(5).max(3600).default(30),
+          useGlobalMetricsInterval: z.boolean().default(true),
         })
         .default({
           enabledWidgets: [
@@ -363,8 +365,10 @@ export function HostManagerEditor({
           ],
           statusCheckEnabled: true,
           statusCheckInterval: 30,
+          useGlobalStatusInterval: true,
           metricsEnabled: true,
           metricsInterval: 30,
+          useGlobalMetricsInterval: true,
         }),
       terminalConfig: z
         .object({
@@ -394,6 +398,8 @@ export function HostManagerEditor({
           moshCommand: z.string(),
           sudoPasswordAutoFill: z.boolean(),
           sudoPassword: z.string().optional(),
+          keepaliveInterval: z.number().min(0).max(300000).optional(),
+          keepaliveCountMax: z.number().min(0).max(100).optional(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
@@ -472,14 +478,6 @@ export function HostManagerEditor({
             code: z.ZodIssueCode.custom,
             message: t("hosts.keyTypeRequired"),
             path: ["keyType"],
-          });
-        }
-      } else if (data.authType === "credential") {
-        if (!data.credentialId) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.credentialRequired"),
-            path: ["credentialId"],
           });
         }
       } else if (data.authType === "credential") {
@@ -971,6 +969,14 @@ export function HostManagerEditor({
     const errorFields = Object.keys(errors);
 
     if (errorFields.length === 0) return;
+
+    const firstErrorField = errorFields[0];
+    const firstError = errors[firstErrorField as keyof typeof errors];
+    const errorMessage =
+      firstError && typeof firstError === "object" && "message" in firstError
+        ? (firstError.message as string)
+        : t("hosts.failedToSaveHost");
+    toast.error(errorMessage);
 
     for (const tab of TAB_PRIORITY) {
       const hasErrorInTab = errorFields.some((field) => {

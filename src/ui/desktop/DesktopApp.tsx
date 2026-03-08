@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Component,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
@@ -148,8 +156,9 @@ function AppContent({
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } =
-            await import("@/ui/main-axios.ts");
+          const { getSSHHostById, getSSHHosts } = await import(
+            "@/ui/main-axios.ts"
+          );
           let host = null;
 
           if (/^\d+$/.test(hostIdentifier)) {
@@ -616,16 +625,54 @@ function AppContent({
   );
 }
 
+class TabErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorCount: number }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorCount: 0 };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      return { hasError: true };
+    }
+    throw error;
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      console.warn(
+        "TabProvider mounting race condition detected, recovering...",
+      );
+      this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
+      setTimeout(() => {
+        this.setState({ hasError: false });
+      }, 0);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
 function DesktopApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   return (
     <TabProvider>
-      <ServerStatusProvider isAuthenticated={isAuthenticated}>
-        <CommandHistoryProvider>
-          <AppContent onAuthStateChange={setIsAuthenticated} />
-        </CommandHistoryProvider>
-      </ServerStatusProvider>
+      <TabErrorBoundary>
+        <ServerStatusProvider isAuthenticated={isAuthenticated}>
+          <CommandHistoryProvider>
+            <AppContent onAuthStateChange={setIsAuthenticated} />
+          </CommandHistoryProvider>
+        </ServerStatusProvider>
+      </TabErrorBoundary>
     </TabProvider>
   );
 }

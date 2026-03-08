@@ -131,12 +131,12 @@ class DataCrypto {
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || updatedRecord.keyPassword || null,
-            updatedRecord.keyType || null,
-            updatedRecord.autostartPassword || null,
-            updatedRecord.autostartKey || null,
-            updatedRecord.autostartKeyPassword || null,
-            updatedRecord.sudoPassword || null,
+            updatedRecord.key_password || null,
+            updatedRecord.key_type || null,
+            updatedRecord.autostart_password || null,
+            updatedRecord.autostart_key || null,
+            updatedRecord.autostart_key_password || null,
+            updatedRecord.sudo_password || null,
             record.id,
           );
 
@@ -171,10 +171,10 @@ class DataCrypto {
           db.prepare(updateQuery).run(
             updatedRecord.password || null,
             updatedRecord.key || null,
-            updatedRecord.key_password || updatedRecord.keyPassword || null,
-            updatedRecord.private_key || updatedRecord.privateKey || null,
-            updatedRecord.public_key || updatedRecord.publicKey || null,
-            updatedRecord.keyType || null,
+            updatedRecord.key_password || null,
+            updatedRecord.private_key || null,
+            updatedRecord.public_key || null,
+            updatedRecord.key_type || null,
             record.id,
           );
 
@@ -207,14 +207,10 @@ class DataCrypto {
             WHERE id = ?
           `;
           db.prepare(updateQuery).run(
-            updatedRecord.totp_secret || updatedRecord.totpSecret || null,
-            updatedRecord.totp_backup_codes ||
-              updatedRecord.totpBackupCodes ||
-              null,
-            updatedRecord.client_secret || updatedRecord.clientSecret || null,
-            updatedRecord.oidc_identifier ||
-              updatedRecord.oidcIdentifier ||
-              null,
+            updatedRecord.totp_secret || null,
+            updatedRecord.totp_backup_codes || null,
+            updatedRecord.client_secret || null,
+            updatedRecord.oidc_identifier || null,
             userId,
           );
 
@@ -267,46 +263,41 @@ class DataCrypto {
             "password",
             "key",
             "key_password",
-            "keyPassword",
-            "keyType",
-            "autostartPassword",
-            "autostartKey",
-            "autostartKeyPassword",
+            "sudo_password",
+            "autostart_password",
+            "autostart_key",
+            "autostart_key_password",
           ],
         },
         {
           table: "ssh_credentials",
           fields: [
             "password",
-            "private_key",
-            "privateKey",
-            "key_password",
-            "keyPassword",
             "key",
+            "private_key",
             "public_key",
-            "publicKey",
-            "keyType",
+            "key_password",
           ],
         },
         {
           table: "users",
           fields: [
             "client_secret",
-            "clientSecret",
             "totp_secret",
-            "totpSecret",
             "totp_backup_codes",
-            "totpBackupCodes",
             "oidc_identifier",
-            "oidcIdentifier",
           ],
         },
       ];
 
       for (const { table, fields } of tablesToReencrypt) {
         try {
+          const selectQuery =
+            table === "users"
+              ? `SELECT * FROM ${table} WHERE id = ?`
+              : `SELECT * FROM ${table} WHERE user_id = ?`;
           const records = db
-            .prepare(`SELECT * FROM ${table} WHERE user_id = ?`)
+            .prepare(selectQuery)
             .all(userId) as DatabaseRecord[];
 
           for (const record of records) {
@@ -359,7 +350,13 @@ class DataCrypto {
                 (field) => updatedRecord[field] !== record[field],
               );
               if (updateFields.length > 0) {
-                const updateQuery = `UPDATE ${table} SET ${updateFields.map((f) => `${f} = ?`).join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+                const setClause = updateFields
+                  .map((f) => `${f} = ?`)
+                  .join(", ");
+                const updateQuery =
+                  table === "users"
+                    ? `UPDATE ${table} SET ${setClause} WHERE id = ?`
+                    : `UPDATE ${table} SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
                 const updateValues = updateFields.map(
                   (field) => updatedRecord[field],
                 );
@@ -507,9 +504,9 @@ class DataCrypto {
       );
     }
 
-    if (record.key_password && typeof record.key_password === "string") {
+    if (record.keyPassword && typeof record.keyPassword === "string") {
       systemEncrypted.systemKeyPassword = FieldCrypto.encryptField(
-        record.key_password as string,
+        record.keyPassword as string,
         systemKey,
         recordId as string,
         "key_password",

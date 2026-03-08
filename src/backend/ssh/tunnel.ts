@@ -6,7 +6,7 @@ import { ChildProcess } from "child_process";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type {
   SSHHost,
   TunnelConfig,
@@ -16,13 +16,14 @@ import type {
   AuthenticatedRequest,
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
-import { tunnelLogger, sshLogger } from "../utils/logger.js";
+import { tunnelLogger } from "../utils/logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
+import { withConnection } from "./ssh-connection-pool.js";
 
 const app = express();
 app.use(
@@ -61,6 +62,10 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -603,8 +608,9 @@ async function connectSSHTunnel(
         tunnelConfig.requestingUserId &&
         tunnelConfig.requestingUserId !== tunnelConfig.sourceUserId
       ) {
-        const { SharedCredentialManager } =
-          await import("../utils/shared-credential-manager.js");
+        const { SharedCredentialManager } = await import(
+          "../utils/shared-credential-manager.js"
+        );
         const sharedCredManager = SharedCredentialManager.getInstance();
 
         if (tunnelConfig.sourceHostId) {
@@ -655,16 +661,10 @@ async function connectSSHTunnel(
             const credential = credentials[0];
             resolvedSourceCredentials = {
               password: credential.password as string | undefined,
-              sshKey: (credential.private_key ||
-                credential.privateKey ||
-                credential.key) as string | undefined,
-              keyPassword: (credential.key_password ||
-                credential.keyPassword) as string | undefined,
-              keyType: (credential.key_type || credential.keyType) as
-                | string
-                | undefined,
-              authMethod: (credential.auth_type ||
-                credential.authType) as string,
+              sshKey: credential.privateKey as string | undefined,
+              keyPassword: credential.keyPassword as string | undefined,
+              keyType: credential.keyType as string | undefined,
+              authMethod: credential.authType as string,
             };
           }
         }
@@ -746,16 +746,10 @@ async function connectSSHTunnel(
           const credential = credentials[0];
           resolvedEndpointCredentials = {
             password: credential.password as string | undefined,
-            sshKey: (credential.private_key ||
-              credential.privateKey ||
-              credential.key) as string | undefined,
-            keyPassword: (credential.key_password || credential.keyPassword) as
-              | string
-              | undefined,
-            keyType: (credential.key_type || credential.keyType) as
-              | string
-              | undefined,
-            authMethod: (credential.auth_type || credential.authType) as string,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
+            keyType: credential.keyType as string | undefined,
+            authMethod: credential.authType as string,
           };
         } else {
           tunnelLogger.warn("No endpoint credentials found in database", {
@@ -802,7 +796,9 @@ async function connectSSHTunnel(
 
       try {
         conn.end();
-      } catch (error) {}
+      } catch {
+        // expected
+      }
 
       activeTunnels.delete(tunnelName);
 
@@ -996,7 +992,9 @@ async function connectSSHTunnel(
             const verification = tunnelVerifications.get(tunnelName);
             if (verification?.timeout) clearTimeout(verification.timeout);
             verification?.conn.end();
-          } catch (error) {}
+          } catch {
+            // expected
+          }
           tunnelVerifications.delete(tunnelName);
         }
 
@@ -1110,7 +1108,8 @@ async function connectSSHTunnel(
   });
 
   const connOptions: Record<string, unknown> = {
-    host: tunnelConfig.sourceIP,
+    host:
+      tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
     tryKeyboard: true,
@@ -1347,16 +1346,10 @@ async function killRemoteTunnelByMarker(
           const credential = credentials[0];
           resolvedSourceCredentials = {
             password: credential.password as string | undefined,
-            sshKey: (credential.private_key ||
-              credential.privateKey ||
-              credential.key) as string | undefined,
-            keyPassword: (credential.key_password || credential.keyPassword) as
-              | string
-              | undefined,
-            keyType: (credential.key_type || credential.keyType) as
-              | string
-              | undefined,
-            authMethod: (credential.auth_type || credential.authType) as string,
+            sshKey: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
+            keyType: credential.keyType as string | undefined,
+            authMethod: credential.authType as string,
           };
         }
       }
@@ -1369,50 +1362,6 @@ async function killRemoteTunnelByMarker(
     }
   }
 
-  const conn = new Client();
-  const connOptions: Record<string, unknown> = {
-    host: tunnelConfig.sourceIP,
-    port: tunnelConfig.sourceSSHPort,
-    username: tunnelConfig.sourceUsername,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
-    readyTimeout: 60000,
-    tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 15000,
-    algorithms: {
-      kex: [
-        "diffie-hellman-group14-sha256",
-        "diffie-hellman-group14-sha1",
-        "diffie-hellman-group1-sha1",
-        "diffie-hellman-group-exchange-sha256",
-        "diffie-hellman-group-exchange-sha1",
-        "ecdh-sha2-nistp256",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp521",
-      ],
-      cipher: [
-        "aes128-ctr",
-        "aes192-ctr",
-        "aes256-ctr",
-        "aes128-gcm@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-cbc",
-        "aes192-cbc",
-        "aes256-cbc",
-        "3des-cbc",
-      ],
-      hmac: [
-        "hmac-sha2-256-etm@openssh.com",
-        "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256",
-        "hmac-sha2-512",
-        "hmac-sha1",
-        "hmac-md5",
-      ],
-      compress: ["none", "zlib@openssh.com", "zlib"],
-    },
-  };
-
   if (
     resolvedSourceCredentials.authMethod === "key" &&
     resolvedSourceCredentials.sshKey
@@ -1424,151 +1373,83 @@ async function killRemoteTunnelByMarker(
       callback(new Error("Invalid SSH key format"));
       return;
     }
-
-    const cleanKey = resolvedSourceCredentials.sshKey
-      .trim()
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
-    connOptions.privateKey = Buffer.from(cleanKey, "utf8");
-    if (resolvedSourceCredentials.keyPassword) {
-      connOptions.passphrase = resolvedSourceCredentials.keyPassword;
-    }
-    if (
-      resolvedSourceCredentials.keyType &&
-      resolvedSourceCredentials.keyType !== "auto"
-    ) {
-      connOptions.privateKeyType = resolvedSourceCredentials.keyType;
-    }
-  } else {
-    connOptions.password = resolvedSourceCredentials.password;
   }
 
-  conn.on("ready", () => {
-    const tunnelType = tunnelConfig.tunnelType || "remote";
-    const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
-    const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*${tunnelFlag})' | grep -v grep`;
+  const poolKey = `tunnel:${tunnelConfig.sourceUserId}:${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}:${tunnelConfig.sourceUsername}`;
 
-    conn.exec(checkCmd, (_err, stream) => {
-      let foundProcesses = false;
+  const factory = async (): Promise<Client> => {
+    const connOptions: Record<string, unknown> = {
+      host:
+        tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
+      port: tunnelConfig.sourceSSHPort,
+      username: tunnelConfig.sourceUsername,
+      keepaliveInterval: 30000,
+      keepaliveCountMax: 3,
+      readyTimeout: 60000,
+      tcpKeepAlive: true,
+      tcpKeepAliveInitialDelay: 15000,
+      algorithms: {
+        kex: [
+          "diffie-hellman-group14-sha256",
+          "diffie-hellman-group14-sha1",
+          "diffie-hellman-group1-sha1",
+          "diffie-hellman-group-exchange-sha256",
+          "diffie-hellman-group-exchange-sha1",
+          "ecdh-sha2-nistp256",
+          "ecdh-sha2-nistp384",
+          "ecdh-sha2-nistp521",
+        ],
+        cipher: [
+          "aes128-ctr",
+          "aes192-ctr",
+          "aes256-ctr",
+          "aes128-gcm@openssh.com",
+          "aes256-gcm@openssh.com",
+          "aes128-cbc",
+          "aes192-cbc",
+          "aes256-cbc",
+          "3des-cbc",
+        ],
+        hmac: [
+          "hmac-sha2-256-etm@openssh.com",
+          "hmac-sha2-512-etm@openssh.com",
+          "hmac-sha2-256",
+          "hmac-sha2-512",
+          "hmac-sha1",
+          "hmac-md5",
+        ],
+        compress: ["none", "zlib@openssh.com", "zlib"],
+      },
+    };
 
-      stream.on("data", (data) => {
-        const output = data.toString().trim();
-        if (output) {
-          foundProcesses = true;
-        }
-      });
+    if (
+      resolvedSourceCredentials.authMethod === "key" &&
+      resolvedSourceCredentials.sshKey
+    ) {
+      const cleanKey = resolvedSourceCredentials.sshKey
+        .trim()
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      connOptions.privateKey = Buffer.from(cleanKey, "utf8");
+      if (resolvedSourceCredentials.keyPassword) {
+        connOptions.passphrase = resolvedSourceCredentials.keyPassword;
+      }
+      if (
+        resolvedSourceCredentials.keyType &&
+        resolvedSourceCredentials.keyType !== "auto"
+      ) {
+        connOptions.privateKeyType = resolvedSourceCredentials.keyType;
+      }
+    } else {
+      connOptions.password = resolvedSourceCredentials.password;
+    }
 
-      stream.on("close", () => {
-        if (!foundProcesses) {
-          tunnelLogger.warn("Remote tunnel process not found", {
-            operation: "tunnel_remote_not_found",
-            userId: tunnelConfig.sourceUserId,
-            hostId: tunnelConfig.sourceHostId,
-            tunnelName,
-            marker: tunnelMarker,
-          });
-          conn.end();
-          callback();
-          return;
-        }
-        tunnelLogger.info("Remote tunnel process found, proceeding to kill", {
-          operation: "tunnel_remote_found",
-          userId: tunnelConfig.sourceUserId,
-          hostId: tunnelConfig.sourceHostId,
-          tunnelName,
-          marker: tunnelMarker,
-        });
-
-        const killCmds = [
-          `pkill -TERM -f '${tunnelMarker}'`,
-          `sleep 1 && pkill -f 'ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}'`,
-          `sleep 1 && pkill -f 'sshpass.*ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}'`,
-          `sleep 2 && pkill -9 -f '${tunnelMarker}'`,
-        ];
-
-        let commandIndex = 0;
-
-        function executeNextKillCommand() {
-          if (commandIndex >= killCmds.length) {
-            conn.exec(checkCmd, (_err, verifyStream) => {
-              let stillRunning = false;
-
-              verifyStream.on("data", (data) => {
-                const output = data.toString().trim();
-                if (output) {
-                  stillRunning = true;
-                  tunnelLogger.warn(
-                    `Processes still running after cleanup for '${tunnelName}': ${output}`,
-                  );
-                }
-              });
-
-              verifyStream.on("close", () => {
-                if (stillRunning) {
-                  tunnelLogger.warn(
-                    `Some tunnel processes may still be running for '${tunnelName}'`,
-                  );
-                } else {
-                  tunnelLogger.success("Remote tunnel process killed", {
-                    operation: "tunnel_remote_killed",
-                    userId: tunnelConfig.sourceUserId,
-                    hostId: tunnelConfig.sourceHostId,
-                    tunnelName,
-                  });
-                }
-                conn.end();
-                callback();
-              });
-            });
-            return;
-          }
-
-          const killCmd = killCmds[commandIndex];
-
-          conn.exec(killCmd, (err, stream) => {
-            if (err) {
-              tunnelLogger.warn(
-                `Kill command ${commandIndex + 1} failed for '${tunnelName}': ${err.message}`,
-              );
-            }
-
-            stream.on("close", () => {
-              commandIndex++;
-              executeNextKillCommand();
-            });
-
-            stream.on("data", () => {});
-
-            stream.stderr.on("data", (data) => {
-              const output = data.toString().trim();
-              if (output && !output.includes("debug1")) {
-                tunnelLogger.warn(
-                  `Kill command ${commandIndex + 1} stderr for '${tunnelName}': ${output}`,
-                );
-              }
-            });
-          });
-        }
-
-        executeNextKillCommand();
-      });
-    });
-  });
-
-  conn.on("error", (err) => {
-    tunnelLogger.error(
-      `Failed to connect to source host for killing tunnel '${tunnelName}': ${err.message}`,
-    );
-    callback(err);
-  });
-
-  if (
-    tunnelConfig.useSocks5 &&
-    (tunnelConfig.socks5Host ||
-      (tunnelConfig.socks5ProxyChain &&
-        tunnelConfig.socks5ProxyChain.length > 0))
-  ) {
-    (async () => {
+    if (
+      tunnelConfig.useSocks5 &&
+      (tunnelConfig.socks5Host ||
+        (tunnelConfig.socks5ProxyChain &&
+          tunnelConfig.socks5ProxyChain.length > 0))
+    ) {
       try {
         const socks5Socket = await createSocks5Connection(
           tunnelConfig.sourceIP,
@@ -1585,9 +1466,8 @@ async function killRemoteTunnelByMarker(
 
         if (socks5Socket) {
           connOptions.sock = socks5Socket;
-          conn.connect(connOptions);
         } else {
-          callback(new Error("Failed to create SOCKS5 connection"));
+          throw new Error("Failed to create SOCKS5 connection");
         }
       } catch (socks5Error) {
         tunnelLogger.error(
@@ -1600,18 +1480,109 @@ async function killRemoteTunnelByMarker(
             proxyPort: tunnelConfig.socks5Port || 1080,
           },
         );
-        callback(
-          new Error(
-            "SOCKS5 proxy connection failed: " +
-              (socks5Error instanceof Error
-                ? socks5Error.message
-                : "Unknown error"),
-          ),
+        throw new Error(
+          "SOCKS5 proxy connection failed: " +
+            (socks5Error instanceof Error
+              ? socks5Error.message
+              : "Unknown error"),
         );
       }
-    })();
-  } else {
-    conn.connect(connOptions);
+    }
+
+    return new Promise<Client>((resolve, reject) => {
+      const conn = new Client();
+      conn.on("ready", () => resolve(conn));
+      conn.on("error", (err) => reject(err));
+      conn.connect(connOptions);
+    });
+  };
+
+  const execCommand = (client: Client, cmd: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      client.exec(cmd, (err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        let output = "";
+        stream.on("data", (data: Buffer) => {
+          output += data.toString();
+        });
+        stream.stderr.on("data", (data: Buffer) => {
+          const stderr = data.toString().trim();
+          if (stderr && !stderr.includes("debug1")) {
+            tunnelLogger.warn(
+              `Kill command stderr for '${tunnelName}': ${stderr}`,
+            );
+          }
+        });
+        stream.on("close", () => resolve(output.trim()));
+      });
+    });
+
+  try {
+    await withConnection(poolKey, factory, async (client) => {
+      const tunnelType = tunnelConfig.tunnelType || "remote";
+      const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
+      const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*${tunnelFlag})' | grep -v grep`;
+
+      const checkOutput = await execCommand(client, checkCmd);
+      if (!checkOutput) {
+        tunnelLogger.warn("Remote tunnel process not found", {
+          operation: "tunnel_remote_not_found",
+          userId: tunnelConfig.sourceUserId,
+          hostId: tunnelConfig.sourceHostId,
+          tunnelName,
+          marker: tunnelMarker,
+        });
+        return;
+      }
+
+      tunnelLogger.info("Remote tunnel process found, proceeding to kill", {
+        operation: "tunnel_remote_found",
+        userId: tunnelConfig.sourceUserId,
+        hostId: tunnelConfig.sourceHostId,
+        tunnelName,
+        marker: tunnelMarker,
+      });
+
+      const killCmds = [
+        `pkill -TERM -f '${tunnelMarker}'`,
+        `sleep 1 && pkill -f 'ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}'`,
+        `sleep 1 && pkill -f 'sshpass.*ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}'`,
+        `sleep 2 && pkill -9 -f '${tunnelMarker}'`,
+      ];
+
+      for (const killCmd of killCmds) {
+        try {
+          await execCommand(client, killCmd);
+        } catch (err) {
+          tunnelLogger.warn(
+            `Kill command failed for '${tunnelName}': ${(err as Error).message}`,
+          );
+        }
+      }
+
+      const verifyOutput = await execCommand(client, checkCmd);
+      if (verifyOutput) {
+        tunnelLogger.warn(
+          `Some tunnel processes may still be running for '${tunnelName}'`,
+        );
+      } else {
+        tunnelLogger.success("Remote tunnel process killed", {
+          operation: "tunnel_remote_killed",
+          userId: tunnelConfig.sourceUserId,
+          hostId: tunnelConfig.sourceHostId,
+          tunnelName,
+        });
+      }
+    });
+    callback();
+  } catch (err) {
+    tunnelLogger.error(
+      `Failed to connect to source host for killing tunnel '${tunnelName}': ${(err as Error).message}`,
+    );
+    callback(err as Error);
   }
 }
 
@@ -1750,7 +1721,7 @@ app.post(
       if (pendingTunnelOperations.has(tunnelName)) {
         try {
           await pendingTunnelOperations.get(tunnelName);
-        } catch (error) {
+        } catch {
           tunnelLogger.warn(`Previous tunnel operation failed`, { tunnelName });
         }
       }

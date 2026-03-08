@@ -82,7 +82,7 @@ export interface QuickActionData {
 export interface ProxyNode {
   host: string;
   port: number;
-  type: 4 | 5;
+  type: 4 | 5 | "http";
   username?: string;
   password?: string;
 }
@@ -173,9 +173,9 @@ export interface CredentialBackend {
   username: string | null;
   password: string | null;
   key: string;
-  private_key?: string;
-  public_key?: string;
-  key_password: string | null;
+  privateKey?: string;
+  publicKey?: string;
+  keyPassword: string | null;
   keyType?: string;
   detectedKeyType: string;
   usageCount: number;
@@ -395,6 +395,8 @@ export interface TerminalConfig {
   autoMosh: boolean;
   moshCommand: string;
   sudoPasswordAutoFill: boolean;
+  keepaliveInterval?: number;
+  keepaliveCountMax?: number;
 }
 
 // ============================================================================
@@ -403,6 +405,7 @@ export interface TerminalConfig {
 
 export interface TabContextTab {
   id: number;
+  instanceId?: string;
   type:
     | "home"
     | "terminal"

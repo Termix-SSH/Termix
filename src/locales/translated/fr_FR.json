@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Identifiants",
     "credentialsViewer": "Visionneuse des identifiants",
     "manageYourSSHCredentials": "Gérez vos identifiants SSH en toute sécurité",
     "addCredential": "Ajouter un mot de passe",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Ceci ajoutera la clé publique au fichier ~/.ssh/authorized_keys de l'hôte cible sans écraser les clés existantes. L'opération est réversible.",
     "chooseHostToDeploy": "Choisissez un hôte à déployer vers...",
     "deploying": "Déploiement...",
-    "copyDeployCommand": "Copier la commande de déploiement",
-    "copyDeployCommandDescription": "Copiez une commande shell pour ajouter manuellement la clé publique au fichier authorized_keys d'un hôte. Utile lorsque l'authentification par mot de passe est désactivée.",
-    "deployCommandCopied": "Déployer la commande copiée dans le presse-papiers",
-    "manualDeployInfo": "Collez cette commande dans le terminal de l'hôte cible (par exemple, console Proxmox, IPMI, ou accès physique) pour ajouter la clé SSH.",
     "name": "Nom",
     "noHostsAvailable": "Aucun hôte disponible",
     "noHostsMatchSearch": "Aucun hôte ne correspond à votre recherche",
@@ -303,9 +298,7 @@
     "createFolder": "Créer un dossier",
     "editFolder": "Modifier le dossier",
     "editFolderDescription": "Personnaliser votre dossier de snippet",
-    "createFolderDescription": "Organiser vos modules de texte dans des dossiers",
-    "confirmExecution": "Exécuter \"{{name}} \" ?",
-    "confirmExecutionDesc": "Êtes-vous sûr de vouloir exécuter ce snippet?"
+    "createFolderDescription": "Organiser vos modules de texte dans des dossiers"
   },
   "commandHistory": {
     "title": "Historique",
@@ -409,7 +402,6 @@
     "required": "Requis",
     "optional": "Optionnel",
     "connect": "Connecter",
-    "copied": "Copié",
     "connecting": "Connexion en cours...",
     "creating": "Création en cours...",
     "clear": "Nettoyer",
@@ -502,7 +494,6 @@
     "checking": "Vérification...",
     "checkingDatabase": "Vérification de la connexion à la base de données...",
     "checkingAuthentication": "Vérification de l'authentification...",
-    "backendReconnected": "Connexion au serveur restaurée",
     "actions": "Actions",
     "remove": "Retirer",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Responsable d'hôte",
-    "hosts": "Hôtes",
     "sshHosts": "Hôtes SSH",
     "noHosts": "Aucun hôte SSH",
     "noHostsMessage": "Vous n'avez pas encore ajouté d'hôtes SSH. Cliquez sur \"Ajouter Hôte\" pour commencer.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Impossible d'importer le fichier JSON",
     "connectionDetails": "Détails de la connexion",
     "organization": "Organisation",
-    "ipAddress": "Adresse IP ou nom d'hôte",
+    "ipAddress": "Adresse IP",
     "port": "Port",
     "name": "Nom",
     "username": "Nom d'utilisateur",
@@ -925,8 +915,6 @@
     "key": "Clés",
     "credential": "Identification",
     "none": "Aucun",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Vous invite à l'authentification OPKSSH à chaque connexion. Votre jeton d'authentification durera 24 heures jusqu'à ce qu'il soit renouvelé.",
     "selectCredential": "Sélectionner les informations d'identification",
     "selectCredentialPlaceholder": "Choisissez un identifiant...",
     "credentialRequired": "Les informations d'identification sont requises lors de l'utilisation de l'authentification",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Authentification interactive du clavier",
     "noneAuthDescription": "Cette méthode d'authentification utilisera l'authentification interactive au clavier lors de la connexion au serveur SSH.",
     "noneAuthDetails": "L'authentification interactive au clavier permet au serveur de vous demander des informations d'identification pendant la connexion. Ceci est utile pour les serveurs qui nécessitent une authentification multi-facteurs ou si vous ne voulez pas enregistrer les identifiants localement.",
-    "opksshAuthTitle": "Authentification OPKSSH",
     "forceKeyboardInteractive": "Forcer l'interaction du clavier",
     "forceKeyboardInteractiveDesc": "Force l'utilisation de l'authentification interactive au clavier. Ceci est parfois nécessaire pour les serveurs qui utilisent l'authentification à deux facteurs (TOTP/2FA).",
     "overrideCredentialUsername": "Remplacer le nom d'utilisateur de l'identifiant",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Ouvrir dans le navigateur",
     "warpgateContinue": "J'ai terminé l'authentification",
     "warpgateTimeout": "Délai d'authentification de Warpgate. Veuillez vous reconnecter.",
-    "opksshAuthRequired": "Authentification OPKSSH requise",
-    "opksshAuthDescription": "Authentification complète dans votre navigateur pour continuer. Cette session restera valide pendant 24 heures.",
-    "opksshAuthUrl": "URL d'authentification",
-    "opksshOpenBrowser": "Ouvrez le navigateur pour vous authentifier",
-    "opksshWaitingForAuth": "En attente d'authentification dans le navigateur...",
-    "opksshAuthenticating": "Traitement de l'authentification...",
-    "opksshTimeout": "Délai d'authentification dépassé. Veuillez réessayer.",
-    "opksshAuthFailed": "L'authentification a échoué. Veuillez vérifier vos identifiants et réessayer.",
-    "opksshConfigMissing": "La configuration OPKSSH est introuvable. Veuillez créer ~/.opk/config.yml avec vos paramètres de fournisseur OIDC. Voir la documentation : https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Insérer un mot de passe ?",
     "sudoPasswordPopupHint": "Appuyez sur Entrée pour insérer, Échap pour rejeter",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Essai automatique de l'authentification {{method}}...",
     "totpTimeout": "Délai de vérification TOTP. Veuillez vous reconnecter.",
     "passwordTimeout": "Délai de vérification du mot de passe. Veuillez vous reconnecter.",
-    "connectionRejected": "Connexion refusée par le serveur. Veuillez vérifier votre authentification et la configuration du réseau.",
-    "hostKeyRejected": "La vérification de la clé d'hôte SSH a été rejetée. La connexion a été annulée."
+    "connectionRejected": "Connexion refusée par le serveur. Veuillez vérifier votre authentification et la configuration du réseau."
   },
   "fileManager": {
     "title": "Gestionnaire de fichiers",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Mot de passe réinitialisé avec succès",
     "passwordResetSuccessDesc": "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
   },
-  "hostKey": {
-    "verifyNewHost": "Vérifier la clé d'hôte SSH",
-    "keyChangedWarning": "Clé d'hôte SSH modifiée",
-    "firstConnectionTitle": "Première connexion à cet hôte",
-    "firstConnectionDescription": "L'authenticité de cet hôte ne peut pas être établie. Vérifiez que l'empreinte digitale correspond à ce que vous attendez.",
-    "keyChangedDescription": "La clé hôte de ce serveur a changé depuis votre dernière connexion. Cela pourrait indiquer un problème de sécurité.",
-    "previousKey": "Clé précédente",
-    "newFingerprint": "Nouvelle empreinte digitale",
-    "fingerprint": "Empreinte digitale",
-    "verifyInstructions": "Si vous faites confiance à cet hôte, cliquez sur Accepter pour continuer et enregistrer cette empreinte digitale pour de futures connexions.",
-    "securityWarning": "Avertissement de sécurité",
-    "acceptAndContinue": "Accepter et continuer",
-    "acceptNewKey": "Accepter la nouvelle clé et continuer"
-  },
   "errors": {
     "notFound": "Page introuvable",
     "unauthorized": "Accès non autorisé",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Hôte et barre latérale",
     "snippetsSettings": "Extraits",
-    "confirmSnippetExecution": "Confirmer l'exécution du snippet",
-    "confirmSnippetExecutionDesc": "Afficher la boîte de dialogue de confirmation avant d'exécuter les snippets",
     "updateSettings": "Mises à jour",
     "disableUpdateCheck": "Désactiver la vérification des mises à jour",
     "disableUpdateCheckDesc": "Arrêter la vérification des nouvelles versions au démarrage et au tableau de bord. Réduit les requêtes réseau.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 ou exemple.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

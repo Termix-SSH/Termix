@@ -82,19 +82,21 @@ export class LazyFieldEncryption {
               legacyFieldName,
             );
             return decrypted;
-          } catch (error) {}
+          } catch {
+            // expected - legacy decryption may fail, try other methods
+          }
         }
 
         const sensitiveFields = [
-          "totp_secret",
-          "totp_backup_codes",
+          "totpSecret",
+          "totpBackupCodes",
           "password",
           "key",
-          "key_password",
-          "private_key",
-          "public_key",
-          "client_secret",
-          "oidc_identifier",
+          "keyPassword",
+          "privateKey",
+          "publicKey",
+          "clientSecret",
+          "oidcIdentifier",
         ];
 
         if (sensitiveFields.includes(fieldName)) {
@@ -174,7 +176,9 @@ export class LazyFieldEncryption {
               wasPlaintext: false,
               wasLegacyEncryption: true,
             };
-          } catch (error) {}
+          } catch {
+            // expected - re-encryption may fail, return original
+          }
         }
         return {
           encrypted: fieldValue,
@@ -200,7 +204,8 @@ export class LazyFieldEncryption {
     let needsUpdate = false;
 
     for (const fieldName of sensitiveFields) {
-      const fieldValue = record[fieldName];
+      const column = this.propertyToColumn(fieldName);
+      const fieldValue = record[column] ?? record[fieldName];
 
       if (fieldValue) {
         try {
@@ -213,7 +218,7 @@ export class LazyFieldEncryption {
             );
 
           if (wasPlaintext || wasLegacyEncryption) {
-            updatedRecord[fieldName] = encrypted;
+            updatedRecord[column] = encrypted;
             migratedFields.push(fieldName);
             needsUpdate = true;
           }
@@ -230,20 +235,46 @@ export class LazyFieldEncryption {
     return { updatedRecord, migratedFields, needsUpdate };
   }
 
+  private static readonly PROPERTY_TO_COLUMN: Record<string, string> = {
+    keyPassword: "key_password",
+    privateKey: "private_key",
+    publicKey: "public_key",
+    sudoPassword: "sudo_password",
+    autostartPassword: "autostart_password",
+    autostartKey: "autostart_key",
+    autostartKeyPassword: "autostart_key_password",
+    totpSecret: "totp_secret",
+    totpBackupCodes: "totp_backup_codes",
+    clientSecret: "client_secret",
+    oidcIdentifier: "oidc_identifier",
+  };
+
   static getSensitiveFieldsForTable(tableName: string): string[] {
     const sensitiveFieldsMap: Record<string, string[]> = {
-      ssh_data: ["password", "key", "key_password"],
+      ssh_data: [
+        "password",
+        "key",
+        "keyPassword",
+        "sudoPassword",
+        "autostartPassword",
+        "autostartKey",
+        "autostartKeyPassword",
+      ],
       ssh_credentials: [
         "password",
         "key",
-        "key_password",
-        "private_key",
-        "public_key",
+        "keyPassword",
+        "privateKey",
+        "publicKey",
       ],
-      users: ["totp_secret", "totp_backup_codes"],
+      users: ["totpSecret", "totpBackupCodes"],
     };
 
     return sensitiveFieldsMap[tableName] || [];
+  }
+
+  static propertyToColumn(propertyName: string): string {
+    return this.PROPERTY_TO_COLUMN[propertyName] || propertyName;
   }
 
   static fieldNeedsMigration(
@@ -310,10 +341,11 @@ export class LazyFieldEncryption {
         const hostPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
+          const column = this.propertyToColumn(field);
           if (
-            host[field] &&
+            host[column] &&
             this.fieldNeedsMigration(
-              host[field] as string,
+              host[column] as string,
               userKEK,
               host.id.toString(),
               field,
@@ -344,10 +376,11 @@ export class LazyFieldEncryption {
         const credentialPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
+          const column = this.propertyToColumn(field);
           if (
-            credential[field] &&
+            credential[column] &&
             this.fieldNeedsMigration(
-              credential[field] as string,
+              credential[column] as string,
               userKEK,
               credential.id.toString(),
               field,
@@ -373,9 +406,10 @@ export class LazyFieldEncryption {
         const userPlaintextFields: string[] = [];
 
         for (const field of sensitiveFields) {
+          const column = this.propertyToColumn(field);
           if (
-            user[field] &&
-            this.fieldNeedsMigration(user[field], userKEK, userId, field)
+            user[column] &&
+            this.fieldNeedsMigration(user[column], userKEK, userId, field)
           ) {
             userPlaintextFields.push(field);
             needsMigration = true;

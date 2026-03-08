@@ -22,7 +22,9 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       if (persistentConfig.parsed) {
         Object.assign(process.env, persistentConfig.parsed);
       }
-    } catch (error) {}
+    } catch {
+      // expected - env file may not exist
+    }
 
     systemLogger.info("Termix backend initialization started", {
       operation: "backend_init_start",
@@ -110,8 +112,9 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await authManager.initialize();
     DataCrypto.initialize();
 
-    const { OPKSSHBinaryManager } =
-      await import("./utils/opkssh-binary-manager.js");
+    const { OPKSSHBinaryManager } = await import(
+      "./utils/opkssh-binary-manager.js"
+    );
     try {
       await OPKSSHBinaryManager.ensureBinary();
     } catch (error) {
@@ -161,6 +164,16 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
         { operation: "shutdown" },
       );
       process.exit(0);
+    });
+
+    process.on("message", (msg: { type?: string }) => {
+      if (msg?.type === "shutdown") {
+        systemLogger.info(
+          "Received IPC shutdown, initiating graceful shutdown...",
+          { operation: "shutdown" },
+        );
+        process.exit(0);
+      }
     });
 
     process.on("uncaughtException", (error) => {

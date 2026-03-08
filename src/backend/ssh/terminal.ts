@@ -1,10 +1,5 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import {
-  Client,
-  type ClientChannel,
-  type PseudoTtyOptions,
-  type ConnectConfig,
-} from "ssh2";
+import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
 import { parse as parseUrl } from "url";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
@@ -14,15 +9,21 @@ import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
-import { createSocks5Connection } from "../utils/socks5-helper.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
 import { SSHAuthManager } from "./auth-manager.js";
+import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { sessionManager } from "./terminal-session-manager.js";
 
 interface ConnectToHostData {
   cols: number;
   rows: number;
   hostConfig: {
     id: number;
+    instanceId?: string;
     ip: string;
     port: number;
     username: string;
@@ -41,6 +42,11 @@ interface ConnectToHostData {
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    terminalConfig?: {
+      keepaliveInterval?: number;
+      keepaliveCountMax?: number;
+      [key: string]: unknown;
+    };
   };
   initialPath?: string;
   executeCommand?: string;
@@ -67,10 +73,24 @@ const userCrypto = UserCrypto.getInstance();
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
+interface JumpHostConfig {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authType?: string;
+  credentialId?: number;
+  [key: string]: unknown;
+}
+
 async function resolveJumpHost(
   hostId: number,
   userId: string,
-): Promise<any | null> {
+): Promise<JumpHostConfig | null> {
   sshLogger.info("Resolving jump host", {
     operation: "terminal_jumphost_resolve",
     userId,
@@ -111,17 +131,16 @@ async function resolveJumpHost(
         const credential = credentials[0];
         return {
           ...host,
-          password: credential.password,
-          key:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          keyType: credential.key_type || credential.keyType,
-          authType: credential.auth_type || credential.authType,
-        };
+          password: credential.password as string | undefined,
+          key: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
+          keyType: credential.keyType as string | undefined,
+          authType: credential.authType as string | undefined,
+        } as JumpHostConfig;
       }
     }
 
-    return host;
+    return host as JumpHostConfig;
   } catch (error) {
     sshLogger.error("Failed to resolve jump host", error, {
       operation: "resolve_jump_host",
@@ -135,6 +154,7 @@ async function resolveJumpHost(
 async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
+  socks5Config?: SOCKS5Config | null,
 ): Promise<Client | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -148,15 +168,29 @@ async function createJumpHostChain(
       jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
     );
 
+    const totalHops = jumpHostConfigs.length;
+
     for (let i = 0; i < jumpHostConfigs.length; i++) {
       if (!jumpHostConfigs[i]) {
         sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
           operation: "jump_host_chain",
           hostId: jumpHosts[i].hostId,
+          hopIndex: i,
+          totalHops,
         });
         clients.forEach((c) => c.end());
         return null;
       }
+    }
+
+    let proxySocket: import("net").Socket | null = null;
+    if (socks5Config?.useSocks5) {
+      const firstHop = jumpHostConfigs[0];
+      proxySocket = await createSocks5Connection(
+        firstHop.ip,
+        firstHop.port || 22,
+        socks5Config,
+      );
     }
 
     for (let i = 0; i < jumpHostConfigs.length; i++) {
@@ -187,22 +221,38 @@ async function createJumpHostChain(
             hostId: jumpHostConfig.id,
             ip: jumpHostConfig.ip,
             depth: i,
+            hopIndex: i,
+            totalHops,
+            usedProxySocket: i === 0 && !!proxySocket,
           });
           resolve(true);
         });
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          sshLogger.error(`Jump host ${i + 1} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-          });
+          sshLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
-        const connectConfig: any = {
-          host: jumpHostConfig.ip,
+        const connectConfig: Record<string, unknown> = {
+          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: true,
@@ -239,6 +289,9 @@ async function createJumpHostChain(
               jumpClient.connect(connectConfig);
             },
           );
+        } else if (proxySocket) {
+          connectConfig.sock = proxySocket;
+          jumpClient.connect(connectConfig);
         } else {
           jumpClient.connect(connectConfig);
         }
@@ -358,8 +411,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     userId,
   });
 
+  let currentSessionId: string | null = null;
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
+  let lastJumpClient: Client | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
   let totpTimeout: NodeJS.Timeout | null = null;
@@ -374,7 +429,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isAwaitingAuthCredentials = false;
   let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
+  const wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, 30000);
+
   ws.on("close", () => {
+    clearInterval(wsPingInterval);
     sshLogger.info("Terminal WebSocket disconnected", {
       operation: "terminal_ws_disconnect",
       sessionId,
@@ -388,7 +450,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    cleanupSSH();
+    if (currentSessionId) {
+      const session = sessionManager.getSession(currentSessionId);
+      if (session?.isConnected) {
+        sessionManager.detachWs(currentSessionId);
+      } else {
+        sessionManager.destroySession(currentSessionId);
+        currentSessionId = null;
+      }
+    }
+    cleanupAuthState();
   });
 
   function resetConnectionState() {
@@ -455,6 +526,110 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "attachSession": {
+        const attachData = data as {
+          sessionId: string;
+          cols: number;
+          rows: number;
+          tabInstanceId?: string;
+        };
+        sshLogger.info("Attempting to attach session", {
+          operation: "terminal_attach_session",
+          sessionId: attachData.sessionId,
+          tabInstanceId: attachData.tabInstanceId,
+          userId,
+          requestedCols: attachData.cols,
+          requestedRows: attachData.rows,
+        });
+        const session = sessionManager.attachWs(
+          attachData.sessionId,
+          userId,
+          ws,
+          attachData.tabInstanceId,
+        );
+        if (session) {
+          sshLogger.success("Session attached successfully", {
+            operation: "terminal_attach_success",
+            sessionId: attachData.sessionId,
+            sessionCreatedAt: session.createdAt,
+            wasDetached: !!session.lastDetachedAt,
+            detachedDuration: session.lastDetachedAt
+              ? Date.now() - session.lastDetachedAt
+              : 0,
+          });
+          currentSessionId = attachData.sessionId;
+          sshStream = session.sshStream;
+          sshConn = session.sshConn;
+          isConnecting = false;
+          isConnected = true;
+          const buffered = sessionManager.getBuffer(session);
+          if (buffered) {
+            ws.send(JSON.stringify({ type: "data", data: buffered }));
+          }
+          if (
+            attachData.cols !== session.cols ||
+            attachData.rows !== session.rows
+          ) {
+            session.sshStream?.setWindow(
+              attachData.rows,
+              attachData.cols,
+              attachData.rows,
+              attachData.cols,
+            );
+            session.cols = attachData.cols;
+            session.rows = attachData.rows;
+          }
+
+          ws.send(
+            JSON.stringify({
+              type: "sessionAttached",
+              sessionId: attachData.sessionId,
+            }),
+          );
+          ws.send(
+            JSON.stringify({
+              type: "connected",
+              message: "Session reattached",
+            }),
+          );
+        } else {
+          sshLogger.warn(
+            "Session attachment failed - will create new connection",
+            {
+              operation: "terminal_attach_failed",
+              sessionId: attachData.sessionId,
+              tabInstanceId: attachData.tabInstanceId,
+              userId,
+              reason: "session_not_found_or_invalid",
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "sessionExpired",
+              sessionId: attachData.sessionId,
+            }),
+          );
+        }
+        break;
+      }
+
+      case "listSessions": {
+        const sessions = sessionManager.getUserSessions(userId);
+        ws.send(
+          JSON.stringify({
+            type: "sessionList",
+            sessions: sessions.map((s) => ({
+              id: s.id,
+              hostId: s.hostId,
+              hostName: s.hostName,
+              createdAt: s.createdAt,
+              lastDetachedAt: s.lastDetachedAt,
+            })),
+          }),
+        );
+        break;
+      }
+
       case "resize": {
         const resizeData = data as ResizeData;
         handleResize(resizeData);
@@ -462,29 +637,37 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       case "disconnect":
-        cleanupSSH();
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState();
+        sshConn = null;
+        sshStream = null;
         break;
 
       case "input": {
         const inputData = data as string;
-        if (sshStream) {
+        const inputStream =
+          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+        if (inputStream) {
           if (inputData === "\t") {
-            sshStream.write(inputData);
+            inputStream.write(inputData);
           } else if (
             typeof inputData === "string" &&
             inputData.startsWith("\x1b")
           ) {
-            sshStream.write(inputData);
+            inputStream.write(inputData);
           } else {
             try {
-              sshStream.write(Buffer.from(inputData, "utf8"));
+              inputStream.write(Buffer.from(inputData, "utf8"));
             } catch (error) {
               sshLogger.error("Error writing input to SSH stream", error, {
                 operation: "ssh_input_encoding",
                 userId,
                 dataLength: inputData.length,
               });
-              sshStream.write(Buffer.from(inputData, "latin1"));
+              inputStream.write(Buffer.from(inputData, "latin1"));
             }
           }
         }
@@ -579,7 +762,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentialsData.password) {
           credentialsData.hostConfig.password = credentialsData.password;
           credentialsData.hostConfig.authType = "password";
-          (credentialsData.hostConfig as any).userProvidedPassword = true;
+          (
+            credentialsData.hostConfig as Record<string, unknown>
+          ).userProvidedPassword = true;
         } else if (credentialsData.sshKey) {
           credentialsData.hostConfig.key = credentialsData.sshKey;
           credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
@@ -587,7 +772,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         isAwaitingAuthCredentials = false;
-        cleanupSSH();
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState();
+        sshConn = null;
+        sshStream = null;
 
         const reconnectData: ConnectToHostData = {
           cols: credentialsData.cols,
@@ -617,8 +808,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } =
-            await import("./opkssh-auth.js");
+          const { startOPKSSHAuth, getRequestOrigin } = await import(
+            "./opkssh-auth.js"
+          );
           const db = getDb();
           const hostRow = await db
             .select()
@@ -693,7 +885,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           hostId: number;
           cols?: number;
           rows?: number;
-          hostConfig?: any;
+          hostConfig?: ConnectToHostData["hostConfig"];
         };
 
         resetConnectionState();
@@ -703,7 +895,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           rows: completedData.rows || 24,
           hostConfig:
             completedData.hostConfig ||
-            ({ id: completedData.hostId, userId } as any),
+            ({
+              id: completedData.hostId,
+              ip: "",
+              port: 22,
+              username: "",
+              userId,
+            } as ConnectToHostData["hostConfig"]),
         };
 
         handleConnectToHost(reconnectConfig).catch((error) => {
@@ -737,7 +935,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { hostConfig, initialPath, executeCommand } = data;
     const {
       id,
-      ip,
+      ip: rawIp,
       port,
       username,
       password,
@@ -747,6 +945,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
+    const ip = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
     sshLogger.info("Resolving SSH host configuration", {
       operation: "terminal_host_resolve",
       sessionId,
@@ -758,7 +957,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       stage: string,
       level: string,
       message: string,
-      details?: Record<string, any>,
+      details?: Record<string, unknown>,
     ) => {
       ws.send(
         JSON.stringify({
@@ -841,12 +1040,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({ type: "error", message: "SSH connection timeout" }),
         );
-        cleanupSSH(connectionTimeout);
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
       }
     }, 120000);
 
-    let resolvedCredentials = { password, key, keyPassword, keyType, authType };
-    let authMethodNotAvailable = false;
+    let resolvedCredentials = {
+      username,
+      password,
+      key,
+      keyPassword,
+      keyType,
+      authType,
+    };
+    const authMethodNotAvailable = false;
     if (credentialId && id && hostConfig.userId) {
       try {
         const credentials = await SimpleDBOps.select(
@@ -866,19 +1076,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (credentials.length > 0) {
           const credential = credentials[0];
           resolvedCredentials = {
+            username: (credential.username as string | undefined) || username,
             password: credential.password as string | undefined,
-            key: (credential.private_key ||
-              credential.privateKey ||
-              credential.key) as string | undefined,
-            keyPassword: (credential.key_password || credential.keyPassword) as
-              | string
-              | undefined,
-            keyType: (credential.key_type || credential.keyType) as
-              | string
-              | undefined,
-            authType: (credential.auth_type || credential.authType) as
-              | string
-              | undefined,
+            key: credential.privateKey as string | undefined,
+            keyPassword: credential.keyPassword as string | undefined,
+            keyType: credential.keyType as string | undefined,
+            authType: credential.authType as string | undefined,
           };
         } else {
           sshLogger.warn(`No credentials found for host ${id}`, {
@@ -926,6 +1129,27 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sendLog("auth", "success", `Authentication successful for ${username}`);
       sendLog("connected", "success", "Connection established");
 
+      const hostDisplayName = `${username}@${ip}:${port}`;
+      const tabInstanceId = hostConfig.instanceId;
+      currentSessionId = sessionManager.createSession(
+        userId,
+        id,
+        hostDisplayName,
+        data.cols,
+        data.rows,
+        tabInstanceId,
+      );
+
+      sshLogger.info("Terminal session created after SSH ready", {
+        operation: "terminal_session_created",
+        sessionId: currentSessionId,
+        userId,
+        hostId: id,
+        tabInstanceId,
+        ip,
+        port,
+      });
+
       const conn = sshConn;
 
       if (!conn || isCleaningUp || !sshConn) {
@@ -949,6 +1173,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
               "SSH connection was closed before terminal could be created",
           }),
         );
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -971,6 +1200,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }),
         );
         isShellInitializing = false;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1000,7 +1234,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 "Shell creation timeout. The server may not support interactive shells or the connection was interrupted.",
             }),
           );
-          cleanupSSH(connectionTimeout);
+          if (currentSessionId) {
+            sessionManager.destroySession(currentSessionId);
+            currentSessionId = null;
+          }
+          cleanupAuthState(connectionTimeout);
         }
       }, 15000);
 
@@ -1029,7 +1267,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 message: "Shell error: " + err.message,
               }),
             );
-            cleanupSSH(connectionTimeout);
+            if (currentSessionId) {
+              sessionManager.destroySession(currentSessionId);
+              currentSessionId = null;
+            }
+            cleanupAuthState(connectionTimeout);
             return;
           }
 
@@ -1042,32 +1284,82 @@ wss.on("connection", async (ws: WebSocket, req) => {
             termType: "xterm-256color",
           });
 
+          if (currentSessionId) {
+            sessionManager.setSSHState(
+              currentSessionId,
+              sshConn!,
+              stream,
+              lastJumpClient,
+              opksshTempFiles,
+            );
+            sessionManager.attachWs(currentSessionId, userId, ws);
+
+            ws.send(
+              JSON.stringify({
+                type: "sessionCreated",
+                sessionId: currentSessionId,
+              }),
+            );
+
+            sshLogger.info("Session ready for persistence", {
+              operation: "session_ready",
+              sessionId: currentSessionId,
+              userId,
+              hostId: id,
+            });
+          }
+
+          const boundSessionId = currentSessionId;
+
           stream.on("data", (data: Buffer) => {
             try {
               const utf8String = data.toString("utf-8");
-              ws.send(JSON.stringify({ type: "data", data: utf8String }));
+              const session = sessionManager.getSession(boundSessionId);
+              if (session) {
+                sessionManager.bufferOutput(boundSessionId!, utf8String);
+
+                if (session.attachedWs?.readyState === WebSocket.OPEN) {
+                  session.attachedWs.send(
+                    JSON.stringify({ type: "data", data: utf8String }),
+                  );
+                }
+              }
             } catch (error) {
               sshLogger.error("Error encoding terminal data", error, {
                 operation: "terminal_data_encoding",
                 hostId: id,
                 dataLength: data.length,
               });
-              ws.send(
-                JSON.stringify({
-                  type: "data",
-                  data: data.toString("latin1"),
-                }),
-              );
+              const fallback = data.toString("latin1");
+              const session = sessionManager.getSession(boundSessionId);
+              if (session) {
+                sessionManager.bufferOutput(boundSessionId!, fallback);
+
+                if (session.attachedWs?.readyState === WebSocket.OPEN) {
+                  session.attachedWs.send(
+                    JSON.stringify({ type: "data", data: fallback }),
+                  );
+                }
+              }
             }
           });
 
           stream.on("close", () => {
-            ws.send(
-              JSON.stringify({
-                type: "disconnected",
-                message: "Connection lost",
-              }),
-            );
+            const session = sessionManager.getSession(boundSessionId);
+            if (session?.attachedWs?.readyState === WebSocket.OPEN) {
+              session.attachedWs.send(
+                JSON.stringify({
+                  type: "disconnected",
+                  message: "Connection lost",
+                }),
+              );
+            }
+            if (boundSessionId) {
+              sessionManager.destroySession(boundSessionId);
+              if (currentSessionId === boundSessionId) {
+                currentSessionId = null;
+              }
+            }
           });
 
           stream.on("error", (err: Error) => {
@@ -1078,12 +1370,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
               port,
               username,
             });
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "SSH stream error: " + err.message,
-              }),
-            );
+            const session = sessionManager.getSession(boundSessionId);
+            if (session?.attachedWs?.readyState === WebSocket.OPEN) {
+              session.attachedWs.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "SSH stream error: " + err.message,
+                }),
+              );
+            }
           });
 
           if (initialPath && initialPath.trim() !== "") {
@@ -1195,14 +1490,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
         })();
 
-        clearTimeout(connectionTimeout);
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch (e) {}
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
 
         sendLog(
           "auth",
@@ -1231,15 +1523,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "error",
           "Server does not support keyboard-interactive authentication",
         );
-        clearTimeout(connectionTimeout);
         isAwaitingAuthCredentials = true;
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch (e) {}
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1256,15 +1545,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         !isKeyboardInteractive &&
         !keyboardInteractiveResponded
       ) {
-        clearTimeout(connectionTimeout);
         isAwaitingAuthCredentials = true;
-        if (sshConn) {
-          try {
-            sshConn.end();
-          } catch (e) {}
-          sshConn = null;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
         }
-        resetConnectionState();
+        cleanupAuthState(connectionTimeout);
         ws.send(
           JSON.stringify({
             type: "auth_method_not_available",
@@ -1333,6 +1619,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       } else if (err.message.includes("ECONNREFUSED")) {
         errorMessage =
           "SSH error: Connection refused. The server may not be running or the port may be incorrect.";
+      } else if (err.message.includes("ENETUNREACH")) {
+        const isIPv6 = ip && ip.includes(":");
+        errorMessage = isIPv6
+          ? "SSH error: Network unreachable. IPv6 may not be available in this environment. If running in Docker, enable IPv6 in the Docker daemon and network configuration."
+          : "SSH error: Network unreachable. Check your network configuration and routing.";
       } else if (err.message.includes("ETIMEDOUT")) {
         errorMessage =
           "SSH error: Connection timed out. Check your network connection and server availability.";
@@ -1351,7 +1642,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       ws.send(JSON.stringify({ type: "error", message: errorMessage }));
-      cleanupSSH(connectionTimeout);
+      if (currentSessionId) {
+        sessionManager.destroySession(currentSessionId);
+        currentSessionId = null;
+      }
+      cleanupAuthState(connectionTimeout);
     });
 
     sshConn.on("close", () => {
@@ -1364,7 +1659,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       });
 
       if (isAwaitingAuthCredentials) {
-        cleanupSSH(connectionTimeout);
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1378,22 +1677,30 @@ wss.on("connection", async (ws: WebSocket, req) => {
           isShellInitializing,
           hasStream: !!sshStream,
         });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "Connection closed during shell initialization. The server may have rejected the shell request.",
-          }),
-        );
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Connection closed during shell initialization. The server may have rejected the shell request.",
+            }),
+          );
+        }
       } else if (!sshStream) {
-        ws.send(
-          JSON.stringify({
-            type: "disconnected",
-            message: "Connection closed",
-          }),
-        );
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "disconnected",
+              message: "Connection closed",
+            }),
+          );
+        }
       }
-      cleanupSSH(connectionTimeout);
+      if (currentSessionId) {
+        sessionManager.destroySession(currentSessionId);
+        currentSessionId = null;
+      }
+      cleanupAuthState(connectionTimeout);
     });
 
     const sshAuthManager = new SSHAuthManager({
@@ -1429,7 +1736,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
           instructionsLang,
           prompts,
           finish,
-          resolvedCredentials as any,
+          resolvedCredentials as unknown as Parameters<
+            typeof sshAuthManager.handleKeyboardInteractive
+          >[5],
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -1444,13 +1753,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     );
 
-    const connectConfig: any = {
+    const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
+    const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
+
+    const connectConfig: Record<string, unknown> = {
       host: ip,
       port,
       username,
       tryKeyboard: true,
-      keepaliveInterval: 30000,
-      keepaliveCountMax: 3,
+      keepaliveInterval:
+        typeof hostKeepaliveInterval === "number"
+          ? hostKeepaliveInterval
+          : 30000,
+      keepaliveCountMax:
+        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
@@ -1527,6 +1843,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
 
     if (resolvedCredentials.authType === "none") {
+      // no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(
@@ -1659,58 +1976,32 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    if (
+    const proxyConfig: SOCKS5Config | null =
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
         (hostConfig.socks5ProxyChain &&
-          (hostConfig.socks5ProxyChain as any).length > 0))
-    ) {
-      try {
-        const socks5Socket = await createSocks5Connection(ip, port, {
-          useSocks5: hostConfig.useSocks5,
-          socks5Host: hostConfig.socks5Host,
-          socks5Port: hostConfig.socks5Port,
-          socks5Username: hostConfig.socks5Username,
-          socks5Password: hostConfig.socks5Password,
-          socks5ProxyChain: hostConfig.socks5ProxyChain as any,
-        });
+          (hostConfig.socks5ProxyChain as ProxyNode[]).length > 0))
+        ? {
+            useSocks5: hostConfig.useSocks5,
+            socks5Host: hostConfig.socks5Host,
+            socks5Port: hostConfig.socks5Port,
+            socks5Username: hostConfig.socks5Username,
+            socks5Password: hostConfig.socks5Password,
+            socks5ProxyChain: hostConfig.socks5ProxyChain as ProxyNode[],
+          }
+        : null;
 
-        if (socks5Socket) {
-          connectConfig.sock = socks5Socket;
-          sshConn.connect(connectConfig);
-          return;
-        }
-      } catch (socks5Error) {
-        sshLogger.error("SOCKS5 connection failed", socks5Error, {
-          operation: "socks5_connect",
-          hostId: id,
-          proxyHost: hostConfig.socks5Host,
-          proxyPort: hostConfig.socks5Port || 1080,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "SOCKS5 proxy connection failed: " +
-              (socks5Error instanceof Error
-                ? socks5Error.message
-                : "Unknown error"),
-          }),
-        );
-        cleanupSSH(connectionTimeout);
-        return;
-      }
-    }
-
-    if (
+    const hasJumpHosts =
       hostConfig.jumpHosts &&
       hostConfig.jumpHosts.length > 0 &&
-      hostConfig.userId
-    ) {
+      hostConfig.userId;
+
+    if (hasJumpHosts) {
       try {
         const jumpClient = await createJumpHostChain(
-          hostConfig.jumpHosts,
-          hostConfig.userId,
+          hostConfig.jumpHosts!,
+          hostConfig.userId!,
+          proxyConfig,
         );
 
         if (!jumpClient) {
@@ -1721,9 +2012,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
               message: "Failed to connect through jump hosts",
             }),
           );
-          cleanupSSH(connectionTimeout);
+          if (currentSessionId) {
+            sessionManager.destroySession(currentSessionId);
+            currentSessionId = null;
+          }
+          cleanupAuthState(connectionTimeout);
           return;
         }
+        lastJumpClient = jumpClient;
 
         jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
           if (err) {
@@ -1740,7 +2036,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }),
             );
             jumpClient.end();
-            cleanupSSH(connectionTimeout);
+            if (currentSessionId) {
+              sessionManager.destroySession(currentSessionId);
+              currentSessionId = null;
+            }
+            cleanupAuthState(connectionTimeout);
             return;
           }
 
@@ -1748,7 +2048,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sendLog(
             "handshake",
             "info",
-            "Starting SSH session through jump host",
+            "Starting SSH session through jump host" +
+              (proxyConfig ? " (via proxy)" : ""),
           );
           sendLog("auth", "info", `Authenticating as ${username}`);
           sshLogger.info("Initiating SSH connection", {
@@ -1760,6 +2061,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             port,
             username,
             authType: resolvedCredentials.authType,
+            viaProxy: !!proxyConfig,
           });
           sshConn.connect(connectConfig);
         });
@@ -1774,9 +2076,57 @@ wss.on("connection", async (ws: WebSocket, req) => {
             message: "Failed to connect through jump hosts",
           }),
         );
-        cleanupSSH(connectionTimeout);
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
         return;
       }
+    } else if (proxyConfig) {
+      try {
+        const proxySocket = await createSocks5Connection(ip, port, proxyConfig);
+        if (proxySocket) {
+          connectConfig.sock = proxySocket;
+        }
+      } catch (proxyError) {
+        sshLogger.error("Proxy connection failed", proxyError, {
+          operation: "proxy_connect",
+          hostId: id,
+          proxyHost: hostConfig.socks5Host,
+          proxyPort: hostConfig.socks5Port || 1080,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Proxy connection failed: " +
+              (proxyError instanceof Error
+                ? proxyError.message
+                : "Unknown error"),
+          }),
+        );
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
+      sendLog("handshake", "info", "Starting SSH session (via proxy)");
+      sendLog("auth", "info", `Authenticating as ${username}`);
+      sshLogger.info("Initiating SSH connection", {
+        operation: "terminal_ssh_connect_attempt",
+        sessionId,
+        userId,
+        hostId: id,
+        ip,
+        port,
+        username,
+        authType: resolvedCredentials.authType,
+        viaProxy: true,
+      });
+      sshConn.connect(connectConfig);
     } else {
       sendLog("handshake", "info", "Starting SSH session");
       sendLog("auth", "info", `Authenticating as ${username}`);
@@ -1795,33 +2145,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   function handleResize(data: ResizeData) {
-    if (sshStream && sshStream.setWindow) {
-      sshStream.setWindow(data.rows, data.cols, data.rows, data.cols);
+    const resizeStream =
+      sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+    if (resizeStream && resizeStream.setWindow) {
+      resizeStream.setWindow(data.rows, data.cols, data.rows, data.cols);
+      const session = sessionManager.getSession(currentSessionId);
+      if (session) {
+        session.cols = data.cols;
+        session.rows = data.rows;
+      }
       ws.send(
         JSON.stringify({ type: "resized", cols: data.cols, rows: data.rows }),
       );
     }
   }
 
-  function cleanupSSH(timeoutId?: NodeJS.Timeout) {
-    if (isCleaningUp) {
-      return;
-    }
-
-    if (isShellInitializing) {
-      sshLogger.warn(
-        "Cleanup attempted during shell initialization, deferring",
-        {
-          operation: "cleanup_deferred",
-          userId,
-        },
-      );
-      setTimeout(() => cleanupSSH(timeoutId), 100);
-      return;
-    }
-
-    isCleaningUp = true;
-
+  function cleanupAuthState(timeoutId?: NodeJS.Timeout) {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
@@ -1836,67 +2175,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       warpgateAuthTimeout = null;
     }
 
-    if (sshStream) {
-      try {
-        sshStream.end();
-      } catch (e: unknown) {
-        sshLogger.error(
-          "Error closing stream: " +
-            (e instanceof Error ? e.message : "Unknown error"),
-        );
-      }
-      sshStream = null;
-    }
-
-    if (sshConn) {
-      try {
-        sshConn.end();
-      } catch (e: unknown) {
-        sshLogger.error(
-          "Error closing connection: " +
-            (e instanceof Error ? e.message : "Unknown error"),
-        );
-      }
-      sshConn = null;
-    }
+    sshStream = null;
+    sshConn = null;
+    lastJumpClient = null;
+    opksshTempFiles = null;
 
     resetConnectionState();
     isCleaningUp = false;
     isAwaitingAuthCredentials = false;
-
-    if (opksshTempFiles) {
-      const tempFilesToClean = opksshTempFiles;
-      opksshTempFiles = null;
-
-      (async () => {
-        try {
-          const { promises: fs } = await import("fs");
-          const cleanupResults = await Promise.allSettled([
-            fs.unlink(tempFilesToClean.keyPath),
-            fs.unlink(tempFilesToClean.certPath),
-          ]);
-
-          cleanupResults.forEach((result, index) => {
-            if (result.status === "rejected") {
-              sshLogger.warn(`Failed to cleanup OPKSSH temp file`, {
-                operation: "opkssh_temp_cleanup_failed",
-                file: index === 0 ? "keyPath" : "certPath",
-                path:
-                  index === 0
-                    ? tempFilesToClean.keyPath
-                    : tempFilesToClean.certPath,
-                error: result.reason,
-              });
-            }
-          });
-        } catch (error) {
-          sshLogger.error("Failed to cleanup OPKSSH temp files", {
-            operation: "opkssh_temp_cleanup_error",
-            error,
-          });
-        }
-      })();
-    }
   }
 
   // Note: PTY-level keepalive (writing \x00 to the stream) was removed.

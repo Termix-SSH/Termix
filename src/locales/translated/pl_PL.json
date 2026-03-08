@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Dane logowania",
     "credentialsViewer": "Przeglądarka danych logowania",
     "manageYourSSHCredentials": "Zarządzaj swoimi danymi uwierzytelniającymi SSH bezpiecznie",
     "addCredential": "Dodaj poświadczenia",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "To bezpiecznie doda klucz publiczny do pliku hosta ~/.ssh/authorized_keys bez nadpisywania istniejących kluczy. Operacja jest odwracalna.",
     "chooseHostToDeploy": "Wybierz hosta do wdrożenia...",
     "deploying": "Wdrażanie...",
-    "copyDeployCommand": "Kopiuj polecenie wdrożenia",
-    "copyDeployCommandDescription": "Skopiuj polecenie powłoki, aby ręcznie dodać klucz publiczny do pliku authorized_keys hosta. Przydatne, gdy uwierzytelnianie hasła jest wyłączone.",
-    "deployCommandCopied": "Wdrożenie polecenia skopiowane do schowka",
-    "manualDeployInfo": "Wklej to polecenie w terminalu docelowego hosta (np. konsola Proxmox, IPMI lub fizyczny dostęp) aby dodać klucz SSH.",
     "name": "Nazwisko",
     "noHostsAvailable": "Brak dostępnych hostów",
     "noHostsMatchSearch": "Brak hostów pasujących do Twojego wyszukiwania",
@@ -303,9 +298,7 @@
     "createFolder": "Utwórz folder",
     "editFolder": "Edytuj folder",
     "editFolderDescription": "Dostosuj swój folder snippet",
-    "createFolderDescription": "Organizuj swoje fragmenty w folderach",
-    "confirmExecution": "Wykonać \"{{name}}\"?",
-    "confirmExecutionDesc": "Czy na pewno chcesz wykonać ten snippet?"
+    "createFolderDescription": "Organizuj swoje fragmenty w folderach"
   },
   "commandHistory": {
     "title": "Historia",
@@ -409,7 +402,6 @@
     "required": "Wymagane",
     "optional": "Opcjonalnie",
     "connect": "Połącz",
-    "copied": "Skopiowano",
     "connecting": "Łączenie...",
     "creating": "Tworzenie...",
     "clear": "Wyczyść",
@@ -502,7 +494,6 @@
     "checking": "Sprawdzanie...",
     "checkingDatabase": "Sprawdzanie połączenia z bazą danych...",
     "checkingAuthentication": "Sprawdzanie uwierzytelniania...",
-    "backendReconnected": "Połączenie z serwerem przywrócone",
     "actions": "Akcje",
     "remove": "Usuń",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Host Manager",
-    "hosts": "Hosty",
     "sshHosts": "Hosty SSH",
     "noHosts": "Brak hostów SSH",
     "noHostsMessage": "Nie dodano jeszcze żadnych hostów SSH. Kliknij \"Dodaj hosta\", aby rozpocząć.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Nie udało się zaimportować pliku JSON",
     "connectionDetails": "Szczegóły połączenia",
     "organization": "Organizacja",
-    "ipAddress": "Adres IP lub nazwa hosta",
+    "ipAddress": "Adres IP",
     "port": "Port",
     "name": "Nazwisko",
     "username": "Nazwa użytkownika",
@@ -925,8 +915,6 @@
     "key": "Klucz",
     "credential": "Dane logowania",
     "none": "Brak",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Pyta Cię o autoryzację sieciową OPKSSH przy każdym połączeniu. Twój token uwierzytelniania potrwa 24 godziny, dopóki nie będzie musiał zostać przedłużony.",
     "selectCredential": "Wybierz dane logowania",
     "selectCredentialPlaceholder": "Wybierz poświadczenie...",
     "credentialRequired": "Dane logowania są wymagane podczas korzystania z uwierzytelniania logowania",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Interaktywne uwierzytelnianie klawiatury",
     "noneAuthDescription": "Ta metoda uwierzytelniania będzie używała interaktywnego uwierzytelniania klawiatury podczas łączenia z serwerem SSH.",
     "noneAuthDetails": "Interaktywne uwierzytelnianie klawiatury pozwala na zapytanie serwera o poświadczenia podczas połączenia. Jest to przydatne dla serwerów, które wymagają wieloetapowego uwierzytelniania lub jeśli nie chcesz zapisywać danych logowania lokalnie.",
-    "opksshAuthTitle": "Uwierzytelnianie OPKSSH",
     "forceKeyboardInteractive": "Wymuś Interaktywną Klawiaturę",
     "forceKeyboardInteractiveDesc": "Wymusza użycie interaktywnego uwierzytelniania klawiatury. Jest to czasami wymagane dla serwerów, które używają dwustopniowego uwierzytelniania (TOTP/2FA).",
     "overrideCredentialUsername": "Zastąp nazwę użytkownika",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Otwórz w przeglądarce",
     "warpgateContinue": "Zakończyłem uwierzytelnianie",
     "warpgateTimeout": "Limit czasu uwierzytelniania Warpgate. Proszę połączyć się ponownie.",
-    "opksshAuthRequired": "Wymagane uwierzytelnienie OPKSSH",
-    "opksshAuthDescription": "Zakończ uwierzytelnianie w przeglądarce, aby kontynuować. Ta sesja pozostanie ważna przez 24 godziny.",
-    "opksshAuthUrl": "Adres URL uwierzytelniania",
-    "opksshOpenBrowser": "Otwórz przeglądarkę do uwierzytelniania",
-    "opksshWaitingForAuth": "Oczekiwanie na uwierzytelnianie w przeglądarce...",
-    "opksshAuthenticating": "Przetwarzanie uwierzytelniania...",
-    "opksshTimeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie.",
-    "opksshAuthFailed": "Uwierzytelnianie nie powiodło się. Sprawdź swoje poświadczenia i spróbuj ponownie.",
-    "opksshConfigMissing": "Konfiguracja OPKSSH nie została znaleziona. Proszę utworzyć ~/.opk/config.yml z ustawieniami dostawcy OIDC. Zobacz dokumentacja: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Wprowadzić hasło?",
     "sudoPasswordPopupHint": "Naciśnij Enter, aby wstawić, Esc, aby odrzucić",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Automatycznie próbuje uwierzytelnić {{method}}...",
     "totpTimeout": "Limit czasu weryfikacji TOTP. Proszę ponownie połączyć.",
     "passwordTimeout": "Limit czasu weryfikacji hasła. Proszę połączyć się ponownie.",
-    "connectionRejected": "Połączenie odrzucone przez serwer. Sprawdź swoje uwierzytelnianie i konfigurację sieci.",
-    "hostKeyRejected": "Weryfikacja klucza hosta SSH odrzucona. Połączenie anulowane."
+    "connectionRejected": "Połączenie odrzucone przez serwer. Sprawdź swoje uwierzytelnianie i konfigurację sieci."
   },
   "fileManager": {
     "title": "Menedżer plików",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Hasło zostało zresetowane",
     "passwordResetSuccessDesc": "Twoje hasło zostało pomyślnie zresetowane. Możesz teraz zalogować się przy użyciu nowego hasła."
   },
-  "hostKey": {
-    "verifyNewHost": "Zweryfikuj klucz hosta SSH",
-    "keyChangedWarning": "Klucz hosta SSH został zmieniony",
-    "firstConnectionTitle": "Pierwsze połączenie z tym hostem",
-    "firstConnectionDescription": "Nie można ustalić autentyczności tego hosta. Sprawdź, czy odcisk palca odpowiada oczekiwaniom.",
-    "keyChangedDescription": "Klucz hosta dla tego serwera zmienił się od ostatniego połączenia. Może to wskazywać na problem bezpieczeństwa.",
-    "previousKey": "Poprzedni klucz",
-    "newFingerprint": "Nowy odcisk palca",
-    "fingerprint": "Odcisk palca",
-    "verifyInstructions": "Jeśli ufasz temu hostowi, kliknij przycisk Akceptuj, aby kontynuować i zapisać ten odcisk palca dla przyszłych połączeń.",
-    "securityWarning": "Ostrzeżenie bezpieczeństwa",
-    "acceptAndContinue": "Zaakceptuj i kontynuuj",
-    "acceptNewKey": "Akceptuj nowy klucz i kontynuuj"
-  },
   "errors": {
     "notFound": "Strona nie znaleziona",
     "unauthorized": "Nieautoryzowany dostęp",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Pasek hosta i boczny",
     "snippetsSettings": "Fragmenty",
-    "confirmSnippetExecution": "Potwierdź wykonanie Snippet",
-    "confirmSnippetExecutionDesc": "Pokaż okno dialogowe potwierdzenia przed wykonaniem fragmentów",
     "updateSettings": "Aktualizacje",
     "disableUpdateCheck": "Wyłącz sprawdzanie aktualizacji",
     "disableUpdateCheckDesc": "Zatrzymaj sprawdzanie nowych wersji na tablicy startowej i menedżerskiej. Zmniejsza żądania sieci.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 lub przykład.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

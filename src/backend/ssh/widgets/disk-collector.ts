@@ -51,7 +51,7 @@ export async function collectDiskMetrics(client: Client): Promise<{
         );
       }
     }
-  } catch (e) {
+  } catch {
     diskPercent = null;
     usedHuman = null;
     totalHuman = null;

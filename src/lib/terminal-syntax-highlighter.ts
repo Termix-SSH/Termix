@@ -113,14 +113,14 @@ const PATTERNS: HighlightPattern[] = [
 function hasExistingAnsiCodes(text: string): boolean {
   const ansiCount = (
     text.match(
-      /\x1b[\[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g,
+      /\x1b[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g,
     ) || []
   ).length;
   return ansiCount > MAX_ANSI_CODES;
 }
 
 function hasIncompleteAnsiSequence(text: string): boolean {
-  return /\x1b(?:\[(?:[0-9;]*)?)?$/.test(text);
+  return /\x1b(?:\[(?:[0-9;?>=!]*)?)?$/.test(text);
 }
 
 interface TextSegment {
@@ -130,7 +130,7 @@ interface TextSegment {
 
 function parseAnsiSegments(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
-  const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;]*[@-~])/g;
+  const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
   let lastIndex = 0;
   let match;
 

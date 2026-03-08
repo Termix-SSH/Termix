@@ -37,10 +37,11 @@ async function initializeDatabaseAsync(): Promise<void> {
         memoryDatabase = new Database(decryptedBuffer);
 
         try {
-          const sessionCount = memoryDatabase
+          memoryDatabase
             .prepare("SELECT COUNT(*) as count FROM sessions")
             .get() as { count: number };
-        } catch (countError) {
+        } catch {
+          // expected - sessions table may not exist yet
         }
       } else {
         const migration = new DatabaseMigration(dataDir);
@@ -179,6 +180,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         expires_at TEXT NOT NULL,
         last_active_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS trusted_devices (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        device_fingerprint TEXT NOT NULL,
+        device_type TEXT NOT NULL,
+        device_info TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
@@ -752,6 +765,33 @@ const migrateSchema = () => {
 
   try {
     sqlite
+      .prepare("SELECT id FROM trusted_devices LIMIT 1")
+      .get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS trusted_devices (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_fingerprint TEXT NOT NULL,
+          device_type TEXT NOT NULL,
+          device_info TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create trusted_devices table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite
       .prepare("SELECT id FROM network_topology LIMIT 1")
       .get();
   } catch {
@@ -1033,23 +1073,15 @@ const migrateSchema = () => {
     try {
       const validSystemRoles = ['admin', 'user'];
       const unwantedRoleNames = ['superAdmin', 'powerUser', 'readonly', 'member'];
-      let deletedCount = 0;
-
       const deleteByName = sqlite.prepare("DELETE FROM roles WHERE name = ?");
       for (const roleName of unwantedRoleNames) {
-        const result = deleteByName.run(roleName);
-        if (result.changes > 0) {
-          deletedCount += result.changes;
-        }
+        deleteByName.run(roleName);
       }
 
       const deleteOldSystemRole = sqlite.prepare("DELETE FROM roles WHERE name = ? AND is_system = 1");
       for (const role of existingRoles) {
         if (role.is_system === 1 && !validSystemRoles.includes(role.name) && !unwantedRoleNames.includes(role.name)) {
-          const result = deleteOldSystemRole.run(role.name);
-          if (result.changes > 0) {
-            deletedCount += result.changes;
-          }
+          deleteOldSystemRole.run(role.name);
         }
       }
     } catch (cleanupError) {
@@ -1107,7 +1139,7 @@ const migrateSchema = () => {
         for (const admin of adminUsers) {
           try {
             insertUserRole.run(admin.id, adminRole.id);
-          } catch (error) {
+          } catch {
             // Ignore duplicate errors
           }
         }
@@ -1122,7 +1154,7 @@ const migrateSchema = () => {
         for (const user of normalUsers) {
           try {
             insertUserRole.run(user.id, userRole.id);
-          } catch (error) {
+          } catch {
             // Ignore duplicate errors
           }
         }
@@ -1156,10 +1188,11 @@ async function saveMemoryDatabaseToFile() {
     }
 
     try {
-      const sessionCount = memoryDatabase
+      memoryDatabase
         .prepare("SELECT COUNT(*) as count FROM sessions")
         .get() as { count: number };
-    } catch (countError) {
+    } catch {
+      // expected - sessions table may not exist yet
     }
 
     if (enableFileEncryption) {
@@ -1170,6 +1203,8 @@ async function saveMemoryDatabaseToFile() {
     } else {
       fs.writeFileSync(dbPath, buffer);
     }
+
+    DatabaseSaveTrigger.markClean();
   } catch (error) {
     databaseLogger.error("Failed to save in-memory database", error, {
       operation: "memory_db_save_failed",
@@ -1185,7 +1220,11 @@ async function handlePostInitFileEncryption() {
     if (memoryDatabase) {
       await saveMemoryDatabaseToFile();
 
-      setInterval(saveMemoryDatabaseToFile, 15 * 1000);
+      setInterval(() => {
+        if (DatabaseSaveTrigger.isDirty) {
+          saveMemoryDatabaseToFile();
+        }
+      }, 5 * 60 * 1000);
 
       DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
@@ -1254,15 +1293,18 @@ async function cleanupDatabase() {
         try {
           fs.unlinkSync(path.join(tempDir, file));
         } catch {
+          // expected - file cleanup best effort
         }
       }
 
       try {
         fs.rmdirSync(tempDir);
       } catch {
+        // expected - dir cleanup best effort
       }
     }
   } catch {
+    // expected - temp dir cleanup best effort
   }
 }
 
@@ -1271,6 +1313,7 @@ process.on("exit", () => {
     try {
       sqlite.close();
     } catch {
+      // expected - database may already be closed
     }
   }
 });

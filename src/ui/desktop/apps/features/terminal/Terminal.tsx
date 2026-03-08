@@ -9,6 +9,7 @@ import {
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
@@ -45,9 +46,11 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import { toast } from "sonner";
 
 interface HostConfig {
   id?: number;
+  instanceId?: string;
   ip: string;
   port: number;
   username: string;
@@ -76,6 +79,7 @@ interface SSHTerminalProps {
   showTitle?: boolean;
   splitScreen?: boolean;
   onClose?: () => void;
+  onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
 }
@@ -87,6 +91,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
+      onTitleChange,
       initialPath,
       executeCommand,
     },
@@ -176,6 +181,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       data: any;
     } | null>(null);
 
+    const sessionIdRef = useRef<string | null>(null);
+    const isAttachingSessionRef = useRef<boolean>(false);
+
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -185,6 +193,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
+    const wasConnectedRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -192,6 +201,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isReconnectingRef.current = false;
       isConnectingRef.current = false;
       reconnectAttempts.current = 0;
+      wasConnectedRef.current = false;
+      isAttachingSessionRef.current = false;
 
       return () => {};
     }, [hostConfig.id]);
@@ -563,6 +574,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearTimeout(warpgateTimeoutRef.current);
             warpgateTimeoutRef.current = null;
           }
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(JSON.stringify({ type: "disconnect" }));
+          }
+          const tabId = hostConfig.id ?? "default";
+          localStorage.removeItem(`termix_session_${tabId}`);
+          sessionIdRef.current = null;
           webSocketRef.current?.close();
           setIsConnected(false);
           setIsConnecting(false);
@@ -624,7 +641,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       isReconnectingRef.current = true;
 
-      if (terminal) {
+      if (terminal && !isAttachingSessionRef.current) {
         terminal.clear();
       }
 
@@ -677,7 +694,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (terminal && hostConfig) {
-          terminal.clear();
+          if (!isAttachingSessionRef.current) {
+            terminal.clear();
+          }
           const cols = terminal.cols;
           const rows = terminal.rows;
           connectToHost(cols, rows);
@@ -694,6 +713,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       isConnectingRef.current = true;
       connectionAttemptIdRef.current++;
+      wasConnectedRef.current = false;
 
       if (!isReconnectingRef.current) {
         reconnectAttempts.current = 0;
@@ -800,12 +820,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         currentHostIdRef.current = hostConfig.id;
         currentHostConfigRef.current = hostConfig;
 
-        ws.send(
-          JSON.stringify({
-            type: "connectToHost",
-            data: { cols, rows, hostConfig, initialPath, executeCommand },
-          }),
-        );
+        const persistenceEnabled =
+          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+        const tabId = hostConfig.instanceId
+          ? `${hostConfig.id}_${hostConfig.instanceId}`
+          : `${hostConfig.id}_${Date.now()}`;
+        const savedSessionId = persistenceEnabled
+          ? localStorage.getItem(`termix_session_${tabId}`)
+          : null;
+        if (savedSessionId && !isReconnectingRef.current) {
+          sessionIdRef.current = savedSessionId;
+          isAttachingSessionRef.current = true;
+
+          ws.send(
+            JSON.stringify({
+              type: "attachSession",
+              data: {
+                sessionId: savedSessionId,
+                cols,
+                rows,
+                tabInstanceId: hostConfig.instanceId,
+              },
+            }),
+          );
+        } else {
+          isAttachingSessionRef.current = false;
+          ws.send(
+            JSON.stringify({
+              type: "connectToHost",
+              data: { cols, rows, hostConfig, initialPath, executeCommand },
+            }),
+          );
+        }
         terminal.onData((data) => {
           trackInput(data);
           ws.send(JSON.stringify({ type: "input", data }));
@@ -925,6 +971,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setIsConnecting(false);
           } else if (msg.type === "connected") {
             opksshFailedRef.current = false;
+            wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
             isConnectingRef.current = false;
@@ -1009,12 +1056,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.clear();
             }
             setIsConnecting(false);
-            if (
-              onClose &&
-              !connectionErrorRef.current &&
-              !opksshFailedRef.current
-            ) {
-              onClose();
+            if (wasConnectedRef.current) {
+              wasConnectedRef.current = false;
+              if (
+                onClose &&
+                !connectionErrorRef.current &&
+                !opksshFailedRef.current
+              ) {
+                onClose();
+              }
+            } else if (!connectionErrorRef.current) {
+              updateConnectionError(
+                msg.message || t("terminal.connectionRejected"),
+              );
             }
           } else if (msg.type === "totp_required") {
             setTotpRequired(true);
@@ -1221,6 +1275,76 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "sessionCreated") {
+            sessionIdRef.current = msg.sessionId;
+            const persistenceEnabled =
+              localStorage.getItem("enableTerminalSessionPersistence") ===
+              "true";
+            if (persistenceEnabled && hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
+            }
+          } else if (msg.type === "sessionAttached") {
+            isAttachingSessionRef.current = false;
+            opksshFailedRef.current = false;
+            wasConnectedRef.current = true;
+            setIsConnected(true);
+            setIsConnecting(false);
+            isConnectingRef.current = false;
+            shouldNotReconnectRef.current = false;
+            updateConnectionError(null);
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = null;
+            }
+            reconnectAttempts.current = 0;
+            isReconnectingRef.current = false;
+
+            logTerminalActivity();
+
+            addLog({
+              type: "success",
+              stage: "connection",
+              message: t("terminal.reconnected"),
+            });
+          } else if (msg.type === "sessionExpired") {
+            isAttachingSessionRef.current = false;
+            shouldNotReconnectRef.current = false;
+            if (hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.removeItem(`termix_session_${tabId}`);
+            }
+            sessionIdRef.current = null;
+
+            if (webSocketRef.current) {
+              webSocketRef.current.close();
+            }
+          } else if (msg.type === "sessionTakenOver") {
+            if (sessionIdRef.current && hostConfig.instanceId) {
+              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
+              localStorage.removeItem(`termix_session_${tabId}`);
+              sessionIdRef.current = null;
+            }
+
+            if (terminal) {
+              terminal.clear();
+            }
+            setIsConnected(false);
+            setIsConnecting(true);
+
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.sessionTakenOver"),
+            });
+
+            const cols = terminal?.cols || 80;
+            const rows = terminal?.rows || 24;
+            connectToHost(cols, rows);
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1290,7 +1414,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          !isConnected &&
+          !wasConnectedRef.current &&
+          !isAttachingSessionRef.current &&
           event.wasClean &&
           (event.code === 1005 || event.code === 1000)
         ) {
@@ -1342,26 +1467,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
     }
 
-    async function writeTextToClipboard(text: string): Promise<void> {
+    async function writeTextToClipboard(text: string): Promise<boolean> {
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(text);
-          return;
+          return true;
         }
-      } catch (error) {
-        console.error("Terminal operation failed:", error);
+      } catch {
+        // fall through to legacy method
       }
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
       try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
         document.execCommand("copy");
-      } finally {
         document.body.removeChild(textarea);
+        return true;
+      } catch {
+        toast.error(t("terminal.clipboardWriteFailed"));
+        return false;
       }
     }
 
@@ -1370,8 +1498,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
-      } catch (error) {
-        console.error("Terminal operation failed:", error);
+      } catch {
+        toast.error(t("terminal.clipboardReadFailed"));
       }
       return "";
     }
@@ -1521,7 +1649,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       const fitAddon = new FitAddon();
-      const clipboardAddon = new ClipboardAddon();
+      const clipboardProvider = new RobustClipboardProvider();
+      const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
       const webLinksAddon = new WebLinksAddon();
 
@@ -1599,6 +1728,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       return () => {
         isFittingRef.current = false;
         resizeObserver.disconnect();
+        clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
@@ -1606,24 +1736,56 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
     }, [xtermRef, terminal, hostConfig, isDarkMode]);
 
+    const isMountedRef = useRef(false);
+
     useEffect(() => {
+      isMountedRef.current = true;
+
+      const currentHostId = hostConfig.id;
+      const currentInstanceId = hostConfig.instanceId;
+
       return () => {
-        isUnmountingRef.current = true;
-        shouldNotReconnectRef.current = true;
-        isReconnectingRef.current = false;
-        setIsConnecting(false);
-        if (reconnectTimeoutRef.current)
-          clearTimeout(reconnectTimeoutRef.current);
-        if (connectionTimeoutRef.current)
-          clearTimeout(connectionTimeoutRef.current);
-        if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
+        if (!isMountedRef.current) {
+          return;
         }
-        webSocketRef.current?.close();
+
+        if (
+          currentHostIdRef.current !== currentHostId &&
+          currentHostIdRef.current !== null
+        ) {
+          isUnmountingRef.current = true;
+          shouldNotReconnectRef.current = true;
+          isReconnectingRef.current = false;
+          setIsConnecting(false);
+          if (reconnectTimeoutRef.current)
+            clearTimeout(reconnectTimeoutRef.current);
+          if (connectionTimeoutRef.current)
+            clearTimeout(connectionTimeoutRef.current);
+          if (totpTimeoutRef.current) clearTimeout(totpTimeoutRef.current);
+          if (pingIntervalRef.current) {
+            clearInterval(pingIntervalRef.current);
+            pingIntervalRef.current = null;
+          }
+
+          const persistenceEnabled =
+            localStorage.getItem("enableTerminalSessionPersistence") === "true";
+          if (
+            !persistenceEnabled &&
+            sessionIdRef.current &&
+            currentInstanceId
+          ) {
+            const tabId = `${currentHostId}_${currentInstanceId}`;
+            localStorage.removeItem(`termix_session_${tabId}`);
+          }
+
+          if (webSocketRef.current) {
+            webSocketRef.current.close();
+          }
+
+          isMountedRef.current = false;
+        }
       };
-    }, []);
+    }, [hostConfig.id, hostConfig.instanceId]);
 
     useEffect(() => {
       if (!terminal) return;
@@ -1634,18 +1796,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          ((e.ctrlKey && !e.altKey && !e.metaKey) ||
-            (e.metaKey && !e.ctrlKey && !e.altKey)) &&
-          e.key.toLowerCase() === "v"
+          e.ctrlKey &&
+          !e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "c" &&
+          terminal.hasSelection()
         ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((pasteText) => {
-            if (pasteText && webSocketRef.current?.readyState === 1) {
-              terminal.paste(pasteText);
-            }
-          });
-          return false;
+          const selection = terminal.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            writeTextToClipboard(selection);
+            terminal.clearSelection();
+            return false;
+          }
+        }
+
+        if (
+          ((e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) ||
+            (e.metaKey && !e.ctrlKey && !e.altKey) ||
+            (e.ctrlKey &&
+              !e.shiftKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              e.key === "Insert")) &&
+          (e.key.toLowerCase() === "c" || e.key === "Insert")
+        ) {
+          const selection = terminal.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            writeTextToClipboard(selection);
+            return false;
+          }
         }
 
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
@@ -1748,6 +1932,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setAutocompleteSuggestions([]);
           currentAutocompleteCommand.current = "";
           return true;
+        }
+
+        if (
+          e.key === "Tab" &&
+          e.shiftKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === 1) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: "\x1b[Z" }),
+            );
+          }
+          return false;
         }
 
         if (
@@ -1856,6 +2057,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
+      if (
+        webSocketRef.current &&
+        (webSocketRef.current.readyState === WebSocket.OPEN ||
+          webSocketRef.current.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+
       if (terminal.cols < 10 || terminal.rows < 3) {
         requestAnimationFrame(() => {
           if (terminal.cols > 0 && terminal.rows > 0) {
@@ -1877,9 +2086,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           connectToHost(terminal.cols, terminal.rows);
         }
       });
-      // Note: Using hostConfig.id instead of hostConfig object to prevent
-      // unnecessary reconnections when host properties are updated.
-      // Only reconnect when switching to a different host.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
@@ -2121,7 +2327,7 @@ style.innerHTML = `
 }
 
 .xterm {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -2129,11 +2335,11 @@ style.innerHTML = `
 
 .xterm .xterm-screen {
   font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
-  font-variant-ligatures: contextual;
+  font-variant-ligatures: none;
 }
 
 .xterm .xterm-screen .xterm-char {
-  font-feature-settings: "liga" 1, "calt" 1;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 `;
 document.head.appendChild(style);

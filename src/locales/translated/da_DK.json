@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Legitimation",
     "credentialsViewer": "Legitimationsfremviser",
     "manageYourSSHCredentials": "Administrer dine SSH-akkreditiver sikkert",
     "addCredential": "Tilføj Credential",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Dette vil sikkert tilføje den offentlige nøgle til målet værtens ~/.ssh / authorized_keys fil uden at overskrive eksisterende nøgler. Handlingen er reversibel.",
     "chooseHostToDeploy": "Vælg en vært at implementere til...",
     "deploying": "Implementerer...",
-    "copyDeployCommand": "Kopier Implementeringskommando",
-    "copyDeployCommandDescription": "Kopiér en skal- kommando for manuelt at tilføje den offentlige nøgle til en værts autoriseret _ keys- fil. Nyttigt når adgangskodegodkendelse er deaktiveret.",
-    "deployCommandCopied": "Deploy kommando kopieret til udklipsholder",
-    "manualDeployInfo": "Indsæt denne kommando i målet værtens terminal (fx, Proxmox konsol, IPMI, eller fysisk adgang) for at tilføje SSH-nøglen.",
     "name": "Navn",
     "noHostsAvailable": "Ingen værter tilgængelige",
     "noHostsMatchSearch": "Ingen værter matcher din søgning",
@@ -303,9 +298,7 @@
     "createFolder": "Opret Mappe",
     "editFolder": "Rediger Mappe",
     "editFolderDescription": "Tilpas din snippet mappe",
-    "createFolderDescription": "Organiser dine snippets i mapper",
-    "confirmExecution": "Kør \"{{name}}\"?",
-    "confirmExecutionDesc": "Er du sikker på, at du vil udføre denne snippet?"
+    "createFolderDescription": "Organiser dine snippets i mapper"
   },
   "commandHistory": {
     "title": "Historik",
@@ -409,7 +402,6 @@
     "required": "Påkrævet",
     "optional": "Valgfri",
     "connect": "Forbind",
-    "copied": "Kopieret",
     "connecting": "Forbinder...",
     "creating": "Opretter...",
     "clear": "Ryd",
@@ -502,7 +494,6 @@
     "checking": "Kontrollerer...",
     "checkingDatabase": "Kontrollerer databaseforbindelse...",
     "checkingAuthentication": "Kontrollerer godkendelse...",
-    "backendReconnected": "Server forbindelse gendannet",
     "actions": "Handlinger",
     "remove": "Fjern",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Vært Manager",
-    "hosts": "Værter",
     "sshHosts": "SSH Værter",
     "noHosts": "Ingen SSH værter",
     "noHostsMessage": "Du har endnu ikke tilføjet nogen SSH-værter. Klik på \"Tilføj vært\" for at komme i gang.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Kunne ikke importere JSON- fil",
     "connectionDetails": "Forbindelse Detaljer",
     "organization": "Organisation",
-    "ipAddress": "Ip adresse eller værtsnavn",
+    "ipAddress": "Ip Adresse",
     "port": "Port",
     "name": "Navn",
     "username": "Brugernavn",
@@ -925,8 +915,6 @@
     "key": "Nøgle",
     "credential": "Credential",
     "none": "Ingen",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Spørg dig om OPKSSH web-auth ved hver forbindelse. Din auth token vil vare i 24 timer, indtil den skal fornyes.",
     "selectCredential": "Vælg Credential",
     "selectCredentialPlaceholder": "Vælg en legitimationsoplysning...",
     "credentialRequired": "Oplysninger er påkrævet, når du bruger legitimationsoplysninger godkendelse",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Tastatur-Interaktiv Autentificering",
     "noneAuthDescription": "Denne godkendelsesmetode vil bruge tastatur-interaktiv godkendelse, når der oprettes forbindelse til SSH-serveren.",
     "noneAuthDetails": "Tastatur-interaktiv godkendelse tillader serveren at bede dig om legitimationsoplysninger under forbindelsen. Dette er nyttigt for servere, der kræver multi-faktor godkendelse, eller hvis du ikke ønsker at gemme legitimationsoplysninger lokalt.",
-    "opksshAuthTitle": "OPKSSH- Godkendelse",
     "forceKeyboardInteractive": "Tving Tastatur-Interaktiv",
     "forceKeyboardInteractiveDesc": "Kræver brugen af tastatur- interaktiv godkendelse. Dette kræves sommetider for servere, der bruger to- faktor godkendelse (TOTP/2FA).",
     "overrideCredentialUsername": "Tilsidesæt Credential Brugernavn",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Åbn i browser",
     "warpgateContinue": "Jeg Er Afsluttet Godkendelse",
     "warpgateTimeout": "Warpgate authentication timeout. Genforbind.",
-    "opksshAuthRequired": "OPKSSH Godkendelse Kræves",
-    "opksshAuthDescription": "Komplet godkendelse i din browser for at fortsætte. Denne session vil forblive gyldig i 24 timer.",
-    "opksshAuthUrl": "Godkendelses-URL",
-    "opksshOpenBrowser": "Åbn browser for at godkende",
-    "opksshWaitingForAuth": "Venter på godkendelse i browser...",
-    "opksshAuthenticating": "Behandler godkendelse...",
-    "opksshTimeout": "Godkendelse fik timeout. Prøv venligst igen.",
-    "opksshAuthFailed": "Godkendelse mislykkedes. Kontroller dine legitimationsoplysninger og prøv igen.",
-    "opksshConfigMissing": "OPKSSH konfiguration ikke fundet. Opret venligst ~/.opk/config.yml med dine OIDC udbyder indstillinger. Se dokumentation: https://github.com/openpubkey/opkssh#konfiguration",
     "sudoPasswordPopupTitle": "Indsæt Adgangskode?",
     "sudoPasswordPopupHint": "Tryk på Enter for at indsætte, Esc for at afvise",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Prøver automatisk {{method}} autentificering...",
     "totpTimeout": "TOTP bekræftelses-timeout. Genforbind.",
     "passwordTimeout": "Adgangskodens bekræftelses-timeout. Opret venligst ny forbindelse.",
-    "connectionRejected": "Forbindelse afvist af serveren. Tjek venligst din godkendelse og netværkskonfiguration.",
-    "hostKeyRejected": "SSH-værtnøglebekræftelse afvist. Forbindelse annulleret."
+    "connectionRejected": "Forbindelse afvist af serveren. Tjek venligst din godkendelse og netværkskonfiguration."
   },
   "fileManager": {
     "title": "Filhåndtering",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Adgangskode Nulstilling Lykkedes",
     "passwordResetSuccessDesc": "Din adgangskode er blevet nulstillet. Du kan nu logge ind med din nye adgangskode."
   },
-  "hostKey": {
-    "verifyNewHost": "Verificér SSH-værtnøgle",
-    "keyChangedWarning": "SSH Værtsnøgle Ændret",
-    "firstConnectionTitle": "Første gang der oprettes forbindelse til værten",
-    "firstConnectionDescription": "Denne værts ægthed kan ikke fastslås. Kontrollér, at fingeraftrykket matcher det, du forventer.",
-    "keyChangedDescription": "Værtsnøglen for denne server er ændret siden din sidste forbindelse. Dette kan indikere et sikkerhedsproblem.",
-    "previousKey": "Forrige Nøgle",
-    "newFingerprint": "Nyt Fingeraftryk",
-    "fingerprint": "Fingeraftryk",
-    "verifyInstructions": "Hvis du stoler på denne vært, skal du klikke på Accepter for at fortsætte og gemme dette fingeraftryk til fremtidige forbindelser.",
-    "securityWarning": "Advarsel Om Sikkerhed",
-    "acceptAndContinue": "Accepter & Fortsæt",
-    "acceptNewKey": "Accepter Ny Nøgle Og Fortsæt"
-  },
   "errors": {
     "notFound": "Siden blev ikke fundet",
     "unauthorized": "Uautoriseret adgang",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Vært & Sidebjælke",
     "snippetsSettings": "Stumper",
-    "confirmSnippetExecution": "Bekræft Udførelse Af Snippet",
-    "confirmSnippetExecutionDesc": "Vis bekræftelsesdialog før udførelse af snippets",
     "updateSettings": "Opdateringer",
     "disableUpdateCheck": "Deaktivér Opdateringstjek",
     "disableUpdateCheckDesc": "Stop med at kontrollere for nye versioner ved opstart og dashboard. Reducerer netværksanmodninger.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 eller eksempel.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

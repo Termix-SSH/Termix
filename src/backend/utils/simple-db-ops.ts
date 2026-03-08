@@ -1,6 +1,7 @@
 import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { SQL } from "drizzle-orm";
 
 type TableName =
   | "users"
@@ -11,7 +12,7 @@ type TableName =
 
 class SimpleDBOps {
   static async insert<T extends Record<string, unknown>>(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     data: T,
     userId: string,
@@ -109,7 +110,7 @@ class SimpleDBOps {
   }
 
   static async update<T extends Record<string, unknown>>(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     where: unknown,
     data: Partial<T>,
@@ -141,7 +142,7 @@ class SimpleDBOps {
     const result = await getDb()
       .update(table)
       .set(encryptedData)
-      .where(where as any)
+      .where(where as SQL | undefined)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`update_${tableName}`);
@@ -157,13 +158,13 @@ class SimpleDBOps {
   }
 
   static async delete(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     where: unknown,
   ): Promise<unknown[]> {
     const result = await getDb()
       .delete(table)
-      .where(where as any)
+      .where(where as SQL | undefined)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`delete_${tableName}`);

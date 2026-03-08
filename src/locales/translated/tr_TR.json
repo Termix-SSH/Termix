@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Kimlik Bilgileri",
     "credentialsViewer": "Kimlik Bilgileri Görüntüleyici",
     "manageYourSSHCredentials": "SSH kimlik bilgilerinizi güvenli bir şekilde yönetin.",
     "addCredential": "Kimlik Bilgisi Ekle",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Bu işlem, mevcut anahtarların üzerine yazmadan, hedef sunucunun ~/.ssh/authorized_keys dosyasına genel anahtarı güvenli bir şekilde ekleyecektir. İşlem geri alınabilir.",
     "chooseHostToDeploy": "Dağıtım yapılacak sunucuyu seçin...",
     "deploying": "Dağıtıma başlanıyor...",
-    "copyDeployCommand": "Dağıtım Komutunu Kopyala",
-    "copyDeployCommandDescription": "Bir sunucunun authorized_keys dosyasına genel anahtarı manuel olarak eklemek için bir shell komutunu kopyalayın. Parola kimlik doğrulamasının devre dışı bırakıldığı durumlarda kullanışlıdır.",
-    "deployCommandCopied": "Dağıtım komutu panoya kopyalandı.",
-    "manualDeployInfo": "SSH anahtarını eklemek için bu komutu hedef sunucunun terminaline (örneğin, Proxmox konsolu, IPMI veya fiziksel erişim) yapıştırın.",
     "name": "İsim",
     "noHostsAvailable": "Hiç ev sahibi mevcut değil.",
     "noHostsMatchSearch": "Arama kriterlerinize uyan ev sahibi bulunamadı.",
@@ -303,9 +298,7 @@
     "createFolder": "Klasör Oluştur",
     "editFolder": "Klasörü Düzenle",
     "editFolderDescription": "Kod parçacığı klasörünüzü özelleştirin.",
-    "createFolderDescription": "Kod parçacıklarınızı klasörler halinde düzenleyin.",
-    "confirmExecution": "\"{{name}}\"'yi yürüt?",
-    "confirmExecutionDesc": "Bu kod parçasını çalıştırmak istediğinizden emin misiniz?"
+    "createFolderDescription": "Kod parçacıklarınızı klasörler halinde düzenleyin."
   },
   "commandHistory": {
     "title": "Tarih",
@@ -409,7 +402,6 @@
     "required": "Gerekli",
     "optional": "İsteğe bağlı",
     "connect": "Bağlamak",
-    "copied": "Kopyalandı",
     "connecting": "Bağlanıyor...",
     "creating": "Oluşturuluyor...",
     "clear": "Temizlemek",
@@ -502,7 +494,6 @@
     "checking": "Kontrol ediliyor...",
     "checkingDatabase": "Veritabanı bağlantısı kontrol ediliyor...",
     "checkingAuthentication": "Kimlik doğrulama kontrol ediliyor...",
-    "backendReconnected": "Sunucu bağlantısı yeniden kuruldu",
     "actions": "Eylemler",
     "remove": "Kaldırmak",
     "revoke": "Geri çekmek",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Sunucu Yöneticisi",
-    "hosts": "Ev sahipleri",
     "sshHosts": "SSH Sunucuları",
     "noHosts": "SSH Sunucusu Yok",
     "noHostsMessage": "Henüz hiçbir SSH sunucusu eklemediniz. Başlamak için \"Sunucu Ekle\"ye tıklayın.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "JSON dosyasını içe aktarma başarısız oldu.",
     "connectionDetails": "Bağlantı Ayrıntıları",
     "organization": "Organizasyon",
-    "ipAddress": "IP Adresi veya Ana Bilgisayar Adı",
+    "ipAddress": "IP Adresi",
     "port": "Liman",
     "name": "İsim",
     "username": "Kullanıcı adı",
@@ -925,8 +915,6 @@
     "key": "Anahtar",
     "credential": "Kimlik belgesi",
     "none": "Hiçbiri",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Her bağlantıda OPKSSH web kimlik doğrulaması için sizden onay ister. Kimlik doğrulama belirteciniz 24 saat boyunca geçerli olacak ve daha sonra yenilenmesi gerekecektir.",
     "selectCredential": "Kimlik Bilgisi Seçin",
     "selectCredentialPlaceholder": "Bir yeterlilik belgesi seçin...",
     "credentialRequired": "Kimlik doğrulama kullanılırken kimlik bilgisi gereklidir.",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Klavye Etkileşimli Kimlik Doğrulama",
     "noneAuthDescription": "Bu kimlik doğrulama yöntemi, SSH sunucusuna bağlanırken klavye etkileşimli kimlik doğrulamasını kullanacaktır.",
     "noneAuthDetails": "Klavyeyle etkileşimli kimlik doğrulama, sunucunun bağlantı sırasında sizden kimlik bilgilerini istemesine olanak tanır. Bu, çok faktörlü kimlik doğrulama gerektiren sunucular için veya kimlik bilgilerini yerel olarak kaydetmek istemiyorsanız kullanışlıdır.",
-    "opksshAuthTitle": "OPKSSH Kimlik Doğrulaması",
     "forceKeyboardInteractive": "Klavyeyle Etkileşimi Zorla",
     "forceKeyboardInteractiveDesc": "Klavyeyle etkileşimli kimlik doğrulama kullanımını zorunlu kılar. Bu, bazen İki Faktörlü Kimlik Doğrulama (TOTP/2FA) kullanan sunucular için gereklidir.",
     "overrideCredentialUsername": "Kimlik Bilgisi Kullanıcı Adını Geçersiz Kıl",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Tarayıcıda aç",
     "warpgateContinue": "Kimlik doğrulama işlemini tamamladım.",
     "warpgateTimeout": "Warpgate kimlik doğrulama zaman aşımı. Lütfen yeniden bağlanın.",
-    "opksshAuthRequired": "OPKSSH Kimlik Doğrulaması Gerekli",
-    "opksshAuthDescription": "Devam etmek için tarayıcınızda kimlik doğrulama işlemini tamamlayın. Bu oturum 24 saat boyunca geçerli olacaktır.",
-    "opksshAuthUrl": "Kimlik Doğrulama URL'si",
-    "opksshOpenBrowser": "Kimlik doğrulaması için tarayıcıyı açın.",
-    "opksshWaitingForAuth": "Tarayıcıda kimlik doğrulaması bekleniyor...",
-    "opksshAuthenticating": "Kimlik doğrulama işlemi gerçekleştiriliyor...",
-    "opksshTimeout": "Kimlik doğrulama işlemi zaman aşımına uğradı. Lütfen tekrar deneyin.",
-    "opksshAuthFailed": "Kimlik doğrulama başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edin ve tekrar deneyin.",
-    "opksshConfigMissing": "OPKSSH yapılandırması bulunamadı. Lütfen OIDC sağlayıcı ayarlarınızla birlikte ~/.opk/config.yml dosyasını oluşturun. Belgelere bakın: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Şifrenizi girin?",
     "sudoPasswordPopupHint": "Eklemek için Enter'a, silmek için Esc'ye basın.",
     "sudoPasswordPopupConfirm": "Sokmak",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Otomatik olarak {{method}} kimlik doğrulaması deneniyor...",
     "totpTimeout": "TOTP doğrulama zaman aşımına uğradı. Lütfen yeniden bağlanın.",
     "passwordTimeout": "Parola doğrulama zaman aşımına uğradı. Lütfen yeniden bağlanın.",
-    "connectionRejected": "Sunucu bağlantıyı reddetti. Lütfen kimlik doğrulama ve ağ yapılandırmanızı kontrol edin.",
-    "hostKeyRejected": "SSH sunucu anahtarı doğrulama işlemi reddedildi. Bağlantı iptal edildi."
+    "connectionRejected": "Sunucu bağlantıyı reddetti. Lütfen kimlik doğrulama ve ağ yapılandırmanızı kontrol edin."
   },
   "fileManager": {
     "title": "Dosya Yöneticisi",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Şifre Sıfırlama Başarılı",
     "passwordResetSuccessDesc": "Parolanız başarıyla sıfırlandı. Artık yeni parolanızla giriş yapabilirsiniz."
   },
-  "hostKey": {
-    "verifyNewHost": "SSH Ana Bilgisayar Anahtarını Doğrulayın",
-    "keyChangedWarning": "SSH Ana Bilgisayar Anahtarı Değiştirildi",
-    "firstConnectionTitle": "Bu sunucuya ilk kez bağlanıyorum.",
-    "firstConnectionDescription": "Bu sunucunun kimliği doğrulanamamıştır. Parmak izinin beklediğinizle eşleştiğini doğrulayın.",
-    "keyChangedDescription": "Bu sunucunun anahtar kodu son bağlantınızdan bu yana değişti. Bu bir güvenlik sorununa işaret edebilir.",
-    "previousKey": "Önceki Anahtar",
-    "newFingerprint": "Yeni Parmak İzi",
-    "fingerprint": "Parmak izi",
-    "verifyInstructions": "Bu sunucuya güveniyorsanız, devam etmek ve bu parmak izini gelecekteki bağlantılar için kaydetmek üzere Kabul Et'e tıklayın.",
-    "securityWarning": "Güvenlik Uyarısı",
-    "acceptAndContinue": "Kabul Et ve Devam Et",
-    "acceptNewKey": "Yeni Anahtarı Kabul Et ve Devam Et"
-  },
   "errors": {
     "notFound": "Sayfa bulunamadı.",
     "unauthorized": "Yetkisiz erişim",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "terminal",
     "hostSidebarSettings": "Sunucu ve Yan Menü",
     "snippetsSettings": "Kısa bölümler",
-    "confirmSnippetExecution": "Kod Parçasının Yürütülmesini Onayla",
-    "confirmSnippetExecutionDesc": "Kod parçacıklarını çalıştırmadan önce onay iletişim kutusunu göster.",
     "updateSettings": "Güncellemeler",
     "disableUpdateCheck": "Güncelleme Kontrolünü Devre Dışı Bırak",
     "disableUpdateCheckDesc": "Başlangıçta ve kontrol panelinde yeni sürümleri kontrol etmeyi durdurun. Ağ isteklerini azaltır.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 veya example.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

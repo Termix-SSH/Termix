@@ -2,6 +2,7 @@ import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/ui/button.tsx";
 import {
@@ -48,7 +49,8 @@ export function ConsoleTerminal({
     if (!terminal) return;
 
     const fitAddon = new FitAddon();
-    const clipboardAddon = new ClipboardAddon();
+    const clipboardProvider = new RobustClipboardProvider();
+    const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
     const webLinksAddon = new WebLinksAddon();
 
     fitAddonRef.current = fitAddon;
@@ -60,6 +62,94 @@ export function ConsoleTerminal({
     terminal.options.cursorBlink = true;
     terminal.options.fontSize = 14;
     terminal.options.fontFamily = "monospace";
+
+    terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {
+      if (e.type !== "keydown") return true;
+
+      if (
+        ((e.ctrlKey && !e.altKey && !e.metaKey) ||
+          (e.metaKey && !e.ctrlKey && !e.altKey)) &&
+        e.key.toLowerCase() === "v"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (text) terminal.paste(text);
+          })
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
+        return false;
+      }
+
+      if (
+        e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.toLowerCase() === "c" &&
+        terminal.hasSelection()
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selection = terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
+          terminal.clearSelection();
+        }
+        return false;
+      }
+
+      if (
+        ((e.ctrlKey &&
+          e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "c") ||
+          (e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            e.key === "Insert")) &&
+        terminal.hasSelection()
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selection = terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {
+            toast.error(t("terminal.clipboardWriteFailed"));
+          });
+        }
+        return false;
+      }
+
+      if (
+        e.shiftKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key === "Insert"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (text) terminal.paste(text);
+          })
+          .catch(() => {
+            toast.error(t("terminal.clipboardReadFailed"));
+          });
+        return false;
+      }
+
+      return true;
+    });
 
     const backgroundColor = getComputedStyle(document.documentElement)
       .getPropertyValue("--bg-elevated")
@@ -97,6 +187,7 @@ export function ConsoleTerminal({
 
     return () => {
       window.removeEventListener("resize", resizeHandler);
+      clipboardProvider.dispose();
 
       if (wsRef.current) {
         try {

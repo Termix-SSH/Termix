@@ -1,12 +1,9 @@
-import { Client } from "ssh2";
 import type { WebSocket } from "ws";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials, sshData } from "../database/db/schema.js";
+import { sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { UserCrypto } from "../utils/user-crypto.js";
-
 interface ResolvedCredentials {
   username: string;
   password?: string;
@@ -43,9 +40,6 @@ interface AuthContext {
   warpgateAuthTimeout: NodeJS.Timeout | null;
   totpAttempts: number;
 }
-
-const userCrypto = UserCrypto.getInstance();
-const MAX_TOTP_ATTEMPTS = 3;
 
 export class SSHAuthManager {
   public context: AuthContext;
@@ -85,7 +79,7 @@ export class SSHAuthManager {
           key: cred.privateKey
             ? Buffer.from(cred.privateKey as string)
             : undefined,
-          keyPassword: (cred.passphrase as string) || undefined,
+          keyPassword: (cred.keyPassword as string) || undefined,
           authType: (cred.authType as string) || "none",
         };
       }
@@ -163,7 +157,7 @@ export class SSHAuthManager {
     );
 
     if (urlMatch) {
-      this.context.keyboardInteractiveFinish = (responses: string[]) => {
+      this.context.keyboardInteractiveFinish = () => {
         finish([""]);
       };
 
@@ -358,7 +352,7 @@ export class SSHAuthManager {
     stage: string,
     level: string,
     message: string,
-    details?: Record<string, any>,
+    details?: Record<string, unknown>,
   ): void {
     this.context.ws.send(
       JSON.stringify({

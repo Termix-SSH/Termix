@@ -285,4 +285,118 @@ router.delete(
   },
 );
 
+/**
+ * @openapi
+ * /terminal/session_settings:
+ *   get:
+ *     summary: Get session persistence settings
+ *     description: Returns the session timeout and persistence enabled flag.
+ *     tags:
+ *       - Terminal
+ *     responses:
+ *       200:
+ *         description: Session settings.
+ *       500:
+ *         description: Failed to fetch settings.
+ */
+router.get(
+  "/session_settings",
+  authenticateJWT,
+  async (_req: Request, res: Response) => {
+    try {
+      const timeoutRow = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+        )
+        .get() as { value: string } | undefined;
+      const enabledRow = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'terminal_session_persistence_enabled'",
+        )
+        .get() as { value: string } | undefined;
+
+      res.json({
+        timeoutMinutes: timeoutRow ? parseInt(timeoutRow.value, 10) : 30,
+        enabled: enabledRow ? enabledRow.value === "true" : true,
+      });
+    } catch (err) {
+      authLogger.error("Failed to fetch session settings", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to fetch settings",
+      });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /terminal/session_settings:
+ *   post:
+ *     summary: Update session persistence settings
+ *     description: Saves session timeout and persistence enabled flag.
+ *     tags:
+ *       - Terminal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               timeoutMinutes:
+ *                 type: integer
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Settings saved successfully.
+ *       400:
+ *         description: Invalid parameters.
+ *       500:
+ *         description: Failed to save settings.
+ */
+router.post(
+  "/session_settings",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const { timeoutMinutes, enabled } = req.body;
+
+    if (
+      timeoutMinutes !== undefined &&
+      (typeof timeoutMinutes !== "number" ||
+        timeoutMinutes < 1 ||
+        timeoutMinutes > 1440)
+    ) {
+      return res
+        .status(400)
+        .json({ error: "timeoutMinutes must be between 1 and 1440" });
+    }
+
+    try {
+      if (timeoutMinutes !== undefined) {
+        db.$client
+          .prepare(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_timeout_minutes', ?)",
+          )
+          .run(String(timeoutMinutes));
+      }
+
+      if (enabled !== undefined) {
+        db.$client
+          .prepare(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_persistence_enabled', ?)",
+          )
+          .run(String(enabled));
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      authLogger.error("Failed to save session settings", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Failed to save settings",
+      });
+    }
+  },
+);
+
 export default router;

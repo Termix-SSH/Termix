@@ -13,7 +13,7 @@ const sshLogger = systemLogger;
 
 interface SSHSession {
   client: SSHClient;
-  stream: any;
+  stream: import("ssh2").ClientChannel | null;
   isConnected: boolean;
   containerId?: string;
   shell?: string;
@@ -42,7 +42,7 @@ const wss = new WebSocketServer({
       }
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   },
@@ -92,7 +92,7 @@ async function detectShell(
 }
 
 async function createJumpHostChain(
-  jumpHosts: any[],
+  jumpHosts: Array<{ hostId: number }>,
   userId: string,
 ): Promise<SSHClient | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
@@ -129,7 +129,12 @@ async function createJumpHostChain(
       }
     }
 
-    let resolvedCredentials: any = {
+    let resolvedCredentials: {
+      password?: string;
+      sshKey?: string;
+      keyPassword?: string;
+      authType?: string;
+    } = {
       password: jumpHost.password,
       sshKey: jumpHost.key,
       keyPassword: jumpHost.keyPassword,
@@ -154,19 +159,18 @@ async function createJumpHostChain(
       if (credentials.length > 0) {
         const credential = credentials[0];
         resolvedCredentials = {
-          password: credential.password,
-          sshKey:
-            credential.private_key || credential.privateKey || credential.key,
-          keyPassword: credential.key_password || credential.keyPassword,
-          authType: credential.auth_type || credential.authType,
+          password: credential.password as string | undefined,
+          sshKey: credential.privateKey as string | undefined,
+          keyPassword: credential.keyPassword as string | undefined,
+          authType: credential.authType as string | undefined,
         };
       }
     }
 
     const client = new SSHClient();
 
-    const config: any = {
-      host: jumpHost.ip,
+    const config: Record<string, unknown> = {
+      host: jumpHost.ip?.replace(/^\[|\]$/g, "") || jumpHost.ip,
       port: jumpHost.port || 22,
       username: jumpHost.username,
       tryKeyboard: true,
@@ -225,7 +229,7 @@ async function createJumpHostChain(
 }
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  const userId = (req as any).userId;
+  const userId = (req as unknown as { userId: string }).userId;
   const sessionId = `docker-console-${Date.now()}-${Math.random()}`;
   sshLogger.info("Docker console WebSocket connected", {
     operation: "docker_console_connect",
@@ -234,6 +238,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   let sshSession: SSHSession | null = null;
+
+  const wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, 30000);
 
   ws.on("message", async (data) => {
     try {
@@ -286,7 +296,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           try {
-            let resolvedCredentials: any = {
+            let resolvedCredentials: {
+              password?: string;
+              sshKey?: string;
+              keyPassword?: string;
+              authType?: string;
+            } = {
               password: hostConfig.password,
               sshKey: hostConfig.key,
               keyPassword: hostConfig.keyPassword,
@@ -311,22 +326,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
               if (credentials.length > 0) {
                 const credential = credentials[0];
                 resolvedCredentials = {
-                  password: credential.password,
-                  sshKey:
-                    credential.private_key ||
-                    credential.privateKey ||
-                    credential.key,
-                  keyPassword:
-                    credential.key_password || credential.keyPassword,
-                  authType: credential.auth_type || credential.authType,
+                  password: credential.password as string | undefined,
+                  sshKey: credential.privateKey as string | undefined,
+                  keyPassword: credential.keyPassword as string | undefined,
+                  authType: credential.authType as string | undefined,
                 };
               }
             }
 
             const client = new SSHClient();
 
-            const config: any = {
-              host: hostConfig.ip,
+            const config: Record<string, unknown> = {
+              host: hostConfig.ip?.replace(/^\[|\]$/g, "") || hostConfig.ip,
               port: hostConfig.port || 22,
               username: hostConfig.username,
               tryKeyboard: true,
@@ -362,18 +373,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 userId,
               );
               if (jumpClient) {
-                const stream = await new Promise<any>((resolve, reject) => {
-                  jumpClient.forwardOut(
-                    "127.0.0.1",
-                    0,
-                    hostConfig.ip,
-                    hostConfig.port || 22,
-                    (err, stream) => {
-                      if (err) return reject(err);
-                      resolve(stream);
-                    },
-                  );
-                });
+                const stream = await new Promise<import("ssh2").ClientChannel>(
+                  (resolve, reject) => {
+                    jumpClient.forwardOut(
+                      "127.0.0.1",
+                      0,
+                      hostConfig.ip,
+                      hostConfig.port || 22,
+                      (err, stream) => {
+                        if (err) return reject(err);
+                        resolve(stream);
+                      },
+                    );
+                  },
+                );
                 config.sock = stream;
               }
             }
@@ -496,7 +509,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   }
                 });
 
-                stream.stderr.on("data", (data: Buffer) => {});
+                stream.stderr.on("data", () => {
+                  // stderr output ignored
+                });
 
                 stream.on("close", () => {
                   if (ws.readyState === WebSocket.OPEN) {
@@ -556,7 +571,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         case "resize": {
           if (sshSession && sshSession.stream) {
             const { cols, rows } = message.data;
-            sshSession.stream.setWindow(rows, cols);
+            sshSession.stream.setWindow(rows, cols, rows, cols);
           }
           break;
         }
@@ -608,6 +623,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
+    clearInterval(wsPingInterval);
     sshLogger.info("Docker console disconnected", {
       operation: "docker_console_disconnect",
       sessionId,
@@ -641,7 +657,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 });
 
 process.on("SIGTERM", () => {
-  activeSessions.forEach((session, sessionId) => {
+  activeSessions.forEach((session) => {
     if (session.stream) {
       session.stream.end();
     }

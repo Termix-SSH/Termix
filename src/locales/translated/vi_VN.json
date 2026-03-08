@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Thông tin xác thực",
     "credentialsViewer": "Trình xem thông tin đăng nhập",
     "manageYourSSHCredentials": "Quản lý thông tin đăng nhập SSH của bạn một cách an toàn",
     "addCredential": "Thêm thông tin đăng nhập",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Thao tác này sẽ thêm khóa công khai một cách an toàn vào tệp ~/.ssh/authorized_keys của máy chủ đích mà không ghi đè lên các khóa hiện có. Thao tác này có thể đảo ngược.",
     "chooseHostToDeploy": "Chọn máy chủ để triển khai...",
     "deploying": "Đang triển khai...",
-    "copyDeployCommand": "Sao chép lệnh triển khai",
-    "copyDeployCommandDescription": "Sao chép lệnh shell để thêm thủ công khóa công khai vào tệp authorized_keys của máy chủ. Hữu ích khi xác thực bằng mật khẩu bị vô hiệu hóa.",
-    "deployCommandCopied": "Lệnh triển khai đã được sao chép vào clipboard",
-    "manualDeployInfo": "Dán lệnh này vào cửa sổ terminal của máy chủ đích (ví dụ: console Proxmox, IPMI hoặc truy cập vật lý) để thêm khóa SSH.",
     "name": "Tên",
     "noHostsAvailable": "Hiện không có máy chủ nào khả dụng",
     "noHostsMatchSearch": "Không có máy chủ nào phù hợp với tìm kiếm của bạn",
@@ -303,9 +298,7 @@
     "createFolder": "Tạo thư mục",
     "editFolder": "Chỉnh sửa thư mục",
     "editFolderDescription": "Tùy chỉnh thư mục đoạn mã của bạn",
-    "createFolderDescription": "Sắp xếp các đoạn văn bản của bạn vào các thư mục.",
-    "confirmExecution": "Thực thi \"{{name}}\"?",
-    "confirmExecutionDesc": "Bạn có chắc chắn muốn thực thi đoạn mã này không?"
+    "createFolderDescription": "Sắp xếp các đoạn văn bản của bạn vào các thư mục."
   },
   "commandHistory": {
     "title": "Lịch sử",
@@ -409,7 +402,6 @@
     "required": "Yêu cầu",
     "optional": "Không bắt buộc",
     "connect": "Kết nối",
-    "copied": "Đã sao chép",
     "connecting": "Đang kết nối...",
     "creating": "Đang tạo...",
     "clear": "Thông thoáng",
@@ -502,7 +494,6 @@
     "checking": "Đang kiểm tra...",
     "checkingDatabase": "Kiểm tra kết nối cơ sở dữ liệu...",
     "checkingAuthentication": "Đang kiểm tra xác thực...",
-    "backendReconnected": "Kết nối máy chủ đã được khôi phục.",
     "actions": "Hành động",
     "remove": "Di dời",
     "revoke": "Thu hồi",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Quản lý máy chủ",
-    "hosts": "Người dẫn chương trình",
     "sshHosts": "Máy chủ SSH",
     "noHosts": "Không có máy chủ SSH",
     "noHostsMessage": "Bạn chưa thêm bất kỳ máy chủ SSH nào. Nhấp vào \"Thêm máy chủ\" để bắt đầu.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Không thể nhập tệp JSON.",
     "connectionDetails": "Chi tiết kết nối",
     "organization": "Tổ chức",
-    "ipAddress": "Địa chỉ IP hoặc tên máy chủ",
+    "ipAddress": "Địa chỉ IP",
     "port": "Cảng",
     "name": "Tên",
     "username": "Tên người dùng",
@@ -925,8 +915,6 @@
     "key": "Chìa khóa",
     "credential": "Chứng chỉ",
     "none": "Không có",
-    "opkssh": "OPKSSH",
-    "opksshAuthDescription": "Hệ thống sẽ yêu cầu bạn xác thực web bằng OPKSSH mỗi khi kết nối. Mã xác thực của bạn sẽ có hiệu lực trong 24 giờ trước khi cần được gia hạn.",
     "selectCredential": "Chọn thông tin xác thực",
     "selectCredentialPlaceholder": "Chọn một loại chứng chỉ...",
     "credentialRequired": "Cần có thông tin đăng nhập khi sử dụng phương thức xác thực bằng thông tin đăng nhập.",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Xác thực tương tác bàn phím",
     "noneAuthDescription": "Phương thức xác thực này sẽ sử dụng xác thực tương tác bàn phím khi kết nối với máy chủ SSH.",
     "noneAuthDetails": "Xác thực tương tác bàn phím cho phép máy chủ yêu cầu bạn nhập thông tin đăng nhập trong quá trình kết nối. Điều này hữu ích cho các máy chủ yêu cầu xác thực đa yếu tố hoặc nếu bạn không muốn lưu thông tin đăng nhập cục bộ.",
-    "opksshAuthTitle": "Xác thực OPKSSH",
     "forceKeyboardInteractive": "Buộc tương tác bàn phím",
     "forceKeyboardInteractiveDesc": "Buộc sử dụng xác thực tương tác bàn phím. Điều này đôi khi cần thiết đối với các máy chủ sử dụng xác thực hai yếu tố (TOTP/2FA).",
     "overrideCredentialUsername": "Ghi đè tên người dùng xác thực",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Mở trong trình duyệt",
     "warpgateContinue": "Tôi đã hoàn tất xác thực.",
     "warpgateTimeout": "Lỗi xác thực Warpgate đã hết thời gian chờ. Vui lòng kết nối lại.",
-    "opksshAuthRequired": "Yêu cầu xác thực OPKSSH",
-    "opksshAuthDescription": "Hoàn tất xác thực trên trình duyệt của bạn để tiếp tục. Phiên này sẽ có hiệu lực trong 24 giờ.",
-    "opksshAuthUrl": "URL xác thực",
-    "opksshOpenBrowser": "Mở trình duyệt để xác thực.",
-    "opksshWaitingForAuth": "Đang chờ xác thực trên trình duyệt...",
-    "opksshAuthenticating": "Đang xử lý xác thực...",
-    "opksshTimeout": "Quá trình xác thực đã hết hạn. Vui lòng thử lại.",
-    "opksshAuthFailed": "Xác thực không thành công. Vui lòng kiểm tra lại thông tin đăng nhập của bạn và thử lại.",
-    "opksshConfigMissing": "Không tìm thấy cấu hình OPKSSH. Vui lòng tạo tệp ~/.opk/config.yml với các cài đặt nhà cung cấp OIDC của bạn. Xem tài liệu: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Nhập mật khẩu?",
     "sudoPasswordPopupHint": "Nhấn Enter để chèn, Esc để xóa",
     "sudoPasswordPopupConfirm": "Chèn",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Đang tự động thử xác thực {{method}} ...",
     "totpTimeout": "Đã hết thời gian xác thực TOTP. Vui lòng kết nối lại.",
     "passwordTimeout": "Đã hết thời gian xác thực mật khẩu. Vui lòng kết nối lại.",
-    "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra cấu hình xác thực và mạng của bạn.",
-    "hostKeyRejected": "Xác thực khóa máy chủ SSH bị từ chối. Kết nối bị hủy."
+    "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra cấu hình xác thực và mạng của bạn."
   },
   "fileManager": {
     "title": "Trình quản lý tập tin",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Đặt lại mật khẩu thành công",
     "passwordResetSuccessDesc": "Mật khẩu của bạn đã được đặt lại thành công. Giờ bạn có thể đăng nhập bằng mật khẩu mới."
   },
-  "hostKey": {
-    "verifyNewHost": "Xác minh khóa máy chủ SSH",
-    "keyChangedWarning": "Khóa máy chủ SSH đã thay đổi",
-    "firstConnectionTitle": "Lần đầu tiên kết nối với máy chủ này.",
-    "firstConnectionDescription": "Không thể xác minh tính xác thực của máy chủ này. Hãy kiểm tra xem dấu vân tay có khớp với những gì bạn mong đợi hay không.",
-    "keyChangedDescription": "Khóa máy chủ (host key) của máy chủ này đã thay đổi kể từ lần kết nối cuối cùng của bạn. Điều này có thể cho thấy một vấn đề về bảo mật.",
-    "previousKey": "Phím trước đó",
-    "newFingerprint": "Dấu vân tay mới",
-    "fingerprint": "Dấu vân tay",
-    "verifyInstructions": "Nếu bạn tin tưởng máy chủ này, hãy nhấp vào Chấp nhận để tiếp tục và lưu dấu vân tay này cho các kết nối trong tương lai.",
-    "securityWarning": "Cảnh báo an ninh",
-    "acceptAndContinue": "Chấp nhận và tiếp tục",
-    "acceptNewKey": "Chấp nhận khóa mới và tiếp tục"
-  },
   "errors": {
     "notFound": "Không tìm thấy trang",
     "unauthorized": "Truy cập trái phép",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Phần cuối",
     "hostSidebarSettings": "Máy chủ & Thanh bên",
     "snippetsSettings": "Những đoạn trích",
-    "confirmSnippetExecution": "Xác nhận việc thực thi đoạn mã",
-    "confirmSnippetExecutionDesc": "Hiển thị hộp thoại xác nhận trước khi thực thi các đoạn mã.",
     "updateSettings": "Cập nhật",
     "disableUpdateCheck": "Tắt kiểm tra cập nhật",
     "disableUpdateCheckDesc": "Ngừng kiểm tra các phiên bản mới khi khởi động và trên bảng điều khiển. Giảm số lượng yêu cầu mạng.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 hoặc example.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",

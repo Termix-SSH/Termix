@@ -37,7 +37,16 @@ import {
   Search,
   Grid3X3,
   List,
+  ArrowUpDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "../../../types/index.js";
 import {
@@ -48,6 +57,7 @@ import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/Connection
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import {
   listSSHFiles,
+  resolveSSHPath,
   uploadSSHFile,
   downloadSSHFile,
   createSSHFile,
@@ -129,6 +139,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
+  });
+  const [sortBy, setSortBy] = useState<"name" | "modified" | "size">(() => {
+    const saved = localStorage.getItem("fileManagerSortBy");
+    return saved === "name" || saved === "modified" || saved === "size"
+      ? saved
+      : "name";
+  });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
+    const saved = localStorage.getItem("fileManagerSortOrder");
+    return saved === "asc" || saved === "desc" ? saved : "asc";
   });
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
@@ -489,15 +509,24 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return false;
       }
 
-      currentLoadingPathRef.current = path;
+      let resolvedPath = path;
+      if (path.includes("$") || path.startsWith("~")) {
+        resolvedPath = await resolveSSHPath(sshSessionId, path);
+        if (resolvedPath !== path) {
+          setCurrentPath(resolvedPath);
+          lastPathChangeRef.current = resolvedPath;
+        }
+      }
+
+      currentLoadingPathRef.current = resolvedPath;
       setIsLoading(true);
 
       setCreateIntent(null);
 
       try {
-        const response = await listSSHFiles(sshSessionId, path);
+        const response = await listSSHFiles(sshSessionId, resolvedPath);
 
-        if (currentLoadingPathRef.current !== path) {
+        if (currentLoadingPathRef.current !== resolvedPath) {
           return false;
         }
 
@@ -509,7 +538,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         clearSelection();
         return true;
       } catch (error: unknown) {
-        if (currentLoadingPathRef.current === path) {
+        if (currentLoadingPathRef.current === resolvedPath) {
           const axiosError = error as {
             response?: {
               status?: number;
@@ -524,7 +553,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
           if (axiosError.response?.data?.needsSudo) {
             if (!sudoDialogOpen) {
-              setPendingSudoOperation({ type: "navigate", path });
+              setPendingSudoOperation({ type: "navigate", path: resolvedPath });
               setSudoDialogOpen(true);
             }
 
@@ -560,7 +589,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         }
         return false;
       } finally {
-        if (currentLoadingPathRef.current === path) {
+        if (currentLoadingPathRef.current === resolvedPath) {
           setIsLoading(false);
           currentLoadingPathRef.current = "";
         }
@@ -2167,6 +2196,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     localStorage.setItem("fileManagerViewMode", viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    localStorage.setItem("fileManagerSortBy", sortBy);
+    localStorage.setItem("fileManagerSortOrder", sortOrder);
+  }, [sortBy, sortOrder]);
+
   const filteredFiles = useMemo(
     () =>
       files
@@ -2176,12 +2210,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         .sort((a, b) => {
           if (a.type === "directory" && b.type !== "directory") return -1;
           if (a.type !== "directory" && b.type === "directory") return 1;
-          return a.name.localeCompare(b.name, undefined, {
-            numeric: true,
-            sensitivity: "base",
-          });
+
+          let result = 0;
+          switch (sortBy) {
+            case "name":
+              result = a.name.localeCompare(b.name, undefined, {
+                numeric: true,
+                sensitivity: "base",
+              });
+              break;
+            case "modified":
+              result = (a.modified || "").localeCompare(b.modified || "");
+              break;
+            case "size":
+              result = (a.size || 0) - (b.size || 0);
+              break;
+          }
+          return sortOrder === "desc" ? -result : result;
         }),
-    [files, searchQuery],
+    [files, searchQuery, sortBy, sortOrder],
   );
 
   if (!currentHost) {
@@ -2244,6 +2291,44 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   <List className="w-4 h-4" />
                 </Button>
               </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuRadioGroup
+                    value={sortBy}
+                    onValueChange={(v) =>
+                      setSortBy(v as "name" | "modified" | "size")
+                    }
+                  >
+                    <DropdownMenuRadioItem value="name">
+                      {t("fileManager.sortByName")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="modified">
+                      {t("fileManager.sortByDate")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="size">
+                      {t("fileManager.sortBySize")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={sortOrder}
+                    onValueChange={(v) => setSortOrder(v as "asc" | "desc")}
+                  >
+                    <DropdownMenuRadioItem value="asc">
+                      {t("fileManager.ascending")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="desc">
+                      {t("fileManager.descending")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 variant="outline"
@@ -2321,6 +2406,16 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               onPathChange={setCurrentPath}
               onRefresh={handleRefreshDirectory}
               onUpload={handleFilesDropped}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSortChange={(field) => {
+                if (field === sortBy) {
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                } else {
+                  setSortBy(field);
+                  setSortOrder("asc");
+                }
+              }}
               onDownload={(files) => files.forEach(handleDownloadFile)}
               onContextMenu={handleContextMenu}
               viewMode={viewMode}

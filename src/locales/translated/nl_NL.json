@@ -1,6 +1,5 @@
 {
   "credentials": {
-    "credentials": "Aanmeldgegevens",
     "credentialsViewer": "Referenties bekijken",
     "manageYourSSHCredentials": "Beheer uw SSH inloggegevens veilig",
     "addCredential": "Toegangsgegevens toevoegen",
@@ -100,10 +99,6 @@
     "deploymentProcessDescription": "Dit zal veilig de publieke sleutel toevoegen aan het doel host's ~/.ssh/authorized_keys bestand zonder bestaande sleutels te overschrijven. De bewerking is omkeerbaar.",
     "chooseHostToDeploy": "Kies een host om naar te implementeren...",
     "deploying": "Implementeren...",
-    "copyDeployCommand": "Kopieer implementatieopdracht",
-    "copyDeployCommandDescription": "Kopieer een shell commando om handmatig de publieke sleutel toe te voegen aan het authorized_keys bestand van een host. Handig wanneer wachtwoordauthenticatie is uitgeschakeld.",
-    "deployCommandCopied": "Implementeer opdracht gekopieerd naar klembord",
-    "manualDeployInfo": "Plak deze opdracht in de terminal van de doel host (bijv. Proxmox console, IPMI of fysieke toegang) om de SSH sleutel toe te voegen.",
     "name": "naam",
     "noHostsAvailable": "Geen hosts beschikbaar",
     "noHostsMatchSearch": "Er zijn geen hosts die voldoen aan jouw zoekopdracht",
@@ -303,9 +298,7 @@
     "createFolder": "Map aanmaken",
     "editFolder": "Map bewerken",
     "editFolderDescription": "Tekstbouwstenenmap aanpassen",
-    "createFolderDescription": "Organiseer uw snippets in mappen",
-    "confirmExecution": "Uitvoeren \"{{name}}\"?",
-    "confirmExecutionDesc": "Weet u zeker dat u deze snippet wilt uitvoeren?"
+    "createFolderDescription": "Organiseer uw snippets in mappen"
   },
   "commandHistory": {
     "title": "Geschiedenis",
@@ -409,7 +402,6 @@
     "required": "vereist",
     "optional": "Optioneel",
     "connect": "Verbinden",
-    "copied": "Gekoppeld",
     "connecting": "Verbinden...",
     "creating": "Maken...",
     "clear": "Verwijderen",
@@ -502,7 +494,6 @@
     "checking": "Controleren...",
     "checkingDatabase": "Database-verbinding controleren...",
     "checkingAuthentication": "Authenticatie controleren...",
-    "backendReconnected": "Serververbinding hersteld",
     "actions": "acties",
     "remove": "Verwijderen",
     "revoke": "Revoke",
@@ -815,7 +806,6 @@
   },
   "hosts": {
     "title": "Host Manager",
-    "hosts": "Verantwoordelijken",
     "sshHosts": "SSH hosts",
     "noHosts": "Geen SSH hosts",
     "noHostsMessage": "U heeft nog geen SSH hosts toegevoegd. Klik op \"Host toevoegen\" om te beginnen.",
@@ -846,7 +836,7 @@
     "failedToImportJson": "Kan JSON bestand niet importeren",
     "connectionDetails": "Connectie Details",
     "organization": "Rekening",
-    "ipAddress": "IP-adres of hostnaam",
+    "ipAddress": "IP adres",
     "port": "Poort",
     "name": "naam",
     "username": "Gebruikersnaam",
@@ -925,8 +915,6 @@
     "key": "Sleutel",
     "credential": "Toegangsgegevens",
     "none": "geen",
-    "opkssh": "OPKENEN",
-    "opksshAuthDescription": "Verzoekt u naar OPKSSH web-authenticatie bij elke verbinding. Uw autorisatietoken zal 24 uur duren tot het moet worden vernieuwd.",
     "selectCredential": "Selecteer referenties",
     "selectCredentialPlaceholder": "Kies een inloggegevens...",
     "credentialRequired": "Referentiegegevens zijn vereist bij het gebruik van referentieauthenticatie",
@@ -1095,7 +1083,6 @@
     "noneAuthTitle": "Toetsenbord-Interactieve authenticatie",
     "noneAuthDescription": "Deze verificatiemethode gebruikt keyboard-interactieve authenticatie bij het verbinden met de SSH-server.",
     "noneAuthDetails": "Keyboard-interactieve authenticatie maakt het mogelijk dat de server je om inloggegevens vraagt tijdens het verbinden. Dit is handig voor servers waarvoor multi-factor authenticatie vereist is of als u geen lokale inloggegevens wilt opslaan.",
-    "opksshAuthTitle": "OPKSSH authenticatie",
     "forceKeyboardInteractive": "Forceer toetsenbord-interactief",
     "forceKeyboardInteractiveDesc": "Forceert het gebruik van keyboard-interactieve authenticatie. Dit is soms vereist voor servers die gebruik maken van tweestapsverificatie (TOTP/2FA).",
     "overrideCredentialUsername": "Aanmeldgebruikersnaam overschrijven",
@@ -1329,15 +1316,6 @@
     "warpgateOpenBrowser": "Open in browser",
     "warpgateContinue": "Ik heb authenticatie voltooid",
     "warpgateTimeout": "Warpgate authenticatie time-out. Maak opnieuw verbinding.",
-    "opksshAuthRequired": "OPKSSH authenticatie vereist",
-    "opksshAuthDescription": "Voltooi de authenticatie in je browser om door te gaan. Deze sessie blijft 24 uur geldig.",
-    "opksshAuthUrl": "URL authenticatie",
-    "opksshOpenBrowser": "Browser openen om te verifiëren",
-    "opksshWaitingForAuth": "Wachten op authenticatie in browser...",
-    "opksshAuthenticating": "Authenticatie verwerken...",
-    "opksshTimeout": "Authenticatie is verlopen. Probeer het opnieuw.",
-    "opksshAuthFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
-    "opksshConfigMissing": "OPKSSH configuratie niet gevonden. Maak ~/.opk/config.yml aan met uw OIDC providerinstellingen. Zie documentatie: https://github.com/openpubkey/opkssh#configuration",
     "sudoPasswordPopupTitle": "Wachtwoord invoeren?",
     "sudoPasswordPopupHint": "Druk op Enter om in te voegen, Esc om te sluiten",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1359,8 +1337,7 @@
     "automaticFallback": "Authenticatie {{method}} automatisch proberen...",
     "totpTimeout": "TOTP-verificatie time-out. Gelieve opnieuw te verbinden.",
     "passwordTimeout": "Wachtwoord verificatie time-out. Gelieve opnieuw te verbinden.",
-    "connectionRejected": "Verbinding geweigerd door de server. Controleer uw authenticatie en netwerkconfiguratie.",
-    "hostKeyRejected": "SSH host sleutel verificatie afgewezen. Verbinding geannuleerd."
+    "connectionRejected": "Verbinding geweigerd door de server. Controleer uw authenticatie en netwerkconfiguratie."
   },
   "fileManager": {
     "title": "Bestands Beheer",
@@ -1957,20 +1934,6 @@
     "passwordResetSuccess": "Wachtwoord opnieuw instellen geslaagd",
     "passwordResetSuccessDesc": "Uw wachtwoord is met succes gereset. U kunt nu inloggen met uw nieuwe wachtwoord."
   },
-  "hostKey": {
-    "verifyNewHost": "Verifieer SSH host-sleutel",
-    "keyChangedWarning": "SSH host-sleutel gewijzigd",
-    "firstConnectionTitle": "Eerste keer verbinden met deze host",
-    "firstConnectionDescription": "De authenticiteit van deze host kan niet worden vastgesteld. Controleer of de vingerafdruk overeenkomt met uw verwachting.",
-    "keyChangedDescription": "De hostsleutel voor deze server is veranderd sinds je laatste verbinding. Dit kan duiden op een beveiligingsprobleem.",
-    "previousKey": "Vorige sleutel",
-    "newFingerprint": "Nieuwe vingerafdruk",
-    "fingerprint": "Vingerafdruk",
-    "verifyInstructions": "Als je deze host vertrouwt, klik je op Accepteren om door te gaan en sla deze vingerafdruk op voor toekomstige verbindingen.",
-    "securityWarning": "Waarschuwing beveiliging",
-    "acceptAndContinue": "Accepteren & doorgaan",
-    "acceptNewKey": "Accepteer Nieuwe Sleutel & Doorgaan"
-  },
   "errors": {
     "notFound": "Pagina niet gevonden",
     "unauthorized": "Onbevoegde toegang",
@@ -2063,8 +2026,6 @@
     "terminalSettings": "Terminal",
     "hostSidebarSettings": "Host & Sidebar",
     "snippetsSettings": "Tekstbouwstenen",
-    "confirmSnippetExecution": "Bevestig de uitvoering van de Snippet",
-    "confirmSnippetExecutionDesc": "Toon bevestigingsvenster voor het uitvoeren van snippets",
     "updateSettings": "Bijwerken",
     "disableUpdateCheck": "Updatecontrole uitschakelen",
     "disableUpdateCheckDesc": "Stop met controleren op nieuwe versies bij opstarten en dashboard. Vermindert netwerkaanvragen.",
@@ -2085,7 +2046,7 @@
   },
   "placeholders": {
     "enterCode": "000000",
-    "ipAddress": "192.168.1.1 of voorbeeld.com",
+    "ipAddress": "127.0.0.1",
     "port": "22",
     "maxRetries": "3",
     "retryInterval": "10",
