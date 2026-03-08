@@ -159,7 +159,7 @@ async function checkOPKConfigExists(): Promise<{
       return {
         exists: false,
         configPath,
-        error: `OPKSSH configuration is missing 'redirect_uris' field.`,
+        error: `OPKSSH configuration is missing 'redirect_uris' field. This field must contain the Termix callback URL that you registered with your OAuth provider (e.g., http://localhost:8080/ssh/opkssh-callback for Docker). The static callback route will internally redirect to the dynamic route for proper URL rewriting.`,
       };
     }
 

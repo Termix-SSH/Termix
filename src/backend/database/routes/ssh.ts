@@ -2899,12 +2899,9 @@ router.patch(
       typeof updates !== "object" ||
       Object.keys(updates).length === 0
     ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "updates object is required and must contain at least one field",
-        });
+      return res.status(400).json({
+        error: "updates object is required and must contain at least one field",
+      });
     }
 
     try {
@@ -4140,52 +4137,21 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       return;
     }
 
-    const axios = (await import("axios")).default;
     const queryString = req.url.includes("?")
       ? req.url.substring(req.url.indexOf("?"))
       : "";
-    const targetUrl = `http://localhost:${session.callbackPort}/login-callback${queryString}`;
+    const redirectUrl = `/ssh/opkssh-callback/${session.requestId}/login-callback${queryString}`;
 
-    sshLogger.info("Proxying OAuth callback to OPKSSH", {
-      operation: "opkssh_static_callback",
+    sshLogger.info("Redirecting OAuth callback to dynamic route", {
+      operation: "opkssh_static_callback_redirect",
       userId,
       requestId: session.requestId,
       callbackPort: session.callbackPort,
-      targetUrl,
       queryParams: Object.keys(req.query),
+      redirectUrl,
     });
 
-    const response = await axios({
-      method: req.method,
-      url: targetUrl,
-      headers: {
-        ...req.headers,
-        host: `localhost:${session.callbackPort}`,
-      },
-      data: req.body,
-      timeout: 10000,
-      validateStatus: () => true,
-      maxRedirects: 0,
-      responseType: "arraybuffer",
-    });
-
-    sshLogger.info("OPKSSH callback response received", {
-      operation: "opkssh_static_callback_response",
-      userId,
-      requestId: session.requestId,
-      statusCode: response.status,
-      contentType: response.headers["content-type"],
-      hasLocation: !!response.headers.location,
-      location: response.headers.location,
-    });
-
-    Object.entries(response.headers).forEach(([key, value]) => {
-      if (key.toLowerCase() !== "transfer-encoding") {
-        res.setHeader(key, value as string);
-      }
-    });
-
-    res.status(response.status).send(response.data);
+    res.redirect(302, redirectUrl);
   } catch (error) {
     sshLogger.error("Error handling OPKSSH static callback", error, {
       operation: "opkssh_static_callback_error",

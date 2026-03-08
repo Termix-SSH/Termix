@@ -22,12 +22,12 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
-import { createSocks5Connection, type SOCKS5Config } from "../utils/socks5-helper.js";
-import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import {
-  connectionPool,
-  withConnection,
-} from "./ssh-connection-pool.js";
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -129,7 +129,8 @@ async function createJumpHostChain(
   const clients: Client[] = [];
 
   try {
-    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> = [];
+    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> =
+      [];
     for (let i = 0; i < jumpHosts.length; i++) {
       const config = await resolveJumpHost(jumpHosts[i].hostId, userId);
       jumpHostConfigs.push(config);
@@ -188,15 +189,24 @@ async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
-          statsLogger.error(`Jump host ${i + 1}/${totalHops} connection failed`, err, {
-            operation: "jump_host_connect",
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-            hopIndex: i,
-            totalHops,
-            previousHop: i > 0 ? jumpHostConfigs[i - 1]?.ip : (proxySocket ? "proxy" : "direct"),
-            usedProxySocket: i === 0 && !!proxySocket,
-          });
+          statsLogger.error(
+            `Jump host ${i + 1}/${totalHops} connection failed`,
+            err,
+            {
+              operation: "jump_host_connect",
+              hostId: jumpHostConfig.id,
+              ip: jumpHostConfig.ip,
+              hopIndex: i,
+              totalHops,
+              previousHop:
+                i > 0
+                  ? jumpHostConfigs[i - 1]?.ip
+                  : proxySocket
+                    ? "proxy"
+                    : "direct",
+              usedProxySocket: i === 0 && !!proxySocket,
+            },
+          );
           resolve(false);
         });
 
@@ -688,19 +698,32 @@ class PollingManager {
     }, 60000);
   }
 
-  private getGlobalDefaults(): { statusCheckInterval: number; metricsInterval: number } {
+  private getGlobalDefaults(): {
+    statusCheckInterval: number;
+    metricsInterval: number;
+  } {
     try {
       const db = getDb();
       const statusRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'global_status_check_interval'")
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
+        )
         .get() as { value: string } | undefined;
       const metricsRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'global_metrics_interval'")
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
+        )
         .get() as { value: string } | undefined;
 
       return {
-        statusCheckInterval: statusRow ? parseInt(statusRow.value, 10) || DEFAULT_STATS_CONFIG.statusCheckInterval : DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: metricsRow ? parseInt(metricsRow.value, 10) || DEFAULT_STATS_CONFIG.metricsInterval : DEFAULT_STATS_CONFIG.metricsInterval,
+        statusCheckInterval: statusRow
+          ? parseInt(statusRow.value, 10) ||
+            DEFAULT_STATS_CONFIG.statusCheckInterval
+          : DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: metricsRow
+          ? parseInt(metricsRow.value, 10) ||
+            DEFAULT_STATS_CONFIG.metricsInterval
+          : DEFAULT_STATS_CONFIG.metricsInterval,
       };
     } catch {
       return {
@@ -1115,6 +1138,7 @@ app.use((_req, res, next) => {
 });
 
 app.use(authManager.createAuthMiddleware());
+const requireAdmin = authManager.createAdminMiddleware();
 
 async function fetchAllHosts(
   userId: string,
@@ -1509,20 +1533,22 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     const client = new Client();
 
     // Unified proxy + jump host pipeline
-    const proxyConfig: SOCKS5Config | null = (host.useSocks5 &&
+    const proxyConfig: SOCKS5Config | null =
+      host.useSocks5 &&
       (host.socks5Host ||
-        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0)))
-      ? {
-          useSocks5: host.useSocks5,
-          socks5Host: host.socks5Host,
-          socks5Port: host.socks5Port,
-          socks5Username: host.socks5Username,
-          socks5Password: host.socks5Password,
-          socks5ProxyChain: host.socks5ProxyChain,
-        }
-      : null;
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+        ? {
+            useSocks5: host.useSocks5,
+            socks5Host: host.socks5Host,
+            socks5Port: host.socks5Port,
+            socks5Username: host.socks5Username,
+            socks5Password: host.socks5Password,
+            socks5ProxyChain: host.socks5ProxyChain,
+          }
+        : null;
 
-    const hasJumpHosts = host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
+    const hasJumpHosts =
+      host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
 
     let jumpClient: Client | null = null;
     if (hasJumpHosts) {
@@ -3033,20 +3059,45 @@ app.post("/metrics/unregister-viewer", async (req, res) => {
  *     responses:
  *       200:
  *         description: Global monitoring settings.
+ *       403:
+ *         description: Requires admin privileges.
  */
-app.get("/global-settings", async (_req, res) => {
+app.get("/global-settings", requireAdmin, async (_req, res) => {
   try {
     const db = getDb();
+
+    try {
+      db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
+    } catch (tableError) {
+      statsLogger.warn("Settings table does not exist, using defaults", {
+        operation: "global_settings_table_check",
+        error:
+          tableError instanceof Error ? tableError.message : String(tableError),
+      });
+      return res.json({
+        statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: DEFAULT_STATS_CONFIG.metricsInterval,
+      });
+    }
+
     const statusRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'global_status_check_interval'")
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
+      )
       .get() as { value: string } | undefined;
     const metricsRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'global_metrics_interval'")
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
+      )
       .get() as { value: string } | undefined;
 
     res.json({
-      statusCheckInterval: statusRow ? parseInt(statusRow.value, 10) : DEFAULT_STATS_CONFIG.statusCheckInterval,
-      metricsInterval: metricsRow ? parseInt(metricsRow.value, 10) : DEFAULT_STATS_CONFIG.metricsInterval,
+      statusCheckInterval: statusRow
+        ? parseInt(statusRow.value, 10)
+        : DEFAULT_STATS_CONFIG.statusCheckInterval,
+      metricsInterval: metricsRow
+        ? parseInt(metricsRow.value, 10)
+        : DEFAULT_STATS_CONFIG.metricsInterval,
     });
   } catch (error) {
     statsLogger.error("Failed to fetch global settings", {
@@ -3080,33 +3131,64 @@ app.get("/global-settings", async (_req, res) => {
  *         description: Settings saved.
  *       400:
  *         description: Invalid parameters.
+ *       403:
+ *         description: Requires admin privileges.
  */
-app.post("/global-settings", async (req, res) => {
+app.post("/global-settings", requireAdmin, async (req, res) => {
   const { statusCheckInterval, metricsInterval } = req.body;
 
   if (
     statusCheckInterval !== undefined &&
-    (typeof statusCheckInterval !== "number" || statusCheckInterval < 5 || statusCheckInterval > 3600)
+    (typeof statusCheckInterval !== "number" ||
+      statusCheckInterval < 5 ||
+      statusCheckInterval > 3600)
   ) {
-    return res.status(400).json({ error: "statusCheckInterval must be between 5 and 3600 seconds" });
+    return res
+      .status(400)
+      .json({
+        error: "statusCheckInterval must be between 5 and 3600 seconds",
+      });
   }
   if (
     metricsInterval !== undefined &&
-    (typeof metricsInterval !== "number" || metricsInterval < 5 || metricsInterval > 3600)
+    (typeof metricsInterval !== "number" ||
+      metricsInterval < 5 ||
+      metricsInterval > 3600)
   ) {
-    return res.status(400).json({ error: "metricsInterval must be between 5 and 3600 seconds" });
+    return res
+      .status(400)
+      .json({ error: "metricsInterval must be between 5 and 3600 seconds" });
   }
 
   try {
     const db = getDb();
+
+    try {
+      db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
+    } catch (tableError) {
+      statsLogger.error("Settings table does not exist, cannot save settings", {
+        operation: "global_settings_table_check",
+        error:
+          tableError instanceof Error ? tableError.message : String(tableError),
+      });
+      return res.status(500).json({
+        error:
+          "Database settings table is missing. Please check database initialization.",
+      });
+    }
+
     if (statusCheckInterval !== undefined) {
       db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('global_status_check_interval', ?)")
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_status_check_interval', ?)",
+        )
         .run(String(statusCheckInterval));
     }
     if (metricsInterval !== undefined) {
       db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('global_metrics_interval', ?)")
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_metrics_interval', ?)",
+        )
         .run(String(metricsInterval));
     }
 

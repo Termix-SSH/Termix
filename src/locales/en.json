@@ -1973,7 +1973,7 @@
     "loginButton": "Login",
     "registerButton": "Register",
     "forgotPassword": "Forgot Password?",
-    "rememberMe": "Remember Me",
+    "rememberMe": "Remember Device for 30 Days (includes TOTP)",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "loginSuccess": "Login successful",

@@ -1822,20 +1822,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
-        if (
-          ((e.ctrlKey && !e.altKey && !e.metaKey) ||
-            (e.metaKey && !e.ctrlKey && !e.altKey)) &&
-          e.key.toLowerCase() === "v"
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((pasteText) => {
-            if (pasteText && webSocketRef.current?.readyState === 1) {
-              terminal.paste(pasteText);
-            }
-          });
-          return false;
-        }
+        // Paste handling removed - let xterm.js ClipboardAddon handle it natively
+        // to avoid conflicts with browser security dialogs (especially Firefox)
 
         if (
           e.ctrlKey &&
@@ -1874,22 +1862,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }
 
-        if (
-          e.shiftKey &&
-          !e.ctrlKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          e.key === "Insert"
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((pasteText) => {
-            if (pasteText && webSocketRef.current?.readyState === 1) {
-              terminal.paste(pasteText);
-            }
-          });
-          return false;
-        }
+        // Shift+Insert paste removed - let ClipboardAddon handle it natively
 
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {
           const key = e.key.toLowerCase();

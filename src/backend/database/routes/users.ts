@@ -802,6 +802,17 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
+    authLogger.info("OIDC authorize request headers", {
+      protocol: req.protocol,
+      host: req.get("Host"),
+      origin: req.get("Origin"),
+      referer: req.get("Referer"),
+      "x-forwarded-proto": req.get("X-Forwarded-Proto"),
+      "x-forwarded-host": req.get("X-Forwarded-Host"),
+      "x-forwarded-port": req.get("X-Forwarded-Port"),
+      secure: req.secure,
+    });
+
     const envConfig = getOIDCConfigFromEnv();
     let config;
 
@@ -819,7 +830,13 @@ router.get("/oidc/authorize", async (req, res) => {
     const state = nanoid();
     const nonce = nanoid();
 
-    const origin = `${req.protocol}://${req.get("Host")}`;
+    const protocol =
+      process.env.OIDC_FORCE_HTTPS === "true"
+        ? "https"
+        : req.get("X-Forwarded-Proto") || req.protocol;
+
+    const host = req.get("Host");
+    const origin = `${protocol}://${host}`;
     const backendCallbackUri = `${origin}/users/oidc/callback`;
 
     const referer = req.get("Referer");
