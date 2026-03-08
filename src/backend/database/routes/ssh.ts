@@ -1458,22 +1458,51 @@ router.get(
         key: resolvedHost.key || null,
         keyPassword: resolvedHost.keyPassword || null,
         keyType: resolvedHost.keyType || null,
+        credentialId: resolvedHost.credentialId || null,
+        overrideCredentialUsername: !!resolvedHost.overrideCredentialUsername,
         folder: resolvedHost.folder,
         tags:
           typeof resolvedHost.tags === "string"
             ? resolvedHost.tags.split(",").filter(Boolean)
             : resolvedHost.tags || [],
         pin: !!resolvedHost.pin,
+        notes: resolvedHost.notes || null,
         enableTerminal: !!resolvedHost.enableTerminal,
         enableTunnel: !!resolvedHost.enableTunnel,
         enableFileManager: !!resolvedHost.enableFileManager,
+        enableDocker: !!resolvedHost.enableDocker,
+        showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
+        showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
+        showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
+        showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
+        showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
         defaultPath: resolvedHost.defaultPath,
+        sudoPassword: resolvedHost.sudoPassword || null,
         tunnelConnections: resolvedHost.tunnelConnections
           ? JSON.parse(resolvedHost.tunnelConnections as string)
           : [],
+        jumpHosts: resolvedHost.jumpHosts
+          ? JSON.parse(resolvedHost.jumpHosts as string)
+          : null,
+        quickActions: resolvedHost.quickActions
+          ? JSON.parse(resolvedHost.quickActions as string)
+          : null,
+        statsConfig: resolvedHost.statsConfig
+          ? JSON.parse(resolvedHost.statsConfig as string)
+          : null,
+        terminalConfig: resolvedHost.terminalConfig
+          ? JSON.parse(resolvedHost.terminalConfig as string)
+          : null,
+        forceKeyboardInteractive:
+          resolvedHost.forceKeyboardInteractive === "true",
+        useSocks5: !!resolvedHost.useSocks5,
+        socks5Host: resolvedHost.socks5Host || null,
+        socks5Port: resolvedHost.socks5Port || null,
+        socks5Username: resolvedHost.socks5Username || null,
+        socks5Password: resolvedHost.socks5Password || null,
         socks5ProxyChain: resolvedHost.socks5ProxyChain
           ? JSON.parse(resolvedHost.socks5ProxyChain as string)
-          : [],
+          : null,
       };
 
       sshLogger.success("Host exported with decrypted credentials", {
@@ -2366,9 +2395,8 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } = await import(
-            "../../utils/shared-credential-manager.js"
-          );
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -3100,7 +3128,13 @@ router.post(
           enableTunnel: hostData.enableTunnel !== false,
           enableFileManager: hostData.enableFileManager !== false,
           enableDocker: hostData.enableDocker || false,
+          showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
+          showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
+          showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
+          showDockerInSidebar: hostData.showDockerInSidebar ? 1 : 0,
+          showServerStatsInSidebar: hostData.showServerStatsInSidebar ? 1 : 0,
           defaultPath: hostData.defaultPath || "/",
+          sudoPassword: hostData.sudoPassword || null,
           tunnelConnections: hostData.tunnelConnections
             ? JSON.stringify(hostData.tunnelConnections)
             : "[]",
@@ -4069,9 +4103,8 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       },
     });
 
-    const { getUserIdFromRequest, getActiveSessionsForUser } = await import(
-      "../../ssh/opkssh-auth.js"
-    );
+    const { getUserIdFromRequest, getActiveSessionsForUser } =
+      await import("../../ssh/opkssh-auth.js");
 
     const userId = await getUserIdFromRequest({
       cookies: req.cookies,
@@ -4474,9 +4507,8 @@ router.post(
     try {
       const { singleProxy, proxyChain, testTarget } = req.body;
 
-      const { testProxyConnectivity } = await import(
-        "../../utils/proxy-helper.js"
-      );
+      const { testProxyConnectivity } =
+        await import("../../utils/proxy-helper.js");
 
       const result = await testProxyConnectivity({
         singleProxy,

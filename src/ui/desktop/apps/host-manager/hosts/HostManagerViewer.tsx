@@ -601,6 +601,9 @@ export function HostManagerViewer({
         enableTunnel: false,
         enableFileManager: true,
         enableDocker: false,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: true,
+        showServerStatsInSidebar: true,
         defaultPath: "/var/www",
       },
       {
@@ -620,6 +623,9 @@ export function HostManagerViewer({
         enableTunnel: true,
         enableFileManager: false,
         enableDocker: false,
+        showTerminalInSidebar: true,
+        showTunnelInSidebar: true,
+        showServerStatsInSidebar: true,
         tunnelConnections: [
           {
             sourcePort: 5432,
@@ -654,7 +660,11 @@ export function HostManagerViewer({
         enableTunnel: false,
         enableFileManager: true,
         enableDocker: true,
+        showTerminalInSidebar: true,
+        showFileManagerInSidebar: true,
+        showDockerInSidebar: true,
         defaultPath: "/home/developer",
+        sudoPassword: "dev_sudo_password",
       },
       {
         name: "Jump Host Server",
