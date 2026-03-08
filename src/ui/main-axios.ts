@@ -678,10 +678,16 @@ export async function getEmbeddedServerStatus(): Promise<{
       window as Window &
         typeof globalThis & {
           IS_ELECTRON?: boolean;
-          electronAPI?: { invoke: (channel: string, ...args: unknown[]) => Promise<unknown> };
+          electronAPI?: {
+            invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+          };
         }
     ).electronAPI?.invoke("get-embedded-server-status");
-    return result as { running: boolean; embedded: boolean; dataDir: string | null } | null;
+    return result as {
+      running: boolean;
+      embedded: boolean;
+      dataDir: string | null;
+    } | null;
   } catch {
     return null;
   }
@@ -1159,7 +1165,10 @@ export async function updateSSHHost(
   }
 }
 
-export async function bulkImportSSHHosts(hosts: SSHHostData[], overwrite = false): Promise<{
+export async function bulkImportSSHHosts(
+  hosts: SSHHostData[],
+  overwrite = false,
+): Promise<{
   message: string;
   success: number;
   updated: number;
@@ -1168,7 +1177,10 @@ export async function bulkImportSSHHosts(hosts: SSHHostData[], overwrite = false
   errors: string[];
 }> {
   try {
-    const response = await sshHostApi.post("/bulk-import", { hosts, overwrite });
+    const response = await sshHostApi.post("/bulk-import", {
+      hosts,
+      overwrite,
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk import SSH hosts");
@@ -1180,7 +1192,10 @@ export async function bulkUpdateSSHHosts(
   updates: Record<string, unknown>,
 ): Promise<{ updated: number; failed: number; errors: string[] }> {
   try {
-    const response = await sshHostApi.patch("/bulk-update", { hostIds, updates });
+    const response = await sshHostApi.patch("/bulk-update", {
+      hostIds,
+      updates,
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk update SSH hosts");

@@ -251,7 +251,15 @@ export class LazyFieldEncryption {
 
   static getSensitiveFieldsForTable(tableName: string): string[] {
     const sensitiveFieldsMap: Record<string, string[]> = {
-      ssh_data: ["password", "key", "keyPassword", "sudoPassword", "autostartPassword", "autostartKey", "autostartKeyPassword"],
+      ssh_data: [
+        "password",
+        "key",
+        "keyPassword",
+        "sudoPassword",
+        "autostartPassword",
+        "autostartKey",
+        "autostartKeyPassword",
+      ],
       ssh_credentials: [
         "password",
         "key",

@@ -287,7 +287,8 @@ class UserDataImport {
           newCredentialData.createdAt = new Date().toISOString();
         }
 
-        let processedCredentialData: Record<string, unknown> = newCredentialData;
+        let processedCredentialData: Record<string, unknown> =
+          newCredentialData;
         if (options.userDataKey) {
           processedCredentialData = DataCrypto.encryptRecord(
             "ssh_credentials",

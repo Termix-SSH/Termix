@@ -13,10 +13,6 @@ export interface SOCKS5Config {
   socks5ProxyChain?: ProxyNode[];
 }
 
-/**
- * Creates a proxy connection (SOCKS4/5 or HTTP CONNECT) to the target.
- * Unified entry point — backward compatible with createSocks5Connection.
- */
 export async function createProxyConnection(
   targetHost: string,
   targetPort: number,
@@ -44,7 +40,6 @@ export async function createProxyConnection(
   return null;
 }
 
-/** Backward-compatible alias */
 export const createSocks5Connection = createProxyConnection;
 
 async function createSingleProxyConnection(
@@ -84,10 +79,6 @@ async function createSingleProxyConnection(
   }
 }
 
-/**
- * HTTP CONNECT proxy: opens a TCP connection to the proxy, sends CONNECT,
- * waits for 200 response, returns the tunneled socket.
- */
 export async function createHttpConnectConnection(
   targetHost: string,
   targetPort: number,
@@ -99,13 +90,19 @@ export async function createHttpConnectConnection(
 ): Promise<net.Socket> {
   return new Promise<net.Socket>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error(`HTTP CONNECT proxy timeout connecting to ${proxyHost}:${proxyPort}`));
+      reject(
+        new Error(
+          `HTTP CONNECT proxy timeout connecting to ${proxyHost}:${proxyPort}`,
+        ),
+      );
     }, 15000);
 
     function sendConnect(socket: net.Socket) {
       let connectReq = `CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n`;
       if (username && password) {
-        const credentials = Buffer.from(`${username}:${password}`).toString("base64");
+        const credentials = Buffer.from(`${username}:${password}`).toString(
+          "base64",
+        );
         connectReq += `Proxy-Authorization: Basic ${credentials}\r\n`;
       }
       connectReq += "\r\n";
@@ -121,14 +118,21 @@ export async function createHttpConnectConnection(
         socket.removeListener("data", onData);
         socket.removeListener("error", onError);
 
-        const statusLine = responseBuffer.slice(0, responseBuffer.indexOf("\r\n"));
+        const statusLine = responseBuffer.slice(
+          0,
+          responseBuffer.indexOf("\r\n"),
+        );
         const statusCode = parseInt(statusLine.split(" ")[1], 10);
 
         if (statusCode === 200) {
           resolve(socket);
         } else {
           socket.destroy();
-          reject(new Error(`HTTP CONNECT proxy returned ${statusCode}: ${statusLine}`));
+          reject(
+            new Error(
+              `HTTP CONNECT proxy returned ${statusCode}: ${statusLine}`,
+            ),
+          );
         }
       }
 
@@ -157,11 +161,6 @@ export async function createHttpConnectConnection(
   });
 }
 
-/**
- * Creates a connection through a mixed proxy chain (SOCKS4, SOCKS5, HTTP CONNECT).
- * If all nodes are pure SOCKS, uses SocksClient.createConnectionChain for efficiency.
- * Otherwise, connects hop-by-hop, passing the existing socket to each next hop.
- */
 export async function createMixedProxyChainConnection(
   targetHost: string,
   targetPort: number,
@@ -278,10 +277,6 @@ async function createHopByHopConnection(
   }
 }
 
-/**
- * Tests proxy connectivity by connecting through the proxy to a test target.
- * Returns latency in ms on success, throws on failure.
- */
 export async function testProxyConnectivity(options: {
   singleProxy?: {
     host: string;

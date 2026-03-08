@@ -129,7 +129,12 @@ async function createJumpHostChain(
       }
     }
 
-    let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
+    let resolvedCredentials: {
+      password?: string;
+      sshKey?: string;
+      keyPassword?: string;
+      authType?: string;
+    } = {
       password: jumpHost.password,
       sshKey: jumpHost.key,
       keyPassword: jumpHost.keyPassword,
@@ -291,7 +296,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           try {
-            let resolvedCredentials: { password?: string; sshKey?: string; keyPassword?: string; authType?: string } = {
+            let resolvedCredentials: {
+              password?: string;
+              sshKey?: string;
+              keyPassword?: string;
+              authType?: string;
+            } = {
               password: hostConfig.password,
               sshKey: hostConfig.key,
               keyPassword: hostConfig.keyPassword,
@@ -363,18 +373,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 userId,
               );
               if (jumpClient) {
-                const stream = await new Promise<import("ssh2").ClientChannel>((resolve, reject) => {
-                  jumpClient.forwardOut(
-                    "127.0.0.1",
-                    0,
-                    hostConfig.ip,
-                    hostConfig.port || 22,
-                    (err, stream) => {
-                      if (err) return reject(err);
-                      resolve(stream);
-                    },
-                  );
-                });
+                const stream = await new Promise<import("ssh2").ClientChannel>(
+                  (resolve, reject) => {
+                    jumpClient.forwardOut(
+                      "127.0.0.1",
+                      0,
+                      hostConfig.ip,
+                      hostConfig.port || 22,
+                      (err, stream) => {
+                        if (err) return reject(err);
+                        resolve(stream);
+                      },
+                    );
+                  },
+                );
                 config.sock = stream;
               }
             }

@@ -87,10 +87,7 @@ export function AppView({
       currentTab: number;
       allSplitScreenTab: number[];
       removeTab: (id: number) => void;
-      updateTab: (
-        tabId: number,
-        updates: Partial<Omit<TabData, "id">>,
-      ) => void;
+      updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
     };
   const { state: sidebarState } = useSidebar();
   const { theme: appTheme } = useTheme();
@@ -386,9 +383,7 @@ export function AppView({
                     showTitle={false}
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
-                    onTitleChange={(title) =>
-                      updateTab(t.id, { title })
-                    }
+                    onTitleChange={(title) => updateTab(t.id, { title })}
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView
@@ -513,9 +508,7 @@ export function AppView({
       }
 
       const groupKey = isRoot ? String(resetKey) : `${path}-${resetKey}`;
-      const groupId = isRoot
-        ? `main-${node.direction}`
-        : `group-${path}`;
+      const groupId = isRoot ? `main-${node.direction}` : `group-${path}`;
 
       const groupContent = (
         <ResizablePrimitive.PanelGroup

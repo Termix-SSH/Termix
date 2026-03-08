@@ -183,7 +183,6 @@ async function createJumpHostChain(
       }
     }
 
-    // If a proxy config is provided, create a proxy socket to the first jump host
     let proxySocket: import("net").Socket | null = null;
     if (socks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0];
@@ -412,9 +411,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     userId,
   });
 
-  // Session persistence: SSH state is managed by sessionManager
   let currentSessionId: string | null = null;
-  // These remain in closure for the auth flow (not persisted across reconnects)
   let sshConn: Client | null = null;
   let sshStream: ClientChannel | null = null;
   let lastJumpClient: Client | null = null;
@@ -453,18 +450,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    // Session persistence: detach instead of destroy if SSH is connected
     if (currentSessionId) {
       const session = sessionManager.getSession(currentSessionId);
       if (session?.isConnected) {
         sessionManager.detachWs(currentSessionId);
       } else {
-        // Incomplete session (still connecting), destroy it
         sessionManager.destroySession(currentSessionId);
         currentSessionId = null;
       }
     }
-    // Clean up auth-flow-only state
     cleanupAuthState();
   });
 
@@ -568,12 +562,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sshConn = session.sshConn;
           isConnecting = false;
           isConnected = true;
-          // Replay buffered output (without clearing buffer for future reattachments)
           const buffered = sessionManager.getBuffer(session);
           if (buffered) {
             ws.send(JSON.stringify({ type: "data", data: buffered }));
           }
-          // Resize if needed
           if (
             attachData.cols !== session.cols ||
             attachData.rows !== session.rows
@@ -816,8 +808,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } =
-            await import("./opkssh-auth.js");
+          const { startOPKSSHAuth, getRequestOrigin } = await import(
+            "./opkssh-auth.js"
+          );
           const db = getDb();
           const hostRow = await db
             .select()
@@ -1136,7 +1129,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sendLog("auth", "success", `Authentication successful for ${username}`);
       sendLog("connected", "success", "Connection established");
 
-      // Create session after SSH handshake completes (before shell creation)
       const hostDisplayName = `${username}@${ip}:${port}`;
       const tabInstanceId = hostConfig.instanceId;
       currentSessionId = sessionManager.createSession(
@@ -1292,7 +1284,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             termType: "xterm-256color",
           });
 
-          // Register SSH state with session manager for persistence
           if (currentSessionId) {
             sessionManager.setSSHState(
               currentSessionId,
@@ -1303,7 +1294,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
             sessionManager.attachWs(currentSessionId, userId, ws);
 
-            // Notify frontend that session is now ready for persistence
             ws.send(
               JSON.stringify({
                 type: "sessionCreated",
@@ -1319,7 +1309,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
             });
           }
 
-          // Capture sessionId at bind time to prevent cross-session data leakage
           const boundSessionId = currentSessionId;
 
           stream.on("data", (data: Buffer) => {
@@ -1327,10 +1316,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const utf8String = data.toString("utf-8");
               const session = sessionManager.getSession(boundSessionId);
               if (session) {
-                // Always buffer output for session persistence (up to MAX_BUFFER_BYTES)
                 sessionManager.bufferOutput(boundSessionId!, utf8String);
 
-                // Send to attached WebSocket if available
                 if (session.attachedWs?.readyState === WebSocket.OPEN) {
                   session.attachedWs.send(
                     JSON.stringify({ type: "data", data: utf8String }),
@@ -1346,10 +1333,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const fallback = data.toString("latin1");
               const session = sessionManager.getSession(boundSessionId);
               if (session) {
-                // Always buffer output for session persistence (up to MAX_BUFFER_BYTES)
                 sessionManager.bufferOutput(boundSessionId!, fallback);
 
-                // Send to attached WebSocket if available
                 if (session.attachedWs?.readyState === WebSocket.OPEN) {
                   session.attachedWs.send(
                     JSON.stringify({ type: "data", data: fallback }),
@@ -1991,8 +1976,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    // Unified proxy + jump host pipeline: proxy config is passed to jump host chain
-    // so it can create the proxy socket to the first jump host internally
     const proxyConfig: SOCKS5Config | null =
       hostConfig.useSocks5 &&
       (hostConfig.socks5Host ||
@@ -2177,8 +2160,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   }
 
-  // Cleans up auth-flow-only state (timeouts, closure vars).
-  // SSH lifecycle is managed by sessionManager.destroySession().
   function cleanupAuthState(timeoutId?: NodeJS.Timeout) {
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -2194,7 +2175,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       warpgateAuthTimeout = null;
     }
 
-    // Clear closure refs (session manager owns the actual objects now)
     sshStream = null;
     sshConn = null;
     lastJumpClient = null;

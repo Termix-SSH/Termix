@@ -785,7 +785,9 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                           value={field.value ?? ""}
                           onChange={(e) => {
                             const val = e.target.value;
-                            field.onChange(val === "" ? undefined : Number(val));
+                            field.onChange(
+                              val === "" ? undefined : Number(val),
+                            );
                           }}
                         />
                       </FormControl>
@@ -810,7 +812,9 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                           value={field.value ?? ""}
                           onChange={(e) => {
                             const val = e.target.value;
-                            field.onChange(val === "" ? undefined : Number(val));
+                            field.onChange(
+                              val === "" ? undefined : Number(val),
+                            );
                           }}
                         />
                       </FormControl>

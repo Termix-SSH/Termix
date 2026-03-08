@@ -53,8 +53,8 @@ class SystemCrypto {
           );
         }
       } catch {
-      // expected - env file may not exist
-    }
+        // expected - env file may not exist
+      }
 
       await this.generateAndGuideUser();
     } catch (error) {

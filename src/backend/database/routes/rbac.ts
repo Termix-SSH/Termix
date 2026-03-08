@@ -858,9 +858,7 @@ router.delete(
         permissionManager.invalidateUserPermissionCache(userId);
       }
 
-      await db
-        .delete(hostAccess)
-        .where(eq(hostAccess.roleId, roleId));
+      await db.delete(hostAccess).where(eq(hostAccess.roleId, roleId));
 
       await db.delete(roles).where(eq(roles.id, roleId));
 

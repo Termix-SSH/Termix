@@ -15,11 +15,7 @@ const http = require("http");
 const { URL } = require("url");
 const { fork } = require("child_process");
 
-// File logger for debugging GUI-launched app (stdout goes nowhere when launched from Finder)
-const logFile = path.join(
-  app.getPath("userData"),
-  "termix-main.log",
-);
+const logFile = path.join(app.getPath("userData"), "termix-main.log");
 function logToFile(...args) {
   const timestamp = new Date().toISOString();
   const msg = args
@@ -865,7 +861,14 @@ function createMenu() {
 
 app.whenReady().then(async () => {
   logToFile("=== App ready ===");
-  logToFile("isDev:", isDev, "platform:", process.platform, "arch:", process.arch);
+  logToFile(
+    "isDev:",
+    isDev,
+    "platform:",
+    process.platform,
+    "arch:",
+    process.arch,
+  );
   createMenu();
 
   // Start embedded backend server (skip in dev mode, backend runs separately via npm run dev:backend)
@@ -873,7 +876,9 @@ app.whenReady().then(async () => {
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
   } else {
-    logToFile("Skipping embedded backend (isDev=true) - expecting separate dev:backend process");
+    logToFile(
+      "Skipping embedded backend (isDev=true) - expecting separate dev:backend process",
+    );
   }
 
   createTray();

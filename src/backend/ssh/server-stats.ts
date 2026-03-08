@@ -151,7 +151,6 @@ async function createJumpHostChain(
       }
     }
 
-    // If proxy config provided, create proxy socket to first jump host
     let proxySocket: import("net").Socket | null = null;
     if (socks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0]!;
@@ -765,7 +764,6 @@ class PollingManager {
 
     const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
 
-    // Apply global defaults when per-host override is not explicitly set
     const globalDefaults = this.getGlobalDefaults();
     if (result.useGlobalStatusInterval !== false) {
       result.statusCheckInterval = globalDefaults.statusCheckInterval;
@@ -1261,8 +1259,9 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -1532,7 +1531,6 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     const config = await buildSshConfig(host);
     const client = new Client();
 
-    // Unified proxy + jump host pipeline
     const proxyConfig: SOCKS5Config | null =
       host.useSocks5 &&
       (host.socks5Host ||
@@ -1903,8 +1901,6 @@ function tcpPing(
     socket.setTimeout(timeoutMs);
 
     socket.once("connect", () => {
-      // Wait for SSH server banner before closing to avoid
-      // kex_exchange_identification errors in sshd logs
       const dataTimeout = setTimeout(() => {
         cleanup();
         finish(true);
@@ -1913,7 +1909,6 @@ function tcpPing(
       socket.once("data", (data) => {
         clearTimeout(dataTimeout);
         if (data.toString().startsWith("SSH-")) {
-          // Complete SSH identification exchange gracefully
           try {
             socket.end("SSH-2.0-TermixHealthCheck\r\n");
           } catch {
@@ -3143,11 +3138,9 @@ app.post("/global-settings", requireAdmin, async (req, res) => {
       statusCheckInterval < 5 ||
       statusCheckInterval > 3600)
   ) {
-    return res
-      .status(400)
-      .json({
-        error: "statusCheckInterval must be between 5 and 3600 seconds",
-      });
+    return res.status(400).json({
+      error: "statusCheckInterval must be between 5 and 3600 seconds",
+    });
   }
   if (
     metricsInterval !== undefined &&

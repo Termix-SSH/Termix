@@ -1,4 +1,4 @@
-import type { TerminalTheme } from "@/constants/terminal-themes.ts";
+wimport type { TerminalTheme } from "@/constants/terminal-themes.ts";
 import {
   TERMINAL_THEMES,
   TERMINAL_FONTS,

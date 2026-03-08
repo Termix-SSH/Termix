@@ -758,7 +758,6 @@ export function Auth({
           ]);
 
           if (status?.embedded && status?.running && !config?.serverUrl) {
-            // Embedded backend running, no remote server needed
             setCurrentServerUrl("");
             setShowServerConfig(false);
             return;

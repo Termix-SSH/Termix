@@ -2366,8 +2366,9 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -2905,7 +2906,6 @@ router.patch(
     }
 
     try {
-      // Ownership check: only update hosts belonging to this user
       const ownedHosts = await db
         .select({ id: sshData.id, statsConfig: sshData.statsConfig })
         .from(sshData)
@@ -2925,7 +2925,6 @@ router.patch(
         errors.push(`${unauthorizedIds.length} host(s) not found or not owned`);
       }
 
-      // Build simple field updates
       const simpleUpdates: Record<string, unknown> = {};
       if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
       if (typeof updates.folder === "string")
@@ -2939,7 +2938,6 @@ router.patch(
       if (typeof updates.enableDocker === "boolean")
         simpleUpdates.enableDocker = updates.enableDocker;
 
-      // Apply simple field updates in one query
       if (Object.keys(simpleUpdates).length > 0) {
         await db
           .update(sshData)
@@ -2949,7 +2947,6 @@ router.patch(
           );
       }
 
-      // Handle statsConfig merge per-host (stored as JSON string)
       if (updates.statsConfig && typeof updates.statsConfig === "object") {
         for (const host of ownedHosts) {
           try {
@@ -3008,7 +3005,6 @@ router.post(
       errors: [] as string[],
     };
 
-    // Build lookup map for dedup when overwrite is enabled
     let existingHostMap: Map<string, { id: number }> | undefined;
     if (overwrite) {
       try {
@@ -4073,8 +4069,9 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       },
     });
 
-    const { getUserIdFromRequest, getActiveSessionsForUser } =
-      await import("../../ssh/opkssh-auth.js");
+    const { getUserIdFromRequest, getActiveSessionsForUser } = await import(
+      "../../ssh/opkssh-auth.js"
+    );
 
     const userId = await getUserIdFromRequest({
       cookies: req.cookies,
@@ -4477,8 +4474,9 @@ router.post(
     try {
       const { singleProxy, proxyChain, testTarget } = req.body;
 
-      const { testProxyConnectivity } =
-        await import("../../utils/proxy-helper.js");
+      const { testProxyConnectivity } = await import(
+        "../../utils/proxy-helper.js"
+      );
 
       const result = await testProxyConnectivity({
         singleProxy,

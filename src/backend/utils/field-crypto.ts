@@ -38,10 +38,7 @@ class FieldCrypto {
       "key",
       "publicKey",
     ]),
-    opkssh_tokens: new Set([
-      "sshCert",
-      "privateKey",
-    ]),
+    opkssh_tokens: new Set(["sshCert", "privateKey"]),
   };
 
   static encryptField(

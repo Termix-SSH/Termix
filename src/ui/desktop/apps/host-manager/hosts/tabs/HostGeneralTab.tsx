@@ -37,7 +37,14 @@ import { Separator } from "@/components/ui/separator.tsx";
 import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
-import { Plus, X, Upload, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Plus,
+  X,
+  Upload,
+  AlertCircle,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
 import type { HostGeneralTabProps } from "./shared/tab-types";
 import { JumpHostItem } from "./shared/JumpHostItem";
 import { testProxyConnection } from "@/ui/main-axios";
@@ -95,18 +102,30 @@ export function HostGeneralTab({
           },
         });
       } else {
-        toast.error(t("hosts.proxyTestFailed", { error: "No proxy configured" }));
+        toast.error(
+          t("hosts.proxyTestFailed", { error: "No proxy configured" }),
+        );
         setProxyTesting(false);
         return;
       }
 
       if (result.success) {
-        toast.success(t("hosts.proxyTestSuccess", { latency: result.latencyMs ?? 0 }));
+        toast.success(
+          t("hosts.proxyTestSuccess", { latency: result.latencyMs ?? 0 }),
+        );
       } else {
-        toast.error(t("hosts.proxyTestFailed", { error: result.error || "Unknown error" }));
+        toast.error(
+          t("hosts.proxyTestFailed", {
+            error: result.error || "Unknown error",
+          }),
+        );
       }
     } catch (err) {
-      toast.error(t("hosts.proxyTestFailed", { error: err instanceof Error ? err.message : "Unknown error" }));
+      toast.error(
+        t("hosts.proxyTestFailed", {
+          error: err instanceof Error ? err.message : "Unknown error",
+        }),
+      );
     } finally {
       setProxyTesting(false);
     }
@@ -114,7 +133,9 @@ export function HostGeneralTab({
 
   // Build connection path for visualization
   const buildConnectionPath = () => {
-    const parts: string[] = [t("hosts.connectionPath") === "Connection Path" ? "You" : "You"];
+    const parts: string[] = [
+      t("hosts.connectionPath") === "Connection Path" ? "You" : "You",
+    ];
     const useSocks5 = form.watch("useSocks5");
     const jumpHosts = form.watch("jumpHosts") || [];
 
@@ -123,7 +144,8 @@ export function HostGeneralTab({
         const chain = form.watch("socks5ProxyChain") || [];
         chain.forEach((node: any, i: number) => {
           if (node.host) {
-            const typeLabel = node.type === "http" ? "HTTP" : `SOCKS${node.type}`;
+            const typeLabel =
+              node.type === "http" ? "HTTP" : `SOCKS${node.type}`;
             parts.push(`${typeLabel} ${node.host}:${node.port}`);
           }
         });
@@ -1219,7 +1241,10 @@ export function HostGeneralTab({
                                 const newChain = [...currentChain];
                                 newChain[index] = {
                                   ...newChain[index],
-                                  type: value === "http" ? "http" as const : (parseInt(value) as 4 | 5),
+                                  type:
+                                    value === "http"
+                                      ? ("http" as const)
+                                      : (parseInt(value) as 4 | 5),
                                 };
                                 form.setValue("socks5ProxyChain", newChain);
                               }}
@@ -1333,12 +1358,16 @@ export function HostGeneralTab({
                             {i > 0 && (
                               <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}
-                            <span className={cn(
-                              "px-2 py-0.5 rounded",
-                              i === 0 ? "bg-primary/10 text-primary" :
-                              i === path.length - 1 ? "bg-green-500/10 text-green-600 dark:text-green-400" :
-                              "bg-muted text-muted-foreground"
-                            )}>
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded",
+                                i === 0
+                                  ? "bg-primary/10 text-primary"
+                                  : i === path.length - 1
+                                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                    : "bg-muted text-muted-foreground",
+                              )}
+                            >
                               {part}
                             </span>
                           </React.Fragment>

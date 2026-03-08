@@ -3,15 +3,6 @@ import type {
   ClipboardSelectionType,
 } from "@xterm/addon-clipboard";
 
-/**
- * A clipboard provider for @xterm/addon-clipboard that handles:
- * - Deferred writes when the document is not focused (browser Clipboard API restriction)
- * - Electron native clipboard when available
- * - Write-only mode for security (readText always returns empty)
- *
- * When multiple OSC 52 writes arrive before focus returns, only the last one
- * is kept (last-write-wins), which matches normal clipboard semantics.
- */
 export class RobustClipboardProvider implements IClipboardProvider {
   private pendingWrite: string | null = null;
   private readonly focusHandler: () => void;

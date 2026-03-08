@@ -3,7 +3,7 @@ import { WebSocket } from "ws";
 import { sshLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
 
-const MAX_BUFFER_BYTES = 512 * 1024; // 512KB
+const MAX_BUFFER_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MINUTES = 30;
 const HEALTH_CHECK_INTERVAL_MS = 60_000;
 const MAX_SESSIONS_PER_USER = 10;
@@ -13,8 +13,8 @@ export interface TerminalSession {
   userId: string;
   hostId: number;
   hostName: string;
-  tabInstanceId?: string; // Original tab instance that created session
-  attachedTabInstanceId?: string; // Current tab instance attached (may differ for split-screen)
+  tabInstanceId?: string;
+  attachedTabInstanceId?: string;
 
   sshConn: Client | null;
   sshStream: ClientChannel | null;
@@ -63,7 +63,6 @@ class TerminalSessionManager {
   ): string {
     const userSessions = this.getUserSessions(userId);
     if (userSessions.length >= MAX_SESSIONS_PER_USER) {
-      // Destroy the oldest detached session
       const detached = userSessions
         .filter((s) => s.attachedWs === null)
         .sort(
@@ -76,13 +75,11 @@ class TerminalSessionManager {
       }
     }
 
-    // Per-tab-instance limit: prevent refresh spam by destroying old sessions for same tab
     if (tabInstanceId) {
       const tabSessions = userSessions.filter(
         (s) => s.tabInstanceId === tabInstanceId,
       );
       if (tabSessions.length > 0) {
-        // Tab already has a session - destroy old one before creating new
         sshLogger.warn("Tab instance already has session, destroying old", {
           operation: "session_tab_duplicate_cleanup",
           existingSessionId: tabSessions[0].id,
@@ -182,8 +179,6 @@ class TerminalSessionManager {
       return null;
     }
 
-    // Allow attachment if session is detached OR if tab instance matches original creator
-    // This supports split-screen terminals with different instanceIds
     const isDetached =
       !session.attachedWs || session.attachedWs.readyState !== WebSocket.OPEN;
     const isOriginalTab = session.tabInstanceId === tabInstanceId;
@@ -194,7 +189,6 @@ class TerminalSessionManager {
       session.tabInstanceId &&
       tabInstanceId
     ) {
-      // Session is actively attached to a different tab instance
       sshLogger.warn("Session actively attached to different tab instance", {
         operation: "session_attach_instance_conflict",
         sessionId,
@@ -215,7 +209,6 @@ class TerminalSessionManager {
       return null;
     }
 
-    // Log if attaching to different tab instance (split-screen scenario)
     if (
       session.tabInstanceId &&
       tabInstanceId &&
@@ -232,7 +225,6 @@ class TerminalSessionManager {
       );
     }
 
-    // If another WS is attached, detach it
     if (session.attachedWs && session.attachedWs !== ws) {
       try {
         session.attachedWs.send(
@@ -248,14 +240,13 @@ class TerminalSessionManager {
       session.attachedWs = null;
     }
 
-    // Cancel detach timeout
     if (session.detachTimeout) {
       clearTimeout(session.detachTimeout);
       session.detachTimeout = null;
     }
 
     session.attachedWs = ws;
-    session.attachedTabInstanceId = tabInstanceId; // Track current attachment
+    session.attachedTabInstanceId = tabInstanceId;
     session.lastDetachedAt = null;
 
     sshLogger.info("WebSocket attached to session", {
@@ -272,7 +263,6 @@ class TerminalSessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
-    // Clear any existing detach timeout to prevent leaks on double-detach
     if (session.detachTimeout) {
       clearTimeout(session.detachTimeout);
       session.detachTimeout = null;
@@ -390,7 +380,6 @@ class TerminalSessionManager {
     return data;
   }
 
-  // Get buffer without clearing (for session reattachment)
   getBuffer(session: TerminalSession): string | null {
     if (session.outputBuffer.length === 0) return null;
     return session.outputBuffer.join("");
@@ -417,15 +406,13 @@ class TerminalSessionManager {
   }
 
   private healthCheck(): void {
-    // Collect IDs to destroy first to avoid mutating Map during iteration
     const toDestroy: string[] = [];
     const now = Date.now();
-    const GRACE_PERIOD_MS = 10_000; // 10 seconds grace period for reattachment
+    const GRACE_PERIOD_MS = 10_000;
 
     for (const [id, session] of this.sessions) {
       if (!session.isConnected) continue;
 
-      // Skip sessions actively attached
       if (
         session.attachedWs &&
         session.attachedWs.readyState === WebSocket.OPEN
@@ -433,7 +420,6 @@ class TerminalSessionManager {
         continue;
       }
 
-      // If stream destroyed WHILE DETACHED, only destroy if past grace period
       if (session.sshStream?.destroyed) {
         const detachedDuration = session.lastDetachedAt
           ? now - session.lastDetachedAt
@@ -453,7 +439,6 @@ class TerminalSessionManager {
         }
       }
 
-      // Destroy if sshConn is null (connection lost)
       if (!session.sshConn) {
         toDestroy.push(id);
       }
@@ -490,7 +475,6 @@ class TerminalSessionManager {
     }
   }
 
-  // For testing / shutdown
   destroyAll(): void {
     for (const id of [...this.sessions.keys()]) {
       this.destroySession(id);

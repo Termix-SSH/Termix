@@ -1767,15 +1767,14 @@ app.use("/terminal", terminalRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 
-// Serve frontend static files (for Electron embedded mode and standalone deployment)
 const frontendDistPaths = [
-  path.join(__dirname, "../../../dist"),        // dev: from dist/backend/backend/ → dist/
-  path.join(__dirname, "../../dist"),           // alternative relative path
-  path.join(process.cwd(), "dist"),             // cwd-based fallback
+  path.join(__dirname, "../../../dist"),
+  path.join(__dirname, "../../dist"),
+  path.join(process.cwd(), "dist"),
 ];
 
-const frontendDist = frontendDistPaths.find(
-  (p) => fs.existsSync(path.join(p, "index.html")),
+const frontendDist = frontendDistPaths.find((p) =>
+  fs.existsSync(path.join(p, "index.html")),
 );
 
 if (frontendDist) {
@@ -1784,7 +1783,6 @@ if (frontendDist) {
   });
   app.use(express.static(frontendDist));
 
-  // SPA fallback: any GET that accepts HTML and wasn't handled by API routes
   app.use((req, res, next) => {
     if (req.method === "GET" && req.accepts("html")) {
       res.sendFile(path.join(frontendDist, "index.html"));
@@ -1796,7 +1794,12 @@ if (frontendDist) {
 
 app.use(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  (
+    err: unknown,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
       method: req.method,

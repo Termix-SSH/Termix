@@ -305,10 +305,14 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const timeoutRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'")
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+        )
         .get() as { value: string } | undefined;
       const enabledRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'terminal_session_persistence_enabled'")
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'terminal_session_persistence_enabled'",
+        )
         .get() as { value: string } | undefined;
 
       res.json({
@@ -359,21 +363,29 @@ router.post(
 
     if (
       timeoutMinutes !== undefined &&
-      (typeof timeoutMinutes !== "number" || timeoutMinutes < 1 || timeoutMinutes > 1440)
+      (typeof timeoutMinutes !== "number" ||
+        timeoutMinutes < 1 ||
+        timeoutMinutes > 1440)
     ) {
-      return res.status(400).json({ error: "timeoutMinutes must be between 1 and 1440" });
+      return res
+        .status(400)
+        .json({ error: "timeoutMinutes must be between 1 and 1440" });
     }
 
     try {
       if (timeoutMinutes !== undefined) {
         db.$client
-          .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_timeout_minutes', ?)")
+          .prepare(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_timeout_minutes', ?)",
+          )
           .run(String(timeoutMinutes));
       }
 
       if (enabled !== undefined) {
         db.$client
-          .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_persistence_enabled', ?)")
+          .prepare(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_persistence_enabled', ?)",
+          )
           .run(String(enabled));
       }
 

@@ -1108,7 +1108,8 @@ async function connectSSHTunnel(
   });
 
   const connOptions: Record<string, unknown> = {
-    host: tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
+    host:
+      tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
     tryKeyboard: true,
@@ -1378,7 +1379,8 @@ async function killRemoteTunnelByMarker(
 
   const factory = async (): Promise<Client> => {
     const connOptions: Record<string, unknown> = {
-      host: tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
+      host:
+        tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
       port: tunnelConfig.sourceSSHPort,
       username: tunnelConfig.sourceUsername,
       keepaliveInterval: 30000,
@@ -1495,10 +1497,7 @@ async function killRemoteTunnelByMarker(
     });
   };
 
-  const execCommand = (
-    client: Client,
-    cmd: string,
-  ): Promise<string> =>
+  const execCommand = (client: Client, cmd: string): Promise<string> =>
     new Promise((resolve, reject) => {
       client.exec(cmd, (err, stream) => {
         if (err) {
@@ -1512,7 +1511,9 @@ async function killRemoteTunnelByMarker(
         stream.stderr.on("data", (data: Buffer) => {
           const stderr = data.toString().trim();
           if (stderr && !stderr.includes("debug1")) {
-            tunnelLogger.warn(`Kill command stderr for '${tunnelName}': ${stderr}`);
+            tunnelLogger.warn(
+              `Kill command stderr for '${tunnelName}': ${stderr}`,
+            );
           }
         });
         stream.on("close", () => resolve(output.trim()));

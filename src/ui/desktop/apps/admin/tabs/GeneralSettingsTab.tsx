@@ -54,8 +54,12 @@ export function GeneralSettingsTab({
   // Global monitoring defaults
   const [statusInterval, setStatusInterval] = React.useState(60);
   const [metricsInterval, setMetricsInterval] = React.useState(30);
-  const [statusUnit, setStatusUnit] = React.useState<"seconds" | "minutes">("seconds");
-  const [metricsUnit, setMetricsUnit] = React.useState<"seconds" | "minutes">("seconds");
+  const [statusUnit, setStatusUnit] = React.useState<"seconds" | "minutes">(
+    "seconds",
+  );
+  const [metricsUnit, setMetricsUnit] = React.useState<"seconds" | "minutes">(
+    "seconds",
+  );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -222,7 +226,9 @@ export function GeneralSettingsTab({
       </div>
 
       <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
-        <h3 className="text-lg font-semibold">{t("admin.monitoringDefaults")}</h3>
+        <h3 className="text-lg font-semibold">
+          {t("admin.monitoringDefaults")}
+        </h3>
         <p className="text-sm text-muted-foreground">
           {t("admin.monitoringDefaultsDesc")}
         </p>

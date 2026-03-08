@@ -24,7 +24,11 @@ class SSHConnectionPool {
 
   private isConnectionHealthy(client: Client): boolean {
     try {
-      const sock = (client as unknown as { _sock?: { destroyed?: boolean; writable?: boolean } })._sock;
+      const sock = (
+        client as unknown as {
+          _sock?: { destroyed?: boolean; writable?: boolean };
+        }
+      )._sock;
       if (sock && (sock.destroyed || !sock.writable)) {
         return false;
       }
@@ -50,8 +54,8 @@ class SSHConnectionPool {
         try {
           available.client.end();
         } catch {
-        // expected
-      }
+          // expected
+        }
         connections = connections.filter((c) => c !== available);
         this.connections.set(key, connections);
       } else {
@@ -91,8 +95,8 @@ class SSHConnectionPool {
             try {
               avail.client.end();
             } catch {
-        // expected
-      }
+              // expected
+            }
             const filtered = conns.filter((c) => c !== avail);
             this.connections.set(key, filtered);
             factory().then((client) => {
@@ -163,16 +167,16 @@ class SSHConnectionPool {
           try {
             conn.client.end();
           } catch {
-        // expected
-      }
+            // expected
+          }
           return false;
         }
         if (!this.isConnectionHealthy(conn.client)) {
           try {
             conn.client.end();
           } catch {
-        // expected
-      }
+            // expected
+          }
           return false;
         }
         return true;
@@ -192,8 +196,8 @@ class SSHConnectionPool {
         try {
           conn.client.end();
         } catch {
-        // expected
-      }
+          // expected
+        }
       }
     }
     this.connections.clear();

@@ -166,7 +166,6 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       process.exit(0);
     });
 
-    // IPC shutdown for Electron embedded mode (SIGTERM doesn't work on Windows)
     process.on("message", (msg: { type?: string }) => {
       if (msg?.type === "shutdown") {
         systemLogger.info(

@@ -292,9 +292,10 @@ class DataCrypto {
 
       for (const { table, fields } of tablesToReencrypt) {
         try {
-          const selectQuery = table === "users"
-            ? `SELECT * FROM ${table} WHERE id = ?`
-            : `SELECT * FROM ${table} WHERE user_id = ?`;
+          const selectQuery =
+            table === "users"
+              ? `SELECT * FROM ${table} WHERE id = ?`
+              : `SELECT * FROM ${table} WHERE user_id = ?`;
           const records = db
             .prepare(selectQuery)
             .all(userId) as DatabaseRecord[];
@@ -349,10 +350,13 @@ class DataCrypto {
                 (field) => updatedRecord[field] !== record[field],
               );
               if (updateFields.length > 0) {
-                const setClause = updateFields.map((f) => `${f} = ?`).join(", ");
-                const updateQuery = table === "users"
-                  ? `UPDATE ${table} SET ${setClause} WHERE id = ?`
-                  : `UPDATE ${table} SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+                const setClause = updateFields
+                  .map((f) => `${f} = ?`)
+                  .join(", ");
+                const updateQuery =
+                  table === "users"
+                    ? `UPDATE ${table} SET ${setClause} WHERE id = ?`
+                    : `UPDATE ${table} SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
                 const updateValues = updateFields.map(
                   (field) => updatedRecord[field],
                 );

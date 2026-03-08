@@ -2318,9 +2318,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup
                     value={sortOrder}
-                    onValueChange={(v) =>
-                      setSortOrder(v as "asc" | "desc")
-                    }
+                    onValueChange={(v) => setSortOrder(v as "asc" | "desc")}
                   >
                     <DropdownMenuRadioItem value="asc">
                       {t("fileManager.ascending")}

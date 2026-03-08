@@ -1,4 +1,3 @@
-// Re-export from proxy-helper for backward compatibility
 export {
   createSocks5Connection,
   createProxyConnection,

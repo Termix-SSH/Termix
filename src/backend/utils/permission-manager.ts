@@ -382,7 +382,8 @@ class PermissionManager {
         });
       }
 
-      (req as unknown as { hostAccessInfo: HostAccessInfo }).hostAccessInfo = accessInfo;
+      (req as unknown as { hostAccessInfo: HostAccessInfo }).hostAccessInfo =
+        accessInfo;
 
       next();
     };

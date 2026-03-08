@@ -62,11 +62,8 @@ export function ElectronServerConfig({
   const checkEmbeddedBackend = async () => {
     try {
       const status = await getEmbeddedServerStatus();
-      // Show button if embedded backend exists, even if not yet running.
-      // The actual health probe in handleUseEmbedded() will verify connectivity.
       setEmbeddedAvailable(!!status?.embedded);
     } catch {
-      // This component only renders in Electron mode, so default to showing the button.
       setEmbeddedAvailable(true);
     }
   };
@@ -83,7 +80,6 @@ export function ElectronServerConfig({
     } catch {
       clearTimeout(timer);
     }
-    // Fallback: /version
     const controller2 = new AbortController();
     const timer2 = setTimeout(() => controller2.abort(), 3000);
     try {
@@ -103,7 +99,6 @@ export function ElectronServerConfig({
     setError(null);
 
     try {
-      // Retry up to 10 times (~30s) — backend may still be starting
       const maxRetries = 10;
       for (let i = 0; i < maxRetries; i++) {
         if (await probeBackend()) {
@@ -115,7 +110,6 @@ export function ElectronServerConfig({
           }
           return;
         }
-        // Wait before next retry (skip wait on last attempt)
         if (i < maxRetries - 1) {
           await new Promise((r) => setTimeout(r, 2000));
         }
@@ -201,7 +195,6 @@ export function ElectronServerConfig({
             </p>
           </div>
 
-          {/* Embedded Server Button */}
           {embeddedAvailable !== false && (
             <div className="space-y-2">
               <Button
@@ -242,7 +235,6 @@ export function ElectronServerConfig({
             </div>
           )}
 
-          {/* Remote Server Configuration */}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
