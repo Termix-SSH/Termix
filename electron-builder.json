@@ -108,8 +108,14 @@
     "type": "distribution",
     "minimumSystemVersion": "10.15",
     "mergeASARs": false,
-    "singleArchFiles": "**/node_modules/@tailwindcss/oxide-*/**/*",
-    "x64ArchFiles": "**/node_modules/@tailwindcss/oxide-*/**/*"
+    "singleArchFiles": [
+      "**/node_modules/@tailwindcss/oxide-*/**/*",
+      "**/node_modules/better-sqlite3/**/*"
+    ],
+    "x64ArchFiles": [
+      "**/node_modules/@tailwindcss/oxide-*/**/*",
+      "**/node_modules/better-sqlite3/**/*"
+    ]
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
