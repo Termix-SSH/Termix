@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { flushSync } from "react-dom";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronDown, ChevronUpIcon, Hammer } from "lucide-react";
+import { ChevronDown, ChevronUpIcon, Hammer, Zap } from "lucide-react";
 import { Tab } from "@/ui/desktop/navigation/tabs/Tab.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
-import { useCommandHistory } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
+import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
+import { QuickConnectDialog } from "@/ui/desktop/navigation/dialogs/QuickConnectDialog.tsx";
 
 interface TabData {
   id: number;
@@ -61,6 +62,7 @@ export function TopNavbar({
   const [toolsSidebarOpen, setToolsSidebarOpen] = useState(false);
   const [commandHistoryTabActive, setCommandHistoryTabActive] = useState(false);
   const [splitScreenTabActive, setSplitScreenTabActive] = useState(false);
+  const [quickConnectOpen, setQuickConnectOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(() => {
     const saved = localStorage.getItem("rightSidebarWidth");
     const defaultWidth = 400;
@@ -348,18 +350,18 @@ export function TopNavbar({
   return (
     <div>
       <div
-        className="fixed z-10 h-[50px] border-2 border-dark-border rounded-lg flex flex-row transform-none m-0 p-0"
+        className="fixed z-10 h-[50px] border-2 border-edge rounded-lg flex flex-row transform-none m-0 p-0"
         style={{
           top: isTopbarOpen ? "0.5rem" : "-3rem",
           left: leftPosition,
           right: rightPosition,
-          backgroundColor: "#18181b",
+          backgroundColor: "var(--bg-base)",
           transition: "top 200ms linear, left 200ms linear, right 200ms linear",
         }}
       >
         <div
           ref={containerRef}
-          className="h-full p-1 pr-2 border-r-2 border-dark-border w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden skinny-scrollbar gap-1"
+          className="h-full p-1 pr-2 border-r-2 border-edge w-[calc(100%-6rem)] flex items-center overflow-x-auto overflow-y-hidden skinny-scrollbar gap-1"
         >
           {tabs.map((tab: TabData, index: number) => {
             const isActive = tab.id === currentTab;
@@ -367,7 +369,7 @@ export function TopNavbar({
               Array.isArray(allSplitScreenTab) &&
               allSplitScreenTab.includes(tab.id);
             const isTerminal = tab.type === "terminal";
-            const isServer = tab.type === "server";
+            const isServer = tab.type === "server_stats";
             const isFileManager = tab.type === "file_manager";
             const isTunnel = tab.type === "tunnel";
             const isDocker = tab.type === "docker";
@@ -384,7 +386,8 @@ export function TopNavbar({
               ((tab.type === "home" ||
                 tab.type === "ssh_manager" ||
                 tab.type === "admin" ||
-                tab.type === "user_profile") &&
+                tab.type === "user_profile" ||
+                tab.type === "network_graph") &&
                 isSplitScreenActive);
             const isHome = tab.type === "home";
             const disableClose = isHome;
@@ -495,7 +498,8 @@ export function TopNavbar({
                     isAdmin ||
                     isUserProfile ||
                     isRdp ||
-                    isVnc
+                    isVnc ||
+                    tab.type === "network_graph"
                       ? () => handleTabClose(tab.id)
                       : undefined
                   }
@@ -513,13 +517,15 @@ export function TopNavbar({
                     isAdmin ||
                     isUserProfile ||
                     isRdp ||
-                    isVnc
+                    isVnc ||
+                    tab.type === "network_graph"
                   }
                   disableActivate={disableActivate}
                   disableSplit={disableSplit}
                   disableClose={disableClose}
                   isDragging={isDraggingThisTab}
                   isDragOver={false}
+                  hostConfig={tab.hostConfig}
                 />
               </div>
             );
@@ -532,10 +538,19 @@ export function TopNavbar({
           <Button
             variant="outline"
             onClick={() => setToolsSidebarOpen(!toolsSidebarOpen)}
-            className="w-[30px] h-[30px] border-dark-border"
+            className="w-[30px] h-[30px] border-edge"
             title={t("nav.tools")}
           >
             <Hammer className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setQuickConnectOpen(true)}
+            className="w-[30px] h-[30px] border-edge"
+            title={t("quickConnect.title")}
+          >
+            <Zap className="h-4 w-4" />
           </Button>
 
           <Button
@@ -557,8 +572,8 @@ export function TopNavbar({
             right: rightPosition,
             height: "10px",
             zIndex: 9999,
-            backgroundColor: "#18181b",
-            border: "2px solid #27272a",
+            backgroundColor: "var(--bg-base)",
+            border: "2px solid var(--border-base)",
             borderTop: "none",
           }}
         >
@@ -583,6 +598,11 @@ export function TopNavbar({
           setCommandHistoryTabActive(false);
           setSplitScreenTabActive(false);
         }}
+      />
+
+      <QuickConnectDialog
+        open={quickConnectOpen}
+        onOpenChange={setQuickConnectOpen}
       />
     </div>
   );

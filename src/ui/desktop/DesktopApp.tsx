@@ -1,21 +1,40 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Component,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host-manager/HostManager.tsx";
+import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
 } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
-import { CommandHistoryProvider } from "@/ui/desktop/apps/terminal/command-history/CommandHistoryContext.tsx";
-import { AdminSettings } from "@/ui/desktop/admin/AdminSettings.tsx";
+import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
+import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
+import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
+import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
+import { useTheme } from "@/components/theme-provider";
+import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
+import { useTranslation } from "react-i18next";
 
-function AppContent() {
+function AppContent({
+  onAuthStateChange,
+}: {
+  onAuthStateChange?: (isAuthenticated: boolean) => void;
+}) {
+  const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -28,17 +47,69 @@ function AppContent() {
   const [transitionPhase, setTransitionPhase] = useState<
     "idle" | "fadeOut" | "fadeIn"
   >("idle");
-  const { currentTab, tabs } = useTabs();
+  const { currentTab, tabs, updateTab, addTab } = useTabs();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
+  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
+
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
   const lastShiftPressTime = useRef(0);
+
+  const lastAltPressTime = useRef(0);
+
+  useEffect(() => {
+    const handleDatabaseConnectionLost = () => {
+      setDbConnectionFailed(true);
+    };
+
+    const handleDatabaseConnectionRestored = () => {
+      setDbConnectionFailed(false);
+      toast.success(t("common.backendReconnected"));
+    };
+
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+    };
+
+    dbHealthMonitor.on(
+      "database-connection-lost",
+      handleDatabaseConnectionLost,
+    );
+    dbHealthMonitor.on(
+      "database-connection-restored",
+      handleDatabaseConnectionRestored,
+    );
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+
+    return () => {
+      dbHealthMonitor.off(
+        "database-connection-lost",
+        handleDatabaseConnectionLost,
+      );
+      dbHealthMonitor.off(
+        "database-connection-restored",
+        handleDatabaseConnectionRestored,
+      );
+      dbHealthMonitor.off("session-expired", handleSessionExpired);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.code === "ShiftLeft") {
         if (event.repeat) {
+          return;
+        }
+        const shortcutEnabled =
+          localStorage.getItem("commandPaletteShortcutEnabled") !== "false";
+        if (!shortcutEnabled) {
           return;
         }
         const now = Date.now();
@@ -49,6 +120,22 @@ function AppContent() {
           lastShiftPressTime.current = now;
         }
       }
+
+      if (event.code === "AltLeft" && !event.repeat) {
+        const now = Date.now();
+        if (now - lastAltPressTime.current < 300) {
+          const currentIsDark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          const newTheme = currentIsDark ? "light" : "dark";
+          setTheme(newTheme);
+          lastAltPressTime.current = 0;
+        } else {
+          lastAltPressTime.current = now;
+        }
+      }
+
       if (event.key === "Escape") {
         setIsCommandPaletteOpen(false);
       }
@@ -58,7 +145,48 @@ function AppContent() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [theme, setTheme]);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const terminalMatch = path.match(/^\/terminal\/([a-zA-Z0-9_-]+)$/);
+    const legacyMatch = path.match(/^\/hosts\/([a-zA-Z0-9_-]+)\/terminal$/);
+    const hostIdentifier = terminalMatch?.[1] || legacyMatch?.[1];
+
+    if (hostIdentifier) {
+      const openTerminal = async () => {
+        try {
+          const { getSSHHostById, getSSHHosts } =
+            await import("@/ui/main-axios.ts");
+          let host = null;
+
+          if (/^\d+$/.test(hostIdentifier)) {
+            host = await getSSHHostById(parseInt(hostIdentifier, 10));
+          } else {
+            const hosts = await getSSHHosts();
+            host =
+              hosts.find((h: { name?: string }) => h.name === hostIdentifier) ||
+              null;
+          }
+
+          if (host) {
+            addTab({
+              type: "terminal",
+              title: host.name || host.ip,
+              data: { host, initialCommand: "" },
+            });
+            window.history.replaceState({}, "", "/");
+          } else {
+            toast.error(`Host "${hostIdentifier}" not found`);
+          }
+        } catch (error) {
+          console.error("Failed to open terminal:", error);
+          toast.error("Failed to open terminal for host");
+        }
+      };
+      openTerminal();
+    }
+  }, [addTab]);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -105,7 +233,9 @@ function AppContent() {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
   }, [isTopbarOpen]);
 
-  const handleSelectView = () => {};
+  useEffect(() => {
+    onAuthStateChange?.(isAuthenticated);
+  }, [isAuthenticated, onAuthStateChange]);
 
   const handleAuthSuccess = useCallback(
     (authData: {
@@ -137,12 +267,7 @@ function AppContent() {
 
     setTimeout(async () => {
       try {
-        const { logoutUser, isElectron } = await import("@/ui/main-axios.ts");
         await logoutUser();
-
-        if (isElectron()) {
-          localStorage.removeItem("jwt");
-        }
       } catch (error) {
         console.error("Logout failed:", error);
       }
@@ -154,34 +279,67 @@ function AppContent() {
   const currentTabData = tabs.find((tab) => tab.id === currentTab);
   const showTerminalView =
     currentTabData?.type === "terminal" ||
-    currentTabData?.type === "server" ||
+    currentTabData?.type === "server_stats" ||
     currentTabData?.type === "file_manager" ||
     currentTabData?.type === "rdp" ||
     currentTabData?.type === "vnc" ||
     currentTabData?.type === "tunnel" ||
-    currentTabData?.type === "docker";
+    currentTabData?.type === "docker" ||
+    currentTabData?.type === "network_graph";
   const showHome = currentTabData?.type === "home";
   const showSshManager = currentTabData?.type === "ssh_manager";
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
 
-  if (authLoading) {
+  if (authLoading && !dbConnectionFailed) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center bg-dark-bg-darkest"
+        className="fixed inset-0 flex items-center justify-center"
         style={{
+          background: "var(--bg-elevated)",
           backgroundImage: `repeating-linear-gradient(
-            225deg,
+            45deg,
             transparent,
             transparent 35px,
-            rgba(255, 255, 255, 0.03) 35px,
-            rgba(255, 255, 255, 0.03) 37px
+            ${lineColor} 35px,
+            ${lineColor} 37px
           )`,
         }}
       >
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {t("common.checkingAuthentication")}
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (dbConnectionFailed) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-background">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
+          <Dashboard
+            isAuthenticated={false}
+            authLoading={false}
+            onAuthSuccess={handleAuthSuccess}
+            isTopbarOpen={isTopbarOpen}
+            onSelectView={() => {}}
+            initialDbError="Database connection failed"
+          />
+        </div>
+        <Toaster
+          position="bottom-right"
+          richColors={false}
+          closeButton
+          duration={5000}
+          offset={20}
+        />
       </div>
     );
   }
@@ -195,7 +353,6 @@ function AppContent() {
       {!isAuthenticated && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
           <Dashboard
-            onSelectView={handleSelectView}
             isAuthenticated={isAuthenticated}
             authLoading={authLoading}
             onAuthSuccess={handleAuthSuccess}
@@ -206,7 +363,6 @@ function AppContent() {
 
       {isAuthenticated && (
         <LeftSidebar
-          onSelectView={handleSelectView}
           disabled={!isAuthenticated || authLoading}
           isAdmin={isAdmin}
           username={username}
@@ -226,7 +382,6 @@ function AppContent() {
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <Dashboard
-                onSelectView={handleSelectView}
                 isAuthenticated={isAuthenticated}
                 authLoading={authLoading}
                 onAuthSuccess={handleAuthSuccess}
@@ -240,12 +395,14 @@ function AppContent() {
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
               <HostManager
-                onSelectView={handleSelectView}
                 isTopbarOpen={isTopbarOpen}
                 initialTab={currentTabData?.initialTab}
                 hostConfig={currentTabData?.hostConfig}
+                _updateTimestamp={currentTabData?._updateTimestamp}
                 rightSidebarOpen={rightSidebarOpen}
                 rightSidebarWidth={rightSidebarWidth}
+                currentTabId={currentTab}
+                updateTab={updateTab}
               />
             </div>
           )}
@@ -261,7 +418,7 @@ function AppContent() {
           )}
 
           {showProfile && (
-            <div className="h-screen w-full visible pointer-events-auto static overflow-auto">
+            <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
               <UserProfile
                 isTopbarOpen={isTopbarOpen}
                 rightSidebarOpen={rightSidebarOpen}
@@ -284,9 +441,19 @@ function AppContent() {
 
       {isTransitioning && (
         <div
-          className={`fixed inset-0 bg-background z-[20000] transition-opacity duration-700 ${
+          className={`fixed inset-0 z-[20000] transition-opacity duration-700 ${
             transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
           }`}
+          style={{
+            background: "var(--bg-elevated)",
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 35px,
+              ${lineColor} 35px,
+              ${lineColor} 37px
+            )`,
+          }}
         >
           {transitionPhase === "fadeOut" && (
             <>
@@ -459,12 +626,54 @@ function AppContent() {
   );
 }
 
+class TabErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorCount: number }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorCount: 0 };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      return { hasError: true };
+    }
+    throw error;
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      console.warn(
+        "TabProvider mounting race condition detected, recovering...",
+      );
+      this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
+      setTimeout(() => {
+        this.setState({ hasError: false });
+      }, 0);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
 function DesktopApp() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
     <TabProvider>
-      <CommandHistoryProvider>
-        <AppContent />
-      </CommandHistoryProvider>
+      <TabErrorBoundary>
+        <ServerStatusProvider isAuthenticated={isAuthenticated}>
+          <CommandHistoryProvider>
+            <AppContent onAuthStateChange={setIsAuthenticated} />
+          </CommandHistoryProvider>
+        </ServerStatusProvider>
+      </TabErrorBoundary>
     </TabProvider>
   );
 }

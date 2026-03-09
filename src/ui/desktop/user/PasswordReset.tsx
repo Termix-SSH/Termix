@@ -67,7 +67,7 @@ export function PasswordReset({ userInfo }: PasswordResetProps) {
 
   const Spinner = (
     <svg
-      className="animate-spin mr-2 h-4 w-4 text-white inline-block"
+      className="animate-spin mr-2 h-4 w-4 text-foreground inline-block"
       viewBox="0 0 24 24"
     >
       <circle

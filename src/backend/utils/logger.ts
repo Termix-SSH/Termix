@@ -36,7 +36,7 @@ const SENSITIVE_FIELDS = [
 
 const TRUNCATE_FIELDS = ["data", "content", "body", "response", "request"];
 
-class Logger {
+export class Logger {
   private serviceName: string;
   private serviceIcon: string;
   private serviceColor: string;

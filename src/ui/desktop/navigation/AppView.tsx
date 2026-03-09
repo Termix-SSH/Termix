@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Terminal } from "@/ui/desktop/apps/terminal/Terminal.tsx";
-import { ServerStats as ServerView } from "@/ui/desktop/apps/server-stats/ServerStats.tsx";
-import { FileManager } from "@/ui/desktop/apps/file-manager/FileManager.tsx";
+import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
+import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
+import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
 import {
   GuacamoleDisplay,
   type GuacamoleConnectionConfig,
 } from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
-import { TunnelManager } from "@/ui/desktop/apps/tunnel/TunnelManager.tsx";
-import { DockerManager } from "@/ui/desktop/apps/docker/DockerManager.tsx";
+import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
+import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
+import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -22,6 +23,8 @@ import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
+import { useTheme } from "@/components/theme-provider";
+import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 
 interface TabData {
   id: number;
@@ -39,6 +42,39 @@ interface TabData {
   [key: string]: unknown;
 }
 
+type LayoutNode =
+  | number // leaf: index into layoutTabs[]
+  | { direction: "horizontal" | "vertical"; children: LayoutNode[] };
+
+const SPLIT_LAYOUTS: Record<number, LayoutNode> = {
+  2: { direction: "horizontal", children: [0, 1] },
+  3: {
+    direction: "vertical",
+    children: [{ direction: "horizontal", children: [0, 1] }, 2],
+  },
+  4: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1] },
+      { direction: "horizontal", children: [2, 3] },
+    ],
+  },
+  5: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1] },
+      { direction: "horizontal", children: [2, 3, 4] },
+    ],
+  },
+  6: {
+    direction: "vertical",
+    children: [
+      { direction: "horizontal", children: [0, 1, 2] },
+      { direction: "horizontal", children: [3, 4, 5] },
+    ],
+  },
+};
+
 interface TerminalViewProps {
   isTopbarOpen?: boolean;
   rightSidebarOpen?: boolean;
@@ -50,25 +86,36 @@ export function AppView({
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
 }: TerminalViewProps): React.ReactElement {
-  const { tabs, currentTab, allSplitScreenTab, removeTab } = useTabs() as {
-    tabs: TabData[];
-    currentTab: number;
-    allSplitScreenTab: number[];
-    removeTab: (id: number) => void;
-  };
+  const { tabs, currentTab, allSplitScreenTab, removeTab, updateTab } =
+    useTabs() as {
+      tabs: TabData[];
+      currentTab: number;
+      allSplitScreenTab: number[];
+      removeTab: (id: number) => void;
+      updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
+    };
   const { state: sidebarState } = useSidebar();
+  const { theme: appTheme } = useTheme();
+
+  const isDarkMode = useMemo(() => {
+    if (appTheme === "dark") return true;
+    if (appTheme === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }, [appTheme]);
 
   const terminalTabs = useMemo(
     () =>
       tabs.filter(
         (tab: TabData) =>
           tab.type === "terminal" ||
-          tab.type === "server" ||
+          tab.type === "server_stats" ||
           tab.type === "file_manager" ||
           tab.type === "rdp" ||
           tab.type === "vnc" ||
+          tab.type === "telnet" ||
           tab.type === "tunnel" ||
-          tab.type === "docker",
+          tab.type === "docker" ||
+          tab.type === "network_graph",
       ),
     [tabs],
   );
@@ -98,13 +145,18 @@ export function AppView({
       const splitIds = allSplitScreenTab as number[];
       visibleIds.push(currentTab, ...splitIds.filter((i) => i !== currentTab));
     }
-    terminalTabs.forEach((t: TabData) => {
-      if (visibleIds.includes(t.id)) {
-        const ref = t.terminalRef?.current;
-        if (ref?.fit) ref.fit();
-        if (ref?.notifyResize) ref.notifyResize();
-        if (ref?.refresh) ref.refresh();
-      }
+
+    const operations = terminalTabs
+      .filter((t: TabData) => visibleIds.includes(t.id))
+      .map((t: TabData) => t.terminalRef?.current)
+      .filter((ref) => ref?.fit);
+
+    requestAnimationFrame(() => {
+      operations.forEach((ref) => {
+        ref.fit?.();
+        ref.notifyResize?.();
+        ref.refresh?.();
+      });
     });
   }, [allSplitScreenTab, currentTab, terminalTabs]);
 
@@ -114,18 +166,14 @@ export function AppView({
       cancelAnimationFrame(layoutScheduleRef.current);
     layoutScheduleRef.current = requestAnimationFrame(() => {
       updatePanelRects();
-      layoutScheduleRef.current = requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
   const hideThenFit = React.useCallback(() => {
     requestAnimationFrame(() => {
       updatePanelRects();
-      requestAnimationFrame(() => {
-        fitActiveAndNotify();
-      });
+      fitActiveAndNotify();
     });
   }, [updatePanelRects, fitActiveAndNotify]);
 
@@ -223,7 +271,8 @@ export function AppView({
       const isFileManagerTab =
         mainTab.type === "file_manager" ||
         mainTab.type === "tunnel" ||
-        mainTab.type === "docker";
+        mainTab.type === "docker" ||
+        mainTab.type === "network_graph";
       const newStyle = {
         position: "absolute" as const,
         top: isFileManagerTab ? 0 : 4,
@@ -234,7 +283,6 @@ export function AppView({
         display: "block" as const,
         pointerEvents: "auto" as const,
         opacity: 1,
-        transition: "opacity 150ms ease-in-out",
       };
       styles[mainTab.id] = newStyle;
       previousStylesRef.current[mainTab.id] = newStyle;
@@ -253,7 +301,6 @@ export function AppView({
             display: "block" as const,
             pointerEvents: "auto" as const,
             opacity: 1,
-            transition: "opacity 150ms ease-in-out",
           };
           styles[t.id] = newStyle;
           previousStylesRef.current[t.id] = newStyle;
@@ -277,7 +324,8 @@ export function AppView({
           const isFileManagerTab =
             t.type === "file_manager" ||
             t.type === "tunnel" ||
-            t.type === "docker";
+            t.type === "docker" ||
+            t.type === "network_graph";
           const standardStyle = {
             position: "absolute" as const,
             top: isFileManagerTab ? 0 : 4,
@@ -295,7 +343,6 @@ export function AppView({
                   pointerEvents: "auto",
                   zIndex: 20,
                   display: "block",
-                  transition: "opacity 150ms ease-in-out",
                   overflow: "hidden",
                 }
               : ({
@@ -303,7 +350,7 @@ export function AppView({
                   opacity: 0,
                   pointerEvents: "none",
                   zIndex: 0,
-                  transition: "opacity 150ms ease-in-out",
+                  display: "none",
                   overflow: "hidden",
                 } as React.CSSProperties);
 
@@ -312,9 +359,17 @@ export function AppView({
             ...DEFAULT_TERMINAL_CONFIG,
             ...(t.hostConfig as any)?.terminalConfig,
           };
-          const themeColors =
-            TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-            TERMINAL_THEMES.termix.colors;
+
+          let themeColors;
+          if (terminalConfig.theme === "termix") {
+            themeColors = isDarkMode
+              ? TERMINAL_THEMES.termixDark.colors
+              : TERMINAL_THEMES.termixLight.colors;
+          } else {
+            themeColors =
+              TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+              TERMINAL_THEMES.termixDark.colors;
+          }
           const backgroundColor = themeColors.background;
 
           return (
@@ -322,7 +377,9 @@ export function AppView({
               <div
                 className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
-                  backgroundColor: isTerminal ? backgroundColor : "#18181b",
+                  backgroundColor: isTerminal
+                    ? backgroundColor
+                    : "var(--bg-base)",
                 }}
               >
                 {t.type === "terminal" ? (
@@ -334,8 +391,9 @@ export function AppView({
                     showTitle={false}
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
+                    onTitleChange={(title) => updateTab(t.id, { title })}
                   />
-                ) : t.type === "server" ? (
+                ) : t.type === "server_stats" ? (
                   <ServerView
                     hostConfig={t.hostConfig}
                     title={t.title}
@@ -343,7 +401,9 @@ export function AppView({
                     isTopbarOpen={isTopbarOpen}
                     embedded
                   />
-                ) : t.type === "rdp" || t.type === "vnc" ? (
+                ) : t.type === "rdp" ||
+                  t.type === "vnc" ||
+                  t.type === "telnet" ? (
                   t.connectionConfig ? (
                     <GuacamoleDisplay
                       connectionConfig={t.connectionConfig}
@@ -356,6 +416,13 @@ export function AppView({
                       Missing connection configuration
                     </div>
                   )
+                ) : t.type === "network_graph" ? (
+                  <NetworkGraphCard
+                    isTopbarOpen={isTopbarOpen}
+                    rightSidebarOpen={rightSidebarOpen}
+                    rightSidebarWidth={rightSidebarWidth}
+                    embedded={false}
+                  />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager
                     hostConfig={t.hostConfig}
@@ -371,6 +438,7 @@ export function AppView({
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
+                    onClose={() => removeTab(t.id)}
                   />
                 ) : (
                   <FileManager
@@ -393,7 +461,7 @@ export function AppView({
       variant="ghost"
       onClick={onClick}
       aria-label="Reset split sizes"
-      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-dark-border-panel bg-dark-bg-panel hover:bg-dark-bg-panel-hover text-white flex items-center justify-center p-0"
+      className="absolute top-0 right-0 h-[28px] w-[28px] !rounded-none border-l-1 border-b-1 border-edge-panel bg-surface hover:bg-surface-hover text-foreground flex items-center justify-center p-0"
     >
       <RefreshCcw className="h-4 w-4" />
     </Button>
@@ -410,10 +478,13 @@ export function AppView({
       .filter((t): t is TabData => t !== null && t !== undefined);
     if (allSplitScreenTab.length === 0) return null;
 
+    const layout = SPLIT_LAYOUTS[layoutTabs.length];
+    if (!layout) return null;
+
     const handleStyle = {
       pointerEvents: "auto",
       zIndex: 12,
-      background: "var(--color-dark-border)",
+      background: "var(--border-base)",
     } as React.CSSProperties;
     const commonGroupProps: {
       onLayout: () => void;
@@ -423,270 +494,95 @@ export function AppView({
       onResize: scheduleMeasureAndFit,
     };
 
-    if (layoutTabs.length === 2) {
-      const [a, b] = layoutTabs;
-      return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="horizontal"
-            className="h-full w-full"
-            {...commonGroupProps}
+    const renderNode = (
+      node: LayoutNode,
+      path: string,
+      siblingCount: number,
+      orderIndex: number,
+      isRoot: boolean,
+    ): React.ReactNode => {
+      const defaultSize = Math.round(100 / siblingCount);
+
+      if (typeof node === "number") {
+        const tab = layoutTabs[node];
+        if (!tab) return null;
+        return (
+          <ResizablePanel
+            key={`panel-${tab.id}`}
+            id={`panel-${tab.id}`}
+            defaultSize={defaultSize}
+            minSize={20}
+            className="!overflow-hidden h-full w-full"
+            order={orderIndex}
           >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id={`panel-${a.id}`}
-              order={1}
+            <div
+              ref={(el) => {
+                panelRefs.current[String(tab.id)] = el;
+              }}
+              className="h-full w-full flex flex-col relative"
             >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(a.id)] = el;
-                }}
-                className="h-full w-full flex flex-col bg-transparent relative"
-              >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {a.title}
-                </div>
+              <div className="bg-surface text-foreground text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-edge-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
+                {tab.title}
+                {node === 1 && <ResetButton onClick={handleReset} />}
               </div>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id={`panel-${b.id}`}
-              order={2}
-            >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(b.id)] = el;
-                }}
-                className="h-full w-full flex flex-col bg-transparent relative"
-              >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {b.title}
-                  <ResetButton onClick={handleReset} />
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
+            </div>
+          </ResizablePanel>
+        );
+      }
+
+      const groupKey = isRoot ? String(resetKey) : `${path}-${resetKey}`;
+      const groupId = isRoot ? `main-${node.direction}` : `group-${path}`;
+
+      const groupContent = (
+        <ResizablePrimitive.PanelGroup
+          key={groupKey}
+          direction={node.direction}
+          className="h-full w-full"
+          id={groupId}
+          {...commonGroupProps}
+        >
+          {node.children.flatMap((child, i) => {
+            const childPath = isRoot ? String(i) : `${path}-${i}`;
+            const panel = renderNode(
+              child,
+              childPath,
+              node.children.length,
+              i + 1,
+              false,
+            );
+            if (i === 0) return [panel];
+            return [
+              <ResizableHandle
+                key={`handle-${childPath}`}
+                style={handleStyle}
+              />,
+              panel,
+            ];
+          })}
+        </ResizablePrimitive.PanelGroup>
       );
-    }
-    if (layoutTabs.length === 3) {
-      const [a, b, c] = layoutTabs;
+
+      if (isRoot) return groupContent;
+
       return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="vertical"
-            className="h-full w-full"
-            id="main-vertical"
-            {...commonGroupProps}
-          >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="top-panel"
-              order={1}
-            >
-              <ResizablePanelGroup
-                key={`top-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="top-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${a.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(a.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {a.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${b.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(b.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {b.title}
-                      <ResetButton onClick={handleReset} />
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="bottom-panel"
-              order={2}
-            >
-              <div
-                ref={(el) => {
-                  panelRefs.current[String(c.id)] = el;
-                }}
-                className="h-full w-full flex flex-col relative"
-              >
-                <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                  {c.title}
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
+        <ResizablePanel
+          key={`container-${path}`}
+          id={`container-${path}`}
+          defaultSize={defaultSize}
+          minSize={20}
+          className="!overflow-hidden h-full w-full"
+          order={orderIndex}
+        >
+          {groupContent}
+        </ResizablePanel>
       );
-    }
-    if (layoutTabs.length === 4) {
-      const [a, b, c, d] = layoutTabs;
-      return (
-        <div className="absolute inset-0 z-[10] pointer-events-none">
-          <ResizablePrimitive.PanelGroup
-            key={resetKey}
-            direction="vertical"
-            className="h-full w-full"
-            id="main-vertical"
-            {...commonGroupProps}
-          >
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="top-panel"
-              order={1}
-            >
-              <ResizablePanelGroup
-                key={`top-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="top-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${a.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(a.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {a.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${b.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(b.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {b.title}
-                      <ResetButton onClick={handleReset} />
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle style={handleStyle} />
-            <ResizablePanel
-              defaultSize={50}
-              minSize={20}
-              className="!overflow-hidden h-full w-full"
-              id="bottom-panel"
-              order={2}
-            >
-              <ResizablePanelGroup
-                key={`bottom-${resetKey}`}
-                direction="horizontal"
-                className="h-full w-full"
-                id="bottom-horizontal"
-                {...commonGroupProps}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${c.id}`}
-                  order={1}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(c.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {c.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle style={handleStyle} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="!overflow-hidden h-full w-full"
-                  id={`panel-${d.id}`}
-                  order={2}
-                >
-                  <div
-                    ref={(el) => {
-                      panelRefs.current[String(d.id)] = el;
-                    }}
-                    className="h-full w-full flex flex-col relative"
-                  >
-                    <div className="bg-dark-bg-panel text-white text-[13px] h-[28px] leading-[28px] px-[10px] border-b border-dark-border-panel tracking-[1px] m-0 pointer-events-auto z-[11] relative">
-                      {d.title}
-                    </div>
-                  </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-          </ResizablePrimitive.PanelGroup>
-        </div>
-      );
-    }
-    return null;
+    };
+
+    return (
+      <div className="absolute inset-0 z-[10] pointer-events-none">
+        {renderNode(layout, "", 1, 1, true)}
+      </div>
+    );
   };
 
   const currentTabData = tabs.find((tab: TabData) => tab.id === currentTab);
@@ -700,18 +596,25 @@ export function AppView({
     ...DEFAULT_TERMINAL_CONFIG,
     ...(currentTabData?.hostConfig as any)?.terminalConfig,
   };
-  const themeColors =
-    TERMINAL_THEMES[terminalConfig.theme]?.colors ||
-    TERMINAL_THEMES.termix.colors;
-  const terminalBackgroundColor = themeColors.background;
+  let containerThemeColors;
+  if (terminalConfig.theme === "termix") {
+    containerThemeColors = isDarkMode
+      ? TERMINAL_THEMES.termixDark.colors
+      : TERMINAL_THEMES.termixLight.colors;
+  } else {
+    containerThemeColors =
+      TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+      TERMINAL_THEMES.termixDark.colors;
+  }
+  const terminalBackgroundColor = containerThemeColors.background;
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;
   const bottomMarginPx = 8;
 
-  let containerBackground = "var(--color-dark-bg)";
+  let containerBackground = "var(--color-canvas)";
   if ((isFileManager || isTunnel || isDocker) && !isSplitScreen) {
-    containerBackground = "var(--color-dark-bg-darkest)";
+    containerBackground = "var(--color-deepest)";
   } else if (isTerminal) {
     containerBackground = terminalBackgroundColor;
   }
@@ -719,7 +622,7 @@ export function AppView({
   return (
     <div
       ref={containerRef}
-      className="border-2 border-dark-border rounded-lg overflow-hidden overflow-x-hidden relative"
+      className="border-2 border-edge rounded-lg overflow-hidden overflow-x-hidden relative"
       style={{
         background: containerBackground,
         marginLeft: leftMarginPx,

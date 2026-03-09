@@ -11,9 +11,12 @@ import {
   Folder as FolderIcon,
   User as UserIcon,
   Monitor as MonitorIcon,
+  Network,
   ArrowDownUp as TunnelIcon,
   Container as DockerIcon,
+  Key,
 } from "lucide-react";
+import type { SSHHost } from "@/types";
 
 interface TabProps {
   tabType: string;
@@ -32,6 +35,7 @@ interface TabProps {
   isDragOver?: boolean;
   isValidDropTarget?: boolean;
   isHoveredDropTarget?: boolean;
+  hostConfig?: SSHHost;
 }
 
 export function Tab({
@@ -51,8 +55,55 @@ export function Tab({
   isDragOver = false,
   isValidDropTarget = false,
   isHoveredDropTarget = false,
+  hostConfig,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
+
+  const handleCopyPassword = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!hostConfig) return;
+
+    const hasSshPassword =
+      hostConfig.authType === "password" && hostConfig.password;
+    const hasSudoPassword = hostConfig.sudoPassword;
+
+    if (!hasSshPassword && !hasSudoPassword) {
+      return;
+    }
+
+    try {
+      let passwordToCopy = "";
+
+      if (hasSshPassword) {
+        passwordToCopy = hostConfig.password || "";
+      } else if (hasSudoPassword) {
+        passwordToCopy = hostConfig.sudoPassword;
+      }
+
+      await navigator.clipboard.writeText(passwordToCopy);
+    } catch {}
+  };
+
+  const hasPassword =
+    hostConfig &&
+    ((hostConfig.authType === "password" && hostConfig.password) ||
+      hostConfig.sudoPassword);
+
+  const getPasswordButtonTitle = () => {
+    if (!hostConfig) return "";
+
+    const hasSshPassword =
+      hostConfig.authType === "password" && hostConfig.password;
+    const hasSudoPassword = hostConfig.sudoPassword;
+
+    if (hasSshPassword) {
+      return t("nav.copyPassword");
+    } else if (hasSudoPassword) {
+      return t("nav.copySudoPassword");
+    }
+    return t("nav.noPasswordAvailable");
+  };
 
   const tabBaseClasses = cn(
     "relative flex items-center gap-1.5 px-3 w-full min-w-0",
@@ -110,7 +161,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <Home className="h-4 w-4" />
@@ -120,20 +171,22 @@ export function Tab({
 
   if (
     tabType === "terminal" ||
-    tabType === "server" ||
+    tabType === "server_stats" ||
     tabType === "file_manager" ||
-    tabType === "user_profile" ||
     tabType === "rdp" ||
     tabType === "vnc" ||
+    tabType === "telnet" ||
     tabType === "tunnel" ||
-    tabType === "docker"
+    tabType === "docker" ||
+    tabType === "user_profile"
   ) {
-    const isServer = tabType === "server";
+    const isServer = tabType === "server_stats";
     const isFileManager = tabType === "file_manager";
     const isTunnel = tabType === "tunnel";
     const isDocker = tabType === "docker";
     const isUserProfile = tabType === "user_profile";
-    const isRemoteDesktop = tabType === "rdp" || tabType === "vnc";
+    const isRemoteDesktop =
+      tabType === "rdp" || tabType === "vnc" || tabType === "telnet";
 
     const displayTitle =
       title ||
@@ -159,7 +212,8 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive || isSplit ? "2px solid white" : "none",
+          borderBottom:
+            isActive || isSplit ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -182,6 +236,18 @@ export function Tab({
           {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>
 
+        {hasPassword && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleCopyPassword}
+            title={getPasswordButtonTitle()}
+          >
+            <Key className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+
         {canSplit && (
           <Button
             variant="ghost"
@@ -199,7 +265,7 @@ export function Tab({
             <SeparatorVertical
               className={cn(
                 "h-4 w-4",
-                isSplit ? "text-white" : "text-muted-foreground",
+                isSplit ? "text-foreground" : "text-muted-foreground",
               )}
             />
           </Button>
@@ -233,7 +299,7 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -269,10 +335,47 @@ export function Tab({
         onClick={!disableActivate ? onActivate : undefined}
         style={{
           marginBottom: "-2px",
-          borderBottom: isActive ? "2px solid white" : "none",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
         }}
       >
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
+          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
+        </div>
+
+        {canClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-6 w-6", disableClose && "opacity-50")}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableClose && onClose) onClose();
+            }}
+            disabled={disableClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (tabType === "network_graph") {
+    const displayTitle = title || t("dashboard.networkGraph");
+    const { base, suffix } = splitTitle(displayTitle);
+
+    return (
+      <div
+        className={cn(tabBaseClasses, "cursor-pointer")}
+        onClick={!disableActivate ? onActivate : undefined}
+        style={{
+          marginBottom: "-2px",
+          borderBottom: isActive ? "2px solid var(--foreground)" : "none",
+        }}
+      >
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Network className="h-4 w-4 flex-shrink-0" />
           <span className="truncate text-sm flex-1 min-w-0">{base}</span>
           {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
         </div>

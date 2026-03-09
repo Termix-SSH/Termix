@@ -1,5 +1,4 @@
 import ssh2Pkg from "ssh2";
-import { sshLogger } from "./logger.js";
 const ssh2Utils = ssh2Pkg.utils;
 
 function detectKeyTypeFromContent(keyContent: string): string {
@@ -85,7 +84,9 @@ function detectKeyTypeFromContent(keyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {}
+    } catch {
+      // expected - base64 decode may fail for some key formats
+    }
 
     if (content.length < 800) {
       return "ssh-ed25519";
@@ -141,7 +142,9 @@ function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
       } else if (decodedString.includes("1.3.101.112")) {
         return "ssh-ed25519";
       }
-    } catch (error) {}
+    } catch {
+      // expected - base64 decode may fail for some key formats
+    }
 
     if (content.length < 400) {
       return "ssh-ed25519";
@@ -243,7 +246,9 @@ export function parseSSHKey(
 
           useSSH2 = true;
         }
-      } catch (error) {}
+      } catch {
+        // expected - ssh2 key parsing may fail
+      }
     }
 
     if (!useSSH2) {
@@ -269,7 +274,9 @@ export function parseSSHKey(
           success: true,
         };
       }
-    } catch (error) {}
+    } catch {
+      // expected - fallback key type detection may fail
+    }
 
     return {
       privateKey: privateKeyData,

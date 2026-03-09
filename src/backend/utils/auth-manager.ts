@@ -2,10 +2,10 @@ import jwt from "jsonwebtoken";
 import { UserCrypto } from "./user-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
-import { databaseLogger } from "./logger.js";
+import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
-import { sessions } from "../database/db/schema.js";
+import { sessions, trustedDevices } from "../database/db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
@@ -99,7 +99,7 @@ class AuthManager {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+        : 2 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateOIDCUser(
       userId,
@@ -121,7 +121,7 @@ class AuthManager {
     const sessionDurationMs =
       deviceType === "desktop" || deviceType === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+        : 2 * 60 * 60 * 1000;
 
     const authenticated = await this.userCrypto.authenticateUser(
       userId,
@@ -154,9 +154,8 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { getSqlite, saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
 
       const sqlite = getSqlite();
 
@@ -168,6 +167,23 @@ class AuthManager {
 
       if (migrationResult.migrated) {
         await saveMemoryDatabaseToFile();
+      }
+
+      try {
+        const { CredentialSystemEncryptionMigration } =
+          await import("./credential-system-encryption-migration.js");
+        const credMigration = new CredentialSystemEncryptionMigration();
+        const credResult = await credMigration.migrateUserCredentials(userId);
+
+        if (credResult.migrated > 0) {
+          await saveMemoryDatabaseToFile();
+        }
+      } catch (error) {
+        databaseLogger.warn("Credential migration failed during login", {
+          operation: "login_credential_migration_failed",
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
       }
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {
@@ -183,6 +199,7 @@ class AuthManager {
     options: {
       expiresIn?: string;
       pendingTOTP?: boolean;
+      rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
     } = {},
@@ -191,13 +208,13 @@ class AuthManager {
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
-      if (options.deviceType === "desktop" || options.deviceType === "mobile") {
+      if (options.rememberMe) {
         expiresIn = "30d";
       } else {
-        expiresIn = "7d";
+        expiresIn = "2h";
       }
     } else if (!expiresIn) {
-      expiresIn = "7d";
+      expiresIn = "2h";
     }
 
     const payload: JWTPayload = { userId };
@@ -231,9 +248,8 @@ class AuthManager {
         });
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -261,7 +277,7 @@ class AuthManager {
 
   private parseExpiresIn(expiresIn: string): number {
     const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) return 7 * 24 * 60 * 60 * 1000;
+    if (!match) return 2 * 60 * 60 * 1000;
 
     const value = parseInt(match[1]);
     const unit = match[2];
@@ -276,7 +292,7 @@ class AuthManager {
       case "d":
         return value * 24 * 60 * 60 * 1000;
       default:
-        return 7 * 24 * 60 * 60 * 1000;
+        return 2 * 60 * 60 * 1000;
     }
   }
 
@@ -325,18 +341,28 @@ class AuthManager {
     }
   }
 
-  invalidateJWTToken(token: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateJWTToken(_token: string): void {
+    // expected - no-op, JWT tokens are stateless
+  }
 
-  invalidateUserTokens(userId: string): void {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  invalidateUserTokens(_userId: string): void {
+    // expected - no-op, handled by session management
+  }
 
   async revokeSession(sessionId: string): Promise<boolean> {
     try {
+      authLogger.info("User session invalidated", {
+        operation: "user_logout",
+        sessionId,
+      });
+
       await db.delete(sessions).where(eq(sessions.id, sessionId));
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -373,6 +399,12 @@ class AuthManager {
         (s) => !exceptSessionId || s.id !== exceptSessionId,
       ).length;
 
+      authLogger.info("All user sessions invalidated", {
+        operation: "user_logout_all",
+        userId,
+        sessionCount: deletedCount,
+      });
+
       if (exceptSessionId) {
         await db
           .delete(sessions)
@@ -387,9 +419,8 @@ class AuthManager {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -430,9 +461,8 @@ class AuthManager {
         .where(sql`${sessions.expiresAt} < datetime('now')`);
 
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "../database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
         await saveMemoryDatabaseToFile();
       } catch (saveError) {
         databaseLogger.error(
@@ -465,7 +495,7 @@ class AuthManager {
     }
   }
 
-  async getAllSessions(): Promise<any[]> {
+  async getAllSessions(): Promise<Record<string, unknown>[]> {
     try {
       const allSessions = await db.select().from(sessions);
       return allSessions;
@@ -477,7 +507,7 @@ class AuthManager {
     }
   }
 
-  async getUserSessions(userId: string): Promise<any[]> {
+  async getUserSessions(userId: string): Promise<Record<string, unknown>[]> {
     try {
       const userSessions = await db
         .select()
@@ -495,13 +525,22 @@ class AuthManager {
 
   getSecureCookieOptions(
     req: RequestWithHeaders,
-    maxAge: number = 7 * 24 * 60 * 60 * 1000,
+    maxAge: number = 2 * 60 * 60 * 1000,
   ) {
     return {
       httpOnly: false,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
       sameSite: "strict" as const,
       maxAge: maxAge,
+      path: "/",
+    };
+  }
+
+  getClearCookieOptions(req: RequestWithHeaders) {
+    return {
+      httpOnly: false,
+      secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+      sameSite: "strict" as const,
       path: "/",
     };
   }
@@ -568,9 +607,8 @@ class AuthManager {
               .where(eq(sessions.id, payload.sessionId))
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } = await import(
-                    "../database/db/index.js"
-                  );
+                  const { saveMemoryDatabaseToFile } =
+                    await import("../database/db/index.js");
                   await saveMemoryDatabaseToFile();
 
                   const remainingSessions = await db
@@ -680,7 +718,7 @@ class AuthManager {
           .from(users)
           .where(eq(users.id, payload.userId));
 
-        if (!user || user.length === 0 || !user[0].is_admin) {
+        if (!user || user.length === 0 || !user[0].isAdmin) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {
@@ -714,9 +752,8 @@ class AuthManager {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
 
         try {
-          const { saveMemoryDatabaseToFile } = await import(
-            "../database/db/index.js"
-          );
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         } catch (saveError) {
           databaseLogger.error(
@@ -738,6 +775,7 @@ class AuthManager {
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
         } else {
+          // expected - other sessions still active, keep user crypto state
         }
       } catch (error) {
         databaseLogger.error("Failed to delete session on logout", error, {
@@ -779,6 +817,121 @@ class AuthManager {
       userId,
       newPassword,
     );
+  }
+
+  /**
+   * Check if device is trusted for TOTP bypass
+   */
+  async isTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+  ): Promise<boolean> {
+    try {
+      const device = await db
+        .select()
+        .from(trustedDevices)
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        )
+        .limit(1);
+
+      if (!device || device.length === 0) {
+        return false;
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(device[0].expiresAt);
+
+      if (now > expiresAt) {
+        await this.removeTrustedDevice(userId, deviceFingerprint);
+        return false;
+      }
+
+      await db
+        .update(trustedDevices)
+        .set({ lastUsedAt: now.toISOString() })
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        );
+
+      return true;
+    } catch (error) {
+      authLogger.error("Failed to check trusted device", { userId, error });
+      return false;
+    }
+  }
+
+  /**
+   * Add device to trusted list for TOTP bypass
+   */
+  async addTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+    deviceType: string,
+    deviceInfo: string,
+  ): Promise<void> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const existingDevice = await db
+      .select()
+      .from(trustedDevices)
+      .where(
+        and(
+          eq(trustedDevices.userId, userId),
+          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+        ),
+      )
+      .limit(1);
+
+    if (existingDevice && existingDevice.length > 0) {
+      await db
+        .update(trustedDevices)
+        .set({
+          expiresAt: expiresAt.toISOString(),
+          lastUsedAt: now.toISOString(),
+        })
+        .where(
+          and(
+            eq(trustedDevices.userId, userId),
+            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+          ),
+        );
+    } else {
+      await db.insert(trustedDevices).values({
+        id: nanoid(),
+        userId,
+        deviceFingerprint,
+        deviceType,
+        deviceInfo,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        lastUsedAt: now.toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Remove trusted device
+   */
+  async removeTrustedDevice(
+    userId: string,
+    deviceFingerprint: string,
+  ): Promise<void> {
+    await db
+      .delete(trustedDevices)
+      .where(
+        and(
+          eq(trustedDevices.userId, userId),
+          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
+        ),
+      );
   }
 }
 

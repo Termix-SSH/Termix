@@ -5,13 +5,12 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import {
   EllipsisVertical,
   Terminal,
+  Monitor,
   Server,
   FolderOpen,
   Pencil,
   ArrowDownUp,
   Container,
-  Monitor,
-  ScreenShare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,16 +19,21 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getServerStatusById, getGuacamoleToken } from "@/ui/main-axios";
+import { getSSHHosts, getGuacamoleToken } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { useTranslation } from "react-i18next";
+import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
+import { cn } from "@/lib/utils.ts";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
   const [host, setHost] = useState(initialHost);
-  const [serverStatus, setServerStatus] = useState<
-    "online" | "offline" | "degraded"
-  >("degraded");
+  const { t } = useTranslation();
+  const [showTags, setShowTags] = useState<boolean>(() => {
+    const saved = localStorage.getItem("showHostTags");
+    return saved !== null ? saved === "true" : true;
+  });
   const tags = Array.isArray(host.tags) ? host.tags : [];
   const hasTags = tags.length > 0;
 
@@ -43,7 +47,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
 
   useEffect(() => {
     const handleHostsChanged = async () => {
-      const { getSSHHosts } = await import("@/ui/main-axios.ts");
       const hosts = await getSSHHosts();
       const updatedHost = hosts.find((h) => h.id === host.id);
       if (updatedHost) {
@@ -55,6 +58,17 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     return () =>
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
   }, [host.id]);
+
+  useEffect(() => {
+    const handleShowTagsChanged = () => {
+      const saved = localStorage.getItem("showHostTags");
+      setShowTags(saved !== null ? saved === "true" : true);
+    };
+
+    window.addEventListener("showHostTagsChanged", handleShowTagsChanged);
+    return () =>
+      window.removeEventListener("showHostTagsChanged", handleShowTagsChanged);
+  }, []);
 
   const statsConfig = useMemo(() => {
     try {
@@ -69,89 +83,76 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
-  useEffect(() => {
-    if (!shouldShowStatus) {
-      setServerStatus("offline");
-      return;
+  const serverStatus = useHostStatus(host.id, shouldShowStatus);
+
+  const hasTunnelConnections = useMemo(() => {
+    if (!host.tunnelConnections) return false;
+    try {
+      const tunnelConnections = Array.isArray(host.tunnelConnections)
+        ? host.tunnelConnections
+        : JSON.parse(host.tunnelConnections);
+      return Array.isArray(tunnelConnections) && tunnelConnections.length > 0;
+    } catch {
+      return false;
     }
-
-    let cancelled = false;
-
-    const fetchStatus = async () => {
-      try {
-        const res = await getServerStatusById(host.id);
-        if (!cancelled) {
-          setServerStatus(res?.status === "online" ? "online" : "offline");
-        }
-      } catch (error: unknown) {
-        if (!cancelled) {
-          const err = error as { response?: { status?: number } };
-          if (err?.response?.status === 503) {
-            setServerStatus("offline");
-          } else if (err?.response?.status === 504) {
-            setServerStatus("degraded");
-          } else if (err?.response?.status === 404) {
-            setServerStatus("offline");
-          } else {
-            setServerStatus("offline");
-          }
-        }
-      }
-    };
-
-    fetchStatus();
-    const intervalId = window.setInterval(fetchStatus, 10000);
-
-    return () => {
-      cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
-    };
-  }, [host.id, shouldShowStatus]);
+  }, [host.tunnelConnections]);
 
   const handleTerminalClick = async () => {
-    const connectionType = host.connectionType || "ssh";
-
-    if (connectionType === "ssh" || connectionType === "telnet") {
-      addTab({ type: "terminal", title, hostConfig: host });
-    } else if (connectionType === "rdp" || connectionType === "vnc") {
+    if (
+      host.connectionType === "rdp" ||
+      host.connectionType === "vnc" ||
+      host.connectionType === "telnet"
+    ) {
       try {
-        // Parse guacamoleConfig if it's a string
-        const guacConfig = typeof host.guacamoleConfig === "string"
-          ? JSON.parse(host.guacamoleConfig)
-          : host.guacamoleConfig;
-
-        // Debug: log what guacamoleConfig we have
-        console.log("[Host.tsx] host.guacamoleConfig type:", typeof host.guacamoleConfig);
-        console.log("[Host.tsx] host.guacamoleConfig:", host.guacamoleConfig);
-        console.log("[Host.tsx] Parsed guacConfig:", guacConfig);
-
-        // Get guacamole token for RDP/VNC connection
-        const tokenResponse = await getGuacamoleToken({
-          protocol: connectionType,
+        const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
+        const result = await getGuacamoleToken({
+          protocol,
           hostname: host.ip,
           port: host.port,
           username: host.username,
-          password: host.password || "",
+          password: host.password,
           domain: host.domain,
           security: host.security,
           ignoreCert: host.ignoreCert,
-          guacamoleConfig: guacConfig,
+          guacamoleConfig: host.guacamoleConfig as any,
         });
-
         addTab({
-          type: connectionType,
+          type: protocol,
           title,
           hostConfig: host,
           connectionConfig: {
-            token: tokenResponse.token,
-            protocol: connectionType,
+            token: result.token,
+            protocol,
+            type: protocol,
+            hostname: host.ip,
+            port: host.port,
+            username: host.username,
+            password: host.password,
+            domain: host.domain,
+            security: host.security,
+            "ignore-cert": host.ignoreCert,
           },
         });
-      } catch (error) {
-        console.error(`Failed to get guacamole token for ${connectionType}:`, error);
+      } catch (err) {
+        console.error("Failed to get Guacamole token:", err);
       }
+      return;
     }
+    addTab({ type: "terminal", title, hostConfig: host });
   };
+
+  const isSSH = !host.connectionType || host.connectionType === "ssh";
+
+  const visibleButtons = [
+    host.enableTerminal && (host.showTerminalInSidebar ?? true),
+    isSSH && host.enableFileManager && (host.showFileManagerInSidebar ?? false),
+    isSSH &&
+      host.enableTunnel &&
+      hasTunnelConnections &&
+      (host.showTunnelInSidebar ?? false),
+    isSSH && host.enableDocker && (host.showDockerInSidebar ?? false),
+    isSSH && shouldShowMetrics && (host.showServerStatsInSidebar ?? false),
+  ].filter(Boolean).length;
 
   return (
     <div>
@@ -170,30 +171,85 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
         </p>
 
         <ButtonGroup className="flex-shrink-0">
-          {/* Show connect button for SSH/Telnet if enableTerminal, or always for RDP/VNC */}
-          {(host.enableTerminal || host.connectionType === "rdp" || host.connectionType === "vnc") && (
+          {host.enableTerminal && (host.showTerminalInSidebar ?? true) && (
             <Button
               variant="outline"
-              className="!px-2 border-1 border-dark-border"
+              className="!px-2 border-1 border-edge"
               onClick={handleTerminalClick}
             >
-              {host.connectionType === "rdp" ? (
+              {host.connectionType && host.connectionType !== "ssh" ? (
                 <Monitor />
-              ) : host.connectionType === "vnc" ? (
-                <ScreenShare />
               ) : (
                 <Terminal />
               )}
             </Button>
           )}
 
+          {isSSH &&
+            host.enableFileManager &&
+            (host.showFileManagerInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "file_manager", title, hostConfig: host })
+                }
+              >
+                <FolderOpen />
+              </Button>
+            )}
+
+          {isSSH &&
+            host.enableTunnel &&
+            hasTunnelConnections &&
+            (host.showTunnelInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "tunnel", title, hostConfig: host })
+                }
+              >
+                <ArrowDownUp />
+              </Button>
+            )}
+
+          {isSSH &&
+            host.enableDocker &&
+            (host.showDockerInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "docker", title, hostConfig: host })
+                }
+              >
+                <Container />
+              </Button>
+            )}
+
+          {isSSH &&
+            shouldShowMetrics &&
+            (host.showServerStatsInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "server_stats", title, hostConfig: host })
+                }
+              >
+                <Server />
+              </Button>
+            )}
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className={`!px-2 border-1 border-dark-border ${
-                  (host.enableTerminal || host.connectionType === "rdp" || host.connectionType === "vnc") ? "rounded-tl-none rounded-bl-none" : ""
-                }`}
+                className={cn(
+                  "!px-2 border-1 border-edge",
+                  visibleButtons > 0 && "rounded-l-none border-l-0",
+                )}
               >
                 <EllipsisVertical />
               </Button>
@@ -202,82 +258,98 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             <DropdownMenuContent
               align="start"
               side="right"
-              className="w-56 bg-dark-bg border-dark-border text-white"
+              className="w-56 bg-canvas border-edge text-foreground"
             >
-              {/* SSH-specific menu items */}
-              {(!host.connectionType || host.connectionType === "ssh") && (
-                <>
-                  {shouldShowMetrics && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        addTab({ type: "server", title, hostConfig: host })
-                      }
-                      className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                    >
-                      <Server className="h-4 w-4" />
-                      <span className="flex-1">Open Server Stats</span>
-                    </DropdownMenuItem>
+              {host.enableTerminal && !(host.showTerminalInSidebar ?? true) && (
+                <DropdownMenuItem
+                  onClick={handleTerminalClick}
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                >
+                  {isSSH ? (
+                    <Terminal className="h-4 w-4" />
+                  ) : (
+                    <Monitor className="h-4 w-4" />
                   )}
-                  {host.enableFileManager && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        addTab({ type: "file_manager", title, hostConfig: host })
-                      }
-                      className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                      <span className="flex-1">Open File Manager</span>
-                    </DropdownMenuItem>
-                  )}
-                  {host.enableTunnel && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        addTab({ type: "tunnel", title, hostConfig: host })
-                      }
-                      className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                    >
-                      <ArrowDownUp className="h-4 w-4" />
-                      <span className="flex-1">Open Tunnels</span>
-                    </DropdownMenuItem>
-                  )}
-                  {host.enableDocker && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        addTab({ type: "docker", title, hostConfig: host })
-                      }
-                      className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
-                    >
-                      <Container className="h-4 w-4" />
-                      <span className="flex-1">Open Docker</span>
-                    </DropdownMenuItem>
-                  )}
-                </>
+                  <span className="flex-1">{t("hosts.openTerminal")}</span>
+                </DropdownMenuItem>
               )}
+              {isSSH &&
+                shouldShowMetrics &&
+                !(host.showServerStatsInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "server_stats", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <Server className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openServerStats")}</span>
+                  </DropdownMenuItem>
+                )}
+              {isSSH &&
+                host.enableFileManager &&
+                !(host.showFileManagerInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "file_manager", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openFileManager")}</span>
+                  </DropdownMenuItem>
+                )}
+              {isSSH &&
+                host.enableTunnel &&
+                hasTunnelConnections &&
+                !(host.showTunnelInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "tunnel", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openTunnels")}</span>
+                  </DropdownMenuItem>
+                )}
+              {isSSH &&
+                host.enableDocker &&
+                !(host.showDockerInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "docker", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <Container className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openDocker")}</span>
+                  </DropdownMenuItem>
+                )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({
                     type: "ssh_manager",
-                    title: "Host Manager",
+                    title: t("nav.hostManager"),
                     hostConfig: host,
-                    initialTab: "add_host",
+                    initialTab: "hosts",
                   })
                 }
-                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-dark-hover text-gray-300"
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
               >
                 <Pencil className="h-4 w-4" />
-                <span className="flex-1">Edit</span>
+                <span className="flex-1">{t("common.edit")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </ButtonGroup>
       </div>
-
-      {hasTags && (
+      {showTags && hasTags && (
         <div className="flex flex-wrap items-center gap-2 mt-1">
           {tags.map((tag: string) => (
             <div
               key={tag}
-              className="bg-dark-bg border-1 border-dark-border pl-2 pr-2 rounded-[10px]"
+              className="bg-canvas border-1 border-edge pl-2 pr-2 rounded-[10px]"
             >
               <p className="text-sm">{tag}</p>
             </div>

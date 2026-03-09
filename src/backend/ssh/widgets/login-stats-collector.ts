@@ -46,10 +46,20 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
           const timeStr = parts.slice(timeStart, timeStart + 5).join(" ");
 
           if (user && user !== "wtmp" && tty !== "system") {
+            let parsedTime: string;
+            try {
+              const date = new Date(timeStr);
+              parsedTime = isNaN(date.getTime())
+                ? new Date().toISOString()
+                : date.toISOString();
+            } catch {
+              parsedTime = new Date().toISOString();
+            }
+
             recentLogins.push({
               user,
               ip,
-              time: new Date(timeStr).toISOString(),
+              time: parsedTime,
               status: "success",
             });
             if (ip !== "local") {
@@ -59,8 +69,8 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {
-    // Ignore errors
+  } catch {
+    // expected
   }
 
   try {
@@ -96,12 +106,20 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
       }
 
       if (user && ip) {
+        let parsedTime: string;
+        try {
+          const date = timeStr ? new Date(timeStr) : new Date();
+          parsedTime = isNaN(date.getTime())
+            ? new Date().toISOString()
+            : date.toISOString();
+        } catch {
+          parsedTime = new Date().toISOString();
+        }
+
         failedLogins.push({
           user,
           ip,
-          time: timeStr
-            ? new Date(timeStr).toISOString()
-            : new Date().toISOString(),
+          time: parsedTime,
           status: "failed",
         });
         if (ip !== "unknown") {
@@ -109,8 +127,8 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         }
       }
     }
-  } catch (e) {
-    // Ignore errors
+  } catch {
+    // expected
   }
 
   return {

@@ -99,5 +99,4 @@ main() {
     setup_ssl_certificates
 }
 
-# Run main function
 main "$@"

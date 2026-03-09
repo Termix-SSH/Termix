@@ -6,8 +6,7 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 
 COPY package*.json ./
 
-RUN rm -rf node_modules package-lock.json && \
-    npm install --ignore-scripts --force && \
+RUN npm ci --ignore-scripts --force && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -19,7 +18,7 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    npm run build
+    NODE_OPTIONS="--max-old-space-size=3072" npm run build
 
 # Stage 3: Build backend
 FROM deps AS backend-builder
@@ -51,18 +50,21 @@ ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
+    update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads && \
-    chown -R node:node /app/data /app/uploads && \
-    useradd -r -s /bin/false nginx
+    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /app/nginx/logs /app/nginx/cache /app/nginx/client_body && \
+    chown -R node:node /app && \
+    chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx && \
+    touch /app/nginx/nginx.conf && \
+    chown node:node /app/nginx/nginx.conf
 
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY docker/nginx-https.conf /etc/nginx/nginx-https.conf
+COPY docker/nginx.conf /app/nginx/nginx.conf.template
+COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
 
-COPY --chown=nginx:nginx --from=frontend-builder /app/dist /usr/share/nginx/html
-COPY --chown=nginx:nginx --from=frontend-builder /app/src/locales /usr/share/nginx/html/locales
-COPY --chown=nginx:nginx --from=frontend-builder /app/public/fonts /usr/share/nginx/html/fonts
+COPY --chown=node:node --from=frontend-builder /app/dist /app/html
+COPY --chown=node:node --from=frontend-builder /app/src/locales /app/html/locales
+COPY --chown=node:node --from=frontend-builder /app/public/fonts /app/html/fonts
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
@@ -72,6 +74,10 @@ VOLUME ["/app/data"]
 
 EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null http://localhost:30001/health || exit 1
+
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
 CMD ["/entrypoint.sh"]

@@ -95,7 +95,7 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
           {host.enableTerminal && (
             <Button
               variant="outline"
-              className="!px-2 border-1 w-[60px] border-dark-border"
+              className="!px-2 border-1 w-[60px] border-edge"
               onClick={handleTerminalClick}
             >
               <Terminal />
@@ -108,7 +108,7 @@ export function Host({ host, onHostConnect }: HostProps): React.ReactElement {
           {tags.map((tag: string) => (
             <div
               key={tag}
-              className="bg-dark-bg border-1 border-dark-border pl-2 pr-2 rounded-[10px]"
+              className="bg-canvas border-1 border-edge pl-2 pr-2 rounded-[10px]"
             >
               <p className="text-sm">{tag}</p>
             </div>

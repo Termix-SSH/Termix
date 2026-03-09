@@ -9,6 +9,8 @@ import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
 import terminalRoutes from "./routes/terminal.js";
 import guacamoleRoutes from "../guacamole/routes.js";
+import networkTopologyRoutes from "./routes/network-topology.js";
+import rbacRoutes from "./routes/rbac.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -24,6 +26,7 @@ import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import { eq, and } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
+import { getProxyAgent } from "../utils/proxy-agent.js";
 import {
   users,
   sshData,
@@ -41,8 +44,12 @@ import type {
   GitHubAPIResponse,
   AuthenticatedRequest,
 } from "../../types/index.js";
-import { getDb } from "./db/index.js";
+import { getDb, DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -56,12 +63,7 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -165,12 +167,14 @@ async function fetchGitHubAPI<T>(
   }
 
   try {
-    const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
+    const url = `${GITHUB_API_BASE}${endpoint}`;
+    const response = await fetch(url, {
       headers: {
         Accept: "application/vnd.github+json",
         "User-Agent": "TermixUpdateChecker/1.0",
         "X-GitHub-Api-Version": "2022-11-28",
       },
+      agent: getProxyAgent(url),
     });
 
     if (!response.ok) {
@@ -204,11 +208,51 @@ app.use(bodyParser.json({ limit: "1gb" }));
 app.use(bodyParser.urlencoded({ limit: "1gb", extended: true }));
 app.use(bodyParser.raw({ limit: "5gb", type: "application/octet-stream" }));
 app.use(cookieParser());
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Returns the health status of the server.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Server is healthy.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ */
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+/**
+ * @openapi
+ * /version:
+ *   get:
+ *     summary: Get version information
+ *     description: Returns the local and remote version of the application.
+ *     tags:
+ *       - General
+ *     responses:
+ *       200:
+ *         description: Version information.
+ *       404:
+ *         description: Local version not set.
+ *       500:
+ *         description: Fetch error.
+ */
 app.get("/version", authenticateJWT, async (req, res) => {
   let localVersion = process.env.VERSION;
 
@@ -307,6 +351,31 @@ app.get("/version", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /releases/rss:
+ *   get:
+ *     summary: Get releases in RSS format
+ *     description: Returns the latest releases from the GitHub repository in an RSS-like JSON format.
+ *     tags:
+ *       - General
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number of the releases to fetch.
+ *       - in: query
+ *         name: per_page
+ *         schema:
+ *           type: integer
+ *         description: The number of releases to fetch per page.
+ *     responses:
+ *       200:
+ *         description: Releases in RSS format.
+ *       500:
+ *         description: Failed to generate RSS format.
+ */
 app.get("/releases/rss", authenticateJWT, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -363,6 +432,20 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/status:
+ *   get:
+ *     summary: Get encryption status
+ *     description: Returns the security status of the application.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: Security status.
+ *       500:
+ *         description: Failed to get security status.
+ */
 app.get("/encryption/status", requireAdmin, async (req, res) => {
   try {
     const securityStatus = {
@@ -384,6 +467,20 @@ app.get("/encryption/status", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/initialize:
+ *   post:
+ *     summary: Initialize security system
+ *     description: Initializes the security system for the application.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: Security system initialized successfully.
+ *       500:
+ *         description: Failed to initialize security system.
+ */
 app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   try {
     const authManager = AuthManager.getInstance();
@@ -407,6 +504,20 @@ app.post("/encryption/initialize", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/regenerate:
+ *   post:
+ *     summary: Regenerate JWT secret
+ *     description: Regenerates the system JWT secret. This will invalidate all existing JWT tokens.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: System JWT secret regenerated.
+ *       500:
+ *         description: Failed to regenerate JWT secret.
+ */
 app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   try {
     apiLogger.warn("System JWT secret regenerated via API", {
@@ -428,6 +539,20 @@ app.post("/encryption/regenerate", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /encryption/regenerate-jwt:
+ *   post:
+ *     summary: Regenerate JWT secret
+ *     description: Regenerates the JWT secret. This will invalidate all existing JWT tokens.
+ *     tags:
+ *       - Encryption
+ *     responses:
+ *       200:
+ *         description: New JWT secret generated.
+ *       500:
+ *         description: Failed to regenerate JWT secret.
+ */
 app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   try {
     apiLogger.warn("JWT secret regenerated via API", {
@@ -448,25 +573,72 @@ app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/export:
+ *   post:
+ *     summary: Export user data
+ *     description: Exports the user's data as a SQLite database file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User data exported successfully.
+ *       400:
+ *         description: Password required for export.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to export user data.
+ */
 app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
     const { password } = req.body;
-
-    if (!password) {
-      return res.status(400).json({
-        error: "Password required for export",
-        code: "PASSWORD_REQUIRED",
-      });
-    }
     const deviceInfo = parseUserAgent(req);
-    const unlocked = await authManager.authenticateUser(
-      userId,
-      password,
-      deviceInfo.type,
-    );
-    if (!unlocked) {
-      return res.status(401).json({ error: "Invalid password" });
+
+    const user = await getDb().select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isOidcUser = !!user[0].isOidc;
+
+    if (!isOidcUser) {
+      if (!password) {
+        return res.status(400).json({
+          error: "Password required for export",
+          code: "PASSWORD_REQUIRED",
+        });
+      }
+
+      const unlocked = await authManager.authenticateUser(
+        userId,
+        password,
+        deviceInfo.type,
+      );
+      if (!unlocked) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+    } else if (!DataCrypto.getUserDataKey(userId)) {
+      const oidcUnlocked = await authManager.authenticateOIDCUser(
+        userId,
+        deviceInfo.type,
+      );
+      if (!oidcUnlocked) {
+        return res.status(403).json({
+          error: "Failed to unlock user data with SSO credentials",
+        });
+      }
     }
 
     apiLogger.info("Exporting user data as SQLite", {
@@ -477,11 +649,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     const userDataKey = DataCrypto.getUserDataKey(userId);
     if (!userDataKey) {
       throw new Error("User data not unlocked");
-    }
-
-    const user = await getDb().select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
-      throw new Error(`User not found: ${userId}`);
     }
 
     const tempDir =
@@ -551,19 +718,39 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           tags TEXT,
           pin INTEGER NOT NULL DEFAULT 0,
           auth_type TEXT NOT NULL,
+          force_keyboard_interactive TEXT,
           password TEXT,
           key TEXT,
           key_password TEXT,
           key_type TEXT,
+          sudo_password TEXT,
           autostart_password TEXT,
           autostart_key TEXT,
           autostart_key_password TEXT,
           credential_id INTEGER,
+          override_credential_username INTEGER,
           enable_terminal INTEGER NOT NULL DEFAULT 1,
           enable_tunnel INTEGER NOT NULL DEFAULT 1,
           tunnel_connections TEXT,
+          jump_hosts TEXT,
           enable_file_manager INTEGER NOT NULL DEFAULT 1,
+          enable_docker INTEGER NOT NULL DEFAULT 0,
+          show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1,
+          show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0,
+          show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0,
+          show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0,
+          show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
           default_path TEXT,
+          stats_config TEXT,
+          terminal_config TEXT,
+          quick_actions TEXT,
+          notes TEXT,
+          use_socks5 INTEGER,
+          socks5_host TEXT,
+          socks5_port INTEGER,
+          socks5_username TEXT,
+          socks5_password TEXT,
+          socks5_proxy_chain TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
@@ -642,20 +829,20 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userRecord.id,
         userRecord.username,
         "[EXPORTED_USER_NO_PASSWORD]",
-        userRecord.is_admin ? 1 : 0,
-        userRecord.is_oidc ? 1 : 0,
-        userRecord.oidc_identifier || null,
-        userRecord.client_id || null,
-        userRecord.client_secret || null,
-        userRecord.issuer_url || null,
-        userRecord.authorization_url || null,
-        userRecord.token_url || null,
-        userRecord.identifier_path || null,
-        userRecord.name_path || null,
+        userRecord.isAdmin ? 1 : 0,
+        userRecord.isOidc ? 1 : 0,
+        userRecord.oidcIdentifier || null,
+        userRecord.clientId || null,
+        userRecord.clientSecret || null,
+        userRecord.issuerUrl || null,
+        userRecord.authorizationUrl || null,
+        userRecord.tokenUrl || null,
+        userRecord.identifierPath || null,
+        userRecord.namePath || null,
         userRecord.scopes || null,
-        userRecord.totp_secret || null,
-        userRecord.totp_enabled ? 1 : 0,
-        userRecord.totp_backup_codes || null,
+        userRecord.totpSecret || null,
+        userRecord.totpEnabled ? 1 : 0,
+        userRecord.totpBackupCodes || null,
       );
 
       const sshHosts = await getDb()
@@ -663,8 +850,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         .from(sshData)
         .where(eq(sshData.userId, userId));
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags, pin, auth_type, password, key, key_password, key_type, autostart_password, autostart_key, autostart_key_password, credential_id, enable_terminal, enable_tunnel, tunnel_connections, enable_file_manager, default_path, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const host of sshHosts) {
@@ -685,19 +872,39 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.tags || null,
           decrypted.pin ? 1 : 0,
           decrypted.authType,
+          decrypted.forceKeyboardInteractive || null,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.key_password || null,
+          decrypted.keyPassword || null,
           decrypted.keyType || null,
+          decrypted.sudoPassword || null,
           decrypted.autostartPassword || null,
           decrypted.autostartKey || null,
           decrypted.autostartKeyPassword || null,
           decrypted.credentialId || null,
+          decrypted.overrideCredentialUsername ? 1 : 0,
           decrypted.enableTerminal ? 1 : 0,
           decrypted.enableTunnel ? 1 : 0,
           decrypted.tunnelConnections || null,
+          decrypted.jumpHosts || null,
           decrypted.enableFileManager ? 1 : 0,
+          decrypted.enableDocker ? 1 : 0,
+          decrypted.showTerminalInSidebar ? 1 : 0,
+          decrypted.showFileManagerInSidebar ? 1 : 0,
+          decrypted.showTunnelInSidebar ? 1 : 0,
+          decrypted.showDockerInSidebar ? 1 : 0,
+          decrypted.showServerStatsInSidebar ? 1 : 0,
           decrypted.defaultPath || null,
+          decrypted.statsConfig || null,
+          decrypted.terminalConfig || null,
+          decrypted.quickActions || null,
+          decrypted.notes || null,
+          decrypted.useSocks5 ? 1 : 0,
+          decrypted.socks5Host || null,
+          decrypted.socks5Port || null,
+          decrypted.socks5Username || null,
+          decrypted.socks5Password || null,
+          decrypted.socks5ProxyChain || null,
           decrypted.createdAt,
           decrypted.updatedAt,
         );
@@ -730,9 +937,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.username,
           decrypted.password || null,
           decrypted.key || null,
-          decrypted.private_key || null,
-          decrypted.public_key || null,
-          decrypted.key_password || null,
+          decrypted.privateKey || null,
+          decrypted.publicKey || null,
+          decrypted.keyPassword || null,
           decrypted.keyType || null,
           decrypted.detectedKeyType || null,
           decrypted.usageCount || 0,
@@ -898,6 +1105,36 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/import:
+ *   post:
+ *     summary: Import user data
+ *     description: Imports user data from a SQLite database file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Incremental import completed successfully.
+ *       400:
+ *         description: No file uploaded or password required for import.
+ *       401:
+ *         description: Invalid password.
+ *       500:
+ *         description: Failed to import SQLite data.
+ */
 app.post(
   "/database/import",
   authenticateJWT,
@@ -922,7 +1159,7 @@ app.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isOidcUser = !!userRecords[0].is_oidc;
+      const isOidcUser = !!userRecords[0].isOidc;
 
       if (!isOidcUser) {
         if (!password) {
@@ -1056,19 +1293,45 @@ app.post(
                 tags: host.tags,
                 pin: Boolean(host.pin),
                 authType: host.auth_type,
+                forceKeyboardInteractive: host.force_keyboard_interactive,
                 password: host.password,
                 key: host.key,
                 keyPassword: host.key_password,
                 keyType: host.key_type,
+                sudoPassword: host.sudo_password,
                 autostartPassword: host.autostart_password,
                 autostartKey: host.autostart_key,
                 autostartKeyPassword: host.autostart_key_password,
-                credentialId: null,
+                credentialId: host.credential_id || null,
+                overrideCredentialUsername: Boolean(
+                  host.override_credential_username,
+                ),
                 enableTerminal: Boolean(host.enable_terminal),
                 enableTunnel: Boolean(host.enable_tunnel),
                 tunnelConnections: host.tunnel_connections,
+                jumpHosts: host.jump_hosts,
                 enableFileManager: Boolean(host.enable_file_manager),
+                enableDocker: Boolean(host.enable_docker),
+                showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
+                showFileManagerInSidebar: Boolean(
+                  host.show_file_manager_in_sidebar,
+                ),
+                showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
+                showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
+                showServerStatsInSidebar: Boolean(
+                  host.show_server_stats_in_sidebar,
+                ),
                 defaultPath: host.default_path,
+                statsConfig: host.stats_config,
+                terminalConfig: host.terminal_config,
+                quickActions: host.quick_actions,
+                notes: host.notes,
+                useSocks5: Boolean(host.use_socks5),
+                socks5Host: host.socks5_host,
+                socks5Port: host.socks5_port,
+                socks5Username: host.socks5_username,
+                socks5Password: host.socks5_password,
+                socks5ProxyChain: host.socks5_proxy_chain,
                 createdAt: host.created_at || new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               };
@@ -1267,7 +1530,7 @@ app.post(
           .select()
           .from(users)
           .where(eq(users.id, userId));
-        if (targetUser.length > 0 && targetUser[0].is_admin) {
+        if (targetUser.length > 0 && targetUser[0].isAdmin) {
           try {
             const importedSettings = importDb
               .prepare("SELECT * FROM settings")
@@ -1308,6 +1571,19 @@ app.post(
         }
 
         result.success = true;
+
+        try {
+          await DatabaseSaveTrigger.forceSave("database_import");
+        } catch (saveError) {
+          apiLogger.error(
+            "Failed to persist imported data to disk",
+            saveError,
+            {
+              operation: "import_force_save_failed",
+              userId,
+            },
+          );
+        }
       } finally {
         if (importDb) {
           importDb.close();
@@ -1362,6 +1638,31 @@ app.post(
   },
 );
 
+/**
+ * @openapi
+ * /database/export/preview:
+ *   post:
+ *     summary: Preview user data export
+ *     description: Generates a preview of the user data export, including statistics about the data.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               scope:
+ *                 type: string
+ *               includeCredentials:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Export preview generated successfully.
+ *       500:
+ *         description: Failed to generate export preview.
+ */
 app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1397,6 +1698,33 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /database/restore:
+ *   post:
+ *     summary: Restore database from backup
+ *     description: Restores the database from an encrypted backup file.
+ *     tags:
+ *       - Database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               backupPath:
+ *                 type: string
+ *               targetPath:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Database restored successfully.
+ *       400:
+ *         description: Backup path is required or invalid encrypted backup file.
+ *       500:
+ *         description: Database restore failed.
+ */
 app.post("/database/restore", requireAdmin, async (req, res) => {
   try {
     const { backupPath, targetPath } = req.body;
@@ -1438,8 +1766,36 @@ app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/guacamole", guacamoleRoutes);
+app.use("/network-topology", networkTopologyRoutes);
+app.use("/rbac", rbacRoutes);
+
+const frontendDistPaths = [
+  path.join(__dirname, "../../../dist"),
+  path.join(__dirname, "../../dist"),
+  path.join(process.cwd(), "dist"),
+];
+
+const frontendDist = frontendDistPaths.find((p) =>
+  fs.existsSync(path.join(p, "index.html")),
+);
+
+if (frontendDist) {
+  databaseLogger.info(`Serving frontend from: ${frontendDist}`, {
+    operation: "static_files",
+  });
+  app.use(express.static(frontendDist));
+
+  app.use((req, res, next) => {
+    if (req.method === "GET" && req.accepts("html")) {
+      res.sendFile(path.join(frontendDist, "index.html"));
+    } else {
+      next();
+    }
+  });
+}
 
 app.use(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (
     err: unknown,
     req: express.Request,
@@ -1477,6 +1833,20 @@ async function initializeSecurity() {
   }
 }
 
+/**
+ * @openapi
+ * /database/migration/status:
+ *   get:
+ *     summary: Get database migration status
+ *     description: Returns the status of the database migration.
+ *     tags:
+ *       - Database
+ *     responses:
+ *       200:
+ *         description: Migration status.
+ *       500:
+ *         description: Failed to get migration status.
+ */
 app.get(
   "/database/migration/status",
   authenticateJWT,
@@ -1500,13 +1870,17 @@ app.get(
       if (status.hasUnencryptedDb) {
         try {
           unencryptedSize = fs.statSync(dbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       if (status.hasEncryptedDb) {
         try {
           encryptedSize = fs.statSync(encryptedDbPath).size;
-        } catch (error) {}
+        } catch {
+          // expected - file may not exist
+        }
       }
 
       res.json({
@@ -1530,6 +1904,20 @@ app.get(
   },
 );
 
+/**
+ * @openapi
+ * /database/migration/history:
+ *   get:
+ *     summary: Get database migration history
+ *     description: Returns the history of database migrations.
+ *     tags:
+ *       - Database
+ *     responses:
+ *       200:
+ *         description: Migration history.
+ *       500:
+ *         description: Failed to get migration history.
+ */
 app.get(
   "/database/migration/history",
   authenticateJWT,

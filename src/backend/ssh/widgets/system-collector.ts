@@ -1,6 +1,5 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import { statsLogger } from "../../utils/logger.js";
 
 export async function collectSystemMetrics(client: Client): Promise<{
   hostname: string | null;
@@ -22,11 +21,8 @@ export async function collectSystemMetrics(client: Client): Promise<{
     hostname = hostnameOut.stdout.trim() || null;
     kernel = kernelOut.stdout.trim() || null;
     os = osOut.stdout.trim() || null;
-  } catch (e) {
-    statsLogger.debug("Failed to collect system info", {
-      operation: "system_info_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
+  } catch {
+    // expected
   }
 
   return {

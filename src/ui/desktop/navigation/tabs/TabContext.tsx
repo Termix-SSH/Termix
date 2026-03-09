@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useState,
+  useEffect,
   useRef,
   type ReactNode,
 } from "react";
@@ -47,16 +48,115 @@ interface TabProviderProps {
   children: ReactNode;
 }
 
+export function clearTermixSessionStorage() {
+  localStorage.removeItem("termix_tabs");
+  localStorage.removeItem("termix_currentTab");
+  // Clear all session keys
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith("termix_session_")) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
+
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>(() => [
-    { id: 1, type: "home", title: "Home" },
-  ]);
-  const [currentTab, setCurrentTab] = useState<number>(1);
-  const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
-  const nextTabId = useRef(2);
+  const [tabs, setTabs] = useState<Tab[]>(() => {
+    // Check if persistence is enabled (always enabled for mobile/Electron)
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const isElectron =
+      typeof window !== "undefined" && !!(window as any).electronAPI;
+    const persistenceEnabled =
+      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+    const shouldRestore = isMobile || isElectron || persistenceEnabled;
 
-  // Update home tab title when translation changes
+    if (!shouldRestore) {
+      return [{ id: 1, type: "home", title: "Home" }];
+    }
+
+    try {
+      const saved = localStorage.getItem("termix_tabs");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Tab[];
+        const restored: Tab[] = [{ id: 1, type: "home", title: "Home" }];
+        let maxId = 1;
+        for (const tab of parsed) {
+          if (tab.type === "home") continue;
+          // Preserve instanceId from saved tab - critical for session lookup
+          const restoredTab: Tab = {
+            ...tab,
+            instanceId: tab.instanceId, // Preserve instanceId for session persistence
+            terminalRef:
+              tab.type === "terminal"
+                ? React.createRef<{ disconnect?: () => void }>()
+                : undefined,
+            hostConfig: tab.hostConfig
+              ? {
+                  ...tab.hostConfig,
+                  instanceId: tab.instanceId,
+                }
+              : undefined,
+          };
+          restored.push(restoredTab);
+          if (tab.id > maxId) maxId = tab.id;
+        }
+        if (restored.length > 1) return restored;
+      }
+    } catch {
+      /* ignore corrupt data */
+    }
+    return [{ id: 1, type: "home", title: "Home" }];
+  });
+  const [currentTab, setCurrentTab] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("termix_currentTab");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        // Validate against restored tabs
+        if (parsed && tabs.some((t) => t.id === parsed)) return parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+    return 1;
+  });
+  const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
+  const [initialMaxId] = useState(() => {
+    let maxId = 1;
+    tabs.forEach((tab) => {
+      if (tab.id > maxId) maxId = tab.id;
+    });
+    return maxId + 1;
+  });
+  const nextTabId = useRef(initialMaxId);
+
+  // Save tabs to localStorage on change
+  useEffect(() => {
+    // Check if persistence is enabled (always enabled for mobile/Electron)
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const isElectron =
+      typeof window !== "undefined" && !!(window as any).electronAPI;
+    const persistenceEnabled =
+      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+    const shouldSave = isMobile || isElectron || persistenceEnabled;
+
+    if (shouldSave) {
+      // Serialize tabs, preserving instanceId for session persistence
+      const serializable = tabs
+        .filter((t) => t.type !== "home")
+        .map(({ terminalRef, ...rest }) => rest);
+      localStorage.setItem("termix_tabs", JSON.stringify(serializable));
+      localStorage.setItem("termix_currentTab", String(currentTab));
+    } else {
+      // Clear saved tabs when persistence is disabled
+      localStorage.removeItem("termix_tabs");
+      localStorage.removeItem("termix_currentTab");
+    }
+  }, [tabs, currentTab]);
+
   React.useEffect(() => {
     setTabs((prev) =>
       prev.map((tab) =>
@@ -72,7 +172,7 @@ export function TabProvider({ children }: TabProviderProps) {
     desiredTitle: string | undefined,
   ): string {
     const defaultTitle =
-      tabType === "server"
+      tabType === "server_stats"
         ? t("nav.serverStats")
         : tabType === "file_manager"
           ? t("nav.fileManager")
@@ -138,9 +238,10 @@ export function TabProvider({ children }: TabProviderProps) {
     }
 
     const id = nextTabId.current++;
+    const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const needsUniqueTitle =
       tabData.type === "terminal" ||
-      tabData.type === "server" ||
+      tabData.type === "server_stats" ||
       tabData.type === "file_manager" ||
       tabData.type === "tunnel" ||
       tabData.type === "docker";
@@ -150,11 +251,18 @@ export function TabProvider({ children }: TabProviderProps) {
     const newTab: Tab = {
       ...tabData,
       id,
+      instanceId,
       title: effectiveTitle,
       terminalRef:
         tabData.type === "terminal"
           ? React.createRef<{ disconnect?: () => void }>()
           : undefined,
+      hostConfig: tabData.hostConfig
+        ? {
+            ...tabData.hostConfig,
+            instanceId,
+          }
+        : undefined,
     };
     setTabs((prev) => [...prev, newTab]);
     setCurrentTab(id);
@@ -174,10 +282,8 @@ export function TabProvider({ children }: TabProviderProps) {
 
     setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
 
-    // Remove from split screen
     setAllSplitScreenTab((prev) => {
       const newSplits = prev.filter((id) => id !== tabId);
-      // Auto-clear split mode if only 1 or fewer tabs remain in split
       if (newSplits.length <= 1) {
         return [];
       }
@@ -187,7 +293,6 @@ export function TabProvider({ children }: TabProviderProps) {
     if (currentTab === tabId) {
       const remainingTabs = tabs.filter((tab) => tab.id !== tabId);
       if (remainingTabs.length > 0) {
-        // Try to set current tab to another split tab first, if any remain
         const remainingSplitTabs = allSplitScreenTab.filter(
           (id) => id !== tabId,
         );
@@ -197,7 +302,7 @@ export function TabProvider({ children }: TabProviderProps) {
           setCurrentTab(remainingTabs[0].id);
         }
       } else {
-        setCurrentTab(1); // Home tab
+        setCurrentTab(1);
       }
     }
   };
@@ -206,7 +311,7 @@ export function TabProvider({ children }: TabProviderProps) {
     setAllSplitScreenTab((prev) => {
       if (prev.includes(tabId)) {
         return prev.filter((id) => id !== tabId);
-      } else if (prev.length < 4) {
+      } else if (prev.length < 6) {
         return [...prev, tabId];
       }
       return prev;
@@ -257,16 +362,26 @@ export function TabProvider({ children }: TabProviderProps) {
           if (tab.type === "ssh_manager") {
             return {
               ...tab,
-              hostConfig: newHostConfig,
+              hostConfig: {
+                ...newHostConfig,
+                instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+              },
             };
           }
 
           return {
             ...tab,
-            hostConfig: newHostConfig,
+            hostConfig: {
+              ...newHostConfig,
+              instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+            },
             title: newHostConfig.name?.trim()
               ? newHostConfig.name
-              : `${newHostConfig.username}@${newHostConfig.ip}:${newHostConfig.port}`,
+              : t("nav.hostTabTitle", {
+                  username: newHostConfig.username,
+                  ip: newHostConfig.ip,
+                  port: newHostConfig.port,
+                }),
           };
         }
         return tab;
@@ -276,7 +391,11 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
     setTabs((prev) =>
-      prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)),
+      prev.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, ...updates, _updateTimestamp: Date.now() }
+          : tab,
+      ),
     );
   };
 

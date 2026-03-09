@@ -4,7 +4,12 @@ import type {
 } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { sshCredentials, sshCredentialUsage, sshData } from "../db/schema.js";
+import {
+  sshCredentials,
+  sshCredentialUsage,
+  sshData,
+  hostAccess,
+} from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -79,8 +84,52 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-// Create a new credential
-// POST /credentials
+/**
+ * @openapi
+ * /credentials:
+ *   post:
+ *     summary: Create a new credential
+ *     description: Creates a new SSH credential for the authenticated user.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               authType:
+ *                 type: string
+ *                 enum: [password, key]
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               key:
+ *                 type: string
+ *               keyPassword:
+ *                 type: string
+ *               keyType:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Credential created successfully.
+ *       400:
+ *         description: Invalid request body.
+ *       500:
+ *         description: Failed to create credential.
+ */
 router.post(
   "/",
   authenticateJWT,
@@ -100,18 +149,13 @@ router.post(
       keyType,
     } = req.body;
 
-    if (
-      !isNonEmptyString(userId) ||
-      !isNonEmptyString(name) ||
-      !isNonEmptyString(username)
-    ) {
+    if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
       authLogger.warn("Invalid credential creation data validation failed", {
         operation: "credential_create",
         userId,
         hasName: !!name,
-        hasUsername: !!username,
       });
-      return res.status(400).json({ error: "Name and username are required" });
+      return res.status(400).json({ error: "Name is required" });
     }
 
     if (!["password", "key"].includes(authType)) {
@@ -178,12 +222,12 @@ router.post(
         folder: folder?.trim() || null,
         tags: Array.isArray(tags) ? tags.join(",") : tags || "",
         authType,
-        username: username.trim(),
+        username: username?.trim() || null,
         password: plainPassword,
         key: plainKey,
-        private_key: keyInfo?.privateKey || plainKey,
-        public_key: keyInfo?.publicKey || null,
-        key_password: plainKeyPassword,
+        privateKey: keyInfo?.privateKey || plainKey,
+        publicKey: keyInfo?.publicKey || null,
+        keyPassword: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
         usageCount: 0,
@@ -226,8 +270,22 @@ router.post(
   },
 );
 
-// Get all credentials for the authenticated user
-// GET /credentials
+/**
+ * @openapi
+ * /credentials:
+ *   get:
+ *     summary: Get all credentials
+ *     description: Retrieves all SSH credentials for the authenticated user.
+ *     tags:
+ *       - Credentials
+ *     responses:
+ *       200:
+ *         description: A list of credentials.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to fetch credentials.
+ */
 router.get(
   "/",
   authenticateJWT,
@@ -259,8 +317,22 @@ router.get(
   },
 );
 
-// Get all unique credential folders for the authenticated user
-// GET /credentials/folders
+/**
+ * @openapi
+ * /credentials/folders:
+ *   get:
+ *     summary: Get credential folders
+ *     description: Retrieves all unique credential folders for the authenticated user.
+ *     tags:
+ *       - Credentials
+ *     responses:
+ *       200:
+ *         description: A list of folder names.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to fetch credential folders.
+ */
 router.get(
   "/folders",
   authenticateJWT,
@@ -297,15 +369,37 @@ router.get(
   },
 );
 
-// Get a specific credential by ID (with plain text secrets)
-// GET /credentials/:id
+/**
+ * @openapi
+ * /credentials/{id}:
+ *   get:
+ *     summary: Get a specific credential
+ *     description: Retrieves a specific credential by its ID, including secrets.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The requested credential.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         description: Failed to fetch credential.
+ */
 router.get(
   "/:id",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for credential fetch");
@@ -340,14 +434,14 @@ router.get(
       if (credential.key) {
         output.key = credential.key;
       }
-      if (credential.private_key) {
-        output.privateKey = credential.private_key;
+      if (credential.privateKey) {
+        output.privateKey = credential.privateKey;
       }
-      if (credential.public_key) {
-        output.publicKey = credential.public_key;
+      if (credential.publicKey) {
+        output.publicKey = credential.publicKey;
       }
-      if (credential.key_password) {
-        output.keyPassword = credential.key_password;
+      if (credential.keyPassword) {
+        output.keyPassword = credential.keyPassword;
       }
 
       res.json(output);
@@ -361,21 +455,60 @@ router.get(
   },
 );
 
-// Update a credential
-// PUT /credentials/:id
+/**
+ * @openapi
+ * /credentials/{id}:
+ *   put:
+ *     summary: Update a credential
+ *     description: Updates a specific credential by its ID.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The updated credential.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         description: Failed to update credential.
+ */
 router.put(
   "/:id",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const updateData = req.body;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for credential update");
       return res.status(400).json({ error: "Invalid request" });
     }
+    authLogger.info("Updating SSH credential", {
+      operation: "credential_update",
+      userId,
+      credentialId: parseInt(id),
+      changes: Object.keys(updateData),
+    });
 
     try {
       const existing = await db
@@ -406,7 +539,7 @@ router.put(
           : updateData.tags || "";
       }
       if (updateData.username !== undefined)
-        updateFields.username = updateData.username.trim();
+        updateFields.username = updateData.username?.trim() || null;
       if (updateData.authType !== undefined)
         updateFields.authType = updateData.authType;
       if (updateData.keyType !== undefined)
@@ -431,13 +564,13 @@ router.put(
               error: `Invalid SSH key: ${keyInfo.error}`,
             });
           }
-          updateFields.private_key = keyInfo.privateKey;
-          updateFields.public_key = keyInfo.publicKey;
+          updateFields.privateKey = keyInfo.privateKey;
+          updateFields.publicKey = keyInfo.publicKey;
           updateFields.detectedKeyType = keyInfo.keyType;
         }
       }
       if (updateData.keyPassword !== undefined) {
-        updateFields.key_password = updateData.keyPassword || null;
+        updateFields.keyPassword = updateData.keyPassword || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -473,18 +606,19 @@ router.put(
         userId,
       );
 
-      const credential = updated[0];
-      authLogger.success(
-        `SSH credential updated: ${credential.name} (${credential.authType}) by user ${userId}`,
-        {
-          operation: "credential_update_success",
-          userId,
-          credentialId: parseInt(id),
-          name: credential.name,
-          authType: credential.authType,
-          username: credential.username,
-        },
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.updateSharedCredentialsForOriginal(
+        parseInt(id),
+        userId,
       );
+
+      authLogger.success("SSH credential updated", {
+        operation: "credential_update_success",
+        userId,
+        credentialId: parseInt(id),
+      });
 
       res.json(formatCredentialOutput(updated[0]));
     } catch (err) {
@@ -497,20 +631,47 @@ router.put(
   },
 );
 
-// Delete a credential
-// DELETE /credentials/:id
+/**
+ * @openapi
+ * /credentials/{id}:
+ *   delete:
+ *     summary: Delete a credential
+ *     description: Deletes a specific credential by its ID.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Credential deleted successfully.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         description: Failed to delete credential.
+ */
 router.delete(
   "/:id",
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!isNonEmptyString(userId) || !id) {
       authLogger.warn("Invalid request for credential deletion");
       return res.status(400).json({ error: "Invalid request" });
     }
+    authLogger.info("Deleting SSH credential", {
+      operation: "credential_delete",
+      userId,
+      credentialId: parseInt(id),
+    });
 
     try {
       const credentialToDelete = await db
@@ -527,8 +688,6 @@ router.delete(
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      // Update hosts using this credential to set credentialId to null
-      // This prevents orphaned references before deletion
       const hostsUsingCredential = await db
         .select()
         .from(sshData)
@@ -546,7 +705,7 @@ router.delete(
             credentialId: null,
             password: null,
             key: null,
-            key_password: null,
+            keyPassword: null,
             authType: "password",
           })
           .where(
@@ -555,10 +714,32 @@ router.delete(
               eq(sshData.userId, userId),
             ),
           );
+
+        for (const host of hostsUsingCredential) {
+          const revokedShares = await db
+            .delete(hostAccess)
+            .where(eq(hostAccess.hostId, host.id))
+            .returning({ id: hostAccess.id });
+
+          if (revokedShares.length > 0) {
+            authLogger.info(
+              "Auto-revoked host shares due to credential deletion",
+              {
+                operation: "auto_revoke_shares",
+                hostId: host.id,
+                credentialId: parseInt(id),
+                revokedCount: revokedShares.length,
+                reason: "credential_deleted",
+              },
+            );
+          }
+        }
       }
 
-      // sshCredentialUsage will be automatically deleted by ON DELETE CASCADE
-      // No need for manual deletion
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
+      const sharedCredManager = SharedCredentialManager.getInstance();
+      await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
 
       await db
         .delete(sshCredentials)
@@ -569,18 +750,11 @@ router.delete(
           ),
         );
 
-      const credential = credentialToDelete[0];
-      authLogger.success(
-        `SSH credential deleted: ${credential.name} (${credential.authType}) by user ${userId}`,
-        {
-          operation: "credential_delete_success",
-          userId,
-          credentialId: parseInt(id),
-          name: credential.name,
-          authType: credential.authType,
-          username: credential.username,
-        },
-      );
+      authLogger.success("SSH credential deleted", {
+        operation: "credential_delete_success",
+        userId,
+        credentialId: parseInt(id),
+      });
 
       res.json({ message: "Credential deleted successfully" });
     } catch (err) {
@@ -593,14 +767,46 @@ router.delete(
   },
 );
 
-// Apply a credential to an SSH host (for quick application)
-// POST /credentials/:id/apply-to-host/:hostId
+/**
+ * @openapi
+ * /credentials/{id}/apply-to-host/{hostId}:
+ *   post:
+ *     summary: Apply a credential to a host
+ *     description: Applies a credential to an SSH host for quick application.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Credential applied to host successfully.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         description: Failed to apply credential to host.
+ */
 router.post(
   "/:id/apply-to-host/:hostId",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id: credentialId, hostId } = req.params;
+    const credentialId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const hostId = Array.isArray(req.params.hostId)
+      ? req.params.hostId[0]
+      : req.params.hostId;
 
     if (!isNonEmptyString(userId) || !credentialId || !hostId) {
       authLogger.warn("Invalid request for credential application");
@@ -632,11 +838,11 @@ router.post(
         .update(sshData)
         .set({
           credentialId: parseInt(credentialId),
-          username: credential.username as string,
-          authType: (credential.auth_type || credential.authType) as string,
+          username: (credential.username as string) || "",
+          authType: credential.authType as string,
           password: null,
           key: null,
-          key_password: null,
+          keyPassword: null,
           keyType: null,
           updatedAt: new Date().toISOString(),
         })
@@ -672,14 +878,36 @@ router.post(
   },
 );
 
-// Get hosts using a specific credential
-// GET /credentials/:id/hosts
+/**
+ * @openapi
+ * /credentials/{id}/hosts:
+ *   get:
+ *     summary: Get hosts using a credential
+ *     description: Retrieves a list of hosts that are using a specific credential.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of hosts.
+ *       400:
+ *         description: Invalid request.
+ *       500:
+ *         description: Failed to fetch hosts using credential.
+ */
 router.get(
   "/:id/hosts",
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { id: credentialId } = req.params;
+    const credentialId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
     if (!isNonEmptyString(userId) || !credentialId) {
       authLogger.warn("Invalid request for credential hosts fetch");
@@ -724,15 +952,15 @@ function formatCredentialOutput(
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
-    authType: credential.authType || credential.auth_type,
-    username: credential.username,
-    publicKey: credential.public_key || credential.publicKey,
-    keyType: credential.key_type || credential.keyType,
-    detectedKeyType: credential.detected_key_type || credential.detectedKeyType,
-    usageCount: credential.usage_count || credential.usageCount || 0,
-    lastUsed: credential.last_used || credential.lastUsed,
-    createdAt: credential.created_at || credential.createdAt,
-    updatedAt: credential.updated_at || credential.updatedAt,
+    authType: credential.authType,
+    username: credential.username || null,
+    publicKey: credential.publicKey,
+    keyType: credential.keyType,
+    detectedKeyType: credential.detectedKeyType,
+    usageCount: credential.usageCount || 0,
+    lastUsed: credential.lastUsed,
+    createdAt: credential.createdAt,
+    updatedAt: credential.updatedAt,
   };
 }
 
@@ -767,8 +995,33 @@ function formatSSHHostOutput(
   };
 }
 
-// Rename a credential folder
-// PUT /credentials/folders/rename
+/**
+ * @openapi
+ * /credentials/folders/rename:
+ *   put:
+ *     summary: Rename a credential folder
+ *     description: Renames a credential folder for the authenticated user.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldName:
+ *                 type: string
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Folder renamed successfully.
+ *       400:
+ *         description: Both oldName and newName are required.
+ *       500:
+ *         description: Failed to rename folder.
+ */
 router.put(
   "/folders/rename",
   authenticateJWT,
@@ -807,8 +1060,33 @@ router.put(
   },
 );
 
-// Detect SSH key type endpoint
-// POST /credentials/detect-key-type
+/**
+ * @openapi
+ * /credentials/detect-key-type:
+ *   post:
+ *     summary: Detect SSH key type
+ *     description: Detects the type of an SSH private key.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               privateKey:
+ *                 type: string
+ *               keyPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Key type detection result.
+ *       400:
+ *         description: Private key is required.
+ *       500:
+ *         description: Failed to detect key type.
+ */
 router.post(
   "/detect-key-type",
   authenticateJWT,
@@ -841,8 +1119,31 @@ router.post(
   },
 );
 
-// Detect SSH public key type endpoint
-// POST /credentials/detect-public-key-type
+/**
+ * @openapi
+ * /credentials/detect-public-key-type:
+ *   post:
+ *     summary: Detect SSH public key type
+ *     description: Detects the type of an SSH public key.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               publicKey:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Key type detection result.
+ *       400:
+ *         description: Public key is required.
+ *       500:
+ *         description: Failed to detect public key type.
+ */
 router.post(
   "/detect-public-key-type",
   authenticateJWT,
@@ -876,8 +1177,35 @@ router.post(
   },
 );
 
-// Validate SSH key pair endpoint
-// POST /credentials/validate-key-pair
+/**
+ * @openapi
+ * /credentials/validate-key-pair:
+ *   post:
+ *     summary: Validate SSH key pair
+ *     description: Validates if a given SSH private key and public key match.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               privateKey:
+ *                 type: string
+ *               publicKey:
+ *                 type: string
+ *               keyPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Key pair validation result.
+ *       400:
+ *         description: Private key and public key are required.
+ *       500:
+ *         description: Failed to validate key pair.
+ */
 router.post(
   "/validate-key-pair",
   authenticateJWT,
@@ -920,8 +1248,32 @@ router.post(
   },
 );
 
-// Generate new SSH key pair endpoint
-// POST /credentials/generate-key-pair
+/**
+ * @openapi
+ * /credentials/generate-key-pair:
+ *   post:
+ *     summary: Generate new SSH key pair
+ *     description: Generates a new SSH key pair.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               keyType:
+ *                 type: string
+ *               keySize:
+ *                 type: integer
+ *               passphrase:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The new key pair.
+ *       500:
+ *         description: Failed to generate SSH key pair.
+ */
 router.post(
   "/generate-key-pair",
   authenticateJWT,
@@ -963,8 +1315,33 @@ router.post(
   },
 );
 
-// Generate public key from private key endpoint
-// POST /credentials/generate-public-key
+/**
+ * @openapi
+ * /credentials/generate-public-key:
+ *   post:
+ *     summary: Generate public key from private key
+ *     description: Generates a public key from a given private key.
+ *     tags:
+ *       - Credentials
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               privateKey:
+ *                 type: string
+ *               keyPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The generated public key.
+ *       400:
+ *         description: Private key is required.
+ *       500:
+ *         description: Failed to generate public key.
+ */
 router.post(
   "/generate-public-key",
   authenticateJWT,
@@ -1129,7 +1506,7 @@ async function deploySSHKeyToHost(
   hostConfig: Record<string, unknown>,
   credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  const publicKey = credData.public_key as string;
+  const publicKey = credData.publicKey as string;
   return new Promise((resolve) => {
     const conn = new Client();
 
@@ -1250,7 +1627,7 @@ async function deploySSHKeyToHost(
             .replace(/'/g, "'\\''");
 
           conn.exec(
-            `printf '%s\\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
               if (err) {
                 clearTimeout(addTimeout);
@@ -1469,13 +1846,47 @@ async function deploySSHKeyToHost(
   });
 }
 
-// Deploy SSH Key to Host endpoint
-// POST /credentials/:id/deploy-to-host
+/**
+ * @openapi
+ * /credentials/{id}/deploy-to-host:
+ *   post:
+ *     summary: Deploy SSH key to a host
+ *     description: Deploys an SSH public key to a target host's authorized_keys file.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetHostId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: SSH key deployed successfully.
+ *       400:
+ *         description: Credential ID and target host ID are required.
+ *       401:
+ *         description: Authentication required.
+ *       404:
+ *         description: Credential or target host not found.
+ *       500:
+ *         description: Failed to deploy SSH key.
+ */
 router.post(
   "/:id/deploy-to-host",
   authenticateJWT,
   async (req: Request, res: Response) => {
-    const credentialId = parseInt(req.params.id);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id);
     const { targetHostId } = req.body;
 
     if (!credentialId || !targetHostId) {
@@ -1521,7 +1932,7 @@ router.post(
         });
       }
 
-      const publicKey = credData.public_key;
+      const publicKey = credData.publicKey;
       if (!publicKey) {
         return res.status(400).json({
           success: false,
@@ -1577,15 +1988,14 @@ router.post(
           if (hostCredential && hostCredential.length > 0) {
             const cred = hostCredential[0];
 
-            hostConfig.authType = cred.auth_type || cred.authType;
+            hostConfig.authType = cred.authType;
             hostConfig.username = cred.username;
 
-            if ((cred.auth_type || cred.authType) === "password") {
+            if (cred.authType === "password") {
               hostConfig.password = cred.password;
-            } else if ((cred.auth_type || cred.authType) === "key") {
-              hostConfig.privateKey =
-                cred.private_key || cred.privateKey || cred.key;
-              hostConfig.keyPassword = cred.key_password || cred.keyPassword;
+            } else if (cred.authType === "key") {
+              hostConfig.privateKey = cred.privateKey || cred.key;
+              hostConfig.keyPassword = cred.keyPassword;
             }
           } else {
             return res.status(400).json({
@@ -1601,10 +2011,7 @@ router.post(
         }
       }
 
-      const deployResult = await deploySSHKeyToHost(
-        hostConfig,
-        credData,
-      );
+      const deployResult = await deploySSHKeyToHost(hostConfig, credData);
 
       if (deployResult.success) {
         res.json({

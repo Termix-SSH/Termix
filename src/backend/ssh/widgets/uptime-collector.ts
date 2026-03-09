@@ -1,6 +1,5 @@
 import type { Client } from "ssh2";
 import { execCommand } from "./common-utils.js";
-import { statsLogger } from "../../utils/logger.js";
 
 export async function collectUptimeMetrics(client: Client): Promise<{
   seconds: number | null;
@@ -21,11 +20,8 @@ export async function collectUptimeMetrics(client: Client): Promise<{
         uptimeFormatted = `${days}d ${hours}h ${minutes}m`;
       }
     }
-  } catch (e) {
-    statsLogger.debug("Failed to collect uptime", {
-      operation: "uptime_failed",
-      error: e instanceof Error ? e.message : String(e),
-    });
+  } catch {
+    // expected
   }
 
   return {

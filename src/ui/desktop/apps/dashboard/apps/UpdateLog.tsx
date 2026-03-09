@@ -97,7 +97,7 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
       <Button
         variant="outline"
         size="sm"
-        className="ml-2 text-sm border-1 border-dark-border text-muted-foreground"
+        className="ml-2 text-sm border-1 border-edge text-muted-foreground"
         onClick={() => setIsOpen(true)}
       >
         {t("common.updatesAndReleases")}
@@ -106,10 +106,10 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent
           side="right"
-          className="w-[500px] bg-dark-bg border-l-2 border-dark-border text-white sm:max-w-[500px] p-0 flex flex-col [&>button]:hidden"
+          className="w-[500px] bg-canvas border-l-2 border-edge text-foreground sm:max-w-[500px] p-0 flex flex-col [&>button]:hidden"
         >
-          <div className="flex items-center justify-between p-4 border-b border-dark-border">
-            <h2 className="text-lg font-semibold text-white">
+          <div className="flex items-center justify-between p-4 border-b border-edge">
+            <h2 className="text-lg font-semibold text-foreground">
               {t("common.updatesAndReleases")}
             </h2>
             <Button
@@ -123,13 +123,13 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 thin-scrollbar">
             {versionInfo && versionInfo.status === "requires_update" && (
-              <Alert className="bg-dark-bg-darker border-dark-border text-white mb-3">
-                <AlertTitle className="text-white">
+              <Alert className="bg-elevated border-edge text-foreground mb-3">
+                <AlertTitle className="text-foreground">
                   {t("common.updateAvailable")}
                 </AlertTitle>
-                <AlertDescription className="text-gray-300">
+                <AlertDescription className="text-foreground-secondary">
                   {t("common.newVersionAvailable", {
                     version: versionInfo.version,
                   })}
@@ -161,11 +161,11 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
               {releases?.items.map((release) => (
                 <div
                   key={release.id}
-                  className="border border-dark-border rounded-lg p-3 hover:bg-dark-bg-darker transition-colors cursor-pointer bg-dark-bg-darker/50"
+                  className="border border-edge rounded-lg p-3 hover:bg-elevated transition-colors cursor-pointer bg-elevated/50"
                   onClick={() => window.open(release.link, "_blank")}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-sm leading-tight flex-1 text-white">
+                    <h4 className="font-semibold text-sm leading-tight flex-1 text-foreground">
                       {release.title}
                     </h4>
                     {release.isPrerelease && (
@@ -175,11 +175,11 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-300 mb-2 leading-relaxed">
+                  <p className="text-xs text-foreground-secondary mb-2 leading-relaxed">
                     {formatDescription(release.description)}
                   </p>
 
-                  <div className="flex items-center text-xs text-gray-400">
+                  <div className="flex items-center text-xs text-muted-foreground">
                     <span>
                       {new Date(release.pubDate).toLocaleDateString()}
                     </span>
@@ -198,11 +198,11 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
             </div>
 
             {releases && releases.items.length === 0 && !loading && (
-              <Alert className="bg-dark-bg-darker border-dark-border text-gray-300">
-                <AlertTitle className="text-gray-300">
+              <Alert className="bg-elevated border-edge text-foreground-secondary">
+                <AlertTitle className="text-foreground-secondary">
                   {t("common.noReleases")}
                 </AlertTitle>
-                <AlertDescription className="text-gray-400">
+                <AlertDescription className="text-muted-foreground">
                   {t("common.noReleasesFound")}
                 </AlertDescription>
               </Alert>

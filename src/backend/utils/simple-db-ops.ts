@@ -1,12 +1,18 @@
 import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { SQL } from "drizzle-orm";
 
-type TableName = "users" | "ssh_data" | "ssh_credentials" | "recent_activity";
+type TableName =
+  | "users"
+  | "ssh_data"
+  | "ssh_credentials"
+  | "recent_activity"
+  | "socks5_proxy_presets";
 
 class SimpleDBOps {
   static async insert<T extends Record<string, unknown>>(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     data: T,
     userId: string,
@@ -22,6 +28,20 @@ class SimpleDBOps {
       userId,
       userDataKey,
     );
+
+    if (tableName === "ssh_credentials") {
+      const { SystemCrypto } = await import("./system-crypto.js");
+      const systemCrypto = SystemCrypto.getInstance();
+      const systemKey = await systemCrypto.getCredentialSharingKey();
+
+      const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
+        tableName,
+        dataWithTempId,
+        systemKey,
+      );
+
+      Object.assign(encryptedData, systemEncrypted);
+    }
 
     if (!data.id) {
       delete encryptedData.id;
@@ -90,7 +110,7 @@ class SimpleDBOps {
   }
 
   static async update<T extends Record<string, unknown>>(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     where: unknown,
     data: Partial<T>,
@@ -105,10 +125,24 @@ class SimpleDBOps {
       userDataKey,
     );
 
+    if (tableName === "ssh_credentials") {
+      const { SystemCrypto } = await import("./system-crypto.js");
+      const systemCrypto = SystemCrypto.getInstance();
+      const systemKey = await systemCrypto.getCredentialSharingKey();
+
+      const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
+        tableName,
+        data,
+        systemKey,
+      );
+
+      Object.assign(encryptedData, systemEncrypted);
+    }
+
     const result = await getDb()
       .update(table)
       .set(encryptedData)
-      .where(where as any)
+      .where(where as SQL | undefined)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`update_${tableName}`);
@@ -124,13 +158,13 @@ class SimpleDBOps {
   }
 
   static async delete(
-    table: SQLiteTable<any>,
+    table: SQLiteTable,
     tableName: TableName,
     where: unknown,
   ): Promise<unknown[]> {
     const result = await getDb()
       .delete(table)
-      .where(where as any)
+      .where(where as SQL | undefined)
       .returning();
 
     DatabaseSaveTrigger.triggerSave(`delete_${tableName}`);

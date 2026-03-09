@@ -333,9 +333,40 @@ export function Auth({
       setResetStep("newPassword");
       toast.success(t("messages.codeVerified"));
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } } };
-      const errorMessage =
+      const error = err as {
+        response?: {
+          data?: {
+            error?: string;
+            code?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
+      };
+      const errorCode = error?.response?.data?.code;
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
         error?.response?.data?.error || t("errors.failedVerifyCode");
+
+      if (errorCode === "RESET_CODE_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.resetCodeRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.resetCodeRateLimited");
+        }
+        toast.error(errorMessage);
+      } else if (
+        remainingAttempts !== undefined &&
+        remainingAttempts <= 2 &&
+        remainingAttempts > 0
+      ) {
+        errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+      }
+
       setError(errorMessage);
     } finally {
       setResetLoading(false);
@@ -448,10 +479,20 @@ export function Auth({
     } catch (err: unknown) {
       const error = err as {
         message?: string;
-        response?: { data?: { code?: string; error?: string } };
+        response?: {
+          data?: {
+            code?: string;
+            error?: string;
+            remainingTime?: number;
+            remainingAttempts?: number;
+          };
+        };
       };
       const errorCode = error?.response?.data?.code;
-      const errorMessage =
+      const remainingTime = error?.response?.data?.remainingTime;
+      const remainingAttempts = error?.response?.data?.remainingAttempts;
+
+      let errorMessage =
         error?.response?.data?.error ||
         error?.message ||
         t("errors.invalidTotpCode");
@@ -462,7 +503,24 @@ export function Auth({
         setTotpTempToken("");
         setTab("login");
         toast.error(t("errors.sessionExpired"));
+      } else if (errorCode === "TOTP_RATE_LIMITED") {
+        if (remainingTime) {
+          errorMessage = t("errors.totpRateLimitedWithTime", {
+            time: remainingTime,
+          });
+        } else {
+          errorMessage = t("errors.totpRateLimited");
+        }
+        setError(errorMessage);
+        toast.error(errorMessage);
       } else {
+        if (
+          remainingAttempts !== undefined &&
+          remainingAttempts <= 2 &&
+          remainingAttempts > 0
+        ) {
+          errorMessage = `${errorMessage} (${remainingAttempts} ${t("auth.attemptsRemaining")})`;
+        }
         setError(errorMessage);
       }
     } finally {
@@ -505,6 +563,8 @@ export function Auth({
       let errorMessage: string;
       if (error === "registration_disabled") {
         errorMessage = t("messages.registrationDisabled");
+      } else if (error === "user_not_allowed") {
+        errorMessage = t("messages.userNotAllowed");
       } else {
         errorMessage = `${t("errors.oidcAuthFailed")}: ${error}`;
       }
@@ -562,7 +622,7 @@ export function Auth({
 
   const Spinner = (
     <svg
-      className="animate-spin mr-2 h-4 w-4 text-white inline-block"
+      className="animate-spin mr-2 h-4 w-4 text-foreground inline-block"
       viewBox="0 0 24 24"
     >
       <circle
@@ -585,7 +645,7 @@ export function Auth({
   if (isReactNativeWebView() && mobileAuthSuccess) {
     return (
       <div
-        className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+        className={`w-full max-w-md flex flex-col bg-canvas overflow-y-auto thin-scrollbar my-2 ${className || ""}`}
         style={{ maxHeight: "calc(100vh - 1rem)" }}
         {...props}
       >
@@ -620,7 +680,7 @@ export function Auth({
 
   return (
     <div
-      className={`w-full max-w-md flex flex-col bg-dark-bg overflow-y-auto my-2 ${className || ""}`}
+      className={`w-full max-w-md flex flex-col bg-canvas overflow-y-auto thin-scrollbar my-2 ${className || ""}`}
       style={{ maxHeight: "calc(100vh - 1rem)" }}
       {...props}
     >
@@ -1094,7 +1154,7 @@ export function Auth({
                     </form>
                   )}
 
-                  <div className="mt-6 pt-4 border-t border-dark-border">
+                  <div className="mt-6 pt-4 border-t border-edge">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label className="text-sm text-muted-foreground">

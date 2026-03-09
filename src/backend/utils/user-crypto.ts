@@ -303,9 +303,8 @@ class UserCrypto {
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
 
       oldKEK.fill(0);
@@ -341,9 +340,8 @@ class UserCrypto {
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
 
       newKEK.fill(0);
@@ -364,15 +362,6 @@ class UserCrypto {
     }
   }
 
-  /**
-   * Convert a password-based user's encryption to DUAL-AUTH encryption.
-   * This is used when linking an OIDC account to a password account for dual-auth.
-   *
-   * IMPORTANT: This does NOT delete the password-based KEK salt!
-   * The user needs to maintain BOTH password and OIDC authentication methods.
-   * We keep the password KEK salt so password login still works.
-   * We also store the DEK encrypted with OIDC system key for OIDC login.
-   */
   async convertToOIDCEncryption(userId: string): Promise<void> {
     try {
       const existingEncryptedDEK = await this.getEncryptedDEK(userId);
@@ -427,9 +416,8 @@ class UserCrypto {
         },
       );
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
     } catch (error) {
       databaseLogger.error("Failed to convert to OIDC encryption", error, {

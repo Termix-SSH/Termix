@@ -17,12 +17,14 @@ import {
   Shield as AdminIcon,
   Network as SshManagerIcon,
   User as UserIcon,
+  Network,
+  X,
 } from "lucide-react";
 import { useTabs, type Tab } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import { useTranslation } from "react-i18next";
 
 export function TabDropdown(): React.ReactElement {
-  const { tabs, currentTab, setCurrentTab } = useTabs();
+  const { tabs, currentTab, setCurrentTab, removeTab } = useTabs();
   const { t } = useTranslation();
 
   const getTabIcon = (tabType: Tab["type"]) => {
@@ -31,7 +33,7 @@ export function TabDropdown(): React.ReactElement {
         return <Home className="h-4 w-4" />;
       case "terminal":
         return <TerminalIcon className="h-4 w-4" />;
-      case "server":
+      case "server_stats":
         return <ServerIcon className="h-4 w-4" />;
       case "file_manager":
         return <FolderIcon className="h-4 w-4" />;
@@ -45,6 +47,8 @@ export function TabDropdown(): React.ReactElement {
         return <SshManagerIcon className="h-4 w-4" />;
       case "admin":
         return <AdminIcon className="h-4 w-4" />;
+      case "network_graph":
+        return <Network className="h-4 w-4" />;
       default:
         return <TerminalIcon className="h-4 w-4" />;
     }
@@ -54,7 +58,7 @@ export function TabDropdown(): React.ReactElement {
     switch (tab.type) {
       case "home":
         return t("nav.home");
-      case "server":
+      case "server_stats":
         return tab.title || t("nav.serverStats");
       case "file_manager":
         return tab.title || t("nav.fileManager");
@@ -68,6 +72,8 @@ export function TabDropdown(): React.ReactElement {
         return tab.title || t("nav.sshManager");
       case "admin":
         return tab.title || t("nav.admin");
+      case "network_graph":
+        return tab.title || t("dashboard.networkGraph");
       case "terminal":
       default:
         return tab.title || t("nav.terminal");
@@ -78,12 +84,22 @@ export function TabDropdown(): React.ReactElement {
     setCurrentTab(tabId);
   };
 
+  const handleCloseTab = (
+    e: React.MouseEvent,
+    tabId: number,
+    tabType: Tab["type"],
+  ) => {
+    e.stopPropagation();
+    if (tabType === "home") return;
+    removeTab(tabId);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="w-[30px] h-[30px] border-dark-border"
+          className="w-[30px] h-[30px] border-edge"
           title={t("nav.tabNavigation", { defaultValue: "Tab Navigation" })}
         >
           <ChevronDown className="h-4 w-4" />
@@ -91,24 +107,31 @@ export function TabDropdown(): React.ReactElement {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 bg-dark-bg border-dark-border text-white"
+        className="w-56 bg-canvas border-edge text-foreground"
       >
         {tabs.map((tab) => {
           const isActive = tab.id === currentTab;
+          const canClose = tab.type !== "home";
           return (
             <DropdownMenuItem
               key={tab.id}
               onClick={() => handleTabSwitch(tab.id)}
               className={`flex items-center gap-2 cursor-pointer px-3 py-2 ${
                 isActive
-                  ? "bg-dark-bg-active text-white"
-                  : "hover:bg-dark-hover text-gray-300"
+                  ? "bg-active text-foreground"
+                  : "hover:bg-hover text-foreground-secondary"
               }`}
             >
               {getTabIcon(tab.type)}
               <span className="flex-1 truncate">{getTabDisplayTitle(tab)}</span>
-              {isActive && (
-                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+              {canClose && (
+                <button
+                  onClick={(e) => handleCloseTab(e, tab.id, tab.type)}
+                  className="ml-1 p-0.5 rounded hover:bg-hover-secondary flex-shrink-0 transition-colors"
+                  title={t("nav.closeTab", { defaultValue: "Close tab" })}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
             </DropdownMenuItem>
           );

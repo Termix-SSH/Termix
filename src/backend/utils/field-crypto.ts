@@ -16,38 +16,29 @@ class FieldCrypto {
 
   private static readonly ENCRYPTED_FIELDS = {
     users: new Set([
-      "password_hash",
       "passwordHash",
-      "client_secret",
       "clientSecret",
-      "totp_secret",
       "totpSecret",
-      "totp_backup_codes",
       "totpBackupCodes",
-      "oidc_identifier",
       "oidcIdentifier",
     ]),
     ssh_data: new Set([
       "password",
       "key",
-      "key_password",
       "keyPassword",
-      "keyType",
+      "sudoPassword",
       "autostartPassword",
       "autostartKey",
       "autostartKeyPassword",
     ]),
     ssh_credentials: new Set([
       "password",
-      "private_key",
       "privateKey",
-      "key_password",
       "keyPassword",
       "key",
-      "public_key",
       "publicKey",
-      "keyType",
     ]),
+    opkssh_tokens: new Set(["sshCert", "privateKey"]),
   };
 
   static encryptField(

@@ -11,7 +11,7 @@ export function BottomNavbar({ onSidebarOpenClick }: MenuProps) {
   const { tabs, currentTab, setCurrentTab, removeTab } = useTabs();
 
   return (
-    <div className="w-full h-[80px] bg-dark-bg flex items-center p-2 gap-2">
+    <div className="w-full h-[80px] bg-canvas flex items-center p-2 gap-2">
       <Button
         className="w-[40px] h-[40px] flex-shrink-0"
         variant="outline"
@@ -30,8 +30,8 @@ export function BottomNavbar({ onSidebarOpenClick }: MenuProps) {
               <Button
                 variant="outline"
                 className={cn(
-                  "h-10 rounded-r-none !px-3 border-1 border-dark-border",
-                  tab.id === currentTab && "!bg-dark-bg-darkest !text-white",
+                  "h-10 rounded-r-none !px-3 border-1 border-edge",
+                  tab.id === currentTab && "!bg-deepest !text-foreground",
                 )}
                 onClick={() => setCurrentTab(tab.id)}
               >
@@ -40,7 +40,7 @@ export function BottomNavbar({ onSidebarOpenClick }: MenuProps) {
               </Button>
               <Button
                 variant="outline"
-                className="h-10 rounded-l-none !px-2 border-1 border-dark-border"
+                className="h-10 rounded-l-none !px-2 border-1 border-edge"
                 onClick={() => removeTab(tab.id)}
               >
                 <X className="h-4 w-4" />

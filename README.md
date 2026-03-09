@@ -1,8 +1,20 @@
 # Repo Stats
 
 <p align="center">
-  <img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English | 
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a>
+  <img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English ·
+  <a href="readme/README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
+  <a href="readme/README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
+  <a href="readme/README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
+  <a href="readme/README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
+  <a href="readme/README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
+  <a href="readme/README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
+  <a href="readme/README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
+  <a href="readme/README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
+  <a href="readme/README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
+  <a href="readme/README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
+  <a href="readme/README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
+  <a href="readme/README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
+  <a href="readme/README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -15,17 +27,6 @@
   <br>
   <small style="color: #666;">Achieved on September 1st, 2025</small>
 </p>
-
-#### Top Technologies
-
-[![React Badge](https://img.shields.io/badge/-React-61DBFB?style=flat-square&labelColor=black&logo=react&logoColor=61DBFB)](#)
-[![TypeScript Badge](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&labelColor=black&logo=typescript&logoColor=3178C6)](#)
-[![Node.js Badge](https://img.shields.io/badge/-Node.js-3C873A?style=flat-square&labelColor=black&logo=node.js&logoColor=3C873A)](#)
-[![Vite Badge](https://img.shields.io/badge/-Vite-646CFF?style=flat-square&labelColor=black&logo=vite&logoColor=646CFF)](#)
-[![Tailwind CSS Badge](https://img.shields.io/badge/-TailwindCSS-38B2AC?style=flat-square&labelColor=black&logo=tailwindcss&logoColor=38B2AC)](#)
-[![Docker Badge](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&labelColor=black&logo=docker&logoColor=2496ED)](#)
-[![SQLite Badge](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&labelColor=black&logo=sqlite&logoColor=003B57)](#)
-[![Radix UI Badge](https://img.shields.io/badge/-Radix%20UI-161618?style=flat-square&labelColor=black&logo=radixui&logoColor=161618)](#)
 
 <br />
 <p align="center">
@@ -45,28 +46,33 @@ If you would like, you can support the project here!\
 
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform
 solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal
-access, SSH tunneling capabilities, and remote file management, with many more tools to come. Termix is the perfect
+access, SSH tunneling capabilities, remote file management, and many other tools. Termix is the perfect
 free and self-hosted alternative to Termius available for all platforms.
 
 # Features
 
-- **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components
-- **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring
-- **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly
+- **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+- **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring and support for -l or -r connections
+- **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+- **Docker Management** - Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
-- **Server Stats** - View CPU, memory, and disk usage along with network, uptime, and system information on any SSH server
+- **Server Stats** - View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers
 - **Dashboard** - View server information at a glance on your dashboard
-- **User Authentication** - Secure user management with admin controls and OIDC and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+- **RBAC** - Create roles and share hosts across users/roles
+- **User Authentication** - Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 - **Database Encryption** - Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
-- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn
-- **Languages** - Built-in support for English, Chinese, German, and Portuguese
-- **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS), and dedicated mobile/tablet app for iOS and Android.
+- **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn. Choose between dark or light mode based UI. Use URL routes to open any connection in full-screen.
+- **Languages** - Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations))
+- **Platform Support** - Available as a web app, desktop application (Windows, Linux, and macOS, can be run standalone without Termix backend), PWA, and dedicated mobile/tablet app for iOS and Android.
 - **SSH Tools** - Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 - **Command History** - Auto-complete and view previously ran SSH commands
+- **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
-- **SSH Feature Rich** - Supports jump hosts, warpgate, TOTP based connections, etc.
+- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
+- **Network Graph** - Customize your Dashboard to visualize your homelab based off your SSH connections with status support
+- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
 
 # Planned Features
 
@@ -76,13 +82,14 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned fe
 
 Supported Devices:
 
-- Website (any modern browser on any platform like Chrome, Safari, and Firefox)
+- Website (any modern browser on any platform like Chrome, Safari, and Firefox) (includes PWA support)
 - Windows (x64/ia32)
   - Portable
   - MSI Installer
   - Chocolatey Package Manager
 - Linux (x64/ia32)
   - Portable
+  - AUR
   - AppImage
   - Deb
   - Flatpak
@@ -92,7 +99,7 @@ Supported Devices:
   - Homebrew
 - iOS/iPadOS (v15.1+)
   - Apple App Store
-  - ISO
+  - IPA
 - Android (v7.0+)
   - Google Play Store
   - APK
@@ -118,13 +125,35 @@ volumes:
     driver: local
 ```
 
+# Sponsors
+
+<p align="left">
+  <a href="https://www.digitalocean.com/">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://crowdin.com/">
+    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.blacksmith.sh/">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.cloudflare.com/">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+  </a>
+</p>
+
 # Support
 
 If you need help or want to request a feature with Termix, visit the [Issues](https://github.com/Termix-SSH/Support/issues) page, log in, and press `New Issue`.
 Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support
 channel, however, response times may be longer.
 
-# Show-off
+# Screenshots
+
+[![YouTube](./repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
 
 <p align="center">
   <img src="./repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
@@ -143,14 +172,20 @@ channel, however, response times may be longer.
 
 <p align="center">
   <img src="./repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+  <img src="./repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/88936e0d-2399-4122-8eee-c255c25da48c" width="800" controls>
-    Your browser does not support the video tag.
-  </video>
+  <img src="./repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
+  <img src="./repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
 </p>
-Videos and images may be out of date.
+
+<p align="center">
+  <img src="./repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="./repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
+</p>
+
+Some videos and images may be out of date or may not perfectly showcase features.
 
 # License
 

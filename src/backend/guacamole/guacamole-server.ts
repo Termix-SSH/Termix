@@ -59,7 +59,7 @@ const clientOptions = {
     },
     vnc: {
       "swap-red-blue": false,
-      "cursor": "remote",
+      cursor: "remote",
       width: 1280,
       height: 720,
     },
@@ -73,36 +73,41 @@ const clientOptions = {
 const guacServer = new GuacamoleLite(
   websocketOptions,
   guacdOptions,
-  clientOptions
+  clientOptions,
 );
 
 // Add authentication via processConnectionSettings callback
-guacServer.on("open", (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-  guacLogger.info("Guacamole connection opened", {
-    operation: "guac_connection_open",
-    type: clientConnection.connectionSettings?.type,
-  });
-});
+guacServer.on(
+  "open",
+  (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
+    guacLogger.info("Guacamole connection opened", {
+      operation: "guac_connection_open",
+      type: clientConnection.connectionSettings?.type,
+    });
+  },
+);
 
-guacServer.on("close", (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-  guacLogger.info("Guacamole connection closed", {
-    operation: "guac_connection_close",
-    type: clientConnection.connectionSettings?.type,
-  });
-});
+guacServer.on(
+  "close",
+  (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
+    guacLogger.info("Guacamole connection closed", {
+      operation: "guac_connection_close",
+      type: clientConnection.connectionSettings?.type,
+    });
+  },
+);
 
-guacServer.on("error", (clientConnection: { connectionSettings?: Record<string, unknown> }, error: Error) => {
-  guacLogger.error("Guacamole connection error", error, {
-    operation: "guac_connection_error",
-    type: clientConnection.connectionSettings?.type,
-  });
-});
-
-guacLogger.info(`Guacamole WebSocket server started on port ${GUAC_WS_PORT}`, {
-  operation: "guac_server_start",
-  guacdHost: GUACD_HOST,
-  guacdPort: GUACD_PORT,
-});
+guacServer.on(
+  "error",
+  (
+    clientConnection: { connectionSettings?: Record<string, unknown> },
+    error: Error,
+  ) => {
+    guacLogger.error("Guacamole connection error", error, {
+      operation: "guac_connection_error",
+      type: clientConnection.connectionSettings?.type,
+    });
+  },
+);
 
 export { guacServer, tokenService };
-

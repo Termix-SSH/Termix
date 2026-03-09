@@ -1,0 +1,29 @@
+.simple-keyboard.light-theme {
+  background-color: #f3f4f6;
+  border-radius: 0;
+}
+
+.simple-keyboard.light-theme .hg-button {
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #ffffff;
+  color: #18181b;
+  border-bottom-color: #d1d5db;
+  border: 1px solid #e5e7eb;
+}
+
+.simple-keyboard.light-theme .hg-button:active {
+  background: #e5e7eb;
+  color: #18181b;
+}
+
+#root .simple-keyboard.light-theme + .simple-keyboard-preview {
+  background: #e5e7eb;
+}
+
+.light-theme .hg-button.key-active {
+  background: #d1d5db;
+  color: #18181b;
+}

@@ -5,10 +5,19 @@ export class DatabaseSaveTrigger {
   private static isInitialized = false;
   private static pendingSave = false;
   private static saveTimeout: NodeJS.Timeout | null = null;
+  private static _dirty = false;
 
   static initialize(saveFunction: () => Promise<void>): void {
     this.saveFunction = saveFunction;
     this.isInitialized = true;
+  }
+
+  static get isDirty(): boolean {
+    return this._dirty;
+  }
+
+  static markClean(): void {
+    this._dirty = false;
   }
 
   static async triggerSave(
@@ -21,6 +30,8 @@ export class DatabaseSaveTrigger {
       });
       return;
     }
+
+    this._dirty = true;
 
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -35,6 +46,7 @@ export class DatabaseSaveTrigger {
 
       try {
         await this.saveFunction!();
+        this._dirty = false;
       } catch (error) {
         databaseLogger.error("Database save failed", error, {
           operation: "db_save_trigger_failed",

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { getUserAlerts, dismissAlert } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import type { TermixAlert } from "../../../../../../types";
+import { toast } from "sonner";
 
 interface AlertManagerProps {
   userId: string | null;
@@ -53,7 +54,6 @@ export function AlertManager({
       setAlerts(sortedAlerts);
       setCurrentAlertIndex(0);
     } catch {
-      const { toast } = await import("sonner");
       toast.error(t("homepage.failedToLoadAlerts"));
       setError(t("homepage.failedToLoadAlerts"));
     } finally {

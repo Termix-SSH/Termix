@@ -1,4 +1,11 @@
-import React, { useState, useEffect, type FC } from "react";
+import React, {
+  useState,
+  useEffect,
+  Component,
+  type FC,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { Terminal } from "@/ui/mobile/apps/terminal/Terminal.tsx";
 import { TerminalKeyboard } from "@/ui/mobile/apps/terminal/TerminalKeyboard.tsx";
 import { BottomNavbar } from "@/ui/mobile/navigation/BottomNavbar.tsx";
@@ -30,14 +37,12 @@ const AppContent: FC = () => {
   useEffect(() => {
     const checkAuth = () => {
       setAuthLoading(true);
-      // Don't optimistically set isAuthenticated before checking
       getUserInfo()
         .then((meRes) => {
           if (typeof meRes === "string" || !meRes.username) {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            // Clear invalid token
             localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
@@ -50,12 +55,11 @@ const AppContent: FC = () => {
           setIsAdmin(false);
           setUsername(null);
 
-          // Clear invalid token on any auth error
           localStorage.removeItem("jwt");
 
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
-            console.warn("Session expired - please log in again");
+            console.warn(t("errors.sessionExpired"));
           }
         })
         .finally(() => setAuthLoading(false));
@@ -124,7 +128,7 @@ const AppContent: FC = () => {
 
   if (authLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg">
+      <div className="h-screen w-screen flex items-center justify-center bg-canvas">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">{t("common.loading")}</p>
@@ -135,7 +139,7 @@ const AppContent: FC = () => {
 
   if (!isAuthenticated || isReactNativeWebView()) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-dark-bg p-4">
+      <div className="h-screen w-screen flex items-center justify-center bg-canvas p-4">
         <Auth
           setLoggedIn={setIsAuthenticated}
           setIsAdmin={setIsAdmin}
@@ -152,12 +156,12 @@ const AppContent: FC = () => {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-dark-bg-darkest overflow-y-hidden overflow-x-hidden relative">
+    <div className="h-screen w-screen flex flex-col bg-deepest overflow-y-hidden overflow-x-hidden relative">
       <div className="flex-1 min-h-0 relative">
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`absolute inset-0 mb-2 ${tab.id === currentTab ? "visible" : "invisible"} ${ready ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 mb-2 bg-elevated ${tab.id === currentTab ? "visible" : "invisible"} ${ready ? "opacity-100" : "opacity-0"}`}
           >
             <Terminal
               ref={tab.terminalRef}
@@ -167,11 +171,11 @@ const AppContent: FC = () => {
           </div>
         ))}
         {tabs.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-white gap-3 px-4 text-center">
+          <div className="flex flex-col items-center justify-center h-full text-foreground gap-3 px-4 text-center">
             <h1 className="text-lg font-semibold">
               {t("mobile.selectHostToStart")}
             </h1>
-            <p className="text-sm text-gray-300 max-w-xs">
+            <p className="text-sm text-foreground-secondary max-w-xs">
               {t("mobile.limitedSupportMessage")}
             </p>
             <button
@@ -229,10 +233,48 @@ const AppContent: FC = () => {
   );
 };
 
+class TabErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorCount: number }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorCount: 0 };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      return { hasError: true };
+    }
+    throw error;
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (error.message?.includes("useTabs must be used within a TabProvider")) {
+      console.warn(
+        "TabProvider mounting race condition detected, recovering...",
+      );
+      this.setState((prev) => ({ errorCount: prev.errorCount + 1 }));
+      setTimeout(() => {
+        this.setState({ hasError: false });
+      }, 0);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
 export const MobileApp: FC = () => {
   return (
     <TabProvider>
-      <AppContent />
+      <TabErrorBoundary>
+        <AppContent />
+      </TabErrorBoundary>
     </TabProvider>
   );
 };

@@ -1,6 +1,27 @@
 #!/bin/sh
 set -e
 
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
+
+if [ "$(id -u)" = "0" ]; then
+    if [ "$PUID" = "0" ]; then
+        echo "Running as root (PUID=0, PGID=$PGID)"
+        chown -R root:root /app/data /app/uploads /app/nginx 2>/dev/null || true
+    else
+        echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
+
+        groupmod -o -g "$PGID" node 2>/dev/null || true
+        usermod -o -u "$PUID" node 2>/dev/null || true
+
+        chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
+
+        echo "User node is now UID: $PUID, GID: $PGID"
+
+        exec gosu node:node "$0" "$@"
+    fi
+fi
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
@@ -11,24 +32,43 @@ echo "Configuring web UI to run on port: $PORT"
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "SSL enabled - using HTTPS configuration with redirect"
-    NGINX_CONF_SOURCE="/etc/nginx/nginx-https.conf"
+    NGINX_CONF_SOURCE="/app/nginx/nginx-https.conf.template"
 else
     echo "SSL disabled - using HTTP-only configuration (default)"
-    NGINX_CONF_SOURCE="/etc/nginx/nginx.conf"
+    NGINX_CONF_SOURCE="/app/nginx/nginx.conf.template"
 fi
 
-envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /etc/nginx/nginx.conf.tmp
-mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /app/nginx/nginx.conf
 
-mkdir -p /app/data /app/uploads
-chown -R node:node /app/data /app/uploads
-chmod 755 /app/data /app/uploads
+mkdir -p /app/data /app/uploads /app/data/.opk
+chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
+
+if [ -w /app/data ]; then
+    echo "Data directory is writable"
+else
+    echo "WARNING: Data directory is not writable. OPKSSH may fail."
+    ls -ld /app/data
+fi
+
+if [ -w /app/data/.opk ]; then
+    echo "OPKSSH directory is writable"
+else
+    echo "WARNING: OPKSSH directory is not writable. OPKSSH authentication will fail."
+    ls -ld /app/data/.opk
+fi
+
+OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
+if [ ! -d "$OPKSSH_DIR" ]; then
+    echo "WARNING: OPKSSH binary directory not found at $OPKSSH_DIR"
+    echo "OPKSSH will be downloaded automatically on first use."
+else
+    echo "OPKSSH binary directory found at $OPKSSH_DIR"
+fi
 
 if [ "$ENABLE_SSL" = "true" ]; then
     echo "Checking SSL certificate configuration..."
     mkdir -p /app/data/ssl
-    chown -R node:node /app/data/ssl
-    chmod 755 /app/data/ssl
+    chmod 755 /app/data/ssl 2>/dev/null || true
 
     DOMAIN=${SSL_DOMAIN:-localhost}
     
@@ -84,7 +124,6 @@ EOF
 
         chmod 600 /app/data/ssl/termix.key
         chmod 644 /app/data/ssl/termix.crt
-        chown node:node /app/data/ssl/termix.key /app/data/ssl/termix.crt
 
         rm -f /app/data/ssl/openssl.conf
         
@@ -93,7 +132,7 @@ EOF
 fi
 
 echo "Starting nginx..."
-nginx
+nginx -c /app/nginx/nginx.conf
 
 echo "Starting backend services..."
 cd /app
@@ -110,11 +149,7 @@ else
     echo "Warning: package.json not found"
 fi
 
-if command -v su-exec > /dev/null 2>&1; then
-  su-exec node node dist/backend/backend/starter.js
-else
-  su -s /bin/sh node -c "node dist/backend/backend/starter.js"
-fi
+node dist/backend/backend/starter.js
 
 echo "All services started"
 

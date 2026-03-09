@@ -14,113 +14,8 @@ export interface QuickAction {
   snippetId: number;
 }
 
-export interface DockerConfig {
-  connectionType: "socket" | "tcp" | "tls";
-  socketPath?: string;
-  host?: string;
-  port?: number;
-  tlsVerify?: boolean;
-  tlsCaCert?: string;
-  tlsCert?: string;
-  tlsKey?: string;
-}
-
-export type HostConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
-
-// Guacamole configuration for RDP/VNC/Telnet connections
-export interface GuacamoleConfig {
-  // Display settings
-  colorDepth?: number;
-  width?: number;
-  height?: number;
-  dpi?: number;
-  resizeMethod?: string;
-  forceLossless?: boolean;
-  // Audio settings
-  disableAudio?: boolean;
-  enableAudioInput?: boolean;
-  // RDP Performance settings
-  enableWallpaper?: boolean;
-  enableTheming?: boolean;
-  enableFontSmoothing?: boolean;
-  enableFullWindowDrag?: boolean;
-  enableDesktopComposition?: boolean;
-  enableMenuAnimations?: boolean;
-  disableBitmapCaching?: boolean;
-  disableOffscreenCaching?: boolean;
-  disableGlyphCaching?: boolean;
-  disableGfx?: boolean;
-  // RDP Device redirection
-  enablePrinting?: boolean;
-  printerName?: string;
-  enableDrive?: boolean;
-  driveName?: string;
-  drivePath?: string;
-  createDrivePath?: boolean;
-  disableDownload?: boolean;
-  disableUpload?: boolean;
-  enableTouch?: boolean;
-  // RDP Session settings
-  clientName?: string;
-  console?: boolean;
-  initialProgram?: string;
-  serverLayout?: string;
-  timezone?: string;
-  // RDP Gateway settings
-  gatewayHostname?: string;
-  gatewayPort?: number;
-  gatewayUsername?: string;
-  gatewayPassword?: string;
-  gatewayDomain?: string;
-  // RDP RemoteApp settings
-  remoteApp?: string;
-  remoteAppDir?: string;
-  remoteAppArgs?: string;
-  // RDP Preconnection settings (Hyper-V)
-  preconnectionId?: number;
-  preconnectionBlob?: string;
-  // RDP Load balancing
-  loadBalanceInfo?: string;
-  // Clipboard settings
-  normalizeClipboard?: string;
-  disableCopy?: boolean;
-  disablePaste?: boolean;
-  // VNC specific settings
-  cursor?: string;
-  swapRedBlue?: boolean;
-  readOnly?: boolean;
-  // VNC Repeater settings
-  destHost?: string;
-  destPort?: number;
-  // VNC Reverse connection
-  reverseConnect?: boolean;
-  listenTimeout?: number;
-  // Common SFTP settings (for RDP/VNC file transfer)
-  enableSftp?: boolean;
-  sftpHostname?: string;
-  sftpPort?: number;
-  sftpUsername?: string;
-  sftpPassword?: string;
-  sftpPrivateKey?: string;
-  sftpDirectory?: string;
-  // Recording settings
-  recordingPath?: string;
-  recordingName?: string;
-  createRecordingPath?: boolean;
-  recordingExcludeOutput?: boolean;
-  recordingExcludeMouse?: boolean;
-  recordingIncludeKeys?: boolean;
-  // Wake-on-LAN settings
-  wolSendPacket?: boolean;
-  wolMacAddr?: string;
-  wolBroadcastAddr?: string;
-  wolUdpPort?: number;
-  wolWaitTime?: number;
-}
-
 export interface SSHHost {
   id: number;
-  connectionType: HostConnectionType;
   name: string;
   ip: string;
   port: number;
@@ -128,11 +23,12 @@ export interface SSHHost {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none";
+  authType: "password" | "key" | "credential" | "none" | "opkssh";
   password?: string;
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   forceKeyboardInteractive?: boolean;
 
   autostartPassword?: string;
@@ -146,21 +42,38 @@ export interface SSHHost {
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
+  showTerminalInSidebar: boolean;
+  showFileManagerInSidebar: boolean;
+  showTunnelInSidebar: boolean;
+  showDockerInSidebar: boolean;
+  showServerStatsInSidebar: boolean;
   defaultPath: string;
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
-  statsConfig?: string;
-  dockerConfig?: string;
+  statsConfig?: string | Record<string, unknown>;
   terminalConfig?: TerminalConfig;
-  // RDP/VNC specific fields (basic)
+  notes?: string;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
+
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  // RDP/VNC extended configuration (stored as JSON)
-  guacamoleConfig?: GuacamoleConfig | string;
+  guacamoleConfig?: string | Record<string, unknown>;
+
   createdAt: string;
   updatedAt: string;
+
+  isShared?: boolean;
+  permissionLevel?: "view";
+  sharedExpiresAt?: string;
 }
 
 export interface JumpHostData {
@@ -172,8 +85,15 @@ export interface QuickActionData {
   snippetId: number;
 }
 
+export interface ProxyNode {
+  host: string;
+  port: number;
+  type: 4 | 5 | "http";
+  username?: string;
+  password?: string;
+}
+
 export interface SSHHostData {
-  connectionType?: HostConnectionType;
   name?: string;
   ip: string;
   port: number;
@@ -181,31 +101,45 @@ export interface SSHHostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none";
+  authType: "password" | "key" | "credential" | "none" | "opkssh";
   password?: string;
   key?: File | null;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   credentialId?: number | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
+  showTerminalInSidebar?: boolean;
+  showFileManagerInSidebar?: boolean;
+  showTunnelInSidebar?: boolean;
+  showDockerInSidebar?: boolean;
+  showServerStatsInSidebar?: boolean;
   defaultPath?: string;
   forceKeyboardInteractive?: boolean;
   tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
   statsConfig?: string | Record<string, unknown>;
-  dockerConfig?: DockerConfig | string;
   terminalConfig?: TerminalConfig;
-  // RDP/VNC specific fields (basic)
+  notes?: string;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
+
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  // RDP/VNC extended configuration
-  guacamoleConfig?: GuacamoleConfig;
+  guacamoleConfig?: Record<string, unknown> | null;
+  dockerConfig?: Record<string, unknown> | null;
 }
 
 export interface SSHFolder {
@@ -229,7 +163,7 @@ export interface Credential {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;
@@ -249,12 +183,12 @@ export interface CredentialBackend {
   folder: string | null;
   tags: string;
   authType: "password" | "key";
-  username: string;
+  username: string | null;
   password: string | null;
   key: string;
-  private_key?: string;
-  public_key?: string;
-  key_password: string | null;
+  privateKey?: string;
+  publicKey?: string;
+  keyPassword: string | null;
   keyType?: string;
   detectedKeyType: string;
   usageCount: number;
@@ -269,7 +203,7 @@ export interface CredentialData {
   folder?: string;
   tags: string[];
   authType: "password" | "key";
-  username: string;
+  username?: string;
   password?: string;
   key?: string;
   publicKey?: string;
@@ -282,6 +216,7 @@ export interface CredentialData {
 // ============================================================================
 
 export interface TunnelConnection {
+  tunnelType?: "local" | "remote";
   sourcePort: number;
   endpointPort: number;
   endpointHost: string;
@@ -299,6 +234,13 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+  tunnelType?: "local" | "remote";
+
+  sourceHostId: number;
+  tunnelIndex: number;
+
+  requestingUserId?: string;
+
   hostName: string;
   sourceIP: string;
   sourceSSHPort: number;
@@ -313,6 +255,7 @@ export interface TunnelConfig {
   endpointIP: string;
   endpointSSHPort: number;
   endpointUsername: string;
+  endpointHost: string;
   endpointPassword?: string;
   endpointAuthMethod: string;
   endpointSSHKey?: string;
@@ -326,6 +269,13 @@ export interface TunnelConfig {
   retryInterval: number;
   autoStart: boolean;
   isPinned: boolean;
+
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  socks5ProxyChain?: ProxyNode[];
 }
 
 export interface TunnelStatus {
@@ -338,6 +288,12 @@ export interface TunnelStatus {
   errorType?: ErrorType;
   manualDisconnect?: boolean;
   retryExhausted?: boolean;
+  connectionLogs?: Array<{
+    type: "info" | "success" | "warning" | "error";
+    stage: string;
+    message: string;
+    details?: Record<string, any>;
+  }>;
 }
 
 // ============================================================================
@@ -452,6 +408,8 @@ export interface TerminalConfig {
   autoMosh: boolean;
   moshCommand: string;
   sudoPasswordAutoFill: boolean;
+  keepaliveInterval?: number;
+  keepaliveCountMax?: number;
 }
 
 // ============================================================================
@@ -460,37 +418,26 @@ export interface TerminalConfig {
 
 export interface TabContextTab {
   id: number;
+  instanceId?: string;
   type:
     | "home"
     | "terminal"
     | "ssh_manager"
-    | "server"
+    | "server_stats"
     | "admin"
     | "file_manager"
     | "user_profile"
+    | "docker"
+    | "network_graph"
     | "rdp"
     | "vnc"
-    | "tunnel"
-    | "docker";
+    | "telnet";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
-  connectionConfig?: {
-    token: string;
-    protocol: "rdp" | "vnc" | "telnet";
-    type?: "rdp" | "vnc" | "telnet";
-    hostname?: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    domain?: string;
-    security?: string;
-    "ignore-cert"?: boolean;
-    width?: number;
-    height?: number;
-    dpi?: number;
-  };
+  _updateTimestamp?: number;
+  connectionConfig?: Record<string, unknown>;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
@@ -505,7 +452,7 @@ export interface SplitLayoutOption {
   name: string;
   description: string;
   cellCount: number;
-  icon: string; // lucide icon name
+  icon: string;
 }
 
 // ============================================================================
@@ -538,7 +485,7 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential" | "none";
+export type AuthType = "password" | "key" | "credential" | "none" | "opkssh";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
@@ -559,11 +506,13 @@ export interface ApiResponse<T = unknown> {
 
 export interface CredentialsManagerProps {
   onEditCredential?: (credential: Credential) => void;
+  onAddCredential?: () => void;
 }
 
 export interface CredentialEditorProps {
   editingCredential?: Credential | null;
   onFormSubmit?: () => void;
+  onBack?: () => void;
 }
 
 export interface CredentialViewerProps {
@@ -582,8 +531,11 @@ export interface HostManagerProps {
   isTopbarOpen?: boolean;
   initialTab?: string;
   hostConfig?: SSHHost;
+  _updateTimestamp?: number;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  currentTabId?: number;
+  updateTab?: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
 }
 
 export interface SSHManagerHostEditorProps {
@@ -593,6 +545,7 @@ export interface SSHManagerHostEditorProps {
 
 export interface SSHManagerHostViewerProps {
   onEditHost?: (host: SSHHost) => void;
+  onAddHost?: () => void;
 }
 
 export interface HostProps {
@@ -641,6 +594,7 @@ export interface AlertManagerProps {
 
 export interface SSHTunnelObjectProps {
   host: SSHHost;
+  tunnelIndex?: number;
   tunnelStatuses: Record<string, TunnelStatus>;
   tunnelActions: Record<string, boolean>;
   onTunnelAction: (
@@ -811,4 +765,56 @@ export interface ExportPreviewBody {
 export interface RestoreRequestBody {
   backupPath: string;
   targetPath?: string;
+}
+
+// ============================================================================
+// DOCKER TYPES
+// ============================================================================
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  state:
+    | "created"
+    | "running"
+    | "paused"
+    | "restarting"
+    | "removing"
+    | "exited"
+    | "dead";
+  ports: string;
+  created: string;
+  command?: string;
+  labels?: Record<string, string>;
+  networks?: string[];
+  mounts?: string[];
+}
+
+export interface DockerStats {
+  cpu: string;
+  memoryUsed: string;
+  memoryLimit: string;
+  memoryPercent: string;
+  netInput: string;
+  netOutput: string;
+  blockRead: string;
+  blockWrite: string;
+  pids?: string;
+}
+
+export interface DockerLogOptions {
+  tail?: number;
+  timestamps?: boolean;
+  since?: string;
+  until?: string;
+  follow?: boolean;
+}
+
+export interface DockerValidation {
+  available: boolean;
+  version?: string;
+  error?: string;
+  code?: string;
 }
