@@ -18,7 +18,15 @@
     "!node_modules/@napi-rs/canvas*/**/*",
     "!node_modules/@rollup/rollup-darwin-*/**/*",
     "!node_modules/@rollup/rollup-linux-*/**/*",
-    "!node_modules/@rollup/rollup-win32-*/**/*"
+    "!node_modules/@rollup/rollup-win32-*/**/*",
+    "!dist/icon-mac.png",
+    "!public/icon-mac.png",
+    "!dist/icon.ico",
+    "!public/icon.ico",
+    "!dist/icon.icns",
+    "!public/icon.icns",
+    "!dist/icons/**/*",
+    "!public/icons/**/*"
   ],
   "extraMetadata": {
     "main": "electron/main.cjs"
