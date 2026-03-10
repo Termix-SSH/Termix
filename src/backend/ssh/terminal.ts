@@ -808,9 +808,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } = await import(
-            "./opkssh-auth.js"
-          );
+          const { startOPKSSHAuth } = await import("./opkssh-auth.js");
+          const { getRequestOrigin } =
+            await import("../utils/request-origin.js");
           const db = getDb();
           const hostRow = await db
             .select()

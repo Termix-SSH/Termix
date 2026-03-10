@@ -12,6 +12,7 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
+import { getRequestOrigin } from "../utils/request-origin.js";
 
 const AUTH_TIMEOUT = 60 * 1000;
 
@@ -47,43 +48,6 @@ interface OPKSSHAuthSession {
 
 const activeAuthSessions = new Map<string, OPKSSHAuthSession>();
 const cleanupInProgress = new Set<string>();
-
-export function getRequestOrigin(req: IncomingMessage): string {
-  const protoHeader =
-    req.headers["x-forwarded-proto"] ||
-    ((req.socket as unknown as { encrypted?: boolean }).encrypted
-      ? "https"
-      : "http");
-  const proto =
-    typeof protoHeader === "string"
-      ? protoHeader.split(",")[0].trim()
-      : String(protoHeader);
-
-  const portHeader = req.headers["x-forwarded-port"];
-  const port =
-    typeof portHeader === "string"
-      ? portHeader.split(",")[0].trim()
-      : undefined;
-
-  const hostHeaderRaw =
-    req.headers["x-forwarded-host"] || req.headers.host || "localhost";
-  const hostHeader =
-    typeof hostHeaderRaw === "string"
-      ? hostHeaderRaw.split(",")[0].trim()
-      : String(hostHeaderRaw);
-
-  if (port) {
-    const hostWithoutPort = hostHeader.split(":")[0];
-    const isDefaultPort =
-      (proto === "http" && port === "80") ||
-      (proto === "https" && port === "443");
-    return isDefaultPort
-      ? `${proto}://${hostWithoutPort}`
-      : `${proto}://${hostWithoutPort}:${port}`;
-  }
-
-  return `${proto}://${hostHeader}`;
-}
 
 function getOPKConfigPath(): string {
   const dataDir =
