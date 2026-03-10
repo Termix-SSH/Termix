@@ -90,6 +90,9 @@ function transformHostResponse(
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
+    guacamoleConfig: host.guacamoleConfig
+      ? JSON.parse(host.guacamoleConfig as string)
+      : undefined,
   };
 }
 
@@ -334,6 +337,7 @@ router.post(
     }
 
     const {
+      connectionType,
       name,
       folder,
       tags,
@@ -363,8 +367,13 @@ router.post(
       jumpHosts,
       quickActions,
       statsConfig,
+      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      domain,
+      security,
+      ignoreCert,
+      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -397,8 +406,10 @@ router.post(
     }
 
     const effectiveAuthType = authType || authMethod;
+    const effectiveConnectionType = connectionType || "ssh";
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
+      connectionType: effectiveConnectionType,
       name,
       folder: folder || null,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
@@ -431,12 +442,21 @@ router.post(
           ? statsConfig
           : JSON.stringify(statsConfig)
         : null,
+      dockerConfig: dockerConfig
+        ? typeof dockerConfig === "string"
+          ? dockerConfig
+          : JSON.stringify(dockerConfig)
+        : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
           : JSON.stringify(terminalConfig)
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      domain: domain || null,
+      security: security || null,
+      ignoreCert: ignoreCert ? 1 : 0,
+      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -818,6 +838,7 @@ router.put(
     }
 
     const {
+      connectionType,
       name,
       folder,
       tags,
@@ -847,8 +868,13 @@ router.put(
       jumpHosts,
       quickActions,
       statsConfig,
+      dockerConfig,
       terminalConfig,
       forceKeyboardInteractive,
+      domain,
+      security,
+      ignoreCert,
+      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -884,6 +910,7 @@ router.put(
 
     const effectiveAuthType = authType || authMethod;
     const sshDataObj: Record<string, unknown> = {
+      connectionType: connectionType || "ssh",
       name,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
@@ -916,12 +943,21 @@ router.put(
           ? statsConfig
           : JSON.stringify(statsConfig)
         : null,
+      dockerConfig: dockerConfig
+        ? typeof dockerConfig === "string"
+          ? dockerConfig
+          : JSON.stringify(dockerConfig)
+        : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
           : JSON.stringify(terminalConfig)
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
+      domain: domain || null,
+      security: security || null,
+      ignoreCert: ignoreCert ? 1 : 0,
+      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,

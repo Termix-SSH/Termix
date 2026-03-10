@@ -10,6 +10,7 @@ import {
   Server as ServerIcon,
   Folder as FolderIcon,
   User as UserIcon,
+  Monitor as MonitorIcon,
   Network,
   ArrowDownUp as TunnelIcon,
   Container as DockerIcon,
@@ -172,6 +173,9 @@ export function Tab({
     tabType === "terminal" ||
     tabType === "server_stats" ||
     tabType === "file_manager" ||
+    tabType === "rdp" ||
+    tabType === "vnc" ||
+    tabType === "telnet" ||
     tabType === "tunnel" ||
     tabType === "docker" ||
     tabType === "user_profile"
@@ -181,6 +185,8 @@ export function Tab({
     const isTunnel = tabType === "tunnel";
     const isDocker = tabType === "docker";
     const isUserProfile = tabType === "user_profile";
+    const isRemoteDesktop =
+      tabType === "rdp" || tabType === "vnc" || tabType === "telnet";
 
     const displayTitle =
       title ||
@@ -194,7 +200,9 @@ export function Tab({
               ? t("nav.docker")
               : isUserProfile
                 ? t("nav.userProfile")
-                : t("nav.terminal"));
+                : isRemoteDesktop
+                  ? tabType.toUpperCase()
+                  : t("nav.terminal"));
 
     const { base, suffix } = splitTitle(displayTitle);
 
@@ -219,6 +227,8 @@ export function Tab({
             <DockerIcon className="h-4 w-4 flex-shrink-0" />
           ) : isUserProfile ? (
             <UserIcon className="h-4 w-4 flex-shrink-0" />
+          ) : isRemoteDesktop ? (
+            <MonitorIcon className="h-4 w-4 flex-shrink-0" />
           ) : (
             <TerminalIcon className="h-4 w-4 flex-shrink-0" />
           )}

@@ -131,6 +131,7 @@ import { HostTunnelTab } from "./tabs/HostTunnelTab";
 import { HostFileManagerTab } from "./tabs/HostFileManagerTab";
 import { HostStatisticsTab } from "./tabs/HostStatisticsTab";
 import { HostSharingTab } from "./tabs/HostSharingTab";
+import { HostRemoteDesktopTab } from "./tabs/HostRemoteDesktopTab";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface User {
@@ -265,10 +266,11 @@ export function HostManagerEditor({
 
   const formSchema = z
     .object({
+      connectionType: z.enum(["ssh", "rdp", "vnc", "telnet"]).default("ssh"),
       name: z.string().optional(),
       ip: z.string().min(1),
       port: z.coerce.number().min(1).max(65535),
-      username: z.string().min(1),
+      username: z.string().default(""),
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
@@ -436,6 +438,10 @@ export function HostManagerEditor({
         )
         .optional(),
       enableDocker: z.boolean().default(false),
+      domain: z.string().optional(),
+      security: z.string().optional(),
+      ignoreCert: z.boolean().default(true),
+      guacamoleConfig: z.record(z.unknown()).optional(),
       showTerminalInSidebar: z.boolean().default(true),
       showFileManagerInSidebar: z.boolean().default(false),
       showTunnelInSidebar: z.boolean().default(false),
@@ -443,6 +449,19 @@ export function HostManagerEditor({
       showServerStatsInSidebar: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
+      // Skip SSH-specific auth validation for non-SSH connection types
+      if (data.connectionType !== "ssh") {
+        return;
+      }
+
+      if (!data.username || data.username.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("hosts.usernameRequired", "Username is required"),
+          path: ["username"],
+        });
+      }
+
       if (data.authType === "none") {
         return;
       }
@@ -510,6 +529,7 @@ export function HostManagerEditor({
     resolver: zodResolver(formSchema) as any,
     mode: "all",
     defaultValues: {
+      connectionType: "ssh" as const,
       name: "",
       ip: "",
       port: 22,
@@ -547,17 +567,53 @@ export function HostManagerEditor({
       socks5Password: "",
       socks5ProxyChain: [],
       enableDocker: false,
+      domain: "",
+      security: "any",
+      ignoreCert: true,
+      guacamoleConfig: {},
     },
   });
 
   const watchedFields = form.watch();
   const formState = form.formState;
+  const watchedConnectionType = form.watch("connectionType") || "ssh";
+
+  // Auto-change port when connection type changes
+  const prevConnectionTypeRef = useRef<string>("ssh");
+  useEffect(() => {
+    const prev = prevConnectionTypeRef.current;
+    const current = watchedConnectionType;
+    if (prev === current) return;
+    prevConnectionTypeRef.current = current;
+
+    const portDefaults: Record<string, number> = {
+      ssh: 22,
+      rdp: 3389,
+      vnc: 5900,
+      telnet: 23,
+    };
+    const currentPort = form.getValues("port");
+    const oldDefault = portDefaults[prev] || 22;
+    if (currentPort === oldDefault) {
+      form.setValue("port", portDefaults[current] || 22);
+    }
+
+    if (activeTab !== "general" && current !== "ssh") {
+      setActiveTab("general");
+    }
+  }, [watchedConnectionType]);
 
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
 
-    if (!values.ip || !values.username || values.username.trim() === "")
-      return false;
+    if (!values.ip) return false;
+
+    // For non-SSH types, only IP is required
+    if (values.connectionType !== "ssh") {
+      return true;
+    }
+
+    if (!values.username || values.username.trim() === "") return false;
 
     if (authTab === "password") {
       return !!(values.password && values.password.trim() !== "");
@@ -669,6 +725,7 @@ export function HostManagerEditor({
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
       const formData: Partial<FormData> = {
+        connectionType: (cleanedHost as any).connectionType || "ssh",
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
         port: cleanedHost.port || 22,
@@ -734,6 +791,21 @@ export function HostManagerEditor({
           ? cleanedHost.socks5ProxyChain
           : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
+        domain: (cleanedHost as any).domain || "",
+        security: (cleanedHost as any).security || "any",
+        ignoreCert: (cleanedHost as any).ignoreCert ?? true,
+        guacamoleConfig: (() => {
+          const cfg = (cleanedHost as any).guacamoleConfig;
+          if (!cfg) return {};
+          if (typeof cfg === "string") {
+            try {
+              return JSON.parse(cfg);
+            } catch {
+              return {};
+            }
+          }
+          return cfg;
+        })(),
         showTerminalInSidebar: cleanedHost.showTerminalInSidebar ?? true,
         showFileManagerInSidebar: cleanedHost.showFileManagerInSidebar ?? false,
         showTunnelInSidebar: cleanedHost.showTunnelInSidebar ?? false,
@@ -774,6 +846,7 @@ export function HostManagerEditor({
     } else {
       setAuthTab("password");
       const defaultFormData: Partial<FormData> = {
+        connectionType: "ssh" as const,
         name: "",
         ip: "",
         port: 22,
@@ -799,6 +872,10 @@ export function HostManagerEditor({
         terminalConfig: DEFAULT_TERMINAL_CONFIG,
         forceKeyboardInteractive: false,
         enableDocker: false,
+        domain: "",
+        security: "any",
+        ignoreCert: true,
+        guacamoleConfig: {},
         showTerminalInSidebar: true,
         showFileManagerInSidebar: false,
         showTunnelInSidebar: false,
@@ -834,23 +911,48 @@ export function HostManagerEditor({
         ...data,
       };
 
-      if (
-        data.terminalConfig?.sudoPasswordAutoFill &&
-        data.terminalConfig?.sudoPassword
-      ) {
-        submitData.sudoPassword = data.terminalConfig.sudoPassword;
-      }
+      // Include guacamole-specific fields
+      (submitData as any).connectionType = data.connectionType;
+      (submitData as any).domain = data.domain;
+      (submitData as any).security = data.security;
+      (submitData as any).ignoreCert = data.ignoreCert;
+      (submitData as any).guacamoleConfig = data.guacamoleConfig;
 
-      if (data.authType !== "credential") {
-        submitData.credentialId = undefined;
-      }
-      if (data.authType !== "password") {
-        submitData.password = undefined;
-      }
-      if (data.authType !== "key") {
+      // For non-SSH types, clear SSH-specific fields
+      if (data.connectionType !== "ssh") {
+        submitData.authType = "none";
         submitData.key = undefined;
         submitData.keyPassword = undefined;
         submitData.keyType = undefined;
+        submitData.credentialId = undefined;
+        submitData.tunnelConnections = [];
+        submitData.jumpHosts = [];
+        (submitData as any).useSocks5 = false;
+        (submitData as any).socks5ProxyChain = [];
+        submitData.forceKeyboardInteractive = false;
+        submitData.enableTunnel = false;
+        submitData.enableFileManager = false;
+        submitData.enableDocker = false;
+        submitData.enableTerminal = true;
+      } else {
+        if (
+          data.terminalConfig?.sudoPasswordAutoFill &&
+          data.terminalConfig?.sudoPassword
+        ) {
+          submitData.sudoPassword = data.terminalConfig.sudoPassword;
+        }
+
+        if (data.authType !== "credential") {
+          submitData.credentialId = undefined;
+        }
+        if (data.authType !== "password") {
+          submitData.password = undefined;
+        }
+        if (data.authType !== "key") {
+          submitData.key = undefined;
+          submitData.keyPassword = undefined;
+          submitData.keyType = undefined;
+        }
       }
 
       if (data.authType === "key") {
@@ -955,6 +1057,11 @@ export function HostManagerEditor({
     enableTerminal: "terminal",
     terminalConfig: "terminal",
     enableDocker: "docker",
+    domain: "general",
+    security: "general",
+    ignoreCert: "general",
+    guacamoleConfig: "remote_desktop",
+    connectionType: "general",
     enableTunnel: "tunnel",
     tunnelConnections: "tunnel",
     enableFileManager: "file_manager",
@@ -1194,6 +1301,36 @@ export function HostManagerEditor({
                     : t("hosts.addHost")}
                 </h3>
               </div>
+              {/* Connection Type Selector */}
+              <FormField
+                control={form.control}
+                name="connectionType"
+                render={({ field }) => (
+                  <FormItem className="mb-4">
+                    <FormLabel className="font-bold">
+                      {t("hosts.connectionType")}
+                    </FormLabel>
+                    <Select
+                      value={field.value || "ssh"}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ssh">{t("hosts.ssh")}</SelectItem>
+                        <SelectItem value="rdp">{t("hosts.rdp")}</SelectItem>
+                        <SelectItem value="vnc">{t("hosts.vnc")}</SelectItem>
+                        <SelectItem value="telnet">
+                          {t("hosts.telnet")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
@@ -1206,36 +1343,48 @@ export function HostManagerEditor({
                   >
                     {t("hosts.general")}
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="terminal"
-                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                  >
-                    {t("hosts.terminal")}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="docker"
-                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                  >
-                    Docker
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="tunnel"
-                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                  >
-                    {t("hosts.tunnel")}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="file_manager"
-                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                  >
-                    {t("hosts.fileManager")}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="statistics"
-                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                  >
-                    {t("hosts.statistics")}
-                  </TabsTrigger>
+                  {watchedConnectionType === "ssh" && (
+                    <>
+                      <TabsTrigger
+                        value="terminal"
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                      >
+                        {t("hosts.terminal")}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="docker"
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                      >
+                        Docker
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="tunnel"
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                      >
+                        {t("hosts.tunnel")}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="file_manager"
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                      >
+                        {t("hosts.fileManager")}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="statistics"
+                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                      >
+                        {t("hosts.statistics")}
+                      </TabsTrigger>
+                    </>
+                  )}
+                  {watchedConnectionType !== "ssh" && (
+                    <TabsTrigger
+                      value="remote_desktop"
+                      className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                    >
+                      {t("hosts.remoteDesktop")}
+                    </TabsTrigger>
+                  )}
                   {!editingHost?.isShared && (
                     <TabsTrigger value="sharing">
                       {t("rbac.sharing")}
@@ -1245,6 +1394,9 @@ export function HostManagerEditor({
                 <TabsContent value="general" className="pt-2">
                   <HostGeneralTab
                     form={form}
+                    connectionType={
+                      watchedConnectionType as "ssh" | "rdp" | "vnc" | "telnet"
+                    }
                     authTab={authTab}
                     setAuthTab={setAuthTab}
                     keyInputMethod={keyInputMethod}
@@ -1273,38 +1425,53 @@ export function HostManagerEditor({
                     t={t}
                   />
                 </TabsContent>
-                <TabsContent value="terminal" className="space-y-1">
-                  <HostTerminalTab form={form} snippets={snippets} t={t} />
-                </TabsContent>
-                <TabsContent value="docker" className="space-y-4">
-                  <HostDockerTab form={form} t={t} />
-                </TabsContent>
-                <TabsContent value="tunnel">
-                  <HostTunnelTab
-                    form={form}
-                    sshConfigDropdownOpen={sshConfigDropdownOpen}
-                    setSshConfigDropdownOpen={setSshConfigDropdownOpen}
-                    sshConfigInputRefs={sshConfigInputRefs}
-                    sshConfigDropdownRefs={sshConfigDropdownRefs}
-                    getFilteredSshConfigs={getFilteredSshConfigs}
-                    handleSshConfigClick={handleSshConfigClick}
-                    t={t}
-                  />
-                </TabsContent>
-                <TabsContent value="file_manager">
-                  <HostFileManagerTab form={form} t={t} />
-                </TabsContent>
-                <TabsContent value="statistics" className="space-y-6">
-                  <HostStatisticsTab
-                    form={form}
-                    statusIntervalUnit={statusIntervalUnit}
-                    setStatusIntervalUnit={setStatusIntervalUnit}
-                    metricsIntervalUnit={metricsIntervalUnit}
-                    setMetricsIntervalUnit={setMetricsIntervalUnit}
-                    snippets={snippets}
-                    t={t}
-                  />
-                </TabsContent>
+                {watchedConnectionType === "ssh" && (
+                  <>
+                    <TabsContent value="terminal" className="space-y-1">
+                      <HostTerminalTab form={form} snippets={snippets} t={t} />
+                    </TabsContent>
+                    <TabsContent value="docker" className="space-y-4">
+                      <HostDockerTab form={form} t={t} />
+                    </TabsContent>
+                    <TabsContent value="tunnel">
+                      <HostTunnelTab
+                        form={form}
+                        sshConfigDropdownOpen={sshConfigDropdownOpen}
+                        setSshConfigDropdownOpen={setSshConfigDropdownOpen}
+                        sshConfigInputRefs={sshConfigInputRefs}
+                        sshConfigDropdownRefs={sshConfigDropdownRefs}
+                        getFilteredSshConfigs={getFilteredSshConfigs}
+                        handleSshConfigClick={handleSshConfigClick}
+                        t={t}
+                      />
+                    </TabsContent>
+                    <TabsContent value="file_manager">
+                      <HostFileManagerTab form={form} t={t} />
+                    </TabsContent>
+                    <TabsContent value="statistics" className="space-y-6">
+                      <HostStatisticsTab
+                        form={form}
+                        statusIntervalUnit={statusIntervalUnit}
+                        setStatusIntervalUnit={setStatusIntervalUnit}
+                        metricsIntervalUnit={metricsIntervalUnit}
+                        setMetricsIntervalUnit={setMetricsIntervalUnit}
+                        snippets={snippets}
+                        t={t}
+                      />
+                    </TabsContent>
+                  </>
+                )}
+                {watchedConnectionType !== "ssh" && (
+                  <TabsContent value="remote_desktop" className="space-y-4">
+                    <HostRemoteDesktopTab
+                      form={form}
+                      connectionType={
+                        watchedConnectionType as "rdp" | "vnc" | "telnet"
+                      }
+                      t={t}
+                    />
+                  </TabsContent>
+                )}
                 <TabsContent value="sharing" className="space-y-6">
                   <HostSharingTab
                     hostId={editingHost?.id}

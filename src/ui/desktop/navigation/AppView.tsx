@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
 import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
 import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
+import {
+  GuacamoleDisplay,
+  type GuacamoleConnectionConfig,
+} from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
 import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
@@ -34,6 +38,7 @@ interface TabData {
     };
   };
   hostConfig?: any;
+  connectionConfig?: GuacamoleConnectionConfig;
   [key: string]: unknown;
 }
 
@@ -105,6 +110,9 @@ export function AppView({
           tab.type === "terminal" ||
           tab.type === "server_stats" ||
           tab.type === "file_manager" ||
+          tab.type === "rdp" ||
+          tab.type === "vnc" ||
+          tab.type === "telnet" ||
           tab.type === "tunnel" ||
           tab.type === "docker" ||
           tab.type === "network_graph",
@@ -393,6 +401,21 @@ export function AppView({
                     isTopbarOpen={isTopbarOpen}
                     embedded
                   />
+                ) : t.type === "rdp" ||
+                  t.type === "vnc" ||
+                  t.type === "telnet" ? (
+                  t.connectionConfig ? (
+                    <GuacamoleDisplay
+                      connectionConfig={t.connectionConfig}
+                      isVisible={effectiveVisible}
+                      onDisconnect={() => removeTab(t.id)}
+                      onError={(err) => console.error("Guacamole error:", err)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-red-500">
+                      Missing connection configuration
+                    </div>
+                  )
                 ) : t.type === "network_graph" ? (
                   <NetworkGraphCard
                     isTopbarOpen={isTopbarOpen}

@@ -156,9 +156,8 @@ function AppContent({
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } = await import(
-            "@/ui/main-axios.ts"
-          );
+          const { getSSHHostById, getSSHHosts } =
+            await import("@/ui/main-axios.ts");
           let host = null;
 
           if (/^\d+$/.test(hostIdentifier)) {
@@ -282,6 +281,8 @@ function AppContent({
     currentTabData?.type === "terminal" ||
     currentTabData?.type === "server_stats" ||
     currentTabData?.type === "file_manager" ||
+    currentTabData?.type === "rdp" ||
+    currentTabData?.type === "vnc" ||
     currentTabData?.type === "tunnel" ||
     currentTabData?.type === "docker" ||
     currentTabData?.type === "network_graph";

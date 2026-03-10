@@ -1417,6 +1417,19 @@ export function HostManagerViewer({
                                         {host.name ||
                                           `${host.username}@${host.ip}`}
                                       </h3>
+                                      {(host as any).connectionType &&
+                                        (host as any).connectionType !==
+                                          "ssh" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs px-1 py-0 text-blue-500 border-blue-500/50"
+                                          >
+                                            {(
+                                              (host as any)
+                                                .connectionType as string
+                                            ).toUpperCase()}
+                                          </Badge>
+                                        )}
                                       {(host as any).isShared && (
                                         <Badge
                                           variant="outline"

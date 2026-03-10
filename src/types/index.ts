@@ -62,6 +62,12 @@ export interface SSHHost {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
 
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
+  guacamoleConfig?: string | Record<string, unknown>;
+
   createdAt: string;
   updatedAt: string;
 
@@ -127,6 +133,13 @@ export interface SSHHostData {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
+  guacamoleConfig?: Record<string, unknown> | null;
+  dockerConfig?: Record<string, unknown> | null;
 }
 
 export interface SSHFolder {
@@ -415,12 +428,16 @@ export interface TabContextTab {
     | "file_manager"
     | "user_profile"
     | "docker"
-    | "network_graph";
+    | "network_graph"
+    | "rdp"
+    | "vnc"
+    | "telnet";
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: any;
   initialTab?: string;
   _updateTimestamp?: number;
+  connectionConfig?: Record<string, unknown>;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";

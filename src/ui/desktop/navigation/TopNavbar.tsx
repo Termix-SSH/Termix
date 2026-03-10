@@ -376,6 +376,8 @@ export function TopNavbar({
             const isSshManager = tab.type === "ssh_manager";
             const isAdmin = tab.type === "admin";
             const isUserProfile = tab.type === "user_profile";
+            const isRdp = tab.type === "rdp";
+            const isVnc = tab.type === "vnc";
             const isSplittable =
               isTerminal || isServer || isFileManager || isTunnel || isDocker;
             const disableSplit = !isSplittable;
@@ -495,6 +497,8 @@ export function TopNavbar({
                     isSshManager ||
                     isAdmin ||
                     isUserProfile ||
+                    isRdp ||
+                    isVnc ||
                     tab.type === "network_graph"
                       ? () => handleTabClose(tab.id)
                       : undefined
@@ -512,6 +516,8 @@ export function TopNavbar({
                     isSshManager ||
                     isAdmin ||
                     isUserProfile ||
+                    isRdp ||
+                    isVnc ||
                     tab.type === "network_graph"
                   }
                   disableActivate={disableActivate}

@@ -36,30 +36,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { FolderCard } from "@/ui/desktop/navigation/hosts/FolderCard.tsx";
 import { getSSHHosts, getSSHFolders } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
-import type { SSHFolder } from "@/types/index.ts";
-
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  folder: string;
-  tags: string[];
-  pin: boolean;
-  authType: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  enableTerminal: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
-  defaultPath: string;
-  tunnelConnections: unknown[];
-  createdAt: string;
-  updatedAt: string;
-}
+import type { SSHFolder, SSHHost } from "@/types/index.ts";
 
 interface SidebarProps {
   disabled?: boolean;

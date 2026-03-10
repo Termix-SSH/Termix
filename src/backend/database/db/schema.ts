@@ -69,6 +69,8 @@ export const sshData = sqliteTable("ssh_data", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // Connection type: ssh, rdp, vnc, telnet
+  connectionType: text("connection_type").notNull().default("ssh"),
   name: text("name"),
   ip: text("ip").notNull(),
   port: integer("port").notNull(),
@@ -124,9 +126,14 @@ export const sshData = sqliteTable("ssh_data", {
     .default(false),
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
+  dockerConfig: text("docker_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
+  domain: text("domain"),
+  security: text("security"),
+  ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
+  guacamoleConfig: text("guacamole_config"),
 
   useSocks5: integer("use_socks5", { mode: "boolean" }),
   socks5Host: text("socks5_host"),
