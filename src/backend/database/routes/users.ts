@@ -43,6 +43,7 @@ import {
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
+import { getRequestOriginWithForceHTTPS } from "../../utils/request-origin.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -798,6 +799,9 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
+    const origin = getRequestOriginWithForceHTTPS(req);
+    const backendCallbackUri = `${origin}/users/oidc/callback`;
+
     authLogger.info("OIDC authorize request headers", {
       protocol: req.protocol,
       host: req.get("Host"),
@@ -807,6 +811,8 @@ router.get("/oidc/authorize", async (req, res) => {
       "x-forwarded-host": req.get("X-Forwarded-Host"),
       "x-forwarded-port": req.get("X-Forwarded-Port"),
       secure: req.secure,
+      calculatedOrigin: origin,
+      backendCallbackUri: backendCallbackUri,
     });
 
     const envConfig = getOIDCConfigFromEnv();
@@ -825,15 +831,6 @@ router.get("/oidc/authorize", async (req, res) => {
     }
     const state = nanoid();
     const nonce = nanoid();
-
-    const protocol =
-      process.env.OIDC_FORCE_HTTPS === "true"
-        ? "https"
-        : req.get("X-Forwarded-Proto") || req.protocol;
-
-    const host = req.get("Host");
-    const origin = `${protocol}://${host}`;
-    const backendCallbackUri = `${origin}/users/oidc/callback`;
 
     const referer = req.get("Referer");
     let frontendOrigin;

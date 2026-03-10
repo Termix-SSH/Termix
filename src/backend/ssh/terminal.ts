@@ -808,8 +808,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "opkssh_start_auth": {
         const opksshData = data as { hostId: number };
         try {
-          const { startOPKSSHAuth, getRequestOrigin } =
-            await import("./opkssh-auth.js");
+          const { startOPKSSHAuth } = await import("./opkssh-auth.js");
+          const { getRequestOrigin } =
+            await import("../utils/request-origin.js");
           const db = getDb();
           const hostRow = await db
             .select()
@@ -2162,18 +2163,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   function cleanupAuthState(timeoutId?: NodeJS.Timeout) {
     if (timeoutId) {
       clearTimeout(timeoutId);
-    }
-
-    if (sshStream) {
-      try {
-        sshStream.end();
-      } catch (e: unknown) {
-        sshLogger.error(
-          "Error closing stream: " +
-            (e instanceof Error ? e.message : "Unknown error"),
-        );
-      }
-      sshStream = null;
     }
 
     if (totpTimeout) {

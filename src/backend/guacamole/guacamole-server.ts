@@ -30,10 +30,10 @@ const clientOptions = {
   log: {
     level: process.env.NODE_ENV === "production" ? "ERRORS" : "VERBOSE",
     stdLog: (...args: unknown[]) => {
-      guacLogger.info(args.join(" "), { operation: "guac_log" });
+      guacLogger.info(args.join(" "));
     },
     errorLog: (...args: unknown[]) => {
-      guacLogger.error(args.join(" "), { operation: "guac_error" });
+      guacLogger.error(args.join(" "));
     },
   },
   // Allow width, height, and dpi to be passed as query parameters

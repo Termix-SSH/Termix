@@ -1001,6 +1001,28 @@ class PollingManager {
     }
   }
 
+  refreshAllPolling(): void {
+    const hostsToRefresh: Array<{
+      host: SSHHostWithCredentials;
+      viewerUserId?: string;
+    }> = [];
+
+    for (const [hostId, config] of this.pollingConfigs.entries()) {
+      hostsToRefresh.push({
+        host: config.host,
+        viewerUserId: config.viewerUserId,
+      });
+    }
+
+    for (const hostId of this.pollingConfigs.keys()) {
+      this.stopPollingForHost(hostId, false);
+    }
+
+    for (const { host, viewerUserId } of hostsToRefresh) {
+      this.startPollingForHost(host, { statusOnly: true, viewerUserId });
+    }
+  }
+
   registerViewer(hostId: number, sessionId: string, userId: string): void {
     if (!this.activeViewers.has(hostId)) {
       this.activeViewers.set(hostId, new Set());
@@ -3183,6 +3205,9 @@ app.post("/global-settings", requireAdmin, async (req, res) => {
         )
         .run(String(metricsInterval));
     }
+
+    // Refresh all active polling to apply new intervals immediately
+    pollingManager.refreshAllPolling();
 
     res.json({ success: true });
   } catch (error) {
