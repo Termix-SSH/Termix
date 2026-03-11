@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globális monitorozási beállítások mentve",
     "failedToSaveGlobalSettings": "Nem sikerült menteni a globális megfigyelési beállításokat",
     "failedToLoadGlobalSettings": "Nem sikerült betölteni a globális megfigyelési beállításokat",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Munkamenetek betöltése...",
     "noActiveSessions": "Nincsenek aktív munkamenetek.",
     "device": "Eszköz",
