@@ -808,6 +808,7 @@
     "globalSettingsSaved": "บันทึกการตั้งค่าการตรวจสอบทั่วโลกแล้ว",
     "failedToSaveGlobalSettings": "ไม่สามารถบันทึกการตั้งค่าการตรวจสอบทั่วโลกได้",
     "failedToLoadGlobalSettings": "ไม่สามารถโหลดการตั้งค่าการตรวจสอบทั่วโลกได้",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "กำลังโหลดเซสชัน...",
     "noActiveSessions": "ไม่พบเซสชันที่ใช้งานอยู่",
     "device": "อุปกรณ์",
