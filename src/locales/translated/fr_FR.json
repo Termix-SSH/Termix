@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Paramètres de surveillance globale enregistrés",
     "failedToSaveGlobalSettings": "Impossible d'enregistrer les paramètres de surveillance globale",
     "failedToLoadGlobalSettings": "Impossible de charger les paramètres de surveillance globale",
+    "clampedToValidRange": "a été ajusté à une plage valide",
     "loadingSessions": "Chargement des sessions...",
     "noActiveSessions": "Aucune session active trouvée.",
     "device": "Appareil",
