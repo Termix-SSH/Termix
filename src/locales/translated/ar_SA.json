@@ -808,6 +808,7 @@
     "globalSettingsSaved": "تم حفظ إعدادات المراقبة العالمية",
     "failedToSaveGlobalSettings": "فشل في حفظ إعدادات المراقبة العالمية",
     "failedToLoadGlobalSettings": "فشل تحميل إعدادات المراقبة العالمية",
+    "clampedToValidRange": "تم تعديله إلى نطاق صحيح",
     "loadingSessions": "جاري تحميل الجلسات...",
     "noActiveSessions": "لم يتم العثور على جلسات نشطة.",
     "device": "الجهاز",
