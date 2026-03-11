@@ -808,6 +808,7 @@
     "globalSettingsSaved": "全局监控设置已保存",
     "failedToSaveGlobalSettings": "无法保存全局监控设置",
     "failedToLoadGlobalSettings": "加载全局监控设置失败",
+    "clampedToValidRange": "被调整为有效范围",
     "loadingSessions": "正在加载会话...",
     "noActiveSessions": "未找到活动会话。",
     "device": "设备",
