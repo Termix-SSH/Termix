@@ -195,37 +195,41 @@ export function LeftSidebar({
         setTimeout(() => {
           setHosts(newHosts);
           prevHostsRef.current = newHosts;
-
-          newHosts.forEach((newHost) => {
-            updateHostConfig(newHost.id, newHost);
-          });
         }, 50);
       }
     } catch {
       setHostsError(t("leftSidebar.failedToLoadHosts"));
     }
-  }, [updateHostConfig]);
+  }, [t]);
+
+  const fetchHostsRef = React.useRef(fetchHosts);
+  const fetchFolderMetadataRef = React.useRef(fetchFolderMetadata);
 
   React.useEffect(() => {
-    fetchHosts();
-    fetchFolderMetadata();
+    fetchHostsRef.current = fetchHosts;
+    fetchFolderMetadataRef.current = fetchFolderMetadata;
+  });
+
+  React.useEffect(() => {
+    fetchHostsRef.current();
+    fetchFolderMetadataRef.current();
     const interval = setInterval(() => {
-      fetchHosts();
-      fetchFolderMetadata();
+      fetchHostsRef.current();
+      fetchFolderMetadataRef.current();
     }, 300000);
     return () => clearInterval(interval);
-  }, [fetchHosts, fetchFolderMetadata]);
+  }, []);
 
   React.useEffect(() => {
     const handleHostsChanged = () => {
-      fetchHosts();
-      fetchFolderMetadata();
+      fetchHostsRef.current();
+      fetchFolderMetadataRef.current();
     };
     const handleCredentialsChanged = () => {
-      fetchHosts();
+      fetchHostsRef.current();
     };
     const handleFoldersChanged = () => {
-      fetchFolderMetadata();
+      fetchFolderMetadataRef.current();
     };
     window.addEventListener(
       "ssh-hosts:changed",
@@ -253,7 +257,7 @@ export function LeftSidebar({
         handleFoldersChanged as EventListener,
       );
     };
-  }, [fetchHosts, fetchFolderMetadata]);
+  }, []);
 
   React.useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 200);
@@ -526,7 +530,7 @@ export function LeftSidebar({
                   const metadata = folderMetadata.get(folder);
                   return (
                     <FolderCard
-                      key={`folder-${folder}-${hostsByFolder[folder]?.length || 0}`}
+                      key={`folder-${folder}`}
                       folderName={folder}
                       hosts={getSortedHosts(hostsByFolder[folder])}
                       isFirst={idx === 0}

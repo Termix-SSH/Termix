@@ -45,10 +45,16 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     setHost(initialHost);
   }, [initialHost]);
 
-  useEffect(() => {
+  const hostIdRef = React.useRef(host.id);
+
+  React.useEffect(() => {
+    hostIdRef.current = host.id;
+  });
+
+  React.useEffect(() => {
     const handleHostsChanged = async () => {
       const hosts = await getSSHHosts();
-      const updatedHost = hosts.find((h) => h.id === host.id);
+      const updatedHost = hosts.find((h) => h.id === hostIdRef.current);
       if (updatedHost) {
         setHost(updatedHost);
       }
@@ -57,7 +63,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     window.addEventListener("ssh-hosts:changed", handleHostsChanged);
     return () =>
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
-  }, [host.id]);
+  }, []);
 
   useEffect(() => {
     const handleShowTagsChanged = () => {
