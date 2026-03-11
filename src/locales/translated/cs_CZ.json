@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globální nastavení monitorování uloženo",
     "failedToSaveGlobalSettings": "Nepodařilo se uložit globální nastavení monitorování",
     "failedToLoadGlobalSettings": "Nepodařilo se načíst globální nastavení monitorování",
+    "clampedToValidRange": "byl upraven na platný rozsah",
     "loadingSessions": "Načítání relací...",
     "noActiveSessions": "Nebyly nalezeny žádné aktivní relace.",
     "device": "Zařízení",
