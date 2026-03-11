@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globalne ustawienia monitorowania zapisane",
     "failedToSaveGlobalSettings": "Nie udało się zapisać globalnych ustawień monitoringu",
     "failedToLoadGlobalSettings": "Nie udało się załadować globalnych ustawień monitoringu",
+    "clampedToValidRange": "został dostosowany do prawidłowego zakresu",
     "loadingSessions": "Ładowanie sesji...",
     "noActiveSessions": "Nie znaleziono aktywnych sesji.",
     "device": "Urządzenie",
