@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globale Überwachungseinstellungen gespeichert",
     "failedToSaveGlobalSettings": "Fehler beim Speichern der globalen Überwachungseinstellungen",
     "failedToLoadGlobalSettings": "Fehler beim Laden der globalen Überwachungseinstellungen",
+    "clampedToValidRange": "wurde an gültigen Bereich angepasst",
     "loadingSessions": "Lade Sitzungen...",
     "noActiveSessions": "Keine aktiven Sitzungen gefunden.",
     "device": "Gerät",
