@@ -808,6 +808,7 @@
     "globalSettingsSaved": "वैश्विक निगरानी सेटिंग्स सहेजी गईं",
     "failedToSaveGlobalSettings": "वैश्विक निगरानी सेटिंग्स को सहेजने में विफल।",
     "failedToLoadGlobalSettings": "वैश्विक निगरानी सेटिंग्स लोड करने में विफल",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "सेशन लोड हो रहे हैं...",
     "noActiveSessions": "कोई सक्रिय सत्र नहीं मिला।",
     "device": "उपकरण",
