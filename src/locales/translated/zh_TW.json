@@ -808,6 +808,7 @@
     "globalSettingsSaved": "已儲存全域監控設定",
     "failedToSaveGlobalSettings": "儲存全域監控設定失敗",
     "failedToLoadGlobalSettings": "載入全域監控設定失敗",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "正在載入會話...",
     "noActiveSessions": "未找到活動會話。",
     "device": "裝置",
