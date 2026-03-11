@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Impostazioni di monitoraggio globali salvate",
     "failedToSaveGlobalSettings": "Impossibile salvare le impostazioni di monitoraggio globale",
     "failedToLoadGlobalSettings": "Impossibile caricare le impostazioni di monitoraggio globale",
+    "clampedToValidRange": "è stato adattato all'intervallo valido",
     "loadingSessions": "Caricamento sessioni...",
     "noActiveSessions": "Nessuna sessione attiva trovata.",
     "device": "Dispositivo",
