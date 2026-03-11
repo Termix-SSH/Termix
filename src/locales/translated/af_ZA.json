@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globale moniteringsinstellings gestoor",
     "failedToSaveGlobalSettings": "Kon nie globale moniteringsinstellings stoor nie",
     "failedToLoadGlobalSettings": "Kon nie globale moniteringsinstellings laai nie",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Laai sessies...",
     "noActiveSessions": "Geen aktiewe sessies gevind nie.",
     "device": "Toestel",
