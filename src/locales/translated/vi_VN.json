@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Cài đặt giám sát toàn cầu đã được lưu",
     "failedToSaveGlobalSettings": "Không thể lưu cài đặt giám sát toàn cầu.",
     "failedToLoadGlobalSettings": "Không thể tải cài đặt giám sát toàn cầu.",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Đang tải phiên...",
     "noActiveSessions": "Không tìm thấy phiên hoạt động nào.",
     "device": "Thiết bị",
