@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globala övervakningsinställningar sparade",
     "failedToSaveGlobalSettings": "Det gick inte att spara globala övervakningsinställningar",
     "failedToLoadGlobalSettings": "Det gick inte att ladda globala övervakningsinställningar",
+    "clampedToValidRange": "justerades till giltigt intervall",
     "loadingSessions": "Laddar sessioner...",
     "noActiveSessions": "Inga aktiva sessioner hittades.",
     "device": "Enhet",
