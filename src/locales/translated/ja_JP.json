@@ -808,6 +808,7 @@
     "globalSettingsSaved": "グローバル監視設定を保存しました",
     "failedToSaveGlobalSettings": "グローバル監視設定の保存に失敗しました",
     "failedToLoadGlobalSettings": "グローバル監視設定の読み込みに失敗しました",
+    "clampedToValidRange": "有効な範囲に調整されました",
     "loadingSessions": "セッションを読み込み中...",
     "noActiveSessions": "アクティブなセッションが見つかりませんでした。",
     "device": "デバイス",
