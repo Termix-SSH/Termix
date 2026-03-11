@@ -808,6 +808,7 @@
     "globalSettingsSaved": "הגדרות ניטור גלובליות נשמרו",
     "failedToSaveGlobalSettings": "נכשלה שמירת הגדרות הניטור הגלובליות",
     "failedToLoadGlobalSettings": "נכשלה טעינת הגדרות הניטור הגלובליות",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "טוען סשנים...",
     "noActiveSessions": "לא נמצאו סשנים פעילים.",
     "device": "הֶתקֵן",
