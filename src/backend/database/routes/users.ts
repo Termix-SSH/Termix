@@ -815,6 +815,13 @@ router.get("/oidc/authorize", async (req, res) => {
       backendCallbackUri: backendCallbackUri,
     });
 
+    authLogger.info(
+      `\n${"=".repeat(68)}\n` +
+        `  OIDC CALLBACK URL - Register this in your OAuth provider:\n` +
+        `  ${backendCallbackUri}\n` +
+        `${"=".repeat(68)}`,
+    );
+
     const envConfig = getOIDCConfigFromEnv();
     let config;
 
@@ -1526,9 +1533,10 @@ router.post("/login", async (req, res) => {
     if (userRecord.totpEnabled) {
       const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
 
-      const isTrusted = rememberMe
-        ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
-        : false;
+      const isTrusted = await authManager.isTrustedDevice(
+        userRecord.id,
+        deviceFingerprint,
+      );
 
       if (isTrusted) {
         authLogger.info("TOTP bypassed for trusted device", {
