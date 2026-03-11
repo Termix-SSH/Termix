@@ -808,6 +808,7 @@
     "globalSettingsSaved": "বিশ্বব্যাপী পর্যবেক্ষণ সেটিংস সংরক্ষণ করা হয়েছে",
     "failedToSaveGlobalSettings": "বিশ্বব্যাপী পর্যবেক্ষণ সেটিংস সংরক্ষণ করতে ব্যর্থ হয়েছে",
     "failedToLoadGlobalSettings": "বিশ্বব্যাপী পর্যবেক্ষণ সেটিংস লোড করা যায়নি",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "সেশন লোড হচ্ছে...",
     "noActiveSessions": "কোন সক্রিয় সেশন পাওয়া যায়নি।",
     "device": "যন্ত্র",
