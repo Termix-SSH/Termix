@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Ajustes globales de monitoreo guardados",
     "failedToSaveGlobalSettings": "Error al guardar la configuración global de monitoreo",
     "failedToLoadGlobalSettings": "Error al cargar la configuración global de monitoreo",
+    "clampedToValidRange": "se ajustó al rango válido",
     "loadingSessions": "Cargando sesiones...",
     "noActiveSessions": "No se encontraron sesiones activas.",
     "device": "Dispositivo",
