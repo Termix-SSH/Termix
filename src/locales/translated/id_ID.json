@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Pengaturan pemantauan global tersimpan",
     "failedToSaveGlobalSettings": "Gagal menyimpan pengaturan pemantauan global.",
     "failedToLoadGlobalSettings": "Gagal memuat pengaturan pemantauan global.",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Memuat sesi...",
     "noActiveSessions": "Tidak ditemukan sesi aktif.",
     "device": "Perangkat",
