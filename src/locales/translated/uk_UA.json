@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Глобальні налаштування моніторингу збережено",
     "failedToSaveGlobalSettings": "Не вдалося зберегти глобальні параметри моніторингу",
     "failedToLoadGlobalSettings": "Не вдалося завантажити налаштування глобального моніторингу",
+    "clampedToValidRange": "було скориговано до дійсного діапазону",
     "loadingSessions": "Завантаження сесій...",
     "noActiveSessions": "Активних сесій не знайдено.",
     "device": "Пристрій",
