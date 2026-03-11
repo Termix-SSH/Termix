@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Подешавања глобалног праћења сачувана",
     "failedToSaveGlobalSettings": "Чување подешавања глобалног праћења није успело",
     "failedToLoadGlobalSettings": "Учитавање подешавања глобалног праћења није успело",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Учитавање сесија...",
     "noActiveSessions": "Није пронађена ниједна активна сесија.",
     "device": "Уређај",
