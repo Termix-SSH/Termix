@@ -808,6 +808,7 @@
     "globalSettingsSaved": "S'ha desat la configuració de monitorització global",
     "failedToSaveGlobalSettings": "No s'ha pogut desar la configuració de monitorització global",
     "failedToLoadGlobalSettings": "No s'ha pogut carregar la configuració de monitorització global",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "S'estan carregant les sessions...",
     "noActiveSessions": "No s'han trobat sessions actives.",
     "device": "Dispositiu",
