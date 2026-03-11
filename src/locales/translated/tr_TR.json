@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Küresel izleme ayarları kaydedildi.",
     "failedToSaveGlobalSettings": "Küresel izleme ayarları kaydedilemedi.",
     "failedToLoadGlobalSettings": "Küresel izleme ayarları yüklenemedi.",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Oturumlar yükleniyor...",
     "noActiveSessions": "Aktif oturum bulunamadı.",
     "device": "Cihaz",
