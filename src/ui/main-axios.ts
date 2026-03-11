@@ -731,8 +731,9 @@ function getApiUrl(path: string, defaultPort: number): string {
 }
 
 function initializeApiInstances() {
-  // SSH Host Management API (port 30001)
-  sshHostApi = createApiInstance(getApiUrl("/ssh", 30001), "SSH_HOST");
+  // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+  hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
+  sshHostApi = hostApi; // Backward compatibility
 
   // Tunnel Management API (port 30003)
   tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
@@ -759,7 +760,9 @@ function initializeApiInstances() {
   dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
 }
 
-// SSH Host Management API (port 30001)
+// Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
+export let hostApi: AxiosInstance;
+// Backward compatibility
 export let sshHostApi: AxiosInstance;
 
 // Tunnel Management API (port 30003)
@@ -3950,6 +3953,17 @@ export async function getGuacamoleToken(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get guacamole token");
+  }
+}
+
+export async function getGuacamoleTokenFromHost(
+  hostId: number,
+): Promise<GuacamoleTokenResponse> {
+  try {
+    const response = await authApi.post(`/guacamole/connect-host/${hostId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get guacamole token from host");
   }
 }
 

@@ -3,7 +3,7 @@ import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
 import { parse as parseUrl } from "url";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials, sshData } from "../database/db/schema.js";
+import { sshCredentials, hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -97,20 +97,20 @@ async function resolveJumpHost(
     hostId,
   });
   try {
-    const hosts = await SimpleDBOps.select(
+    const hostResults = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return null;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
 
     if (host.credentialId) {
       const credentials = await SimpleDBOps.select(
@@ -814,8 +814,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const db = getDb();
           const hostRow = await db
             .select()
-            .from(sshData)
-            .where(eq(sshData.id, opksshData.hostId))
+            .from(hosts)
+            .where(eq(hosts.id, opksshData.hostId))
             .limit(1);
           if (!hostRow || hostRow.length === 0) {
             sshLogger.error(
@@ -1400,14 +1400,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
           if (id && hostConfig.userId) {
             (async () => {
               try {
-                const hosts = await SimpleDBOps.select(
+                const hostResults = await SimpleDBOps.select(
                   getDb()
                     .select()
-                    .from(sshData)
+                    .from(hosts)
                     .where(
                       and(
-                        eq(sshData.id, id),
-                        eq(sshData.userId, hostConfig.userId!),
+                        eq(hosts.id, id),
+                        eq(hosts.userId, hostConfig.userId!),
                       ),
                     ),
                   "ssh_data",
@@ -1415,8 +1415,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 );
 
                 const hostName =
-                  hosts.length > 0 && hosts[0].name
-                    ? hosts[0].name
+                  hostResults.length > 0 && hostResults[0].name
+                    ? hostResults[0].name
                     : `${username}@${ip}:${port}`;
 
                 await axios.post(

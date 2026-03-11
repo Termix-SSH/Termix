@@ -4,7 +4,7 @@ import {
   sshCredentials,
   hostAccess,
   userRoles,
-  sshData,
+  hosts,
 } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
@@ -587,7 +587,7 @@ class SharedCredentialManager {
       const access = await db
         .select()
         .from(hostAccess)
-        .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
+        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
         .where(eq(hostAccess.id, cred.hostAccessId))
         .limit(1);
 

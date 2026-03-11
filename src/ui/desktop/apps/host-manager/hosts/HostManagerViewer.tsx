@@ -41,6 +41,7 @@ import {
   refreshServerPolling,
   isElectron,
   getConfiguredServerUrl,
+  getGuacamoleTokenFromHost,
 } from "@/ui/main-axios.ts";
 import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
 import { toast } from "sonner";
@@ -83,6 +84,7 @@ import {
   Plus,
   ListChecks,
   ChevronDown,
+  Monitor,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -1835,6 +1837,52 @@ export function HostManagerViewer({
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>{t("hosts.openDocker")}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {((host as any).connectionType === "rdp" ||
+                                    (host as any).connectionType === "vnc" ||
+                                    (host as any).connectionType ===
+                                      "telnet") && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const title = host.name?.trim()
+                                              ? host.name
+                                              : `${host.ip}:${host.port}`;
+                                            const connectionType = (host as any)
+                                              .connectionType as
+                                              | "rdp"
+                                              | "vnc"
+                                              | "telnet";
+
+                                            try {
+                                              const { token } =
+                                                await getGuacamoleTokenFromHost(
+                                                  host.id,
+                                                );
+                                              addTab({
+                                                type: connectionType,
+                                                title,
+                                                connectionConfig: { token },
+                                              });
+                                            } catch (error) {
+                                              toast.error(
+                                                `Failed to connect: ${error instanceof Error ? error.message : "Unknown error"}`,
+                                              );
+                                            }
+                                          }}
+                                          className="h-7 px-2 hover:bg-indigo-500/10 hover:border-indigo-500/50 flex-1"
+                                        >
+                                          <Monitor className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{t("hosts.remoteDesktop")}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}

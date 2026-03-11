@@ -7,7 +7,7 @@ import { db } from "../db/index.js";
 import {
   sshCredentials,
   sshCredentialUsage,
-  sshData,
+  hosts,
   hostAccess,
 } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -690,17 +690,14 @@ router.delete(
 
       const hostsUsingCredential = await db
         .select()
-        .from(sshData)
+        .from(hosts)
         .where(
-          and(
-            eq(sshData.credentialId, parseInt(id)),
-            eq(sshData.userId, userId),
-          ),
+          and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
         );
 
       if (hostsUsingCredential.length > 0) {
         await db
-          .update(sshData)
+          .update(hosts)
           .set({
             credentialId: null,
             password: null,
@@ -709,10 +706,7 @@ router.delete(
             authType: "password",
           })
           .where(
-            and(
-              eq(sshData.credentialId, parseInt(id)),
-              eq(sshData.userId, userId),
-            ),
+            and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
           );
 
         for (const host of hostsUsingCredential) {
@@ -835,7 +829,7 @@ router.post(
       const credential = credentials[0];
 
       await db
-        .update(sshData)
+        .update(hosts)
         .set({
           credentialId: parseInt(credentialId),
           username: (credential.username as string) || "",
@@ -846,9 +840,7 @@ router.post(
           keyType: null,
           updatedAt: new Date().toISOString(),
         })
-        .where(
-          and(eq(sshData.id, parseInt(hostId)), eq(sshData.userId, userId)),
-        );
+        .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId)));
 
       await db.insert(sshCredentialUsage).values({
         credentialId: parseInt(credentialId),
@@ -915,17 +907,17 @@ router.get(
     }
 
     try {
-      const hosts = await db
+      const hostsUsingCredential = await db
         .select()
-        .from(sshData)
+        .from(hosts)
         .where(
           and(
-            eq(sshData.credentialId, parseInt(credentialId)),
-            eq(sshData.userId, userId),
+            eq(hosts.credentialId, parseInt(credentialId)),
+            eq(hosts.userId, userId),
           ),
         );
 
-      res.json(hosts.map((host) => formatSSHHostOutput(host)));
+      res.json(hostsUsingCredential.map((host) => formatSSHHostOutput(host)));
     } catch (err) {
       authLogger.error("Failed to fetch hosts using credential", err);
       res.status(500).json({
@@ -1940,7 +1932,7 @@ router.post(
         });
       }
       const targetHost = await SimpleDBOps.select(
-        db.select().from(sshData).where(eq(sshData.id, targetHostId)).limit(1),
+        db.select().from(hosts).where(eq(hosts.id, targetHostId)).limit(1),
         "ssh_data",
         userId,
       );

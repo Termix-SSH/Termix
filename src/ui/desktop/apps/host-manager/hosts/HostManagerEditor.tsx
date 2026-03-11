@@ -268,9 +268,9 @@ export function HostManagerEditor({
     .object({
       connectionType: z.enum(["ssh", "rdp", "vnc", "telnet"]).default("ssh"),
       name: z.string().optional(),
-      ip: z.string().min(1),
+      ip: z.string().min(1, t("hosts.ipRequired", "IP address is required")),
       port: z.coerce.number().min(1).max(65535),
-      username: z.string().default(""),
+      username: z.string().optional(),
       folder: z.string().optional(),
       tags: z.array(z.string().min(1)).default([]),
       pin: z.boolean().default(false),
@@ -477,25 +477,27 @@ export function HostManagerEditor({
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: t("hosts.passwordRequired"),
+            message: t("hosts.passwordRequired", "Password is required"),
             path: ["password"],
           });
         }
       } else if (data.authType === "key") {
         if (
           !data.key ||
-          (typeof data.key === "string" && data.key.trim() === "")
+          (typeof data.key === "string" &&
+            data.key.trim() === "" &&
+            data.key !== "existing_key")
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: t("hosts.sshKeyRequired"),
+            message: t("hosts.sshKeyRequired", "SSH key is required"),
             path: ["key"],
           });
         }
         if (!data.keyType) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: t("hosts.keyTypeRequired"),
+            message: t("hosts.keyTypeRequired", "Key type is required"),
             path: ["keyType"],
           });
         }
@@ -503,7 +505,7 @@ export function HostManagerEditor({
         if (!data.credentialId) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: t("hosts.credentialRequired"),
+            message: t("hosts.credentialRequired", "Credential is required"),
             path: ["credentialId"],
           });
         }
@@ -605,30 +607,33 @@ export function HostManagerEditor({
 
   const isFormValid = React.useMemo(() => {
     const values = form.getValues();
+    const errors = form.formState.errors;
 
     if (!values.ip) return false;
 
     // For non-SSH types, only IP is required
     if (values.connectionType !== "ssh") {
-      return true;
+      return Object.keys(errors).length === 0;
     }
 
     if (!values.username || values.username.trim() === "") return false;
 
     if (authTab === "password") {
-      return !!(values.password && values.password.trim() !== "");
+      if (!values.password || values.password.trim() === "") return false;
     } else if (authTab === "key") {
-      return !!(values.key && values.keyType);
+      if (!values.key || !values.keyType) return false;
     } else if (authTab === "credential") {
-      return !!values.credentialId;
+      if (!values.credentialId) return false;
     } else if (authTab === "none") {
-      return true;
+      // No auth required
     } else if (authTab === "opkssh") {
-      return true;
+      // No auth required
+    } else {
+      return false;
     }
 
-    return false;
-  }, [watchedFields, authTab]);
+    return Object.keys(errors).length === 0;
+  }, [watchedFields, authTab, form.formState.errors]);
 
   useEffect(() => {
     const updateAuthFields = async () => {
@@ -1301,33 +1306,45 @@ export function HostManagerEditor({
                     : t("hosts.addHost")}
                 </h3>
               </div>
-              {/* Connection Type Selector */}
               <FormField
                 control={form.control}
                 name="connectionType"
                 render={({ field }) => (
                   <FormItem className="mb-4">
-                    <FormLabel className="font-bold">
-                      {t("hosts.connectionType")}
-                    </FormLabel>
-                    <Select
-                      value={field.value || "ssh"}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="ssh">{t("hosts.ssh")}</SelectItem>
-                        <SelectItem value="rdp">{t("hosts.rdp")}</SelectItem>
-                        <SelectItem value="vnc">{t("hosts.vnc")}</SelectItem>
-                        <SelectItem value="telnet">
-                          {t("hosts.telnet")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Tabs
+                        value={field.value || "ssh"}
+                        onValueChange={field.onChange}
+                        className="w-full"
+                      >
+                        <TabsList className="bg-button border border-edge-medium">
+                          <TabsTrigger
+                            value="ssh"
+                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                          >
+                            {t("hosts.ssh")}
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="rdp"
+                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                          >
+                            {t("hosts.rdp")}
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="vnc"
+                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                          >
+                            {t("hosts.vnc")}
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="telnet"
+                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                          >
+                            {t("hosts.telnet")}
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </FormControl>
                   </FormItem>
                 )}
               />

@@ -2,8 +2,20 @@ import type { Client } from "ssh2";
 import type { Request } from "express";
 
 // ============================================================================
-// SSH HOST TYPES
+// HOST TYPES (SSH, RDP, VNC, Telnet)
 // ============================================================================
+
+export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
+export type SSHAuthType = "password" | "key" | "credential" | "none" | "opkssh";
+export type GuacamoleAuthType = "password" | "credential";
+
+export interface HostFeatureFlags {
+  enableTerminal: boolean; // SSH, Telnet only
+  enableTunnel: boolean; // SSH only
+  enableFileManager: boolean; // SSH only
+  enableDocker: boolean; // SSH only
+  enableRemoteDesktop: boolean; // RDP, VNC only
+}
 
 export interface JumpHost {
   hostId: number;
@@ -14,7 +26,7 @@ export interface QuickAction {
   snippetId: number;
 }
 
-export interface SSHHost {
+export interface Host {
   id: number;
   name: string;
   ip: string;
@@ -93,7 +105,7 @@ export interface ProxyNode {
   password?: string;
 }
 
-export interface SSHHostData {
+export interface HostData {
   name?: string;
   ip: string;
   port: number;
@@ -141,6 +153,10 @@ export interface SSHHostData {
   guacamoleConfig?: Record<string, unknown> | null;
   dockerConfig?: Record<string, unknown> | null;
 }
+
+// Backward compatibility aliases
+export type SSHHost = Host;
+export type SSHHostData = HostData;
 
 export interface SSHFolder {
   id: number;

@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import { getDb, DatabaseSaveTrigger } from "./database/db/index.js";
 import {
   recentActivity,
-  sshData,
+  hosts,
   hostAccess,
   dashboardPreferences,
 } from "./database/db/schema.js";
@@ -252,8 +252,8 @@ app.post("/activity/log", async (req, res) => {
     const ownedHosts = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );

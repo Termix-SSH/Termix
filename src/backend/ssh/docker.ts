@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshData, sshCredentials } from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -136,20 +136,20 @@ async function resolveJumpHost(
   userId: string,
 ): Promise<JumpHostConfig | null> {
   try {
-    const hosts = await SimpleDBOps.select(
+    const hostResults = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return null;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
 
     if (host.credentialId) {
       const credentials = await SimpleDBOps.select(
@@ -570,20 +570,20 @@ app.post("/docker/ssh/connect", async (req, res) => {
   );
 
   try {
-    const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(eq(sshData.id, hostId)),
+    const hostResults = await SimpleDBOps.select(
+      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       connectionLogs.push(
         createConnectionLog("error", "docker_connecting", "Host not found"),
       );
       return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
-    const host = hosts[0] as unknown as SSHHost;
+    const host = hostResults[0] as unknown as SSHHost;
 
     if (host.userId !== userId) {
       const { PermissionManager } =
@@ -1676,14 +1676,14 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hosts = await SimpleDBOps.select(
+            const hostResults = await SimpleDBOps.select(
               getDb()
                 .select()
-                .from(sshData)
+                .from(hosts)
                 .where(
                   and(
-                    eq(sshData.id, session.hostId!),
-                    eq(sshData.userId, session.userId!),
+                    eq(hosts.id, session.hostId!),
+                    eq(hosts.userId, session.userId!),
                   ),
                 ),
               "ssh_data",
@@ -1691,8 +1691,8 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
             );
 
             const hostName =
-              hosts.length > 0 && hosts[0].name
-                ? hosts[0].name
+              hostResults.length > 0 && hostResults[0].name
+                ? hostResults[0].name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(
@@ -1861,14 +1861,14 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hosts = await SimpleDBOps.select(
+            const hostResults = await SimpleDBOps.select(
               getDb()
                 .select()
-                .from(sshData)
+                .from(hosts)
                 .where(
                   and(
-                    eq(sshData.id, session.hostId!),
-                    eq(sshData.userId, session.userId!),
+                    eq(hosts.id, session.hostId!),
+                    eq(hosts.userId, session.userId!),
                   ),
                 ),
               "ssh_data",
@@ -1876,8 +1876,8 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
             );
 
             const hostName =
-              hosts.length > 0 && hosts[0].name
-                ? hosts[0].name
+              hostResults.length > 0 && hostResults[0].name
+                ? hostResults[0].name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(

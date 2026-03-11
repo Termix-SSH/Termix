@@ -11,7 +11,7 @@ const tokenService = GuacamoleTokenService.getInstance();
 // Configuration from environment
 const GUACD_HOST = process.env.GUACD_HOST || "localhost";
 const GUACD_PORT = parseInt(process.env.GUACD_PORT || "4822", 10);
-const GUAC_WS_PORT = 30007;
+const GUAC_WS_PORT = 30008;
 
 const websocketOptions = {
   port: GUAC_WS_PORT,
@@ -28,7 +28,7 @@ const clientOptions = {
     key: tokenService.getEncryptionKey(),
   },
   log: {
-    level: process.env.NODE_ENV === "production" ? "ERRORS" : "VERBOSE",
+    level: "ERRORS",
     stdLog: (...args: unknown[]) => {
       guacLogger.info(args.join(" "));
     },

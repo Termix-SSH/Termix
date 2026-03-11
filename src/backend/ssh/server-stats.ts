@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshData, sshCredentials } from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -62,20 +62,20 @@ async function resolveJumpHost(
   userId: string,
 ): Promise<JumpHostConfig | null> {
   try {
-    const hosts = await SimpleDBOps.select(
+    const hostResults = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return null;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
 
     if (host.credentialId) {
       const credentials = await SimpleDBOps.select(
@@ -1164,14 +1164,14 @@ async function fetchAllHosts(
   userId: string,
 ): Promise<SSHHostWithCredentials[]> {
   try {
-    const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(eq(sshData.userId, userId)),
+    const hostResults = await SimpleDBOps.select(
+      getDb().select().from(hosts).where(eq(hosts.userId, userId)),
       "ssh_data",
       userId,
     );
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
-    for (const host of hosts) {
+    for (const host of hostResults) {
       try {
         const hostWithCreds = await resolveHostCredentials(host, userId);
         if (hostWithCreds) {
@@ -1215,17 +1215,17 @@ async function fetchHostById(
       return undefined;
     }
 
-    const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(eq(sshData.id, id)),
+    const hostResults = await SimpleDBOps.select(
+      getDb().select().from(hosts).where(eq(hosts.id, id)),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return undefined;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
     return await resolveHostCredentials(host, userId);
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);

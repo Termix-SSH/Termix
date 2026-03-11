@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import {
-  sshData,
+  hosts,
   sshCredentials,
   sshCredentialUsage,
   fileManagerRecent,
@@ -142,12 +142,9 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
   try {
     const autostartHosts = await db
       .select()
-      .from(sshData)
+      .from(hosts)
       .where(
-        and(
-          eq(sshData.enableTunnel, true),
-          isNotNull(sshData.tunnelConnections),
-        ),
+        and(eq(hosts.enableTunnel, true), isNotNull(hosts.tunnelConnections)),
       );
 
     const result = autostartHosts
@@ -238,7 +235,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         .json({ error: "Invalid internal authentication token" });
     }
 
-    const allHosts = await db.select().from(sshData);
+    const allHosts = await db.select().from(hosts);
 
     const result = allHosts.map((host) => {
       const tunnelConnections = host.tunnelConnections
@@ -521,7 +518,7 @@ router.post(
 
     try {
       const result = await SimpleDBOps.insert(
-        sshData,
+        hosts,
         "ssh_data",
         sshDataObj,
         userId,
@@ -1057,12 +1054,12 @@ router.put(
 
       const hostRecord = await db
         .select({
-          userId: sshData.userId,
-          credentialId: sshData.credentialId,
-          authType: sshData.authType,
+          userId: hosts.userId,
+          credentialId: hosts.credentialId,
+          authType: hosts.authType,
         })
-        .from(sshData)
-        .where(eq(sshData.id, Number(hostId)))
+        .from(hosts)
+        .where(eq(hosts.id, Number(hostId)))
         .limit(1);
 
       if (hostRecord.length === 0) {
@@ -1108,9 +1105,9 @@ router.put(
       }
 
       await SimpleDBOps.update(
-        sshData,
+        hosts,
         "ssh_data",
-        eq(sshData.id, Number(hostId)),
+        eq(hosts.id, Number(hostId)),
         sshDataObj,
         ownerId,
       );
@@ -1118,8 +1115,8 @@ router.put(
       const updatedHosts = await SimpleDBOps.select(
         db
           .select()
-          .from(sshData)
-          .where(eq(sshData.id, Number(hostId))),
+          .from(hosts)
+          .where(eq(hosts.id, Number(hostId))),
         "ssh_data",
         ownerId,
       );
@@ -1222,62 +1219,67 @@ router.get(
 
       const rawData = await db
         .select({
-          id: sshData.id,
-          userId: sshData.userId,
-          name: sshData.name,
-          ip: sshData.ip,
-          port: sshData.port,
-          username: sshData.username,
-          folder: sshData.folder,
-          tags: sshData.tags,
-          pin: sshData.pin,
-          authType: sshData.authType,
-          password: sshData.password,
-          key: sshData.key,
-          keyPassword: sshData.keyPassword,
-          keyType: sshData.keyType,
-          enableTerminal: sshData.enableTerminal,
-          enableTunnel: sshData.enableTunnel,
-          tunnelConnections: sshData.tunnelConnections,
-          jumpHosts: sshData.jumpHosts,
-          enableFileManager: sshData.enableFileManager,
-          defaultPath: sshData.defaultPath,
-          autostartPassword: sshData.autostartPassword,
-          autostartKey: sshData.autostartKey,
-          autostartKeyPassword: sshData.autostartKeyPassword,
-          forceKeyboardInteractive: sshData.forceKeyboardInteractive,
-          statsConfig: sshData.statsConfig,
-          terminalConfig: sshData.terminalConfig,
-          sudoPassword: sshData.sudoPassword,
-          createdAt: sshData.createdAt,
-          updatedAt: sshData.updatedAt,
-          credentialId: sshData.credentialId,
-          overrideCredentialUsername: sshData.overrideCredentialUsername,
-          quickActions: sshData.quickActions,
-          notes: sshData.notes,
-          enableDocker: sshData.enableDocker,
-          showTerminalInSidebar: sshData.showTerminalInSidebar,
-          showFileManagerInSidebar: sshData.showFileManagerInSidebar,
-          showTunnelInSidebar: sshData.showTunnelInSidebar,
-          showDockerInSidebar: sshData.showDockerInSidebar,
-          showServerStatsInSidebar: sshData.showServerStatsInSidebar,
-          useSocks5: sshData.useSocks5,
-          socks5Host: sshData.socks5Host,
-          socks5Port: sshData.socks5Port,
-          socks5Username: sshData.socks5Username,
-          socks5Password: sshData.socks5Password,
-          socks5ProxyChain: sshData.socks5ProxyChain,
+          id: hosts.id,
+          userId: hosts.userId,
+          connectionType: hosts.connectionType,
+          name: hosts.name,
+          ip: hosts.ip,
+          port: hosts.port,
+          username: hosts.username,
+          folder: hosts.folder,
+          tags: hosts.tags,
+          pin: hosts.pin,
+          authType: hosts.authType,
+          password: hosts.password,
+          key: hosts.key,
+          keyPassword: hosts.keyPassword,
+          keyType: hosts.keyType,
+          enableTerminal: hosts.enableTerminal,
+          enableTunnel: hosts.enableTunnel,
+          tunnelConnections: hosts.tunnelConnections,
+          jumpHosts: hosts.jumpHosts,
+          enableFileManager: hosts.enableFileManager,
+          defaultPath: hosts.defaultPath,
+          autostartPassword: hosts.autostartPassword,
+          autostartKey: hosts.autostartKey,
+          autostartKeyPassword: hosts.autostartKeyPassword,
+          forceKeyboardInteractive: hosts.forceKeyboardInteractive,
+          statsConfig: hosts.statsConfig,
+          terminalConfig: hosts.terminalConfig,
+          sudoPassword: hosts.sudoPassword,
+          createdAt: hosts.createdAt,
+          updatedAt: hosts.updatedAt,
+          credentialId: hosts.credentialId,
+          overrideCredentialUsername: hosts.overrideCredentialUsername,
+          quickActions: hosts.quickActions,
+          notes: hosts.notes,
+          enableDocker: hosts.enableDocker,
+          showTerminalInSidebar: hosts.showTerminalInSidebar,
+          showFileManagerInSidebar: hosts.showFileManagerInSidebar,
+          showTunnelInSidebar: hosts.showTunnelInSidebar,
+          showDockerInSidebar: hosts.showDockerInSidebar,
+          showServerStatsInSidebar: hosts.showServerStatsInSidebar,
+          useSocks5: hosts.useSocks5,
+          socks5Host: hosts.socks5Host,
+          socks5Port: hosts.socks5Port,
+          socks5Username: hosts.socks5Username,
+          socks5Password: hosts.socks5Password,
+          socks5ProxyChain: hosts.socks5ProxyChain,
+          domain: hosts.domain,
+          security: hosts.security,
+          ignoreCert: hosts.ignoreCert,
+          guacamoleConfig: hosts.guacamoleConfig,
 
-          ownerId: sshData.userId,
-          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${sshData.userId} != ${userId}`,
+          ownerId: hosts.userId,
+          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
         })
-        .from(sshData)
+        .from(hosts)
         .leftJoin(
           hostAccess,
           and(
-            eq(hostAccess.hostId, sshData.id),
+            eq(hostAccess.hostId, hosts.id),
             or(
               eq(hostAccess.userId, userId),
               roleIds.length > 0
@@ -1289,7 +1291,7 @@ router.get(
         )
         .where(
           or(
-            eq(sshData.userId, userId),
+            eq(hosts.userId, userId),
             and(
               eq(hostAccess.userId, userId),
               or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
@@ -1399,8 +1401,8 @@ router.get(
     try {
       const data = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        .from(hosts)
+        .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId)));
 
       if (data.length === 0) {
         sshLogger.warn("SSH host not found", {
@@ -1465,18 +1467,16 @@ router.get(
     }
 
     try {
-      const hosts = await SimpleDBOps.select(
+      const hostResults = await SimpleDBOps.select(
         db
           .select()
-          .from(sshData)
-          .where(
-            and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)),
-          ),
+          .from(hosts)
+          .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId))),
         "ssh_data",
         userId,
       );
 
-      if (hosts.length === 0) {
+      if (hostResults.length === 0) {
         return res.status(404).json({ error: "SSH host not found" });
       }
 
@@ -1609,8 +1609,8 @@ router.delete(
     try {
       const hostToDelete = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, Number(hostId)), eq(sshData.userId, userId)));
+        .from(hosts)
+        .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId)));
 
       if (hostToDelete.length === 0) {
         sshLogger.warn("SSH host not found for deletion", {
@@ -1654,8 +1654,8 @@ router.delete(
         .where(eq(sessionRecordings.hostId, numericHostId));
 
       await db
-        .delete(sshData)
-        .where(and(eq(sshData.id, numericHostId), eq(sshData.userId, userId)));
+        .delete(hosts)
+        .where(and(eq(hosts.id, numericHostId), eq(hosts.userId, userId)));
 
       databaseLogger.success("SSH host deleted", {
         operation: "host_delete_success",
@@ -2558,9 +2558,9 @@ router.put(
 
     try {
       const updatedHosts = await SimpleDBOps.update(
-        sshData,
+        hosts,
         "ssh_data",
-        and(eq(sshData.userId, userId), eq(sshData.folder, oldName)),
+        and(eq(hosts.userId, userId), eq(hosts.folder, oldName)),
         {
           folder: newName,
           updatedAt: new Date().toISOString(),
@@ -2784,8 +2784,8 @@ router.delete(
     try {
       const hostsToDelete = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+        .from(hosts)
+        .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
 
       if (hostsToDelete.length === 0) {
         return res.json({
@@ -2829,8 +2829,8 @@ router.delete(
       }
 
       await db
-        .delete(sshData)
-        .where(and(eq(sshData.userId, userId), eq(sshData.folder, folderName)));
+        .delete(hosts)
+        .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
 
       await db
         .delete(sshFolders)
@@ -2971,9 +2971,9 @@ router.patch(
 
     try {
       const ownedHosts = await db
-        .select({ id: sshData.id, statsConfig: sshData.statsConfig })
-        .from(sshData)
-        .where(and(inArray(sshData.id, hostIds), eq(sshData.userId, userId)));
+        .select({ id: hosts.id, statsConfig: hosts.statsConfig })
+        .from(hosts)
+        .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)));
 
       const ownedIds = ownedHosts.map((h) => h.id);
       const unauthorizedIds = hostIds.filter(
@@ -3004,11 +3004,9 @@ router.patch(
 
       if (Object.keys(simpleUpdates).length > 0) {
         await db
-          .update(sshData)
+          .update(hosts)
           .set(simpleUpdates)
-          .where(
-            and(inArray(sshData.id, ownedIds), eq(sshData.userId, userId)),
-          );
+          .where(and(inArray(hosts.id, ownedIds), eq(hosts.userId, userId)));
       }
 
       if (updates.statsConfig && typeof updates.statsConfig === "object") {
@@ -3019,9 +3017,9 @@ router.patch(
               : {};
             const merged = { ...existing, ...updates.statsConfig };
             await db
-              .update(sshData)
+              .update(hosts)
               .set({ statsConfig: JSON.stringify(merged) })
-              .where(and(eq(sshData.id, host.id), eq(sshData.userId, userId)));
+              .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
           } catch (e) {
             errors.push(`Failed to update statsConfig for host ${host.id}`);
           }
@@ -3047,15 +3045,15 @@ router.post(
   authenticateJWT,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { hosts, overwrite } = req.body;
+    const { hosts: hostsToImport, overwrite } = req.body;
 
-    if (!Array.isArray(hosts) || hosts.length === 0) {
+    if (!Array.isArray(hostsToImport) || hostsToImport.length === 0) {
       return res
         .status(400)
         .json({ error: "Hosts array is required and must not be empty" });
     }
 
-    if (hosts.length > 100) {
+    if (hostsToImport.length > 100) {
       return res
         .status(400)
         .json({ error: "Maximum 100 hosts allowed per import" });
@@ -3073,7 +3071,7 @@ router.post(
     if (overwrite) {
       try {
         const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
-          db.select().from(sshData).where(eq(sshData.userId, userId)),
+          db.select().from(hosts).where(eq(hosts.userId, userId)),
           "ssh_data",
           userId,
         );
@@ -3087,8 +3085,8 @@ router.post(
       }
     }
 
-    for (let i = 0; i < hosts.length; i++) {
-      const hostData = hosts[i];
+    for (let i = 0; i < hostsToImport.length; i++) {
+      const hostData = hostsToImport[i];
 
       try {
         if (
@@ -3209,16 +3207,16 @@ router.post(
 
         if (existing) {
           await SimpleDBOps.update(
-            sshData,
+            hosts,
             "ssh_data",
-            eq(sshData.id, existing.id),
+            eq(hosts.id, existing.id),
             sshDataObj,
             userId,
           );
           results.updated++;
         } else {
           sshDataObj.createdAt = new Date().toISOString();
-          await SimpleDBOps.insert(sshData, "ssh_data", sshDataObj, userId);
+          await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
           results.success++;
         }
       } catch (error) {
@@ -3306,8 +3304,8 @@ router.post(
 
       const sshConfig = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, sshConfigId), eq(sshData.userId, userId)));
+        .from(hosts)
+        .where(and(eq(hosts.id, sshConfigId), eq(hosts.userId, userId)));
 
       if (sshConfig.length === 0) {
         sshLogger.warn("SSH config not found for autostart enable", {
@@ -3345,8 +3343,8 @@ router.post(
               ) {
                 const endpointHosts = await db
                   .select()
-                  .from(sshData)
-                  .where(eq(sshData.userId, userId));
+                  .from(hosts)
+                  .where(eq(hosts.userId, userId));
 
                 const endpointHost = endpointHosts.find(
                   (h) =>
@@ -3385,14 +3383,14 @@ router.post(
       }
 
       await db
-        .update(sshData)
+        .update(hosts)
         .set({
           autostartPassword: decryptedConfig.password || null,
           autostartKey: decryptedConfig.key || null,
           autostartKeyPassword: decryptedConfig.keyPassword || null,
           tunnelConnections: updatedTunnelConnections,
         })
-        .where(eq(sshData.id, sshConfigId));
+        .where(eq(hosts.id, sshConfigId));
 
       try {
         await DatabaseSaveTrigger.triggerSave();
@@ -3465,13 +3463,13 @@ router.delete(
 
     try {
       await db
-        .update(sshData)
+        .update(hosts)
         .set({
           autostartPassword: null,
           autostartKey: null,
           autostartKeyPassword: null,
         })
-        .where(and(eq(sshData.id, sshConfigId), eq(sshData.userId, userId)));
+        .where(and(eq(hosts.id, sshConfigId), eq(hosts.userId, userId)));
 
       res.json({
         message: "AutoStart disabled successfully",
@@ -3511,13 +3509,13 @@ router.get(
     try {
       const autostartConfigs = await db
         .select()
-        .from(sshData)
+        .from(hosts)
         .where(
           and(
-            eq(sshData.userId, userId),
+            eq(hosts.userId, userId),
             or(
-              isNotNull(sshData.autostartPassword),
-              isNotNull(sshData.autostartKey),
+              isNotNull(hosts.autostartPassword),
+              isNotNull(hosts.autostartKey),
             ),
           ),
         );
