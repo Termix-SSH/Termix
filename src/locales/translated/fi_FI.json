@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Yleiset seurantaasetukset tallennettu",
     "failedToSaveGlobalSettings": "Yleisten seuranta-asetusten tallentaminen epäonnistui",
     "failedToLoadGlobalSettings": "Globaalien valvontaasetusten lataaminen epäonnistui",
+    "clampedToValidRange": "oli mukautettu kelvolliseen alueeseen",
     "loadingSessions": "Ladataan istuntoja...",
     "noActiveSessions": "Aktiivisia istuntoja ei löytynyt.",
     "device": "Laite",
