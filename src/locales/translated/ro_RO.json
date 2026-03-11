@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Setări de monitorizare globale salvate",
     "failedToSaveGlobalSettings": "Salvarea setărilor globale de monitorizare a eșuat",
     "failedToLoadGlobalSettings": "Încărcarea setărilor globale de monitorizare a eșuat",
+    "clampedToValidRange": "a fost ajustat la un interval valid",
     "loadingSessions": "Se încarcă sesiunile...",
     "noActiveSessions": "Nici o sesiune activă găsită.",
     "device": "Dispozitiv",
