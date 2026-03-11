@@ -29,6 +29,15 @@ import {
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
+function supportsMetrics(host: SSHHostWithCredentials): boolean {
+  const connectionType = host.connectionType || "ssh";
+  return connectionType === "ssh";
+}
+
+function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
+  return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
+}
+
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
   stage: ConnectionStage,
@@ -644,6 +653,7 @@ interface SSHHostWithCredentials {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
 }
 
 type StatusEntry = {
@@ -659,6 +669,7 @@ interface StatsConfig {
   metricsEnabled: boolean;
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
+  disableTcpPing?: boolean;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -783,9 +794,13 @@ class PollingManager {
     const statusOnly = options?.statusOnly ?? false;
     const viewerUserId = options?.viewerUserId;
 
+    const canCollectMetrics = supportsMetrics(host);
+
     const enabledCollectors: string[] = [];
-    if (statsConfig.statusCheckEnabled) enabledCollectors.push("status");
-    if (!statusOnly && statsConfig.metricsEnabled) {
+    if (isTcpPingEnabled(statsConfig)) {
+      enabledCollectors.push("status");
+    }
+    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
       enabledCollectors.push(
         "cpu",
         "memory",
@@ -810,7 +825,7 @@ class PollingManager {
       }
     }
 
-    if (!statsConfig.statusCheckEnabled && !statsConfig.metricsEnabled) {
+    if (!isTcpPingEnabled(statsConfig) && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
@@ -823,14 +838,14 @@ class PollingManager {
       viewerUserId,
     };
 
-    if (statsConfig.statusCheckEnabled) {
+    if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
       this.pollHostStatus(host, viewerUserId);
 
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
-        if (latestConfig && latestConfig.statsConfig.statusCheckEnabled) {
+        if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
           this.pollHostStatus(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
@@ -838,14 +853,18 @@ class PollingManager {
       this.statusStore.delete(host.id);
     }
 
-    if (!statusOnly && statsConfig.metricsEnabled) {
+    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
       await this.pollHostMetrics(host, viewerUserId);
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
-        if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
+        if (
+          latestConfig &&
+          latestConfig.statsConfig.metricsEnabled &&
+          supportsMetrics(latestConfig.host)
+        ) {
           this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
@@ -893,6 +912,15 @@ class PollingManager {
     const userId = viewerUserId || host.userId;
     const refreshedHost = await fetchHostById(host.id, userId);
     if (!refreshedHost) {
+      return;
+    }
+
+    if (!supportsMetrics(refreshedHost)) {
+      statsLogger.debug("Skipping metrics collection for non-SSH host", {
+        operation: "poll_host_metrics_skipped",
+        hostId: refreshedHost.id,
+        connectionType: refreshedHost.connectionType || "ssh",
+      });
       return;
     }
 
@@ -1751,6 +1779,10 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     os: string | null;
   };
 }> {
+  if (!supportsMetrics(host)) {
+    throw new Error("Metrics collection only supported for SSH hosts");
+  }
+
   if (authFailureTracker.shouldSkip(host.id)) {
     const reason = authFailureTracker.getSkipReason(host.id);
     throw new Error(reason || "Authentication failed");

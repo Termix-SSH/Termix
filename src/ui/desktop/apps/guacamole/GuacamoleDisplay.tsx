@@ -163,7 +163,10 @@ export const GuacamoleDisplay = forwardRef<
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/guacamole/websocket/`;
 
-        return `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
+        const wsUrl = `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
+        console.log(`[Guacamole] WebSocket URL:`, wsUrl);
+        console.log(`[Guacamole] DPI value type:`, typeof dpi, `value:`, dpi);
+        return wsUrl;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -271,6 +274,18 @@ export const GuacamoleDisplay = forwardRef<
 
     // Handle client state changes
     client.onstatechange = (state: number) => {
+      const stateNames = [
+        "IDLE",
+        "CONNECTING",
+        "WAITING",
+        "CONNECTED",
+        "DISCONNECTING",
+        "DISCONNECTED",
+      ];
+      console.log(
+        `[Guacamole] State change:`,
+        stateNames[state] || `Unknown(${state})`,
+      );
       switch (state) {
         case 0: // IDLE
           break;
@@ -299,6 +314,14 @@ export const GuacamoleDisplay = forwardRef<
     // Handle errors
     client.onerror = (error: Guacamole.Status) => {
       const errorMessage = error.message || "Connection error";
+      console.error(
+        `[Guacamole] Connection error:`,
+        error,
+        `Code:`,
+        error.code,
+        `Message:`,
+        errorMessage,
+      );
       setConnectionError(errorMessage);
       setIsConnecting(false);
       onError?.(errorMessage);
@@ -336,7 +359,14 @@ export const GuacamoleDisplay = forwardRef<
   const hasInitiatedRef = useRef(false);
 
   useEffect(() => {
+    console.log(
+      `[Guacamole] Component effect - isVisible:`,
+      isVisible,
+      `hasInitiated:`,
+      hasInitiatedRef.current,
+    );
     if (isVisible && !hasInitiatedRef.current) {
+      console.log(`[Guacamole] Initiating connection`);
       hasInitiatedRef.current = true;
       connect();
     }
@@ -344,7 +374,9 @@ export const GuacamoleDisplay = forwardRef<
 
   // Separate cleanup effect that only runs on unmount
   useEffect(() => {
+    console.log(`[Guacamole] Component mounted`);
     return () => {
+      console.log(`[Guacamole] Component unmounting, disconnecting client`);
       if (clientRef.current) {
         clientRef.current.disconnect();
       }

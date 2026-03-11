@@ -386,6 +386,24 @@ export function Dashboard({
           title: item.hostName,
           hostConfig: host,
         });
+      } else if (item.type === "telnet") {
+        addTab({
+          type: "telnet",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      } else if (item.type === "vnc") {
+        addTab({
+          type: "vnc",
+          title: item.hostName,
+          hostConfig: host,
+        });
+      } else if (item.type === "rdp") {
+        addTab({
+          type: "rdp",
+          title: item.hostName,
+          hostConfig: host,
+        });
       }
     });
   };

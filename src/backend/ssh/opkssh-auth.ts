@@ -123,7 +123,7 @@ async function checkOPKConfigExists(): Promise<{
       return {
         exists: false,
         configPath,
-        error: `OPKSSH configuration is missing 'redirect_uris' field. This field must contain the Termix callback URL that you registered with your OAuth provider (e.g., http://localhost:8080/ssh/opkssh-callback for Docker). The static callback route will internally redirect to the dynamic route for proper URL rewriting.`,
+        error: `OPKSSH configuration is missing 'redirect_uris' field. This field must contain the Termix callback URL that you registered with your OAuth provider (e.g., http://localhost:8080/host/opkssh-callback for Docker). The static callback route will internally redirect to the dynamic route for proper URL rewriting.`,
       };
     }
 
@@ -179,7 +179,7 @@ export async function startOPKSSHAuth(
   }
 
   const requestId = randomUUID();
-  const remoteRedirectUri = `${requestOrigin}/ssh/opkssh-callback`;
+  const remoteRedirectUri = `${requestOrigin}/host/opkssh-callback`;
 
   const session: Partial<OPKSSHAuthSession> = {
     requestId,
@@ -352,7 +352,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
       /\/ssh\/opkssh-callback$/,
       "",
     );
-    const proxiedChooserUrl = `${baseUrl}/ssh/opkssh-chooser/${requestId}`;
+    const proxiedChooserUrl = `${baseUrl}/host/opkssh-chooser/${requestId}`;
 
     session.status = "waiting_for_auth";
     session.ws.send(

@@ -176,32 +176,64 @@ export function HostRemoteDesktopTab({
           <AccordionItem value="connection">
             <AccordionTrigger>{t("hosts.connectionSettings")}</AccordionTrigger>
             <AccordionContent className="space-y-4 pt-4">
-              <GuacField
-                form={form}
-                path="domain"
-                label={t("hosts.domain")}
-                t={t}
+              <FormField
+                control={form.control}
+                name="domain"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("hosts.domain")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <GuacSelect
-                form={form}
-                path="security"
-                label={t("hosts.securityMode")}
-                options={[
-                  { value: "any", label: "Any" },
-                  { value: "nla", label: "NLA" },
-                  { value: "nla-ext", label: "NLA Extended" },
-                  { value: "tls", label: "TLS" },
-                  { value: "vmconnect", label: "VMConnect" },
-                  { value: "rdp", label: "RDP" },
-                ]}
+              <FormField
+                control={form.control}
+                name="security"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("hosts.securityMode")}</FormLabel>
+                    <Select
+                      value={field.value || "any"}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
+                        <SelectItem value="nla">NLA</SelectItem>
+                        <SelectItem value="nla-ext">NLA Extended</SelectItem>
+                        <SelectItem value="tls">TLS</SelectItem>
+                        <SelectItem value="vmconnect">VMConnect</SelectItem>
+                        <SelectItem value="rdp">RDP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
               />
-              <GuacField
-                form={form}
-                path="ignore-cert"
-                label={t("hosts.ignoreCert")}
-                description={t("hosts.ignoreCertDesc")}
-                type="switch"
-                t={t}
+              <FormField
+                control={form.control}
+                name="ignoreCert"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-elevated dark:bg-input/30">
+                    <div className="space-y-0.5">
+                      <FormLabel>{t("hosts.ignoreCert")}</FormLabel>
+                      <FormDescription>
+                        {t("hosts.ignoreCertDesc")}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
             </AccordionContent>
           </AccordionItem>

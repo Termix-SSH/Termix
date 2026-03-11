@@ -24,7 +24,7 @@ const activeSessions = new Map<string, SSHSession>();
 
 const wss = new WebSocketServer({
   host: "0.0.0.0",
-  port: 30008,
+  port: 30009,
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url || "", true);

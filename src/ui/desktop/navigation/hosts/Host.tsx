@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getSSHHosts, getGuacamoleToken } from "@/ui/main-axios";
+import { getSSHHosts, getGuacamoleToken, logActivity } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
@@ -133,6 +133,12 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             "ignore-cert": host.ignoreCert,
           },
         });
+
+        try {
+          await logActivity(protocol, host.id, title);
+        } catch (err) {
+          console.warn(`Failed to log ${protocol} activity:`, err);
+        }
       } catch (err) {
         console.error("Failed to get Guacamole token:", err);
       }

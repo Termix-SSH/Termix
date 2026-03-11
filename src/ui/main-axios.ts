@@ -1032,7 +1032,12 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       tags: hostData.tags || [],
       pin: Boolean(hostData.pin),
       authType: hostData.authType,
-      password: hostData.authType === "password" ? hostData.password : null,
+      password:
+        hostData.connectionType !== "ssh"
+          ? hostData.password || null
+          : hostData.authType === "password"
+            ? hostData.password
+            : null,
       key: hostData.authType === "key" ? hostData.key : null,
       keyPassword: hostData.authType === "key" ? hostData.keyPassword : null,
       keyType: hostData.authType === "key" ? hostData.keyType : null,
@@ -1114,7 +1119,12 @@ export async function updateSSHHost(
       tags: hostData.tags || [],
       pin: Boolean(hostData.pin),
       authType: hostData.authType,
-      password: hostData.authType === "password" ? hostData.password : null,
+      password:
+        hostData.connectionType !== "ssh"
+          ? hostData.password || null
+          : hostData.authType === "password"
+            ? hostData.password
+            : null,
       key: hostData.authType === "key" ? hostData.key : null,
       keyPassword: hostData.authType === "key" ? hostData.keyPassword : null,
       keyType: hostData.authType === "key" ? hostData.keyType : null,
@@ -1668,7 +1678,7 @@ export async function quickConnect(
   data: Record<string, unknown>,
 ): Promise<SSHHost> {
   try {
-    const response = await authApi.post("/ssh/quick-connect", data);
+    const response = await authApi.post("/host/quick-connect", data);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "quick connect");
@@ -2150,7 +2160,7 @@ export async function getRecentFiles(
   hostId: number,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/ssh/file_manager/recent", {
+    const response = await authApi.get("/host/file_manager/recent", {
       params: { hostId },
     });
     return response.data;
@@ -2166,7 +2176,7 @@ export async function addRecentFile(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/ssh/file_manager/recent", {
+    const response = await authApi.post("/host/file_manager/recent", {
       hostId,
       path,
       name,
@@ -2183,7 +2193,7 @@ export async function removeRecentFile(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.delete("/ssh/file_manager/recent", {
+    const response = await authApi.delete("/host/file_manager/recent", {
       data: { hostId, path },
     });
     return response.data;
@@ -2197,7 +2207,7 @@ export async function getPinnedFiles(
   hostId: number,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/ssh/file_manager/pinned", {
+    const response = await authApi.get("/host/file_manager/pinned", {
       params: { hostId },
     });
     return response.data;
@@ -2213,7 +2223,7 @@ export async function addPinnedFile(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/ssh/file_manager/pinned", {
+    const response = await authApi.post("/host/file_manager/pinned", {
       hostId,
       path,
       name,
@@ -2230,7 +2240,7 @@ export async function removePinnedFile(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.delete("/ssh/file_manager/pinned", {
+    const response = await authApi.delete("/host/file_manager/pinned", {
       data: { hostId, path },
     });
     return response.data;
@@ -2244,7 +2254,7 @@ export async function getFolderShortcuts(
   hostId: number,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/ssh/file_manager/shortcuts", {
+    const response = await authApi.get("/host/file_manager/shortcuts", {
       params: { hostId },
     });
     return response.data;
@@ -2260,7 +2270,7 @@ export async function addFolderShortcut(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/ssh/file_manager/shortcuts", {
+    const response = await authApi.post("/host/file_manager/shortcuts", {
       hostId,
       path,
       name,
@@ -2277,7 +2287,7 @@ export async function removeFolderShortcut(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.delete("/ssh/file_manager/shortcuts", {
+    const response = await authApi.delete("/host/file_manager/shortcuts", {
       data: { hostId, path },
     });
     return response.data;
@@ -3216,7 +3226,7 @@ export async function migrateHostToCredential(
 
 export async function getFoldersWithStats(): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/ssh/db/folders/with-stats");
+    const response = await authApi.get("/host/db/folders/with-stats");
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch folders with statistics");
@@ -3228,7 +3238,7 @@ export async function renameFolder(
   newName: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.put("/ssh/folders/rename", {
+    const response = await authApi.put("/host/folders/rename", {
       oldName,
       newName,
     });
@@ -3244,7 +3254,7 @@ export async function getSSHFolders(): Promise<SSHFolder[]> {
       operation: "fetch_ssh_folders",
     });
 
-    const response = await authApi.get("/ssh/folders");
+    const response = await authApi.get("/host/folders");
 
     sshLogger.success("SSH folders fetched successfully", {
       operation: "fetch_ssh_folders",
@@ -3274,7 +3284,7 @@ export async function updateFolderMetadata(
       icon,
     });
 
-    await authApi.put("/ssh/folders/metadata", {
+    await authApi.put("/host/folders/metadata", {
       name,
       color,
       icon,
@@ -3304,7 +3314,7 @@ export async function deleteAllHostsInFolder(
     });
 
     const response = await authApi.delete(
-      `/ssh/folders/${encodeURIComponent(folderName)}/hosts`,
+      `/host/folders/${encodeURIComponent(folderName)}/hosts`,
     );
 
     sshLogger.success("All hosts in folder deleted successfully", {
@@ -3611,7 +3621,15 @@ export interface UptimeInfo {
 export interface RecentActivityItem {
   id: number;
   userId: string;
-  type: "terminal" | "file_manager" | "server_stats" | "tunnel" | "docker";
+  type:
+    | "terminal"
+    | "file_manager"
+    | "server_stats"
+    | "tunnel"
+    | "docker"
+    | "telnet"
+    | "vnc"
+    | "rdp";
   hostId: number;
   hostName: string;
   timestamp: string;
@@ -3640,7 +3658,15 @@ export async function getRecentActivity(
 }
 
 export async function logActivity(
-  type: "terminal" | "file_manager" | "server_stats" | "tunnel" | "docker",
+  type:
+    | "terminal"
+    | "file_manager"
+    | "server_stats"
+    | "tunnel"
+    | "docker"
+    | "rdp"
+    | "vnc"
+    | "telnet",
   hostId: number,
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {

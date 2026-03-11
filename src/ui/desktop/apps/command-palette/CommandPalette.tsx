@@ -27,8 +27,14 @@ import { BiMoney, BiSupport } from "react-icons/bi";
 import { BsDiscord } from "react-icons/bs";
 import { GrUpdate } from "react-icons/gr";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
-import { getRecentActivity, getSSHHosts } from "@/ui/main-axios.ts";
+import {
+  getRecentActivity,
+  getSSHHosts,
+  getGuacamoleToken,
+  logActivity,
+} from "@/ui/main-axios.ts";
 import type { RecentActivityItem } from "@/ui/main-axios.ts";
+import { toast } from "sonner";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import {
   DropdownMenu,
@@ -62,6 +68,16 @@ interface SSHHost {
   statsConfig?: string;
   createdAt: string;
   updatedAt: string;
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  domain?: string;
+  security?: string;
+  ignoreCert?: boolean;
+  guacamoleConfig?: any;
+  showTerminalInSidebar?: boolean;
+  showFileManagerInSidebar?: boolean;
+  showTunnelInSidebar?: boolean;
+  showDockerInSidebar?: boolean;
+  showServerStatsInSidebar?: boolean;
 }
 
 export function CommandPalette({
@@ -204,10 +220,61 @@ export function CommandPalette({
     setIsOpen(false);
   };
 
-  const handleHostTerminalClick = (host: SSHHost) => {
+  const handleHostTerminalClick = async (host: SSHHost) => {
     const title = host.name?.trim()
       ? host.name
       : `${host.username}@${host.ip}:${host.port}`;
+
+    if (
+      host.connectionType === "rdp" ||
+      host.connectionType === "vnc" ||
+      host.connectionType === "telnet"
+    ) {
+      try {
+        const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
+        const result = await getGuacamoleToken({
+          protocol,
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig as any,
+        });
+
+        addTab({
+          type: protocol,
+          title,
+          hostConfig: host,
+          connectionConfig: {
+            token: result.token,
+            protocol,
+            type: protocol,
+            hostname: host.ip,
+            port: host.port,
+            username: host.username,
+            password: host.password,
+            domain: host.domain,
+            security: host.security,
+            "ignore-cert": host.ignoreCert,
+          },
+        });
+
+        try {
+          await logActivity(protocol, host.id, title);
+        } catch (err) {
+          console.warn(`Failed to log ${protocol} activity:`, err);
+        }
+      } catch (err) {
+        console.error("Failed to get Guacamole token:", err);
+        toast.error(t("errors.connectionFailed"));
+      }
+      setIsOpen(false);
+      return;
+    }
+
     addTab({ type: "terminal", title, hostConfig: host });
     setIsOpen(false);
   };
@@ -340,6 +407,9 @@ export function CommandPalette({
                     shouldShowMetrics = true;
                   }
 
+                  const isSSH =
+                    !host.connectionType || host.connectionType === "ssh";
+
                   let hasTunnelConnections = false;
                   try {
                     const tunnelConnections = Array.isArray(
@@ -356,13 +426,18 @@ export function CommandPalette({
 
                   const visibleButtons = [
                     host.enableTerminal && (host.showTerminalInSidebar ?? true),
-                    host.enableFileManager &&
+                    isSSH &&
+                      host.enableFileManager &&
                       (host.showFileManagerInSidebar ?? false),
-                    host.enableTunnel &&
+                    isSSH &&
+                      host.enableTunnel &&
                       hasTunnelConnections &&
                       (host.showTunnelInSidebar ?? false),
-                    host.enableDocker && (host.showDockerInSidebar ?? false),
-                    shouldShowMetrics &&
+                    isSSH &&
+                      host.enableDocker &&
+                      (host.showDockerInSidebar ?? false),
+                    isSSH &&
+                      shouldShowMetrics &&
                       (host.showServerStatsInSidebar ?? false),
                   ].filter(Boolean).length;
 
@@ -399,7 +474,8 @@ export function CommandPalette({
                             </Button>
                           )}
 
-                        {host.enableFileManager &&
+                        {isSSH &&
+                          host.enableFileManager &&
                           (host.showFileManagerInSidebar ?? false) && (
                             <Button
                               variant="outline"
@@ -413,7 +489,8 @@ export function CommandPalette({
                             </Button>
                           )}
 
-                        {host.enableTunnel &&
+                        {isSSH &&
+                          host.enableTunnel &&
                           hasTunnelConnections &&
                           (host.showTunnelInSidebar ?? false) && (
                             <Button
@@ -428,7 +505,8 @@ export function CommandPalette({
                             </Button>
                           )}
 
-                        {host.enableDocker &&
+                        {isSSH &&
+                          host.enableDocker &&
                           (host.showDockerInSidebar ?? false) && (
                             <Button
                               variant="outline"
@@ -442,7 +520,8 @@ export function CommandPalette({
                             </Button>
                           )}
 
-                        {shouldShowMetrics &&
+                        {isSSH &&
+                          shouldShowMetrics &&
                           (host.showServerStatsInSidebar ?? false) && (
                             <Button
                               variant="outline"
@@ -490,7 +569,8 @@ export function CommandPalette({
                                   </span>
                                 </DropdownMenuItem>
                               )}
-                            {shouldShowMetrics &&
+                            {isSSH &&
+                              shouldShowMetrics &&
                               !(host.showServerStatsInSidebar ?? false) && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -505,7 +585,8 @@ export function CommandPalette({
                                   </span>
                                 </DropdownMenuItem>
                               )}
-                            {host.enableFileManager &&
+                            {isSSH &&
+                              host.enableFileManager &&
                               !(host.showFileManagerInSidebar ?? false) && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -520,7 +601,8 @@ export function CommandPalette({
                                   </span>
                                 </DropdownMenuItem>
                               )}
-                            {host.enableTunnel &&
+                            {isSSH &&
+                              host.enableTunnel &&
                               hasTunnelConnections &&
                               !(host.showTunnelInSidebar ?? false) && (
                                 <DropdownMenuItem
@@ -536,7 +618,8 @@ export function CommandPalette({
                                   </span>
                                 </DropdownMenuItem>
                               )}
-                            {host.enableDocker &&
+                            {isSSH &&
+                              host.enableDocker &&
                               !(host.showDockerInSidebar ?? false) && (
                                 <DropdownMenuItem
                                   onClick={(e) => {

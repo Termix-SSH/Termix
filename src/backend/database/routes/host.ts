@@ -90,6 +90,9 @@ function transformHostResponse(
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
+    domain: host.domain || undefined,
+    security: host.security || undefined,
+    ignoreCert: !!host.ignoreCert,
     guacamoleConfig: host.guacamoleConfig
       ? JSON.parse(host.guacamoleConfig as string)
       : undefined,
@@ -466,7 +469,13 @@ router.post(
         : null,
     };
 
-    if (effectiveAuthType === "password") {
+    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    if (effectiveConnectionType !== "ssh") {
+      sshDataObj.password = password || null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
+    } else if (effectiveAuthType === "password") {
       sshDataObj.password = password || null;
       sshDataObj.key = null;
       sshDataObj.keyPassword = null;
@@ -967,7 +976,15 @@ router.put(
         : null,
     };
 
-    if (effectiveAuthType === "password") {
+    // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
+    if ((connectionType || "ssh") !== "ssh") {
+      if (password) {
+        sshDataObj.password = password;
+      }
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
+    } else if (effectiveAuthType === "password") {
       if (password) {
         sshDataObj.password = password;
       }
@@ -1399,10 +1416,14 @@ router.get(
       return res.status(400).json({ error: "Invalid userId or hostId" });
     }
     try {
-      const data = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId)));
+      const data = await SimpleDBOps.select(
+        db
+          .select()
+          .from(hosts)
+          .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId))),
+        "ssh_data",
+        userId,
+      );
 
       if (data.length === 0) {
         sshLogger.warn("SSH host not found", {
@@ -1480,11 +1501,12 @@ router.get(
         return res.status(404).json({ error: "SSH host not found" });
       }
 
-      const host = hosts[0];
+      const host = hostResults[0];
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
 
       const exportData = {
+        connectionType: resolvedHost.connectionType || "ssh",
         name: resolvedHost.name,
         ip: resolvedHost.ip,
         port: resolvedHost.port,
@@ -1526,11 +1548,20 @@ router.get(
         statsConfig: resolvedHost.statsConfig
           ? JSON.parse(resolvedHost.statsConfig as string)
           : null,
+        dockerConfig: resolvedHost.dockerConfig
+          ? JSON.parse(resolvedHost.dockerConfig as string)
+          : null,
         terminalConfig: resolvedHost.terminalConfig
           ? JSON.parse(resolvedHost.terminalConfig as string)
           : null,
         forceKeyboardInteractive:
           resolvedHost.forceKeyboardInteractive === "true",
+        domain: resolvedHost.domain || null,
+        security: resolvedHost.security || null,
+        ignoreCert: !!resolvedHost.ignoreCert,
+        guacamoleConfig: resolvedHost.guacamoleConfig
+          ? JSON.parse(resolvedHost.guacamoleConfig as string)
+          : null,
         useSocks5: !!resolvedHost.useSocks5,
         socks5Host: resolvedHost.socks5Host || null,
         socks5Port: resolvedHost.socks5Port || null,
@@ -3089,19 +3120,30 @@ router.post(
       const hostData = hostsToImport[i];
 
       try {
-        if (
-          !isNonEmptyString(hostData.ip) ||
-          !isValidPort(hostData.port) ||
-          !isNonEmptyString(hostData.username)
-        ) {
+        const effectiveConnectionType = hostData.connectionType || "ssh";
+
+        if (!isNonEmptyString(hostData.ip) || !isValidPort(hostData.port)) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: Missing required fields (ip, port, username)`,
+            `Host ${i + 1}: Missing required fields (ip, port)`,
           );
           continue;
         }
 
         if (
+          effectiveConnectionType === "ssh" &&
+          !isNonEmptyString(hostData.username)
+        ) {
+          results.failed++;
+          results.errors.push(
+            `Host ${i + 1}: Username required for SSH connections`,
+          );
+          continue;
+        }
+
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType &&
           !["password", "key", "credential", "none", "opkssh"].includes(
             hostData.authType,
           )
@@ -3114,6 +3156,7 @@ router.post(
         }
 
         if (
+          effectiveConnectionType === "ssh" &&
           hostData.authType === "password" &&
           !isNonEmptyString(hostData.password)
         ) {
@@ -3124,7 +3167,11 @@ router.post(
           continue;
         }
 
-        if (hostData.authType === "key" && !isNonEmptyString(hostData.key)) {
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType === "key" &&
+          !isNonEmptyString(hostData.key)
+        ) {
           results.failed++;
           results.errors.push(
             `Host ${i + 1}: Key required for key authentication`,
@@ -3132,7 +3179,11 @@ router.post(
           continue;
         }
 
-        if (hostData.authType === "credential" && !hostData.credentialId) {
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType === "credential" &&
+          !hostData.credentialId
+        ) {
           results.failed++;
           results.errors.push(
             `Host ${i + 1}: credentialId required for credential authentication`,
@@ -3142,21 +3193,13 @@ router.post(
 
         const sshDataObj: Record<string, unknown> = {
           userId: userId,
-          name: hostData.name || `${hostData.username}@${hostData.ip}`,
+          connectionType: effectiveConnectionType,
+          name: hostData.name || `${hostData.username || ""}@${hostData.ip}`,
           folder: hostData.folder || "Default",
           tags: Array.isArray(hostData.tags) ? hostData.tags.join(",") : "",
           ip: hostData.ip,
           port: hostData.port,
-          username: hostData.username,
-          password: hostData.authType === "password" ? hostData.password : null,
-          authType: hostData.authType,
-          credentialId:
-            hostData.authType === "credential" ? hostData.credentialId : null,
-          key: hostData.authType === "key" ? hostData.key : null,
-          keyPassword:
-            hostData.authType === "key" ? hostData.keyPassword || null : null,
-          keyType:
-            hostData.authType === "key" ? hostData.keyType || "auto" : null,
+          username: hostData.username || null,
           pin: hostData.pin || false,
           enableTerminal: hostData.enableTerminal !== false,
           enableTunnel: hostData.enableTunnel !== false,
@@ -3181,6 +3224,9 @@ router.post(
           statsConfig: hostData.statsConfig
             ? JSON.stringify(hostData.statsConfig)
             : null,
+          dockerConfig: hostData.dockerConfig
+            ? JSON.stringify(hostData.dockerConfig)
+            : null,
           terminalConfig: hostData.terminalConfig
             ? JSON.stringify(hostData.terminalConfig)
             : null,
@@ -3201,6 +3247,36 @@ router.post(
             : 0,
           updatedAt: new Date().toISOString(),
         };
+
+        if (effectiveConnectionType !== "ssh") {
+          sshDataObj.password = hostData.password || null;
+          sshDataObj.authType = "password";
+          sshDataObj.credentialId = null;
+          sshDataObj.key = null;
+          sshDataObj.keyPassword = null;
+          sshDataObj.keyType = null;
+          sshDataObj.domain = hostData.domain || null;
+          sshDataObj.security = hostData.security || null;
+          sshDataObj.ignoreCert = hostData.ignoreCert ? 1 : 0;
+          sshDataObj.guacamoleConfig = hostData.guacamoleConfig
+            ? JSON.stringify(hostData.guacamoleConfig)
+            : null;
+        } else {
+          sshDataObj.password =
+            hostData.authType === "password" ? hostData.password : null;
+          sshDataObj.authType = hostData.authType || "password";
+          sshDataObj.credentialId =
+            hostData.authType === "credential" ? hostData.credentialId : null;
+          sshDataObj.key = hostData.authType === "key" ? hostData.key : null;
+          sshDataObj.keyPassword =
+            hostData.authType === "key" ? hostData.keyPassword || null : null;
+          sshDataObj.keyType =
+            hostData.authType === "key" ? hostData.keyType || "auto" : null;
+          sshDataObj.domain = null;
+          sshDataObj.security = null;
+          sshDataObj.ignoreCert = 0;
+          sshDataObj.guacamoleConfig = null;
+        }
 
         const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
         const existing = existingHostMap?.get(lookupKey);
@@ -3235,6 +3311,104 @@ router.post(
       failed: results.failed,
       errors: results.errors,
     });
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/folders/{folderName}/hosts:
+ *   delete:
+ *     summary: Delete all hosts in a folder
+ *     description: Deletes all hosts within a specific folder.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: folderName
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: All hosts deleted successfully.
+ *       400:
+ *         description: Invalid folder name.
+ *       500:
+ *         description: Failed to delete hosts.
+ */
+router.delete(
+  "/folders/:folderName/hosts",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const folderName = decodeURIComponent(
+      Array.isArray(req.params.folderName)
+        ? req.params.folderName[0]
+        : req.params.folderName,
+    );
+
+    if (!folderName) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    try {
+      const hostsToDelete = await db
+        .select({ id: hosts.id })
+        .from(hosts)
+        .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
+
+      if (hostsToDelete.length === 0) {
+        return res.json({ deletedCount: 0 });
+      }
+
+      const hostIds = hostsToDelete.map((h) => h.id);
+
+      for (const hostId of hostIds) {
+        await db
+          .delete(fileManagerRecent)
+          .where(eq(fileManagerRecent.hostId, hostId));
+        await db
+          .delete(fileManagerPinned)
+          .where(eq(fileManagerPinned.hostId, hostId));
+        await db
+          .delete(fileManagerShortcuts)
+          .where(eq(fileManagerShortcuts.hostId, hostId));
+        await db
+          .delete(commandHistory)
+          .where(eq(commandHistory.hostId, hostId));
+        await db
+          .delete(sshCredentialUsage)
+          .where(eq(sshCredentialUsage.hostId, hostId));
+        await db
+          .delete(recentActivity)
+          .where(eq(recentActivity.hostId, hostId));
+        await db.delete(hostAccess).where(eq(hostAccess.hostId, hostId));
+        await db
+          .delete(sessionRecordings)
+          .where(eq(sessionRecordings.hostId, hostId));
+      }
+
+      await db
+        .delete(hosts)
+        .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
+
+      databaseLogger.success("All hosts in folder deleted", {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+        deletedCount: hostsToDelete.length,
+      });
+
+      res.json({ deletedCount: hostsToDelete.length });
+    } catch (error) {
+      sshLogger.error("Failed to delete hosts in folder", error, {
+        operation: "delete_folder_hosts",
+        userId,
+        folderName,
+      });
+      res.status(500).json({ error: "Failed to delete hosts in folder" });
+    }
   },
 );
 

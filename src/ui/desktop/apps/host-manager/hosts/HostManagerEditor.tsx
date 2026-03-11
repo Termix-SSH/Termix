@@ -130,6 +130,7 @@ import { HostDockerTab } from "./tabs/HostDockerTab";
 import { HostTunnelTab } from "./tabs/HostTunnelTab";
 import { HostFileManagerTab } from "./tabs/HostFileManagerTab";
 import { HostStatisticsTab } from "./tabs/HostStatisticsTab";
+import { HostStatusTab } from "./tabs/HostStatusTab";
 import { HostSharingTab } from "./tabs/HostSharingTab";
 import { HostRemoteDesktopTab } from "./tabs/HostRemoteDesktopTab";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
@@ -352,6 +353,7 @@ export function HostManagerEditor({
           metricsEnabled: z.boolean().default(true),
           metricsInterval: z.number().min(5).max(3600).default(30),
           useGlobalMetricsInterval: z.boolean().default(true),
+          disableTcpPing: z.boolean().default(false),
         })
         .default({
           enabledWidgets: [
@@ -371,6 +373,7 @@ export function HostManagerEditor({
           metricsEnabled: true,
           metricsInterval: 30,
           useGlobalMetricsInterval: true,
+          disableTcpPing: false,
         }),
       terminalConfig: z
         .object({
@@ -455,11 +458,14 @@ export function HostManagerEditor({
       }
 
       if (!data.username || data.username.trim() === "") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: t("hosts.usernameRequired", "Username is required"),
-          path: ["username"],
-        });
+        // Don't validate username if using credential auth - it will be filled from credential
+        if (data.authType !== "credential") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("hosts.usernameRequired", "Username is required"),
+            path: ["username"],
+          });
+        }
       }
 
       if (data.authType === "none") {
@@ -600,6 +606,15 @@ export function HostManagerEditor({
       form.setValue("port", portDefaults[current] || 22);
     }
 
+    if (current !== "ssh") {
+      const currentStatsConfig = form.getValues("statsConfig");
+      form.setValue("statsConfig", {
+        ...currentStatsConfig,
+        metricsEnabled: false,
+        disableTcpPing: false,
+      });
+    }
+
     if (activeTab !== "general" && current !== "ssh") {
       setActiveTab("general");
     }
@@ -666,7 +681,11 @@ export function HostManagerEditor({
           }
         }
       } else if (authTab === "none") {
-        form.setValue("password", "", { shouldValidate: true });
+        // For non-SSH hosts (RDP/VNC/Telnet), don't clear the password
+        const connectionType = form.getValues("connectionType");
+        if (connectionType === "ssh") {
+          form.setValue("password", "", { shouldValidate: true });
+        }
         form.setValue("key", null, { shouldValidate: true });
         form.setValue("keyPassword", "", { shouldValidate: true });
         form.setValue("keyType", "auto", { shouldValidate: true });
@@ -689,14 +708,17 @@ export function HostManagerEditor({
   useEffect(() => {
     if (editingHost) {
       const cleanedHost = { ...editingHost };
-      if (cleanedHost.credentialId && cleanedHost.key) {
-        cleanedHost.key = undefined;
-        cleanedHost.keyPassword = undefined;
-        cleanedHost.keyType = undefined;
-      } else if (cleanedHost.credentialId && cleanedHost.password) {
-        cleanedHost.password = undefined;
-      } else if (cleanedHost.key && cleanedHost.password) {
-        cleanedHost.password = undefined;
+      // Only clear conflicting auth fields for SSH hosts
+      if ((cleanedHost as any).connectionType === "ssh") {
+        if (cleanedHost.credentialId && cleanedHost.key) {
+          cleanedHost.key = undefined;
+          cleanedHost.keyPassword = undefined;
+          cleanedHost.keyType = undefined;
+        } else if (cleanedHost.credentialId && cleanedHost.password) {
+          cleanedHost.password = undefined;
+        } else if (cleanedHost.key && cleanedHost.password) {
+          cleanedHost.password = undefined;
+        }
       }
 
       const defaultAuthType = (cleanedHost.authType ||
@@ -827,7 +849,12 @@ export function HostManagerEditor({
         setProxyMode("single");
       }
 
-      if (defaultAuthType === "password") {
+      if (cleanedHost.connectionType !== "ssh") {
+        // For non-SSH hosts (RDP, VNC, Telnet), always load password if present
+        if (cleanedHost.password) {
+          formData.password = cleanedHost.password;
+        }
+      } else if (defaultAuthType === "password") {
         formData.password = cleanedHost.password || "";
       } else if (defaultAuthType === "key") {
         formData.key = editingHost.id ? "existing_key" : editingHost.key;
@@ -1386,14 +1413,16 @@ export function HostManagerEditor({
                       >
                         {t("hosts.fileManager")}
                       </TabsTrigger>
-                      <TabsTrigger
-                        value="statistics"
-                        className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                      >
-                        {t("hosts.statistics")}
-                      </TabsTrigger>
                     </>
                   )}
+                  <TabsTrigger
+                    value="statistics"
+                    className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                  >
+                    {watchedConnectionType === "ssh"
+                      ? t("hosts.statistics")
+                      : t("hosts.status")}
+                  </TabsTrigger>
                   {watchedConnectionType !== "ssh" && (
                     <TabsTrigger
                       value="remote_desktop"
@@ -1465,19 +1494,28 @@ export function HostManagerEditor({
                     <TabsContent value="file_manager">
                       <HostFileManagerTab form={form} t={t} />
                     </TabsContent>
-                    <TabsContent value="statistics" className="space-y-6">
-                      <HostStatisticsTab
-                        form={form}
-                        statusIntervalUnit={statusIntervalUnit}
-                        setStatusIntervalUnit={setStatusIntervalUnit}
-                        metricsIntervalUnit={metricsIntervalUnit}
-                        setMetricsIntervalUnit={setMetricsIntervalUnit}
-                        snippets={snippets}
-                        t={t}
-                      />
-                    </TabsContent>
                   </>
                 )}
+                <TabsContent value="statistics" className="space-y-6">
+                  {watchedConnectionType === "ssh" ? (
+                    <HostStatisticsTab
+                      form={form}
+                      statusIntervalUnit={statusIntervalUnit}
+                      setStatusIntervalUnit={setStatusIntervalUnit}
+                      metricsIntervalUnit={metricsIntervalUnit}
+                      setMetricsIntervalUnit={setMetricsIntervalUnit}
+                      snippets={snippets}
+                      t={t}
+                    />
+                  ) : (
+                    <HostStatusTab
+                      form={form}
+                      statusIntervalUnit={statusIntervalUnit}
+                      setStatusIntervalUnit={setStatusIntervalUnit}
+                      t={t}
+                    />
+                  )}
+                </TabsContent>
                 {watchedConnectionType !== "ssh" && (
                   <TabsContent value="remote_desktop" className="space-y-4">
                     <HostRemoteDesktopTab
