@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globale overvågningsindstillinger gemt",
     "failedToSaveGlobalSettings": "Kunne ikke gemme globale overvågningsindstillinger",
     "failedToLoadGlobalSettings": "Kunne ikke indlæse globale overvågningsindstillinger",
+    "clampedToValidRange": "blev justeret til gyldigt interval",
     "loadingSessions": "Indlæser sessioner...",
     "noActiveSessions": "Ingen aktive sessioner fundet.",
     "device": "Enhed",
