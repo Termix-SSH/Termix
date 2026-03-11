@@ -808,6 +808,7 @@
     "globalSettingsSaved": "글로벌 모니터링 설정이 저장되었습니다.",
     "failedToSaveGlobalSettings": "전역 모니터링 설정을 저장하는 데 실패했습니다.",
     "failedToLoadGlobalSettings": "전역 모니터링 설정을 불러오는 데 실패했습니다.",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "세션 불러오는 중...",
     "noActiveSessions": "활성화된 세션이 없습니다.",
     "device": "장치",
