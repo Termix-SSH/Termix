@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Глобальные настройки мониторинга сохранены",
     "failedToSaveGlobalSettings": "Не удалось сохранить глобальные настройки мониторинга",
     "failedToLoadGlobalSettings": "Не удалось загрузить глобальные настройки мониторинга",
+    "clampedToValidRange": "был скорректирован на действительный диапазон",
     "loadingSessions": "Загрузка сессий...",
     "noActiveSessions": "Активные сессии не найдены.",
     "device": "Устройство",
