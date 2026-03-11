@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Algemene monitoring instellingen opgeslagen",
     "failedToSaveGlobalSettings": "Fout bij het opslaan van de globale monitoring instellingen",
     "failedToLoadGlobalSettings": "Fout bij het laden van de globale monitoring instellingen",
+    "clampedToValidRange": "is aangepast aan geldig bereik",
     "loadingSessions": "Sessies laden...",
     "noActiveSessions": "Geen actieve sessies gevonden.",
     "device": "Apparaat",
