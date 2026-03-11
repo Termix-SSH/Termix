@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Globale overvåkingsinnstillinger lagret",
     "failedToSaveGlobalSettings": "Kan ikke lagre globale overvåkingsinnstillinger",
     "failedToLoadGlobalSettings": "Kan ikke laste inn globale overvåkingsinnstillinger",
+    "clampedToValidRange": "ble justert til gyldig område",
     "loadingSessions": "Laster inn økter...",
     "noActiveSessions": "Ingen aktive økter funnet.",
     "device": "Enhet",
