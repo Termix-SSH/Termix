@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Глобалните настройки за наблюдение са запазени",
     "failedToSaveGlobalSettings": "Запазването на настройките за глобално наблюдение не бе успешно",
     "failedToLoadGlobalSettings": "Зареждането на настройките за глобално наблюдение не бе успешно",
+    "clampedToValidRange": "was adjusted to valid range",
     "loadingSessions": "Зареждане на сесиите...",
     "noActiveSessions": "Няма намерени активни сесии.",
     "device": "Устройство",
