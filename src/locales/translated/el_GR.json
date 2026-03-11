@@ -808,6 +808,7 @@
     "globalSettingsSaved": "Οι καθολικές ρυθμίσεις παρακολούθησης αποθηκεύτηκαν",
     "failedToSaveGlobalSettings": "Αποτυχία αποθήκευσης καθολικών ρυθμίσεων παρακολούθησης",
     "failedToLoadGlobalSettings": "Αποτυχία φόρτωσης καθολικών ρυθμίσεων παρακολούθησης",
+    "clampedToValidRange": "προσαρμόστηκε σε έγκυρο εύρος",
     "loadingSessions": "Φόρτωση συνεδριών...",
     "noActiveSessions": "Δεν βρέθηκαν ενεργές συνεδρίες.",
     "device": "Συσκευή",
