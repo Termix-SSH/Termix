@@ -150,14 +150,6 @@ export function TabProvider({ children }: TabProviderProps) {
       const serializable = tabs
         .filter((t) => t.type !== "home")
         .map(({ terminalRef, ...rest }) => rest);
-      console.log(
-        `[TabContext] Saving tabs to localStorage:`,
-        serializable.map((t) => ({
-          id: t.id,
-          type: t.type,
-          hasConnectionConfig: !!t.connectionConfig,
-        })),
-      );
       localStorage.setItem("termix_tabs", JSON.stringify(serializable));
       localStorage.setItem("termix_currentTab", String(currentTab));
     } else {
@@ -221,13 +213,6 @@ export function TabProvider({ children }: TabProviderProps) {
   }
 
   const addTab = (tabData: Omit<Tab, "id">): number => {
-    console.log(`[TabContext] addTab called:`, {
-      type: tabData.type,
-      hasConnectionConfig: !!tabData.connectionConfig,
-      connectionConfigKeys: tabData.connectionConfig
-        ? Object.keys(tabData.connectionConfig)
-        : [],
-    });
     if (tabData.type === "ssh_manager") {
       const existingTab = tabs.find((t) => t.type === "ssh_manager");
       if (existingTab) {
@@ -281,15 +266,8 @@ export function TabProvider({ children }: TabProviderProps) {
           }
         : undefined,
     };
-    console.log(`[TabContext] Created new tab:`, {
-      id,
-      type: newTab.type,
-      hasConnectionConfig: !!newTab.connectionConfig,
-    });
     setTabs((prev) => [...prev, newTab]);
-    console.log(`[TabContext] Setting current tab to:`, id);
     setCurrentTab(id);
-    console.log(`[TabContext] Removing from split screen:`, id);
     setAllSplitScreenTab((prev) => prev.filter((tid) => tid !== id));
     return id;
   };

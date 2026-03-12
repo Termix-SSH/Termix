@@ -1459,7 +1459,13 @@
     "wolWaitTime": "Wait Time (seconds)",
     "connectionSettings": "Connection Settings",
     "rdpOnly": "RDP only",
-    "vncOnly": "VNC only"
+    "vncOnly": "VNC only",
+    "telnetTerminalSettings": "Terminal Settings",
+    "terminalType": "Terminal Type",
+    "guacFontName": "Font Name",
+    "guacFontSize": "Font Size",
+    "guacColorScheme": "Color Scheme",
+    "guacBackspaceKey": "Backspace Key"
   },
   "guacamole": {
     "connecting": "Connecting to {{type}} session...",
@@ -1467,7 +1473,8 @@
     "vncConnecting": "Connecting to VNC server...",
     "telnetConnecting": "Connecting to Telnet server...",
     "connectionError": "Connection error",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "Connection failed",
+    "failedToConnect": "Failed to get connection token"
   },
   "terminal": {
     "title": "Split Screen",

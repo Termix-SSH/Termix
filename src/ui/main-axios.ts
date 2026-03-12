@@ -3953,18 +3953,8 @@ export async function getGuacamoleToken(
   request: GuacamoleTokenRequest,
 ): Promise<GuacamoleTokenResponse> {
   try {
-    // Convert guacamoleConfig to guacamole parameter format
     const guacParams = toGuacamoleParams(request.guacamoleConfig);
 
-    // Debug: log guacamoleConfig and converted params
-    console.log(
-      "[Guacamole] Request guacamoleConfig:",
-      request.guacamoleConfig,
-    );
-    console.log("[Guacamole] Converted params:", guacParams);
-    console.log("[Guacamole] Param count:", Object.keys(guacParams).length);
-
-    // Use authApi (port 30001 without /ssh prefix) since guacamole routes are at /guacamole
     const response = await authApi.post("/guacamole/token", {
       type: request.protocol,
       hostname: request.hostname,

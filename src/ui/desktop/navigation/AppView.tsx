@@ -18,6 +18,7 @@ import {
 import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button.tsx";
 import {
   TERMINAL_THEMES,
@@ -412,7 +413,10 @@ export function AppView({
                       connectionConfig={t.connectionConfig}
                       isVisible={effectiveVisible}
                       onDisconnect={() => removeTab(t.id)}
-                      onError={(err) => console.error("Guacamole error:", err)}
+                      onError={(err) => {
+                        toast.error(err);
+                        removeTab(t.id);
+                      }}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-red-500">

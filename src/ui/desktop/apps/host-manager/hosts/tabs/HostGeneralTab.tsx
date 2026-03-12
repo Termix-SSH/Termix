@@ -214,7 +214,11 @@ export function HostGeneralTab({
             <FormItem className="col-span-1">
               <FormLabel>{t("hosts.port")}</FormLabel>
               <FormControl>
-                <Input placeholder={t("placeholders.port")} {...field} />
+                <Input
+                  type="number"
+                  placeholder={t("placeholders.port")}
+                  {...field}
+                />
               </FormControl>
             </FormItem>
           )}

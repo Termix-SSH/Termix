@@ -8,9 +8,8 @@ import {
 } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { getCookie, isElectron } from "@/ui/main-axios.ts";
-import { Loader2 } from "lucide-react";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -58,14 +57,13 @@ export const GuacamoleDisplay = forwardRef<
   ref,
 ) {
   const { t } = useTranslation();
-  const containerRef = useRef<HTMLDivElement>(null); // Outer container for measuring size
-  const displayRef = useRef<HTMLDivElement>(null); // Inner div for guacamole canvas
+  const containerRef = useRef<HTMLDivElement>(null);
+  const displayRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<Guacamole.Client | null>(null);
-  const scaleRef = useRef<number>(1); // Track current scale factor for mouse
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debounce resize events
-  const [isConnected, setIsConnected] = useState(false);
+  const scaleRef = useRef<number>(1);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false); // true only after first frame arrives
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -109,14 +107,12 @@ export const GuacamoleDisplay = forwardRef<
       try {
         let token: string;
 
-        // If token is pre-fetched, use it directly
         if (connectionConfig.token) {
           token = connectionConfig.token;
         } else {
-          // Otherwise, fetch token from backend (legacy behavior)
           const jwtToken = getCookie("jwt");
           if (!jwtToken) {
-            setConnectionError("Authentication required");
+            onError?.("Authentication required");
             return null;
           }
 
@@ -146,9 +142,6 @@ export const GuacamoleDisplay = forwardRef<
           token = data.token;
         }
 
-        // Build WebSocket URL with width/height/dpi as query parameters
-        // These are passed as unencrypted settings to guacamole-lite
-        // Use actual container dimensions, fall back to 720p
         const width = connectionConfig.width || containerWidth || 1280;
         const height = connectionConfig.height || containerHeight || 720;
         const dpi = connectionConfig.dpi || 96;
@@ -168,7 +161,6 @@ export const GuacamoleDisplay = forwardRef<
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        setConnectionError(errorMessage);
         onError?.(errorMessage);
         return null;
       }
@@ -176,7 +168,6 @@ export const GuacamoleDisplay = forwardRef<
     [connectionConfig, onError],
   );
 
-  // Consolidated rescaling function with debouncing
   const rescaleDisplay = useCallback((immediate: boolean = false) => {
     if (!clientRef.current || !containerRef.current) return;
 
@@ -199,7 +190,6 @@ export const GuacamoleDisplay = forwardRef<
     if (immediate) {
       performRescale();
     } else {
-      // Debounce to match sidebar/topbar transition duration (200ms)
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
@@ -208,16 +198,14 @@ export const GuacamoleDisplay = forwardRef<
   }, []);
 
   const connect = useCallback(async () => {
-    if (isConnectingRef.current || isConnected) return;
+    if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     setIsConnecting(true);
-    setConnectionError(null);
+    setIsReady(false);
 
-    // Get container dimensions for the WebSocket URL
     let containerWidth = containerRef.current?.clientWidth || 0;
     let containerHeight = containerRef.current?.clientHeight || 0;
 
-    // If container size is too small or unavailable, use 720p default
     if (containerWidth < 100 || containerHeight < 100) {
       containerWidth = 1280;
       containerHeight = 720;
@@ -225,6 +213,7 @@ export const GuacamoleDisplay = forwardRef<
 
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
     if (!wsUrl) {
+      isConnectingRef.current = false;
       setIsConnecting(false);
       return;
     }
@@ -233,7 +222,6 @@ export const GuacamoleDisplay = forwardRef<
     const client = new Guacamole.Client(tunnel);
     clientRef.current = client;
 
-    // Set up display
     const display = client.getDisplay();
     const displayElement = display.getElement();
 
@@ -242,21 +230,18 @@ export const GuacamoleDisplay = forwardRef<
       displayRef.current.appendChild(displayElement);
     }
 
-    // Handle display sync (when frames arrive)
+    // Show content only after the first frame arrives
     display.onresize = () => {
-      rescaleDisplay(true); // Immediate rescale on display resize
+      rescaleDisplay(true);
+      setIsReady(true);
     };
 
-    // Set up mouse input on the display element (not the container)
-    // We need to adjust mouse coordinates based on the current scale factor
     const mouse = new Guacamole.Mouse(displayElement);
     const sendMouseState = (state: Guacamole.Mouse.State) => {
-      // Adjust coordinates based on scale factor and round to integers
       const scale = scaleRef.current;
       const adjustedX = Math.round(state.x / scale);
       const adjustedY = Math.round(state.y / scale);
 
-      // Create adjusted state - guacamole expects integer coordinates
       const adjustedState = new Guacamole.Mouse.State(
         adjustedX,
         adjustedY,
@@ -271,7 +256,6 @@ export const GuacamoleDisplay = forwardRef<
     };
     mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
 
-    // Set up keyboard input
     const keyboard = new Guacamole.Keyboard(document);
     keyboard.onkeydown = (keysym: number) => {
       client.sendKeyEvent(1, keysym);
@@ -280,7 +264,6 @@ export const GuacamoleDisplay = forwardRef<
       client.sendKeyEvent(0, keysym);
     };
 
-    // Handle client state changes
     client.onstatechange = (state: number) => {
       switch (state) {
         case 0: // IDLE
@@ -291,15 +274,14 @@ export const GuacamoleDisplay = forwardRef<
         case 2: // WAITING
           break;
         case 3: // CONNECTED
-          setIsConnected(true);
           setIsConnecting(false);
           onConnect?.();
           break;
         case 4: // DISCONNECTING
           break;
         case 5: // DISCONNECTED
-          setIsConnected(false);
           setIsConnecting(false);
+          setIsReady(false);
           keyboard.onkeydown = null;
           keyboard.onkeyup = null;
           onDisconnect?.();
@@ -307,24 +289,13 @@ export const GuacamoleDisplay = forwardRef<
       }
     };
 
-    // Handle errors
     client.onerror = (error: Guacamole.Status) => {
       const errorMessage = error.message || "Connection error";
-      console.error(
-        `[Guacamole] Connection error:`,
-        error,
-        `Code:`,
-        error.code,
-        `Message:`,
-        errorMessage,
-      );
-      setConnectionError(errorMessage);
       setIsConnecting(false);
+      setIsReady(false);
       onError?.(errorMessage);
-      toast.error(`${t("guacamole.connectionError")}: ${errorMessage}`);
     };
 
-    // Handle clipboard from remote
     client.onclipboard = (stream: Guacamole.InputStream, mimetype: string) => {
       if (mimetype === "text/plain") {
         const reader = new Guacamole.StringReader(stream);
@@ -338,21 +309,9 @@ export const GuacamoleDisplay = forwardRef<
       }
     };
 
-    // Connect - the width/height/dpi are already in the WebSocket URL
     client.connect();
-  }, [
-    isConnecting,
-    isConnected,
-    getWebSocketUrl,
-    connectionConfig,
-    onConnect,
-    onDisconnect,
-    onError,
-    t,
-    rescaleDisplay,
-  ]);
+  }, [getWebSocketUrl, onConnect, onDisconnect, onError, rescaleDisplay]);
 
-  // Track if we've initiated a connection to prevent re-triggering
   const hasInitiatedRef = useRef(false);
   const isMountedRef = useRef(false);
   const isConnectingRef = useRef(false);
@@ -385,17 +344,15 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, []);
 
-  // Use ResizeObserver to handle container resizing (sidebar/topbar toggle, window resize)
   useEffect(() => {
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      rescaleDisplay(false); // Debounced rescale
+      rescaleDisplay(false);
     });
 
     resizeObserver.observe(containerRef.current);
 
-    // Initial rescale after a short delay to ensure layout is stable
     const initialTimeout = setTimeout(() => rescaleDisplay(true), 100);
 
     return () => {
@@ -404,46 +361,30 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [rescaleDisplay]);
 
+  const connectingMessage = t("guacamole.connecting", {
+    type: (
+      connectionConfig.protocol ||
+      connectionConfig.type ||
+      "remote"
+    ).toUpperCase(),
+  });
+
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden"
+      className="absolute inset-0 overflow-hidden"
+      style={{ backgroundColor: "var(--bg-base)" }}
     >
       <div
         ref={displayRef}
-        className="relative"
-        style={{ cursor: isConnected ? "none" : "default" }}
+        className="relative w-full h-full flex items-center justify-center"
+        style={{
+          cursor: isReady ? "none" : "default",
+          visibility: isReady ? "visible" : "hidden",
+        }}
       />
 
-      {isConnecting && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="text-muted-foreground">
-              {t("guacamole.connecting", {
-                type: (
-                  connectionConfig.protocol ||
-                  connectionConfig.type ||
-                  "remote"
-                ).toUpperCase(),
-              })}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {connectionError && !isConnecting && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="flex flex-col items-center gap-4 text-center p-4">
-            <span className="text-destructive font-medium">
-              {t("guacamole.connectionFailed")}
-            </span>
-            <span className="text-muted-foreground text-sm">
-              {connectionError}
-            </span>
-          </div>
-        </div>
-      )}
+      <SimpleLoader visible={!isReady} message={connectingMessage} />
     </div>
   );
 });

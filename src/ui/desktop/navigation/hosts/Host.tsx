@@ -6,6 +6,8 @@ import {
   EllipsisVertical,
   Terminal,
   Monitor,
+  Eye,
+  MessagesSquare,
   Server,
   FolderOpen,
   Pencil,
@@ -116,16 +118,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     ) {
       try {
         const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
-        console.log(`[Host] Getting token for ${protocol} connection:`, {
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          hasPassword: !!host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig,
-        });
         const result = await getGuacamoleToken({
           protocol,
           hostname: host.ip,
@@ -137,15 +129,6 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
           ignoreCert: host.ignoreCert,
           guacamoleConfig: host.guacamoleConfig as any,
         });
-        console.log(
-          `[Host] Got token for ${protocol}, adding tab with config:`,
-          {
-            token: result.token.substring(0, 50) + "...",
-            protocol,
-            hostname: host.ip,
-            port: host.port,
-          },
-        );
         addTab({
           type: protocol,
           title,
@@ -213,8 +196,12 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               className="!px-2 border-1 border-edge"
               onClick={handleTerminalClick}
             >
-              {host.connectionType && host.connectionType !== "ssh" ? (
+              {host.connectionType === "rdp" ? (
                 <Monitor />
+              ) : host.connectionType === "vnc" ? (
+                <Eye />
+              ) : host.connectionType === "telnet" ? (
+                <MessagesSquare />
               ) : (
                 <Terminal />
               )}
@@ -301,10 +288,14 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   onClick={handleTerminalClick}
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
-                  {isSSH ? (
-                    <Terminal className="h-4 w-4" />
-                  ) : (
+                  {host.connectionType === "rdp" ? (
                     <Monitor className="h-4 w-4" />
+                  ) : host.connectionType === "vnc" ? (
+                    <Eye className="h-4 w-4" />
+                  ) : host.connectionType === "telnet" ? (
+                    <MessagesSquare className="h-4 w-4" />
+                  ) : (
+                    <Terminal className="h-4 w-4" />
                   )}
                   <span className="flex-1">{t("hosts.openTerminal")}</span>
                 </DropdownMenuItem>

@@ -87,6 +87,8 @@ import {
   ListChecks,
   ChevronDown,
   Monitor,
+  MessagesSquare,
+  Eye,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -1674,7 +1676,13 @@ export function HostManagerViewer({
                                                       );
                                                     }}
                                                   >
-                                                    <Monitor className="h-4 w-4 mr-2" />
+                                                    {connType === "rdp" ? (
+                                                      <Monitor className="h-4 w-4 mr-2" />
+                                                    ) : connType === "vnc" ? (
+                                                      <Eye className="h-4 w-4 mr-2" />
+                                                    ) : (
+                                                      <MessagesSquare className="h-4 w-4 mr-2" />
+                                                    )}
                                                     {t(
                                                       "hosts.copyRemoteDesktopUrl",
                                                     )}
@@ -1815,7 +1823,7 @@ export function HostManagerViewer({
                                             variant="outline"
                                             className="text-xs px-1 py-0"
                                           >
-                                            <Monitor className="h-2 w-2 mr-0.5" />
+                                            <Eye className="h-2 w-2 mr-0.5" />
                                             {t("hosts.vnc")}
                                           </Badge>
                                         );
@@ -1826,7 +1834,7 @@ export function HostManagerViewer({
                                             variant="outline"
                                             className="text-xs px-1 py-0"
                                           >
-                                            <Monitor className="h-2 w-2 mr-0.5" />
+                                            <MessagesSquare className="h-2 w-2 mr-0.5" />
                                             {t("hosts.telnet")}
                                           </Badge>
                                         );
@@ -1968,7 +1976,13 @@ export function HostManagerViewer({
                                               }}
                                               className="h-7 px-2 hover:bg-indigo-500/10 hover:border-indigo-500/50 flex-1"
                                             >
-                                              <Monitor className="h-3.5 w-3.5" />
+                                              {connType === "rdp" ? (
+                                                <Monitor className="h-3.5 w-3.5" />
+                                              ) : connType === "vnc" ? (
+                                                <Eye className="h-3.5 w-3.5" />
+                                              ) : (
+                                                <MessagesSquare className="h-3.5 w-3.5" />
+                                              )}
                                             </Button>
                                           </TooltipTrigger>
                                           <TooltipContent>

@@ -17,6 +17,8 @@ import {
   Github,
   Terminal,
   Monitor,
+  Eye,
+  MessagesSquare,
   FolderOpen,
   Pencil,
   EllipsisVertical,
@@ -470,9 +472,12 @@ export function CommandPalette({
                                 handleHostTerminalClick(host);
                               }}
                             >
-                              {host.connectionType &&
-                              host.connectionType !== "ssh" ? (
+                              {host.connectionType === "rdp" ? (
                                 <Monitor className="h-3 w-3" />
+                              ) : host.connectionType === "vnc" ? (
+                                <Eye className="h-3 w-3" />
+                              ) : host.connectionType === "telnet" ? (
+                                <MessagesSquare className="h-3 w-3" />
                               ) : (
                                 <Terminal className="h-3 w-3" />
                               )}
@@ -568,10 +573,14 @@ export function CommandPalette({
                                   }}
                                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                                 >
-                                  {isSSH ? (
-                                    <Terminal className="h-4 w-4" />
-                                  ) : (
+                                  {host.connectionType === "rdp" ? (
                                     <Monitor className="h-4 w-4" />
+                                  ) : host.connectionType === "vnc" ? (
+                                    <Eye className="h-4 w-4" />
+                                  ) : host.connectionType === "telnet" ? (
+                                    <MessagesSquare className="h-4 w-4" />
+                                  ) : (
+                                    <Terminal className="h-4 w-4" />
                                   )}
                                   <span className="flex-1">
                                     {t("hosts.openTerminal")}

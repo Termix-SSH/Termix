@@ -9,6 +9,8 @@ import {
   ArrowDownUp,
   Container,
   Monitor,
+  Eye,
+  MessagesSquare,
   Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -86,9 +88,9 @@ export function RecentActivityCard({
                   ) : item.type === "docker" ? (
                     <Container size={20} className="shrink-0" />
                   ) : item.type === "telnet" ? (
-                    <Monitor size={20} className="shrink-0" />
+                    <MessagesSquare size={20} className="shrink-0" />
                   ) : item.type === "vnc" ? (
-                    <Monitor size={20} className="shrink-0" />
+                    <Eye size={20} className="shrink-0" />
                   ) : item.type === "rdp" ? (
                     <Monitor size={20} className="shrink-0" />
                   ) : (

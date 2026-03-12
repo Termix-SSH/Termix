@@ -444,7 +444,7 @@ export function HostManagerEditor({
       domain: z.string().optional(),
       security: z.string().optional(),
       ignoreCert: z.boolean().default(true),
-      guacamoleConfig: z.record(z.unknown()).optional(),
+      guacamoleConfig: z.record(z.string(), z.unknown()).optional(),
       showTerminalInSidebar: z.boolean().default(true),
       showFileManagerInSidebar: z.boolean().default(false),
       showTunnelInSidebar: z.boolean().default(false),
@@ -621,24 +621,27 @@ export function HostManagerEditor({
   }, [watchedConnectionType]);
 
   const isFormValid = React.useMemo(() => {
-    const values = form.getValues();
-    const errors = form.formState.errors;
+    const errors = formState.errors;
 
-    if (!values.ip) return false;
+    if (!watchedFields.ip) return false;
 
-    // For non-SSH types, only IP is required
-    if (values.connectionType !== "ssh") {
-      return Object.keys(errors).length === 0;
+    // For non-SSH types, validate IP and port manually — do not block on other errors
+    // (guacamoleConfig sub-fields may have transient validation errors during editing)
+    if (watchedFields.connectionType !== "ssh") {
+      const port = Number(watchedFields.port);
+      return !errors.ip && port >= 1 && port <= 65535;
     }
 
-    if (!values.username || values.username.trim() === "") return false;
+    if (!watchedFields.username || watchedFields.username.trim() === "")
+      return false;
 
     if (authTab === "password") {
-      if (!values.password || values.password.trim() === "") return false;
+      if (!watchedFields.password || watchedFields.password.trim() === "")
+        return false;
     } else if (authTab === "key") {
-      if (!values.key || !values.keyType) return false;
+      if (!watchedFields.key || !watchedFields.keyType) return false;
     } else if (authTab === "credential") {
-      if (!values.credentialId) return false;
+      if (!watchedFields.credentialId) return false;
     } else if (authTab === "none") {
       // No auth required
     } else if (authTab === "opkssh") {
@@ -648,7 +651,7 @@ export function HostManagerEditor({
     }
 
     return Object.keys(errors).length === 0;
-  }, [watchedFields, authTab, form.formState.errors]);
+  }, [watchedFields, authTab, formState.errors]);
 
   useEffect(() => {
     const updateAuthFields = async () => {

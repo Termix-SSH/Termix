@@ -43,28 +43,8 @@ router.post("/token", async (req, res) => {
     }
 
     if (!["rdp", "vnc", "telnet"].includes(type)) {
-      return res
-        .status(400)
-        .json({
-          error: "Invalid connection type. Must be rdp, vnc, or telnet",
-        });
-    }
-
-    // Log received options for debugging
-    guacLogger.info("Guacamole token request received", {
-      operation: "guac_token_request",
-      type,
-      hostname,
-      port,
-      optionKeys: Object.keys(options),
-      optionsCount: Object.keys(options).length,
-    });
-
-    // Log specific option values for debugging
-    if (Object.keys(options).length > 0) {
-      guacLogger.info("Guacamole options received", {
-        operation: "guac_token_options",
-        options: JSON.stringify(options),
+      return res.status(400).json({
+        error: "Invalid connection type. Must be rdp, vnc, or telnet",
       });
     }
 
@@ -98,13 +78,6 @@ router.post("/token", async (req, res) => {
       default:
         return res.status(400).json({ error: "Invalid connection type" });
     }
-
-    guacLogger.info("Generated guacamole connection token", {
-      operation: "guac_token_generated",
-      userId,
-      type,
-      hostname,
-    });
 
     res.json({ token });
   } catch (error) {
@@ -252,14 +225,6 @@ router.post(
         default:
           return res.status(400).json({ error: "Invalid connection type" });
       }
-
-      guacLogger.info("Generated guacamole connection token for host", {
-        operation: "guac_host_token_generated",
-        userId,
-        hostId,
-        connectionType,
-        hostname,
-      });
 
       res.json({ token });
     } catch (error) {

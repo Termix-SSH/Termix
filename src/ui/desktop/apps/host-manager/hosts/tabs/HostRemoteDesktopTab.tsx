@@ -98,7 +98,9 @@ function GuacField({
               onChange={(e) =>
                 field.onChange(
                   type === "number"
-                    ? parseInt(e.target.value) || undefined
+                    ? e.target.value === ""
+                      ? undefined
+                      : parseInt(e.target.value)
                     : e.target.value,
                 )
               }
@@ -163,6 +165,7 @@ export function HostRemoteDesktopTab({
 }: HostRemoteDesktopTabProps) {
   const isRDP = connectionType === "rdp";
   const isVNC = connectionType === "vnc";
+  const isTelnet = connectionType === "telnet";
 
   return (
     <div className="pt-2 space-y-4">
@@ -176,18 +179,6 @@ export function HostRemoteDesktopTab({
           <AccordionItem value="connection">
             <AccordionTrigger>{t("hosts.connectionSettings")}</AccordionTrigger>
             <AccordionContent className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="domain"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("hosts.domain")}</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ""} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="security"
@@ -243,18 +234,20 @@ export function HostRemoteDesktopTab({
         <AccordionItem value="display">
           <AccordionTrigger>{t("hosts.displaySettings")}</AccordionTrigger>
           <AccordionContent className="space-y-4 pt-4">
-            <GuacSelect
-              form={form}
-              path="color-depth"
-              label={t("hosts.colorDepth")}
-              options={[
-                { value: "auto", label: "Auto" },
-                { value: "8", label: "8-bit" },
-                { value: "16", label: "16-bit" },
-                { value: "24", label: "24-bit" },
-                { value: "32", label: "32-bit" },
-              ]}
-            />
+            {!isTelnet && (
+              <GuacSelect
+                form={form}
+                path="color-depth"
+                label={t("hosts.colorDepth")}
+                options={[
+                  { value: "auto", label: "Auto" },
+                  { value: "8", label: "8-bit" },
+                  { value: "16", label: "16-bit" },
+                  { value: "24", label: "24-bit" },
+                  { value: "32", label: "32-bit" },
+                ]}
+              />
+            )}
             <div className="grid grid-cols-2 gap-4">
               <GuacField
                 form={form}
@@ -271,32 +264,94 @@ export function HostRemoteDesktopTab({
                 t={t}
               />
             </div>
-            <GuacField
-              form={form}
-              path="dpi"
-              label={t("hosts.dpi")}
-              type="number"
-              t={t}
-            />
-            <GuacSelect
-              form={form}
-              path="resize-method"
-              label={t("hosts.resizeMethod")}
-              options={[
-                { value: "auto", label: "Auto" },
-                { value: "display-update", label: "Display Update" },
-                { value: "reconnect", label: "Reconnect" },
-              ]}
-            />
-            <GuacField
-              form={form}
-              path="force-lossless"
-              label={t("hosts.forceLossless")}
-              type="switch"
-              t={t}
-            />
+            {!isTelnet && (
+              <>
+                <GuacField
+                  form={form}
+                  path="dpi"
+                  label={t("hosts.dpi")}
+                  type="number"
+                  t={t}
+                />
+                <GuacSelect
+                  form={form}
+                  path="resize-method"
+                  label={t("hosts.resizeMethod")}
+                  options={[
+                    { value: "auto", label: "Auto" },
+                    { value: "display-update", label: "Display Update" },
+                    { value: "reconnect", label: "Reconnect" },
+                  ]}
+                />
+                <GuacField
+                  form={form}
+                  path="force-lossless"
+                  label={t("hosts.forceLossless")}
+                  type="switch"
+                  t={t}
+                />
+              </>
+            )}
           </AccordionContent>
         </AccordionItem>
+
+        {/* Telnet Terminal Settings */}
+        {isTelnet && (
+          <AccordionItem value="telnet-terminal">
+            <AccordionTrigger>
+              {t("hosts.telnetTerminalSettings")}
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
+              <GuacSelect
+                form={form}
+                path="terminal-type"
+                label={t("hosts.terminalType")}
+                options={[
+                  { value: "auto", label: "Auto" },
+                  { value: "xterm", label: "xterm" },
+                  { value: "xterm-256color", label: "xterm-256color" },
+                  { value: "vt100", label: "VT100" },
+                  { value: "vt220", label: "VT220" },
+                ]}
+              />
+              <GuacField
+                form={form}
+                path="font-name"
+                label={t("hosts.guacFontName")}
+                t={t}
+              />
+              <GuacField
+                form={form}
+                path="font-size"
+                label={t("hosts.guacFontSize")}
+                type="number"
+                t={t}
+              />
+              <GuacSelect
+                form={form}
+                path="color-scheme"
+                label={t("hosts.guacColorScheme")}
+                options={[
+                  { value: "auto", label: "Auto" },
+                  { value: "black-white", label: "Black on White" },
+                  { value: "white-black", label: "White on Black" },
+                  { value: "gray-black", label: "Gray on Black" },
+                  { value: "green-black", label: "Green on Black" },
+                ]}
+              />
+              <GuacSelect
+                form={form}
+                path="backspace"
+                label={t("hosts.guacBackspaceKey")}
+                options={[
+                  { value: "auto", label: "Auto" },
+                  { value: "127", label: "DEL (127)" },
+                  { value: "8", label: "BS (8)" },
+                ]}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Audio Settings */}
         {(isRDP || isVNC) && (

@@ -69,6 +69,15 @@ const clientOptions = {
   },
 };
 
+// Suppress hardcoded console.log calls from guacamole-lite
+const _origConsoleLog = console.log;
+console.log = (...args: unknown[]) => {
+  const msg = args[0];
+  if (typeof msg === "string" && msg.startsWith("New client connection"))
+    return;
+  _origConsoleLog(...args);
+};
+
 // Create the guacamole-lite server
 const guacServer = new GuacamoleLite(
   websocketOptions,
