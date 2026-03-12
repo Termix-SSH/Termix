@@ -143,7 +143,16 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./dashboard.js");
 
     // Initialize Guacamole server for RDP/VNC/Telnet support
-    if (process.env.ENABLE_GUACAMOLE !== "false") {
+    const { getDb: getDbForGuac } = await import("./database/db/index.js");
+    const guacDb = getDbForGuac();
+    const guacEnabledRow = guacDb.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const guacEnabled = guacEnabledRow
+      ? guacEnabledRow.value !== "false"
+      : true;
+
+    if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
       try {
         await import("./guacamole/guacamole-server.js");
         systemLogger.info("Guacamole server initialized", {

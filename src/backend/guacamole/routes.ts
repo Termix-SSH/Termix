@@ -242,8 +242,21 @@ router.post(
  */
 router.get("/status", async (req, res) => {
   try {
-    const guacdHost = process.env.GUACD_HOST || "localhost";
-    const guacdPort = parseInt(process.env.GUACD_PORT || "4822", 10);
+    let guacdHost = process.env.GUACD_HOST || "localhost";
+    let guacdPort = parseInt(process.env.GUACD_PORT || "4822", 10);
+    try {
+      const db = getDb();
+      const urlRow = db.$client
+        .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+        .get() as { value: string } | undefined;
+      if (urlRow?.value) {
+        const parts = urlRow.value.split(":");
+        guacdHost = parts[0] || guacdHost;
+        guacdPort = parseInt(parts[1] || String(guacdPort), 10);
+      }
+    } catch {
+      // Fall back to env vars
+    }
 
     // Simple TCP check to see if guacd is responding
     const net = await import("net");

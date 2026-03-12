@@ -53,6 +53,7 @@ import {
   revokeHostAccess,
   getSSHHostById,
   notifyHostCreatedOrUpdated,
+  getGuacamoleSettings,
   type Role,
   type AccessRecord,
 } from "@/ui/main-axios.ts";
@@ -178,10 +179,17 @@ export function HostManagerEditor({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [formError, setFormError] = useState<string | null>(null);
+  const [guacEnabled, setGuacEnabled] = useState(true);
 
   useEffect(() => {
     setFormError(null);
   }, [activeTab]);
+
+  useEffect(() => {
+    getGuacamoleSettings()
+      .then((data) => setGuacEnabled(data.enabled))
+      .catch(() => {});
+  }, []);
 
   const [statusIntervalUnit, setStatusIntervalUnit] = useState<
     "seconds" | "minutes"
@@ -1336,48 +1344,50 @@ export function HostManagerEditor({
                     : t("hosts.addHost")}
                 </h3>
               </div>
-              <FormField
-                control={form.control}
-                name="connectionType"
-                render={({ field }) => (
-                  <FormItem className="mb-4">
-                    <FormControl>
-                      <Tabs
-                        value={field.value || "ssh"}
-                        onValueChange={field.onChange}
-                        className="w-full"
-                      >
-                        <TabsList className="bg-button border border-edge-medium">
-                          <TabsTrigger
-                            value="ssh"
-                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                          >
-                            {t("hosts.ssh")}
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="rdp"
-                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                          >
-                            {t("hosts.rdp")}
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="vnc"
-                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                          >
-                            {t("hosts.vnc")}
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="telnet"
-                            className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
-                          >
-                            {t("hosts.telnet")}
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {guacEnabled && (
+                <FormField
+                  control={form.control}
+                  name="connectionType"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormControl>
+                        <Tabs
+                          value={field.value || "ssh"}
+                          onValueChange={field.onChange}
+                          className="w-full"
+                        >
+                          <TabsList className="bg-button border border-edge-medium">
+                            <TabsTrigger
+                              value="ssh"
+                              className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                            >
+                              {t("hosts.ssh")}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="rdp"
+                              className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                            >
+                              {t("hosts.rdp")}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="vnc"
+                              className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                            >
+                              {t("hosts.vnc")}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="telnet"
+                              className="bg-button data-[state=active]:bg-elevated data-[state=active]:border data-[state=active]:border-edge-medium"
+                            >
+                              {t("hosts.telnet")}
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}

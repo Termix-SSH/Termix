@@ -4126,4 +4126,110 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /users/guacamole-settings:
+ *   get:
+ *     summary: Get Guacamole settings
+ *     description: Returns current guacd enabled status and host:port URL. No authentication required.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Guacamole settings.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 enabled:
+ *                   type: boolean
+ *                 url:
+ *                   type: string
+ *       500:
+ *         description: Failed to get guacamole settings.
+ */
+router.get("/guacamole-settings", async (req, res) => {
+  try {
+    const enabledRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const urlRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get() as { value: string } | undefined;
+    res.json({
+      enabled: enabledRow ? enabledRow.value !== "false" : true,
+      url: urlRow ? urlRow.value : "localhost:4822",
+    });
+  } catch (err) {
+    authLogger.error("Failed to get guacamole settings", err);
+    res.status(500).json({ error: "Failed to get guacamole settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/guacamole-settings:
+ *   patch:
+ *     summary: Update Guacamole settings
+ *     description: Admin-only. Updates guacd enabled status and/or host:port URL.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *               url:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Guacamole settings updated.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to update guacamole settings.
+ */
+router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled, url } = req.body;
+    if (typeof enabled === "boolean") {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_enabled', ?)",
+        )
+        .run(enabled ? "true" : "false");
+    }
+    if (typeof url === "string") {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_url', ?)",
+        )
+        .run(url);
+    }
+    const enabledRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const urlRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get() as { value: string } | undefined;
+    res.json({
+      enabled: enabledRow ? enabledRow.value !== "false" : true,
+      url: urlRow ? urlRow.value : "localhost:4822",
+    });
+  } catch (err) {
+    authLogger.error("Failed to update guacamole settings", err);
+    res.status(500).json({ error: "Failed to update guacamole settings" });
+  }
+});
+
 export default router;

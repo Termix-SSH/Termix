@@ -17,6 +17,8 @@ import {
   updatePasswordResetAllowed,
   getGlobalMonitoringSettings,
   updateGlobalMonitoringSettings,
+  getGuacamoleSettings,
+  updateGuacamoleSettings,
 } from "@/ui/main-axios.ts";
 
 interface GeneralSettingsTabProps {
@@ -61,6 +63,44 @@ export function GeneralSettingsTab({
     "seconds",
   );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
+
+  // Guacamole settings
+  const [guacEnabled, setGuacEnabled] = React.useState(true);
+  const [guacUrl, setGuacUrl] = React.useState("localhost:4822");
+  const [guacLoading, setGuacLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    getGuacamoleSettings()
+      .then((data) => {
+        setGuacEnabled(data.enabled);
+        setGuacUrl(data.url);
+      })
+      .catch(() => {
+        toast.error(t("admin.failedToLoadGuacamoleSettings"));
+      });
+  }, [t]);
+
+  const saveGuacDebounce = React.useRef<NodeJS.Timeout | null>(null);
+
+  const saveGuacSettings = React.useCallback(
+    (newEnabled: boolean, newUrl: string) => {
+      if (saveGuacDebounce.current) {
+        clearTimeout(saveGuacDebounce.current);
+      }
+      saveGuacDebounce.current = setTimeout(async () => {
+        setGuacLoading(true);
+        try {
+          await updateGuacamoleSettings({ enabled: newEnabled, url: newUrl });
+          toast.success(t("admin.guacamoleSettingsSaved"));
+        } catch {
+          toast.error(t("admin.failedToSaveGuacamoleSettings"));
+        } finally {
+          setGuacLoading(false);
+        }
+      }, 800);
+    },
+    [t],
+  );
 
   React.useEffect(() => {
     getGlobalMonitoringSettings()
@@ -310,6 +350,45 @@ export function GeneralSettingsTab({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
+        <h3 className="text-lg font-semibold">
+          {t("admin.guacamoleIntegration")}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.guacamoleIntegrationDesc")}
+        </p>
+        <label className="flex items-center gap-2">
+          <Checkbox
+            checked={guacEnabled}
+            onCheckedChange={(checked) => {
+              const val = checked === true;
+              setGuacEnabled(val);
+              saveGuacSettings(val, guacUrl);
+            }}
+            disabled={guacLoading}
+          />
+          {t("admin.enableGuacamole")}
+        </label>
+        {guacEnabled && (
+          <div>
+            <label className="text-sm font-medium">{t("admin.guacdUrl")}</label>
+            <Input
+              className="mt-1"
+              value={guacUrl}
+              placeholder={t("admin.guacdUrlPlaceholder")}
+              disabled={guacLoading}
+              onChange={(e) => {
+                setGuacUrl(e.target.value);
+                saveGuacSettings(guacEnabled, e.target.value);
+              }}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("admin.guacdUrlNote")}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

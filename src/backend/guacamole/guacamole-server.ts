@@ -3,14 +3,36 @@ import { parse as parseUrl } from "url";
 import { guacLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { GuacamoleTokenService } from "./token-service.js";
+import { getDb } from "../database/db/index.js";
 import type { IncomingMessage } from "http";
 
 const authManager = AuthManager.getInstance();
 const tokenService = GuacamoleTokenService.getInstance();
 
-// Configuration from environment
-const GUACD_HOST = process.env.GUACD_HOST || "localhost";
-const GUACD_PORT = parseInt(process.env.GUACD_PORT || "4822", 10);
+function parseGuacUrl(url: string): { host: string; port: number } {
+  const parts = url.split(":");
+  return {
+    host: parts[0] || "localhost",
+    port: parseInt(parts[1] || "4822", 10),
+  };
+}
+
+// Read guac_url from DB at startup, fall back to env vars
+let GUACD_HOST = process.env.GUACD_HOST || "localhost";
+let GUACD_PORT = parseInt(process.env.GUACD_PORT || "4822", 10);
+try {
+  const db = getDb();
+  const urlRow = db.$client
+    .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+    .get() as { value: string } | undefined;
+  if (urlRow?.value) {
+    const parsed = parseGuacUrl(urlRow.value);
+    GUACD_HOST = parsed.host;
+    GUACD_PORT = parsed.port;
+  }
+} catch {
+  // DB not available yet, use env var defaults
+}
 const GUAC_WS_PORT = 30008;
 
 const websocketOptions = {

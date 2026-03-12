@@ -474,6 +474,42 @@ async function initializeCompleteDatabase(): Promise<void> {
       error: e,
     });
   }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('guac_enabled', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize guac_enabled setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('guac_url', 'localhost:4822')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize guac_url setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
 }
 
 const addColumnIfNotExists = (
