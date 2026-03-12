@@ -62,6 +62,7 @@ export const GuacamoleDisplay = forwardRef<
   const displayRef = useRef<HTMLDivElement>(null); // Inner div for guacamole canvas
   const clientRef = useRef<Guacamole.Client | null>(null);
   const scaleRef = useRef<number>(1); // Track current scale factor for mouse
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Debounce resize events
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -163,10 +164,7 @@ export const GuacamoleDisplay = forwardRef<
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/guacamole/websocket/`;
 
-        const wsUrl = `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
-        console.log(`[Guacamole] WebSocket URL:`, wsUrl);
-        console.log(`[Guacamole] DPI value type:`, typeof dpi, `value:`, dpi);
-        return wsUrl;
+        return `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -178,23 +176,49 @@ export const GuacamoleDisplay = forwardRef<
     [connectionConfig, onError],
   );
 
+  // Consolidated rescaling function with debouncing
+  const rescaleDisplay = useCallback((immediate: boolean = false) => {
+    if (!clientRef.current || !containerRef.current) return;
+
+    const performRescale = () => {
+      if (!clientRef.current || !containerRef.current) return;
+
+      const display = clientRef.current.getDisplay();
+      const cWidth = containerRef.current.clientWidth;
+      const cHeight = containerRef.current.clientHeight;
+      const displayWidth = display.getWidth();
+      const displayHeight = display.getHeight();
+
+      if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
+        const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
+        scaleRef.current = scale;
+        display.scale(scale);
+      }
+    };
+
+    if (immediate) {
+      performRescale();
+    } else {
+      // Debounce to match sidebar/topbar transition duration (200ms)
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(performRescale, 200);
+    }
+  }, []);
+
   const connect = useCallback(async () => {
-    if (isConnecting || isConnected) return;
+    if (isConnectingRef.current || isConnected) return;
+    isConnectingRef.current = true;
     setIsConnecting(true);
     setConnectionError(null);
 
     // Get container dimensions for the WebSocket URL
-    // Use the outer container ref which has h-full w-full
     let containerWidth = containerRef.current?.clientWidth || 0;
     let containerHeight = containerRef.current?.clientHeight || 0;
 
-    console.log(
-      `[Guacamole] Container size: ${containerWidth}x${containerHeight}`,
-    );
-
     // If container size is too small or unavailable, use 720p default
     if (containerWidth < 100 || containerHeight < 100) {
-      console.log(`[Guacamole] Container too small, using 720p default`);
       containerWidth = 1280;
       containerHeight = 720;
     }
@@ -218,25 +242,9 @@ export const GuacamoleDisplay = forwardRef<
       displayRef.current.appendChild(displayElement);
     }
 
-    // Function to rescale display to fit container
-    const rescaleDisplay = () => {
-      if (!containerRef.current) return;
-
-      const cWidth = containerRef.current.clientWidth;
-      const cHeight = containerRef.current.clientHeight;
-      const displayWidth = display.getWidth();
-      const displayHeight = display.getHeight();
-
-      if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
-        const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
-        scaleRef.current = scale;
-        display.scale(scale);
-      }
-    };
-
     // Handle display sync (when frames arrive)
     display.onresize = () => {
-      rescaleDisplay();
+      rescaleDisplay(true); // Immediate rescale on display resize
     };
 
     // Set up mouse input on the display element (not the container)
@@ -274,18 +282,6 @@ export const GuacamoleDisplay = forwardRef<
 
     // Handle client state changes
     client.onstatechange = (state: number) => {
-      const stateNames = [
-        "IDLE",
-        "CONNECTING",
-        "WAITING",
-        "CONNECTED",
-        "DISCONNECTING",
-        "DISCONNECTED",
-      ];
-      console.log(
-        `[Guacamole] State change:`,
-        stateNames[state] || `Unknown(${state})`,
-      );
       switch (state) {
         case 0: // IDLE
           break;
@@ -353,75 +349,65 @@ export const GuacamoleDisplay = forwardRef<
     onDisconnect,
     onError,
     t,
+    rescaleDisplay,
   ]);
 
   // Track if we've initiated a connection to prevent re-triggering
   const hasInitiatedRef = useRef(false);
+  const isMountedRef = useRef(false);
+  const isConnectingRef = useRef(false);
 
   useEffect(() => {
-    console.log(
-      `[Guacamole] Component effect - isVisible:`,
-      isVisible,
-      `hasInitiated:`,
-      hasInitiatedRef.current,
-    );
+    isMountedRef.current = true;
+
     if (isVisible && !hasInitiatedRef.current) {
-      console.log(`[Guacamole] Initiating connection`);
       hasInitiatedRef.current = true;
-      connect();
+      requestAnimationFrame(() => {
+        if (isMountedRef.current) {
+          connect();
+        }
+      });
     }
   }, [isVisible, connect]);
 
-  // Separate cleanup effect that only runs on unmount
   useEffect(() => {
-    console.log(`[Guacamole] Component mounted`);
     return () => {
-      console.log(`[Guacamole] Component unmounting, disconnecting client`);
+      isMountedRef.current = false;
+      hasInitiatedRef.current = false;
+      isConnectingRef.current = false;
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
       if (clientRef.current) {
         clientRef.current.disconnect();
+        clientRef.current = null;
       }
     };
   }, []);
 
-  // Handle window resize - rescale display to fit container
+  // Use ResizeObserver to handle container resizing (sidebar/topbar toggle, window resize)
   useEffect(() => {
-    const handleResize = () => {
-      if (clientRef.current && containerRef.current) {
-        const display = clientRef.current.getDisplay();
-        const cWidth = containerRef.current.clientWidth;
-        const cHeight = containerRef.current.clientHeight;
-        const displayWidth = display.getWidth();
-        const displayHeight = display.getHeight();
+    if (!containerRef.current) return;
 
-        if (
-          displayWidth > 0 &&
-          displayHeight > 0 &&
-          cWidth > 0 &&
-          cHeight > 0
-        ) {
-          const scale = Math.min(
-            cWidth / displayWidth,
-            cHeight / displayHeight,
-          );
-          scaleRef.current = scale;
-          display.scale(scale);
-        }
-      }
-    };
+    const resizeObserver = new ResizeObserver(() => {
+      rescaleDisplay(false); // Debounced rescale
+    });
 
-    window.addEventListener("resize", handleResize);
-    // Also trigger on initial render after a short delay
-    const initialTimeout = setTimeout(handleResize, 100);
+    resizeObserver.observe(containerRef.current);
+
+    // Initial rescale after a short delay to ensure layout is stable
+    const initialTimeout = setTimeout(() => rescaleDisplay(true), 100);
+
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       clearTimeout(initialTimeout);
     };
-  }, []);
+  }, [rescaleDisplay]);
 
   return (
     <div
       ref={containerRef}
-      className="h-full w-full relative bg-black flex items-center justify-center overflow-hidden"
+      className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden"
     >
       <div
         ref={displayRef}

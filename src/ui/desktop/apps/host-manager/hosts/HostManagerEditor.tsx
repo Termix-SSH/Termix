@@ -1431,11 +1431,12 @@ export function HostManagerEditor({
                       {t("hosts.remoteDesktop")}
                     </TabsTrigger>
                   )}
-                  {!editingHost?.isShared && (
-                    <TabsTrigger value="sharing">
-                      {t("rbac.sharing")}
-                    </TabsTrigger>
-                  )}
+                  {watchedConnectionType === "ssh" &&
+                    !editingHost?.isShared && (
+                      <TabsTrigger value="sharing">
+                        {t("rbac.sharing")}
+                      </TabsTrigger>
+                    )}
                 </TabsList>
                 <TabsContent value="general" className="pt-2">
                   <HostGeneralTab
@@ -1527,12 +1528,14 @@ export function HostManagerEditor({
                     />
                   </TabsContent>
                 )}
-                <TabsContent value="sharing" className="space-y-6">
-                  <HostSharingTab
-                    hostId={editingHost?.id}
-                    isNewHost={!editingHost}
-                  />
-                </TabsContent>
+                {watchedConnectionType === "ssh" && (
+                  <TabsContent value="sharing" className="space-y-6">
+                    <HostSharingTab
+                      hostId={editingHost?.id}
+                      isNewHost={!editingHost}
+                    />
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           </ScrollArea>

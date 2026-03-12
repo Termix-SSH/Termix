@@ -15,6 +15,7 @@ import {
   getServerMetricsById,
   registerMetricsViewer,
   sendMetricsHeartbeat,
+  getGuacamoleToken,
   type RecentActivityItem,
 } from "@/ui/main-axios.ts";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
@@ -387,23 +388,107 @@ export function Dashboard({
           hostConfig: host,
         });
       } else if (item.type === "telnet") {
-        addTab({
-          type: "telnet",
-          title: item.hostName,
-          hostConfig: host,
-        });
+        getGuacamoleToken({
+          protocol: "telnet",
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig as any,
+        })
+          .then((result) => {
+            addTab({
+              type: "telnet",
+              title: item.hostName,
+              hostConfig: host,
+              connectionConfig: {
+                token: result.token,
+                protocol: "telnet",
+                type: "telnet",
+                hostname: host.ip,
+                port: host.port,
+                username: host.username,
+                password: host.password,
+                domain: host.domain,
+                security: host.security,
+                "ignore-cert": host.ignoreCert,
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Failed to get telnet token:", error);
+          });
       } else if (item.type === "vnc") {
-        addTab({
-          type: "vnc",
-          title: item.hostName,
-          hostConfig: host,
-        });
+        getGuacamoleToken({
+          protocol: "vnc",
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig as any,
+        })
+          .then((result) => {
+            addTab({
+              type: "vnc",
+              title: item.hostName,
+              hostConfig: host,
+              connectionConfig: {
+                token: result.token,
+                protocol: "vnc",
+                type: "vnc",
+                hostname: host.ip,
+                port: host.port,
+                username: host.username,
+                password: host.password,
+                domain: host.domain,
+                security: host.security,
+                "ignore-cert": host.ignoreCert,
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Failed to get vnc token:", error);
+          });
       } else if (item.type === "rdp") {
-        addTab({
-          type: "rdp",
-          title: item.hostName,
-          hostConfig: host,
-        });
+        getGuacamoleToken({
+          protocol: "rdp",
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig as any,
+        })
+          .then((result) => {
+            addTab({
+              type: "rdp",
+              title: item.hostName,
+              hostConfig: host,
+              connectionConfig: {
+                token: result.token,
+                protocol: "rdp",
+                type: "rdp",
+                hostname: host.ip,
+                port: host.port,
+                username: host.username,
+                password: host.password,
+                domain: host.domain,
+                security: host.security,
+                "ignore-cert": host.ignoreCert,
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Failed to get rdp token:", error);
+          });
       }
     });
   };

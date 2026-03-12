@@ -1459,27 +1459,38 @@ export function HostManagerViewer({
                                         )}
                                       {(() => {
                                         const statsConfig = (() => {
+                                          if (!host.statsConfig) {
+                                            return DEFAULT_STATS_CONFIG;
+                                          }
+                                          if (
+                                            typeof host.statsConfig === "object"
+                                          ) {
+                                            return host.statsConfig;
+                                          }
                                           try {
-                                            return host.statsConfig
-                                              ? JSON.parse(host.statsConfig)
-                                              : DEFAULT_STATS_CONFIG;
-                                          } catch {
+                                            return JSON.parse(host.statsConfig);
+                                          } catch (e) {
                                             return DEFAULT_STATS_CONFIG;
                                           }
                                         })();
-                                        const shouldShowStatus =
-                                          statsConfig.statusCheckEnabled !==
-                                          false;
-                                        const serverStatus = getStatus(host.id);
+                                        const shouldShowStatus = ![
+                                          false,
+                                          "false",
+                                        ].includes(
+                                          statsConfig.statusCheckEnabled,
+                                        );
 
-                                        return shouldShowStatus ? (
+                                        if (!shouldShowStatus) return null;
+
+                                        const serverStatus = getStatus(host.id);
+                                        return (
                                           <Status
                                             status={serverStatus}
                                             className="!bg-transparent !p-0.75 flex-shrink-0"
                                           >
                                             <StatusIndicator />
                                           </Status>
-                                        ) : null;
+                                        );
                                       })()}
                                       {host.pin && (
                                         <Pin className="h-3 w-3 text-yellow-500 flex-shrink-0" />
@@ -1815,7 +1826,7 @@ export function HostManagerViewer({
                                             variant="outline"
                                             className="text-xs px-1 py-0"
                                           >
-                                            <Terminal className="h-2 w-2 mr-0.5" />
+                                            <Monitor className="h-2 w-2 mr-0.5" />
                                             {t("hosts.telnet")}
                                           </Badge>
                                         );

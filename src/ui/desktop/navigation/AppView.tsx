@@ -384,6 +384,7 @@ export function AppView({
               >
                 {t.type === "terminal" ? (
                   <Terminal
+                    key={`term-${t.id}-${t.instanceId || ""}`}
                     ref={t.terminalRef}
                     hostConfig={t.hostConfig}
                     isVisible={effectiveVisible}
@@ -395,6 +396,7 @@ export function AppView({
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView
+                    key={`stats-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
@@ -406,6 +408,7 @@ export function AppView({
                   t.type === "telnet" ? (
                   t.connectionConfig ? (
                     <GuacamoleDisplay
+                      key={`guac-${t.id}-${t.instanceId || ""}`}
                       connectionConfig={t.connectionConfig}
                       isVisible={effectiveVisible}
                       onDisconnect={() => removeTab(t.id)}
@@ -418,6 +421,7 @@ export function AppView({
                   )
                 ) : t.type === "network_graph" ? (
                   <NetworkGraphCard
+                    key={`netgraph-${t.id}-${t.instanceId || ""}`}
                     isTopbarOpen={isTopbarOpen}
                     rightSidebarOpen={rightSidebarOpen}
                     rightSidebarWidth={rightSidebarWidth}
@@ -425,6 +429,7 @@ export function AppView({
                   />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager
+                    key={`tunnel-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
@@ -433,6 +438,7 @@ export function AppView({
                   />
                 ) : t.type === "docker" ? (
                   <DockerManager
+                    key={`docker-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
@@ -442,6 +448,7 @@ export function AppView({
                   />
                 ) : (
                   <FileManager
+                    key={`filemgr-${t.id}-${t.instanceId || ""}`}
                     embedded
                     initialHost={t.hostConfig}
                     onClose={() => removeTab(t.id)}

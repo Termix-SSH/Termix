@@ -77,16 +77,21 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   }, []);
 
   const statsConfig = useMemo(() => {
+    if (!host.statsConfig) {
+      return DEFAULT_STATS_CONFIG;
+    }
+    if (typeof host.statsConfig === "object") {
+      return host.statsConfig;
+    }
     try {
-      return host.statsConfig
-        ? JSON.parse(host.statsConfig)
-        : DEFAULT_STATS_CONFIG;
-    } catch {
+      return JSON.parse(host.statsConfig);
+    } catch (e) {
       return DEFAULT_STATS_CONFIG;
     }
   }, [host.statsConfig]);
-
-  const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+  const shouldShowStatus = ![false, "false"].includes(
+    statsConfig.statusCheckEnabled,
+  );
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
   const serverStatus = useHostStatus(host.id, shouldShowStatus);
@@ -111,6 +116,16 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     ) {
       try {
         const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
+        console.log(`[Host] Getting token for ${protocol} connection:`, {
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          hasPassword: !!host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig,
+        });
         const result = await getGuacamoleToken({
           protocol,
           hostname: host.ip,
@@ -122,6 +137,15 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
           ignoreCert: host.ignoreCert,
           guacamoleConfig: host.guacamoleConfig as any,
         });
+        console.log(
+          `[Host] Got token for ${protocol}, adding tab with config:`,
+          {
+            token: result.token.substring(0, 50) + "...",
+            protocol,
+            hostname: host.ip,
+            port: host.port,
+          },
+        );
         addTab({
           type: protocol,
           title,

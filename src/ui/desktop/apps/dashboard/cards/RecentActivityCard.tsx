@@ -86,7 +86,7 @@ export function RecentActivityCard({
                   ) : item.type === "docker" ? (
                     <Container size={20} className="shrink-0" />
                   ) : item.type === "telnet" ? (
-                    <Network size={20} className="shrink-0" />
+                    <Monitor size={20} className="shrink-0" />
                   ) : item.type === "vnc" ? (
                     <Monitor size={20} className="shrink-0" />
                   ) : item.type === "rdp" ? (

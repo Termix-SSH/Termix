@@ -16,6 +16,7 @@ import {
   User,
   Github,
   Terminal,
+  Monitor,
   FolderOpen,
   Pencil,
   EllipsisVertical,
@@ -269,7 +270,6 @@ export function CommandPalette({
         }
       } catch (err) {
         console.error("Failed to get Guacamole token:", err);
-        toast.error(t("errors.connectionFailed"));
       }
       setIsOpen(false);
       return;
@@ -470,7 +470,12 @@ export function CommandPalette({
                                 handleHostTerminalClick(host);
                               }}
                             >
-                              <Terminal className="h-3 w-3" />
+                              {host.connectionType &&
+                              host.connectionType !== "ssh" ? (
+                                <Monitor className="h-3 w-3" />
+                              ) : (
+                                <Terminal className="h-3 w-3" />
+                              )}
                             </Button>
                           )}
 
@@ -563,7 +568,11 @@ export function CommandPalette({
                                   }}
                                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                                 >
-                                  <Terminal className="h-4 w-4" />
+                                  {isSSH ? (
+                                    <Terminal className="h-4 w-4" />
+                                  ) : (
+                                    <Monitor className="h-4 w-4" />
+                                  )}
                                   <span className="flex-1">
                                     {t("hosts.openTerminal")}
                                   </span>

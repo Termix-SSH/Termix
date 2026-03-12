@@ -283,6 +283,7 @@ function AppContent({
     currentTabData?.type === "file_manager" ||
     currentTabData?.type === "rdp" ||
     currentTabData?.type === "vnc" ||
+    currentTabData?.type === "telnet" ||
     currentTabData?.type === "tunnel" ||
     currentTabData?.type === "docker" ||
     currentTabData?.type === "network_graph";
