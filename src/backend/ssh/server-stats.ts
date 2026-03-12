@@ -1029,17 +1029,21 @@ class PollingManager {
     }
   }
 
-  refreshAllPolling(): void {
+  async refreshAllPolling(): Promise<void> {
     const hostsToRefresh: Array<{
       host: SSHHostWithCredentials;
       viewerUserId?: string;
     }> = [];
 
     for (const [hostId, config] of this.pollingConfigs.entries()) {
-      hostsToRefresh.push({
-        host: config.host,
-        viewerUserId: config.viewerUserId,
-      });
+      const status = this.statusStore.get(hostId);
+
+      if (!status || status.status === "online") {
+        hostsToRefresh.push({
+          host: config.host,
+          viewerUserId: config.viewerUserId,
+        });
+      }
     }
 
     for (const hostId of this.pollingConfigs.keys()) {
@@ -1047,8 +1051,10 @@ class PollingManager {
     }
 
     for (const { host, viewerUserId } of hostsToRefresh) {
-      this.startPollingForHost(host, { statusOnly: true, viewerUserId });
+      await this.startPollingForHost(host, { statusOnly: true, viewerUserId });
     }
+
+    const skipped = this.pollingConfigs.size - hostsToRefresh.length;
   }
 
   registerViewer(hostId: number, sessionId: string, userId: string): void {
@@ -3239,16 +3245,21 @@ app.post("/global-settings", requireAdmin, async (req, res) => {
         .run(String(metricsInterval));
     }
 
-    // Refresh all active polling to apply new intervals immediately
-    pollingManager.refreshAllPolling();
+    await pollingManager.refreshAllPolling();
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      message: "Settings updated and polling refreshed",
+    });
   } catch (error) {
     statsLogger.error("Failed to save global settings", {
       operation: "global_settings_save_error",
       error: error instanceof Error ? error.message : String(error),
     });
-    res.status(500).json({ error: "Failed to save global settings" });
+    res.status(500).json({
+      error: "Failed to save global settings",
+      details: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 

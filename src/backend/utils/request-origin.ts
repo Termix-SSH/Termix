@@ -19,7 +19,7 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
   }
 
   const portHeader = req.headers["x-forwarded-port"];
-  const port =
+  let port: string | undefined =
     typeof portHeader === "string"
       ? portHeader.split(",")[0].trim()
       : undefined;
@@ -31,8 +31,15 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
       ? hostHeaderRaw.split(",")[0].trim()
       : String(hostHeaderRaw);
 
+  if (!port && hostHeader.includes(":")) {
+    const parts = hostHeader.split(":");
+    if (parts.length === 2 && !parts[0].includes("[")) {
+      port = parts[1];
+    }
+  }
+
+  const hostWithoutPort = hostHeader.split(":")[0];
   if (port) {
-    const hostWithoutPort = hostHeader.split(":")[0];
     const isDefaultPort =
       (protocol === "http" && port === "80") ||
       (protocol === "https" && port === "443");
@@ -42,7 +49,7 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
       : `${protocol}://${hostWithoutPort}:${port}`;
   }
 
-  return `${protocol}://${hostHeader}`;
+  return `${protocol}://${hostWithoutPort}`;
 }
 
 export function getRequestOriginWithForceHTTPS(

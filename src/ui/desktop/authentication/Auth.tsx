@@ -104,7 +104,14 @@ export function Auth({
   const [localUsername, setLocalUsername] = useState("");
   const [password, setPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    try {
+      const saved = localStorage.getItem("rememberMe");
+      return saved === "true";
+    } catch {
+      return false;
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
@@ -174,6 +181,14 @@ export function Auth({
       totpInputRef.current.focus();
     }
   }, [totpRequired]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("rememberMe", rememberMe.toString());
+    } catch {
+      // expected - localStorage might not be available
+    }
+  }, [rememberMe]);
 
   useEffect(() => {
     getRegistrationAllowed().then((res) => {

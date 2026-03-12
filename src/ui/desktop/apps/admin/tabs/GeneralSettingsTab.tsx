@@ -88,8 +88,12 @@ export function GeneralSettingsTab({
             metricsInterval: newMetrics,
           });
           toast.success(t("admin.globalSettingsSaved"));
-        } catch {
-          toast.error(t("admin.failedToSaveGlobalSettings"));
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : t("admin.failedToSaveGlobalSettings");
+          toast.error(errorMessage);
         } finally {
           setMonitoringLoading(false);
         }

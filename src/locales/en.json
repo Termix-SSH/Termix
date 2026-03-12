@@ -810,6 +810,7 @@
     "globalSettingsSaved": "Global monitoring settings saved",
     "failedToSaveGlobalSettings": "Failed to save global monitoring settings",
     "failedToLoadGlobalSettings": "Failed to load global monitoring settings",
+    "clampedToValidRange": "was adjusted to valid range",
     "sessionManagement": "Session Management",
     "loadingSessions": "Loading sessions...",
     "noActiveSessions": "No active sessions found.",
