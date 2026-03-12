@@ -3,11 +3,12 @@ import bodyParser from "body-parser";
 import multer from "multer";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
-import sshRoutes from "./routes/ssh.js";
+import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
 import terminalRoutes from "./routes/terminal.js";
+import guacamoleRoutes from "../guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import cors from "cors";
@@ -28,7 +29,7 @@ import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import {
   users,
-  sshData,
+  hosts,
   sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
@@ -846,8 +847,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       const sshHosts = await getDb()
         .select()
-        .from(sshData)
-        .where(eq(sshData.userId, userId));
+        .from(hosts)
+        .where(eq(hosts.userId, userId));
       const insertHost = exportDb.prepare(`
         INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1267,13 +1268,13 @@ app.post(
             try {
               const existing = await mainDb
                 .select()
-                .from(sshData)
+                .from(hosts)
                 .where(
                   and(
-                    eq(sshData.userId, userId),
-                    eq(sshData.ip, host.ip),
-                    eq(sshData.port, host.port),
-                    eq(sshData.username, host.username),
+                    eq(hosts.userId, userId),
+                    eq(hosts.ip, host.ip),
+                    eq(hosts.port, host.port),
+                    eq(hosts.username, host.username),
                   ),
                 );
 
@@ -1341,7 +1342,7 @@ app.post(
                 userId,
                 userDataKey,
               );
-              await mainDb.insert(sshData).values(encrypted);
+              await mainDb.insert(hosts).values(encrypted);
               result.summary.sshHostsImported++;
             } catch (hostError) {
               result.summary.errors.push(
@@ -1759,11 +1760,12 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
 });
 
 app.use("/users", userRoutes);
-app.use("/ssh", sshRoutes);
+app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
 app.use("/terminal", terminalRoutes);
+app.use("/guacamole", guacamoleRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 

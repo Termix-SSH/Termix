@@ -1,7 +1,7 @@
 import { getDb } from "../database/db/index.js";
 import {
   users,
-  sshData,
+  hosts,
   sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
@@ -179,13 +179,13 @@ class UserDataImport {
 
         const existing = await getDb()
           .select()
-          .from(sshData)
+          .from(hosts)
           .where(
             and(
-              eq(sshData.userId, targetUserId),
-              eq(sshData.ip, host.ip as string),
-              eq(sshData.port, host.port as number),
-              eq(sshData.username, host.username as string),
+              eq(hosts.userId, targetUserId),
+              eq(hosts.ip, host.ip as string),
+              eq(hosts.port, host.port as number),
+              eq(hosts.username, host.username as string),
             ),
           );
 
@@ -218,15 +218,13 @@ class UserDataImport {
 
         if (existing.length > 0 && options.replaceExisting) {
           await getDb()
-            .update(sshData)
-            .set(processedHostData as unknown as typeof sshData.$inferInsert)
-            .where(eq(sshData.id, existing[0].id));
+            .update(hosts)
+            .set(processedHostData as unknown as typeof hosts.$inferInsert)
+            .where(eq(hosts.id, existing[0].id));
         } else {
           await getDb()
-            .insert(sshData)
-            .values(
-              processedHostData as unknown as typeof sshData.$inferInsert,
-            );
+            .insert(hosts)
+            .values(processedHostData as unknown as typeof hosts.$inferInsert);
         }
         imported++;
       } catch (error) {

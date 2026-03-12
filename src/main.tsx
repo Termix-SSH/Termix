@@ -14,6 +14,7 @@ import FileManagerApp from "./ui/desktop/apps/features/file-manager/FileManagerA
 import TunnelApp from "./ui/desktop/apps/features/tunnel/TunnelApp.tsx";
 import ServerStatsApp from "./ui/desktop/apps/features/server-stats/ServerStatsApp.tsx";
 import DockerApp from "./ui/desktop/apps/features/docker/DockerApp.tsx";
+import GuacamoleApp from "./ui/desktop/apps/guacamole/GuacamoleApp.tsx";
 
 const FullscreenApp: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
@@ -33,6 +34,10 @@ const FullscreenApp: React.FC = () => {
       return <ServerStatsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
+    case "rdp":
+    case "vnc":
+    case "telnet":
+      return <GuacamoleApp hostId={hostId || undefined} />;
     default:
       return <DesktopApp />;
   }

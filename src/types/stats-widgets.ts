@@ -57,6 +57,7 @@ export interface StatsConfig {
   metricsEnabled: boolean;
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
+  disableTcpPing?: boolean;
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -75,4 +76,5 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
   metricsEnabled: true,
   metricsInterval: 30,
   useGlobalMetricsInterval: true,
+  disableTcpPing: false,
 };

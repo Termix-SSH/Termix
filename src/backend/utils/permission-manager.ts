@@ -4,7 +4,7 @@ import {
   hostAccess,
   roles,
   userRoles,
-  sshData,
+  hosts,
   users,
 } from "../database/db/schema.js";
 import { eq, and, or, isNull, gte, sql } from "drizzle-orm";
@@ -167,8 +167,8 @@ class PermissionManager {
     try {
       const host = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId)))
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
         .limit(1);
 
       if (host.length > 0) {
@@ -210,9 +210,9 @@ class PermissionManager {
         const access = sharedAccess[0];
 
         const hostOwnerCheck = await db
-          .select({ ownerId: sshData.userId })
-          .from(sshData)
-          .where(eq(sshData.id, hostId))
+          .select({ ownerId: hosts.userId })
+          .from(hosts)
+          .where(eq(hosts.id, hostId))
           .limit(1);
 
         if (hostOwnerCheck.length > 0 && hostOwnerCheck[0].ownerId === userId) {

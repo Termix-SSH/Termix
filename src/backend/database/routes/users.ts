@@ -5,7 +5,7 @@ import { db } from "../db/index.js";
 import {
   users,
   sessions,
-  sshData,
+  hosts,
   sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
@@ -265,7 +265,7 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
 
-    await db.delete(sshData).where(eq(sshData.userId, userId));
+    await db.delete(hosts).where(eq(hosts.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
     await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
@@ -2488,7 +2488,7 @@ router.post("/complete-reset", async (req, res) => {
           .delete(dismissedAlerts)
           .where(eq(dismissedAlerts.userId, userId));
         await db.delete(snippets).where(eq(snippets.userId, userId));
-        await db.delete(sshData).where(eq(sshData.userId, userId));
+        await db.delete(hosts).where(eq(hosts.userId, userId));
         await db
           .delete(sshCredentials)
           .where(eq(sshCredentials.userId, userId));

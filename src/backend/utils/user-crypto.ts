@@ -303,9 +303,8 @@ class UserCrypto {
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
 
       oldKEK.fill(0);
@@ -341,9 +340,8 @@ class UserCrypto {
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
 
       newKEK.fill(0);
@@ -418,9 +416,8 @@ class UserCrypto {
         },
       );
 
-      const { saveMemoryDatabaseToFile } = await import(
-        "../database/db/index.js"
-      );
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
     } catch (error) {
       databaseLogger.error("Failed to convert to OIDC encryption", error, {

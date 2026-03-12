@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import { getDb, DatabaseSaveTrigger } from "./database/db/index.js";
 import {
   recentActivity,
-  sshData,
+  hosts,
   hostAccess,
   dashboardPreferences,
 } from "./database/db/schema.js";
@@ -176,7 +176,7 @@ app.get("/activity/recent", async (req, res) => {
  *             properties:
  *               type:
  *                 type: string
- *                 enum: [terminal, file_manager, server_stats, tunnel, docker]
+ *                 enum: [terminal, file_manager, server_stats, tunnel, docker, telnet, vnc, rdp]
  *               hostId:
  *                 type: integer
  *               hostName:
@@ -219,11 +219,14 @@ app.post("/activity/log", async (req, res) => {
         "server_stats",
         "tunnel",
         "docker",
+        "telnet",
+        "vnc",
+        "rdp",
       ].includes(type)
     ) {
       return res.status(400).json({
         error:
-          "Invalid activity type. Must be 'terminal', 'file_manager', 'server_stats', 'tunnel', or 'docker'",
+          "Invalid activity type. Must be 'terminal', 'file_manager', 'server_stats', 'tunnel', 'docker', 'telnet', 'vnc', or 'rdp'",
       });
     }
 
@@ -252,8 +255,8 @@ app.post("/activity/log", async (req, res) => {
     const ownedHosts = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );

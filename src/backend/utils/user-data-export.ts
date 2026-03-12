@@ -1,7 +1,7 @@
 import { getDb } from "../database/db/index.js";
 import {
   users,
-  sshData,
+  hosts,
   sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
@@ -74,8 +74,8 @@ class UserDataExport {
 
       const sshHosts = await getDb()
         .select()
-        .from(sshData)
-        .where(eq(sshData.userId, userId));
+        .from(hosts)
+        .where(eq(hosts.userId, userId));
       const processedSshHosts =
         format === "plaintext" && userDataKey
           ? sshHosts.map((host) =>

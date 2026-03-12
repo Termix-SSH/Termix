@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshData, sshCredentials } from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -28,6 +28,15 @@ import {
 } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
+
+function supportsMetrics(host: SSHHostWithCredentials): boolean {
+  const connectionType = host.connectionType || "ssh";
+  return connectionType === "ssh";
+}
+
+function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
+  return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
+}
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -62,20 +71,20 @@ async function resolveJumpHost(
   userId: string,
 ): Promise<JumpHostConfig | null> {
   try {
-    const hosts = await SimpleDBOps.select(
+    const hostResults = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return null;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
 
     if (host.credentialId) {
       const credentials = await SimpleDBOps.select(
@@ -644,6 +653,7 @@ interface SSHHostWithCredentials {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
 }
 
 type StatusEntry = {
@@ -659,6 +669,7 @@ interface StatsConfig {
   metricsEnabled: boolean;
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
+  disableTcpPing?: boolean;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -783,9 +794,13 @@ class PollingManager {
     const statusOnly = options?.statusOnly ?? false;
     const viewerUserId = options?.viewerUserId;
 
+    const canCollectMetrics = supportsMetrics(host);
+
     const enabledCollectors: string[] = [];
-    if (statsConfig.statusCheckEnabled) enabledCollectors.push("status");
-    if (!statusOnly && statsConfig.metricsEnabled) {
+    if (isTcpPingEnabled(statsConfig)) {
+      enabledCollectors.push("status");
+    }
+    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
       enabledCollectors.push(
         "cpu",
         "memory",
@@ -810,7 +825,7 @@ class PollingManager {
       }
     }
 
-    if (!statsConfig.statusCheckEnabled && !statsConfig.metricsEnabled) {
+    if (!isTcpPingEnabled(statsConfig) && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
@@ -823,14 +838,14 @@ class PollingManager {
       viewerUserId,
     };
 
-    if (statsConfig.statusCheckEnabled) {
+    if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
       this.pollHostStatus(host, viewerUserId);
 
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
-        if (latestConfig && latestConfig.statsConfig.statusCheckEnabled) {
+        if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
           this.pollHostStatus(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
@@ -838,14 +853,18 @@ class PollingManager {
       this.statusStore.delete(host.id);
     }
 
-    if (!statusOnly && statsConfig.metricsEnabled) {
+    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
       const intervalMs = statsConfig.metricsInterval * 1000;
 
       await this.pollHostMetrics(host, viewerUserId);
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
-        if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
+        if (
+          latestConfig &&
+          latestConfig.statsConfig.metricsEnabled &&
+          supportsMetrics(latestConfig.host)
+        ) {
           this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
@@ -893,6 +912,15 @@ class PollingManager {
     const userId = viewerUserId || host.userId;
     const refreshedHost = await fetchHostById(host.id, userId);
     if (!refreshedHost) {
+      return;
+    }
+
+    if (!supportsMetrics(refreshedHost)) {
+      statsLogger.debug("Skipping metrics collection for non-SSH host", {
+        operation: "poll_host_metrics_skipped",
+        hostId: refreshedHost.id,
+        connectionType: refreshedHost.connectionType || "ssh",
+      });
       return;
     }
 
@@ -1170,14 +1198,14 @@ async function fetchAllHosts(
   userId: string,
 ): Promise<SSHHostWithCredentials[]> {
   try {
-    const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(eq(sshData.userId, userId)),
+    const hostResults = await SimpleDBOps.select(
+      getDb().select().from(hosts).where(eq(hosts.userId, userId)),
       "ssh_data",
       userId,
     );
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
-    for (const host of hosts) {
+    for (const host of hostResults) {
       try {
         const hostWithCreds = await resolveHostCredentials(host, userId);
         if (hostWithCreds) {
@@ -1221,17 +1249,17 @@ async function fetchHostById(
       return undefined;
     }
 
-    const hosts = await SimpleDBOps.select(
-      getDb().select().from(sshData).where(eq(sshData.id, id)),
+    const hostResults = await SimpleDBOps.select(
+      getDb().select().from(hosts).where(eq(hosts.id, id)),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return undefined;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
     return await resolveHostCredentials(host, userId);
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);
@@ -1757,6 +1785,10 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     os: string | null;
   };
 }> {
+  if (!supportsMetrics(host)) {
+    throw new Error("Metrics collection only supported for SSH hosts");
+  }
+
   if (authFailureTracker.shouldSkip(host.id)) {
     const reason = authFailureTracker.getSkipReason(host.id);
     throw new Error(reason || "Authentication failed");
@@ -1935,7 +1967,8 @@ function tcpPing(
 
       socket.once("data", (data) => {
         clearTimeout(dataTimeout);
-        if (data.toString().startsWith("SSH-")) {
+        const dataStr = data.toString("utf8");
+        if (dataStr.startsWith("SSH-")) {
           try {
             socket.end("SSH-2.0-TermixHealthCheck\r\n");
           } catch {

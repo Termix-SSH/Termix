@@ -4,6 +4,8 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -346,72 +348,92 @@ export function TabProvider({ children }: TabProviderProps) {
     });
   };
 
-  const updateHostConfig = (
-    hostId: number,
-    newHostConfig: {
-      id: number;
-      name?: string;
-      username: string;
-      ip: string;
-      port: number;
-    },
-  ) => {
-    setTabs((prev) =>
-      prev.map((tab) => {
-        if (tab.hostConfig && tab.hostConfig.id === hostId) {
-          if (tab.type === "ssh_manager") {
+  const updateHostConfig = useCallback(
+    (
+      hostId: number,
+      newHostConfig: {
+        id: number;
+        name?: string;
+        username: string;
+        ip: string;
+        port: number;
+      },
+    ) => {
+      setTabs((prev) =>
+        prev.map((tab) => {
+          if (tab.hostConfig && tab.hostConfig.id === hostId) {
+            if (tab.type === "ssh_manager") {
+              return {
+                ...tab,
+                hostConfig: {
+                  ...newHostConfig,
+                  instanceId: tab.hostConfig.instanceId,
+                },
+              };
+            }
+
             return {
               ...tab,
               hostConfig: {
                 ...newHostConfig,
-                instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+                instanceId: tab.hostConfig.instanceId,
               },
+              title: newHostConfig.name?.trim()
+                ? newHostConfig.name
+                : t("nav.hostTabTitle", {
+                    username: newHostConfig.username,
+                    ip: newHostConfig.ip,
+                    port: newHostConfig.port,
+                  }),
             };
           }
+          return tab;
+        }),
+      );
+    },
+    [t],
+  );
 
-          return {
-            ...tab,
-            hostConfig: {
-              ...newHostConfig,
-              instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
-            },
-            title: newHostConfig.name?.trim()
-              ? newHostConfig.name
-              : t("nav.hostTabTitle", {
-                  username: newHostConfig.username,
-                  ip: newHostConfig.ip,
-                  port: newHostConfig.port,
-                }),
-          };
-        }
-        return tab;
-      }),
-    );
-  };
+  const updateTab = useCallback(
+    (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === tabId
+            ? { ...tab, ...updates, _updateTimestamp: Date.now() }
+            : tab,
+        ),
+      );
+    },
+    [],
+  );
 
-  const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === tabId
-          ? { ...tab, ...updates, _updateTimestamp: Date.now() }
-          : tab,
-      ),
-    );
-  };
-
-  const value: TabContextType = {
-    tabs,
-    currentTab,
-    allSplitScreenTab,
-    addTab,
-    removeTab,
-    setCurrentTab,
-    setSplitScreenTab,
-    getTab,
-    reorderTabs,
-    updateHostConfig,
-    updateTab,
-  };
+  const value: TabContextType = useMemo(
+    () => ({
+      tabs,
+      currentTab,
+      allSplitScreenTab,
+      addTab,
+      removeTab,
+      setCurrentTab,
+      setSplitScreenTab,
+      getTab,
+      reorderTabs,
+      updateHostConfig,
+      updateTab,
+    }),
+    [
+      tabs,
+      currentTab,
+      allSplitScreenTab,
+      addTab,
+      removeTab,
+      setSplitScreenTab,
+      getTab,
+      reorderTabs,
+      updateHostConfig,
+      updateTab,
+    ],
+  );
 
   return <TabContext.Provider value={value}>{children}</TabContext.Provider>;
 }

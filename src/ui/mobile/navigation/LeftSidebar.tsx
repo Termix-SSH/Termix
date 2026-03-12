@@ -36,6 +36,7 @@ interface SSHHost {
   tags: string[];
   pin: boolean;
   authType: string;
+  connectionType: string;
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -131,9 +132,10 @@ export function LeftSidebar({
   }, [search]);
 
   const filteredHosts = useMemo(() => {
-    if (!debouncedSearch.trim()) return hosts;
+    const sshOnlyHosts = hosts.filter((h) => h.connectionType === "ssh");
+    if (!debouncedSearch.trim()) return sshOnlyHosts;
     const q = debouncedSearch.trim().toLowerCase();
-    return hosts.filter((h) => {
+    return sshOnlyHosts.filter((h) => {
       const searchableText = [
         h.name || "",
         h.username,

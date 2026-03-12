@@ -608,9 +608,8 @@ async function connectSSHTunnel(
         tunnelConfig.requestingUserId &&
         tunnelConfig.requestingUserId !== tunnelConfig.sourceUserId
       ) {
-        const { SharedCredentialManager } = await import(
-          "../utils/shared-credential-manager.js"
-        );
+        const { SharedCredentialManager } =
+          await import("../utils/shared-credential-manager.js");
         const sharedCredManager = SharedCredentialManager.getInstance();
 
         if (tunnelConfig.sourceHostId) {
@@ -1750,7 +1749,7 @@ app.post(
             const internalAuthToken = await systemCrypto.getInternalAuthToken();
 
             const allHostsResponse = await axios.get(
-              "http://localhost:30001/ssh/db/host/internal/all",
+              "http://localhost:30001/host/db/host/internal/all",
               {
                 headers: {
                   "Content-Type": "application/json",
@@ -2028,7 +2027,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
     const internalAuthToken = await systemCrypto.getInternalAuthToken();
 
     const autostartResponse = await axios.get(
-      "http://localhost:30001/ssh/db/host/internal",
+      "http://localhost:30001/host/db/host/internal",
       {
         headers: {
           "Content-Type": "application/json",
@@ -2038,7 +2037,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
     );
 
     const allHostsResponse = await axios.get(
-      "http://localhost:30001/ssh/db/host/internal/all",
+      "http://localhost:30001/host/db/host/internal/all",
       {
         headers: {
           "Content-Type": "application/json",
@@ -2050,7 +2049,6 @@ async function initializeAutoStartTunnels(): Promise<void> {
     const autostartHosts: SSHHost[] = autostartResponse.data || [];
     const allHosts: SSHHost[] = allHostsResponse.data || [];
     const autoStartTunnels: TunnelConfig[] = [];
-
     tunnelLogger.info(
       `Found ${autostartHosts.length} autostart hosts and ${allHosts.length} total hosts for endpointHost resolution`,
     );

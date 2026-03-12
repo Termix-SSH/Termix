@@ -8,6 +8,10 @@ import {
   Server,
   ArrowDownUp,
   Container,
+  Monitor,
+  Eye,
+  MessagesSquare,
+  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type RecentActivityItem } from "@/ui/main-axios";
@@ -83,6 +87,12 @@ export function RecentActivityCard({
                     <ArrowDownUp size={20} className="shrink-0" />
                   ) : item.type === "docker" ? (
                     <Container size={20} className="shrink-0" />
+                  ) : item.type === "telnet" ? (
+                    <MessagesSquare size={20} className="shrink-0" />
+                  ) : item.type === "vnc" ? (
+                    <Eye size={20} className="shrink-0" />
+                  ) : item.type === "rdp" ? (
+                    <Monitor size={20} className="shrink-0" />
                   ) : (
                     <Terminal size={20} className="shrink-0" />
                   )}

@@ -2,7 +2,7 @@ import { Client as SSHClient } from "ssh2";
 import { WebSocketServer, WebSocket } from "ws";
 import { parse as parseUrl } from "url";
 import { AuthManager } from "../utils/auth-manager.js";
-import { sshData, sshCredentials } from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../database/db/index.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -24,7 +24,7 @@ const activeSessions = new Map<string, SSHSession>();
 
 const wss = new WebSocketServer({
   host: "0.0.0.0",
-  port: 30008,
+  port: 30009,
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url || "", true);
@@ -107,8 +107,8 @@ async function createJumpHostChain(
     const jumpHostData = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, jumpHostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, jumpHostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
