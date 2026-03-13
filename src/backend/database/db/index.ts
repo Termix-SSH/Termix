@@ -500,7 +500,7 @@ async function initializeCompleteDatabase(): Promise<void> {
     if (!row) {
       sqlite
         .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_url', 'localhost:4822')",
+          "INSERT INTO settings (key, value) VALUES ('guac_url', 'guacd:4822')",
         )
         .run();
     }

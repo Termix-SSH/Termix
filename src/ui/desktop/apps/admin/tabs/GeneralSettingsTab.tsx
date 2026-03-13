@@ -20,6 +20,7 @@ import {
   getGuacamoleSettings,
   updateGuacamoleSettings,
 } from "@/ui/main-axios.ts";
+import { Button } from "@/components/ui/button.tsx";
 
 interface GeneralSettingsTabProps {
   allowRegistration: boolean;
@@ -66,7 +67,7 @@ export function GeneralSettingsTab({
 
   // Guacamole settings
   const [guacEnabled, setGuacEnabled] = React.useState(true);
-  const [guacUrl, setGuacUrl] = React.useState("localhost:4822");
+  const [guacUrl, setGuacUrl] = React.useState("guacd:4822");
   const [guacLoading, setGuacLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -359,6 +360,16 @@ export function GeneralSettingsTab({
         <p className="text-sm text-muted-foreground">
           {t("admin.guacamoleIntegrationDesc")}
         </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs"
+          onClick={() =>
+            window.open("https://docs.termix.site/remote-desktop", "_blank")
+          }
+        >
+          {t("common.documentation")}
+        </Button>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={guacEnabled}

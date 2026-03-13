@@ -49,6 +49,7 @@ Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código a
 # Funcionalidades
 
 - **Acesso ao Terminal SSH** - Terminal completo com suporte a tela dividida (até 4 painéis) com um sistema de abas similar ao navegador. Inclui suporte para personalização do terminal incluindo temas comuns de terminal, fontes e outros componentes
+- **Acesso à Área de Trabalho Remota** - Suporte a RDP, VNC e Telnet pelo navegador com personalização completa e tela dividida
 - **Gerenciamento de Túneis SSH** - Crie e gerencie túneis SSH com reconexão automática e monitoramento de saúde, com suporte para conexões -l ou -r
 - **Gerenciador Remoto de Arquivos** - Gerencie arquivos diretamente em servidores remotos com suporte para visualizar e editar código, imagens, áudio e vídeo. Faça upload, download, renomeie, exclua e mova arquivos facilmente com suporte sudo.
 - **Gerenciamento de Docker** - Inicie, pare, pause, remova contêineres. Visualize estatísticas de contêineres. Controle contêineres usando o terminal Docker Exec. Não foi feito para substituir Portainer ou Dockge, mas sim para simplesmente gerenciar seus contêineres em vez de criá-los.
@@ -69,7 +70,7 @@ Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código a
 - **Paleta de Comandos** - Pressione duas vezes a tecla Shift esquerda para acessar rapidamente as conexões SSH com seu teclado
 - **SSH Rico em Funcionalidades** - Suporta jump hosts, Warpgate, conexões baseadas em TOTP, SOCKS5, verificação de chave do host, preenchimento automático de senhas, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
 - **Gráfico de Rede** - Personalize seu Dashboard para visualizar seu homelab baseado nas suas conexões SSH com suporte de status
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **Abas Persistentes** - Sessões SSH e abas permanecem abertas entre dispositivos/atualizações se habilitado no perfil do usuário
 
 # Funcionalidades Planejadas
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # Patrocinadores
@@ -148,7 +166,7 @@ Por favor, seja o mais detalhado possível no seu relato, preferencialmente escr
 
 # Capturas de Tela
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

@@ -4160,7 +4160,7 @@ router.get("/guacamole-settings", async (req, res) => {
       .get() as { value: string } | undefined;
     res.json({
       enabled: enabledRow ? enabledRow.value !== "false" : true,
-      url: urlRow ? urlRow.value : "localhost:4822",
+      url: urlRow ? urlRow.value : "guacd:4822",
     });
   } catch (err) {
     authLogger.error("Failed to get guacamole settings", err);
@@ -4230,7 +4230,7 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
       .get() as { value: string } | undefined;
     res.json({
       enabled: enabledRow ? enabledRow.value !== "false" : true,
-      url: urlRow ? urlRow.value : "localhost:4822",
+      url: urlRow ? urlRow.value : "guacd:4822",
     });
   } catch (err) {
     authLogger.error("Failed to update guacamole settings", err);

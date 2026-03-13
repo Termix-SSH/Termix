@@ -48,7 +48,8 @@ Termix è una piattaforma di gestione server tutto-in-uno, open-source, per semp
 
 # Funzionalità
 
-- **Accesso Terminale SSH** - Terminale completo con supporto schermo divIPA (fino a 4 pannelli) con un sistema di schede in stile browser. Include il supporto per la personalizzazione del terminale, inclusi temi, font e altri componenti comuni
+- **Accesso Terminale SSH** - Terminale completo con supporto schermo diviso (fino a 4 pannelli) con un sistema di schede in stile browser. Include il supporto per la personalizzazione del terminale, inclusi temi, font e altri componenti comuni
+- **Accesso Desktop Remoto** - Supporto RDP, VNC e Telnet tramite browser con personalizzazione completa e schermo diviso
 - **Gestione Tunnel SSH** - Crea e gestisci tunnel SSH con riconnessione automatica e monitoraggio dello stato, con supporto per connessioni -l o -r
 - **Gestore File Remoto** - Gestisci i file direttamente sui server remoti con supporto per la visualizzazione e la modifica di codice, immagini, audio e video. Carica, scarica, rinomina, elimina e sposta file senza problemi con supporto sudo.
 - **Gestione Docker** - Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Non è stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
@@ -69,7 +70,7 @@ Termix è una piattaforma di gestione server tutto-in-uno, open-source, per semp
 - **Palette Comandi** - Premi due volte shift sinistro per accedere rapidamente alle connessioni SSH con la tastiera
 - **SSH Ricco di Funzionalità** - Supporta jump host, Warpgate, connessioni basate su TOTP, SOCKS5, verifica chiave host, compilazione automatica password, [OPKSSH](https://github.com/openpubkey/opkssh), ecc.
 - **Grafico di Rete** - Personalizza la tua Dashboard per visualizzare il tuo homelab basato sulle connessioni SSH con supporto dello stato
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **Schede Persistenti** - Le sessioni SSH e le schede rimangono aperte tra dispositivi/aggiornamenti se abilitato nel profilo utente
 
 # Funzionalità Pianificate
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # Sponsor
@@ -148,7 +166,7 @@ Per favore, sii il più dettagliato possibile nella tua segnalazione, preferibil
 
 # Screenshot
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

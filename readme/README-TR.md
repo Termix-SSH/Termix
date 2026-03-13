@@ -49,6 +49,7 @@ Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındıra
 # Özellikler
 
 - **SSH Terminal Erişimi** - Tarayıcı benzeri sekme sistemiyle bölünmüş ekran desteğine sahip (4 panele kadar) tam özellikli terminal. Yaygın terminal temaları, yazı tipleri ve diğer bileşenler dahil olmak üzere terminal özelleştirme desteği içerir
+- **Uzak Masaüstü Erişimi** - Tam özelleştirme ve bölünmüş ekran ile tarayıcı üzerinden RDP, VNC ve Telnet desteği
 - **SSH Tünel Yönetimi** - Otomatik yeniden bağlanma ve sağlık izleme ile SSH tünelleri oluşturun ve yönetin, -l veya -r bağlantıları desteğiyle
 - **Uzak Dosya Yöneticisi** - Uzak sunuculardaki dosyaları doğrudan yönetin; kod, görüntü, ses ve video görüntüleme ve düzenleme desteğiyle. Sudo desteğiyle dosyaları sorunsuzca yükleyin, indirin, yeniden adlandırın, silin ve taşıyın.
 - **Docker Yönetimi** - Konteynerleri başlatın, durdurun, duraklatın, kaldırın. Konteyner istatistiklerini görüntüleyin. Docker exec terminali kullanarak konteyneri kontrol edin. Portainer veya Dockge'nin yerini almak için değil, konteynerlerinizi oluşturmak yerine basitçe yönetmek için tasarlanmıştır.
@@ -69,7 +70,7 @@ Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındıra
 - **Komut Paleti** - Sol shift tuşuna iki kez basarak SSH bağlantılarına klavyenizle hızlıca erişin
 - **SSH Zengin Özellikler** - Atlama ana bilgisayarları, Warpgate, TOTP tabanlı bağlantılar, SOCKS5, ana bilgisayar anahtar doğrulama, otomatik şifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh) vb. destekler.
 - **Ağ Grafiği** - Kontrol panelinizi, SSH bağlantılarınıza dayalı olarak ev laboratuvarınızı durum desteğiyle görselleştirmek için özelleştirin
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **Kalıcı Sekmeler** - Kullanıcı profilinde etkinleştirilmişse SSH oturumları ve sekmeler cihazlar/yenilemeler arasında açık kalır
 
 # Planlanan Özellikler
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # Sponsorlar
@@ -148,7 +166,7 @@ Lütfen sorununuzu mümkün olduğunca ayrıntılı yazın, tercihen İngilizce 
 
 # Ekran Görüntüleri
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

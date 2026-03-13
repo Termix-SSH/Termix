@@ -49,6 +49,7 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 # 기능
 
 - **SSH 터미널 접속** - 브라우저 스타일 탭 시스템과 분할 화면 지원(최대 4개 패널)을 갖춘 완전한 기능의 터미널. 일반 터미널 테마, 글꼴 및 기타 구성 요소를 포함한 터미널 사용자 정의 지원
+- **원격 데스크톱 접속** - 완전한 사용자 정의와 분할 화면을 지원하는 브라우저 기반 RDP, VNC, Telnet 지원
 - **SSH 터널 관리** - 자동 재연결 및 상태 모니터링 기능을 갖춘 SSH 터널 생성 및 관리, -l 또는 -r 연결 지원
 - **원격 파일 관리자** - 코드, 이미지, 오디오, 비디오의 보기 및 편집을 지원하여 원격 서버에서 파일을 직접 관리. sudo 지원으로 파일 업로드, 다운로드, 이름 변경, 삭제, 이동을 원활하게 수행
 - **Docker 관리** - 컨테이너 시작, 중지, 일시 정지, 제거. 컨테이너 통계 보기. docker exec 터미널로 컨테이너 제어. Portainer나 Dockge를 대체하기 위한 것이 아니라 컨테이너 생성보다는 간편한 관리를 목적으로 합니다
@@ -69,7 +70,7 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 - **명령어 팔레트** - 왼쪽 Shift 키를 두 번 눌러 키보드로 SSH 연결에 빠르게 접근
 - **풍부한 SSH 기능** - 점프 호스트, Warpgate, TOTP 기반 연결, SOCKS5, 호스트 키 검증, 비밀번호 자동 입력, [OPKSSH](https://github.com/openpubkey/opkssh) 등 지원
 - **네트워크 그래프** - 대시보드를 사용자 정의하여 SSH 연결 기반의 홈랩 네트워크를 상태 표시와 함께 시각화
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **지속 탭** - 사용자 프로필에서 활성화된 경우 SSH 세션 및 탭이 기기/새로 고침 간에 열린 상태 유지
 
 # 계획된 기능
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # 스폰서
@@ -147,7 +165,7 @@ Termix에 대한 도움이 필요하거나 기능을 요청하려면 [Issues](ht
 
 # 스크린샷
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

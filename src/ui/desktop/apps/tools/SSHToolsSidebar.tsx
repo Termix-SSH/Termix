@@ -251,7 +251,10 @@ export function SSHToolsSidebar({
       tab.type === "server_stats" ||
       tab.type === "file_manager" ||
       tab.type === "tunnel" ||
-      tab.type === "docker",
+      tab.type === "docker" ||
+      tab.type === "rdp" ||
+      tab.type === "vnc" ||
+      tab.type === "telnet",
   );
 
   useEffect(() => {

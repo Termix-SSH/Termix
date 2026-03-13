@@ -558,7 +558,7 @@ router.post(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = process.env.STATS_PORT || 30005;
+        const statsPort = 30005;
         await axios.post(
           `http://localhost:${statsPort}/host-updated`,
           { hostId: createdHost.id },
@@ -1160,7 +1160,7 @@ router.put(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = process.env.STATS_PORT || 30005;
+        const statsPort = 30005;
         await axios.post(
           `http://localhost:${statsPort}/host-updated`,
           { hostId: parseInt(hostId) },
@@ -1696,7 +1696,7 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = process.env.STATS_PORT || 30005;
+        const statsPort = 30005;
         await axios.post(
           `http://localhost:${statsPort}/host-deleted`,
           { hostId: numericHostId },
@@ -2873,7 +2873,7 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = process.env.STATS_PORT || 30005;
+        const statsPort = 30005;
         for (const host of hostsToDelete) {
           try {
             await axios.post(
