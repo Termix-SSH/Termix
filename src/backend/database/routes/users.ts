@@ -1,5 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
+import { restartGuacServer } from "../../guacamole/guacamole-server.js";
 import crypto from "crypto";
 import { db } from "../db/index.js";
 import {
@@ -4215,6 +4216,11 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
           "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_url', ?)",
         )
         .run(url);
+      try {
+        await restartGuacServer();
+      } catch (err) {
+        authLogger.error("Failed to restart guac server after URL update", err);
+      }
     }
     const enabledRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")

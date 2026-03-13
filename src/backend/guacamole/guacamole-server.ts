@@ -17,31 +17,29 @@ function parseGuacUrl(url: string): { host: string; port: number } {
   };
 }
 
-// Read guac_url from DB at startup, fall back to env vars
-let GUACD_HOST = process.env.GUACD_HOST || "localhost";
-let GUACD_PORT = parseInt(process.env.GUACD_PORT || "4822", 10);
-try {
-  const db = getDb();
-  const urlRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-    .get() as { value: string } | undefined;
-  if (urlRow?.value) {
-    const parsed = parseGuacUrl(urlRow.value);
-    GUACD_HOST = parsed.host;
-    GUACD_PORT = parsed.port;
+function readGuacdOptions(): { host: string; port: number } {
+  let host = process.env.GUACD_HOST || "localhost";
+  let port = parseInt(process.env.GUACD_PORT || "4822", 10);
+  try {
+    const db = getDb();
+    const urlRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get() as { value: string } | undefined;
+    if (urlRow?.value) {
+      const parsed = parseGuacUrl(urlRow.value);
+      host = parsed.host;
+      port = parsed.port;
+    }
+  } catch {
+    // DB not available yet, use env var defaults
   }
-} catch {
-  // DB not available yet, use env var defaults
+  return { host, port };
 }
+
 const GUAC_WS_PORT = 30008;
 
 const websocketOptions = {
   port: GUAC_WS_PORT,
-};
-
-const guacdOptions = {
-  host: GUACD_HOST,
-  port: GUACD_PORT,
 };
 
 const clientOptions = {
@@ -100,45 +98,59 @@ console.log = (...args: unknown[]) => {
   _origConsoleLog(...args);
 };
 
-// Create the guacamole-lite server
-const guacServer = new GuacamoleLite(
-  websocketOptions,
-  guacdOptions,
-  clientOptions,
-);
+function createGuacServer(): GuacamoleLite {
+  const guacdOptions = readGuacdOptions();
+  const server = new GuacamoleLite(
+    websocketOptions,
+    guacdOptions,
+    clientOptions,
+  );
 
-// Add authentication via processConnectionSettings callback
-guacServer.on(
-  "open",
-  (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-    guacLogger.info("Guacamole connection opened", {
-      operation: "guac_connection_open",
-      type: clientConnection.connectionSettings?.type,
-    });
-  },
-);
+  server.on(
+    "open",
+    (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
+      guacLogger.info("Guacamole connection opened", {
+        operation: "guac_connection_open",
+        type: clientConnection.connectionSettings?.type,
+      });
+    },
+  );
 
-guacServer.on(
-  "close",
-  (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-    guacLogger.info("Guacamole connection closed", {
-      operation: "guac_connection_close",
-      type: clientConnection.connectionSettings?.type,
-    });
-  },
-);
+  server.on(
+    "close",
+    (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
+      guacLogger.info("Guacamole connection closed", {
+        operation: "guac_connection_close",
+        type: clientConnection.connectionSettings?.type,
+      });
+    },
+  );
 
-guacServer.on(
-  "error",
-  (
-    clientConnection: { connectionSettings?: Record<string, unknown> },
-    error: Error,
-  ) => {
-    guacLogger.error("Guacamole connection error", error, {
-      operation: "guac_connection_error",
-      type: clientConnection.connectionSettings?.type,
-    });
-  },
-);
+  server.on(
+    "error",
+    (
+      clientConnection: { connectionSettings?: Record<string, unknown> },
+      error: Error,
+    ) => {
+      guacLogger.error("Guacamole connection error", error, {
+        operation: "guac_connection_error",
+        type: clientConnection.connectionSettings?.type,
+      });
+    },
+  );
+
+  return server;
+}
+
+let guacServer = createGuacServer();
+
+export async function restartGuacServer(): Promise<void> {
+  try {
+    guacServer.close();
+  } catch (err) {
+    guacLogger.error("Error closing guac server during restart", err as Error);
+  }
+  guacServer = createGuacServer();
+}
 
 export { guacServer, tokenService };
