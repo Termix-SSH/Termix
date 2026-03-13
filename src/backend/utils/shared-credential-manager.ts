@@ -190,15 +190,28 @@ class SharedCredentialManager {
       const cred = sharedCred[0].shared_credentials;
 
       if (cred.needsReEncryption) {
-        databaseLogger.warn(
-          "Shared credential needs re-encryption but cannot be accessed yet",
-          {
-            operation: "get_shared_credential_pending",
-            hostId,
-            userId,
-          },
-        );
-        return null;
+        // Attempt inline re-encryption since user is now logged in
+        await this.reEncryptSharedCredential(cred.id, userId);
+
+        const refreshed = await db
+          .select()
+          .from(sharedCredentials)
+          .where(eq(sharedCredentials.id, cred.id))
+          .limit(1);
+
+        if (refreshed.length === 0 || refreshed[0].needsReEncryption) {
+          databaseLogger.warn(
+            "Shared credential needs re-encryption but cannot be accessed yet",
+            {
+              operation: "get_shared_credential_pending",
+              hostId,
+              userId,
+            },
+          );
+          return null;
+        }
+
+        return this.decryptSharedCredential(refreshed[0], userDEK);
       }
 
       return this.decryptSharedCredential(cred, userDEK);

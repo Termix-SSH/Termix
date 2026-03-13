@@ -1531,6 +1531,7 @@
     "connected": "Connected",
     "clipboardWriteFailed": "Failed to copy to clipboard. Make sure the page is served over HTTPS or localhost.",
     "clipboardReadFailed": "Failed to read from clipboard. Make sure clipboard permissions are granted.",
+    "clipboardHttpWarning": "Paste requires HTTPS. Use Ctrl+Shift+V or serve Termix over HTTPS.",
     "sshConnected": "SSH connection established",
     "authError": "Authentication failed: {{message}}",
     "unknownError": "Unknown error occurred",

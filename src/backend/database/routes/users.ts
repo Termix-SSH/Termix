@@ -790,6 +790,12 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  *     description: Returns the OIDC authorization URL.
  *     tags:
  *       - Users
+ *     parameters:
+ *       - in: query
+ *         name: rememberMe
+ *         schema:
+ *           type: boolean
+ *         description: Whether to extend the session to 30 days instead of 2 hours.
  *     responses:
  *       200:
  *         description: OIDC authorization URL.
@@ -800,28 +806,9 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
+    const { rememberMe } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
     const backendCallbackUri = `${origin}/users/oidc/callback`;
-
-    authLogger.info("OIDC authorize request headers", {
-      protocol: req.protocol,
-      host: req.get("Host"),
-      origin: req.get("Origin"),
-      referer: req.get("Referer"),
-      "x-forwarded-proto": req.get("X-Forwarded-Proto"),
-      "x-forwarded-host": req.get("X-Forwarded-Host"),
-      "x-forwarded-port": req.get("X-Forwarded-Port"),
-      secure: req.secure,
-      calculatedOrigin: origin,
-      backendCallbackUri: backendCallbackUri,
-    });
-
-    authLogger.info(
-      `\n${"=".repeat(68)}\n` +
-        `  OIDC CALLBACK URL - Register this in your OAuth provider:\n` +
-        `  ${backendCallbackUri}\n` +
-        `${"=".repeat(68)}`,
-    );
 
     const envConfig = getOIDCConfigFromEnv();
     let config;
@@ -861,12 +848,9 @@ router.get("/oidc/authorize", async (req, res) => {
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
       .run(`oidc_frontend_origin_${state}`, frontendOrigin);
 
-    authLogger.info("OIDC authorization initiated", {
-      operation: "oidc_authorize",
-      backendCallbackUri,
-      frontendOrigin,
-      referer,
-    });
+    db.$client
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+      .run(`oidc_remember_me_${state}`, rememberMe === "true" ? "true" : "false");
 
     const authUrl = new URL(config.authorization_url);
     authUrl.searchParams.set("client_id", config.client_id);
@@ -899,10 +883,6 @@ router.get("/oidc/authorize", async (req, res) => {
  */
 router.get("/oidc/callback", async (req, res) => {
   const { code, state } = req.query;
-  authLogger.info("OIDC login callback received", {
-    operation: "oidc_login_request",
-    state,
-  });
 
   if (!isNonEmptyString(code) || !isNonEmptyString(state)) {
     return res.status(400).json({ error: "Code and state are required" });
@@ -914,6 +894,9 @@ router.get("/oidc/callback", async (req, res) => {
   const storedFrontendOriginRow = db.$client
     .prepare("SELECT value FROM settings WHERE key = ?")
     .get(`oidc_frontend_origin_${state}`);
+  const storedRememberMeRow = db.$client
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(`oidc_remember_me_${state}`);
 
   if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
     return res
@@ -926,6 +909,8 @@ router.get("/oidc/callback", async (req, res) => {
   ).value as string;
   const frontendOrigin = (storedFrontendOriginRow as Record<string, unknown>)
     .value as string;
+  const storedRememberMe =
+    (storedRememberMeRow as Record<string, unknown> | null)?.value === "true";
 
   try {
     const storedNonce = db.$client
@@ -951,12 +936,6 @@ router.get("/oidc/callback", async (req, res) => {
         (configRow as Record<string, unknown>).value as string,
       );
     }
-
-    authLogger.info("OIDC token exchange attempt", {
-      operation: "oidc_token_exchange",
-      backendCallbackUri,
-      frontendOrigin,
-    });
 
     const tokenResponse = await fetch(config.token_url, {
       method: "POST",
@@ -999,6 +978,9 @@ router.get("/oidc/callback", async (req, res) => {
     db.$client
       .prepare("DELETE FROM settings WHERE key = ?")
       .run(`oidc_frontend_origin_${state}`);
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_remember_me_${state}`);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1321,6 +1303,7 @@ router.get("/oidc/callback", async (req, res) => {
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      rememberMe: storedRememberMe,
     });
 
     authLogger.success("OIDC login successful", {
@@ -1335,7 +1318,9 @@ router.get("/oidc/callback", async (req, res) => {
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 2 * 60 * 60 * 1000;
+        : storedRememberMe
+          ? 30 * 24 * 60 * 60 * 1000
+          : 2 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 

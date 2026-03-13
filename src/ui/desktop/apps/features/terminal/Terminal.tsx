@@ -1499,7 +1499,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return await navigator.clipboard.readText();
         }
       } catch {
-        toast.error(t("terminal.clipboardReadFailed"));
+        // fall through
+      }
+      if (window.location.protocol !== "https:" && !isElectron()) {
+        toast.error(t("terminal.clipboardHttpWarning"));
       }
       return "";
     }
@@ -1679,19 +1682,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (!getUseRightClickCopyPaste()) return;
         e.preventDefault();
         e.stopPropagation();
-        try {
-          if (terminal.hasSelection()) {
-            const selection = terminal.getSelection();
-            if (selection) {
-              await writeTextToClipboard(selection);
-              terminal.clearSelection();
-            }
-          } else {
-            const pasteText = await readTextFromClipboard();
-            if (pasteText) terminal.paste(pasteText);
+        if (terminal.hasSelection()) {
+          const selection = terminal.getSelection();
+          if (selection) {
+            await writeTextToClipboard(selection);
+            terminal.clearSelection();
           }
-        } catch (error) {
-          console.error("Terminal operation failed:", error);
+        } else {
+          const text = await readTextFromClipboard();
+          if (text) terminal.paste(text);
         }
       };
       element?.addEventListener("contextmenu", handleContextMenu);
@@ -1830,6 +1829,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             writeTextToClipboard(selection);
             return false;
           }
+        }
+
+        if (
+          e.ctrlKey &&
+          !e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "v"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          readTextFromClipboard().then((text) => {
+            if (text) terminal.paste(text);
+          });
+          return false;
         }
 
         if (e.ctrlKey && e.altKey && !e.metaKey && !e.shiftKey) {

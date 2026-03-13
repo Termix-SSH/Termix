@@ -2760,9 +2760,11 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
-export async function getOIDCAuthorizeUrl(): Promise<OIDCAuthorize> {
+export async function getOIDCAuthorizeUrl(rememberMe = false): Promise<OIDCAuthorize> {
   try {
-    const response = await authApi.get("/users/oidc/authorize");
+    const response = await authApi.get("/users/oidc/authorize", {
+      params: { rememberMe },
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "get OIDC authorize URL");

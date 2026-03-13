@@ -615,7 +615,7 @@ export function Auth({
   async function handleOIDCLogin() {
     setOidcLoading(true);
     try {
-      const authResponse = await getOIDCAuthorizeUrl();
+      const authResponse = await getOIDCAuthorizeUrl(rememberMe);
       const { auth_url: authUrl } = authResponse;
 
       if (!authUrl || authUrl === "undefined") {
@@ -1236,16 +1236,30 @@ export function Auth({
                                     );
                                   } else {
                                     return (
-                                      <Button
-                                        type="button"
-                                        className="w-full h-11 mt-2 text-base font-semibold"
-                                        disabled={oidcLoading}
-                                        onClick={handleOIDCLogin}
-                                      >
-                                        {oidcLoading
-                                          ? Spinner
-                                          : t("auth.loginWithExternal")}
-                                      </Button>
+                                      <>
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id="rememberMeOIDC"
+                                            checked={rememberMe}
+                                            onCheckedChange={(checked) =>
+                                              setRememberMe(checked === true)
+                                            }
+                                          />
+                                          <Label htmlFor="rememberMeOIDC">
+                                            {t("auth.rememberMe")}
+                                          </Label>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          className="w-full h-11 mt-2 text-base font-semibold"
+                                          disabled={oidcLoading}
+                                          onClick={handleOIDCLogin}
+                                        >
+                                          {oidcLoading
+                                            ? Spinner
+                                            : t("auth.loginWithExternal")}
+                                        </Button>
+                                      </>
                                     );
                                   }
                                 })()}

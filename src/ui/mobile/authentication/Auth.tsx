@@ -549,7 +549,7 @@ export function Auth({
     setError(null);
     setOidcLoading(true);
     try {
-      const authResponse = await getOIDCAuthorizeUrl();
+      const authResponse = await getOIDCAuthorizeUrl(rememberMe);
       const { auth_url: authUrl } = authResponse;
 
       if (!authUrl || authUrl === "undefined") {
@@ -907,6 +907,18 @@ export function Auth({
                         <>
                           <div className="text-center text-muted-foreground mb-4">
                             <p>{t("auth.loginWithExternalDesc")}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="rememberMeOIDC"
+                              checked={rememberMe}
+                              onCheckedChange={(checked) =>
+                                setRememberMe(checked === true)
+                              }
+                            />
+                            <Label htmlFor="rememberMeOIDC">
+                              {t("auth.rememberMe")}
+                            </Label>
                           </div>
                           <Button
                             type="button"

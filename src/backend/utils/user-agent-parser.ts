@@ -23,7 +23,18 @@ export function detectPlatform(req: Request): DeviceType {
     return "mobile";
   }
 
-  if (userAgent.includes("Android")) {
+  const isDesktopOS =
+    userAgent.includes("Windows") ||
+    userAgent.includes("Macintosh") ||
+    userAgent.includes("Mac OS X") ||
+    userAgent.includes("X11") ||
+    userAgent.includes("Linux x86_64");
+
+  if (
+    (userAgent.includes("Android") && !isDesktopOS) ||
+    userAgent.includes("iPhone") ||
+    userAgent.includes("iPad")
+  ) {
     return "mobile";
   }
 
