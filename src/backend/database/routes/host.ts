@@ -1505,19 +1505,19 @@ router.get(
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
 
-      const exportData = {
-        connectionType: resolvedHost.connectionType || "ssh",
+      const exportedConnectionType =
+        (resolvedHost.connectionType as string) || "ssh";
+      const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
+        exportedConnectionType,
+      );
+
+      const baseExportData = {
+        connectionType: exportedConnectionType,
         name: resolvedHost.name,
         ip: resolvedHost.ip,
         port: resolvedHost.port,
         username: resolvedHost.username,
-        authType: resolvedHost.authType,
         password: resolvedHost.password || null,
-        key: resolvedHost.key || null,
-        keyPassword: resolvedHost.keyPassword || null,
-        keyType: resolvedHost.keyType || null,
-        credentialId: resolvedHost.credentialId || null,
-        overrideCredentialUsername: !!resolvedHost.overrideCredentialUsername,
         folder: resolvedHost.folder,
         tags:
           typeof resolvedHost.tags === "string"
@@ -1525,52 +1525,67 @@ router.get(
             : resolvedHost.tags || [],
         pin: !!resolvedHost.pin,
         notes: resolvedHost.notes || null,
-        enableTerminal: !!resolvedHost.enableTerminal,
-        enableTunnel: !!resolvedHost.enableTunnel,
-        enableFileManager: !!resolvedHost.enableFileManager,
-        enableDocker: !!resolvedHost.enableDocker,
-        showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
-        showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
-        showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
-        showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
-        showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
-        defaultPath: resolvedHost.defaultPath,
-        sudoPassword: resolvedHost.sudoPassword || null,
-        tunnelConnections: resolvedHost.tunnelConnections
-          ? JSON.parse(resolvedHost.tunnelConnections as string)
-          : [],
-        jumpHosts: resolvedHost.jumpHosts
-          ? JSON.parse(resolvedHost.jumpHosts as string)
-          : null,
-        quickActions: resolvedHost.quickActions
-          ? JSON.parse(resolvedHost.quickActions as string)
-          : null,
-        statsConfig: resolvedHost.statsConfig
-          ? JSON.parse(resolvedHost.statsConfig as string)
-          : null,
-        dockerConfig: resolvedHost.dockerConfig
-          ? JSON.parse(resolvedHost.dockerConfig as string)
-          : null,
-        terminalConfig: resolvedHost.terminalConfig
-          ? JSON.parse(resolvedHost.terminalConfig as string)
-          : null,
-        forceKeyboardInteractive:
-          resolvedHost.forceKeyboardInteractive === "true",
-        domain: resolvedHost.domain || null,
-        security: resolvedHost.security || null,
-        ignoreCert: !!resolvedHost.ignoreCert,
-        guacamoleConfig: resolvedHost.guacamoleConfig
-          ? JSON.parse(resolvedHost.guacamoleConfig as string)
-          : null,
-        useSocks5: !!resolvedHost.useSocks5,
-        socks5Host: resolvedHost.socks5Host || null,
-        socks5Port: resolvedHost.socks5Port || null,
-        socks5Username: resolvedHost.socks5Username || null,
-        socks5Password: resolvedHost.socks5Password || null,
-        socks5ProxyChain: resolvedHost.socks5ProxyChain
-          ? JSON.parse(resolvedHost.socks5ProxyChain as string)
-          : null,
       };
+
+      const exportData = isRemoteDesktop
+        ? {
+            ...baseExportData,
+            domain: resolvedHost.domain || null,
+            security: resolvedHost.security || null,
+            ignoreCert: !!resolvedHost.ignoreCert,
+            guacamoleConfig: resolvedHost.guacamoleConfig
+              ? JSON.parse(resolvedHost.guacamoleConfig as string)
+              : null,
+          }
+        : {
+            ...baseExportData,
+            authType: resolvedHost.authType,
+            key: resolvedHost.key || null,
+            keyPassword: resolvedHost.keyPassword || null,
+            keyType: resolvedHost.keyType || null,
+            credentialId: resolvedHost.credentialId || null,
+            overrideCredentialUsername:
+              !!resolvedHost.overrideCredentialUsername,
+            enableTerminal: !!resolvedHost.enableTerminal,
+            enableTunnel: !!resolvedHost.enableTunnel,
+            enableFileManager: !!resolvedHost.enableFileManager,
+            enableDocker: !!resolvedHost.enableDocker,
+            showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
+            showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
+            showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
+            showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
+            showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
+            defaultPath: resolvedHost.defaultPath,
+            sudoPassword: resolvedHost.sudoPassword || null,
+            tunnelConnections: resolvedHost.tunnelConnections
+              ? JSON.parse(resolvedHost.tunnelConnections as string)
+              : [],
+            jumpHosts: resolvedHost.jumpHosts
+              ? JSON.parse(resolvedHost.jumpHosts as string)
+              : null,
+            quickActions: resolvedHost.quickActions
+              ? JSON.parse(resolvedHost.quickActions as string)
+              : null,
+            statsConfig: resolvedHost.statsConfig
+              ? JSON.parse(resolvedHost.statsConfig as string)
+              : null,
+            dockerConfig: resolvedHost.dockerConfig
+              ? JSON.parse(resolvedHost.dockerConfig as string)
+              : null,
+            terminalConfig: resolvedHost.terminalConfig
+              ? JSON.parse(resolvedHost.terminalConfig as string)
+              : null,
+            forceKeyboardInteractive:
+              resolvedHost.forceKeyboardInteractive === "true",
+            useSocks5: !!resolvedHost.useSocks5,
+            socks5Host: resolvedHost.socks5Host || null,
+            socks5Port: resolvedHost.socks5Port || null,
+            socks5Username: resolvedHost.socks5Username || null,
+            socks5Password: resolvedHost.socks5Password || null,
+            socks5ProxyChain: resolvedHost.socks5ProxyChain
+              ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+              : null,
+          };
 
       sshLogger.success("Host exported with decrypted credentials", {
         operation: "host_export",

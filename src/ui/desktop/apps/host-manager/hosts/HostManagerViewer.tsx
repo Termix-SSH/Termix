@@ -693,7 +693,6 @@ export function HostManagerViewer({
           "enable-drive": true,
           "drive-path": "/shared",
           "create-drive-path": true,
-          console: false,
           "server-layout": "en-us-qwerty",
           "resize-method": "display-update",
         },
@@ -711,7 +710,6 @@ export function HostManagerViewer({
         notes: "Ubuntu desktop with VNC server",
         guacamoleConfig: {
           "color-depth": 24,
-          "swap-red-blue": false,
           cursor: "remote",
           "read-only": false,
           "clipboard-encoding": "UTF-8",
