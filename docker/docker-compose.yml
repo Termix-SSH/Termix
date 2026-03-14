@@ -1,49 +1,32 @@
 services:
   termix:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/lukegus/termix:latest
     container_name: termix
     restart: unless-stopped
     ports:
       - "8080:8080"
     volumes:
-      - termix_data:/app/db/data
+      - termix-data:/app/data
     environment:
-      - NODE_ENV=production
-      - PORT=8080
-      - GUACD_HOST=guacd
-      - GUACD_PORT=4822
-      - ENABLE_GUACAMOLE=true
+      PORT: "8080"
     depends_on:
       - guacd
     networks:
-      - termix-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - termix-net
 
   guacd:
     image: guacamole/guacd:latest
-    container_name: termix-guacd
+    container_name: guacd
     restart: unless-stopped
+    ports:
+      - "4822:4822"
     networks:
-      - termix-network
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "4822"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-networks:
-  termix-network:
-    driver: bridge
+      - termix-net
 
 volumes:
-  termix_data:
+  termix-data:
     driver: local
 
+networks:
+  termix-net:
+    driver: bridge
