@@ -48,7 +48,7 @@ declare module "guacamole-common-js" {
           middle?: boolean,
           right?: boolean,
           up?: boolean,
-          down?: boolean
+          down?: boolean,
         );
         constructor(state: {
           x: number;
@@ -106,4 +106,3 @@ declare module "guacamole-common-js" {
 
   export default Guacamole;
 }
-

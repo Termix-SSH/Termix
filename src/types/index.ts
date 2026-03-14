@@ -154,7 +154,6 @@ export interface HostData {
   dockerConfig?: Record<string, unknown> | null;
 }
 
-// Backward compatibility aliases
 export type SSHHost = Host;
 export type SSHHostData = HostData;
 

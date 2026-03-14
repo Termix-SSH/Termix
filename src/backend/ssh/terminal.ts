@@ -1058,8 +1058,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     };
     const authMethodNotAvailable = false;
     if (credentialId && id) {
-      // Look up the actual host owner from DB — hostConfig.userId is unreliable
-      // because the server overwrites it with the connecting user's ID on line 508.
       const hostRow = await getDb()
         .select({ userId: hosts.userId })
         .from(hosts)
@@ -1068,7 +1066,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
       const ownerId = hostRow[0]?.userId ?? null;
 
       if (ownerId && userId !== ownerId) {
-        // Non-owner: fetch the shared credential encrypted for this user
         try {
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");
@@ -1095,17 +1092,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
             });
           }
         } catch (error) {
-          sshLogger.warn(
-            `Failed to resolve shared credential for host ${id}`,
-            {
-              operation: "ssh_credentials",
-              hostId: id,
-              error: error instanceof Error ? error.message : "Unknown error",
-            },
-          );
+          sshLogger.warn(`Failed to resolve shared credential for host ${id}`, {
+            operation: "ssh_credentials",
+            hostId: id,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
         }
       } else if (ownerId) {
-        // Owner: decrypt directly with owner's DEK
         try {
           const credentials = await SimpleDBOps.select(
             getDb()

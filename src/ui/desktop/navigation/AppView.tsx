@@ -5,7 +5,7 @@ import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager
 import {
   GuacamoleDisplay,
   type GuacamoleConnectionConfig,
-} from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
+} from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
 import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";

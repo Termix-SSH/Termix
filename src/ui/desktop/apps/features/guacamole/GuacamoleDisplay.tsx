@@ -14,21 +14,17 @@ import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.ts
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
 export interface GuacamoleConnectionConfig {
-  // Pre-fetched token (preferred) - if provided, skip token fetch
   token?: string;
   protocol?: GuacamoleConnectionType;
-  // Legacy fields for backward compatibility (used if token not provided)
   type?: GuacamoleConnectionType;
   hostname?: string;
   port?: number;
   username?: string;
   password?: string;
   domain?: string;
-  // Display settings
   width?: number;
   height?: number;
   dpi?: number;
-  // Additional protocol options
   [key: string]: unknown;
 }
 
@@ -63,7 +59,7 @@ export const GuacamoleDisplay = forwardRef<
   const scaleRef = useRef<number>(1);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isReady, setIsReady] = useState(false); // true only after first frame arrives
+  const [isReady, setIsReady] = useState(false);
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -230,7 +226,6 @@ export const GuacamoleDisplay = forwardRef<
       displayRef.current.appendChild(displayElement);
     }
 
-    // Show content only after the first frame arrives
     display.onresize = () => {
       rescaleDisplay(true);
       setIsReady(true);
@@ -266,20 +261,20 @@ export const GuacamoleDisplay = forwardRef<
 
     client.onstatechange = (state: number) => {
       switch (state) {
-        case 0: // IDLE
+        case 0:
           break;
-        case 1: // CONNECTING
+        case 1:
           setIsConnecting(true);
           break;
-        case 2: // WAITING
+        case 2:
           break;
-        case 3: // CONNECTED
+        case 3:
           setIsConnecting(false);
           onConnect?.();
           break;
-        case 4: // DISCONNECTING
+        case 4:
           break;
-        case 5: // DISCONNECTED
+        case 5:
           setIsConnecting(false);
           setIsReady(false);
           keyboard.onkeydown = null;

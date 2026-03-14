@@ -190,7 +190,6 @@ class SharedCredentialManager {
       const cred = sharedCred[0].shared_credentials;
 
       if (cred.needsReEncryption) {
-        // Attempt inline re-encryption since user is now logged in
         await this.reEncryptSharedCredential(cred.id, userId);
 
         const refreshed = await db

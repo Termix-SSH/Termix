@@ -53,7 +53,6 @@ interface TabProviderProps {
 export function clearTermixSessionStorage() {
   localStorage.removeItem("termix_tabs");
   localStorage.removeItem("termix_currentTab");
-  // Clear all session keys
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -67,7 +66,6 @@ export function clearTermixSessionStorage() {
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>(() => {
-    // Check if persistence is enabled (always enabled for mobile/Electron)
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
       typeof window !== "undefined" && !!(window as any).electronAPI;
@@ -87,10 +85,9 @@ export function TabProvider({ children }: TabProviderProps) {
         let maxId = 1;
         for (const tab of parsed) {
           if (tab.type === "home") continue;
-          // Preserve instanceId from saved tab - critical for session lookup
           const restoredTab: Tab = {
             ...tab,
-            instanceId: tab.instanceId, // Preserve instanceId for session persistence
+            instanceId: tab.instanceId,
             terminalRef:
               tab.type === "terminal"
                 ? React.createRef<{ disconnect?: () => void }>()
@@ -117,7 +114,6 @@ export function TabProvider({ children }: TabProviderProps) {
       const saved = localStorage.getItem("termix_currentTab");
       if (saved) {
         const parsed = parseInt(saved, 10);
-        // Validate against restored tabs
         if (parsed && tabs.some((t) => t.id === parsed)) return parsed;
       }
     } catch {
@@ -135,9 +131,7 @@ export function TabProvider({ children }: TabProviderProps) {
   });
   const nextTabId = useRef(initialMaxId);
 
-  // Save tabs to localStorage on change
   useEffect(() => {
-    // Check if persistence is enabled (always enabled for mobile/Electron)
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
       typeof window !== "undefined" && !!(window as any).electronAPI;
@@ -146,14 +140,12 @@ export function TabProvider({ children }: TabProviderProps) {
     const shouldSave = isMobile || isElectron || persistenceEnabled;
 
     if (shouldSave) {
-      // Serialize tabs, preserving instanceId for session persistence
       const serializable = tabs
         .filter((t) => t.type !== "home")
         .map(({ terminalRef, ...rest }) => rest);
       localStorage.setItem("termix_tabs", JSON.stringify(serializable));
       localStorage.setItem("termix_currentTab", String(currentTab));
     } else {
-      // Clear saved tabs when persistence is disabled
       localStorage.removeItem("termix_tabs");
       localStorage.removeItem("termix_currentTab");
     }

@@ -811,7 +811,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     const ownerId = hostRow[0]?.userId ?? null;
 
     if (ownerId && userId !== ownerId) {
-      // Non-owner: fetch the shared credential encrypted for this user
       try {
         const { SharedCredentialManager } =
           await import("../utils/shared-credential-manager.js");
@@ -867,7 +866,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } else if (ownerId) {
-      // Owner: decrypt directly with owner's DEK
       try {
         const credentials = await SimpleDBOps.select(
           getDb()

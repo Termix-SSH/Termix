@@ -850,7 +850,10 @@ router.get("/oidc/authorize", async (req, res) => {
 
     db.$client
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_remember_me_${state}`, rememberMe === "true" ? "true" : "false");
+      .run(
+        `oidc_remember_me_${state}`,
+        rememberMe === "true" ? "true" : "false",
+      );
 
     const authUrl = new URL(config.authorization_url);
     authUrl.searchParams.set("client_id", config.client_id);

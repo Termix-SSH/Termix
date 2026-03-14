@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { GuacamoleDisplay } from "@/ui/desktop/apps/guacamole/GuacamoleDisplay.tsx";
+import { GuacamoleDisplay } from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
 import { FullScreenAppWrapper } from "@/ui/desktop/apps/FullScreenAppWrapper.tsx";
 import { getGuacamoleTokenFromHost } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";

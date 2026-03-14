@@ -69,7 +69,6 @@ export const hosts = sqliteTable("ssh_data", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  // Connection type: ssh, rdp, vnc, telnet
   connectionType: text("connection_type").notNull().default("ssh"),
   name: text("name"),
   ip: text("ip").notNull(),

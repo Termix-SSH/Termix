@@ -54,7 +54,6 @@ export function GeneralSettingsTab({
   const [passwordLoginLoading, setPasswordLoginLoading] = React.useState(false);
   const [passwordResetLoading, setPasswordResetLoading] = React.useState(false);
 
-  // Global monitoring defaults
   const [statusInterval, setStatusInterval] = React.useState(60);
   const [metricsInterval, setMetricsInterval] = React.useState(30);
   const [statusInputValue, setStatusInputValue] = React.useState("60");
@@ -67,7 +66,6 @@ export function GeneralSettingsTab({
   );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
 
-  // Guacamole settings
   const [guacEnabled, setGuacEnabled] = React.useState(true);
   const [guacUrl, setGuacUrl] = React.useState("guacd:4822");
   const [guacLoading, setGuacLoading] = React.useState(false);

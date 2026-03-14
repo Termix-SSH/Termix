@@ -733,7 +733,7 @@ function getApiUrl(path: string, defaultPort: number): string {
 function initializeApiInstances() {
   // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
   hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
-  sshHostApi = hostApi; // Backward compatibility
+  sshHostApi = hostApi;
 
   // Tunnel Management API (port 30003)
   tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
@@ -1536,7 +1536,6 @@ export async function connectSSH(
     });
     return response.data;
   } catch (error: any) {
-    // Preserve connection logs from error response
     if (error?.response?.data?.connectionLogs) {
       const errorWithLogs = new Error(
         error?.response?.data?.error ||
@@ -1545,7 +1544,6 @@ export async function connectSSH(
       );
       (errorWithLogs as any).connectionLogs =
         error.response.data.connectionLogs;
-      // Also preserve other fields like requires_totp
       if (error.response.data.requires_totp) {
         (errorWithLogs as any).requires_totp = true;
         (errorWithLogs as any).sessionId = error.response.data.sessionId;
@@ -2344,7 +2342,6 @@ export async function startMetricsPolling(hostId: number): Promise<{
     const response = await statsApi.post(`/metrics/start/${hostId}`);
     return response.data;
   } catch (error: any) {
-    // Preserve connection logs from error response
     if (error?.response?.data?.connectionLogs) {
       const errorWithLogs = new Error(
         error?.response?.data?.error || error.message,
@@ -2760,7 +2757,9 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
-export async function getOIDCAuthorizeUrl(rememberMe = false): Promise<OIDCAuthorize> {
+export async function getOIDCAuthorizeUrl(
+  rememberMe = false,
+): Promise<OIDCAuthorize> {
   try {
     const response = await authApi.get("/users/oidc/authorize", {
       params: { rememberMe },
@@ -3813,7 +3812,6 @@ export async function unlinkOIDCFromPasswordAccount(
   }
 }
 
-// Guacamole API functions
 export interface GuacamoleTokenRequest {
   protocol: "rdp" | "vnc" | "telnet";
   hostname: string;
@@ -3823,19 +3821,15 @@ export interface GuacamoleTokenRequest {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  // Extended guacamole configuration
   guacamoleConfig?: {
-    // Display settings
     colorDepth?: number;
     width?: number;
     height?: number;
     dpi?: number;
     resizeMethod?: string;
     forceLossless?: boolean;
-    // Audio settings
     disableAudio?: boolean;
     enableAudioInput?: boolean;
-    // RDP Performance settings
     enableWallpaper?: boolean;
     enableTheming?: boolean;
     enableFontSmoothing?: boolean;
@@ -3846,7 +3840,6 @@ export interface GuacamoleTokenRequest {
     disableOffscreenCaching?: boolean;
     disableGlyphCaching?: boolean;
     disableGfx?: boolean;
-    // RDP Device redirection
     enablePrinting?: boolean;
     printerName?: string;
     enableDrive?: boolean;
@@ -3856,38 +3849,31 @@ export interface GuacamoleTokenRequest {
     disableDownload?: boolean;
     disableUpload?: boolean;
     enableTouch?: boolean;
-    // RDP Session settings
     clientName?: string;
     console?: boolean;
     initialProgram?: string;
     serverLayout?: string;
     timezone?: string;
-    // RDP Gateway settings
     gatewayHostname?: string;
     gatewayPort?: number;
     gatewayUsername?: string;
     gatewayPassword?: string;
     gatewayDomain?: string;
-    // RDP RemoteApp settings
     remoteApp?: string;
     remoteAppDir?: string;
     remoteAppArgs?: string;
-    // Clipboard settings
     normalizeClipboard?: string;
     disableCopy?: boolean;
     disablePaste?: boolean;
-    // VNC specific settings
     cursor?: string;
     swapRedBlue?: boolean;
     readOnly?: boolean;
-    // Recording settings
     recordingPath?: string;
     recordingName?: string;
     createRecordingPath?: boolean;
     recordingExcludeOutput?: boolean;
     recordingExcludeMouse?: boolean;
     recordingIncludeKeys?: boolean;
-    // Wake-on-LAN settings
     wolSendPacket?: boolean;
     wolMacAddr?: string;
     wolBroadcastAddr?: string;
@@ -3900,7 +3886,6 @@ export interface GuacamoleTokenResponse {
   token: string;
 }
 
-// Helper to convert camelCase to kebab-case for guacamole parameters
 function toGuacamoleParams(
   config: GuacamoleTokenRequest["guacamoleConfig"],
 ): Record<string, unknown> {
@@ -3908,7 +3893,6 @@ function toGuacamoleParams(
 
   const params: Record<string, unknown> = {};
 
-  // Map camelCase to guacamole's kebab-case parameter names
   const mappings: Record<string, string> = {
     colorDepth: "color-depth",
     resizeMethod: "resize-method",
@@ -3966,7 +3950,6 @@ function toGuacamoleParams(
   for (const [key, value] of Object.entries(config)) {
     if (value !== undefined && value !== null && value !== "") {
       const paramName = mappings[key] || key;
-      // Guacamole expects boolean values as strings "true" or "false"
       if (typeof value === "boolean") {
         params[paramName] = value ? "true" : "false";
       } else {
@@ -4016,7 +3999,6 @@ export async function getGuacamoleTokenFromHost(
 // RBAC MANAGEMENT
 // ============================================================================
 
-// Role Management
 export async function getRoles(): Promise<{ roles: Role[] }> {
   try {
     const response = await rbacApi.get("/rbac/roles");
@@ -4065,7 +4047,6 @@ export async function deleteRole(
   }
 }
 
-// User-Role Management
 export async function getUserRoles(
   userId: string,
 ): Promise<{ roles: UserRole[] }> {
@@ -4105,14 +4086,13 @@ export async function removeRoleFromUser(
   }
 }
 
-// Host Sharing Management
 export async function shareHost(
   hostId: number,
   shareData: {
     targetType: "user" | "role";
     targetUserId?: string;
     targetRoleId?: number;
-    permissionLevel: "view"; // Only view permission is supported
+    permissionLevel: "view";
     durationHours?: number;
   },
 ): Promise<{ success: boolean }> {
@@ -4201,7 +4181,6 @@ export async function connectDockerSession(
     if (error.response?.data?.requires_warpgate) {
       return error.response.data;
     }
-    // Preserve connection logs from error response
     if (error?.response?.data?.connectionLogs) {
       const errorWithLogs = new Error(
         error?.response?.data?.error ||

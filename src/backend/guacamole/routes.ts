@@ -13,7 +13,6 @@ const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
 const authManager = AuthManager.getInstance();
 
-// Apply authentication middleware
 router.use(authManager.createAuthMiddleware());
 
 /**
@@ -136,7 +135,6 @@ router.post(
         return res.status(400).json({ error: "Invalid host ID" });
       }
 
-      // Fetch host from database
       const hostResults = await SimpleDBOps.select(
         getDb().select().from(hosts).where(eq(hosts.id, hostId)),
         "ssh_data",
@@ -149,7 +147,6 @@ router.post(
 
       const host = hostResults[0];
 
-      // Check if user has access to this host
       if (host.userId !== userId) {
         const permissionManager = PermissionManager.getInstance();
         const accessInfo = await permissionManager.canAccessHost(
@@ -168,7 +165,6 @@ router.post(
         }
       }
 
-      // Verify connection type is supported
       const connectionType = (host.connectionType as string) || "ssh";
       if (!["rdp", "vnc", "telnet"].includes(connectionType)) {
         return res.status(400).json({
@@ -176,7 +172,6 @@ router.post(
         });
       }
 
-      // Parse guacamole config if present
       let guacConfig: Record<string, unknown> = {};
       if (host.guacamoleConfig) {
         try {
@@ -258,7 +253,6 @@ router.get("/status", async (req, res) => {
       // Fall back to env vars
     }
 
-    // Simple TCP check to see if guacd is responding
     const net = await import("net");
 
     const checkConnection = (): Promise<boolean> => {

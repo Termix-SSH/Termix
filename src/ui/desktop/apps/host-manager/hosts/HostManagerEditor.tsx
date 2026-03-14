@@ -460,13 +460,11 @@ export function HostManagerEditor({
       showServerStatsInSidebar: z.boolean().default(false),
     })
     .superRefine((data, ctx) => {
-      // Skip SSH-specific auth validation for non-SSH connection types
       if (data.connectionType !== "ssh") {
         return;
       }
 
       if (!data.username || data.username.trim() === "") {
-        // Don't validate username if using credential auth - it will be filled from credential
         if (data.authType !== "credential") {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -594,7 +592,6 @@ export function HostManagerEditor({
   const formState = form.formState;
   const watchedConnectionType = form.watch("connectionType") || "ssh";
 
-  // Auto-change port when connection type changes
   const prevConnectionTypeRef = useRef<string>("ssh");
   useEffect(() => {
     const prev = prevConnectionTypeRef.current;
@@ -633,8 +630,6 @@ export function HostManagerEditor({
 
     if (!watchedFields.ip) return false;
 
-    // For non-SSH types, validate IP and port manually — do not block on other errors
-    // (guacamoleConfig sub-fields may have transient validation errors during editing)
     if (watchedFields.connectionType !== "ssh") {
       const port = Number(watchedFields.port);
       return !errors.ip && port >= 1 && port <= 65535;
@@ -692,7 +687,6 @@ export function HostManagerEditor({
           }
         }
       } else if (authTab === "none") {
-        // For non-SSH hosts (RDP/VNC/Telnet), don't clear the password
         const connectionType = form.getValues("connectionType");
         if (connectionType === "ssh") {
           form.setValue("password", "", { shouldValidate: true });
@@ -719,7 +713,6 @@ export function HostManagerEditor({
   useEffect(() => {
     if (editingHost) {
       const cleanedHost = { ...editingHost };
-      // Only clear conflicting auth fields for SSH hosts
       if ((cleanedHost as any).connectionType === "ssh") {
         if (cleanedHost.credentialId && cleanedHost.key) {
           cleanedHost.key = undefined;
@@ -861,7 +854,6 @@ export function HostManagerEditor({
       }
 
       if (cleanedHost.connectionType !== "ssh") {
-        // For non-SSH hosts (RDP, VNC, Telnet), always load password if present
         if (cleanedHost.password) {
           formData.password = cleanedHost.password;
         }
@@ -954,14 +946,12 @@ export function HostManagerEditor({
         ...data,
       };
 
-      // Include guacamole-specific fields
       (submitData as any).connectionType = data.connectionType;
       (submitData as any).domain = data.domain;
       (submitData as any).security = data.security;
       (submitData as any).ignoreCert = data.ignoreCert;
       (submitData as any).guacamoleConfig = data.guacamoleConfig;
 
-      // For non-SSH types, clear SSH-specific fields
       if (data.connectionType !== "ssh") {
         submitData.authType = "none";
         submitData.key = undefined;

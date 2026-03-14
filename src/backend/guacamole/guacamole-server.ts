@@ -56,8 +56,6 @@ const clientOptions = {
       guacLogger.error(args.join(" "));
     },
   },
-  // Allow width, height, and dpi to be passed as query parameters
-  // This allows the client to request the appropriate resolution at connection time
   allowedUnencryptedConnectionSettings: {
     rdp: ["width", "height", "dpi"],
     vnc: ["width", "height", "dpi"],
@@ -89,7 +87,6 @@ const clientOptions = {
   },
 };
 
-// Suppress hardcoded console.log calls from guacamole-lite
 const _origConsoleLog = console.log;
 console.log = (...args: unknown[]) => {
   const msg = args[0];

@@ -21,17 +21,6 @@ interface VerificationResponse {
 }
 
 export class SSHHostKeyVerifier {
-  /**
-   * Creates a hostVerifier callback for ssh2 Client.connect()
-   *
-   * @param hostId - Database ID of the host (null for quick connect)
-   * @param ip - IP address or hostname
-   * @param port - SSH port
-   * @param ws - WebSocket for user prompts (null for non-interactive connections)
-   * @param userId - User ID for logging
-   * @param isJumpHost - If true, auto-accepts without prompting
-   * @returns async hostVerifier callback
-   */
   static async createHostVerifier(
     hostId: number | null,
     ip: string,
