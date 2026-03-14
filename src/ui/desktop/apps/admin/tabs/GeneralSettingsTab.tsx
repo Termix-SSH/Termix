@@ -57,6 +57,8 @@ export function GeneralSettingsTab({
   // Global monitoring defaults
   const [statusInterval, setStatusInterval] = React.useState(60);
   const [metricsInterval, setMetricsInterval] = React.useState(30);
+  const [statusInputValue, setStatusInputValue] = React.useState("60");
+  const [metricsInputValue, setMetricsInputValue] = React.useState("30");
   const [statusUnit, setStatusUnit] = React.useState<"seconds" | "minutes">(
     "seconds",
   );
@@ -108,54 +110,59 @@ export function GeneralSettingsTab({
       .then((data) => {
         setStatusInterval(data.statusCheckInterval);
         setMetricsInterval(data.metricsInterval);
+        setStatusInputValue(String(data.statusCheckInterval));
+        setMetricsInputValue(String(data.metricsInterval));
       })
       .catch(() => {
         // Use defaults silently
       });
   }, []);
 
-  const saveMonitoringDebounce = React.useRef<NodeJS.Timeout | null>(null);
-
   const saveMonitoringSettings = React.useCallback(
-    (newStatus: number, newMetrics: number) => {
-      if (saveMonitoringDebounce.current) {
-        clearTimeout(saveMonitoringDebounce.current);
+    async (newStatus: number, newMetrics: number) => {
+      setMonitoringLoading(true);
+      try {
+        await updateGlobalMonitoringSettings({
+          statusCheckInterval: newStatus,
+          metricsInterval: newMetrics,
+        });
+        toast.success(t("admin.globalSettingsSaved"));
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : t("admin.failedToSaveGlobalSettings");
+        toast.error(errorMessage);
+      } finally {
+        setMonitoringLoading(false);
       }
-      saveMonitoringDebounce.current = setTimeout(async () => {
-        setMonitoringLoading(true);
-        try {
-          await updateGlobalMonitoringSettings({
-            statusCheckInterval: newStatus,
-            metricsInterval: newMetrics,
-          });
-          toast.success(t("admin.globalSettingsSaved"));
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : t("admin.failedToSaveGlobalSettings");
-          toast.error(errorMessage);
-        } finally {
-          setMonitoringLoading(false);
-        }
-      }, 800);
     },
     [t],
   );
 
-  const handleStatusIntervalChange = (value: string) => {
-    const num = parseInt(value) || 0;
+  const handleStatusBlur = () => {
+    const num = parseInt(statusInputValue) || 0;
     const seconds = statusUnit === "minutes" ? num * 60 : num;
     const clamped = Math.max(5, Math.min(3600, seconds));
     setStatusInterval(clamped);
+    setStatusInputValue(
+      statusUnit === "minutes"
+        ? String(Math.round(clamped / 60))
+        : String(clamped),
+    );
     saveMonitoringSettings(clamped, metricsInterval);
   };
 
-  const handleMetricsIntervalChange = (value: string) => {
-    const num = parseInt(value) || 0;
+  const handleMetricsBlur = () => {
+    const num = parseInt(metricsInputValue) || 0;
     const seconds = metricsUnit === "minutes" ? num * 60 : num;
     const clamped = Math.max(5, Math.min(3600, seconds));
     setMetricsInterval(clamped);
+    setMetricsInputValue(
+      metricsUnit === "minutes"
+        ? String(Math.round(clamped / 60))
+        : String(clamped),
+    );
     saveMonitoringSettings(statusInterval, clamped);
   };
 
@@ -285,12 +292,9 @@ export function GeneralSettingsTab({
             <div className="flex gap-2 mt-1">
               <Input
                 type="number"
-                value={
-                  statusUnit === "minutes"
-                    ? Math.round(statusInterval / 60)
-                    : statusInterval
-                }
-                onChange={(e) => handleStatusIntervalChange(e.target.value)}
+                value={statusInputValue}
+                onChange={(e) => setStatusInputValue(e.target.value)}
+                onBlur={handleStatusBlur}
                 disabled={monitoringLoading}
                 className="flex-1"
               />
@@ -298,6 +302,11 @@ export function GeneralSettingsTab({
                 value={statusUnit}
                 onValueChange={(value: "seconds" | "minutes") => {
                   setStatusUnit(value);
+                  setStatusInputValue(
+                    value === "minutes"
+                      ? String(Math.round(statusInterval / 60))
+                      : String(statusInterval),
+                  );
                 }}
               >
                 <SelectTrigger className="w-[120px]">
@@ -321,12 +330,9 @@ export function GeneralSettingsTab({
             <div className="flex gap-2 mt-1">
               <Input
                 type="number"
-                value={
-                  metricsUnit === "minutes"
-                    ? Math.round(metricsInterval / 60)
-                    : metricsInterval
-                }
-                onChange={(e) => handleMetricsIntervalChange(e.target.value)}
+                value={metricsInputValue}
+                onChange={(e) => setMetricsInputValue(e.target.value)}
+                onBlur={handleMetricsBlur}
                 disabled={monitoringLoading}
                 className="flex-1"
               />
@@ -334,6 +340,11 @@ export function GeneralSettingsTab({
                 value={metricsUnit}
                 onValueChange={(value: "seconds" | "minutes") => {
                   setMetricsUnit(value);
+                  setMetricsInputValue(
+                    value === "minutes"
+                      ? String(Math.round(metricsInterval / 60))
+                      : String(metricsInterval),
+                  );
                 }}
               >
                 <SelectTrigger className="w-[120px]">
