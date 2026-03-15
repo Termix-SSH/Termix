@@ -814,7 +814,7 @@
     "guacdUrl": "رابط guacd (المضيف:port)",
     "guacdUrlPlaceholder": "guacd:4822",
     "guacdUrlNote": "تتطلب التغييرات على مضيف/منفذ guacd إعادة تشغيل الخادم لتفعيلها.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "تم حفظ إعدادات غواكامول",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "تم تعديله إلى نطاق صحيح",
