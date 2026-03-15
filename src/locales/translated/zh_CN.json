@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (主机:端口)",
     "guacdUrlPlaceholder": "guacd：4822",
     "guacdUrlNote": "要更改guacd 主机/端口，需要重新启动服务器才能生效。",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "已保存关岛设置",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "被调整为有效范围",
