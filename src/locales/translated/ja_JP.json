@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (host:port)",
     "guacdUrlPlaceholder": "guacd:4822",
     "guacdUrlNote": "guacd ホスト/ポートへの変更を有効にするにはサーバーの再起動が必要です。",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Guacamoleの設定を保存しました",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "有効な範囲に調整されました",
