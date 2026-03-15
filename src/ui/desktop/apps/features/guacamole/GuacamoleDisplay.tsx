@@ -304,6 +304,10 @@ export const GuacamoleDisplay = forwardRef<
       }
     };
 
+    client.onaudio = (stream: Guacamole.InputStream, mimetype: string) => {
+      Guacamole.AudioPlayer.getInstance(stream, mimetype);
+    };
+
     client.connect();
   }, [getWebSocketUrl, onConnect, onDisconnect, onError, rescaleDisplay]);
 
@@ -344,6 +348,14 @@ export const GuacamoleDisplay = forwardRef<
 
     const resizeObserver = new ResizeObserver(() => {
       rescaleDisplay(false);
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
+        if (clientRef.current && containerRef.current) {
+          const w = containerRef.current.clientWidth;
+          const h = containerRef.current.clientHeight;
+          if (w > 0 && h > 0) clientRef.current.sendSize(w, h);
+        }
+      }, 200);
     });
 
     resizeObserver.observe(containerRef.current);
