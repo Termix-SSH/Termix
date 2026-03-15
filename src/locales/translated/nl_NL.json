@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (host:poort)",
     "guacdUrlPlaceholder": "adviseur:4822",
     "guacdUrlNote": "Wijzigingen in de guacd host/poort vereisen een herstart van de server van kracht.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Guacamole instellingen opgeslagen",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "is aangepast aan geldig bereik",
