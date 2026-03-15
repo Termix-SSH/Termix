@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (host:port)",
     "guacdUrlPlaceholder": "guacd:4822",
     "guacdUrlNote": "Endringer i guacd vert/port krever at serveren startes på nytt.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Innstillinger for Guacamol lagret",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "ble justert til gyldig område",
