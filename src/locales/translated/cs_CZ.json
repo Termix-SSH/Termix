@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (host:port)",
     "guacdUrlPlaceholder": "guakd:4822",
     "guacdUrlNote": "Změny hostitele/portu guacd vyžadují restartování serveru.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Nastavení Guacamole uloženo",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "byl upraven na platný rozsah",
