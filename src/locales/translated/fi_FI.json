@@ -814,7 +814,7 @@
     "guacdUrl": "guacd URL (host:port)",
     "guacdUrlPlaceholder": "guacd:4822",
     "guacdUrlNote": "Muutokset guacd isäntä/portti vaativat palvelimen uudelleenkäynnistyksen voimaan.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Guacamolen asetukset tallennettu",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "oli mukautettu kelvolliseen alueeseen",
