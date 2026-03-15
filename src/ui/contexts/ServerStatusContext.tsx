@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
 import { getAllServerStatuses, getSSHHosts } from "@/ui/main-axios";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
@@ -71,7 +72,13 @@ export function ServerStatusProvider({
         }
       });
 
-      setEnabledHostIds(enabled);
+      setEnabledHostIds((prev) => {
+        if (prev.size !== enabled.size) return enabled;
+        for (const id of enabled) {
+          if (!prev.has(id)) return enabled;
+        }
+        return prev;
+      });
       return enabled;
     } catch (error) {
       return new Set<number>();
@@ -125,14 +132,19 @@ export function ServerStatusProvider({
     }
   }, [isAuthenticated]);
 
+  const stableEnabledHostIds = useMemo(
+    () => enabledHostIds,
+    [[...enabledHostIds].sort().join(",")],
+  );
+
   const getStatus = useCallback(
     (hostId: number): StatusValue => {
-      if (!enabledHostIds.has(hostId)) {
+      if (!stableEnabledHostIds.has(hostId)) {
         return "offline";
       }
       return statuses.get(hostId)?.status || "degraded";
     },
-    [statuses, enabledHostIds],
+    [statuses, stableEnabledHostIds],
   );
 
   useEffect(() => {

@@ -99,8 +99,6 @@ function getBackendEntryPath() {
   if (isDev) {
     return path.join(appRoot, "dist", "backend", "backend", "starter.js");
   }
-  // In production, asar is disabled (asar: false in electron-builder.json)
-  // so backend is directly in appRoot/dist
   return path.join(appRoot, "dist", "backend", "backend", "starter.js");
 }
 
@@ -133,13 +131,11 @@ function startBackendServer() {
     logToFile("Data directory:", dataDir);
     logToFile("Backend cwd:", appRoot);
 
-    // Verify all required paths exist
     logToFile("Checking paths...");
     logToFile("  entryPath exists:", fs.existsSync(entryPath));
     logToFile("  dataDir exists:", fs.existsSync(dataDir));
     logToFile("  appRoot exists:", fs.existsSync(appRoot));
 
-    // List contents of dist directory
     const distPath = path.join(appRoot, "dist");
     if (fs.existsSync(distPath)) {
       logToFile("  dist directory contents:", fs.readdirSync(distPath));
@@ -214,7 +210,6 @@ function stopBackendServer() {
 
   console.log("Stopping embedded backend server...");
 
-  // Use IPC for graceful shutdown (SIGTERM doesn't work on Windows)
   try {
     backendProcess.send({ type: "shutdown" });
   } catch {
@@ -256,7 +251,6 @@ function createTray() {
 
     let trayIcon;
     if (process.platform === "darwin") {
-      // macOS: use 16x16 Template image for menu bar
       const iconPath = path.join(appRoot, "public", "icons", "16x16.png");
       trayIcon = nativeImage.createFromPath(iconPath);
       trayIcon.setTemplateImage(true);
@@ -304,7 +298,6 @@ function createTray() {
     console.log("System tray created successfully");
   } catch (err) {
     console.error("Failed to create system tray:", err);
-    // Tray is non-critical; app still works without it
   }
 }
 
@@ -871,7 +864,6 @@ app.whenReady().then(async () => {
   );
   createMenu();
 
-  // Start embedded backend server (skip in dev mode, backend runs separately via npm run dev:backend)
   if (!isDev) {
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
@@ -887,7 +879,6 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  // If tray exists, keep backend alive; otherwise quit normally
   if (!tray || tray.isDestroyed()) {
     app.quit();
   }

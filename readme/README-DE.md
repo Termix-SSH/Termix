@@ -49,6 +49,7 @@ Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-S
 # Funktionen
 
 - **SSH-Terminalzugriff** - Voll ausgestattetes Terminal mit Split-Screen-Unterstützung (bis zu 4 Panels) mit einem browserähnlichen Tab-System. Enthält Unterstützung für die Anpassung des Terminals einschließlich gängiger Terminal-Themes, Schriftarten und anderer Komponenten
+- **Remote-Desktop-Zugriff** - RDP-, VNC- und Telnet-Unterstützung über den Browser mit vollständiger Anpassung und Split-Screen
 - **SSH-Tunnelverwaltung** - Erstellen und verwalten Sie SSH-Tunnel mit automatischer Wiederverbindung und Gesundheitsüberwachung sowie Unterstützung für -l oder -r Verbindungen
 - **Remote-Dateimanager** - Verwalten Sie Dateien direkt auf Remote-Servern mit Unterstützung für das Anzeigen und Bearbeiten von Code, Bildern, Audio und Video. Laden Sie Dateien hoch, herunter, benennen Sie sie um, löschen oder verschieben Sie sie nahtlos mit Sudo-Unterstützung.
 - **Docker-Verwaltung** - Container starten, stoppen, pausieren, entfernen. Container-Statistiken anzeigen. Container über Docker-Exec-Terminal steuern. Es wurde nicht entwickelt, um Portainer oder Dockge zu ersetzen, sondern um Ihre Container einfach zu verwalten, anstatt sie zu erstellen.
@@ -69,7 +70,7 @@ Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-S
 - **Befehlspalette** - Doppeltippen Sie die linke Umschalttaste, um schnell auf SSH-Verbindungen mit Ihrer Tastatur zuzugreifen
 - **SSH-Funktionsreich** - Unterstützt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh) usw.
 - **Netzwerkgraph** - Passen Sie Ihr Dashboard an, um Ihr Homelab basierend auf Ihren SSH-Verbindungen mit Statusunterstützung zu visualisieren
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **Persistente Tabs** - SSH-Sitzungen und Tabs bleiben über Geräte/Aktualisierungen hinweg offen, wenn im Benutzerprofil aktiviert
 
 # Geplante Funktionen
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # Sponsoren
@@ -148,7 +166,7 @@ Bitte beschreiben Sie Ihr Anliegen so detailliert wie möglich, vorzugsweise auf
 
 # Screenshots
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

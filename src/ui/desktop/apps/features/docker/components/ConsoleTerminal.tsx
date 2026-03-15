@@ -249,7 +249,7 @@ export function ConsoleTerminal({
           window.location.port === "");
 
       const baseWsUrl = isDev
-        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30008`
+        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`
         : isElectronApp
           ? (() => {
               const baseUrl =

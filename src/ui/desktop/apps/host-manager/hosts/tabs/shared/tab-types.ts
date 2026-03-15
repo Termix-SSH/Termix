@@ -4,6 +4,7 @@ import type { SSHHost, Credential } from "@/types";
 
 export interface HostGeneralTabProps {
   form: UseFormReturn<FormData>;
+  connectionType: "ssh" | "rdp" | "vnc" | "telnet";
   authTab: "password" | "key" | "credential" | "none";
   setAuthTab: (value: "password" | "key" | "credential" | "none") => void;
   keyInputMethod: "upload" | "paste";
@@ -72,6 +73,12 @@ export interface HostStatisticsTabProps {
   metricsIntervalUnit: "seconds" | "minutes";
   setMetricsIntervalUnit: (value: "seconds" | "minutes") => void;
   snippets: Array<{ id: number; name: string; content: string }>;
+  t: (key: string) => string;
+}
+
+export interface HostRemoteDesktopTabProps {
+  form: UseFormReturn<FormData>;
+  connectionType: "rdp" | "vnc" | "telnet";
   t: (key: string) => string;
 }
 

@@ -49,6 +49,7 @@ Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jam
 # Fonctionnalités
 
 - **Accès terminal SSH** - Terminal complet avec support d'écran partagé (jusqu'à 4 panneaux) et un système d'onglets inspiré des navigateurs. Inclut la personnalisation du terminal avec des thèmes courants, des polices et d'autres composants
+- **Accès Bureau à Distance** - Support RDP, VNC et Telnet via navigateur avec personnalisation complète et écran partagé
 - **Gestion des tunnels SSH** - Créez et gérez des tunnels SSH avec reconnexion automatique et surveillance de l'état, avec support des connexions -l ou -r
 - **Gestionnaire de fichiers distant** - Gérez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'édition de code, images, audio et vidéo. Téléversez, téléchargez, renommez, supprimez et déplacez des fichiers de manière fluide avec support sudo
 - **Gestion Docker** - Démarrez, arrêtez, mettez en pause, supprimez des conteneurs. Consultez les statistiques des conteneurs. Contrôlez les conteneurs via le terminal docker exec. Non conçu pour remplacer Portainer ou Dockge, mais plutôt pour gérer simplement vos conteneurs plutôt que de les créer
@@ -69,7 +70,7 @@ Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jam
 - **Palette de commandes** - Appuyez deux fois sur Shift gauche pour accéder rapidement aux connexions SSH avec votre clavier
 - **SSH riche en fonctionnalités** - Support des hôtes de rebond, Warpgate, connexions basées sur TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
 - **Graphe réseau** - Personnalisez votre tableau de bord pour visualiser votre homelab basé sur vos connexions SSH avec support des statuts
-- **Persistent Tabs** - SSH sessions and tabs stay open across devices/refreshes if enabled in user profile
+- **Onglets Persistants** - Les sessions SSH et les onglets restent ouverts sur tous les appareils/actualisations si activé dans le profil utilisateur
 
 # Fonctionnalités prévues
 
@@ -115,10 +116,27 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
 
 volumes:
   termix-data:
     driver: local
+
+networks:
+  termix-net:
+    driver: bridge
 ```
 
 # Sponsors
@@ -147,7 +165,7 @@ Si vous avez besoin d'aide ou souhaitez demander une fonctionnalité pour Termix
 
 # Captures d'écran
 
-[![YouTube](../repo-images/YouTube.jpg)](https://youtu.be/sjKIqfCK0NY)
+[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
   <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>

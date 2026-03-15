@@ -17,7 +17,10 @@ import {
   updatePasswordResetAllowed,
   getGlobalMonitoringSettings,
   updateGlobalMonitoringSettings,
+  getGuacamoleSettings,
+  updateGuacamoleSettings,
 } from "@/ui/main-axios.ts";
+import { Button } from "@/components/ui/button.tsx";
 
 interface GeneralSettingsTabProps {
   allowRegistration: boolean;
@@ -51,9 +54,10 @@ export function GeneralSettingsTab({
   const [passwordLoginLoading, setPasswordLoginLoading] = React.useState(false);
   const [passwordResetLoading, setPasswordResetLoading] = React.useState(false);
 
-  // Global monitoring defaults
   const [statusInterval, setStatusInterval] = React.useState(60);
   const [metricsInterval, setMetricsInterval] = React.useState(30);
+  const [statusInputValue, setStatusInputValue] = React.useState("60");
+  const [metricsInputValue, setMetricsInputValue] = React.useState("30");
   const [statusUnit, setStatusUnit] = React.useState<"seconds" | "minutes">(
     "seconds",
   );
@@ -62,59 +66,101 @@ export function GeneralSettingsTab({
   );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
 
+  const [guacEnabled, setGuacEnabled] = React.useState(true);
+  const [guacUrl, setGuacUrl] = React.useState("guacd:4822");
+  const [guacLoading, setGuacLoading] = React.useState(false);
+
   React.useEffect(() => {
-    getGlobalMonitoringSettings()
+    getGuacamoleSettings()
       .then((data) => {
-        setStatusInterval(data.statusCheckInterval);
-        setMetricsInterval(data.metricsInterval);
+        setGuacEnabled(data.enabled);
+        setGuacUrl(data.url);
       })
       .catch(() => {
-        // Use defaults silently
+        toast.error(t("admin.failedToLoadGuacamoleSettings"));
       });
-  }, []);
+  }, [t]);
 
-  const saveMonitoringDebounce = React.useRef<NodeJS.Timeout | null>(null);
+  const saveGuacDebounce = React.useRef<NodeJS.Timeout | null>(null);
 
-  const saveMonitoringSettings = React.useCallback(
-    (newStatus: number, newMetrics: number) => {
-      if (saveMonitoringDebounce.current) {
-        clearTimeout(saveMonitoringDebounce.current);
+  const saveGuacSettings = React.useCallback(
+    (newEnabled: boolean, newUrl: string) => {
+      if (saveGuacDebounce.current) {
+        clearTimeout(saveGuacDebounce.current);
       }
-      saveMonitoringDebounce.current = setTimeout(async () => {
-        setMonitoringLoading(true);
+      saveGuacDebounce.current = setTimeout(async () => {
+        setGuacLoading(true);
         try {
-          await updateGlobalMonitoringSettings({
-            statusCheckInterval: newStatus,
-            metricsInterval: newMetrics,
-          });
-          toast.success(t("admin.globalSettingsSaved"));
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : t("admin.failedToSaveGlobalSettings");
-          toast.error(errorMessage);
+          await updateGuacamoleSettings({ enabled: newEnabled, url: newUrl });
+          toast.success(t("admin.guacamoleSettingsSaved"));
+        } catch {
+          toast.error(t("admin.failedToSaveGuacamoleSettings"));
         } finally {
-          setMonitoringLoading(false);
+          setGuacLoading(false);
         }
       }, 800);
     },
     [t],
   );
 
-  const handleStatusIntervalChange = (value: string) => {
-    const num = parseInt(value) || 0;
+  React.useEffect(() => {
+    getGlobalMonitoringSettings()
+      .then((data) => {
+        setStatusInterval(data.statusCheckInterval);
+        setMetricsInterval(data.metricsInterval);
+        setStatusInputValue(String(data.statusCheckInterval));
+        setMetricsInputValue(String(data.metricsInterval));
+      })
+      .catch(() => {
+        // Use defaults silently
+      });
+  }, []);
+
+  const saveMonitoringSettings = React.useCallback(
+    async (newStatus: number, newMetrics: number) => {
+      setMonitoringLoading(true);
+      try {
+        await updateGlobalMonitoringSettings({
+          statusCheckInterval: newStatus,
+          metricsInterval: newMetrics,
+        });
+        toast.success(t("admin.globalSettingsSaved"));
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : t("admin.failedToSaveGlobalSettings");
+        toast.error(errorMessage);
+      } finally {
+        setMonitoringLoading(false);
+      }
+    },
+    [t],
+  );
+
+  const handleStatusBlur = () => {
+    const num = parseInt(statusInputValue) || 0;
     const seconds = statusUnit === "minutes" ? num * 60 : num;
     const clamped = Math.max(5, Math.min(3600, seconds));
     setStatusInterval(clamped);
+    setStatusInputValue(
+      statusUnit === "minutes"
+        ? String(Math.round(clamped / 60))
+        : String(clamped),
+    );
     saveMonitoringSettings(clamped, metricsInterval);
   };
 
-  const handleMetricsIntervalChange = (value: string) => {
-    const num = parseInt(value) || 0;
+  const handleMetricsBlur = () => {
+    const num = parseInt(metricsInputValue) || 0;
     const seconds = metricsUnit === "minutes" ? num * 60 : num;
     const clamped = Math.max(5, Math.min(3600, seconds));
     setMetricsInterval(clamped);
+    setMetricsInputValue(
+      metricsUnit === "minutes"
+        ? String(Math.round(clamped / 60))
+        : String(clamped),
+    );
     saveMonitoringSettings(statusInterval, clamped);
   };
 
@@ -244,12 +290,9 @@ export function GeneralSettingsTab({
             <div className="flex gap-2 mt-1">
               <Input
                 type="number"
-                value={
-                  statusUnit === "minutes"
-                    ? Math.round(statusInterval / 60)
-                    : statusInterval
-                }
-                onChange={(e) => handleStatusIntervalChange(e.target.value)}
+                value={statusInputValue}
+                onChange={(e) => setStatusInputValue(e.target.value)}
+                onBlur={handleStatusBlur}
                 disabled={monitoringLoading}
                 className="flex-1"
               />
@@ -257,6 +300,11 @@ export function GeneralSettingsTab({
                 value={statusUnit}
                 onValueChange={(value: "seconds" | "minutes") => {
                   setStatusUnit(value);
+                  setStatusInputValue(
+                    value === "minutes"
+                      ? String(Math.round(statusInterval / 60))
+                      : String(statusInterval),
+                  );
                 }}
               >
                 <SelectTrigger className="w-[120px]">
@@ -280,12 +328,9 @@ export function GeneralSettingsTab({
             <div className="flex gap-2 mt-1">
               <Input
                 type="number"
-                value={
-                  metricsUnit === "minutes"
-                    ? Math.round(metricsInterval / 60)
-                    : metricsInterval
-                }
-                onChange={(e) => handleMetricsIntervalChange(e.target.value)}
+                value={metricsInputValue}
+                onChange={(e) => setMetricsInputValue(e.target.value)}
+                onBlur={handleMetricsBlur}
                 disabled={monitoringLoading}
                 className="flex-1"
               />
@@ -293,6 +338,11 @@ export function GeneralSettingsTab({
                 value={metricsUnit}
                 onValueChange={(value: "seconds" | "minutes") => {
                   setMetricsUnit(value);
+                  setMetricsInputValue(
+                    value === "minutes"
+                      ? String(Math.round(metricsInterval / 60))
+                      : String(metricsInterval),
+                  );
                 }}
               >
                 <SelectTrigger className="w-[120px]">
@@ -310,6 +360,55 @@ export function GeneralSettingsTab({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
+        <h3 className="text-lg font-semibold">
+          {t("admin.guacamoleIntegration")}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.guacamoleIntegrationDesc")}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs"
+          onClick={() =>
+            window.open("https://docs.termix.site/remote-desktop", "_blank")
+          }
+        >
+          {t("common.documentation")}
+        </Button>
+        <label className="flex items-center gap-2">
+          <Checkbox
+            checked={guacEnabled}
+            onCheckedChange={(checked) => {
+              const val = checked === true;
+              setGuacEnabled(val);
+              saveGuacSettings(val, guacUrl);
+            }}
+            disabled={guacLoading}
+          />
+          {t("admin.enableGuacamole")}
+        </label>
+        {guacEnabled && (
+          <div>
+            <label className="text-sm font-medium">{t("admin.guacdUrl")}</label>
+            <Input
+              className="mt-1"
+              value={guacUrl}
+              placeholder={t("admin.guacdUrlPlaceholder")}
+              disabled={guacLoading}
+              onChange={(e) => {
+                setGuacUrl(e.target.value);
+                saveGuacSettings(guacEnabled, e.target.value);
+              }}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("admin.guacdUrlNote")}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

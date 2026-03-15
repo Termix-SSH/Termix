@@ -5,6 +5,9 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import {
   EllipsisVertical,
   Terminal,
+  Monitor,
+  Eye,
+  MessagesSquare,
   Server,
   FolderOpen,
   Pencil,
@@ -18,7 +21,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getSSHHosts } from "@/ui/main-axios";
+import { getSSHHosts, getGuacamoleToken, logActivity } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
@@ -44,10 +47,16 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     setHost(initialHost);
   }, [initialHost]);
 
-  useEffect(() => {
+  const hostIdRef = React.useRef(host.id);
+
+  React.useEffect(() => {
+    hostIdRef.current = host.id;
+  });
+
+  React.useEffect(() => {
     const handleHostsChanged = async () => {
       const hosts = await getSSHHosts();
-      const updatedHost = hosts.find((h) => h.id === host.id);
+      const updatedHost = hosts.find((h) => h.id === hostIdRef.current);
       if (updatedHost) {
         setHost(updatedHost);
       }
@@ -56,7 +65,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     window.addEventListener("ssh-hosts:changed", handleHostsChanged);
     return () =>
       window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
-  }, [host.id]);
+  }, []);
 
   useEffect(() => {
     const handleShowTagsChanged = () => {
@@ -70,16 +79,21 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
   }, []);
 
   const statsConfig = useMemo(() => {
+    if (!host.statsConfig) {
+      return DEFAULT_STATS_CONFIG;
+    }
+    if (typeof host.statsConfig === "object") {
+      return host.statsConfig;
+    }
     try {
-      return host.statsConfig
-        ? JSON.parse(host.statsConfig)
-        : DEFAULT_STATS_CONFIG;
-    } catch {
+      return JSON.parse(host.statsConfig);
+    } catch (e) {
       return DEFAULT_STATS_CONFIG;
     }
   }, [host.statsConfig]);
-
-  const shouldShowStatus = statsConfig.statusCheckEnabled !== false;
+  const shouldShowStatus = ![false, "false"].includes(
+    statsConfig.statusCheckEnabled,
+  );
   const shouldShowMetrics = statsConfig.metricsEnabled !== false;
 
   const serverStatus = useHostStatus(host.id, shouldShowStatus);
@@ -96,18 +110,67 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     }
   }, [host.tunnelConnections]);
 
-  const handleTerminalClick = () => {
+  const handleTerminalClick = async () => {
+    if (
+      host.connectionType === "rdp" ||
+      host.connectionType === "vnc" ||
+      host.connectionType === "telnet"
+    ) {
+      try {
+        const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
+        const result = await getGuacamoleToken({
+          protocol,
+          hostname: host.ip,
+          port: host.port,
+          username: host.username,
+          password: host.password,
+          domain: host.domain,
+          security: host.security,
+          ignoreCert: host.ignoreCert,
+          guacamoleConfig: host.guacamoleConfig as any,
+        });
+        addTab({
+          type: protocol,
+          title,
+          hostConfig: host,
+          connectionConfig: {
+            token: result.token,
+            protocol,
+            type: protocol,
+            hostname: host.ip,
+            port: host.port,
+            username: host.username,
+            password: host.password,
+            domain: host.domain,
+            security: host.security,
+            "ignore-cert": host.ignoreCert,
+          },
+        });
+
+        try {
+          await logActivity(protocol, host.id, title);
+        } catch (err) {
+          console.warn(`Failed to log ${protocol} activity:`, err);
+        }
+      } catch (err) {
+        console.error("Failed to get Guacamole token:", err);
+      }
+      return;
+    }
     addTab({ type: "terminal", title, hostConfig: host });
   };
 
+  const isSSH = !host.connectionType || host.connectionType === "ssh";
+
   const visibleButtons = [
     host.enableTerminal && (host.showTerminalInSidebar ?? true),
-    host.enableFileManager && (host.showFileManagerInSidebar ?? false),
-    host.enableTunnel &&
+    isSSH && host.enableFileManager && (host.showFileManagerInSidebar ?? false),
+    isSSH &&
+      host.enableTunnel &&
       hasTunnelConnections &&
       (host.showTunnelInSidebar ?? false),
-    host.enableDocker && (host.showDockerInSidebar ?? false),
-    shouldShowMetrics && (host.showServerStatsInSidebar ?? false),
+    isSSH && host.enableDocker && (host.showDockerInSidebar ?? false),
+    isSSH && shouldShowMetrics && (host.showServerStatsInSidebar ?? false),
   ].filter(Boolean).length;
 
   return (
@@ -133,11 +196,20 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               className="!px-2 border-1 border-edge"
               onClick={handleTerminalClick}
             >
-              <Terminal />
+              {host.connectionType === "rdp" ? (
+                <Monitor />
+              ) : host.connectionType === "vnc" ? (
+                <Eye />
+              ) : host.connectionType === "telnet" ? (
+                <MessagesSquare />
+              ) : (
+                <Terminal />
+              )}
             </Button>
           )}
 
-          {host.enableFileManager &&
+          {isSSH &&
+            host.enableFileManager &&
             (host.showFileManagerInSidebar ?? false) && (
               <Button
                 variant="outline"
@@ -150,7 +222,8 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               </Button>
             )}
 
-          {host.enableTunnel &&
+          {isSSH &&
+            host.enableTunnel &&
             hasTunnelConnections &&
             (host.showTunnelInSidebar ?? false) && (
               <Button
@@ -164,29 +237,33 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
               </Button>
             )}
 
-          {host.enableDocker && (host.showDockerInSidebar ?? false) && (
-            <Button
-              variant="outline"
-              className="!px-2 border-1 border-edge"
-              onClick={() =>
-                addTab({ type: "docker", title, hostConfig: host })
-              }
-            >
-              <Container />
-            </Button>
-          )}
+          {isSSH &&
+            host.enableDocker &&
+            (host.showDockerInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "docker", title, hostConfig: host })
+                }
+              >
+                <Container />
+              </Button>
+            )}
 
-          {shouldShowMetrics && (host.showServerStatsInSidebar ?? false) && (
-            <Button
-              variant="outline"
-              className="!px-2 border-1 border-edge"
-              onClick={() =>
-                addTab({ type: "server_stats", title, hostConfig: host })
-              }
-            >
-              <Server />
-            </Button>
-          )}
+          {isSSH &&
+            shouldShowMetrics &&
+            (host.showServerStatsInSidebar ?? false) && (
+              <Button
+                variant="outline"
+                className="!px-2 border-1 border-edge"
+                onClick={() =>
+                  addTab({ type: "server_stats", title, hostConfig: host })
+                }
+              >
+                <Server />
+              </Button>
+            )}
 
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
@@ -211,11 +288,20 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   onClick={handleTerminalClick}
                   className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
                 >
-                  <Terminal className="h-4 w-4" />
+                  {host.connectionType === "rdp" ? (
+                    <Monitor className="h-4 w-4" />
+                  ) : host.connectionType === "vnc" ? (
+                    <Eye className="h-4 w-4" />
+                  ) : host.connectionType === "telnet" ? (
+                    <MessagesSquare className="h-4 w-4" />
+                  ) : (
+                    <Terminal className="h-4 w-4" />
+                  )}
                   <span className="flex-1">{t("hosts.openTerminal")}</span>
                 </DropdownMenuItem>
               )}
-              {shouldShowMetrics &&
+              {isSSH &&
+                shouldShowMetrics &&
                 !(host.showServerStatsInSidebar ?? false) && (
                   <DropdownMenuItem
                     onClick={() =>
@@ -227,7 +313,8 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openServerStats")}</span>
                   </DropdownMenuItem>
                 )}
-              {host.enableFileManager &&
+              {isSSH &&
+                host.enableFileManager &&
                 !(host.showFileManagerInSidebar ?? false) && (
                   <DropdownMenuItem
                     onClick={() =>
@@ -239,7 +326,8 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openFileManager")}</span>
                   </DropdownMenuItem>
                 )}
-              {host.enableTunnel &&
+              {isSSH &&
+                host.enableTunnel &&
                 hasTunnelConnections &&
                 !(host.showTunnelInSidebar ?? false) && (
                   <DropdownMenuItem
@@ -252,17 +340,19 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openTunnels")}</span>
                   </DropdownMenuItem>
                 )}
-              {host.enableDocker && !(host.showDockerInSidebar ?? false) && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    addTab({ type: "docker", title, hostConfig: host })
-                  }
-                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
-                >
-                  <Container className="h-4 w-4" />
-                  <span className="flex-1">{t("hosts.openDocker")}</span>
-                </DropdownMenuItem>
-              )}
+              {isSSH &&
+                host.enableDocker &&
+                !(host.showDockerInSidebar ?? false) && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      addTab({ type: "docker", title, hostConfig: host })
+                    }
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                  >
+                    <Container className="h-4 w-4" />
+                    <span className="flex-1">{t("hosts.openDocker")}</span>
+                  </DropdownMenuItem>
+                )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({

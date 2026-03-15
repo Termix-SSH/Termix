@@ -1,11 +1,12 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
+import { restartGuacServer } from "../../guacamole/guacamole-server.js";
 import crypto from "crypto";
 import { db } from "../db/index.js";
 import {
   users,
   sessions,
-  sshData,
+  hosts,
   sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
@@ -265,7 +266,7 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
 
-    await db.delete(sshData).where(eq(sshData.userId, userId));
+    await db.delete(hosts).where(eq(hosts.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
     await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
@@ -789,6 +790,12 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  *     description: Returns the OIDC authorization URL.
  *     tags:
  *       - Users
+ *     parameters:
+ *       - in: query
+ *         name: rememberMe
+ *         schema:
+ *           type: boolean
+ *         description: Whether to extend the session to 30 days instead of 2 hours.
  *     responses:
  *       200:
  *         description: OIDC authorization URL.
@@ -799,28 +806,9 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
+    const { rememberMe } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
     const backendCallbackUri = `${origin}/users/oidc/callback`;
-
-    authLogger.info("OIDC authorize request headers", {
-      protocol: req.protocol,
-      host: req.get("Host"),
-      origin: req.get("Origin"),
-      referer: req.get("Referer"),
-      "x-forwarded-proto": req.get("X-Forwarded-Proto"),
-      "x-forwarded-host": req.get("X-Forwarded-Host"),
-      "x-forwarded-port": req.get("X-Forwarded-Port"),
-      secure: req.secure,
-      calculatedOrigin: origin,
-      backendCallbackUri: backendCallbackUri,
-    });
-
-    authLogger.info(
-      `\n${"=".repeat(68)}\n` +
-        `  OIDC CALLBACK URL - Register this in your OAuth provider:\n` +
-        `  ${backendCallbackUri}\n` +
-        `${"=".repeat(68)}`,
-    );
 
     const envConfig = getOIDCConfigFromEnv();
     let config;
@@ -860,12 +848,12 @@ router.get("/oidc/authorize", async (req, res) => {
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
       .run(`oidc_frontend_origin_${state}`, frontendOrigin);
 
-    authLogger.info("OIDC authorization initiated", {
-      operation: "oidc_authorize",
-      backendCallbackUri,
-      frontendOrigin,
-      referer,
-    });
+    db.$client
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+      .run(
+        `oidc_remember_me_${state}`,
+        rememberMe === "true" ? "true" : "false",
+      );
 
     const authUrl = new URL(config.authorization_url);
     authUrl.searchParams.set("client_id", config.client_id);
@@ -898,10 +886,6 @@ router.get("/oidc/authorize", async (req, res) => {
  */
 router.get("/oidc/callback", async (req, res) => {
   const { code, state } = req.query;
-  authLogger.info("OIDC login callback received", {
-    operation: "oidc_login_request",
-    state,
-  });
 
   if (!isNonEmptyString(code) || !isNonEmptyString(state)) {
     return res.status(400).json({ error: "Code and state are required" });
@@ -913,6 +897,9 @@ router.get("/oidc/callback", async (req, res) => {
   const storedFrontendOriginRow = db.$client
     .prepare("SELECT value FROM settings WHERE key = ?")
     .get(`oidc_frontend_origin_${state}`);
+  const storedRememberMeRow = db.$client
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(`oidc_remember_me_${state}`);
 
   if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
     return res
@@ -925,6 +912,8 @@ router.get("/oidc/callback", async (req, res) => {
   ).value as string;
   const frontendOrigin = (storedFrontendOriginRow as Record<string, unknown>)
     .value as string;
+  const storedRememberMe =
+    (storedRememberMeRow as Record<string, unknown> | null)?.value === "true";
 
   try {
     const storedNonce = db.$client
@@ -950,12 +939,6 @@ router.get("/oidc/callback", async (req, res) => {
         (configRow as Record<string, unknown>).value as string,
       );
     }
-
-    authLogger.info("OIDC token exchange attempt", {
-      operation: "oidc_token_exchange",
-      backendCallbackUri,
-      frontendOrigin,
-    });
 
     const tokenResponse = await fetch(config.token_url, {
       method: "POST",
@@ -998,6 +981,9 @@ router.get("/oidc/callback", async (req, res) => {
     db.$client
       .prepare("DELETE FROM settings WHERE key = ?")
       .run(`oidc_frontend_origin_${state}`);
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_remember_me_${state}`);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1320,6 +1306,7 @@ router.get("/oidc/callback", async (req, res) => {
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
+      rememberMe: storedRememberMe,
     });
 
     authLogger.success("OIDC login successful", {
@@ -1334,7 +1321,9 @@ router.get("/oidc/callback", async (req, res) => {
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
-        : 2 * 60 * 60 * 1000;
+        : storedRememberMe
+          ? 30 * 24 * 60 * 60 * 1000
+          : 2 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
@@ -2488,7 +2477,7 @@ router.post("/complete-reset", async (req, res) => {
           .delete(dismissedAlerts)
           .where(eq(dismissedAlerts.userId, userId));
         await db.delete(snippets).where(eq(snippets.userId, userId));
-        await db.delete(sshData).where(eq(sshData.userId, userId));
+        await db.delete(hosts).where(eq(hosts.userId, userId));
         await db
           .delete(sshCredentials)
           .where(eq(sshCredentials.userId, userId));
@@ -4123,6 +4112,117 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
       error: "Failed to unlink OIDC",
       details: err instanceof Error ? err.message : "Unknown error",
     });
+  }
+});
+
+/**
+ * @openapi
+ * /users/guacamole-settings:
+ *   get:
+ *     summary: Get Guacamole settings
+ *     description: Returns current guacd enabled status and host:port URL. No authentication required.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Guacamole settings.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 enabled:
+ *                   type: boolean
+ *                 url:
+ *                   type: string
+ *       500:
+ *         description: Failed to get guacamole settings.
+ */
+router.get("/guacamole-settings", async (req, res) => {
+  try {
+    const enabledRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const urlRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get() as { value: string } | undefined;
+    res.json({
+      enabled: enabledRow ? enabledRow.value !== "false" : true,
+      url: urlRow ? urlRow.value : "guacd:4822",
+    });
+  } catch (err) {
+    authLogger.error("Failed to get guacamole settings", err);
+    res.status(500).json({ error: "Failed to get guacamole settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/guacamole-settings:
+ *   patch:
+ *     summary: Update Guacamole settings
+ *     description: Admin-only. Updates guacd enabled status and/or host:port URL.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *               url:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Guacamole settings updated.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to update guacamole settings.
+ */
+router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled, url } = req.body;
+    if (typeof enabled === "boolean") {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_enabled', ?)",
+        )
+        .run(enabled ? "true" : "false");
+    }
+    if (typeof url === "string") {
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_url', ?)",
+        )
+        .run(url);
+      try {
+        await restartGuacServer();
+      } catch (err) {
+        authLogger.error("Failed to restart guac server after URL update", err);
+      }
+    }
+    const enabledRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const urlRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get() as { value: string } | undefined;
+    res.json({
+      enabled: enabledRow ? enabledRow.value !== "false" : true,
+      url: urlRow ? urlRow.value : "guacd:4822",
+    });
+  } catch (err) {
+    authLogger.error("Failed to update guacamole settings", err);
+    res.status(500).json({ error: "Failed to update guacamole settings" });
   }
 });
 

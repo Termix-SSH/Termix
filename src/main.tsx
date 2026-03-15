@@ -8,12 +8,13 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
-import HostManagerApp from "./ui/desktop/apps/HostManagerApp.tsx";
+import HostManagerApp from "./ui/desktop/apps/host-manager/HostManagerApp.tsx";
 import TerminalApp from "./ui/desktop/apps/features/terminal/TerminalApp.tsx";
 import FileManagerApp from "./ui/desktop/apps/features/file-manager/FileManagerApp.tsx";
 import TunnelApp from "./ui/desktop/apps/features/tunnel/TunnelApp.tsx";
 import ServerStatsApp from "./ui/desktop/apps/features/server-stats/ServerStatsApp.tsx";
 import DockerApp from "./ui/desktop/apps/features/docker/DockerApp.tsx";
+import GuacamoleApp from "@/ui/desktop/apps/features/guacamole/GuacamoleApp.tsx";
 
 const FullscreenApp: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
@@ -33,6 +34,10 @@ const FullscreenApp: React.FC = () => {
       return <ServerStatsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
+    case "rdp":
+    case "vnc":
+    case "telnet":
+      return <GuacamoleApp hostId={hostId || undefined} />;
     default:
       return <DesktopApp />;
   }

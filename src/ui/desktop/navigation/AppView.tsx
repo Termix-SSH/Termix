@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
 import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
 import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
+import {
+  GuacamoleDisplay,
+  type GuacamoleConnectionConfig,
+} from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
 import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
 import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
 import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
@@ -14,6 +18,7 @@ import {
 import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button.tsx";
 import {
   TERMINAL_THEMES,
@@ -34,6 +39,7 @@ interface TabData {
     };
   };
   hostConfig?: any;
+  connectionConfig?: GuacamoleConnectionConfig;
   [key: string]: unknown;
 }
 
@@ -105,6 +111,9 @@ export function AppView({
           tab.type === "terminal" ||
           tab.type === "server_stats" ||
           tab.type === "file_manager" ||
+          tab.type === "rdp" ||
+          tab.type === "vnc" ||
+          tab.type === "telnet" ||
           tab.type === "tunnel" ||
           tab.type === "docker" ||
           tab.type === "network_graph",
@@ -376,6 +385,7 @@ export function AppView({
               >
                 {t.type === "terminal" ? (
                   <Terminal
+                    key={`term-${t.id}-${t.instanceId || ""}`}
                     ref={t.terminalRef}
                     hostConfig={t.hostConfig}
                     isVisible={effectiveVisible}
@@ -387,14 +397,35 @@ export function AppView({
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView
+                    key={`stats-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
                     isTopbarOpen={isTopbarOpen}
                     embedded
                   />
+                ) : t.type === "rdp" ||
+                  t.type === "vnc" ||
+                  t.type === "telnet" ? (
+                  t.connectionConfig ? (
+                    <GuacamoleDisplay
+                      key={`guac-${t.id}-${t.instanceId || ""}`}
+                      connectionConfig={t.connectionConfig}
+                      isVisible={effectiveVisible}
+                      onDisconnect={() => removeTab(t.id)}
+                      onError={(err) => {
+                        toast.error(err);
+                        removeTab(t.id);
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-red-500">
+                      Missing connection configuration
+                    </div>
+                  )
                 ) : t.type === "network_graph" ? (
                   <NetworkGraphCard
+                    key={`netgraph-${t.id}-${t.instanceId || ""}`}
                     isTopbarOpen={isTopbarOpen}
                     rightSidebarOpen={rightSidebarOpen}
                     rightSidebarWidth={rightSidebarWidth}
@@ -402,6 +433,7 @@ export function AppView({
                   />
                 ) : t.type === "tunnel" ? (
                   <TunnelManager
+                    key={`tunnel-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
@@ -410,6 +442,7 @@ export function AppView({
                   />
                 ) : t.type === "docker" ? (
                   <DockerManager
+                    key={`docker-${t.id}-${t.instanceId || ""}`}
                     hostConfig={t.hostConfig}
                     title={t.title}
                     isVisible={effectiveVisible}
@@ -419,6 +452,7 @@ export function AppView({
                   />
                 ) : (
                   <FileManager
+                    key={`filemgr-${t.id}-${t.instanceId || ""}`}
                     embedded
                     initialHost={t.hostConfig}
                     onClose={() => removeTab(t.id)}

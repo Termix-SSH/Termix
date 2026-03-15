@@ -427,9 +427,7 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite
-      .prepare("DELETE FROM sessions WHERE expires_at < datetime('now')")
-      .run();
+    sqlite.prepare("DELETE FROM sessions").run();
   } catch (e) {
     databaseLogger.warn("Could not clear expired sessions on startup", {
       operation: "db_init_session_cleanup_failed",
@@ -470,6 +468,42 @@ async function initializeCompleteDatabase(): Promise<void> {
     }
   } catch (e) {
     databaseLogger.warn("Could not initialize allow_password_login setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('guac_enabled', 'true')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize guac_enabled setting", {
+      operation: "db_init",
+      error: e,
+    });
+  }
+
+  try {
+    const row = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
+      .get();
+    if (!row) {
+      sqlite
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('guac_url', 'guacd:4822')",
+        )
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize guac_url setting", {
       operation: "db_init",
       error: e,
     });
@@ -591,6 +625,11 @@ const migrateSchema = () => {
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
 
+  addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
+  addColumnIfNotExists("ssh_data", "domain", "TEXT");
+  addColumnIfNotExists("ssh_data", "security", "TEXT");
+  addColumnIfNotExists("ssh_data", "ignore_cert", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("ssh_data", "guacamole_config", "TEXT");
   addColumnIfNotExists("ssh_data", "notes", "TEXT");
 
   addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");

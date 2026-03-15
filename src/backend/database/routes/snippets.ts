@@ -632,17 +632,15 @@ router.post(
       const snippet = snippetResult[0];
 
       const { Client } = await import("ssh2");
-      const { sshData, sshCredentials } = await import("../db/schema.js");
+      const { hosts, sshCredentials } = await import("../db/schema.js");
 
       const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
 
       const hostResult = await SimpleDBOps.select(
         db
           .select()
-          .from(sshData)
-          .where(
-            and(eq(sshData.id, parseInt(hostId)), eq(sshData.userId, userId)),
-          ),
+          .from(hosts)
+          .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId))),
         "ssh_data",
         userId,
       );

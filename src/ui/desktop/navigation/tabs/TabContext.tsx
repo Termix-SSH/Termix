@@ -4,6 +4,8 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -51,7 +53,6 @@ interface TabProviderProps {
 export function clearTermixSessionStorage() {
   localStorage.removeItem("termix_tabs");
   localStorage.removeItem("termix_currentTab");
-  // Clear all session keys
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -65,7 +66,6 @@ export function clearTermixSessionStorage() {
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>(() => {
-    // Check if persistence is enabled (always enabled for mobile/Electron)
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
       typeof window !== "undefined" && !!(window as any).electronAPI;
@@ -85,10 +85,9 @@ export function TabProvider({ children }: TabProviderProps) {
         let maxId = 1;
         for (const tab of parsed) {
           if (tab.type === "home") continue;
-          // Preserve instanceId from saved tab - critical for session lookup
           const restoredTab: Tab = {
             ...tab,
-            instanceId: tab.instanceId, // Preserve instanceId for session persistence
+            instanceId: tab.instanceId,
             terminalRef:
               tab.type === "terminal"
                 ? React.createRef<{ disconnect?: () => void }>()
@@ -115,7 +114,6 @@ export function TabProvider({ children }: TabProviderProps) {
       const saved = localStorage.getItem("termix_currentTab");
       if (saved) {
         const parsed = parseInt(saved, 10);
-        // Validate against restored tabs
         if (parsed && tabs.some((t) => t.id === parsed)) return parsed;
       }
     } catch {
@@ -133,9 +131,7 @@ export function TabProvider({ children }: TabProviderProps) {
   });
   const nextTabId = useRef(initialMaxId);
 
-  // Save tabs to localStorage on change
   useEffect(() => {
-    // Check if persistence is enabled (always enabled for mobile/Electron)
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
       typeof window !== "undefined" && !!(window as any).electronAPI;
@@ -144,14 +140,12 @@ export function TabProvider({ children }: TabProviderProps) {
     const shouldSave = isMobile || isElectron || persistenceEnabled;
 
     if (shouldSave) {
-      // Serialize tabs, preserving instanceId for session persistence
       const serializable = tabs
         .filter((t) => t.type !== "home")
         .map(({ terminalRef, ...rest }) => rest);
       localStorage.setItem("termix_tabs", JSON.stringify(serializable));
       localStorage.setItem("termix_currentTab", String(currentTab));
     } else {
-      // Clear saved tabs when persistence is disabled
       localStorage.removeItem("termix_tabs");
       localStorage.removeItem("termix_currentTab");
     }
@@ -346,72 +340,92 @@ export function TabProvider({ children }: TabProviderProps) {
     });
   };
 
-  const updateHostConfig = (
-    hostId: number,
-    newHostConfig: {
-      id: number;
-      name?: string;
-      username: string;
-      ip: string;
-      port: number;
-    },
-  ) => {
-    setTabs((prev) =>
-      prev.map((tab) => {
-        if (tab.hostConfig && tab.hostConfig.id === hostId) {
-          if (tab.type === "ssh_manager") {
+  const updateHostConfig = useCallback(
+    (
+      hostId: number,
+      newHostConfig: {
+        id: number;
+        name?: string;
+        username: string;
+        ip: string;
+        port: number;
+      },
+    ) => {
+      setTabs((prev) =>
+        prev.map((tab) => {
+          if (tab.hostConfig && tab.hostConfig.id === hostId) {
+            if (tab.type === "ssh_manager") {
+              return {
+                ...tab,
+                hostConfig: {
+                  ...newHostConfig,
+                  instanceId: tab.hostConfig.instanceId,
+                },
+              };
+            }
+
             return {
               ...tab,
               hostConfig: {
                 ...newHostConfig,
-                instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
+                instanceId: tab.hostConfig.instanceId,
               },
+              title: newHostConfig.name?.trim()
+                ? newHostConfig.name
+                : t("nav.hostTabTitle", {
+                    username: newHostConfig.username,
+                    ip: newHostConfig.ip,
+                    port: newHostConfig.port,
+                  }),
             };
           }
+          return tab;
+        }),
+      );
+    },
+    [t],
+  );
 
-          return {
-            ...tab,
-            hostConfig: {
-              ...newHostConfig,
-              instanceId: tab.hostConfig.instanceId, // Preserve instanceId for session persistence
-            },
-            title: newHostConfig.name?.trim()
-              ? newHostConfig.name
-              : t("nav.hostTabTitle", {
-                  username: newHostConfig.username,
-                  ip: newHostConfig.ip,
-                  port: newHostConfig.port,
-                }),
-          };
-        }
-        return tab;
-      }),
-    );
-  };
+  const updateTab = useCallback(
+    (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === tabId
+            ? { ...tab, ...updates, _updateTimestamp: Date.now() }
+            : tab,
+        ),
+      );
+    },
+    [],
+  );
 
-  const updateTab = (tabId: number, updates: Partial<Omit<Tab, "id">>) => {
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === tabId
-          ? { ...tab, ...updates, _updateTimestamp: Date.now() }
-          : tab,
-      ),
-    );
-  };
-
-  const value: TabContextType = {
-    tabs,
-    currentTab,
-    allSplitScreenTab,
-    addTab,
-    removeTab,
-    setCurrentTab,
-    setSplitScreenTab,
-    getTab,
-    reorderTabs,
-    updateHostConfig,
-    updateTab,
-  };
+  const value: TabContextType = useMemo(
+    () => ({
+      tabs,
+      currentTab,
+      allSplitScreenTab,
+      addTab,
+      removeTab,
+      setCurrentTab,
+      setSplitScreenTab,
+      getTab,
+      reorderTabs,
+      updateHostConfig,
+      updateTab,
+    }),
+    [
+      tabs,
+      currentTab,
+      allSplitScreenTab,
+      addTab,
+      removeTab,
+      setSplitScreenTab,
+      getTab,
+      reorderTabs,
+      updateHostConfig,
+      updateTab,
+    ],
+  );
 
   return <TabContext.Provider value={value}>{children}</TabContext.Provider>;
 }

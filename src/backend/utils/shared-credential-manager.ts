@@ -4,7 +4,7 @@ import {
   sshCredentials,
   hostAccess,
   userRoles,
-  sshData,
+  hosts,
 } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
@@ -190,15 +190,27 @@ class SharedCredentialManager {
       const cred = sharedCred[0].shared_credentials;
 
       if (cred.needsReEncryption) {
-        databaseLogger.warn(
-          "Shared credential needs re-encryption but cannot be accessed yet",
-          {
-            operation: "get_shared_credential_pending",
-            hostId,
-            userId,
-          },
-        );
-        return null;
+        await this.reEncryptSharedCredential(cred.id, userId);
+
+        const refreshed = await db
+          .select()
+          .from(sharedCredentials)
+          .where(eq(sharedCredentials.id, cred.id))
+          .limit(1);
+
+        if (refreshed.length === 0 || refreshed[0].needsReEncryption) {
+          databaseLogger.warn(
+            "Shared credential needs re-encryption but cannot be accessed yet",
+            {
+              operation: "get_shared_credential_pending",
+              hostId,
+              userId,
+            },
+          );
+          return null;
+        }
+
+        return this.decryptSharedCredential(refreshed[0], userDEK);
       }
 
       return this.decryptSharedCredential(cred, userDEK);
@@ -587,7 +599,7 @@ class SharedCredentialManager {
       const access = await db
         .select()
         .from(hostAccess)
-        .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
+        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
         .where(eq(hostAccess.id, cred.hostAccessId))
         .limit(1);
 

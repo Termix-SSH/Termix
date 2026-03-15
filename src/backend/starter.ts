@@ -112,9 +112,8 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await authManager.initialize();
     DataCrypto.initialize();
 
-    const { OPKSSHBinaryManager } = await import(
-      "./utils/opkssh-binary-manager.js"
-    );
+    const { OPKSSHBinaryManager } =
+      await import("./utils/opkssh-binary-manager.js");
     try {
       await OPKSSHBinaryManager.ensureBinary();
     } catch (error) {
@@ -142,6 +141,33 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/docker.js");
     await import("./ssh/docker-console.js");
     await import("./dashboard.js");
+
+    // Initialize Guacamole server for RDP/VNC/Telnet support
+    const { getDb: getDbForGuac } = await import("./database/db/index.js");
+    const guacDb = getDbForGuac();
+    const guacEnabledRow = guacDb.$client
+      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
+      .get() as { value: string } | undefined;
+    const guacEnabled = guacEnabledRow
+      ? guacEnabledRow.value !== "false"
+      : true;
+
+    if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
+      try {
+        await import("./guacamole/guacamole-server.js");
+        systemLogger.info("Guacamole server initialized", {
+          operation: "guac_init",
+        });
+      } catch (error) {
+        systemLogger.warn(
+          "Failed to initialize Guacamole server (guacd may not be available)",
+          {
+            operation: "guac_init_skip",
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+        );
+      }
+    }
 
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",

@@ -3,7 +3,7 @@ import express from "express";
 import { db } from "../db/index.js";
 import {
   hostAccess,
-  sshData,
+  hosts,
   users,
   roles,
   userRoles,
@@ -111,8 +111,8 @@ router.post(
 
       const host = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId)))
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
         .limit(1);
 
       if (host.length === 0) {
@@ -201,9 +201,8 @@ router.post(
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
 
-        const { SharedCredentialManager } = await import(
-          "../../utils/shared-credential-manager.js"
-        );
+        const { SharedCredentialManager } =
+          await import("../../utils/shared-credential-manager.js");
         const sharedCredManager = SharedCredentialManager.getInstance();
         if (targetType === "user") {
           await sharedCredManager.createSharedCredentialForUser(
@@ -244,9 +243,8 @@ router.post(
         expiresAt,
       });
 
-      const { SharedCredentialManager } = await import(
-        "../../utils/shared-credential-manager.js"
-      );
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
       if (targetType === "user") {
@@ -336,8 +334,8 @@ router.delete(
     try {
       const host = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId)))
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
         .limit(1);
 
       if (host.length === 0) {
@@ -404,8 +402,8 @@ router.get(
     try {
       const host = await db
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId)))
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
         .limit(1);
 
       if (host.length === 0) {
@@ -484,21 +482,21 @@ router.get(
 
       const sharedHosts = await db
         .select({
-          id: sshData.id,
-          name: sshData.name,
-          ip: sshData.ip,
-          port: sshData.port,
-          username: sshData.username,
-          folder: sshData.folder,
-          tags: sshData.tags,
+          id: hosts.id,
+          name: hosts.name,
+          ip: hosts.ip,
+          port: hosts.port,
+          username: hosts.username,
+          folder: hosts.folder,
+          tags: hosts.tags,
           permissionLevel: hostAccess.permissionLevel,
           expiresAt: hostAccess.expiresAt,
           grantedBy: hostAccess.grantedBy,
           ownerUsername: users.username,
         })
         .from(hostAccess)
-        .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
-        .innerJoin(users, eq(sshData.userId, users.id))
+        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
+        .innerJoin(users, eq(hosts.userId, users.id))
         .where(
           and(
             eq(hostAccess.userId, userId),
@@ -978,12 +976,11 @@ router.post(
       const hostsSharedWithRole = await db
         .select()
         .from(hostAccess)
-        .innerJoin(sshData, eq(hostAccess.hostId, sshData.id))
+        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
         .where(eq(hostAccess.roleId, roleId));
 
-      const { SharedCredentialManager } = await import(
-        "../../utils/shared-credential-manager.js"
-      );
+      const { SharedCredentialManager } =
+        await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
       for (const { host_access, ssh_data } of hostsSharedWithRole) {

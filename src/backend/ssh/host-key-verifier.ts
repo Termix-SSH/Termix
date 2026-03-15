@@ -1,6 +1,6 @@
 import type { WebSocket } from "ws";
 import { db } from "../database/db/index.js";
-import { sshData } from "../database/db/schema.js";
+import { hosts } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
 
@@ -21,17 +21,6 @@ interface VerificationResponse {
 }
 
 export class SSHHostKeyVerifier {
-  /**
-   * Creates a hostVerifier callback for ssh2 Client.connect()
-   *
-   * @param hostId - Database ID of the host (null for quick connect)
-   * @param ip - IP address or hostname
-   * @param port - SSH port
-   * @param ws - WebSocket for user prompts (null for non-interactive connections)
-   * @param userId - User ID for logging
-   * @param isJumpHost - If true, auto-accepts without prompting
-   * @returns async hostVerifier callback
-   */
   static async createHostVerifier(
     hostId: number | null,
     ip: string,
@@ -63,8 +52,8 @@ export class SSHHostKeyVerifier {
             return;
           }
 
-          const host = await db.query.sshData.findFirst({
-            where: eq(sshData.id, hostId),
+          const host = await db.query.hosts.findFirst({
+            where: eq(hosts.id, hostId),
           });
 
           if (!host) {
@@ -153,11 +142,11 @@ export class SSHHostKeyVerifier {
 
           if (host.hostKeyFingerprint === fingerprint) {
             await db
-              .update(sshData)
+              .update(hosts)
               .set({
                 hostKeyLastVerified: new Date().toISOString(),
               })
-              .where(eq(sshData.id, hostId));
+              .where(eq(hosts.id, hostId));
 
             sshLogger.info("Host key verified successfully", {
               operation: "host_key_verified",
@@ -287,7 +276,7 @@ export class SSHHostKeyVerifier {
     algorithm: string,
   ): Promise<void> {
     await db
-      .update(sshData)
+      .update(hosts)
       .set({
         hostKeyFingerprint: fingerprint,
         hostKeyType: keyType,
@@ -295,7 +284,7 @@ export class SSHHostKeyVerifier {
         hostKeyFirstSeen: new Date().toISOString(),
         hostKeyLastVerified: new Date().toISOString(),
       })
-      .where(eq(sshData.id, hostId));
+      .where(eq(hosts.id, hostId));
   }
 
   private static async updateHostKey(
@@ -306,7 +295,7 @@ export class SSHHostKeyVerifier {
     currentChangeCount: number,
   ): Promise<void> {
     await db
-      .update(sshData)
+      .update(hosts)
       .set({
         hostKeyFingerprint: fingerprint,
         hostKeyType: keyType,
@@ -314,7 +303,7 @@ export class SSHHostKeyVerifier {
         hostKeyLastVerified: new Date().toISOString(),
         hostKeyChangedCount: currentChangeCount + 1,
       })
-      .where(eq(sshData.id, hostId));
+      .where(eq(hosts.id, hostId));
   }
 
   private static async promptUserForNewKey(

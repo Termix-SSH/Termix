@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials, sshData } from "../database/db/schema.js";
+import { sshCredentials, hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -179,20 +179,20 @@ async function resolveJumpHost(
   userId: string,
 ): Promise<JumpHostConfig | null> {
   try {
-    const hosts = await SimpleDBOps.select(
+    const hostResults = await SimpleDBOps.select(
       getDb()
         .select()
-        .from(sshData)
-        .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
       "ssh_data",
       userId,
     );
 
-    if (hosts.length === 0) {
+    if (hostResults.length === 0) {
       return null;
     }
 
-    const host = hosts[0];
+    const host = hostResults[0];
 
     if (host.credentialId) {
       const credentials = await SimpleDBOps.select(
@@ -803,64 +803,137 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
   if (credentialId && hostId && userId) {
-    try {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+    const hostRow = await getDb()
+      .select({ userId: hosts.userId })
+      .from(hosts)
+      .where(eq(hosts.id, hostId))
+      .limit(1);
+    const ownerId = hostRow[0]?.userId ?? null;
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        resolvedCredentials = {
-          password: credential.password,
-          sshKey: credential.privateKey,
-          keyPassword: credential.keyPassword,
-          authType: credential.authType,
-        };
+    if (ownerId && userId !== ownerId) {
+      try {
+        const { SharedCredentialManager } =
+          await import("../utils/shared-credential-manager.js");
+        const sharedCredManager = SharedCredentialManager.getInstance();
+        const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+          hostId,
+          userId,
+        );
+
+        if (sharedCred) {
+          resolvedCredentials = {
+            password: sharedCred.password,
+            sshKey: sharedCred.key,
+            keyPassword: sharedCred.keyPassword,
+            authType: sharedCred.authType,
+          };
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "sftp_auth",
+              "Credentials resolved from shared credential store",
+            ),
+          );
+        } else {
+          fileLogger.warn(`No shared credentials found for host ${hostId}`, {
+            operation: "ssh_credentials",
+            hostId,
+            userId,
+          });
+          connectionLogs.push(
+            createConnectionLog(
+              "warning",
+              "sftp_auth",
+              "No shared credentials found, using provided credentials",
+            ),
+          );
+        }
+      } catch (error) {
+        fileLogger.warn(
+          `Failed to resolve shared credential for host ${hostId}`,
+          {
+            operation: "ssh_credentials",
+            hostId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+        );
         connectionLogs.push(
           createConnectionLog(
-            "info",
+            "warning",
             "sftp_auth",
-            "Credentials resolved from credential store",
+            `Failed to resolve shared credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
           ),
         );
-      } else {
-        fileLogger.warn(`No credentials found for host ${hostId}`, {
+      }
+    } else if (ownerId) {
+      try {
+        const credentials = await SimpleDBOps.select(
+          getDb()
+            .select()
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, ownerId),
+              ),
+            ),
+          "ssh_credentials",
+          ownerId,
+        );
+
+        if (credentials.length > 0) {
+          const credential = credentials[0];
+          resolvedCredentials = {
+            password: credential.password,
+            sshKey: credential.privateKey,
+            keyPassword: credential.keyPassword,
+            authType: credential.authType,
+          };
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "sftp_auth",
+              "Credentials resolved from credential store",
+            ),
+          );
+        } else {
+          fileLogger.warn(`No credentials found for host ${hostId}`, {
+            operation: "ssh_credentials",
+            hostId,
+            credentialId,
+            userId: ownerId,
+          });
+          connectionLogs.push(
+            createConnectionLog(
+              "warning",
+              "sftp_auth",
+              "No stored credentials found, using provided credentials",
+            ),
+          );
+        }
+      } catch (error) {
+        fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
           operation: "ssh_credentials",
           hostId,
           credentialId,
-          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
         });
         connectionLogs.push(
           createConnectionLog(
             "warning",
             "sftp_auth",
-            "No stored credentials found, using provided credentials",
+            `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
           ),
         );
       }
-    } catch (error) {
-      fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
-        operation: "ssh_credentials",
-        hostId,
-        credentialId,
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "warning",
-          "sftp_auth",
-          `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
-        ),
+    } else {
+      fileLogger.warn(
+        "Missing userId for credential resolution in file manager",
+        {
+          operation: "ssh_credentials",
+          hostId,
+          credentialId,
+        },
       );
     }
   } else if (credentialId && hostId) {
@@ -1201,18 +1274,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     if (hostId && userId) {
       (async () => {
         try {
-          const hosts = await SimpleDBOps.select(
+          const hostResults = await SimpleDBOps.select(
             getDb()
               .select()
-              .from(sshData)
-              .where(and(eq(sshData.id, hostId), eq(sshData.userId, userId))),
+              .from(hosts)
+              .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
             "ssh_data",
             userId,
           );
 
           const hostName =
-            hosts.length > 0 && hosts[0].name
-              ? hosts[0].name
+            hostResults.length > 0 && hostResults[0].name
+              ? hostResults[0].name
               : `${username}@${ip}:${port}`;
 
           const authManager = AuthManager.getInstance();
@@ -1844,14 +1917,14 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hosts = await SimpleDBOps.select(
+            const hostResults = await SimpleDBOps.select(
               getDb()
                 .select()
-                .from(sshData)
+                .from(hosts)
                 .where(
                   and(
-                    eq(sshData.id, session.hostId!),
-                    eq(sshData.userId, session.userId!),
+                    eq(hosts.id, session.hostId!),
+                    eq(hosts.userId, session.userId!),
                   ),
                 ),
               "ssh_data",
@@ -1859,8 +1932,8 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
             );
 
             const hostName =
-              hosts.length > 0 && hosts[0].name
-                ? hosts[0].name
+              hostResults.length > 0 && hostResults[0].name
+                ? hostResults[0].name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             const authManager = AuthManager.getInstance();
@@ -2045,14 +2118,14 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hosts = await SimpleDBOps.select(
+            const hostResults = await SimpleDBOps.select(
               getDb()
                 .select()
-                .from(sshData)
+                .from(hosts)
                 .where(
                   and(
-                    eq(sshData.id, session.hostId!),
-                    eq(sshData.userId, session.userId!),
+                    eq(hosts.id, session.hostId!),
+                    eq(hosts.userId, session.userId!),
                   ),
                 ),
               "ssh_data",
@@ -2060,8 +2133,8 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
             );
 
             const hostName =
-              hosts.length > 0 && hosts[0].name
-                ? hosts[0].name
+              hostResults.length > 0 && hostResults[0].name
+                ? hostResults[0].name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(
