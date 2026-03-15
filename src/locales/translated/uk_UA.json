@@ -814,7 +814,7 @@
     "guacdUrl": "URL guacd (хост:порт)",
     "guacdUrlPlaceholder": "гуак:4822",
     "guacdUrlNote": "Зміни на хост/порт guacd вимагає перезавантаження сервера для набуття чинності.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Налаштування Guacamole збережено",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "було скориговано до дійсного діапазону",
