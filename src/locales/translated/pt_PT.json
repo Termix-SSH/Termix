@@ -814,7 +814,7 @@
     "guacdUrl": "URL guacd (host:port)",
     "guacdUrlPlaceholder": "guacd:4822",
     "guacdUrlNote": "Alterações no host/porta do guacd requerem que o servidor reinicie para que tenha efeito.",
-    "guacamoleSettingsSaved": "Guacamole settings saved",
+    "guacamoleSettingsSaved": "Configurações de Guacamole salvas",
     "failedToSaveGuacamoleSettings": "Failed to save guacamole settings",
     "failedToLoadGuacamoleSettings": "Failed to load guacamole settings",
     "clampedToValidRange": "foi ajustado para um intervalo válido",
