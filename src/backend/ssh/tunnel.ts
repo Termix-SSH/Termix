@@ -2,6 +2,7 @@ import express, { type Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Client } from "ssh2";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { ChildProcess } from "child_process";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
@@ -1152,18 +1153,7 @@ async function connectSSHTunnel(
         "ssh-rsa",
         "ssh-dss",
       ],
-      cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
-        "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
-        "aes128-cbc",
-        "3des-cbc",
-      ],
+      cipher: SSH_ALGORITHMS.cipher,
       hmac: [
         "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",

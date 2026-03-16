@@ -3,6 +3,7 @@ import net from "net";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -1485,18 +1486,7 @@ async function buildSshConfig(
         "ssh-rsa",
         "ssh-dss",
       ],
-      cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
-        "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
-        "aes128-cbc",
-        "3des-cbc",
-      ],
+      cipher: SSH_ALGORITHMS.cipher,
       hmac: [
         "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",
