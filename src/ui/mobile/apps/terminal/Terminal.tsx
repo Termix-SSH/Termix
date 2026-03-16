@@ -13,7 +13,12 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
-import { isElectron, getCookie, getSnippets } from "@/ui/main-axios.ts";
+import {
+  isElectron,
+  isEmbeddedMode,
+  getCookie,
+  getSnippets,
+} from "@/ui/main-axios.ts";
 import { getBasePath } from "@/lib/base-path";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -506,13 +511,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
+              const configuredUrl = (window as { configuredServerUrl?: string })
+                .configuredServerUrl;
+              if (isEmbeddedMode() || !configuredUrl) {
+                return "ws://127.0.0.1:30002";
+              }
+              const wsProtocol = configuredUrl.startsWith("https://")
                 ? "wss://"
                 : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              const wsHost = configuredUrl
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/ssh/websocket/`;

@@ -17,6 +17,7 @@ import { getBasePath } from "@/lib/base-path";
 import {
   getCookie,
   isElectron,
+  isEmbeddedMode,
   logActivity,
   getSnippets,
   deleteCommandFromHistory,
@@ -742,13 +743,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
+              const configuredUrl = (window as { configuredServerUrl?: string })
+                .configuredServerUrl;
+              // Embedded mode or localhost: connect directly to the WebSocket server port
+              if (isEmbeddedMode() || !configuredUrl) {
+                return "ws://127.0.0.1:30002";
+              }
+              // Remote server: use the /ssh/websocket/ path (expects reverse proxy)
+              const wsProtocol = configuredUrl.startsWith("https://")
                 ? "wss://"
                 : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              const wsHost = configuredUrl
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
           : `${getBasePath()}/ssh/websocket/`;
