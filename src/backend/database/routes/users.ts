@@ -1318,6 +1318,10 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    if (deviceInfo.type === "desktop" || deviceInfo.type === "mobile") {
+      redirectUrl.searchParams.set("token", token);
+    }
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
