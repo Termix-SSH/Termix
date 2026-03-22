@@ -163,7 +163,7 @@ networks:
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://dartnode.com/">
-    <img src="https://dartnode.com/assets/dash/images/brand/logo.png?w=300" height="50" alt="DartNode">
+    <img src="https://i.imgur.com/5nQ9rwK.png" height="50" alt="DartNode">
   </a>
 </p>
 
