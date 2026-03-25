@@ -162,8 +162,8 @@ networks:
     <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdflare">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://dartnode.com/">
-    <img src="https://i.imgur.com/5nQ9rwK.png" height="50" alt="DartNode">
+  <a href="https://tailscale.com/">
+    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
   </a>
 </p>
 
