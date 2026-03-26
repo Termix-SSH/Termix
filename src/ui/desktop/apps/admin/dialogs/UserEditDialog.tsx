@@ -147,7 +147,6 @@ export function UserEditDialog({
       }
       setIsAdmin(checked);
       onSuccess();
-      onOpenChange(true);
     } catch (error) {
       console.error("Failed to toggle admin status:", error);
       toast.error(
