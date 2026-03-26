@@ -734,7 +734,8 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
       .get();
     if (!row) {
-      return res.json(null);
+      const envConfig = getOIDCConfigFromEnv();
+      return res.json(envConfig);
     }
 
     let config = JSON.parse((row as Record<string, unknown>).value as string);
