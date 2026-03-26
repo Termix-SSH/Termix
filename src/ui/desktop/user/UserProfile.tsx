@@ -121,6 +121,10 @@ export function UserProfile({
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") === "true",
   );
+  const [commandHistoryTracking, setCommandHistoryTracking] =
+    useState<boolean>(
+      () => localStorage.getItem("commandHistoryTracking") === "true",
+    );
   const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
     useState<boolean>(
       () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
@@ -212,6 +216,12 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+  };
+
+  const handleCommandHistoryTrackingToggle = (enabled: boolean) => {
+    setCommandHistoryTracking(enabled);
+    localStorage.setItem("commandHistoryTracking", enabled.toString());
+    window.dispatchEvent(new Event("commandHistoryTrackingChanged"));
   };
 
   const handleTerminalSyntaxHighlightingToggle = (enabled: boolean) => {
@@ -589,6 +599,20 @@ export function UserProfile({
                       <Switch
                         checked={commandAutocomplete}
                         onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.commandHistoryTracking")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.commandHistoryTrackingDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandHistoryTracking}
+                        onCheckedChange={handleCommandHistoryTrackingToggle}
                       />
                     </div>
                     <div className="flex items-center justify-between">

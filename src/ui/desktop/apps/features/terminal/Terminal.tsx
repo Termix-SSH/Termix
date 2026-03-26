@@ -211,11 +211,35 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
     const keyHandlerAttachedRef = useRef(false);
+    const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
+      useState<boolean>(
+        () => localStorage.getItem("commandHistoryTracking") === "true",
+      );
+
+    useEffect(() => {
+      const handleCommandHistoryTrackingChanged = () => {
+        setCommandHistoryTrackingEnabled(
+          localStorage.getItem("commandHistoryTracking") === "true",
+        );
+      };
+
+      window.addEventListener(
+        "commandHistoryTrackingChanged",
+        handleCommandHistoryTrackingChanged,
+      );
+
+      return () => {
+        window.removeEventListener(
+          "commandHistoryTrackingChanged",
+          handleCommandHistoryTrackingChanged,
+        );
+      };
+    }, []);
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
         hostId: hostConfig.id,
-        enabled: true,
+        enabled: commandHistoryTrackingEnabled,
         onCommandExecuted: (command) => {
           if (!autocompleteHistory.current.includes(command)) {
             autocompleteHistory.current = [
