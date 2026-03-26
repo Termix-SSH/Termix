@@ -97,7 +97,7 @@ export function UserProfile({
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, setThemePreview } = useTheme();
   const [userInfo, setUserInfo] = useState<{
     username: string;
     is_admin: boolean;
@@ -525,20 +525,65 @@ export function UserProfile({
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">
+                        <SelectContent onMouseLeave={() => setThemePreview(null)}>
+                          <SelectItem
+                            value="light"
+                            onMouseEnter={() => setThemePreview("light")}
+                          >
                             <div className="flex items-center gap-2">
                               <Sun className="w-4 h-4" />
                               {t("profile.themeLight")}
                             </div>
                           </SelectItem>
-                          <SelectItem value="dark">
+                          <SelectItem
+                            value="dark"
+                            onMouseEnter={() => setThemePreview("dark")}
+                          >
                             <div className="flex items-center gap-2">
                               <Moon className="w-4 h-4" />
                               {t("profile.themeDark")}
                             </div>
                           </SelectItem>
-                          <SelectItem value="system">
+                          <SelectItem
+                            value="dracula"
+                            onMouseEnter={() => setThemePreview("dracula")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Dracula
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="gentlemansChoice"
+                            onMouseEnter={() => setThemePreview("gentlemansChoice")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Gentleman's Choice
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="midnightEspresso"
+                            onMouseEnter={() => setThemePreview("midnightEspresso")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Midnight Espresso
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="catppuccinMocha"
+                            onMouseEnter={() => setThemePreview("catppuccinMocha")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Catppuccin Mocha
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="system"
+                            onMouseEnter={() => setThemePreview("system")}
+                          >
                             <div className="flex items-center gap-2">
                               <Monitor className="w-4 h-4" />
                               {t("profile.themeSystem")}

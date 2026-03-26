@@ -34,6 +34,8 @@ interface TabContextType {
     },
   ) => void;
   updateTab: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
+  previewTerminalTheme: string | null;
+  setPreviewTerminalTheme: (theme: string | null) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -122,6 +124,9 @@ export function TabProvider({ children }: TabProviderProps) {
     return 1;
   });
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
+  const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
+    string | null
+  >(null);
   const [initialMaxId] = useState(() => {
     let maxId = 1;
     tabs.forEach((tab) => {
@@ -412,6 +417,8 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
+      previewTerminalTheme,
+      setPreviewTerminalTheme,
     }),
     [
       tabs,
@@ -424,6 +431,8 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
+      previewTerminalTheme,
+      setPreviewTerminalTheme,
     ],
   );
 

@@ -82,6 +82,7 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  previewTheme?: string | null;
 }
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
@@ -94,6 +95,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onTitleChange,
       initialPath,
       executeCommand,
+      previewTheme,
     },
     ref,
   ) {
@@ -114,21 +116,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { theme: appTheme } = useTheme();
     const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
-    const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
+    const savedTheme = localStorage.getItem(`terminal_theme_host_${hostConfig.id}`);
+    const config = { 
+      ...DEFAULT_TERMINAL_CONFIG, 
+      ...hostConfig.terminalConfig,
+      theme: savedTheme || hostConfig.terminalConfig?.theme || DEFAULT_TERMINAL_CONFIG.theme
+    };
 
     const isDarkMode =
       appTheme === "dark" ||
+      appTheme === "dracula" ||
+      appTheme === "gentlemansChoice" ||
+      appTheme === "midnightEspresso" ||
+      appTheme === "catppuccinMocha" ||
       (appTheme === "system" &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     let themeColors;
-    if (config.theme === "termix") {
+    const activeTheme = previewTheme || config.theme;
+
+    if (activeTheme === "termix") {
       themeColors = isDarkMode
         ? TERMINAL_THEMES.termixDark.colors
         : TERMINAL_THEMES.termixLight.colors;
     } else {
       themeColors =
-        TERMINAL_THEMES[config.theme]?.colors ||
+        TERMINAL_THEMES[activeTheme]?.colors ||
         TERMINAL_THEMES.termixDark.colors;
     }
     const backgroundColor = themeColors.background;
@@ -1581,22 +1594,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       commandHistoryContext.setOnDeleteCommand(handleDeleteCommand);
     }, [handleDeleteCommand]);
 
+    // Separate theme and options updates to avoid terminal re-initialization flashes
     useEffect(() => {
-      if (!terminal || !xtermRef.current) return;
+      if (!terminal) return;
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...hostConfig.terminalConfig,
+        ...(hostConfig.terminalConfig as any),
       };
 
       let themeColors;
-      if (config.theme === "termix") {
+      const activeTheme = previewTheme || config.theme;
+
+      if (activeTheme === "termix") {
         themeColors = isDarkMode
           ? TERMINAL_THEMES.termixDark.colors
           : TERMINAL_THEMES.termixLight.colors;
       } else {
         themeColors =
-          TERMINAL_THEMES[config.theme]?.colors ||
+          TERMINAL_THEMES[activeTheme]?.colors ||
           TERMINAL_THEMES.termixDark.colors;
       }
 
@@ -1605,13 +1621,88 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
+      // Update terminal options individually to avoid re-initialization flashes
+      terminal.options.cursorBlink = config.cursorBlink;
+      terminal.options.cursorStyle = config.cursorStyle;
+      terminal.options.scrollback = config.scrollback;
+      terminal.options.fontSize = config.fontSize;
+      terminal.options.fontFamily = fontFamily;
+      terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
+      terminal.options.fastScrollModifier = config.fastScrollModifier;
+      terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
+      terminal.options.minimumContrastRatio = config.minimumContrastRatio;
+      terminal.options.letterSpacing = config.letterSpacing;
+      terminal.options.lineHeight = config.lineHeight;
+      terminal.options.bellStyle = config.bellStyle as "none" | "sound" | "visual" | "both";
+
+      terminal.options.theme = {
+        background: themeColors.background,
+        foreground: themeColors.foreground,
+        cursor: themeColors.cursor,
+        cursorAccent: themeColors.cursorAccent,
+        selectionBackground: themeColors.selectionBackground,
+        selectionForeground: themeColors.selectionForeground,
+        black: themeColors.black,
+        red: themeColors.red,
+        green: themeColors.green,
+        yellow: themeColors.yellow,
+        blue: themeColors.blue,
+        magenta: themeColors.magenta,
+        cyan: themeColors.cyan,
+        white: themeColors.white,
+        brightBlack: themeColors.brightBlack,
+        brightRed: themeColors.brightRed,
+        brightGreen: themeColors.brightGreen,
+        brightYellow: themeColors.brightYellow,
+        brightBlue: themeColors.brightBlue,
+        brightMagenta: themeColors.brightMagenta,
+        brightCyan: themeColors.brightCyan,
+        brightWhite: themeColors.brightWhite,
+      };
+
+      // Ensure terminal is correctly fitted if font-related options change
+      if (fitAddonRef.current && isFitted) {
+        performFit();
+      }
+
+      // Refresh terminal to apply new theme colors to existing buffer content
+      hardRefresh();
+    }, [terminal, hostConfig.terminalConfig, previewTheme, isDarkMode, isFitted]);
+
+    useEffect(() => {
+      if (!terminal || !xtermRef.current) return;
+
+      const config = {
+        ...DEFAULT_TERMINAL_CONFIG,
+        ...(hostConfig.terminalConfig as any),
+      };
+
+      const fontConfig = TERMINAL_FONTS.find(
+        (f) => f.value === config.fontFamily,
+      );
+      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+
+      let themeColors;
+      const activeTheme = previewTheme || config.theme;
+
+      if (activeTheme === "termix") {
+        themeColors = isDarkMode
+          ? TERMINAL_THEMES.termixDark.colors
+          : TERMINAL_THEMES.termixLight.colors;
+      } else {
+        themeColors =
+          TERMINAL_THEMES[activeTheme]?.colors ||
+          TERMINAL_THEMES.termixDark.colors;
+      }
+
+      // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
         fontSize: config.fontSize,
         fontFamily,
-        allowTransparency: true,
+        allowTransparency: true, // MUST be set before open()
         convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
@@ -1624,7 +1715,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         letterSpacing: config.letterSpacing,
         lineHeight: config.lineHeight,
         bellStyle: config.bellStyle as "none" | "sound" | "visual" | "both",
-
         theme: {
           background: themeColors.background,
           foreground: themeColors.foreground,
@@ -1698,6 +1788,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
+        
+        const config = {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...(hostConfig.terminalConfig as any),
+        };
         if (config.backspaceMode !== "control-h") return;
 
         e.preventDefault();
@@ -1733,7 +1828,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       };
-    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+    }, [xtermRef, terminal]);
 
     const isMountedRef = useRef(false);
 
