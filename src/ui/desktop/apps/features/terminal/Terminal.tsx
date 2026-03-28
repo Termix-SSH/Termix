@@ -32,11 +32,14 @@ import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/constants/terminal-themes.ts";
+import {
+  buildAutocompleteMatches,
+  isCommandAutocompleteEnabled,
+} from "@/constants/terminal-common-commands.ts";
 import type { TerminalConfig } from "@/types";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
-import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory.ts";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
@@ -291,21 +294,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [showHistoryDialog, hostConfig.id]);
 
     useEffect(() => {
-      const autocompleteEnabled =
-        localStorage.getItem("commandAutocomplete") === "true";
+      const loadAutocompleteHistory = () => {
+        const autocompleteEnabled = isCommandAutocompleteEnabled();
 
-      if (hostConfig.id && autocompleteEnabled) {
-        getCommandHistory(hostConfig.id!)
-          .then((history) => {
-            autocompleteHistory.current = history;
-          })
-          .catch((error) => {
-            console.error("Failed to load autocomplete history:", error);
-            autocompleteHistory.current = [];
-          });
-      } else {
-        autocompleteHistory.current = [];
-      }
+        if (hostConfig.id && autocompleteEnabled) {
+          getCommandHistory(hostConfig.id)
+            .then((history) => {
+              autocompleteHistory.current = history;
+            })
+            .catch((error) => {
+              console.error("Failed to load autocomplete history:", error);
+              autocompleteHistory.current = [];
+            });
+        } else {
+          autocompleteHistory.current = [];
+          setShowAutocomplete(false);
+          setAutocompleteSuggestions([]);
+          currentAutocompleteCommand.current = "";
+        }
+      };
+
+      loadAutocompleteHistory();
+      window.addEventListener(
+        "commandAutocompleteChanged",
+        loadAutocompleteHistory,
+      );
+
+      return () => {
+        window.removeEventListener(
+          "commandAutocompleteChanged",
+          loadAutocompleteHistory,
+        );
+      };
     }, [hostConfig.id]);
 
     useEffect(() => {
@@ -319,6 +339,121 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       autocompleteSelectedIndexRef.current = autocompleteSelectedIndex;
     }, [autocompleteSelectedIndex]);
+
+    const closeAutocomplete = useCallback(() => {
+      setShowAutocomplete(false);
+      setAutocompleteSuggestions([]);
+      currentAutocompleteCommand.current = "";
+    }, []);
+
+    const updateAutocompletePosition = useCallback(
+      (suggestionCount: number) => {
+        if (!terminal) {
+          return;
+        }
+
+        const cursorY = terminal.buffer.active.cursorY;
+        const cursorX = terminal.buffer.active.cursorX;
+        const rect = xtermRef.current?.getBoundingClientRect();
+
+        if (!rect) {
+          return;
+        }
+
+        const cellHeight = terminal.rows > 0 ? rect.height / terminal.rows : 20;
+        const cellWidth = terminal.cols > 0 ? rect.width / terminal.cols : 10;
+        const itemHeight = 32;
+        const footerHeight = 32;
+        const maxMenuHeight = 240;
+        const estimatedMenuHeight = Math.min(
+          suggestionCount * itemHeight + footerHeight,
+          maxMenuHeight,
+        );
+        const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
+        const cursorTopY = rect.top + cursorY * cellHeight;
+        const spaceBelow = window.innerHeight - cursorBottomY;
+        const spaceAbove = cursorTopY;
+        const showAbove =
+          spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
+
+        setAutocompletePosition({
+          top: showAbove
+            ? Math.max(0, cursorTopY - estimatedMenuHeight)
+            : cursorBottomY,
+          left: Math.max(0, rect.left + cursorX * cellWidth),
+        });
+      },
+      [terminal],
+    );
+
+    const showAutocompleteMatches = useCallback(
+      (currentCommand: string, matches: string[]) => {
+        if (matches.length === 0) {
+          closeAutocomplete();
+          return;
+        }
+
+        currentAutocompleteCommand.current = currentCommand;
+        setAutocompleteSuggestions(matches);
+        setAutocompleteSelectedIndex(0);
+        updateAutocompletePosition(matches.length);
+        setShowAutocomplete(true);
+      },
+      [closeAutocomplete, updateAutocompletePosition],
+    );
+
+    const refreshAutocompleteSuggestions = useCallback(() => {
+      const autocompleteEnabled = isCommandAutocompleteEnabled();
+
+      if (!autocompleteEnabled) {
+        closeAutocomplete();
+        return;
+      }
+
+      const currentCommand = getCurrentCommandRef.current().trim();
+
+      if (!currentCommand) {
+        closeAutocomplete();
+        return;
+      }
+
+      const matches = buildAutocompleteMatches(
+        currentCommand,
+        autocompleteHistory.current,
+      );
+
+      if (matches.length === 0) {
+        closeAutocomplete();
+        return;
+      }
+
+      showAutocompleteMatches(currentCommand, matches);
+    }, [closeAutocomplete, showAutocompleteMatches]);
+
+    const applyAutocompleteSelection = useCallback(
+      (selectedCommand: string) => {
+        if (!webSocketRef.current) return;
+
+        const currentCmd =
+          currentAutocompleteCommand.current ||
+          getCurrentCommandRef.current().trim();
+        const completion = selectedCommand.substring(currentCmd.length);
+
+        for (const char of completion) {
+          webSocketRef.current.send(
+            JSON.stringify({ type: "input", data: char }),
+          );
+        }
+
+        updateCurrentCommandRef.current(selectedCommand);
+        closeAutocomplete();
+
+        setTimeout(() => {
+          terminal?.focus();
+        }, 50);
+      },
+      [closeAutocomplete, terminal],
+    );
 
     const activityLoggingRef = useRef(false);
     const sudoPromptShownRef = useRef(false);
@@ -854,6 +989,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         terminal.onData((data) => {
           trackInput(data);
+          if (
+            data.includes("\r") ||
+            data.includes("\n") ||
+            data.includes("\u0003") ||
+            data.includes("\u0004") ||
+            data.includes("\u0015") ||
+            data.includes("\u001b")
+          ) {
+            closeAutocomplete();
+          } else {
+            refreshAutocompleteSuggestions();
+          }
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -1530,28 +1677,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const handleAutocompleteSelect = useCallback(
       (selectedCommand: string) => {
-        if (!webSocketRef.current) return;
-
-        const currentCmd = currentAutocompleteCommand.current;
-        const completion = selectedCommand.substring(currentCmd.length);
-
-        for (const char of completion) {
-          webSocketRef.current.send(
-            JSON.stringify({ type: "input", data: char }),
-          );
-        }
-
-        updateCurrentCommand(selectedCommand);
-
-        setShowAutocomplete(false);
-        setAutocompleteSuggestions([]);
-        currentAutocompleteCommand.current = "";
-
-        setTimeout(() => {
-          terminal?.focus();
-        }, 50);
+        applyAutocompleteSelection(selectedCommand);
       },
-      [terminal, updateCurrentCommand],
+      [applyAutocompleteSelection],
     );
 
     const handleDeleteCommand = useCallback(
@@ -1869,9 +1997,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (e.key === "Escape") {
             e.preventDefault();
             e.stopPropagation();
-            setShowAutocomplete(false);
-            setAutocompleteSuggestions([]);
-            currentAutocompleteCommand.current = "";
+            closeAutocomplete();
             return false;
           }
 
@@ -1895,37 +2021,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           if (
-            e.key === "Enter" &&
-            autocompleteSuggestionsRef.current.length > 0
-          ) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const selectedCommand =
-              autocompleteSuggestionsRef.current[
-                autocompleteSelectedIndexRef.current
-              ];
-            const currentCmd = currentAutocompleteCommand.current;
-            const completion = selectedCommand.substring(currentCmd.length);
-
-            if (webSocketRef.current?.readyState === 1) {
-              for (const char of completion) {
-                webSocketRef.current.send(
-                  JSON.stringify({ type: "input", data: char }),
-                );
-              }
-            }
-
-            updateCurrentCommandRef.current(selectedCommand);
-
-            setShowAutocomplete(false);
-            setAutocompleteSuggestions([]);
-            currentAutocompleteCommand.current = "";
-
-            return false;
-          }
-
-          if (
             e.key === "Tab" &&
             !e.ctrlKey &&
             !e.altKey &&
@@ -1934,17 +2029,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ) {
             e.preventDefault();
             e.stopPropagation();
-            const currentIndex = autocompleteSelectedIndexRef.current;
-            const suggestionsLength = autocompleteSuggestionsRef.current.length;
-            const newIndex =
-              currentIndex < suggestionsLength - 1 ? currentIndex + 1 : 0;
-            setAutocompleteSelectedIndex(newIndex);
+            const selectedCommand =
+              autocompleteSuggestionsRef.current[
+                autocompleteSelectedIndexRef.current
+              ];
+            if (selectedCommand) {
+              applyAutocompleteSelection(selectedCommand);
+            }
             return false;
           }
 
-          setShowAutocomplete(false);
-          setAutocompleteSuggestions([]);
-          currentAutocompleteCommand.current = "";
+          closeAutocomplete();
           return true;
         }
 
@@ -1975,8 +2070,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
 
-          const autocompleteEnabled =
-            localStorage.getItem("commandAutocomplete") === "true";
+          const autocompleteEnabled = isCommandAutocompleteEnabled();
 
           if (!autocompleteEnabled) {
             if (webSocketRef.current?.readyState === 1) {
@@ -1989,66 +2083,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
           const currentCmd = getCurrentCommandRef.current().trim();
           if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
-            const matches = autocompleteHistory.current
-              .filter(
-                (cmd) =>
-                  cmd.startsWith(currentCmd) &&
-                  cmd !== currentCmd &&
-                  cmd.length > currentCmd.length,
-              )
-              .slice(0, 5);
+            const matches = buildAutocompleteMatches(
+              currentCmd,
+              autocompleteHistory.current,
+            );
 
             if (matches.length === 1) {
-              const completedCommand = matches[0];
-              const completion = completedCommand.substring(currentCmd.length);
-
-              for (const char of completion) {
-                webSocketRef.current.send(
-                  JSON.stringify({ type: "input", data: char }),
-                );
-              }
-
-              updateCurrentCommandRef.current(completedCommand);
+              applyAutocompleteSelection(matches[0]);
             } else if (matches.length > 1) {
-              currentAutocompleteCommand.current = currentCmd;
-              setAutocompleteSuggestions(matches);
-              setAutocompleteSelectedIndex(0);
-
-              const cursorY = terminal.buffer.active.cursorY;
-              const cursorX = terminal.buffer.active.cursorX;
-              const rect = xtermRef.current?.getBoundingClientRect();
-
-              if (rect) {
-                const cellHeight =
-                  terminal.rows > 0 ? rect.height / terminal.rows : 20;
-                const cellWidth =
-                  terminal.cols > 0 ? rect.width / terminal.cols : 10;
-
-                const itemHeight = 32;
-                const footerHeight = 32;
-                const maxMenuHeight = 240;
-                const estimatedMenuHeight = Math.min(
-                  matches.length * itemHeight + footerHeight,
-                  maxMenuHeight,
-                );
-                const cursorBottomY = rect.top + (cursorY + 1) * cellHeight;
-                const cursorTopY = rect.top + cursorY * cellHeight;
-                const spaceBelow = window.innerHeight - cursorBottomY;
-                const spaceAbove = cursorTopY;
-
-                const showAbove =
-                  spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
-
-                setAutocompletePosition({
-                  top: showAbove
-                    ? Math.max(0, cursorTopY - estimatedMenuHeight)
-                    : cursorBottomY,
-                  left: Math.max(0, rect.left + cursorX * cellWidth),
-                });
-              }
-
-              setShowAutocomplete(true);
+              showAutocompleteMatches(currentCmd, matches);
+            } else {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: "\t" }),
+              );
             }
+          } else if (webSocketRef.current?.readyState === 1) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: "\t" }),
+            );
           }
           return false;
         }
@@ -2057,7 +2109,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       terminal.attachCustomKeyEventHandler(handleCustomKey);
-    }, [terminal]);
+    }, [
+      terminal,
+      applyAutocompleteSelection,
+      closeAutocomplete,
+      refreshAutocompleteSuggestions,
+      showAutocompleteMatches,
+      trackInput,
+    ]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !isVisible) return;

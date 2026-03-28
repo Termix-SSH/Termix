@@ -59,14 +59,13 @@ export function CommandAutocomplete({
               index === selectedIndex && "bg-surface text-muted-foreground",
             )}
             onClick={() => onSelect(suggestion)}
-            onMouseEnter={() => {}}
           >
             {suggestion}
           </div>
         ))}
       </div>
       <div className="px-3 py-1 text-xs text-muted-foreground border-t border-edge bg-canvas/50 shrink-0">
-        Tab/Enter to complete • ↑↓ to navigate • Esc to close
+        Tab to complete | Up/Down to navigate | Esc to close
       </div>
     </div>
   );

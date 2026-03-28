@@ -22,6 +22,7 @@ import {
   TERMINAL_FONTS,
 } from "@/constants/terminal-themes.ts";
 import type { TerminalConfig } from "@/types";
+import { useCommandTracker } from "@/ui/hooks/useCommandTracker.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
@@ -54,16 +55,22 @@ interface TerminalHandle {
   sendInput: (data: string) => void;
   notifyResize: () => void;
   refresh: () => void;
+  getCurrentCommand: () => string;
 }
 
 interface SSHTerminalProps {
   hostConfig: HostConfig;
   isVisible: boolean;
   title?: string;
+  onCommandInputChange?: (command: string) => void;
+  onCommandExecuted?: (command: string) => void;
 }
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
-  function SSHTerminal({ hostConfig, isVisible }, ref) {
+  function SSHTerminal(
+    { hostConfig, isVisible, onCommandInputChange, onCommandExecuted },
+    ref,
+  ) {
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
     const { theme: appTheme } = useTheme();
@@ -135,6 +142,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_MS = 140;
+
+    const { trackInput, getCurrentCommand } = useCommandTracker({
+      hostId: hostConfig.id,
+      enabled: true,
+      onCommandExecuted: (command) => {
+        onCommandExecuted?.(command);
+      },
+    });
+
+    const syncCurrentCommand = useCallback(() => {
+      onCommandInputChange?.(getCurrentCommand());
+    }, [getCurrentCommand, onCommandInputChange]);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -363,6 +382,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         },
         sendInput: (data: string) => {
           if (webSocketRef.current?.readyState === 1) {
+            trackInput(data);
+            syncCurrentCommand();
             webSocketRef.current.send(JSON.stringify({ type: "input", data }));
           }
         },
@@ -379,8 +400,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
         refresh: () => hardRefresh(),
+        getCurrentCommand: () => getCurrentCommand(),
       }),
-      [terminal],
+      [terminal, getCurrentCommand, syncCurrentCommand, trackInput],
     );
 
     function attemptReconnection() {
@@ -588,6 +610,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }),
         );
         terminal.onData((data) => {
+          trackInput(data);
+          syncCurrentCommand();
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -1064,6 +1088,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       return () => {
+        onCommandInputChange?.("");
         isUnmountingRef.current = true;
         shouldNotReconnectRef.current = true;
         isReconnectingRef.current = false;
@@ -1081,7 +1106,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         webSocketRef.current?.close();
       };
-    }, []);
+    }, [onCommandInputChange]);
 
     useEffect(() => {
       if (!isVisible || !isReady || !fitAddonRef.current || !terminal) {

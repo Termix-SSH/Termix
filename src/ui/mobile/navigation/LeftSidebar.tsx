@@ -21,10 +21,13 @@ import { useTheme } from "@/components/theme-provider";
 import { Input } from "@/components/ui/input.tsx";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
+} from "@/components/ui/dropdown-menu.tsx";
+import { isCommandAutocompleteEnabled } from "@/constants/terminal-common-commands.ts";
 
 interface SSHHost {
   id: number;
@@ -90,6 +93,9 @@ export function LeftSidebar({
   const prevHostsRef = React.useRef<SSHHost[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [commandAutocomplete, setCommandAutocomplete] = useState(
+    isCommandAutocompleteEnabled(),
+  );
 
   const fetchHosts = useCallback(async () => {
     try {
@@ -110,6 +116,32 @@ export function LeftSidebar({
     const interval = setInterval(fetchHosts, 300000);
     return () => clearInterval(interval);
   }, [fetchHosts]);
+
+  useEffect(() => {
+    const syncAutocompleteEnabled = () => {
+      setCommandAutocomplete(isCommandAutocompleteEnabled());
+    };
+
+    window.addEventListener(
+      "commandAutocompleteChanged",
+      syncAutocompleteEnabled,
+    );
+    window.addEventListener("storage", syncAutocompleteEnabled);
+
+    return () => {
+      window.removeEventListener(
+        "commandAutocompleteChanged",
+        syncAutocompleteEnabled,
+      );
+      window.removeEventListener("storage", syncAutocompleteEnabled);
+    };
+  }, []);
+
+  const handleCommandAutocompleteToggle = (enabled: boolean) => {
+    setCommandAutocomplete(enabled);
+    localStorage.setItem("commandAutocomplete", enabled.toString());
+    window.dispatchEvent(new Event("commandAutocompleteChanged"));
+  };
 
   useEffect(() => {
     const handleHostsChanged = () => {
@@ -255,6 +287,16 @@ export function LeftSidebar({
                     sideOffset={6}
                     className="min-w-[var(--radix-popper-anchor-width)] bg-sidebar-accent text-sidebar-accent-foreground border border-border rounded-md shadow-2xl p-1"
                   >
+                    <DropdownMenuCheckboxItem
+                      checked={commandAutocomplete}
+                      onCheckedChange={(checked) =>
+                        handleCommandAutocompleteToggle(checked === true)
+                      }
+                      className="rounded hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
+                    >
+                      <span>{t("profile.commandAutocomplete")}</span>
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="rounded px-2 py-1.5 hover:bg-surface-hover hover:text-accent-foreground focus:bg-surface-hover focus:text-accent-foreground cursor-pointer focus:outline-none"
                       onClick={() =>

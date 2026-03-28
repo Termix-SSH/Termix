@@ -14,10 +14,15 @@ import {
   TabProvider,
   useTabs,
 } from "@/ui/mobile/navigation/tabs/TabContext.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import { getCommandHistory, getUserInfo } from "@/ui/main-axios.ts";
 import { Auth } from "@/ui/mobile/authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { CommandSuggestionBar } from "@/ui/mobile/apps/terminal/CommandSuggestionBar.tsx";
+import {
+  buildAutocompleteMatches,
+  isCommandAutocompleteEnabled,
+} from "@/constants/terminal-common-commands.ts";
 
 function isReactNativeWebView(): boolean {
   return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
@@ -33,6 +38,36 @@ const AppContent: FC = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [currentCommand, setCurrentCommand] = useState("");
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<
+    string[]
+  >([]);
+  const [autocompleteEnabled, setAutocompleteEnabled] = useState(
+    isCommandAutocompleteEnabled(),
+  );
+  const autocompleteHistoryCacheRef = React.useRef<Map<number, string[]>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    const syncAutocompleteEnabled = () => {
+      setAutocompleteEnabled(isCommandAutocompleteEnabled());
+    };
+
+    window.addEventListener(
+      "commandAutocompleteChanged",
+      syncAutocompleteEnabled,
+    );
+    window.addEventListener("storage", syncAutocompleteEnabled);
+
+    return () => {
+      window.removeEventListener(
+        "commandAutocompleteChanged",
+        syncAutocompleteEnabled,
+      );
+      window.removeEventListener("storage", syncAutocompleteEnabled);
+    };
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -116,15 +151,126 @@ const AppContent: FC = () => {
     fitCurrentTerminal();
   };
 
+  const updateMobileAutocomplete = React.useCallback(
+    (hostId: number | undefined, command: string) => {
+      setCurrentCommand(command);
+
+      if (!autocompleteEnabled || !hostId) {
+        setAutocompleteSuggestions([]);
+        return;
+      }
+
+      const history = autocompleteHistoryCacheRef.current.get(hostId) || [];
+      setAutocompleteSuggestions(buildAutocompleteMatches(command, history));
+    },
+    [autocompleteEnabled],
+  );
+
+  const handleTerminalCommandChange = React.useCallback(
+    (tabId: number, hostId: number | undefined, command: string) => {
+      if (tabId !== currentTab) {
+        return;
+      }
+
+      updateMobileAutocomplete(hostId, command);
+    },
+    [currentTab, updateMobileAutocomplete],
+  );
+
+  const handleCommandExecuted = React.useCallback(
+    (hostId: number | undefined, command: string) => {
+      if (!hostId || !command.trim()) {
+        return;
+      }
+
+      const previousHistory =
+        autocompleteHistoryCacheRef.current.get(hostId) || [];
+      const nextHistory = [
+        command,
+        ...previousHistory.filter((item) => item !== command),
+      ].slice(0, 500);
+
+      autocompleteHistoryCacheRef.current.set(hostId, nextHistory);
+
+      const activeTab = currentTab ? getTab(currentTab) : undefined;
+      if (activeTab?.hostConfig?.id === hostId) {
+        setAutocompleteSuggestions(
+          buildAutocompleteMatches(currentCommand, nextHistory),
+        );
+      }
+    },
+    [currentCommand, currentTab, getTab],
+  );
+
+  const handleSuggestionSelect = React.useCallback(
+    (selectedCommand: string) => {
+      const currentTerminalTab = getTab(currentTab as number);
+      const currentCommandValue = currentCommand.trim();
+
+      if (!currentTerminalTab?.terminalRef?.current?.sendInput) {
+        return;
+      }
+
+      const completion = selectedCommand.substring(currentCommandValue.length);
+      if (!completion) {
+        setAutocompleteSuggestions([]);
+        return;
+      }
+
+      currentTerminalTab.terminalRef.current.sendInput(completion);
+    },
+    [currentCommand, currentTab, getTab],
+  );
+
   function handleKeyboardInput(input: string) {
     const currentTerminalTab = getTab(currentTab as number);
     if (
       currentTerminalTab &&
       currentTerminalTab.terminalRef?.current?.sendInput
     ) {
+      if (autocompleteEnabled && input === "\t" && autocompleteSuggestions[0]) {
+        handleSuggestionSelect(autocompleteSuggestions[0]);
+        return;
+      }
+
       currentTerminalTab.terminalRef.current.sendInput(input);
     }
   }
+
+  useEffect(() => {
+    const activeTab = currentTab ? getTab(currentTab) : undefined;
+    const hostId = activeTab?.hostConfig?.id;
+
+    if (!autocompleteEnabled || !hostId) {
+      setCurrentCommand("");
+      setAutocompleteSuggestions([]);
+      return;
+    }
+
+    const syncActiveCommand = () => {
+      const command =
+        activeTab?.terminalRef?.current?.getCurrentCommand?.() || "";
+      updateMobileAutocomplete(hostId, command);
+    };
+
+    const cachedHistory = autocompleteHistoryCacheRef.current.get(hostId);
+    if (cachedHistory) {
+      syncActiveCommand();
+      return;
+    }
+
+    getCommandHistory(hostId)
+      .then((history) => {
+        autocompleteHistoryCacheRef.current.set(hostId, history);
+      })
+      .catch((error) => {
+        console.error("Failed to load mobile command history:", error);
+        autocompleteHistoryCacheRef.current.set(hostId, []);
+      })
+      .finally(() => {
+        syncActiveCommand();
+      });
+  }, [autocompleteEnabled, currentTab, getTab, updateMobileAutocomplete]);
 
   if (authLoading) {
     return (
@@ -167,6 +313,12 @@ const AppContent: FC = () => {
               ref={tab.terminalRef}
               hostConfig={tab.hostConfig}
               isVisible={tab.id === currentTab}
+              onCommandInputChange={(command) =>
+                handleTerminalCommandChange(tab.id, tab.hostConfig?.id, command)
+              }
+              onCommandExecuted={(command) =>
+                handleCommandExecuted(tab.hostConfig?.id, command)
+              }
             />
           </div>
         ))}
@@ -189,6 +341,14 @@ const AppContent: FC = () => {
           </div>
         )}
       </div>
+      {currentTab && autocompleteEnabled && (
+        <div className="z-10">
+          <CommandSuggestionBar
+            suggestions={autocompleteSuggestions}
+            onSelect={handleSuggestionSelect}
+          />
+        </div>
+      )}
       {currentTab && (
         <div className="mb-1 z-10">
           <TerminalKeyboard

@@ -40,6 +40,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { PasswordReset } from "@/ui/desktop/user/PasswordReset.tsx";
 import { useTranslation } from "react-i18next";
+import { isCommandAutocompleteEnabled } from "@/constants/terminal-common-commands.ts";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { toast } from "sonner";
@@ -119,7 +120,7 @@ export function UserProfile({
     localStorage.getItem("fileColorCoding") !== "false",
   );
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
-    localStorage.getItem("commandAutocomplete") === "true",
+    isCommandAutocompleteEnabled(),
   );
   const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
     useState<boolean>(
@@ -212,6 +213,7 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+    window.dispatchEvent(new Event("commandAutocompleteChanged"));
   };
 
   const handleTerminalSyntaxHighlightingToggle = (enabled: boolean) => {
