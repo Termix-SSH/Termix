@@ -2472,6 +2472,10 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
       sshConn.client.exec(
@@ -3278,6 +3282,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       let contentBuffer: Buffer;
       if (typeof content === "string") {
@@ -3564,6 +3572,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       let contentBuffer: Buffer;
       if (typeof content === "string") {
