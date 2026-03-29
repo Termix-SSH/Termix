@@ -595,6 +595,11 @@ export function Auth({
       setOidcLoading(true);
       setError(null);
 
+      const urlToken = urlParams.get("token");
+      if (urlToken && (isElectron() || isReactNativeWebView())) {
+        localStorage.setItem("jwt", urlToken);
+      }
+
       window.history.replaceState({}, document.title, window.location.pathname);
 
       setTimeout(() => {

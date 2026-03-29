@@ -662,6 +662,11 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
+      const urlToken = urlParams.get("token");
+      if (urlToken && (isElectron() || isInElectronWebView())) {
+        localStorage.setItem("jwt", urlToken);
+      }
+
       getUserInfo()
         .then((meRes) => {
           if (isInElectronWebView()) {
