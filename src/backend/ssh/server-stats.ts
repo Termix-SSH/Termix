@@ -1373,8 +1373,8 @@ async function resolveHostCredentials(
             if (credential.password) {
               baseHost.password = credential.password;
             }
-            if (credential.key) {
-              baseHost.key = credential.key;
+            if (credential.key || (credential as Record<string, unknown>).privateKey) {
+              baseHost.key = credential.key || (credential as Record<string, unknown>).privateKey as string;
             }
             if (credential.keyPassword) {
               baseHost.keyPassword = credential.keyPassword;
