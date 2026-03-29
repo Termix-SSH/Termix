@@ -4315,15 +4315,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
     sshLogger.info("OAuth callback received", {
       operation: "opkssh_static_callback_received",
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      headers: {
-        host: req.headers.host,
-        "x-forwarded-proto": req.headers["x-forwarded-proto"],
-        "x-forwarded-host": req.headers["x-forwarded-host"],
-        "x-forwarded-port": req.headers["x-forwarded-port"],
-      },
+      host: req.headers.host,
     });
 
     const { getUserIdFromRequest, getActiveSessionsForUser } =
