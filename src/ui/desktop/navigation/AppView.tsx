@@ -87,20 +87,32 @@ export function AppView({
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
 }: TerminalViewProps): React.ReactElement {
-  const { tabs, currentTab, allSplitScreenTab, removeTab, updateTab } =
-    useTabs() as {
-      tabs: TabData[];
-      currentTab: number;
-      allSplitScreenTab: number[];
-      removeTab: (id: number) => void;
-      updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
-    };
+  const {
+    tabs,
+    currentTab,
+    allSplitScreenTab,
+    removeTab,
+    updateTab,
+    previewTerminalTheme,
+  } = useTabs() as {
+    tabs: TabData[];
+    currentTab: number;
+    allSplitScreenTab: number[];
+    removeTab: (id: number) => void;
+    updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
+    previewTerminalTheme: string | null;
+  };
   const { state: sidebarState } = useSidebar();
   const { theme: appTheme } = useTheme();
 
   const isDarkMode = useMemo(() => {
     if (appTheme === "dark") return true;
+    if (appTheme === "dracula") return true;
+    if (appTheme === "gentlemansChoice") return true;
+    if (appTheme === "midnightEspresso") return true;
+    if (appTheme === "catppuccinMocha") return true;
     if (appTheme === "light") return false;
+
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   }, [appTheme]);
 
@@ -362,13 +374,18 @@ export function AppView({
           };
 
           let themeColors;
-          if (terminalConfig.theme === "termix") {
+          const activeTerminalTheme =
+            t.id === currentTab && previewTerminalTheme
+              ? previewTerminalTheme
+              : terminalConfig.theme;
+
+          if (activeTerminalTheme === "termix") {
             themeColors = isDarkMode
               ? TERMINAL_THEMES.termixDark.colors
               : TERMINAL_THEMES.termixLight.colors;
           } else {
             themeColors =
-              TERMINAL_THEMES[terminalConfig.theme]?.colors ||
+              TERMINAL_THEMES[activeTerminalTheme]?.colors ||
               TERMINAL_THEMES.termixDark.colors;
           }
           const backgroundColor = themeColors.background;
@@ -394,6 +411,7 @@ export function AppView({
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
                     onTitleChange={(title) => updateTab(t.id, { title })}
+                    previewTheme={t.id === currentTab ? previewTerminalTheme : null}
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView
