@@ -31,7 +31,9 @@ import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
 function supportsMetrics(host: SSHHostWithCredentials): boolean {
   const connectionType = host.connectionType || "ssh";
-  return connectionType === "ssh";
+  if (connectionType !== "ssh") return false;
+  if (host.authType === "none" || host.authType === "opkssh") return false;
+  return true;
 }
 
 function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
