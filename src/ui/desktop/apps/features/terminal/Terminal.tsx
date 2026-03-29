@@ -769,9 +769,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
-
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(baseWsUrl);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);

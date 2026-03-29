@@ -28,7 +28,15 @@ const wss = new WebSocketServer({
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url || "", true);
-      const token = url.query.token as string;
+      let token = url.query.token as string;
+
+      if (!token) {
+        const cookieHeader = info.req.headers.cookie;
+        if (cookieHeader) {
+          const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+          if (match) token = decodeURIComponent(match[1]);
+        }
+      }
 
       if (!token) {
         return false;
