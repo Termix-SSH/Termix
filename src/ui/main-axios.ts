@@ -2538,7 +2538,7 @@ export async function loginUser(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -2550,7 +2550,7 @@ export async function loginUser(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3012,7 +3012,7 @@ export async function verifyTOTPLogin(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -3024,7 +3024,7 @@ export async function verifyTOTPLogin(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
