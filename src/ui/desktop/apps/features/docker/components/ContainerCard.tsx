@@ -246,7 +246,7 @@ export function ContainerCard({
   return (
     <>
       <Card
-        className={`cursor-pointer transition-all hover:shadow-lg ${
+        className={`cursor-pointer transition-all hover:shadow-lg overflow-hidden min-w-0 ${
           isSelected
             ? "ring-2 ring-primary border-primary"
             : `border-2 ${colors.border}`
