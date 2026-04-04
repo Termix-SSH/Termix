@@ -1577,7 +1577,9 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const sessionTimeoutHours = parseInt(process.env.SESSION_TIMEOUT_HOURS || "24", 10);
+    const defaultMaxAge = (isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours) * 60 * 60 * 1000;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : defaultMaxAge;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -3359,7 +3361,9 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const sessionTimeoutHours = parseInt(process.env.SESSION_TIMEOUT_HOURS || "24", 10);
+    const defaultMaxAge = (isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours) * 60 * 60 * 1000;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : defaultMaxAge;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
