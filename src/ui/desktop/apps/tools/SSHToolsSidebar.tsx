@@ -1296,6 +1296,30 @@ export function SSHToolsSidebar({
                                   })
                                 : t("snippets.executeOnCurrent")}
                             </p>
+                            <div className="flex gap-2 mb-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() =>
+                                  setSelectedSnippetTabIds(
+                                    terminalTabs.map((t) => t.id),
+                                  )
+                                }
+                              >
+                                {t("snippets.selectAll", "Select All")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() => setSelectedSnippetTabIds([])}
+                              >
+                                {t("snippets.deselectAll", "Deselect All")}
+                              </Button>
+                            </div>
                             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto thin-scrollbar">
                               {terminalTabs.map((tab) => (
                                 <Button
