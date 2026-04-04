@@ -293,7 +293,13 @@ export function TabProvider({ children }: TabProviderProps) {
         if (remainingSplitTabs.length > 0) {
           setCurrentTab(remainingSplitTabs[0]);
         } else {
-          setCurrentTab(remainingTabs[0].id);
+          // Switch to the adjacent tab (prefer the one after, then before)
+          const closedIndex = tabs.findIndex((t) => t.id === tabId);
+          const nextTab =
+            closedIndex < remainingTabs.length
+              ? remainingTabs[closedIndex]
+              : remainingTabs[remainingTabs.length - 1];
+          setCurrentTab(nextTab.id);
         }
       } else {
         setCurrentTab(1);
