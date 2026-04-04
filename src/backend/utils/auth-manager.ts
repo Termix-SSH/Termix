@@ -206,15 +206,21 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
+    const sessionTimeoutHours = parseInt(
+      process.env.SESSION_TIMEOUT_HOURS || "24",
+      10,
+    );
+    const defaultExpiry = `${isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours}h`;
+
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
       if (options.rememberMe) {
         expiresIn = "30d";
       } else {
-        expiresIn = "24h";
+        expiresIn = defaultExpiry;
       }
     } else if (!expiresIn) {
-      expiresIn = "24h";
+      expiresIn = defaultExpiry;
     }
 
     const payload: JWTPayload = { userId };
