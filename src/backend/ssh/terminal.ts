@@ -339,7 +339,7 @@ const wss = new WebSocketServer({
 
       const existingConnections = userConnections.get(payload.userId);
 
-      if (existingConnections && existingConnections.size >= 3) {
+      if (existingConnections && existingConnections.size >= 10) {
         return false;
       }
 
@@ -430,8 +430,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isAwaitingAuthCredentials = false;
   let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
+  let wsAlive = true;
+
+  ws.on("pong", () => {
+    wsAlive = true;
+  });
+
   const wsPingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
+      if (!wsAlive) {
+        sshLogger.warn("WebSocket pong timeout - terminating zombie connection", {
+          operation: "ws_pong_timeout",
+          userId,
+          sessionId: currentSessionId,
+        });
+        ws.terminate();
+        return;
+      }
+      wsAlive = false;
       ws.ping();
     }
   }, 30000);

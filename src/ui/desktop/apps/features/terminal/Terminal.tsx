@@ -151,6 +151,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const pongReceivedRef = useRef(true);
+    const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
@@ -202,7 +204,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
-    const maxReconnectAttempts = 3;
+    const maxReconnectAttempts = 8;
     const isUnmountingRef = useRef(false);
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
@@ -596,6 +598,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearInterval(pingIntervalRef.current);
             pingIntervalRef.current = null;
           }
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = null;
+          }
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
@@ -901,8 +907,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
+        pongReceivedRef.current = true;
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
+            if (!pongReceivedRef.current) {
+              console.warn("[WebSocket] Pong timeout - connection appears dead, closing");
+              ws.close();
+              return;
+            }
+            pongReceivedRef.current = false;
             ws.send(JSON.stringify({ type: "ping" }));
           }
         }, 30000);
@@ -911,6 +924,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       ws.addEventListener("message", (event) => {
         try {
           const msg = JSON.parse(event.data);
+          if (msg.type === "pong") {
+            pongReceivedRef.current = true;
+            return;
+          }
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
               const syntaxHighlightingEnabled =
@@ -1413,8 +1430,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         setIsConnected(false);
         isConnectingRef.current = false;
-        if (terminal) {
-          terminal.clear();
+
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
         }
 
         if (totpTimeoutRef.current) {
@@ -1423,17 +1442,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (event.code === 1006) {
-          console.error(
-            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          console.warn(
+            "[WebSocket] Abnormal closure detected - attempting reconnection",
           );
           addLog({
-            type: "error",
+            type: "warning",
             stage: "connection",
             message: t("terminal.websocketAbnormalClose"),
           });
-          updateConnectionError(t("terminal.websocketAbnormalClose"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
+
+          if (wasConnectedRef.current) {
+            attemptReconnection();
+          } else {
+            updateConnectionError(t("terminal.websocketAbnormalClose"));
+            setIsConnecting(false);
+          }
           return;
         }
 
@@ -1449,10 +1472,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           shouldNotReconnectRef.current = true;
 
           localStorage.removeItem("jwt");
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
 
           return;
         }
@@ -1890,6 +1909,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (pingIntervalRef.current) {
             clearInterval(pingIntervalRef.current);
             pingIntervalRef.current = null;
+          }
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = null;
           }
 
           const persistenceEnabled =
