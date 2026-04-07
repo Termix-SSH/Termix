@@ -165,6 +165,10 @@ networks:
   <a href="https://tailscale.com/">
     <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://akamai.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="75" alt="Akamai">
+  </a>
 </p>
 
 # Support
