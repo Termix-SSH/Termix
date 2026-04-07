@@ -1003,6 +1003,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
+      const handlePaste = (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData("text");
+        if (text) {
+          e.preventDefault();
+          e.stopPropagation();
+          terminal.paste(text);
+        }
+      };
+      xtermRef.current.addEventListener("paste", handlePaste);
+
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
@@ -1055,9 +1065,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         });
       });
 
+      const currentElement = xtermRef.current;
+
       return () => {
         resizeObserver.disconnect();
         clipboardProvider.dispose();
+        currentElement?.removeEventListener("paste", handlePaste);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         if (pingIntervalRef.current) {
