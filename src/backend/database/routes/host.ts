@@ -130,7 +130,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 
 /**
  * @openapi
- * /ssh/db/host/internal:
+ * /host/db/host/internal:
  *   get:
  *     summary: Get internal SSH host data
  *     description: Returns internal SSH host data for autostart tunnels. Requires internal auth token.
@@ -224,7 +224,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host/internal/all:
+ * /host/db/host/internal/all:
  *   get:
  *     summary: Get all internal SSH host data
  *     description: Returns all internal SSH host data. Requires internal auth token.
@@ -298,7 +298,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   post:
  *     summary: Create SSH host
  *     description: Creates a new SSH host configuration.
@@ -607,7 +607,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/quick-connect:
+ * /host/quick-connect:
  *   post:
  *     summary: Create a temporary SSH connection without saving to database
  *     description: Returns a temporary host configuration for immediate use
@@ -790,7 +790,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   put:
  *     summary: Update SSH host
  *     description: Updates an existing SSH host configuration.
@@ -1210,7 +1210,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   get:
  *     summary: Get all SSH hosts
  *     description: Retrieves all SSH hosts for the authenticated user.
@@ -1388,7 +1388,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   get:
  *     summary: Get SSH host by ID
  *     description: Retrieves a specific SSH host by its ID.
@@ -1449,8 +1449,7 @@ router.get(
 
       const host = data[0];
       const result = transformHostResponse(host);
-      const resolved =
-        (await resolveHostCredentials(result, userId)) || result;
+      const resolved = (await resolveHostCredentials(result, userId)) || result;
 
       res.json(stripSensitiveFields(resolved));
     } catch (err) {
@@ -1466,7 +1465,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}/password:
+ * /host/db/host/{id}/password:
  *   get:
  *     summary: Get host password for clipboard copy
  *     description: Returns the password for a specific host. Used by the copy-password feature.
@@ -1517,8 +1516,7 @@ router.get(
       }
 
       const host = data[0];
-      const resolved =
-        (await resolveHostCredentials(host, userId)) || host;
+      const resolved = (await resolveHostCredentials(host, userId)) || host;
       const value = resolved[field];
 
       if (!value) {
@@ -1539,7 +1537,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}/export:
+ * /host/db/host/{id}/export:
  *   get:
  *     summary: Export SSH host
  *     description: Exports a specific SSH host with decrypted credentials.
@@ -1695,7 +1693,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
  *     description: Deletes an SSH host by its ID.
@@ -1833,7 +1831,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   get:
  *     summary: Get recent files
  *     description: Retrieves a list of recent files for a specific host.
@@ -1896,7 +1894,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   post:
  *     summary: Add recent file
  *     description: Adds a file to the list of recent files for a host.
@@ -1972,7 +1970,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   delete:
  *     summary: Remove recent file
  *     description: Removes a file from the list of recent files for a host.
@@ -2030,7 +2028,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   get:
  *     summary: Get pinned files
  *     description: Retrieves a list of pinned files for a specific host.
@@ -2092,7 +2090,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   post:
  *     summary: Add pinned file
  *     description: Adds a file to the list of pinned files for a host.
@@ -2167,7 +2165,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   delete:
  *     summary: Remove pinned file
  *     description: Removes a file from the list of pinned files for a host.
@@ -2225,7 +2223,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   get:
  *     summary: Get shortcuts
  *     description: Retrieves a list of shortcuts for a specific host.
@@ -2287,7 +2285,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   post:
  *     summary: Add shortcut
  *     description: Adds a shortcut for a specific host.
@@ -2362,7 +2360,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   delete:
  *     summary: Remove shortcut
  *     description: Removes a shortcut for a specific host.
@@ -2420,7 +2418,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/command-history/{hostId}:
+ * /host/command-history/{hostId}:
  *   get:
  *     summary: Get command history
  *     description: Retrieves the command history for a specific host.
@@ -2489,7 +2487,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/command-history:
+ * /host/command-history:
  *   delete:
  *     summary: Delete command from history
  *     description: Deletes a specific command from the history of a host.
@@ -2647,7 +2645,7 @@ async function resolveHostCredentials(
 
 /**
  * @openapi
- * /ssh/folders/rename:
+ * /host/folders/rename:
  *   put:
  *     summary: Rename folder
  *     description: Renames a folder for SSH hosts and credentials.
@@ -2747,7 +2745,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders:
+ * /host/folders:
  *   get:
  *     summary: Get all folders
  *     description: Retrieves all folders for the authenticated user.
@@ -2786,7 +2784,7 @@ router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/folders/metadata:
+ * /host/folders/metadata:
  *   put:
  *     summary: Update folder metadata
  *     description: Updates the metadata (color, icon) of a folder.
@@ -2877,7 +2875,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders/{name}/hosts:
+ * /host/folders/{name}/hosts:
  *   delete:
  *     summary: Delete all hosts in folder
  *     description: Deletes all SSH hosts within a specific folder.
@@ -3023,7 +3021,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/bulk-import:
+ * /host/bulk-import:
  *   post:
  *     summary: Bulk import SSH hosts
  *     description: Bulk imports multiple SSH hosts.
@@ -3049,7 +3047,7 @@ router.delete(
 
 /**
  * @swagger
- * /ssh/bulk-update:
+ * /host/bulk-update:
  *   patch:
  *     summary: Bulk update partial fields on multiple SSH hosts
  *     tags: [SSH]
@@ -3419,7 +3417,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/folders/{folderName}/hosts:
+ * /host/folders/{folderName}/hosts:
  *   delete:
  *     summary: Delete all hosts in a folder
  *     description: Deletes all hosts within a specific folder.
@@ -3517,7 +3515,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/enable:
+ * /host/autostart/enable:
  *   post:
  *     summary: Enable autostart for SSH configuration
  *     description: Enables autostart for a specific SSH configuration.
@@ -3696,7 +3694,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/autostart/disable:
+ * /host/autostart/disable:
  *   delete:
  *     summary: Disable autostart for SSH configuration
  *     description: Disables autostart for a specific SSH configuration.
@@ -3765,7 +3763,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/status:
+ * /host/autostart/status:
  *   get:
  *     summary: Get autostart status
  *     description: Retrieves the autostart status for the user's SSH configurations.
@@ -3821,7 +3819,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   get:
  *     summary: Get OPKSSH token status for a host
  *     tags: [SSH]
@@ -3920,7 +3918,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   delete:
  *     summary: Delete OPKSSH token for a host
  *     tags: [SSH]
@@ -4073,7 +4071,7 @@ function rewriteOPKSSHHtml(
 
 /**
  * @openapi
- * /opkssh-chooser/{requestId}:
+ * /host/opkssh-chooser/{requestId}:
  *   get:
  *     summary: Proxy OPKSSH provider chooser page and all related resources
  *     tags: [SSH]
@@ -4387,7 +4385,7 @@ router.use(
 
 /**
  * @openapi
- * /opkssh-callback:
+ * /host/opkssh-callback:
  *   get:
  *     summary: Static OAuth callback from OIDC provider for OPKSSH authentication
  *     tags: [SSH]
@@ -4497,7 +4495,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /opkssh-callback/{requestId}:
+ * /host/opkssh-callback/{requestId}:
  *   get:
  *     summary: OAuth callback from OIDC provider for OPKSSH authentication (handles all sub-paths)
  *     tags: [SSH]
@@ -4759,7 +4757,7 @@ router.use(
 
 /**
  * @openapi
- * /db/proxy/test:
+ * /host/db/proxy/test:
  *   post:
  *     summary: Test proxy connectivity
  *     description: Tests connectivity through a proxy configuration to a target host.
