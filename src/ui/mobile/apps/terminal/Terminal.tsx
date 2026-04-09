@@ -126,7 +126,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
-    const maxReconnectAttempts = 3;
+    const maxReconnectAttempts = 8;
     const isUnmountingRef = useRef(false);
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
@@ -843,17 +843,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (event.code === 1006) {
-          console.error(
-            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          console.warn(
+            "[WebSocket] Abnormal closure detected - attempting reconnection",
           );
           addLog({
-            type: "error",
+            type: "warning",
             stage: "connection",
             message: t("terminal.websocketAbnormalClose"),
           });
-          updateConnectionError(t("terminal.websocketAbnormalClose"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
+
+          if (wasConnectedRef.current) {
+            attemptReconnection();
+          } else {
+            updateConnectionError(t("terminal.websocketAbnormalClose"));
+            setIsConnecting(false);
+          }
           return;
         }
 
@@ -869,10 +873,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           shouldNotReconnectRef.current = true;
 
           localStorage.removeItem("jwt");
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
 
           return;
         }
