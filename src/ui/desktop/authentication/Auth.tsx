@@ -329,7 +329,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            "*",
+            window.location.origin,
           );
           setWebviewAuthSuccess(true);
           return;
@@ -538,7 +538,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            "*",
+            window.location.origin,
           );
           setWebviewAuthSuccess(true);
           setTotpLoading(false);
@@ -681,7 +681,7 @@ export function Auth({
                     platform: "desktop",
                     timestamp: Date.now(),
                   },
-                  "*",
+                  window.location.origin,
                 );
                 setWebviewAuthSuccess(true);
                 setOidcLoading(false);
