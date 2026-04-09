@@ -284,6 +284,27 @@ wss.on("connection", async (ws: WebSocket, req) => {
             return;
           }
 
+          if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerId)) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Invalid container ID",
+              }),
+            );
+            return;
+          }
+
+          const allowedShells = ["bash", "sh", "ash", "zsh"];
+          if (shell && !allowedShells.includes(shell)) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Invalid shell",
+              }),
+            );
+            return;
+          }
+
           if (!hostConfig.enableDocker) {
             ws.send(
               JSON.stringify({
