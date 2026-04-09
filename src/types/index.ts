@@ -83,6 +83,10 @@ export interface Host {
   createdAt: string;
   updatedAt: string;
 
+  hasPassword?: boolean;
+  hasKey?: boolean;
+  hasSudoPassword?: boolean;
+
   isShared?: boolean;
   permissionLevel?: "view";
   sharedExpiresAt?: string;

@@ -567,6 +567,13 @@ class AuthManager {
         return res.status(401).json({ error: "Invalid token" });
       }
 
+      if (payload.pendingTOTP) {
+        return res.status(401).json({
+          error: "TOTP verification required",
+          code: "TOTP_REQUIRED",
+        });
+      }
+
       if (payload.sessionId) {
         try {
           const sessionRecords = await db
@@ -706,6 +713,13 @@ class AuthManager {
 
       if (!payload) {
         return res.status(401).json({ error: "Invalid token" });
+      }
+
+      if (payload.pendingTOTP) {
+        return res.status(401).json({
+          error: "TOTP verification required",
+          code: "TOTP_REQUIRED",
+        });
       }
 
       try {

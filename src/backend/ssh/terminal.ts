@@ -1073,6 +1073,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
+    // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
       username,
       password,
@@ -1082,94 +1083,48 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
     };
     const authMethodNotAvailable = false;
-    if (credentialId && id) {
-      const hostRow = await getDb()
-        .select({ userId: hosts.userId })
-        .from(hosts)
-        .where(eq(hosts.id, id))
-        .limit(1);
-      const ownerId = hostRow[0]?.userId ?? null;
-
-      if (ownerId && userId !== ownerId) {
-        try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            id,
-            userId,
-          );
-
-          if (sharedCred) {
-            resolvedCredentials = {
-              username: sharedCred.username || username,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authType: sharedCred.authType,
-            };
-          } else {
-            sshLogger.warn(`No shared credentials found for host ${id}`, {
-              operation: "ssh_credentials",
-              userId,
-              hostId: id,
-            });
-          }
-        } catch (error) {
-          sshLogger.warn(`Failed to resolve shared credential for host ${id}`, {
-            operation: "ssh_credentials",
-            hostId: id,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
+    if (id && userId && (!password && !key)) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        const resolvedHost = await resolveHostById(id, userId);
+        if (resolvedHost) {
+          resolvedCredentials = {
+            username: resolvedHost.username || username,
+            password: resolvedHost.password,
+            key: resolvedHost.key,
+            keyPassword: resolvedHost.keyPassword,
+            keyType: resolvedHost.keyType,
+            authType: resolvedHost.authType,
+          };
+          sendLog("auth", "info", "Credentials resolved from server-side host data");
         }
-      } else if (ownerId) {
-        try {
-          const credentials = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, credentialId),
-                  eq(sshCredentials.userId, ownerId),
-                ),
-              ),
-            "ssh_credentials",
-            ownerId,
-          );
-
-          if (credentials.length > 0) {
-            const credential = credentials[0];
-            resolvedCredentials = {
-              username: (credential.username as string | undefined) || username,
-              password: credential.password as string | undefined,
-              key: credential.privateKey as string | undefined,
-              keyPassword: credential.keyPassword as string | undefined,
-              keyType: credential.keyType as string | undefined,
-              authType: credential.authType as string | undefined,
-            };
-          } else {
-            sshLogger.warn(`No credentials found for host ${id}`, {
-              operation: "ssh_credentials",
-              hostId: id,
-              credentialId,
-              userId: ownerId,
-            });
-          }
-        } catch (error) {
-          sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
-            operation: "ssh_credentials",
-            hostId: id,
-            credentialId,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
+          operation: "ssh_credentials",
+          hostId: id,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    } else if (credentialId && id && userId) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        const resolvedHost = await resolveHostById(id, userId);
+        if (resolvedHost) {
+          resolvedCredentials = {
+            username: resolvedHost.username || username,
+            password: resolvedHost.password,
+            key: resolvedHost.key,
+            keyPassword: resolvedHost.keyPassword,
+            keyType: resolvedHost.keyType,
+            authType: resolvedHost.authType,
+          };
         }
-      } else {
-        sshLogger.warn("Missing userId for credential resolution in terminal", {
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }

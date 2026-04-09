@@ -3207,6 +3207,20 @@ export async function getSSHHostWithCredentials(
   }
 }
 
+export async function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword" = "password",
+): Promise<string | null> {
+  try {
+    const response = await sshHostApi.get(
+      `/db/host/${hostId}/password?field=${field}`,
+    );
+    return response.data?.value || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function applyCredentialToHost(
   hostId: number,
   credentialId: number,

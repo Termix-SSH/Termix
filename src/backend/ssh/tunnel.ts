@@ -1,5 +1,5 @@
 import express, { type Response } from "express";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -27,40 +27,7 @@ import { PermissionManager } from "../utils/permission-manager.js";
 import { withConnection } from "./ssh-connection-pool.js";
 
 const app = express();
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json());
 app.use((_req, res, next) => {
@@ -603,70 +570,49 @@ async function connectSSHTunnel(
   const effectiveUserId =
     tunnelConfig.requestingUserId || tunnelConfig.sourceUserId;
 
-  if (tunnelConfig.sourceCredentialId && effectiveUserId) {
+  // Resolve source credentials server-side when not provided by frontend
+  if (tunnelConfig.sourceHostId && effectiveUserId &&
+      (!tunnelConfig.sourcePassword && !tunnelConfig.sourceSSHKey)) {
     try {
-      if (
-        tunnelConfig.requestingUserId &&
-        tunnelConfig.requestingUserId !== tunnelConfig.sourceUserId
-      ) {
-        const { SharedCredentialManager } =
-          await import("../utils/shared-credential-manager.js");
-        const sharedCredManager = SharedCredentialManager.getInstance();
-
-        if (tunnelConfig.sourceHostId) {
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            tunnelConfig.sourceHostId,
-            tunnelConfig.requestingUserId,
-          );
-
-          if (sharedCred) {
-            resolvedSourceCredentials = {
-              password: sharedCred.password,
-              sshKey: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authMethod: sharedCred.authType,
-            };
-          } else {
-            const errorMessage = `Cannot connect tunnel '${tunnelName}': shared credentials not available`;
-            tunnelLogger.error(errorMessage, undefined, {
-              operation: "tunnel_shared_credentials_unavailable",
-              tunnelName,
-              requestingUserId: tunnelConfig.requestingUserId,
-              sourceUserId: tunnelConfig.sourceUserId,
-              sourceHostId: tunnelConfig.sourceHostId,
-            });
-            broadcastTunnelStatus(tunnelName, {
-              connected: false,
-              status: CONNECTION_STATES.FAILED,
-              reason: errorMessage,
-            });
-            tunnelConnecting.delete(tunnelName);
-            return;
-          }
-        }
-      } else {
-        const userDataKey = DataCrypto.getUserDataKey(effectiveUserId);
-        if (userDataKey) {
-          const credentials = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(eq(sshCredentials.id, tunnelConfig.sourceCredentialId)),
-            "ssh_credentials",
-            effectiveUserId,
-          );
-
-          if (credentials.length > 0) {
-            const credential = credentials[0];
-            resolvedSourceCredentials = {
-              password: credential.password as string | undefined,
-              sshKey: credential.privateKey as string | undefined,
-              keyPassword: credential.keyPassword as string | undefined,
-              keyType: credential.keyType as string | undefined,
-              authMethod: credential.authType as string,
-            };
-          }
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(
+        tunnelConfig.sourceHostId,
+        effectiveUserId,
+      );
+      if (resolvedHost) {
+        resolvedSourceCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          keyType: resolvedHost.keyType,
+          authMethod: resolvedHost.authType,
+        };
+      }
+    } catch (error) {
+      tunnelLogger.warn("Failed to resolve source host credentials", {
+        operation: "tunnel_connect",
+        tunnelName,
+        sourceHostId: tunnelConfig.sourceHostId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  } else if (tunnelConfig.sourceCredentialId && effectiveUserId) {
+    // Legacy: credential resolution from credentialId
+    try {
+      if (tunnelConfig.sourceHostId) {
+        const { resolveHostById } = await import("./host-resolver.js");
+        const resolvedHost = await resolveHostById(
+          tunnelConfig.sourceHostId,
+          effectiveUserId,
+        );
+        if (resolvedHost) {
+          resolvedSourceCredentials = {
+            password: resolvedHost.password,
+            sshKey: resolvedHost.key,
+            keyPassword: resolvedHost.keyPassword,
+            keyType: resolvedHost.keyType,
+            authMethod: resolvedHost.authType,
+          };
         }
       }
     } catch (error) {
@@ -1318,34 +1264,27 @@ async function killRemoteTunnelByMarker(
     authMethod: tunnelConfig.sourceAuthMethod,
   };
 
-  if (tunnelConfig.sourceCredentialId && tunnelConfig.sourceUserId) {
+  if (tunnelConfig.sourceHostId && tunnelConfig.sourceUserId &&
+      (!tunnelConfig.sourcePassword && !tunnelConfig.sourceSSHKey)) {
     try {
-      const userDataKey = DataCrypto.getUserDataKey(tunnelConfig.sourceUserId);
-      if (userDataKey) {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.id, tunnelConfig.sourceCredentialId)),
-          "ssh_credentials",
-          tunnelConfig.sourceUserId,
-        );
-
-        if (credentials.length > 0) {
-          const credential = credentials[0];
-          resolvedSourceCredentials = {
-            password: credential.password as string | undefined,
-            sshKey: credential.privateKey as string | undefined,
-            keyPassword: credential.keyPassword as string | undefined,
-            keyType: credential.keyType as string | undefined,
-            authMethod: credential.authType as string,
-          };
-        }
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(
+        tunnelConfig.sourceHostId,
+        tunnelConfig.sourceUserId,
+      );
+      if (resolvedHost) {
+        resolvedSourceCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          keyType: resolvedHost.keyType,
+          authMethod: resolvedHost.authType,
+        };
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
         tunnelName,
-        credentialId: tunnelConfig.sourceCredentialId,
+        sourceHostId: tunnelConfig.sourceHostId,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }

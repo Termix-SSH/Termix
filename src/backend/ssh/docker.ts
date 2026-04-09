@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
@@ -425,39 +425,7 @@ async function executeDockerCommand(
 
 const app = express();
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
 app.use(express.json({ limit: "100mb" }));

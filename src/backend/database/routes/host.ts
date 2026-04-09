@@ -49,6 +49,30 @@ function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
+const SENSITIVE_FIELDS = [
+  "password",
+  "key",
+  "keyPassword",
+  "sudoPassword",
+  "autostartPassword",
+  "autostartKey",
+  "autostartKeyPassword",
+  "socks5Password",
+];
+
+function stripSensitiveFields(
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...host };
+  result.hasPassword = !!host.password;
+  result.hasKey = !!host.key;
+  result.hasSudoPassword = !!host.sudoPassword;
+  for (const field of SENSITIVE_FIELDS) {
+    delete result[field];
+  }
+  return result;
+}
+
 function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -1350,7 +1374,8 @@ router.get(
         }),
       );
 
-      res.json(result);
+      const sanitized = result.map((host) => stripSensitiveFields(host));
+      res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
         operation: "host_fetch",
@@ -1424,8 +1449,10 @@ router.get(
 
       const host = data[0];
       const result = transformHostResponse(host);
+      const resolved =
+        (await resolveHostCredentials(result, userId)) || result;
 
-      res.json((await resolveHostCredentials(result, userId)) || result);
+      res.json(stripSensitiveFields(resolved));
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -1433,6 +1460,79 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to fetch SSH host" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/db/host/{id}/password:
+ *   get:
+ *     summary: Get host password for clipboard copy
+ *     description: Returns the password for a specific host. Used by the copy-password feature.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: field
+ *         schema:
+ *           type: string
+ *           enum: [password, sudoPassword]
+ *     responses:
+ *       200:
+ *         description: The requested password value.
+ *       404:
+ *         description: Host not found or no password set.
+ */
+router.get(
+  "/db/host/:id/password",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = Number(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+    const field = (req.query.field as string) || "password";
+
+    if (!["password", "sudoPassword"].includes(field)) {
+      return res.status(400).json({ error: "Invalid field" });
+    }
+
+    try {
+      const data = await SimpleDBOps.select(
+        db
+          .select()
+          .from(hosts)
+          .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
+        "ssh_data",
+        userId,
+      );
+
+      if (data.length === 0) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const host = data[0];
+      const resolved =
+        (await resolveHostCredentials(host, userId)) || host;
+      const value = resolved[field];
+
+      if (!value) {
+        return res.status(404).json({ error: "No password set" });
+      }
+
+      res.json({ value });
+    } catch (err) {
+      sshLogger.error("Failed to fetch host password", err, {
+        operation: "host_password_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch password" });
     }
   },
 );
@@ -4303,15 +4403,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
     sshLogger.info("OAuth callback received", {
       operation: "opkssh_static_callback_received",
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      headers: {
-        host: req.headers.host,
-        "x-forwarded-proto": req.headers["x-forwarded-proto"],
-        "x-forwarded-host": req.headers["x-forwarded-host"],
-        "x-forwarded-port": req.headers["x-forwarded-port"],
-      },
+      host: req.headers.host,
     });
 
     const { getUserIdFromRequest, getActiveSessionsForUser } =
