@@ -470,6 +470,16 @@ app.use((_req, res, next) => {
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
+const CONTAINER_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
+const DOCKER_TIMESTAMP_RE = /^[0-9T:.Z+-]+$/;
+
+app.param("containerId", (req, res, next, value) => {
+  if (!CONTAINER_ID_RE.test(value)) {
+    return res.status(400).json({ error: "Invalid container ID" });
+  }
+  next();
+});
+
 /**
  * @openapi
  * /docker/ssh/connect:
@@ -3025,18 +3035,18 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
     let command = `docker logs ${containerId}`;
 
     if (tail && tail > 0) {
-      command += ` --tail ${tail}`;
+      command += ` --tail ${Math.floor(tail)}`;
     }
 
     if (timestamps) {
       command += " --timestamps";
     }
 
-    if (since) {
+    if (since && DOCKER_TIMESTAMP_RE.test(since)) {
       command += ` --since ${since}`;
     }
 
-    if (until) {
+    if (until && DOCKER_TIMESTAMP_RE.test(until)) {
       command += ` --until ${until}`;
     }
 
