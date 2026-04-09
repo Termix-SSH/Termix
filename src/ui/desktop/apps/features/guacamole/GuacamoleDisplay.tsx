@@ -389,6 +389,40 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [rescaleDisplay]);
 
+  const syncClipboard = useCallback(() => {
+    const client = clientRef.current;
+    if (!client) return;
+    navigator.clipboard
+      .readText()
+      .then((text) => {
+        if (text) {
+          const stream = client.createClipboardStream("text/plain");
+          const writer = new Guacamole.StringWriter(stream);
+          writer.sendText(text);
+          writer.sendEnd();
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && isReady) {
+      syncClipboard();
+    }
+  }, [isVisible, isReady, syncClipboard]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isReady) return;
+
+    const handleFocus = () => syncClipboard();
+    container.addEventListener("mouseenter", handleFocus);
+
+    return () => {
+      container.removeEventListener("mouseenter", handleFocus);
+    };
+  }, [isReady, syncClipboard]);
+
   const connectingMessage = t("guacamole.connecting", {
     type: (
       connectionConfig.protocol ||
