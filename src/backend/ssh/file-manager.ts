@@ -771,151 +771,62 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     ),
   );
 
+  // Resolve credentials server-side when frontend doesn't provide them
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
-  if (credentialId && hostId && userId) {
-    const hostRow = await getDb()
-      .select({ userId: hosts.userId })
-      .from(hosts)
-      .where(eq(hosts.id, hostId))
-      .limit(1);
-    const ownerId = hostRow[0]?.userId ?? null;
-
-    if (ownerId && userId !== ownerId) {
-      try {
-        const { SharedCredentialManager } =
-          await import("../utils/shared-credential-manager.js");
-        const sharedCredManager = SharedCredentialManager.getInstance();
-        const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-          hostId,
-          userId,
-        );
-
-        if (sharedCred) {
-          resolvedCredentials = {
-            password: sharedCred.password,
-            sshKey: sharedCred.key,
-            keyPassword: sharedCred.keyPassword,
-            authType: sharedCred.authType,
-          };
-          connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "sftp_auth",
-              "Credentials resolved from shared credential store",
-            ),
-          );
-        } else {
-          fileLogger.warn(`No shared credentials found for host ${hostId}`, {
-            operation: "ssh_credentials",
-            hostId,
-            userId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "warning",
-              "sftp_auth",
-              "No shared credentials found, using provided credentials",
-            ),
-          );
-        }
-      } catch (error) {
-        fileLogger.warn(
-          `Failed to resolve shared credential for host ${hostId}`,
-          {
-            operation: "ssh_credentials",
-            hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
-          },
-        );
+  if (hostId && userId && (!password && !sshKey)) {
+    try {
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(hostId, userId);
+      if (resolvedHost) {
+        resolvedCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          authType: resolvedHost.authType,
+        };
         connectionLogs.push(
           createConnectionLog(
-            "warning",
+            "info",
             "sftp_auth",
-            `Failed to resolve shared credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
+            "Credentials resolved from server-side host data",
           ),
         );
       }
-    } else if (ownerId) {
-      try {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, credentialId),
-                eq(sshCredentials.userId, ownerId),
-              ),
-            ),
-          "ssh_credentials",
-          ownerId,
-        );
-
-        if (credentials.length > 0) {
-          const credential = credentials[0];
-          resolvedCredentials = {
-            password: credential.password,
-            sshKey: credential.privateKey,
-            keyPassword: credential.keyPassword,
-            authType: credential.authType,
-          };
-          connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "sftp_auth",
-              "Credentials resolved from credential store",
-            ),
-          );
-        } else {
-          fileLogger.warn(`No credentials found for host ${hostId}`, {
-            operation: "ssh_credentials",
-            hostId,
-            credentialId,
-            userId: ownerId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "warning",
-              "sftp_auth",
-              "No stored credentials found, using provided credentials",
-            ),
-          );
-        }
-      } catch (error) {
-        fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
-          operation: "ssh_credentials",
-          hostId,
-          credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        connectionLogs.push(
-          createConnectionLog(
-            "warning",
-            "sftp_auth",
-            `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
-          ),
-        );
-      }
-    } else {
-      fileLogger.warn(
-        "Missing userId for credential resolution in file manager",
-        {
-          operation: "ssh_credentials",
-          hostId,
-          credentialId,
-        },
-      );
+    } catch (error) {
+      fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
+        operation: "ssh_credentials",
+        hostId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  } else if (credentialId && hostId) {
-    fileLogger.warn(
-      "Missing userId for credential resolution in file manager",
-      {
+  } else if (credentialId && hostId && userId) {
+    // Legacy: credential resolution from credentialId
+    try {
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(hostId, userId);
+      if (resolvedHost) {
+        resolvedCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          authType: resolvedHost.authType,
+        };
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "Credentials resolved from credential store",
+          ),
+        );
+      }
+    } catch (error) {
+      fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
         credentialId,
-        hasUserId: !!userId,
-      },
-    );
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   const config: Record<string, unknown> = {

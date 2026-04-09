@@ -21,6 +21,7 @@ import {
   getSnippets,
   deleteCommandFromHistory,
   getCommandHistory,
+  getHostPassword,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
@@ -879,19 +880,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.write(outputData);
               const sudoPasswordPattern =
                 /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
-              const passwordToFill =
-                hostConfig.terminalConfig?.sudoPassword || hostConfig.password;
+              const hasSudoPw =
+                hostConfig.terminalConfig?.sudoPassword ||
+                hostConfig.password ||
+                hostConfig.hasSudoPassword ||
+                hostConfig.hasPassword;
               if (
                 config.sudoPasswordAutoFill &&
                 sudoPasswordPattern.test(msg.data) &&
-                passwordToFill &&
+                hasSudoPw &&
                 !sudoPromptShownRef.current
               ) {
                 sudoPromptShownRef.current = true;
                 confirmWithToast(
                   t("terminal.sudoPasswordPopupTitle"),
                   async () => {
+                    // Fetch password on-demand from server
+                    let passwordToFill =
+                      hostConfig.terminalConfig?.sudoPassword ||
+                      hostConfig.password;
+                    if (!passwordToFill && hostConfig.id) {
+                      passwordToFill =
+                        (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+                        (await getHostPassword(hostConfig.id, "password")) ||
+                        undefined;
+                    }
                     if (
+                      passwordToFill &&
                       webSocketRef.current &&
                       webSocketRef.current.readyState === WebSocket.OPEN
                     ) {
