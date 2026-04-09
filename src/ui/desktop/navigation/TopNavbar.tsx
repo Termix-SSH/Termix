@@ -456,7 +456,6 @@ export function TopNavbar({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                e
                 onMouseDown={(e) => {
                   if (e.button === 1 && !disableClose) {
                     e.preventDefault();
