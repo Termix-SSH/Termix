@@ -18,6 +18,7 @@ import {
   Container as DockerIcon,
   Key,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { SSHHost } from "@/types";
 
 interface TabProps {
@@ -74,17 +75,34 @@ export function Tab({
       return;
     }
 
+    let passwordToCopy = "";
+
+    if (hasSshPassword) {
+      passwordToCopy = hostConfig.password || "";
+    } else if (hasSudoPassword) {
+      passwordToCopy = hostConfig.sudoPassword;
+    }
+
+    if (!passwordToCopy) return;
+
     try {
-      let passwordToCopy = "";
-
-      if (hasSshPassword) {
-        passwordToCopy = hostConfig.password || "";
-      } else if (hasSudoPassword) {
-        passwordToCopy = hostConfig.sudoPassword;
-      }
-
       await navigator.clipboard.writeText(passwordToCopy);
-    } catch {}
+      toast.success(t("nav.passwordCopied"));
+    } catch {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = passwordToCopy;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        toast.success(t("nav.passwordCopied"));
+      } catch {
+        toast.error(t("nav.failedToCopyPassword"));
+      }
+    }
   };
 
   const hasPassword =
