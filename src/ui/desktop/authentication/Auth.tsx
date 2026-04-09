@@ -31,6 +31,7 @@ import {
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
   getServerConfig,
+  saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
   isEmbeddedMode,
@@ -772,7 +773,7 @@ export function Auth({
             getEmbeddedServerStatus(),
           ]);
 
-          if (status?.embedded && status?.running && !config?.serverUrl) {
+          if (status?.embedded && status?.running && config && !config.serverUrl) {
             setCurrentServerUrl("");
             setShowServerConfig(false);
             return;
@@ -816,7 +817,11 @@ export function Auth({
           onServerConfigured={() => {
             window.location.reload();
           }}
-          onUseEmbedded={() => {
+          onUseEmbedded={async () => {
+            await saveServerConfig({
+              serverUrl: "",
+              lastUpdated: new Date().toISOString(),
+            });
             setShowServerConfig(false);
             setCurrentServerUrl("");
           }}
