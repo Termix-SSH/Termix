@@ -56,6 +56,7 @@ export const GuacamoleDisplay = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<Guacamole.Client | null>(null);
+  const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
   const scaleRef = useRef<number>(1);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -252,6 +253,7 @@ export const GuacamoleDisplay = forwardRef<
     mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
 
     const keyboard = new Guacamole.Keyboard(document);
+    keyboardRef.current = keyboard;
     keyboard.onkeydown = (keysym: number) => {
       client.sendKeyEvent(1, keysym);
     };
@@ -327,6 +329,25 @@ export const GuacamoleDisplay = forwardRef<
       });
     }
   }, [isVisible, connect]);
+
+  useEffect(() => {
+    const keyboard = keyboardRef.current;
+    const client = clientRef.current;
+    if (!keyboard || !client) return;
+
+    if (isVisible) {
+      keyboard.onkeydown = (keysym: number) => {
+        client.sendKeyEvent(1, keysym);
+      };
+      keyboard.onkeyup = (keysym: number) => {
+        client.sendKeyEvent(0, keysym);
+      };
+    } else {
+      keyboard.onkeydown = null;
+      keyboard.onkeyup = null;
+      keyboard.reset();
+    }
+  }, [isVisible]);
 
   useEffect(() => {
     return () => {
