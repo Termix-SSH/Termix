@@ -1816,6 +1816,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
+      const handlePaste = (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData("text");
+        if (text) {
+          e.preventDefault();
+          e.stopPropagation();
+          terminal.paste(text);
+        }
+      };
+      element?.addEventListener("paste", handlePaste);
+
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1855,6 +1865,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeObserver.disconnect();
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
+        element?.removeEventListener("paste", handlePaste);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -1964,11 +1975,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !e.metaKey &&
           e.key.toLowerCase() === "v"
         ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((text) => {
-            if (text) terminal.paste(text);
-          });
+          // Let the browser handle Ctrl+V natively — the paste event
+          // listener will intercept the result without triggering the
+          // clipboard permission popup
           return false;
         }
 
