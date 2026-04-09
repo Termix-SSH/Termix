@@ -1764,13 +1764,29 @@ app.post(
             tunnelConfig.endpointIP = endpointHost.ip;
             tunnelConfig.endpointSSHPort = endpointHost.port;
             tunnelConfig.endpointUsername = endpointHost.username;
-            tunnelConfig.endpointPassword = endpointHost.password;
             tunnelConfig.endpointAuthMethod = endpointHost.authType;
-            tunnelConfig.endpointSSHKey = endpointHost.key;
-            tunnelConfig.endpointKeyPassword = endpointHost.keyPassword;
             tunnelConfig.endpointKeyType = endpointHost.keyType;
             tunnelConfig.endpointCredentialId = endpointHost.credentialId;
             tunnelConfig.endpointUserId = endpointHost.userId;
+
+            // Resolve credentials server-side instead of from HTTP response
+            if (endpointHost.id && endpointHost.userId) {
+              try {
+                const { resolveHostById } = await import("./host-resolver.js");
+                const resolved = await resolveHostById(endpointHost.id, endpointHost.userId);
+                if (resolved) {
+                  tunnelConfig.endpointPassword = resolved.password;
+                  tunnelConfig.endpointSSHKey = resolved.key;
+                  tunnelConfig.endpointKeyPassword = resolved.keyPassword;
+                }
+              } catch (credError) {
+                tunnelLogger.warn("Failed to resolve endpoint credentials from DB", {
+                  operation: "tunnel_endpoint_credential_resolve",
+                  endpointHostId: endpointHost.id,
+                  error: credError instanceof Error ? credError.message : "Unknown",
+                });
+              }
+            }
           } catch (resolveError) {
             tunnelLogger.error(
               "Failed to resolve endpoint host",
@@ -2072,11 +2088,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 sourceIP: host.ip,
                 sourceSSHPort: host.port,
                 sourceUsername: host.username,
-                sourcePassword: host.autostartPassword || host.password,
                 sourceAuthMethod: host.authType,
-                sourceSSHKey: host.autostartKey || host.key,
-                sourceKeyPassword:
-                  host.autostartKeyPassword || host.keyPassword,
                 sourceKeyType: host.keyType,
                 sourceCredentialId: host.credentialId,
                 sourceUserId: host.userId,
@@ -2084,20 +2096,8 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 endpointSSHPort: endpointHost.port,
                 endpointUsername: endpointHost.username,
                 endpointHost: tunnelConnection.endpointHost,
-                endpointPassword:
-                  tunnelConnection.endpointPassword ||
-                  endpointHost.autostartPassword ||
-                  endpointHost.password,
                 endpointAuthMethod:
                   tunnelConnection.endpointAuthType || endpointHost.authType,
-                endpointSSHKey:
-                  tunnelConnection.endpointKey ||
-                  endpointHost.autostartKey ||
-                  endpointHost.key,
-                endpointKeyPassword:
-                  tunnelConnection.endpointKeyPassword ||
-                  endpointHost.autostartKeyPassword ||
-                  endpointHost.keyPassword,
                 endpointKeyType:
                   tunnelConnection.endpointKeyType || endpointHost.keyType,
                 endpointCredentialId: endpointHost.credentialId,
