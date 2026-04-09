@@ -866,7 +866,13 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
+          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId)
+            .catch((err) => {
+              statsLogger.error("Metrics polling failed", err, {
+                operation: "metrics_poll_unhandled",
+                hostId: host.id,
+              });
+            });
         }
       }, intervalMs);
     } else {
@@ -1903,7 +1909,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         } else if (
           error.message.includes("No password available") ||
           error.message.includes("Unsupported authentication type") ||
-          error.message.includes("No SSH key available")
+          error.message.includes("No SSH key available") ||
+          error.message.includes("Invalid SSH key format")
         ) {
           authFailureTracker.recordFailure(host.id, "AUTH", true);
         } else if (
