@@ -2155,12 +2155,16 @@ router.post("/initiate-reset", async (req, res) => {
       authLogger.warn(
         `Password reset attempted for non-existent user: ${username}`,
       );
-      return res.status(404).json({ error: "User not found" });
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
+      });
     }
 
     if (user[0].isOidc) {
-      return res.status(403).json({
-        error: "Password reset not available for external authentication users",
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
       });
     }
 
@@ -2175,7 +2179,7 @@ router.post("/initiate-reset", async (req, res) => {
       );
 
     authLogger.info(
-      `Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
+      `Password reset code generated for user ${username} (expires at ${expiresAt.toLocaleString()}). Check admin panel or database settings table for code.`,
     );
 
     res.json({
