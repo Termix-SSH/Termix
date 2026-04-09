@@ -40,6 +40,7 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
   activeOperations: number;
   hostId?: number;
+  userId?: string;
 }
 
 interface PendingTOTPSession {
@@ -983,6 +984,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId,
+        userId,
       };
 
       scheduleSessionCleanup(sessionId);
@@ -1665,6 +1667,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId: session.hostId,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1850,6 +1853,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId: session.hostId,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1953,6 +1957,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
  */
 app.post("/docker/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -1965,6 +1970,10 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
       error: "SSH session not found or not connected",
       connected: false,
     });
+  }
+
+  if (session.userId && session.userId !== userId) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();

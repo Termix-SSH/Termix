@@ -400,6 +400,7 @@ interface SSHSession {
   sudoPassword?: string;
   sftp?: import("ssh2").SFTPWrapper;
   poolKey?: string;
+  userId?: string;
 }
 
 interface PendingTOTPSession {
@@ -530,6 +531,13 @@ function scheduleSessionCleanup(sessionId: string) {
       30 * 60 * 1000,
     );
   }
+}
+
+function verifySessionOwnership(
+  session: SSHSession,
+  userId: string,
+): boolean {
+  return !session.userId || session.userId === userId;
 }
 
 function getMimeType(fileName: string): string {
@@ -1253,6 +1261,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       isConnected: true,
       lastActive: Date.now(),
       activeOperations: 0,
+      userId,
     };
     scheduleSessionCleanup(sessionId);
     res.json({
@@ -1896,6 +1905,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2097,6 +2107,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2226,9 +2237,13 @@ app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
  */
 app.post("/ssh/file_manager/sudo-password", (req, res) => {
   const { sessionId, password } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
   const session = sshSessions[sessionId];
   if (!session || !session.isConnected) {
     return res.status(400).json({ error: "Invalid or disconnected session" });
+  }
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
   session.sudoPassword = password;
   session.lastActive = Date.now();
@@ -2255,7 +2270,12 @@ app.post("/ssh/file_manager/sudo-password", (req, res) => {
  */
 app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
-  const isConnected = !!sshSessions[sessionId]?.isConnected;
+  const userId = (req as AuthenticatedRequest).userId;
+  const session = sshSessions[sessionId];
+  if (session && !verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+  const isConnected = !!session?.isConnected;
   res.json({ status: "success", connected: isConnected });
 });
 
@@ -2284,6 +2304,7 @@ app.get("/ssh/file_manager/ssh/status", (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2296,6 +2317,10 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
       error: "SSH session not found or not connected",
       connected: false,
     });
+  }
+
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
@@ -2348,6 +2373,10 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   sshConn.lastActive = Date.now();
