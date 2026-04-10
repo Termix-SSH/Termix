@@ -114,7 +114,7 @@ export function ElectronLoginForm({
                   source: source,
                   platform: 'desktop',
                   timestamp: Date.now()
-                }, '*');
+                }, window.location.origin);
               } catch (e) {
               }
             }
