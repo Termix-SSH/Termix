@@ -42,7 +42,6 @@ import {
   isElectron,
   getConfiguredServerUrl,
   getGuacamoleTokenFromHost,
-  getGuacamoleToken,
   logActivity,
 } from "@/ui/main-axios.ts";
 import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
@@ -1941,19 +1940,9 @@ export function HostManagerViewer({
                                                     | "vnc"
                                                     | "telnet";
                                                   const result =
-                                                    await getGuacamoleToken({
-                                                      protocol,
-                                                      hostname: host.ip,
-                                                      port: host.port,
-                                                      username: host.username,
-                                                      password: host.password,
-                                                      domain: host.domain,
-                                                      security: host.security,
-                                                      ignoreCert:
-                                                        host.ignoreCert,
-                                                      guacamoleConfig:
-                                                        host.guacamoleConfig as any,
-                                                    });
+                                                    await getGuacamoleTokenFromHost(
+                                                      host.id,
+                                                    );
 
                                                   addTab({
                                                     type: protocol,
