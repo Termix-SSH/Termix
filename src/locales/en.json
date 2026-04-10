@@ -541,7 +541,8 @@
     "copySudoPassword": "Copy Sudo Password",
     "passwordCopied": "Password copied to clipboard",
     "sudoPasswordCopied": "Sudo password copied to clipboard",
-    "noPasswordAvailable": "No password available"
+    "noPasswordAvailable": "No password available",
+    "failedToCopyPassword": "Failed to copy password"
   },
   "admin": {
     "title": "Admin Settings",
