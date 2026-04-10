@@ -599,13 +599,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   );
 
   const debouncedLoadDirectory = useCallback(
-    (path: string) => {
+    (path: string, force?: boolean) => {
       if (pathChangeTimerRef.current) {
         clearTimeout(pathChangeTimerRef.current);
       }
 
       pathChangeTimerRef.current = setTimeout(() => {
-        if (path !== lastPathChangeRef.current && sshSessionId) {
+        if ((force || path !== lastPathChangeRef.current) && sshSessionId) {
           lastPathChangeRef.current = path;
           loadDirectory(path);
         }
@@ -641,6 +641,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     }
 
     setLastRefreshTime(now);
+    // Force reset loading state to ensure refresh is not blocked
+    setIsLoading(false);
+    currentLoadingPathRef.current = "";
     loadDirectory(currentPath);
   }, [currentPath, lastRefreshTime, loadDirectory]);
 
@@ -778,6 +781,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         toast.success(
           t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
         );
+      } else {
+        toast.error(t("fileManager.failedToDownloadFile"));
       }
     } catch (error: unknown) {
       if (

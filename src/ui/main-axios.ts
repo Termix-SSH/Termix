@@ -1006,10 +1006,16 @@ function handleApiError(error: unknown, operation: string): never {
 export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
     const hostsResponse = await sshHostApi.get("/db/host");
-    const hosts: SSHHost[] = hostsResponse.data;
+    const hosts: SSHHost[] = Array.isArray(hostsResponse.data)
+      ? hostsResponse.data
+      : [];
 
-    const statusesResponse = await getAllServerStatuses();
-    const statuses = statusesResponse || {};
+    let statuses: Record<number, ServerStatus> = {};
+    try {
+      statuses = (await getAllServerStatuses()) || {};
+    } catch {
+      // Status fetch failure should not prevent host list from loading
+    }
 
     return hosts.map((host) => ({
       ...host,
@@ -2561,7 +2567,7 @@ export async function loginUser(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -2573,7 +2579,7 @@ export async function loginUser(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3035,7 +3041,7 @@ export async function verifyTOTPLogin(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -3047,7 +3053,7 @@ export async function verifyTOTPLogin(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3227,6 +3233,20 @@ export async function getSSHHostWithCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch SSH host with credentials");
+  }
+}
+
+export async function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword" = "password",
+): Promise<string | null> {
+  try {
+    const response = await sshHostApi.get(
+      `/db/host/${hostId}/password?field=${field}`,
+    );
+    return response.data?.value || null;
+  } catch {
+    return null;
   }
 }
 

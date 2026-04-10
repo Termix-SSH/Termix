@@ -734,7 +734,8 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
       .get();
     if (!row) {
-      return res.json(null);
+      const envConfig = getOIDCConfigFromEnv();
+      return res.json(envConfig);
     }
 
     let config = JSON.parse((row as Record<string, unknown>).value as string);
@@ -1226,7 +1227,7 @@ router.get("/oidc/callback", async (req, res) => {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
-            : 2 * 60 * 60 * 1000;
+            : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -1318,12 +1319,16 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    if (deviceInfo.type === "desktop" || deviceInfo.type === "mobile") {
+      redirectUrl.searchParams.set("token", token);
+    }
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : storedRememberMe
           ? 30 * 24 * 60 * 60 * 1000
-          : 2 * 60 * 60 * 1000;
+          : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
@@ -2159,12 +2164,16 @@ router.post("/initiate-reset", async (req, res) => {
       authLogger.warn(
         `Password reset attempted for non-existent user: ${username}`,
       );
-      return res.status(404).json({ error: "User not found" });
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
+      });
     }
 
     if (user[0].isOidc) {
-      return res.status(403).json({
-        error: "Password reset not available for external authentication users",
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
       });
     }
 
@@ -2179,7 +2188,7 @@ router.post("/initiate-reset", async (req, res) => {
       );
 
     authLogger.info(
-      `Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
+      `Password reset code generated for user ${username} (expires at ${expiresAt.toLocaleString()}). Check admin panel or database settings table for code.`,
     );
 
     res.json({
