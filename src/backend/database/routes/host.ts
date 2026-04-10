@@ -3292,6 +3292,41 @@ router.post(
           continue;
         }
 
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType === "credential" &&
+          hostData.credentialId
+        ) {
+          const cred = await db
+            .select({ id: sshCredentials.id })
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, hostData.credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            )
+            .limit(1);
+
+          if (cred.length === 0) {
+            const fallback = await db
+              .select({ id: sshCredentials.id })
+              .from(sshCredentials)
+              .where(eq(sshCredentials.userId, userId))
+              .limit(1);
+
+            if (fallback.length > 0) {
+              hostData.credentialId = fallback[0].id;
+            } else {
+              results.failed++;
+              results.errors.push(
+                `Host ${i + 1}: credentialId ${hostData.credentialId} not found and no fallback credential available`,
+              );
+              continue;
+            }
+          }
+        }
+
         const sshDataObj: Record<string, unknown> = {
           userId: userId,
           connectionType: effectiveConnectionType,
