@@ -736,7 +736,7 @@ export function SSHToolsSidebar({
       selectedSnippetTabIds.forEach((tabId) => {
         const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
-          tab.terminalRef.current.sendInput(snippet.content + "\n");
+          tab.terminalRef.current.sendInput(snippet.content + "\r");
         }
       });
       toast.success(

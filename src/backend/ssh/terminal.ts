@@ -1423,13 +1423,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
           });
 
           if (initialPath && initialPath.trim() !== "") {
-            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
+            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
             stream.write(cdCommand);
           }
 
           if (executeCommand && executeCommand.trim() !== "") {
             setTimeout(() => {
-              const command = `${executeCommand}\n`;
+              const command = `${executeCommand}\r`;
               stream.write(command);
             }, 500);
           }

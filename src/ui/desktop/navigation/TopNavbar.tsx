@@ -146,7 +146,7 @@ export function TopNavbar({
   const handleSnippetExecute = (content: string) => {
     const tab = tabs.find((t: TabData) => t.id === currentTab);
     if (tab?.terminalRef?.current?.sendInput) {
-      tab.terminalRef.current.sendInput(content + "\n");
+      tab.terminalRef.current.sendInput(content + "\r");
     }
   };
 
