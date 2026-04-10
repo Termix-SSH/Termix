@@ -1227,7 +1227,7 @@ router.get("/oidc/callback", async (req, res) => {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
-            : 2 * 60 * 60 * 1000;
+            : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -1328,7 +1328,7 @@ router.get("/oidc/callback", async (req, res) => {
         ? 30 * 24 * 60 * 60 * 1000
         : storedRememberMe
           ? 30 * 24 * 60 * 60 * 1000
-          : 2 * 60 * 60 * 1000;
+          : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
