@@ -83,8 +83,10 @@ async function detectShell(
               }
             });
 
-            stream.stderr.on("data", () => {
-              // Ignore stderr
+            stream.stderr.on("data", () => {});
+            stream.stderr.on("error", () => {});
+            stream.on("error", (streamErr) => {
+              reject(streamErr);
             });
           },
         );
@@ -433,8 +435,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
                         }
                       });
 
-                      stream.stderr.on("data", () => {
-                        // Ignore stderr
+                      stream.stderr.on("data", () => {});
+                      stream.stderr.on("error", () => {});
+                      stream.on("error", (streamErr) => {
+                        reject(streamErr);
                       });
                     },
                   );
@@ -512,8 +516,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   }
                 });
 
-                stream.stderr.on("data", () => {
-                  // stderr output ignored
+                stream.stderr.on("data", () => {});
+                stream.stderr.on("error", () => {});
+
+                stream.on("error", (streamErr) => {
+                  sshLogger.error("Docker console stream error", streamErr, {
+                    operation: "docker_console_stream_error",
+                    sessionId,
+                    containerId,
+                  });
+                  if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        message: `Console error: ${streamErr.message}`,
+                      }),
+                    );
+                  }
                 });
 
                 stream.on("close", () => {
