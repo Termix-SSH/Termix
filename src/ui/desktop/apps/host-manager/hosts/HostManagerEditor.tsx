@@ -413,6 +413,7 @@ export function HostManagerEditor({
           sudoPassword: z.string().optional(),
           keepaliveInterval: z.number().min(0).max(300000).optional(),
           keepaliveCountMax: z.number().min(0).max(100).optional(),
+          autoTmux: z.boolean(),
         })
         .optional(),
       forceKeyboardInteractive: z.boolean().optional(),
