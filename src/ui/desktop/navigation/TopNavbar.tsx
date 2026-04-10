@@ -19,7 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu.tsx";
-import { Sun, Moon, Monitor, Palette, Terminal as TerminalIcon } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Palette,
+  Terminal as TerminalIcon,
+} from "lucide-react";
 import { TERMINAL_THEMES } from "@/constants/terminal-themes.ts";
 
 interface TabData {
@@ -134,7 +140,6 @@ export function TopNavbar({
   const isProcessingDropRef = React.useRef(false);
 
   const prevTabsRef = React.useRef<TabData[]>([]);
-  const { theme, setTheme, setThemePreview } = useTheme();
 
   const handleTabActivate = (tabId: number) => {
     setCurrentTab(tabId);
@@ -570,16 +575,21 @@ export function TopNavbar({
                     <DropdownMenuItem
                       key={key}
                       onClick={() => {
-                        const activeTab = tabs.find((t: any) => t.id === currentTab);
+                        const activeTab = tabs.find(
+                          (t: any) => t.id === currentTab,
+                        );
                         if (activeTab?.hostConfig) {
                           const updatedConfig = {
                             ...activeTab.hostConfig.terminalConfig,
                             theme: key,
                           };
-                          
+
                           // Persist terminal theme selection to localStorage
-                          localStorage.setItem(`terminal_theme_host_${activeTab.hostConfig.id}`, key);
-                          
+                          localStorage.setItem(
+                            `terminal_theme_host_${activeTab.hostConfig.id}`,
+                            key,
+                          );
+
                           updateTab(currentTab, {
                             hostConfig: {
                               ...activeTab.hostConfig,
@@ -591,8 +601,8 @@ export function TopNavbar({
                       onMouseEnter={() => setPreviewTerminalTheme(key)}
                       className="flex items-center gap-2 cursor-pointer"
                     >
-                      <div 
-                        className="w-3 h-3 rounded-full border border-edge" 
+                      <div
+                        className="w-3 h-3 rounded-full border border-edge"
                         style={{ backgroundColor: theme.colors.background }}
                       />
                       <span>{theme.name}</span>
@@ -602,86 +612,6 @@ export function TopNavbar({
               </DropdownMenu>
             );
           })()}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-[30px] h-[30px] border-edge"
-                title={t("profile.theme")}
-              >
-                {theme === "light" ? (
-                  <Sun className="h-4 w-4" />
-                ) : theme === "dark" ? (
-                  <Moon className="h-4 w-4" />
-                ) : (
-                  <Monitor className="h-4 w-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="bg-canvas border-edge text-foreground"
-              onMouseLeave={() => setThemePreview(null)}
-            >
-              <DropdownMenuItem
-                onClick={() => setTheme("light")}
-                onMouseEnter={() => setThemePreview("light")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Sun className="h-4 w-4" />
-                <span>{t("profile.themeLight")}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("dark")}
-                onMouseEnter={() => setThemePreview("dark")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Moon className="h-4 w-4" />
-                <span>{t("profile.themeDark")}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("dracula")}
-                onMouseEnter={() => setThemePreview("dracula")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Palette className="h-4 w-4" />
-                <span>Dracula</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("gentlemansChoice")}
-                onMouseEnter={() => setThemePreview("gentlemansChoice")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Palette className="h-4 w-4" />
-                <span>Gentleman's Choice</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("midnightEspresso")}
-                onMouseEnter={() => setThemePreview("midnightEspresso")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Palette className="h-4 w-4" />
-                <span>Midnight Espresso</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("catppuccinMocha")}
-                onMouseEnter={() => setThemePreview("catppuccinMocha")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Palette className="h-4 w-4" />
-                <span>Catppuccin Mocha</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme("system")}
-                onMouseEnter={() => setThemePreview("system")}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <Monitor className="h-4 w-4" />
-                <span>{t("profile.themeSystem")}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           <Button
             variant="outline"
