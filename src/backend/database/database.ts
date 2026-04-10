@@ -63,7 +63,11 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "file://",
+      ];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -77,7 +81,7 @@ app.use(
         return callback(null, true);
       }
 
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
