@@ -709,7 +709,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                     ws.send(
                       JSON.stringify({
                         type: "input",
-                        data: snippet.content + "\n",
+                        data: snippet.content + "\r",
                       }),
                     );
                   }
