@@ -1006,10 +1006,16 @@ function handleApiError(error: unknown, operation: string): never {
 export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
     const hostsResponse = await sshHostApi.get("/db/host");
-    const hosts: SSHHost[] = hostsResponse.data;
+    const hosts: SSHHost[] = Array.isArray(hostsResponse.data)
+      ? hostsResponse.data
+      : [];
 
-    const statusesResponse = await getAllServerStatuses();
-    const statuses = statusesResponse || {};
+    let statuses: Record<number, ServerStatus> = {};
+    try {
+      statuses = (await getAllServerStatuses()) || {};
+    } catch {
+      // Status fetch failure should not prevent host list from loading
+    }
 
     return hosts.map((host) => ({
       ...host,
