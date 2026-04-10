@@ -3500,6 +3500,20 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
         chunks.push(base64Content.slice(i, i + chunkSize));
       }
 
+      if (!sshConn?.isConnected) {
+        fileLogger.error("SSH connection lost before fallback upload", {
+          operation: "file_upload_fallback",
+          sessionId,
+          path: fullPath,
+        });
+        if (!res.headersSent) {
+          return res
+            .status(500)
+            .json({ error: "SSH connection lost during upload" });
+        }
+        return;
+      }
+
       if (chunks.length === 1) {
         const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
 
@@ -3525,6 +3539,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
           stream.stderr.on("data", (chunk: Buffer) => {
             errorData += chunk.toString();
+          });
+
+          stream.stderr.on("error", (stderrErr) => {
+            fileLogger.error("Fallback upload stderr error:", stderrErr);
           });
 
           stream.on("close", (code) => {
@@ -3595,6 +3613,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
           stream.stderr.on("data", (chunk: Buffer) => {
             errorData += chunk.toString();
+          });
+
+          stream.stderr.on("error", (stderrErr) => {
+            fileLogger.error("Chunked fallback upload stderr error:", stderrErr);
           });
 
           stream.on("close", (code) => {
