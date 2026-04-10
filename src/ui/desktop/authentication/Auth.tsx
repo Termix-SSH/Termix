@@ -692,6 +692,13 @@ export function Auth({
             }
           }
 
+          if (isElectron()) {
+            const token = getCookie("jwt");
+            if (token) {
+              localStorage.setItem("jwt", token);
+            }
+          }
+
           setInternalLoggedIn(true);
           setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);
