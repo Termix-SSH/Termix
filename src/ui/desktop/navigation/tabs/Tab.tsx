@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { useTranslation } from "react-i18next";
+import { getHostPassword } from "@/ui/main-axios.ts";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -67,13 +68,12 @@ export function Tab({
 
     if (!hostConfig) return;
 
-    const hasSshPassword =
-      hostConfig.authType === "password" && hostConfig.password;
-    const hasSudoPassword = hostConfig.sudoPassword;
+    const hasSshPw =
+      hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password);
+    const hasSudoPw = hostConfig.hasSudoPassword || hostConfig.sudoPassword;
 
-    if (!hasSshPassword && !hasSudoPassword) {
-      return;
-    }
+    if (!hasSshPw && !hasSudoPw) return;
 
     let passwordToCopy = "";
 
@@ -107,19 +107,22 @@ export function Tab({
 
   const hasPassword =
     hostConfig &&
-    ((hostConfig.authType === "password" && hostConfig.password) ||
+    ((hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password)) ||
+      hostConfig.hasSudoPassword ||
       hostConfig.sudoPassword);
 
   const getPasswordButtonTitle = () => {
     if (!hostConfig) return "";
 
-    const hasSshPassword =
-      hostConfig.authType === "password" && hostConfig.password;
-    const hasSudoPassword = hostConfig.sudoPassword;
+    const hasSshPw =
+      hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password);
+    const hasSudoPw = hostConfig.hasSudoPassword || hostConfig.sudoPassword;
 
-    if (hasSshPassword) {
+    if (hasSshPw) {
       return t("nav.copyPassword");
-    } else if (hasSudoPassword) {
+    } else if (hasSudoPw) {
       return t("nav.copySudoPassword");
     }
     return t("nav.noPasswordAvailable");

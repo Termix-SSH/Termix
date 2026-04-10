@@ -47,9 +47,11 @@ import {
 import { TerminalPreview } from "@/ui/desktop/apps/features/terminal/TerminalPreview.tsx";
 import type { HostTerminalTabProps } from "./shared/tab-types";
 import React from "react";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
   const [snippetPopoverOpen, setSnippetPopoverOpen] = React.useState(false);
+  const { setPreviewTerminalTheme } = useTabs() as any;
   return (
     <div className="space-y-1">
       <FormField
@@ -103,9 +105,13 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                         <SelectValue placeholder={t("hosts.selectTheme")} />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent onMouseLeave={() => setPreviewTerminalTheme(null)}>
                       {Object.entries(TERMINAL_THEMES).map(([key, theme]) => (
-                        <SelectItem key={key} value={key}>
+                        <SelectItem 
+                          key={key} 
+                          value={key}
+                          onMouseEnter={() => setPreviewTerminalTheme(key)}
+                        >
                           {theme.name}
                         </SelectItem>
                       ))}

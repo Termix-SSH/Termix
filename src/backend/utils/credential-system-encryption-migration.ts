@@ -107,20 +107,23 @@ export class CredentialSystemEncryptionMigration {
 
           migrated++;
         } catch (error) {
-          databaseLogger.error("Failed to migrate credential", error, {
-            credentialId: cred.id,
-            userId,
-          });
+          databaseLogger.warn(
+            `Skipping credential migration for credential ${cred.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            {
+              operation: "credential_migration_skip",
+              credentialId: cred.id,
+              userId,
+            },
+          );
           failed++;
         }
       }
       return { migrated, failed, skipped };
     } catch (error) {
-      databaseLogger.error(
-        "Credential system encryption migration failed",
-        error,
+      databaseLogger.warn(
+        "Credential system encryption migration incomplete",
         {
-          operation: "credential_migration_failed",
+          operation: "credential_migration_incomplete",
           userId,
           error: error instanceof Error ? error.message : "Unknown error",
         },

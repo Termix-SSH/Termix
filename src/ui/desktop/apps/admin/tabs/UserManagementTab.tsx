@@ -17,9 +17,9 @@ import { deleteUser } from "@/ui/main-axios.ts";
 interface User {
   id: string;
   username: string;
-  is_admin: boolean;
-  is_oidc: boolean;
-  password_hash?: string;
+  isAdmin: boolean;
+  isOidc: boolean;
+  passwordHash?: string;
 }
 
 interface UserManagementTabProps {
@@ -47,9 +47,9 @@ export function UserManagementTab({
   const { confirmWithToast } = useConfirmation();
 
   const getAuthTypeDisplay = (user: User): string => {
-    if (user.is_oidc && user.password_hash) {
+    if (user.isOidc && user.passwordHash) {
       return t("admin.dualAuth");
-    } else if (user.is_oidc) {
+    } else if (user.isOidc) {
       return t("admin.externalOIDC");
     } else {
       return t("admin.localPassword");
@@ -111,7 +111,7 @@ export function UserManagementTab({
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   {user.username}
-                  {user.is_admin && (
+                  {user.isAdmin && (
                     <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border">
                       {t("admin.adminBadge")}
                     </span>
@@ -129,7 +129,7 @@ export function UserManagementTab({
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    {user.is_oidc && !user.password_hash && (
+                    {user.isOidc && !user.passwordHash && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -145,7 +145,7 @@ export function UserManagementTab({
                         <Link2 className="h-4 w-4" />
                       </Button>
                     )}
-                    {user.is_oidc && user.password_hash && (
+                    {user.isOidc && user.passwordHash && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -161,7 +161,7 @@ export function UserManagementTab({
                       size="sm"
                       onClick={() => handleDeleteUserQuick(user.username)}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      disabled={user.is_admin}
+                      disabled={user.isAdmin}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

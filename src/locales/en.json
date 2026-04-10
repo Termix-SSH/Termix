@@ -2293,6 +2293,8 @@
     "fileColorCodingDesc": "Color-code files by type: folders (red), files (blue), symlinks (green)",
     "commandAutocomplete": "Command Autocomplete",
     "commandAutocompleteDesc": "Enable Tab key autocomplete suggestions for terminal commands based on your command history",
+    "commandHistoryTracking": "Save Command History",
+    "commandHistoryTrackingDesc": "Store terminal commands in history for autocomplete and sidebar. Disabled by default for privacy.",
     "defaultSnippetFoldersCollapsed": "Collapse Snippet Folders by Default",
     "defaultSnippetFoldersCollapsedDesc": "When enabled, all snippet folders will be collapsed when you open the snippets tab",
     "terminalSyntaxHighlighting": "Terminal Syntax Highlighting",
