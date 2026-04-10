@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,

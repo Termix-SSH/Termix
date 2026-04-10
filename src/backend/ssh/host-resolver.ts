@@ -78,9 +78,8 @@ export async function resolveHostById(
       // Try shared credential first for non-owner users
       if (userId !== ownerId) {
         try {
-          const { SharedCredentialManager } = await import(
-            "../utils/shared-credential-manager.js"
-          );
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             hostId,
@@ -148,14 +147,13 @@ export async function checkHostAccess(
   hostId: number,
   userId: string,
   hostUserId: string,
-  requiredPermission: "view" | "execute" = "execute",
+  requiredPermission: "read" | "execute" = "execute",
 ): Promise<boolean> {
   if (userId === hostUserId) return true;
 
   try {
-    const { PermissionManager } = await import(
-      "../utils/permission-manager.js"
-    );
+    const { PermissionManager } =
+      await import("../utils/permission-manager.js");
     const permissionManager = PermissionManager.getInstance();
     const accessInfo = await permissionManager.canAccessHost(
       userId,
