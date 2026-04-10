@@ -29,6 +29,7 @@ import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ui/desktop/navigation/dialogs/HostKeyVerificationDialog.tsx";
+import { TmuxSessionPicker } from "@/ui/desktop/navigation/dialogs/TmuxSessionPicker.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -200,6 +201,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
+    const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
+      sessions: Array<{
+        name: string;
+        created: number;
+        lastActivity: number;
+        windows: number;
+        attachedClients: number;
+      }>;
+    } | null>(null);
+    const tmuxSessionNameRef = useRef<string | null>(null);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
@@ -1419,6 +1430,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const cols = terminal?.cols || 80;
             const rows = terminal?.rows || 24;
             connectToHost(cols, rows);
+          } else if (msg.type === "tmux_sessions_available") {
+            setTmuxSessionPicker({
+              sessions: msg.sessions,
+            });
+          } else if (
+            msg.type === "tmux_session_created" ||
+            msg.type === "tmux_session_attached"
+          ) {
+            const sessionName =
+              typeof msg.sessionName === "string" ? msg.sessionName : "";
+            tmuxSessionNameRef.current = sessionName || "(active)";
+            addLog({
+              type: "info",
+              stage: "connection",
+              message:
+                msg.type === "tmux_session_created"
+                  ? t("terminal.tmuxSessionCreated", {
+                      name: sessionName || "new",
+                    })
+                  : t("terminal.tmuxSessionAttached", {
+                      name: sessionName,
+                    }),
+            });
+          } else if (msg.type === "tmux_unavailable") {
+            setTimeout(() => {
+              toast.warning(t("terminal.tmuxUnavailable"), {
+                duration: 8000,
+              });
+            }, 500);
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.tmuxUnavailable"),
+            });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -2421,6 +2466,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               setIsConnecting(false);
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
+        {tmuxSessionPicker && (
+          <TmuxSessionPicker
+            isOpen={true}
+            sessions={tmuxSessionPicker.sessions}
+            onSelect={(sessionName) => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName },
+                  }),
+                );
+              }
+            }}
+            onCreateNew={() => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName: "" },
+                  }),
+                );
+              }
+            }}
+            onCancel={() => setTmuxSessionPicker(null)}
             backgroundColor={backgroundColor}
           />
         )}

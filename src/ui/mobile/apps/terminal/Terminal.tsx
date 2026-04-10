@@ -13,6 +13,7 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   isElectron,
   isEmbeddedMode,
@@ -809,6 +810,46 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "tmux_sessions_available") {
+            // On mobile, auto-attach to the first available session
+            const sessions = msg.sessions as Array<{ name: string }>;
+            if (sessions.length > 0 && ws.readyState === 1) {
+              ws.send(
+                JSON.stringify({
+                  type: "tmux_attach",
+                  data: { sessionName: sessions[0].name },
+                }),
+              );
+            }
+          } else if (
+            msg.type === "tmux_session_created" ||
+            msg.type === "tmux_session_attached"
+          ) {
+            const sessionName =
+              typeof msg.sessionName === "string" ? msg.sessionName : "";
+            addLog({
+              type: "info",
+              stage: "connection",
+              message:
+                msg.type === "tmux_session_created"
+                  ? t("terminal.tmuxSessionCreated", {
+                      name: sessionName || "new",
+                    })
+                  : t("terminal.tmuxSessionAttached", {
+                      name: sessionName,
+                    }),
+            });
+          } else if (msg.type === "tmux_unavailable") {
+            setTimeout(() => {
+              toast.warning(t("terminal.tmuxUnavailable"), {
+                duration: 8000,
+              });
+            }, 500);
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.tmuxUnavailable"),
+            });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
