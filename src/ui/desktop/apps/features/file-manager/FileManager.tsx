@@ -781,6 +781,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         toast.success(
           t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
         );
+      } else {
+        toast.error(t("fileManager.failedToDownloadFile"));
       }
     } catch (error: unknown) {
       if (
