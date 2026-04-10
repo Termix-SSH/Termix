@@ -206,11 +206,10 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-    const sessionTimeoutHours = parseInt(
-      process.env.SESSION_TIMEOUT_HOURS || "24",
-      10,
-    );
-    const defaultExpiry = `${isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours}h`;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const defaultExpiry = `${timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24}h`;
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {

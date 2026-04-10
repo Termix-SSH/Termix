@@ -1577,9 +1577,11 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    const sessionTimeoutHours = parseInt(process.env.SESSION_TIMEOUT_HOURS || "24", 10);
-    const defaultMaxAge = (isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours) * 60 * 60 * 1000;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : defaultMaxAge;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -3361,9 +3363,11 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    const sessionTimeoutHours = parseInt(process.env.SESSION_TIMEOUT_HOURS || "24", 10);
-    const defaultMaxAge = (isNaN(sessionTimeoutHours) || sessionTimeoutHours <= 0 ? 24 : sessionTimeoutHours) * 60 * 60 * 1000;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : defaultMaxAge;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -4227,6 +4231,77 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to update guacamole settings", err);
     res.status(500).json({ error: "Failed to update guacamole settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   get:
+ *     summary: Get session timeout setting
+ *     description: Returns the configured session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current session timeout hours.
+ */
+router.get("/session-timeout", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    res.json({
+      timeoutHours: row ? parseInt(row.value, 10) : 24,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get session timeout", err);
+    res.status(500).json({ error: "Failed to get session timeout" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   patch:
+ *     summary: Update session timeout setting (admin only)
+ *     description: Sets the session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Session timeout updated.
+ *       400:
+ *         description: Invalid value.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/session-timeout", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { timeoutHours } = req.body;
+    if (
+      typeof timeoutHours !== "number" ||
+      timeoutHours < 1 ||
+      timeoutHours > 720
+    ) {
+      return res
+        .status(400)
+        .json({ error: "timeoutHours must be between 1 and 720" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('session_timeout_hours', ?)",
+      )
+      .run(String(timeoutHours));
+    res.json({ timeoutHours });
+  } catch (err) {
+    authLogger.error("Failed to set session timeout", err);
+    res.status(500).json({ error: "Failed to set session timeout" });
   }
 });
 
