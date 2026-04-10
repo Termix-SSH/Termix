@@ -256,7 +256,7 @@ async function createJumpHostChain(
           host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
-          tryKeyboard: true,
+          tryKeyboard: jumpHostConfig.authType !== "none",
           readyTimeout: 30000,
           hostVerifier: jumpHostVerifier,
         };
@@ -1781,7 +1781,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: true,
+      tryKeyboard: resolvedCredentials.authType !== "none",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval
