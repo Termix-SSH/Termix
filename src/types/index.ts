@@ -429,6 +429,7 @@ export interface TerminalConfig {
   sudoPasswordAutoFill: boolean;
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
+  autoTmux: boolean;
 }
 
 // ============================================================================

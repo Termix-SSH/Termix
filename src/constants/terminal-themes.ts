@@ -820,6 +820,7 @@ export const DEFAULT_TERMINAL_CONFIG = {
   sudoPasswordAutoFill: false,
   keepaliveInterval: undefined as number | undefined,
   keepaliveCountMax: undefined as number | undefined,
+  autoTmux: false,
 };
 
 export type TerminalConfigType = typeof DEFAULT_TERMINAL_CONFIG;
