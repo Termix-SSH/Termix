@@ -2478,6 +2478,29 @@ export async function updateGlobalMonitoringSettings(settings: {
 }
 
 // ============================================================================
+// SESSION TIMEOUT SETTINGS
+// ============================================================================
+
+export async function getSessionTimeout(): Promise<{ timeoutHours: number }> {
+  try {
+    const response = await authApi.get("/users/session-timeout");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch session timeout");
+  }
+}
+
+export async function updateSessionTimeout(
+  timeoutHours: number,
+): Promise<void> {
+  try {
+    await authApi.patch("/users/session-timeout", { timeoutHours });
+  } catch (error) {
+    handleApiError(error, "update session timeout");
+  }
+}
+
+// ============================================================================
 // GUACAMOLE SETTINGS
 // ============================================================================
 
