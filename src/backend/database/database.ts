@@ -11,7 +11,7 @@ import terminalRoutes from "./routes/terminal.js";
 import guacamoleRoutes from "../guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";

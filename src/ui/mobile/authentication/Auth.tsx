@@ -166,12 +166,6 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    if (!registrationAllowed && !internalLoggedIn) {
-      toast.warning(t("messages.registrationDisabled"));
-    }
-  }, [registrationAllowed, internalLoggedIn, t]);
-
-  useEffect(() => {
     if (!passwordLoginAllowed && oidcConfigured && tab !== "external") {
       setTab("external");
     }
@@ -594,6 +588,11 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
       setError(null);
+
+      const urlToken = urlParams.get("token");
+      if (urlToken && (isElectron() || isReactNativeWebView())) {
+        localStorage.setItem("jwt", urlToken);
+      }
 
       window.history.replaceState({}, document.title, window.location.pathname);
 

@@ -190,10 +190,18 @@ export function ElectronLoginForm({
             try {
               iframe.contentWindow.eval(injectedScript);
             } catch (evalError) {
-              iframe.contentWindow.postMessage(
-                { type: "INJECT_SCRIPT", script: injectedScript },
-                "*",
-              );
+              try {
+                const iframeOrigin = new URL(serverUrl).origin;
+                iframe.contentWindow.postMessage(
+                  { type: "INJECT_SCRIPT", script: injectedScript },
+                  iframeOrigin,
+                );
+              } catch {
+                iframe.contentWindow.postMessage(
+                  { type: "INJECT_SCRIPT", script: injectedScript },
+                  "*",
+                );
+              }
             }
           }
         } catch (err) {
