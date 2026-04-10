@@ -261,12 +261,6 @@ export function Auth({
   }, [setDbError, firstUserToastShown, showServerConfig, t]);
 
   useEffect(() => {
-    if (!registrationAllowed && !internalLoggedIn) {
-      toast.warning(t("messages.registrationDisabled"));
-    }
-  }, [registrationAllowed, internalLoggedIn, t]);
-
-  useEffect(() => {
     if (!passwordLoginAllowed && oidcConfigured && tab !== "external") {
       setTab("external");
     }
