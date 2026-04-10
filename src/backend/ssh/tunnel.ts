@@ -546,7 +546,7 @@ async function connectSSHTunnel(
 
   tunnelConnecting.add(tunnelName);
 
-  cleanupTunnelResources(tunnelName, true);
+  await cleanupTunnelResources(tunnelName, true);
 
   if (retryAttempt === 0) {
     retryExhaustedTunnels.delete(tunnelName);
