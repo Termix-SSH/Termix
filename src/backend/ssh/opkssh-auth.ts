@@ -509,25 +509,6 @@ async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
       }),
     );
 
-    try {
-      await axios.post(
-        "http://localhost:30006/activity/log",
-        {
-          type: "opkssh_authentication",
-          hostId: session.hostId,
-          hostName: session.hostname,
-          status: "approved",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.INTERNAL_AUTH_TOKEN}`,
-          },
-        },
-      );
-    } catch (activityError) {
-      sshLogger.warn("Failed to log OPKSSH activity", activityError);
-    }
-
     await session.cleanup();
   } catch (error) {
     sshLogger.error(
