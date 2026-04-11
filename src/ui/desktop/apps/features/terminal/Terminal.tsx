@@ -66,6 +66,7 @@ interface HostConfig {
 
 interface TerminalHandle {
   disconnect: () => void;
+  reconnect: () => void;
   fit: () => void;
   sendInput: (data: string) => void;
   notifyResize: () => void;
@@ -142,6 +143,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [isFitted, setIsFitted] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const connectionErrorRef = useRef<string | null>(null);
+    const [showDisconnectedOverlay, setShowDisconnectedOverlay] =
+      useState(false);
 
     const updateConnectionError = useCallback((error: string | null) => {
       connectionErrorRef.current = error;
@@ -584,6 +587,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnected(false);
           setIsConnecting(false);
         },
+        reconnect: () => {
+          isUnmountingRef.current = false;
+          shouldNotReconnectRef.current = false;
+          isReconnectingRef.current = false;
+          isConnectingRef.current = false;
+          reconnectAttempts.current = 0;
+          wasDisconnectedBySSH.current = false;
+          wasConnectedRef.current = false;
+          updateConnectionError(null);
+          setShowDisconnectedOverlay(false);
+          if (terminal) {
+            terminal.clear();
+            const cols = terminal.cols;
+            const rows = terminal.rows;
+            connectToHost(cols, rows);
+          }
+        },
         fit: () => {
           fitAddonRef.current?.fit();
           if (terminal) scheduleNotify(terminal.cols, terminal.rows);
@@ -628,9 +648,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       if (reconnectAttempts.current >= maxReconnectAttempts) {
-        updateConnectionError(t("terminal.maxReconnectAttemptsReached"));
         setIsConnecting(false);
         shouldNotReconnectRef.current = true;
+        setShowDisconnectedOverlay(true);
         addLog({
           type: "error",
           stage: "connection",
@@ -1052,19 +1072,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);
-            if (terminal) {
-              terminal.clear();
-            }
             setIsConnecting(false);
             if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              if (
-                onClose &&
-                !connectionErrorRef.current &&
-                !opksshFailedRef.current
-              ) {
-                onClose();
-              }
+              setShowDisconnectedOverlay(true);
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),
@@ -2144,6 +2155,47 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           message={t("terminal.connecting")}
           backgroundColor={backgroundColor}
         />
+
+        {showDisconnectedOverlay && !isConnecting && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
+            style={{ backgroundColor }}
+          >
+            <p className="text-sm text-muted-foreground">
+              {t("terminal.connectionLost")}
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  setShowDisconnectedOverlay(false);
+                  isUnmountingRef.current = false;
+                  shouldNotReconnectRef.current = false;
+                  isReconnectingRef.current = false;
+                  isConnectingRef.current = false;
+                  reconnectAttempts.current = 0;
+                  wasDisconnectedBySSH.current = false;
+                  wasConnectedRef.current = false;
+                  updateConnectionError(null);
+                  if (terminal) {
+                    terminal.clear();
+                    connectToHost(terminal.cols, terminal.rows);
+                  }
+                }}
+              >
+                {t("terminal.reconnect")}
+              </button>
+              {onClose && (
+                <button
+                  className="px-4 py-2 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
+                  onClick={onClose}
+                >
+                  {t("terminal.closeTab")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <ConnectionLog
           isConnecting={isConnecting}
