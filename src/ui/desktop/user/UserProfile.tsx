@@ -121,6 +121,9 @@ export function UserProfile({
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") === "true",
   );
+  const [commandHistoryEnabled, setCommandHistoryEnabled] = useState<boolean>(
+    localStorage.getItem("commandHistoryEnabled") !== "false",
+  );
   const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
     useState<boolean>(
       () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
@@ -212,6 +215,11 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+  };
+
+  const handleCommandHistoryToggle = (enabled: boolean) => {
+    setCommandHistoryEnabled(enabled);
+    localStorage.setItem("commandHistoryEnabled", enabled.toString());
   };
 
   const handleTerminalSyntaxHighlightingToggle = (enabled: boolean) => {
@@ -589,6 +597,20 @@ export function UserProfile({
                       <Switch
                         checked={commandAutocomplete}
                         onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.commandHistory")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.commandHistoryDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandHistoryEnabled}
+                        onCheckedChange={handleCommandHistoryToggle}
                       />
                     </div>
                     <div className="flex items-center justify-between">

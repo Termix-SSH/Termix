@@ -62,11 +62,37 @@ router.post(
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
+    const sensitivePatterns = [
+      /passw(or)?d/i,
+      /\bsecret\b/i,
+      /\btoken\b/i,
+      /\bapi.?key\b/i,
+      /PASS(WORD)?=/i,
+      /AWS_SECRET/i,
+      /mysql\b.*-p/i,
+      /sudo\s+-S\b/,
+      /htpasswd/i,
+      /sshpass/i,
+      /curl\b.*-u\s/i,
+      /export\b.*(?:PASSWORD|SECRET|TOKEN|KEY)=/i,
+    ];
+
+    const trimmedCommand = command.trim();
+    if (sensitivePatterns.some((p: RegExp) => p.test(trimmedCommand))) {
+      return res.status(201).json({
+        id: 0,
+        userId,
+        hostId: parseInt(hostId, 10),
+        command: trimmedCommand,
+        executedAt: new Date().toISOString(),
+      });
+    }
+
     try {
       const insertData = {
         userId,
         hostId: parseInt(hostId, 10),
-        command: command.trim(),
+        command: trimmedCommand,
       };
 
       const result = await db
