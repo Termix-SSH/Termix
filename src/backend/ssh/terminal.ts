@@ -427,7 +427,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
-  let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
 
   const wsPingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -809,8 +808,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         const opksshData = data as { hostId: number };
         try {
           const { startOPKSSHAuth } = await import("./opkssh-auth.js");
-          const { getRequestOrigin } =
-            await import("../utils/request-origin.js");
+          const { getRequestOrigin } = await import(
+            "../utils/request-origin.js"
+          );
           const db = getDb();
           const hostRow = await db
             .select()
@@ -1067,8 +1067,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       if (ownerId && userId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             id,
@@ -1331,7 +1332,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               sshConn!,
               stream,
               lastJumpClient,
-              opksshTempFiles,
             );
             sessionManager.attachWs(currentSessionId, userId, ws);
 
@@ -1974,19 +1974,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         sendLog("auth", "info", "Using cached OPKSSH certificate");
 
-        const { promises: fs } = await import("fs");
-        const path = await import("path");
-        const os = await import("os");
-
-        const tempDir = os.tmpdir();
-        const keyPath = path.join(tempDir, `opkssh-${userId}-${id}`);
-        const certPath = `${keyPath}-cert.pub`;
-
-        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
-        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
-
-        opksshTempFiles = { keyPath, certPath };
-        connectConfig.privateKey = await fs.readFile(keyPath);
+        const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+        await setupOPKSSHCertAuth(connectConfig, sshConn, token, username);
       } catch (opksshError) {
         sshLogger.error("OPKSSH authentication error", opksshError, {
           operation: "opkssh_auth_error",
@@ -2171,6 +2160,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else {
       sendLog("handshake", "info", "Starting SSH session");
       sendLog("auth", "info", `Authenticating as ${username}`);
+
       sshLogger.info("Initiating SSH connection", {
         operation: "terminal_ssh_connect_attempt",
         sessionId,
@@ -2219,7 +2209,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshStream = null;
     sshConn = null;
     lastJumpClient = null;
-    opksshTempFiles = null;
 
     resetConnectionState();
     isCleaningUp = false;
