@@ -1258,6 +1258,17 @@ export async function exportSSHHostWithCredentials(
   }
 }
 
+export async function exportAllSSHHosts(): Promise<{
+  hosts: SSHHost[];
+}> {
+  try {
+    const response = await sshHostApi.get("/db/hosts/export");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export all SSH hosts");
+  }
+}
+
 // ============================================================================
 // SSH AUTOSTART MANAGEMENT
 // ============================================================================
