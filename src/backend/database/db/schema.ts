@@ -295,6 +295,30 @@ export const snippetFolders = sqliteTable("snippet_folders", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const snippetAccess = sqliteTable("snippet_access", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  snippetId: integer("snippet_id")
+    .notNull()
+    .references(() => snippets.id, { onDelete: "cascade" }),
+
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  roleId: integer("role_id").references(() => roles.id, {
+    onDelete: "cascade",
+  }),
+
+  grantedBy: text("granted_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  permissionLevel: text("permission_level").notNull().default("view"),
+
+  expiresAt: text("expires_at"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const sshFolders = sqliteTable("ssh_folders", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
