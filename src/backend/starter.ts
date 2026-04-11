@@ -7,7 +7,11 @@ import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
-import { systemLogger, versionLogger } from "./utils/logger.js";
+import {
+  systemLogger,
+  versionLogger,
+  setGlobalLogLevel,
+} from "./utils/logger.js";
 
 (async () => {
   const initStartTime = Date.now();
@@ -141,6 +145,19 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/docker.js");
     await import("./ssh/docker-console.js");
     await import("./dashboard.js");
+
+    // Initialize log level from database settings
+    const { getDb: getDbForSettings } = await import("./database/db/index.js");
+    const settingsDb = getDbForSettings();
+    const logLevelRow = settingsDb.$client
+      .prepare("SELECT value FROM settings WHERE key = 'log_level'")
+      .get() as { value: string } | undefined;
+    if (logLevelRow) {
+      setGlobalLogLevel(logLevelRow.value);
+      systemLogger.info(`Log level set to: ${logLevelRow.value}`, {
+        operation: "log_level_init",
+      });
+    }
 
     // Initialize Guacamole server for RDP/VNC/Telnet support
     const { getDb: getDbForGuac } = await import("./database/db/index.js");

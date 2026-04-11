@@ -19,6 +19,8 @@ import {
   updateGlobalMonitoringSettings,
   getGuacamoleSettings,
   updateGuacamoleSettings,
+  getLogLevel,
+  updateLogLevel,
 } from "@/ui/main-axios.ts";
 import { Button } from "@/components/ui/button.tsx";
 
@@ -66,9 +68,35 @@ export function GeneralSettingsTab({
   );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
 
+  const [logLevel, setLogLevel] = React.useState("info");
+  const [logLevelLoading, setLogLevelLoading] = React.useState(false);
+
   const [guacEnabled, setGuacEnabled] = React.useState(true);
   const [guacUrl, setGuacUrl] = React.useState("guacd:4822");
   const [guacLoading, setGuacLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    getLogLevel()
+      .then((data) => {
+        setLogLevel(data.level);
+      })
+      .catch(() => {
+        // Use default silently
+      });
+  }, []);
+
+  const handleLogLevelChange = async (value: string) => {
+    setLogLevel(value);
+    setLogLevelLoading(true);
+    try {
+      await updateLogLevel(value);
+      toast.success(t("admin.logLevelSaved"));
+    } catch {
+      toast.error(t("admin.failedToSaveLogLevel"));
+    } finally {
+      setLogLevelLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     getGuacamoleSettings()
@@ -409,6 +437,36 @@ export function GeneralSettingsTab({
             </p>
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
+        <h3 className="text-lg font-semibold">{t("admin.logLevel")}</h3>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.logLevelDesc")}
+        </p>
+        <div>
+          <label className="text-sm font-medium">
+            {t("admin.logVerbosity")}
+          </label>
+          <Select
+            value={logLevel}
+            onValueChange={handleLogLevelChange}
+            disabled={logLevelLoading}
+          >
+            <SelectTrigger className="w-[200px] mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="debug">Debug</SelectItem>
+              <SelectItem value="info">Info</SelectItem>
+              <SelectItem value="warn">Warning</SelectItem>
+              <SelectItem value="error">Error</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("admin.logLevelNote")}
+          </p>
+        </div>
       </div>
     </div>
   );
