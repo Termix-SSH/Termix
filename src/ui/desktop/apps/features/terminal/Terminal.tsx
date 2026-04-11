@@ -211,6 +211,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }>;
     } | null>(null);
     const tmuxSessionNameRef = useRef<string | null>(null);
+    const tmuxCopyModeHintShownRef = useRef(false);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
@@ -1903,6 +1904,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
       element?.addEventListener("paste", handlePaste);
 
+      let tmuxDragTracking = false;
+      const handleTmuxDragStart = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        if (!tmuxSessionNameRef.current) return;
+        tmuxDragTracking = true;
+      };
+      const handleTmuxDragMove = () => {
+        if (!tmuxDragTracking) return;
+        tmuxDragTracking = false;
+        if (tmuxCopyModeHintShownRef.current) return;
+        tmuxCopyModeHintShownRef.current = true;
+        toast.info(t("terminal.tmuxCopyHint"), { duration: 5000 });
+      };
+      const handleTmuxDragEnd = () => {
+        tmuxDragTracking = false;
+      };
+      element?.addEventListener("mousedown", handleTmuxDragStart);
+      element?.addEventListener("mousemove", handleTmuxDragMove);
+      element?.addEventListener("mouseup", handleTmuxDragEnd);
+
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1943,6 +1964,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("paste", handlePaste);
+        element?.removeEventListener("mousedown", handleTmuxDragStart);
+        element?.removeEventListener("mousemove", handleTmuxDragMove);
+        element?.removeEventListener("mouseup", handleTmuxDragEnd);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);

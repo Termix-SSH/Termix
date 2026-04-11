@@ -1559,6 +1559,7 @@
     "tmuxTimeHours": "{{count}}h ago",
     "tmuxTimeDays": "{{count}}d ago",
     "tmuxCreateNew": "Start new session",
+    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
     "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
     "connectionTimeout": "Connection timeout",
     "terminalTitle": "Terminal - {{host}}",
