@@ -169,6 +169,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       requestId: string;
       stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
       error?: string;
+      providers?: Array<{ alias: string; issuer: string }>;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const opksshFailedRef = useRef(false);
@@ -1158,6 +1159,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 authUrl: msg.url || "",
                 requestId: msg.requestId || "",
                 stage: "chooser",
+                providers: msg.providers,
               });
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);
@@ -2191,6 +2193,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             requestId={opksshDialog.requestId}
             stage={opksshDialog.stage}
             error={opksshDialog.error}
+            providers={opksshDialog.providers}
             onCancel={() => {
               if (webSocketRef.current) {
                 webSocketRef.current.send(
@@ -2216,6 +2219,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
+            }}
+            onSelectProvider={(issuer) => {
+              if (!opksshDialog.authUrl) return;
+              const selectUrl = `${opksshDialog.authUrl}/select?op=${encodeURIComponent(issuer)}`;
+              window.open(selectUrl, "_blank");
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "opkssh_browser_opened",
+                    data: { requestId: opksshDialog.requestId },
+                  }),
+                );
+              }
+              setOpksshDialog((prev) =>
+                prev ? { ...prev, stage: "waiting" } : null,
+              );
             }}
             backgroundColor={backgroundColor}
           />
