@@ -87,13 +87,14 @@ export function AppView({
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
 }: TerminalViewProps): React.ReactElement {
-  const { tabs, currentTab, allSplitScreenTab, removeTab, updateTab } =
+  const { tabs, currentTab, allSplitScreenTab, removeTab, updateTab, addTab } =
     useTabs() as {
       tabs: TabData[];
       currentTab: number;
       allSplitScreenTab: number[];
       removeTab: (id: number) => void;
       updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
+      addTab: (tab: Omit<TabData, "id">) => number;
     };
   const { state: sidebarState } = useSidebar();
   const { theme: appTheme } = useTheme();
@@ -394,6 +395,16 @@ export function AppView({
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
                     onTitleChange={(title) => updateTab(t.id, { title })}
+                    onOpenFileManager={
+                      (t.hostConfig as any)?.enableFileManager
+                        ? () =>
+                            addTab({
+                              type: "file_manager",
+                              title: t.title,
+                              hostConfig: t.hostConfig,
+                            })
+                        : undefined
+                    }
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView
