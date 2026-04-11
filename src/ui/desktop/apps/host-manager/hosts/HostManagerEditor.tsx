@@ -448,6 +448,7 @@ export function HostManagerEditor({
           }),
         )
         .optional(),
+      macAddress: z.string().optional(),
       enableDocker: z.boolean().default(false),
       domain: z.string().optional(),
       security: z.string().optional(),
@@ -580,6 +581,7 @@ export function HostManagerEditor({
       socks5Username: "",
       socks5Password: "",
       socks5ProxyChain: [],
+      macAddress: "",
       enableDocker: false,
       domain: "",
       security: "any",
@@ -821,6 +823,7 @@ export function HostManagerEditor({
         socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
           ? cleanedHost.socks5ProxyChain
           : [],
+        macAddress: (cleanedHost as any).macAddress || "",
         enableDocker: Boolean(cleanedHost.enableDocker),
         domain: (cleanedHost as any).domain || "",
         security: (cleanedHost as any).security || "any",

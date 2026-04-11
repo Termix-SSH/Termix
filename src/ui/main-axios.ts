@@ -1073,6 +1073,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1160,6 +1161,7 @@ export async function updateSSHHost(
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1187,6 +1189,15 @@ export async function updateSSHHost(
     }
   } catch (error) {
     throw handleApiError(error, "update SSH host");
+  }
+}
+
+export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
+  try {
+    const response = await sshHostApi.post(`/db/host/${hostId}/wake`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "wake on LAN");
   }
 }
 
