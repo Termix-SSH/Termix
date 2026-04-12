@@ -168,7 +168,7 @@ export class OPKSSHBinaryManager {
     const osMap: Record<string, string> = {
       win32: "windows",
       linux: "linux",
-      darwin: "darwin",
+      darwin: "osx",
     };
 
     const archMap: Record<string, string> = {
@@ -209,7 +209,7 @@ export class OPKSSHBinaryManager {
     const osMap: Record<string, string> = {
       win32: "windows",
       linux: "linux",
-      darwin: "darwin",
+      darwin: "osx",
     };
 
     const archMap: Record<string, string> = {

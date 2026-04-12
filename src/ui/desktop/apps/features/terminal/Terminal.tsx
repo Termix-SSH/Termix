@@ -17,16 +17,19 @@ import { getBasePath } from "@/lib/base-path";
 import {
   getCookie,
   isElectron,
+  isEmbeddedMode,
   logActivity,
   getSnippets,
   deleteCommandFromHistory,
   getCommandHistory,
+  getHostPassword,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ui/desktop/navigation/dialogs/HostKeyVerificationDialog.tsx";
+import { TmuxSessionPicker } from "@/ui/desktop/navigation/dialogs/TmuxSessionPicker.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -82,6 +85,7 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  previewTheme?: string | null;
 }
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
@@ -94,6 +98,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onTitleChange,
       initialPath,
       executeCommand,
+      previewTheme,
     },
     ref,
   ) {
@@ -114,21 +119,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { theme: appTheme } = useTheme();
     const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
-    const config = { ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig };
+    const savedTheme = localStorage.getItem(
+      `terminal_theme_host_${hostConfig.id}`,
+    );
+    const config = {
+      ...DEFAULT_TERMINAL_CONFIG,
+      ...hostConfig.terminalConfig,
+      theme:
+        savedTheme ||
+        hostConfig.terminalConfig?.theme ||
+        DEFAULT_TERMINAL_CONFIG.theme,
+    };
 
     const isDarkMode =
       appTheme === "dark" ||
+      appTheme === "dracula" ||
+      appTheme === "gentlemansChoice" ||
+      appTheme === "midnightEspresso" ||
+      appTheme === "catppuccinMocha" ||
       (appTheme === "system" &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     let themeColors;
-    if (config.theme === "termix") {
+    const activeTheme = previewTheme || config.theme;
+
+    if (activeTheme === "termix") {
       themeColors = isDarkMode
         ? TERMINAL_THEMES.termixDark.colors
         : TERMINAL_THEMES.termixLight.colors;
     } else {
       themeColors =
-        TERMINAL_THEMES[config.theme]?.colors ||
+        TERMINAL_THEMES[activeTheme]?.colors ||
         TERMINAL_THEMES.termixDark.colors;
     }
     const backgroundColor = themeColors.background;
@@ -137,6 +158,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const pongReceivedRef = useRef(true);
+    const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
@@ -184,12 +207,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
+    const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
+      sessions: Array<{
+        name: string;
+        created: number;
+        lastActivity: number;
+        windows: number;
+        attachedClients: number;
+      }>;
+    } | null>(null);
+    const tmuxSessionNameRef = useRef<string | null>(null);
+    const tmuxCopyModeHintShownRef = useRef(false);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
-    const maxReconnectAttempts = 3;
+    const maxReconnectAttempts = 8;
     const isUnmountingRef = useRef(false);
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
@@ -212,11 +246,35 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
     const keyHandlerAttachedRef = useRef(false);
+    const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
+      useState<boolean>(
+        () => localStorage.getItem("commandHistoryTracking") === "true",
+      );
+
+    useEffect(() => {
+      const handleCommandHistoryTrackingChanged = () => {
+        setCommandHistoryTrackingEnabled(
+          localStorage.getItem("commandHistoryTracking") === "true",
+        );
+      };
+
+      window.addEventListener(
+        "commandHistoryTrackingChanged",
+        handleCommandHistoryTrackingChanged,
+      );
+
+      return () => {
+        window.removeEventListener(
+          "commandHistoryTrackingChanged",
+          handleCommandHistoryTrackingChanged,
+        );
+      };
+    }, []);
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
         hostId: hostConfig.id,
-        enabled: true,
+        enabled: commandHistoryTrackingEnabled,
         onCommandExecuted: (command) => {
           if (!autocompleteHistory.current.includes(command)) {
             autocompleteHistory.current = [
@@ -559,6 +617,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearInterval(pingIntervalRef.current);
             pingIntervalRef.current = null;
           }
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = null;
+          }
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
@@ -743,13 +805,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
+              const configuredUrl = (window as { configuredServerUrl?: string })
+                .configuredServerUrl;
+              // Embedded mode or localhost: connect directly to the WebSocket server port
+              if (isEmbeddedMode() || !configuredUrl) {
+                return "ws://127.0.0.1:30002";
+              }
+              // Remote server: use the /ssh/websocket/ path (expects reverse proxy)
+              const wsProtocol = configuredUrl.startsWith("https://")
                 ? "wss://"
                 : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              const wsHost = configuredUrl
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
           : `${getBasePath()}/ssh/websocket/`;
@@ -770,9 +838,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
-
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(baseWsUrl);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);
@@ -858,8 +924,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
+        pongReceivedRef.current = true;
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
+            if (!pongReceivedRef.current) {
+              console.warn(
+                "[WebSocket] Pong timeout - connection appears dead, closing",
+              );
+              ws.close();
+              return;
+            }
+            pongReceivedRef.current = false;
             ws.send(JSON.stringify({ type: "ping" }));
           }
         }, 30000);
@@ -868,6 +943,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       ws.addEventListener("message", (event) => {
         try {
           const msg = JSON.parse(event.data);
+          if (msg.type === "pong") {
+            pongReceivedRef.current = true;
+            return;
+          }
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
               const syntaxHighlightingEnabled =
@@ -880,19 +959,36 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               terminal.write(outputData);
               const sudoPasswordPattern =
                 /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
-              const passwordToFill =
-                hostConfig.terminalConfig?.sudoPassword || hostConfig.password;
+              const hasSudoPw =
+                hostConfig.terminalConfig?.sudoPassword ||
+                hostConfig.password ||
+                hostConfig.hasSudoPassword ||
+                hostConfig.hasPassword;
               if (
                 config.sudoPasswordAutoFill &&
                 sudoPasswordPattern.test(msg.data) &&
-                passwordToFill &&
+                hasSudoPw &&
                 !sudoPromptShownRef.current
               ) {
                 sudoPromptShownRef.current = true;
                 confirmWithToast(
                   t("terminal.sudoPasswordPopupTitle"),
                   async () => {
+                    // Fetch password on-demand from server
+                    let passwordToFill =
+                      hostConfig.terminalConfig?.sudoPassword ||
+                      hostConfig.password;
+                    if (!passwordToFill && hostConfig.id) {
+                      passwordToFill =
+                        (await getHostPassword(
+                          hostConfig.id,
+                          "sudoPassword",
+                        )) ||
+                        (await getHostPassword(hostConfig.id, "password")) ||
+                        undefined;
+                    }
                     if (
+                      passwordToFill &&
                       webSocketRef.current &&
                       webSocketRef.current.readyState === WebSocket.OPEN
                     ) {
@@ -1347,6 +1443,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const cols = terminal?.cols || 80;
             const rows = terminal?.rows || 24;
             connectToHost(cols, rows);
+          } else if (msg.type === "tmux_sessions_available") {
+            setTmuxSessionPicker({
+              sessions: msg.sessions,
+            });
+          } else if (
+            msg.type === "tmux_session_created" ||
+            msg.type === "tmux_session_attached"
+          ) {
+            const sessionName =
+              typeof msg.sessionName === "string" ? msg.sessionName : "";
+            tmuxSessionNameRef.current = sessionName || "(active)";
+            addLog({
+              type: "info",
+              stage: "connection",
+              message:
+                msg.type === "tmux_session_created"
+                  ? t("terminal.tmuxSessionCreated", {
+                      name: sessionName || "new",
+                    })
+                  : t("terminal.tmuxSessionAttached", {
+                      name: sessionName,
+                    }),
+            });
+          } else if (msg.type === "tmux_unavailable") {
+            setTimeout(() => {
+              toast.warning(t("terminal.tmuxUnavailable"), {
+                duration: 8000,
+              });
+            }, 500);
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.tmuxUnavailable"),
+            });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1371,8 +1501,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         setIsConnected(false);
         isConnectingRef.current = false;
-        if (terminal) {
-          terminal.clear();
+
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
         }
 
         if (totpTimeoutRef.current) {
@@ -1381,17 +1513,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (event.code === 1006) {
-          console.error(
-            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          console.warn(
+            "[WebSocket] Abnormal closure detected - attempting reconnection",
           );
           addLog({
-            type: "error",
+            type: "warning",
             stage: "connection",
             message: t("terminal.websocketAbnormalClose"),
           });
-          updateConnectionError(t("terminal.websocketAbnormalClose"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
+
+          if (wasConnectedRef.current) {
+            attemptReconnection();
+          } else {
+            updateConnectionError(t("terminal.websocketAbnormalClose"));
+            setIsConnecting(false);
+          }
           return;
         }
 
@@ -1407,10 +1543,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           shouldNotReconnectRef.current = true;
 
           localStorage.removeItem("jwt");
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
 
           return;
         }
@@ -1583,22 +1715,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       commandHistoryContext.setOnDeleteCommand(handleDeleteCommand);
     }, [handleDeleteCommand]);
 
+    // Separate theme and options updates to avoid terminal re-initialization flashes
     useEffect(() => {
-      if (!terminal || !xtermRef.current) return;
+      if (!terminal) return;
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...hostConfig.terminalConfig,
+        ...(hostConfig.terminalConfig as any),
       };
 
       let themeColors;
-      if (config.theme === "termix") {
+      const activeTheme = previewTheme || config.theme;
+
+      if (activeTheme === "termix") {
         themeColors = isDarkMode
           ? TERMINAL_THEMES.termixDark.colors
           : TERMINAL_THEMES.termixLight.colors;
       } else {
         themeColors =
-          TERMINAL_THEMES[config.theme]?.colors ||
+          TERMINAL_THEMES[activeTheme]?.colors ||
           TERMINAL_THEMES.termixDark.colors;
       }
 
@@ -1607,13 +1742,98 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
+      // Update terminal options individually to avoid re-initialization flashes
+      terminal.options.cursorBlink = config.cursorBlink;
+      terminal.options.cursorStyle = config.cursorStyle;
+      terminal.options.scrollback = config.scrollback;
+      terminal.options.fontSize = config.fontSize;
+      terminal.options.fontFamily = fontFamily;
+      terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
+      terminal.options.fastScrollModifier = config.fastScrollModifier;
+      terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
+      terminal.options.minimumContrastRatio = config.minimumContrastRatio;
+      terminal.options.letterSpacing = config.letterSpacing;
+      terminal.options.lineHeight = config.lineHeight;
+      terminal.options.bellStyle = config.bellStyle as
+        | "none"
+        | "sound"
+        | "visual"
+        | "both";
+
+      terminal.options.theme = {
+        background: themeColors.background,
+        foreground: themeColors.foreground,
+        cursor: themeColors.cursor,
+        cursorAccent: themeColors.cursorAccent,
+        selectionBackground: themeColors.selectionBackground,
+        selectionForeground: themeColors.selectionForeground,
+        black: themeColors.black,
+        red: themeColors.red,
+        green: themeColors.green,
+        yellow: themeColors.yellow,
+        blue: themeColors.blue,
+        magenta: themeColors.magenta,
+        cyan: themeColors.cyan,
+        white: themeColors.white,
+        brightBlack: themeColors.brightBlack,
+        brightRed: themeColors.brightRed,
+        brightGreen: themeColors.brightGreen,
+        brightYellow: themeColors.brightYellow,
+        brightBlue: themeColors.brightBlue,
+        brightMagenta: themeColors.brightMagenta,
+        brightCyan: themeColors.brightCyan,
+        brightWhite: themeColors.brightWhite,
+      };
+
+      // Ensure terminal is correctly fitted if font-related options change
+      if (fitAddonRef.current && isFitted) {
+        performFit();
+      }
+
+      // Refresh terminal to apply new theme colors to existing buffer content
+      hardRefresh();
+    }, [
+      terminal,
+      hostConfig.terminalConfig,
+      previewTheme,
+      isDarkMode,
+      isFitted,
+    ]);
+
+    useEffect(() => {
+      if (!terminal || !xtermRef.current) return;
+
+      const config = {
+        ...DEFAULT_TERMINAL_CONFIG,
+        ...(hostConfig.terminalConfig as any),
+      };
+
+      const fontConfig = TERMINAL_FONTS.find(
+        (f) => f.value === config.fontFamily,
+      );
+      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+
+      let themeColors;
+      const activeTheme = previewTheme || config.theme;
+
+      if (activeTheme === "termix") {
+        themeColors = isDarkMode
+          ? TERMINAL_THEMES.termixDark.colors
+          : TERMINAL_THEMES.termixLight.colors;
+      } else {
+        themeColors =
+          TERMINAL_THEMES[activeTheme]?.colors ||
+          TERMINAL_THEMES.termixDark.colors;
+      }
+
+      // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
         fontSize: config.fontSize,
         fontFamily,
-        allowTransparency: true,
+        allowTransparency: true, // MUST be set before open()
         convertEol: false,
         windowsMode: false,
         macOptionIsMeta: false,
@@ -1626,7 +1846,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         letterSpacing: config.letterSpacing,
         lineHeight: config.lineHeight,
         bellStyle: config.bellStyle as "none" | "sound" | "visual" | "both",
-
         theme: {
           background: themeColors.background,
           foreground: themeColors.foreground,
@@ -1697,9 +1916,44 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
+      const handlePaste = (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData("text");
+        if (text) {
+          e.preventDefault();
+          e.stopPropagation();
+          terminal.paste(text);
+        }
+      };
+      element?.addEventListener("paste", handlePaste);
+
+      let tmuxDragTracking = false;
+      const handleTmuxDragStart = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        if (!tmuxSessionNameRef.current) return;
+        tmuxDragTracking = true;
+      };
+      const handleTmuxDragMove = () => {
+        if (!tmuxDragTracking) return;
+        tmuxDragTracking = false;
+        if (tmuxCopyModeHintShownRef.current) return;
+        tmuxCopyModeHintShownRef.current = true;
+        toast.info(t("terminal.tmuxCopyHint"), { duration: 5000 });
+      };
+      const handleTmuxDragEnd = () => {
+        tmuxDragTracking = false;
+      };
+      element?.addEventListener("mousedown", handleTmuxDragStart);
+      element?.addEventListener("mousemove", handleTmuxDragMove);
+      element?.addEventListener("mouseup", handleTmuxDragEnd);
+
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        const config = {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...(hostConfig.terminalConfig as any),
+        };
         if (config.backspaceMode !== "control-h") return;
 
         e.preventDefault();
@@ -1731,11 +1985,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeObserver.disconnect();
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
+        element?.removeEventListener("paste", handlePaste);
+        element?.removeEventListener("mousedown", handleTmuxDragStart);
+        element?.removeEventListener("mousemove", handleTmuxDragMove);
+        element?.removeEventListener("mouseup", handleTmuxDragEnd);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       };
-    }, [xtermRef, terminal, hostConfig, isDarkMode]);
+    }, [xtermRef, terminal]);
 
     const isMountedRef = useRef(false);
 
@@ -1766,6 +2024,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (pingIntervalRef.current) {
             clearInterval(pingIntervalRef.current);
             pingIntervalRef.current = null;
+          }
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = null;
           }
 
           const persistenceEnabled =
@@ -1840,11 +2102,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !e.metaKey &&
           e.key.toLowerCase() === "v"
         ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((text) => {
-            if (text) terminal.paste(text);
-          });
+          // Let the browser handle Ctrl+V natively — the paste event
+          // listener will intercept the result without triggering the
+          // clipboard permission popup
           return false;
         }
 
@@ -2269,6 +2529,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               setIsConnecting(false);
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
+        {tmuxSessionPicker && (
+          <TmuxSessionPicker
+            isOpen={true}
+            sessions={tmuxSessionPicker.sessions}
+            onSelect={(sessionName) => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName },
+                  }),
+                );
+              }
+            }}
+            onCreateNew={() => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName: "" },
+                  }),
+                );
+              }
+            }}
+            onCancel={() => setTmuxSessionPicker(null)}
             backgroundColor={backgroundColor}
           />
         )}

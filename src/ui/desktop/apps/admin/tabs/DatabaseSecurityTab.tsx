@@ -66,11 +66,19 @@ export function DatabaseSecurityTab({
           ? `http://localhost:30001/database/export`
           : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/export`;
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (isElectron()) {
+        const token = localStorage.getItem("jwt");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      }
+
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         credentials: "include",
         body: JSON.stringify(
           requiresExportPassword ? { password: exportPassword } : {},
@@ -145,8 +153,17 @@ export function DatabaseSecurityTab({
         formData.append("password", importPassword);
       }
 
+      const importHeaders: Record<string, string> = {};
+      if (isElectron()) {
+        const token = localStorage.getItem("jwt");
+        if (token) {
+          importHeaders["Authorization"] = `Bearer ${token}`;
+        }
+      }
+
       const response = await fetch(apiUrl, {
         method: "POST",
+        headers: importHeaders,
         credentials: "include",
         body: formData,
       });

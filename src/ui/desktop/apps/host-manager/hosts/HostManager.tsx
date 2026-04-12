@@ -12,6 +12,7 @@ import { CredentialsManager } from "@/ui/desktop/apps/host-manager/credentials/C
 import { CredentialEditor } from "@/ui/desktop/apps/host-manager/credentials/CredentialEditor.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { useTranslation } from "react-i18next";
+import { exportSSHHostWithCredentials } from "@/ui/main-axios.ts";
 import type { SSHHost, HostManagerProps } from "../../../types/index";
 
 export function HostManager({
@@ -93,9 +94,13 @@ export function HostManager({
       }
 
       if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
-        setEditingHost(hostConfig);
-        setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
+        setIsAddingHost(false);
+        exportSSHHostWithCredentials(hostConfig.id)
+          .then((fullHost) =>
+            setEditingHost({ ...hostConfig, ...fullHost } as SSHHost),
+          )
+          .catch(() => setEditingHost(hostConfig));
       } else if (!hostConfig && editingHost) {
         setEditingHost(null);
         setIsAddingHost(false);
@@ -111,17 +116,26 @@ export function HostManager({
         setActiveTab(normalizedTab);
       }
       if (hostConfig && hostConfig.id !== lastProcessedHostIdRef.current) {
-        setEditingHost(hostConfig);
-        setIsAddingHost(false);
         lastProcessedHostIdRef.current = hostConfig.id;
+        setIsAddingHost(false);
+        exportSSHHostWithCredentials(hostConfig.id)
+          .then((fullHost) =>
+            setEditingHost({ ...hostConfig, ...fullHost } as SSHHost),
+          )
+          .catch(() => setEditingHost(hostConfig));
       }
     }
   }, [_updateTimestamp, initialTab, hostConfig]);
 
-  const handleEditHost = (host: SSHHost) => {
-    setEditingHost(host);
+  const handleEditHost = async (host: SSHHost) => {
     setIsAddingHost(false);
     lastProcessedHostIdRef.current = host.id;
+    try {
+      const fullHost = await exportSSHHostWithCredentials(host.id);
+      setEditingHost({ ...host, ...fullHost } as SSHHost);
+    } catch {
+      setEditingHost(host);
+    }
   };
 
   const handleAddHost = () => {

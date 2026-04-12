@@ -74,6 +74,7 @@ const clientOptions = {
       width: 1280,
       height: 720,
       dpi: 96,
+      audio: ["audio/L16"],
     },
     vnc: {
       "swap-red-blue": false,
