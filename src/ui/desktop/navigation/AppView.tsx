@@ -93,6 +93,7 @@ export function AppView({
     allSplitScreenTab,
     removeTab,
     updateTab,
+    addTab,
     previewTerminalTheme,
   } = useTabs() as {
     tabs: TabData[];
@@ -100,6 +101,7 @@ export function AppView({
     allSplitScreenTab: number[];
     removeTab: (id: number) => void;
     updateTab: (tabId: number, updates: Partial<Omit<TabData, "id">>) => void;
+    addTab: (tab: Omit<TabData, "id">) => number;
     previewTerminalTheme: string | null;
   };
   const { state: sidebarState } = useSidebar();
@@ -411,7 +413,19 @@ export function AppView({
                     splitScreen={allSplitScreenTab.length > 0}
                     onClose={() => removeTab(t.id)}
                     onTitleChange={(title) => updateTab(t.id, { title })}
-                    previewTheme={t.id === currentTab ? previewTerminalTheme : null}
+                    onOpenFileManager={
+                      (t.hostConfig as any)?.enableFileManager
+                        ? () =>
+                            addTab({
+                              type: "file_manager",
+                              title: t.title,
+                              hostConfig: t.hostConfig,
+                            })
+                        : undefined
+                    }
+                    previewTheme={
+                      t.id === currentTab ? previewTerminalTheme : null
+                    }
                   />
                 ) : t.type === "server_stats" ? (
                   <ServerView

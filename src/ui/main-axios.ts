@@ -2502,6 +2502,27 @@ export async function updateGlobalMonitoringSettings(settings: {
 }
 
 // ============================================================================
+// LOG LEVEL SETTINGS
+// ============================================================================
+
+export async function getLogLevel(): Promise<{ level: string }> {
+  try {
+    const response = await authApi.get("/users/log-level");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch log level");
+  }
+}
+
+export async function updateLogLevel(level: string): Promise<void> {
+  try {
+    await authApi.patch("/users/log-level", { level });
+  } catch (error) {
+    handleApiError(error, "update log level");
+  }
+}
+
+// ============================================================================
 // SESSION TIMEOUT SETTINGS
 // ============================================================================
 

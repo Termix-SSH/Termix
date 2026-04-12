@@ -276,7 +276,9 @@ export function SSHToolsSidebar({
 
   useEffect(() => {
     const terminalIds = new Set(terminalTabs.map((t) => t.id));
-    setSelectedSnippetTabIds((prev) => prev.filter((id) => terminalIds.has(id)));
+    setSelectedSnippetTabIds((prev) =>
+      prev.filter((id) => terminalIds.has(id)),
+    );
   }, [terminalTabs.length]);
 
   const activeUiTab = tabs.find((tab) => tab.id === currentTab);
@@ -2478,23 +2480,14 @@ export function SSHToolsSidebar({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">
-                      {t("snippets.user")}
-                    </SelectItem>
-                    <SelectItem value="role">
-                      {t("snippets.role")}
-                    </SelectItem>
+                    <SelectItem value="user">{t("snippets.user")}</SelectItem>
+                    <SelectItem value="role">{t("snippets.role")}</SelectItem>
                   </SelectContent>
                 </Select>
 
-                <Select
-                  value={shareTargetId}
-                  onValueChange={setShareTargetId}
-                >
+                <Select value={shareTargetId} onValueChange={setShareTargetId}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue
-                      placeholder={t("snippets.selectTarget")}
-                    />
+                    <SelectValue placeholder={t("snippets.selectTarget")} />
                   </SelectTrigger>
                   <SelectContent>
                     {shareTargetType === "user"
@@ -2504,10 +2497,7 @@ export function SSHToolsSidebar({
                           </SelectItem>
                         ))
                       : shareRoles.map((r) => (
-                          <SelectItem
-                            key={r.id}
-                            value={String(r.id)}
-                          >
+                          <SelectItem key={r.id} value={String(r.id)}>
                             {r.displayName || r.name}
                           </SelectItem>
                         ))}
@@ -2535,15 +2525,15 @@ export function SSHToolsSidebar({
                     className="flex items-center justify-between rounded-md border p-2 text-sm"
                   >
                     <span>
-                      {access.username || access.roleDisplayName || access.roleName}
+                      {access.username ||
+                        access.roleDisplayName ||
+                        access.roleName}
                     </span>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() =>
-                        handleRevokeSnippetAccess(access.id)
-                      }
+                      onClick={() => handleRevokeSnippetAccess(access.id)}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>

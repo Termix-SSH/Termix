@@ -43,7 +43,6 @@ import {
   isElectron,
   getConfiguredServerUrl,
   getGuacamoleTokenFromHost,
-  getGuacamoleToken,
   logActivity,
 } from "@/ui/main-axios.ts";
 import { useServerStatus } from "@/ui/contexts/ServerStatusContext";
@@ -1270,7 +1269,11 @@ export function HostManagerViewer({
                 setOpenAccordions(folderKeys);
               }
             }}
-            title={openAccordions.length > 0 ? t("hosts.collapseAll", "Collapse All") : t("hosts.expandAll", "Expand All")}
+            title={
+              openAccordions.length > 0
+                ? t("hosts.collapseAll", "Collapse All")
+                : t("hosts.expandAll", "Expand All")
+            }
           >
             {openAccordions.length > 0 ? (
               <ChevronsDownUp className="h-4 w-4" />
@@ -1984,19 +1987,9 @@ export function HostManagerViewer({
                                                     | "vnc"
                                                     | "telnet";
                                                   const result =
-                                                    await getGuacamoleToken({
-                                                      protocol,
-                                                      hostname: host.ip,
-                                                      port: host.port,
-                                                      username: host.username,
-                                                      password: host.password,
-                                                      domain: host.domain,
-                                                      security: host.security,
-                                                      ignoreCert:
-                                                        host.ignoreCert,
-                                                      guacamoleConfig:
-                                                        host.guacamoleConfig as any,
-                                                    });
+                                                    await getGuacamoleTokenFromHost(
+                                                      host.id,
+                                                    );
 
                                                   addTab({
                                                     type: protocol,

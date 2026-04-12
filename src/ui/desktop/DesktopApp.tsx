@@ -150,17 +150,18 @@ function ConnectionLostOverlay({
               ? t(
                   "common.reconnectingIn",
                   `Reconnecting in ${nextRetryIn}s... (attempt ${attempt}/${MAX_OVERLAY_RECONNECT_ATTEMPTS})`,
-                  { seconds: nextRetryIn, attempt, max: MAX_OVERLAY_RECONNECT_ATTEMPTS },
+                  {
+                    seconds: nextRetryIn,
+                    attempt,
+                    max: MAX_OVERLAY_RECONNECT_ATTEMPTS,
+                  },
                 )
               : t(
                   "common.reconnectingNow",
                   `Reconnecting... (attempt ${attempt}/${MAX_OVERLAY_RECONNECT_ATTEMPTS})`,
                   { attempt, max: MAX_OVERLAY_RECONNECT_ATTEMPTS },
                 )
-            : t(
-                "common.reconnectFailed",
-                "Could not reconnect to the server.",
-              )}
+            : t("common.reconnectFailed", "Could not reconnect to the server.")}
         </p>
 
         <div className="flex gap-3 justify-center">

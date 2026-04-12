@@ -120,14 +120,11 @@ export class CredentialSystemEncryptionMigration {
       }
       return { migrated, failed, skipped };
     } catch (error) {
-      databaseLogger.warn(
-        "Credential system encryption migration incomplete",
-        {
-          operation: "credential_migration_incomplete",
-          userId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-      );
+      databaseLogger.warn("Credential system encryption migration incomplete", {
+        operation: "credential_migration_incomplete",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
       throw error;
     }
   }

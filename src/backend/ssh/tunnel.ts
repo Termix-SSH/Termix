@@ -571,8 +571,12 @@ async function connectSSHTunnel(
     tunnelConfig.requestingUserId || tunnelConfig.sourceUserId;
 
   // Resolve source credentials server-side when not provided by frontend
-  if (tunnelConfig.sourceHostId && effectiveUserId &&
-      (!tunnelConfig.sourcePassword && !tunnelConfig.sourceSSHKey)) {
+  if (
+    tunnelConfig.sourceHostId &&
+    effectiveUserId &&
+    !tunnelConfig.sourcePassword &&
+    !tunnelConfig.sourceSSHKey
+  ) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(
@@ -1264,8 +1268,12 @@ async function killRemoteTunnelByMarker(
     authMethod: tunnelConfig.sourceAuthMethod,
   };
 
-  if (tunnelConfig.sourceHostId && tunnelConfig.sourceUserId &&
-      (!tunnelConfig.sourcePassword && !tunnelConfig.sourceSSHKey)) {
+  if (
+    tunnelConfig.sourceHostId &&
+    tunnelConfig.sourceUserId &&
+    !tunnelConfig.sourcePassword &&
+    !tunnelConfig.sourceSSHKey
+  ) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(
@@ -1712,18 +1720,27 @@ app.post(
             if (endpointHost.id && endpointHost.userId) {
               try {
                 const { resolveHostById } = await import("./host-resolver.js");
-                const resolved = await resolveHostById(endpointHost.id, endpointHost.userId);
+                const resolved = await resolveHostById(
+                  endpointHost.id,
+                  endpointHost.userId,
+                );
                 if (resolved) {
                   tunnelConfig.endpointPassword = resolved.password;
                   tunnelConfig.endpointSSHKey = resolved.key;
                   tunnelConfig.endpointKeyPassword = resolved.keyPassword;
                 }
               } catch (credError) {
-                tunnelLogger.warn("Failed to resolve endpoint credentials from DB", {
-                  operation: "tunnel_endpoint_credential_resolve",
-                  endpointHostId: endpointHost.id,
-                  error: credError instanceof Error ? credError.message : "Unknown",
-                });
+                tunnelLogger.warn(
+                  "Failed to resolve endpoint credentials from DB",
+                  {
+                    operation: "tunnel_endpoint_credential_resolve",
+                    endpointHostId: endpointHost.id,
+                    error:
+                      credError instanceof Error
+                        ? credError.message
+                        : "Unknown",
+                  },
+                );
               }
             }
           } catch (resolveError) {

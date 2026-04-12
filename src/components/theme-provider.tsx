@@ -1,7 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light" | "system" | "dracula" | "gentlemansChoice" | "midnightEspresso" | "catppuccinMocha";
+type Theme =
+  | "dark"
+  | "light"
+  | "system"
+  | "dracula"
+  | "gentlemansChoice"
+  | "midnightEspresso"
+  | "catppuccinMocha";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -37,7 +44,14 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark", "dracula", "gentlemansChoice", "midnightEspresso", "catppuccinMocha");
+    root.classList.remove(
+      "light",
+      "dark",
+      "dracula",
+      "gentlemansChoice",
+      "midnightEspresso",
+      "catppuccinMocha",
+    );
 
     const activeTheme = previewTheme || theme;
 

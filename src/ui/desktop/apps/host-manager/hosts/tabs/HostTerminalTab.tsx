@@ -105,10 +105,12 @@ export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
                         <SelectValue placeholder={t("hosts.selectTheme")} />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent onMouseLeave={() => setPreviewTerminalTheme(null)}>
+                    <SelectContent
+                      onMouseLeave={() => setPreviewTerminalTheme(null)}
+                    >
                       {Object.entries(TERMINAL_THEMES).map(([key, theme]) => (
-                        <SelectItem 
-                          key={key} 
+                        <SelectItem
+                          key={key}
                           value={key}
                           onMouseEnter={() => setPreviewTerminalTheme(key)}
                         >

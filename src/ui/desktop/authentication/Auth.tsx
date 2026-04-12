@@ -783,7 +783,12 @@ export function Auth({
             getEmbeddedServerStatus(),
           ]);
 
-          if (status?.embedded && status?.running && config && !config.serverUrl) {
+          if (
+            status?.embedded &&
+            status?.running &&
+            config &&
+            !config.serverUrl
+          ) {
             setCurrentServerUrl("");
             setShowServerConfig(false);
             return;

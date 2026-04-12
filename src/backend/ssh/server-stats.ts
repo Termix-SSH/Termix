@@ -868,13 +868,15 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId)
-            .catch((err) => {
-              statsLogger.error("Metrics polling failed", err, {
-                operation: "metrics_poll_unhandled",
-                hostId: host.id,
-              });
+          this.pollHostMetrics(
+            latestConfig.host,
+            latestConfig.viewerUserId,
+          ).catch((err) => {
+            statsLogger.error("Metrics polling failed", err, {
+              operation: "metrics_poll_unhandled",
+              hostId: host.id,
             });
+          });
         }
       }, intervalMs);
     } else {
@@ -1162,8 +1164,7 @@ function validateHostId(
 }
 
 const app = express();
-app.use(createCorsMiddleware()
-);
+app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
@@ -1353,8 +1354,13 @@ async function resolveHostCredentials(
             if (credential.password) {
               baseHost.password = credential.password;
             }
-            if (credential.key || (credential as Record<string, unknown>).privateKey) {
-              baseHost.key = credential.key || (credential as Record<string, unknown>).privateKey as string;
+            if (
+              credential.key ||
+              (credential as Record<string, unknown>).privateKey
+            ) {
+              baseHost.key =
+                credential.key ||
+                ((credential as Record<string, unknown>).privateKey as string);
             }
             if (credential.keyPassword) {
               baseHost.keyPassword = credential.keyPassword;
@@ -1515,7 +1521,7 @@ async function buildSshConfig(
   } else if (host.authType === "none") {
     // no credentials needed
   } else if (host.authType === "opkssh") {
-    // handled externally
+    // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1554,6 +1560,19 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
   return async () => {
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    // Set up OPKSSH cert auth if needed (requires client instance)
+    if (host.authType === "opkssh" && host.userId) {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(host.userId, host.id);
+      if (!token) {
+        throw new Error(
+          "OPKSSH authentication required. Please open a Terminal connection first.",
+        );
+      }
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(config, client, token, host.username);
+    }
 
     const proxyConfig: SOCKS5Config | null =
       host.useSocks5 &&
@@ -2382,6 +2401,27 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    if (host.authType === "opkssh" && host.userId) {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(host.userId, host.id);
+      if (!token) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "auth",
+            "OPKSSH authentication required. Please open a Terminal connection first.",
+          ),
+        );
+        return res.status(401).json({
+          error: "OPKSSH authentication required",
+          requiresOPKSSHAuth: true,
+          connectionLogs,
+        });
+      }
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(config, client, token, host.username);
+    }
 
     const connectionPromise = new Promise<{
       success: boolean;

@@ -22,7 +22,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getSSHHosts, getGuacamoleToken, logActivity, wakeOnLan } from "@/ui/main-axios";
+import {
+  getSSHHosts,
+  getGuacamoleToken,
+  getGuacamoleTokenFromHost,
+  logActivity,
+  wakeOnLan,
+} from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
@@ -120,17 +126,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     ) {
       try {
         const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
-        const result = await getGuacamoleToken({
-          protocol,
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        });
+        const result = await getGuacamoleTokenFromHost(host.id);
         addTab({
           type: protocol,
           title,

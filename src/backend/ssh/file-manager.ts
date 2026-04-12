@@ -503,10 +503,7 @@ function scheduleSessionCleanup(sessionId: string) {
   }
 }
 
-function verifySessionOwnership(
-  session: SSHSession,
-  userId: string,
-): boolean {
+function verifySessionOwnership(session: SSHSession, userId: string): boolean {
   return !session.userId || session.userId === userId;
 }
 
@@ -782,7 +779,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
   // Resolve credentials server-side when frontend doesn't provide them
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
-  if (hostId && userId && (!password && !sshKey)) {
+  if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
@@ -991,18 +988,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         });
       }
 
-      const { promises: fs } = await import("fs");
-      const path = await import("path");
-      const os = await import("os");
-
-      const tempDir = os.tmpdir();
-      const keyPath = path.join(tempDir, `opkssh-fm-${userId}-${hostId}`);
-      const certPath = `${keyPath}-cert.pub`;
-
-      await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
-      await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
-
-      config.privateKey = await fs.readFile(keyPath);
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(
+        config as import("ssh2").ConnectConfig,
+        client,
+        token,
+        username,
+      );
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -1010,32 +1002,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "Using OPKSSH certificate authentication",
         ),
       );
-
-      setTimeout(async () => {
-        try {
-          const cleanupResults = await Promise.allSettled([
-            fs.unlink(keyPath),
-            fs.unlink(certPath),
-          ]);
-
-          cleanupResults.forEach((result, index) => {
-            if (result.status === "rejected") {
-              fileLogger.warn(`Failed to cleanup OPKSSH temp file`, {
-                operation: "opkssh_temp_cleanup_failed",
-                file: index === 0 ? "keyPath" : "certPath",
-                sessionId,
-                error: result.reason,
-              });
-            }
-          });
-        } catch (error) {
-          fileLogger.error("Failed to cleanup OPKSSH temp files", {
-            operation: "opkssh_temp_cleanup_error",
-            sessionId,
-            error,
-          });
-        }
-      }, 60000);
     } catch (opksshError) {
       fileLogger.error("OPKSSH authentication error for file manager", {
         operation: "file_connect",
@@ -3616,7 +3582,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           });
 
           stream.stderr.on("error", (stderrErr) => {
-            fileLogger.error("Chunked fallback upload stderr error:", stderrErr);
+            fileLogger.error(
+              "Chunked fallback upload stderr error:",
+              stderrErr,
+            );
           });
 
           stream.on("close", (code) => {
@@ -5164,7 +5133,9 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
 
   const escapedArchive = archivePath.replace(/'/g, "'\"'\"'");
   const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
-  const escapedDecompressed = archivePath.replace(/\.gz$/, "").replace(/'/g, "'\"'\"'");
+  const escapedDecompressed = archivePath
+    .replace(/\.gz$/, "")
+    .replace(/'/g, "'\"'\"'");
 
   if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz")) {
     extractCommand = `tar -xzf '${escapedArchive}' -C '${escapedTarget}'`;

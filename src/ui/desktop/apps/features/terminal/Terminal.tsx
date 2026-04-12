@@ -69,6 +69,7 @@ interface HostConfig {
 
 interface TerminalHandle {
   disconnect: () => void;
+  reconnect: () => void;
   fit: () => void;
   sendInput: (data: string) => void;
   notifyResize: () => void;
@@ -85,7 +86,110 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  onOpenFileManager?: () => void;
   previewTheme?: string | null;
+}
+
+function TerminalContextMenu({
+  x,
+  y,
+  hasSelection,
+  showCopyPaste,
+  showOpenFileManager,
+  onCopy,
+  onPaste,
+  onOpenFileManager,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  hasSelection: boolean;
+  showCopyPaste: boolean;
+  showOpenFileManager: boolean;
+  onCopy: () => void;
+  onPaste: () => void;
+  onOpenFileManager: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const menuX = x + 180 > window.innerWidth ? window.innerWidth - 190 : x;
+  const menuY = y + 150 > window.innerHeight ? window.innerHeight - 160 : y;
+
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
+    const timeoutId = setTimeout(() => {
+      const handleClose = (e: MouseEvent) => {
+        if (!menuRef.current?.contains(e.target as Element)) onClose();
+      };
+      const handleRightClick = (e: MouseEvent) => {
+        e.preventDefault();
+        onClose();
+      };
+      const handleKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") onClose();
+      };
+      document.addEventListener("mousedown", handleClose, true);
+      document.addEventListener("contextmenu", handleRightClick);
+      document.addEventListener("keydown", handleKey);
+      window.addEventListener("blur", onClose);
+
+      cleanup = () => {
+        document.removeEventListener("mousedown", handleClose, true);
+        document.removeEventListener("contextmenu", handleRightClick);
+        document.removeEventListener("keydown", handleKey);
+        window.removeEventListener("blur", onClose);
+      };
+    }, 50);
+    return () => {
+      clearTimeout(timeoutId);
+      cleanup?.();
+    };
+  }, [onClose]);
+
+  const items: { label: string; action: () => void; disabled?: boolean }[] = [];
+
+  if (showCopyPaste) {
+    items.push(
+      { label: t("terminal.copy"), action: onCopy, disabled: !hasSelection },
+      { label: t("terminal.paste"), action: onPaste },
+    );
+  }
+
+  if (showOpenFileManager) {
+    items.push({
+      label: t("terminal.openFileManagerHere"),
+      action: onOpenFileManager,
+    });
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[99990]" />
+      <div
+        ref={menuRef}
+        className="fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] z-[99995] overflow-hidden"
+        style={{ left: menuX, top: menuY }}
+      >
+        {items.map((item, i) => (
+          <button
+            key={i}
+            className={`w-full px-3 py-2 text-left text-sm flex items-center hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={item.disabled}
+            onClick={() => {
+              if (!item.disabled) {
+                item.action();
+                onClose();
+              }
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
 }
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
@@ -98,6 +202,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onTitleChange,
       initialPath,
       executeCommand,
+      onOpenFileManager,
       previewTheme,
     },
     ref,
@@ -119,11 +224,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { theme: appTheme } = useTheme();
     const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
-    const savedTheme = localStorage.getItem(`terminal_theme_host_${hostConfig.id}`);
-    const config = { 
-      ...DEFAULT_TERMINAL_CONFIG, 
+    const savedTheme = localStorage.getItem(
+      `terminal_theme_host_${hostConfig.id}`,
+    );
+    const config = {
+      ...DEFAULT_TERMINAL_CONFIG,
       ...hostConfig.terminalConfig,
-      theme: savedTheme || hostConfig.terminalConfig?.theme || DEFAULT_TERMINAL_CONFIG.theme
+      theme:
+        savedTheme ||
+        hostConfig.terminalConfig?.theme ||
+        DEFAULT_TERMINAL_CONFIG.theme,
     };
 
     const isDarkMode =
@@ -160,6 +270,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [isFitted, setIsFitted] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const connectionErrorRef = useRef<string | null>(null);
+    const [showDisconnectedOverlay, setShowDisconnectedOverlay] =
+      useState(false);
 
     const updateConnectionError = useCallback((error: string | null) => {
       connectionErrorRef.current = error;
@@ -187,8 +299,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       requestId: string;
       stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
       error?: string;
+      providers?: Array<{ alias: string; issuer: string }>;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [contextMenu, setContextMenu] = useState<{
+      x: number;
+      y: number;
+      hasSelection: boolean;
+    } | null>(null);
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<any>(null);
@@ -641,6 +760,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnected(false);
           setIsConnecting(false);
         },
+        reconnect: () => {
+          isUnmountingRef.current = false;
+          shouldNotReconnectRef.current = false;
+          isReconnectingRef.current = false;
+          isConnectingRef.current = false;
+          reconnectAttempts.current = 0;
+          wasDisconnectedBySSH.current = false;
+          wasConnectedRef.current = false;
+          updateConnectionError(null);
+          setShowDisconnectedOverlay(false);
+          if (terminal) {
+            terminal.clear();
+            const cols = terminal.cols;
+            const rows = terminal.rows;
+            connectToHost(cols, rows);
+          }
+        },
         fit: () => {
           fitAddonRef.current?.fit();
           if (terminal) scheduleNotify(terminal.cols, terminal.rows);
@@ -685,9 +821,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       if (reconnectAttempts.current >= maxReconnectAttempts) {
-        updateConnectionError(t("terminal.maxReconnectAttemptsReached"));
         setIsConnecting(false);
         shouldNotReconnectRef.current = true;
+        setShowDisconnectedOverlay(true);
         addLog({
           type: "error",
           stage: "connection",
@@ -922,7 +1058,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             if (!pongReceivedRef.current) {
-              console.warn("[WebSocket] Pong timeout - connection appears dead, closing");
+              console.warn(
+                "[WebSocket] Pong timeout - connection appears dead, closing",
+              );
               ws.close();
               return;
             }
@@ -972,7 +1110,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                       hostConfig.password;
                     if (!passwordToFill && hostConfig.id) {
                       passwordToFill =
-                        (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+                        (await getHostPassword(
+                          hostConfig.id,
+                          "sudoPassword",
+                        )) ||
                         (await getHostPassword(hostConfig.id, "password")) ||
                         undefined;
                     }
@@ -1138,19 +1279,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             setIsConnected(false);
-            if (terminal) {
-              terminal.clear();
-            }
             setIsConnecting(false);
             if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              if (
-                onClose &&
-                !connectionErrorRef.current &&
-                !opksshFailedRef.current
-              ) {
-                onClose();
-              }
+              setShowDisconnectedOverlay(true);
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),
@@ -1244,6 +1376,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 authUrl: msg.url || "",
                 requestId: msg.requestId || "",
                 stage: "chooser",
+                providers: msg.providers,
               });
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);
@@ -1742,7 +1875,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
-      terminal.options.bellStyle = config.bellStyle as "none" | "sound" | "visual" | "both";
+      terminal.options.bellStyle = config.bellStyle as
+        | "none"
+        | "sound"
+        | "visual"
+        | "both";
 
       terminal.options.theme = {
         background: themeColors.background,
@@ -1776,7 +1913,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [terminal, hostConfig.terminalConfig, previewTheme, isDarkMode, isFitted]);
+    }, [
+      terminal,
+      hostConfig.terminalConfig,
+      previewTheme,
+      isDarkMode,
+      isFitted,
+    ]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1877,20 +2020,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       const element = xtermRef.current;
-      const handleContextMenu = async (e: MouseEvent) => {
-        if (!getUseRightClickCopyPaste()) return;
+      const handleContextMenu = (e: MouseEvent) => {
+        if (!getUseRightClickCopyPaste() && !onOpenFileManager) return;
         e.preventDefault();
         e.stopPropagation();
-        if (terminal.hasSelection()) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            await writeTextToClipboard(selection);
-            terminal.clearSelection();
-          }
-        } else {
-          const text = await readTextFromClipboard();
-          if (text) terminal.paste(text);
-        }
+        setContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          hasSelection: terminal.hasSelection(),
+        });
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
@@ -1927,7 +2065,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        
+
         const config = {
           ...DEFAULT_TERMINAL_CONFIG,
           ...(hostConfig.terminalConfig as any),
@@ -2385,6 +2523,47 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           backgroundColor={backgroundColor}
         />
 
+        {showDisconnectedOverlay && !isConnecting && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
+            style={{ backgroundColor }}
+          >
+            <p className="text-sm text-muted-foreground">
+              {t("terminal.connectionLost")}
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => {
+                  setShowDisconnectedOverlay(false);
+                  isUnmountingRef.current = false;
+                  shouldNotReconnectRef.current = false;
+                  isReconnectingRef.current = false;
+                  isConnectingRef.current = false;
+                  reconnectAttempts.current = 0;
+                  wasDisconnectedBySSH.current = false;
+                  wasConnectedRef.current = false;
+                  updateConnectionError(null);
+                  if (terminal) {
+                    terminal.clear();
+                    connectToHost(terminal.cols, terminal.rows);
+                  }
+                }}
+              >
+                {t("terminal.reconnect")}
+              </button>
+              {onClose && (
+                <button
+                  className="px-4 py-2 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
+                  onClick={onClose}
+                >
+                  {t("terminal.closeTab")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <ConnectionLog
           isConnecting={isConnecting}
           isConnected={isConnected}
@@ -2431,6 +2610,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             requestId={opksshDialog.requestId}
             stage={opksshDialog.stage}
             error={opksshDialog.error}
+            providers={opksshDialog.providers}
             onCancel={() => {
               if (webSocketRef.current) {
                 webSocketRef.current.send(
@@ -2456,6 +2636,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
+            }}
+            onSelectProvider={(issuer) => {
+              if (!opksshDialog.authUrl) return;
+              const selectUrl = `${opksshDialog.authUrl}/select?op=${encodeURIComponent(issuer)}`;
+              window.open(selectUrl, "_blank");
+              if (webSocketRef.current) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "opkssh_browser_opened",
+                    data: { requestId: opksshDialog.requestId },
+                  }),
+                );
+              }
+              setOpksshDialog((prev) =>
+                prev ? { ...prev, stage: "waiting" } : null,
+              );
             }}
             backgroundColor={backgroundColor}
           />
@@ -2532,6 +2728,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
+
+        {contextMenu && (
+          <TerminalContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            hasSelection={contextMenu.hasSelection}
+            showCopyPaste={getUseRightClickCopyPaste()}
+            showOpenFileManager={!!onOpenFileManager}
+            onCopy={async () => {
+              const selection = terminal?.getSelection();
+              if (selection) {
+                await writeTextToClipboard(selection);
+                terminal?.clearSelection();
+              }
+            }}
+            onPaste={async () => {
+              const text = await readTextFromClipboard();
+              if (text) terminal?.paste(text);
+            }}
+            onOpenFileManager={() => onOpenFileManager?.()}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
       </div>
     );
   },

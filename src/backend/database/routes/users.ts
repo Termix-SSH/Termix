@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { restartGuacServer } from "../../guacamole/guacamole-server.js";
+import { setGlobalLogLevel, getGlobalLogLevel } from "../../utils/logger.js";
 import crypto from "crypto";
 import { db } from "../db/index.js";
 import {
@@ -1586,7 +1587,9 @@ router.post("/login", async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
       .get() as { value: string } | undefined;
     const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -3376,7 +3379,9 @@ router.post("/totp/verify-login", async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
       .get() as { value: string } | undefined;
     const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -4240,6 +4245,75 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to update guacamole settings", err);
     res.status(500).json({ error: "Failed to update guacamole settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/log-level:
+ *   get:
+ *     summary: Get log level setting
+ *     description: Returns the configured log verbosity level.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current log level.
+ */
+router.get("/log-level", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'log_level'")
+      .get() as { value: string } | undefined;
+    res.json({
+      level: row ? row.value : getGlobalLogLevel(),
+    });
+  } catch (err) {
+    authLogger.error("Failed to get log level", err);
+    res.status(500).json({ error: "Failed to get log level" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/log-level:
+ *   patch:
+ *     summary: Update log level setting (admin only)
+ *     description: Sets the log verbosity level.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Log level updated.
+ *       400:
+ *         description: Invalid log level.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/log-level", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { level } = req.body;
+    const validLevels = ["debug", "info", "warn", "error"];
+    if (typeof level !== "string" || !validLevels.includes(level)) {
+      return res
+        .status(400)
+        .json({ error: "level must be one of: debug, info, warn, error" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('log_level', ?)",
+      )
+      .run(level);
+    setGlobalLogLevel(level);
+    res.json({ level });
+  } catch (err) {
+    authLogger.error("Failed to set log level", err);
+    res.status(500).json({ error: "Failed to set log level" });
   }
 });
 
