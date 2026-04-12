@@ -13,7 +13,13 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
-import { isElectron, getCookie, getSnippets } from "@/ui/main-axios.ts";
+import { toast } from "sonner";
+import {
+  isElectron,
+  isEmbeddedMode,
+  getCookie,
+  getSnippets,
+} from "@/ui/main-axios.ts";
 import { getBasePath } from "@/lib/base-path";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -121,7 +127,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isFittingRef = useRef(false);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
-    const maxReconnectAttempts = 3;
+    const maxReconnectAttempts = 8;
     const isUnmountingRef = useRef(false);
     const shouldNotReconnectRef = useRef(false);
     const isReconnectingRef = useRef(false);
@@ -506,13 +512,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
         : isElectron()
           ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
+              const configuredUrl = (window as { configuredServerUrl?: string })
+                .configuredServerUrl;
+              if (isEmbeddedMode() || !configuredUrl) {
+                return "ws://127.0.0.1:30002";
+              }
+              const wsProtocol = configuredUrl.startsWith("https://")
                 ? "wss://"
                 : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
+              const wsHost = configuredUrl
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "");
               return `${wsProtocol}${wsHost}/ssh/websocket/`;
             })()
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/ssh/websocket/`;
@@ -709,7 +719,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                     ws.send(
                       JSON.stringify({
                         type: "input",
-                        data: snippet.content + "\n",
+                        data: snippet.content + "\r",
                       }),
                     );
                   }
@@ -800,6 +810,46 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "tmux_sessions_available") {
+            // On mobile, auto-attach to the first available session
+            const sessions = msg.sessions as Array<{ name: string }>;
+            if (sessions.length > 0 && ws.readyState === 1) {
+              ws.send(
+                JSON.stringify({
+                  type: "tmux_attach",
+                  data: { sessionName: sessions[0].name },
+                }),
+              );
+            }
+          } else if (
+            msg.type === "tmux_session_created" ||
+            msg.type === "tmux_session_attached"
+          ) {
+            const sessionName =
+              typeof msg.sessionName === "string" ? msg.sessionName : "";
+            addLog({
+              type: "info",
+              stage: "connection",
+              message:
+                msg.type === "tmux_session_created"
+                  ? t("terminal.tmuxSessionCreated", {
+                      name: sessionName || "new",
+                    })
+                  : t("terminal.tmuxSessionAttached", {
+                      name: sessionName,
+                    }),
+            });
+          } else if (msg.type === "tmux_unavailable") {
+            setTimeout(() => {
+              toast.warning(t("terminal.tmuxUnavailable"), {
+                duration: 8000,
+              });
+            }, 500);
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.tmuxUnavailable"),
+            });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -834,17 +884,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (event.code === 1006) {
-          console.error(
-            "[WebSocket] Abnormal closure detected - possible HTTPS/proxy issue",
+          console.warn(
+            "[WebSocket] Abnormal closure detected - attempting reconnection",
           );
           addLog({
-            type: "error",
+            type: "warning",
             stage: "connection",
             message: t("terminal.websocketAbnormalClose"),
           });
-          updateConnectionError(t("terminal.websocketAbnormalClose"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
+
+          if (wasConnectedRef.current) {
+            attemptReconnection();
+          } else {
+            updateConnectionError(t("terminal.websocketAbnormalClose"));
+            setIsConnecting(false);
+          }
           return;
         }
 
@@ -860,10 +914,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           shouldNotReconnectRef.current = true;
 
           localStorage.removeItem("jwt");
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
 
           return;
         }
@@ -994,6 +1044,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
+      const handlePaste = (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData("text");
+        if (text) {
+          e.preventDefault();
+          e.stopPropagation();
+          terminal.paste(text);
+        }
+      };
+      xtermRef.current.addEventListener("paste", handlePaste);
+
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
@@ -1046,9 +1106,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         });
       });
 
+      const currentElement = xtermRef.current;
+
       return () => {
         resizeObserver.disconnect();
         clipboardProvider.dispose();
+        currentElement?.removeEventListener("paste", handlePaste);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         if (pingIntervalRef.current) {

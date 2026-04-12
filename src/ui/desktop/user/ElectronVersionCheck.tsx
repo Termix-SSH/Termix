@@ -25,6 +25,10 @@ export function ElectronVersionCheck({
 
   const isDarkMode =
     theme === "dark" ||
+    theme === "dracula" ||
+    theme === "gentlemansChoice" ||
+    theme === "midnightEspresso" ||
+    theme === "catppuccinMocha" ||
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";

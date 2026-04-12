@@ -50,10 +50,10 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
             try {
               const date = new Date(timeStr);
               parsedTime = isNaN(date.getTime())
-                ? new Date().toISOString()
+                ? timeStr || "unknown"
                 : date.toISOString();
             } catch {
-              parsedTime = new Date().toISOString();
+              parsedTime = timeStr || "unknown";
             }
 
             recentLogins.push({
@@ -99,21 +99,30 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
         ip = ipMatch[1];
       }
 
-      const dateMatch = line.match(/^(\w+\s+\d+\s+\d+:\d+:\d+)/);
+      const dateMatch = line.match(/^(\w+)\s+(\d+)\s+(\d+:\d+:\d+)/);
       if (dateMatch) {
-        const currentYear = new Date().getFullYear();
-        timeStr = `${currentYear} ${dateMatch[1]}`;
+        const [, month, day, time] = dateMatch;
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const candidate = new Date(`${month} ${day}, ${currentYear} ${time}`);
+        if (!isNaN(candidate.getTime()) && candidate > now) {
+          // If parsed date is in the future, it's from last year
+          timeStr = `${month} ${day}, ${currentYear - 1} ${time}`;
+        } else {
+          timeStr = `${month} ${day}, ${currentYear} ${time}`;
+        }
       }
 
       if (user && ip) {
         let parsedTime: string;
         try {
-          const date = timeStr ? new Date(timeStr) : new Date();
-          parsedTime = isNaN(date.getTime())
-            ? new Date().toISOString()
-            : date.toISOString();
+          const date = timeStr ? new Date(timeStr) : null;
+          parsedTime =
+            date && !isNaN(date.getTime())
+              ? date.toISOString()
+              : timeStr || "unknown";
         } catch {
-          parsedTime = new Date().toISOString();
+          parsedTime = timeStr || "unknown";
         }
 
         failedLogins.push({

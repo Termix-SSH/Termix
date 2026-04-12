@@ -56,6 +56,7 @@ export const GuacamoleDisplay = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<Guacamole.Client | null>(null);
+  const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
   const scaleRef = useRef<number>(1);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -252,6 +253,7 @@ export const GuacamoleDisplay = forwardRef<
     mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
 
     const keyboard = new Guacamole.Keyboard(document);
+    keyboardRef.current = keyboard;
     keyboard.onkeydown = (keysym: number) => {
       client.sendKeyEvent(1, keysym);
     };
@@ -304,6 +306,10 @@ export const GuacamoleDisplay = forwardRef<
       }
     };
 
+    client.onaudio = (stream: Guacamole.InputStream, mimetype: string) => {
+      Guacamole.AudioPlayer.getInstance(stream, mimetype);
+    };
+
     client.connect();
   }, [getWebSocketUrl, onConnect, onDisconnect, onError, rescaleDisplay]);
 
@@ -325,6 +331,25 @@ export const GuacamoleDisplay = forwardRef<
   }, [isVisible, connect]);
 
   useEffect(() => {
+    const keyboard = keyboardRef.current;
+    const client = clientRef.current;
+    if (!keyboard || !client) return;
+
+    if (isVisible) {
+      keyboard.onkeydown = (keysym: number) => {
+        client.sendKeyEvent(1, keysym);
+      };
+      keyboard.onkeyup = (keysym: number) => {
+        client.sendKeyEvent(0, keysym);
+      };
+    } else {
+      keyboard.onkeydown = null;
+      keyboard.onkeyup = null;
+      keyboard.reset();
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
     return () => {
       isMountedRef.current = false;
       hasInitiatedRef.current = false;
@@ -344,6 +369,14 @@ export const GuacamoleDisplay = forwardRef<
 
     const resizeObserver = new ResizeObserver(() => {
       rescaleDisplay(false);
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
+        if (clientRef.current && containerRef.current) {
+          const w = containerRef.current.clientWidth;
+          const h = containerRef.current.clientHeight;
+          if (w > 0 && h > 0) clientRef.current.sendSize(w, h);
+        }
+      }, 200);
     });
 
     resizeObserver.observe(containerRef.current);
@@ -355,6 +388,40 @@ export const GuacamoleDisplay = forwardRef<
       clearTimeout(initialTimeout);
     };
   }, [rescaleDisplay]);
+
+  const syncClipboard = useCallback(() => {
+    const client = clientRef.current;
+    if (!client) return;
+    navigator.clipboard
+      .readText()
+      .then((text) => {
+        if (text) {
+          const stream = client.createClipboardStream("text/plain");
+          const writer = new Guacamole.StringWriter(stream);
+          writer.sendText(text);
+          writer.sendEnd();
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && isReady) {
+      syncClipboard();
+    }
+  }, [isVisible, isReady, syncClipboard]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isReady) return;
+
+    const handleFocus = () => syncClipboard();
+    container.addEventListener("mouseenter", handleFocus);
+
+    return () => {
+      container.removeEventListener("mouseenter", handleFocus);
+    };
+  }, [isReady, syncClipboard]);
 
   const connectingMessage = t("guacamole.connecting", {
     type: (

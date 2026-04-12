@@ -955,6 +955,8 @@ const migrateSchema = () => {
     { column: "host_key_first_seen", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_first_seen TEXT" },
     { column: "host_key_last_verified", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_last_verified TEXT" },
     { column: "host_key_changed_count", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_changed_count INTEGER NOT NULL DEFAULT 0" },
+    { column: "mac_address", sql: "ALTER TABLE ssh_data ADD COLUMN mac_address TEXT" },
+    { column: "port_knock_sequence", sql: "ALTER TABLE ssh_data ADD COLUMN port_knock_sequence TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {

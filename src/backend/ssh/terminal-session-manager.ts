@@ -32,6 +32,7 @@ export interface TerminalSession {
 
   outputBuffer: string[];
   outputBufferBytes: number;
+  tmuxSessionName: string | null;
 }
 
 class TerminalSessionManager {
@@ -109,6 +110,7 @@ class TerminalSessionManager {
       detachTimeout: null,
       outputBuffer: [],
       outputBufferBytes: 0,
+      tmuxSessionName: null,
     };
     this.sessions.set(id, session);
 
