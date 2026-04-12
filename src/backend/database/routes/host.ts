@@ -36,6 +36,7 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
 
 const router = express.Router();
 
@@ -113,6 +114,9 @@ function transformHostResponse(
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
+      : [],
+    portKnockSequence: host.portKnockSequence
+      ? JSON.parse(host.portKnockSequence as string)
       : [],
     domain: host.domain || undefined,
     security: host.security || undefined,
@@ -393,7 +397,9 @@ router.post(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
@@ -478,6 +484,10 @@ router.post(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -900,7 +910,9 @@ router.put(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
@@ -985,6 +997,10 @@ router.put(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -1294,6 +1310,7 @@ router.get(
           socks5Username: hosts.socks5Username,
           socks5Password: hosts.socks5Password,
           socks5ProxyChain: hosts.socks5ProxyChain,
+          portKnockSequence: hosts.portKnockSequence,
           domain: hosts.domain,
           security: hosts.security,
           ignoreCert: hosts.ignoreCert,
@@ -1671,6 +1688,9 @@ router.get(
             socks5ProxyChain: resolvedHost.socks5ProxyChain
               ? JSON.parse(resolvedHost.socks5ProxyChain as string)
               : null,
+            portKnockSequence: resolvedHost.portKnockSequence
+              ? JSON.parse(resolvedHost.portKnockSequence as string)
+              : null,
           };
 
       sshLogger.success("Host exported with decrypted credentials", {
@@ -1693,7 +1713,149 @@ router.get(
 
 /**
  * @openapi
- * /host/db/host/{id}:
+ * /ssh/db/hosts/export:
+ *   get:
+ *     summary: Export all SSH hosts
+ *     description: Exports all SSH hosts for the current user with decrypted credentials.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: All exported SSH hosts.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to export SSH hosts.
+ */
+router.get(
+  "/db/hosts/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    try {
+      const allHosts = await SimpleDBOps.select(
+        db.select().from(hosts).where(eq(hosts.userId, userId)),
+        "ssh_data",
+        userId,
+      );
+
+      const exportedHosts = [];
+
+      for (const host of allHosts) {
+        const resolvedHost =
+          (await resolveHostCredentials(host, userId)) || host;
+
+        const exportedConnectionType =
+          (resolvedHost.connectionType as string) || "ssh";
+        const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
+          exportedConnectionType,
+        );
+
+        const baseExportData = {
+          connectionType: exportedConnectionType,
+          name: resolvedHost.name,
+          ip: resolvedHost.ip,
+          port: resolvedHost.port,
+          username: resolvedHost.username,
+          password: resolvedHost.password || null,
+          folder: resolvedHost.folder,
+          tags:
+            typeof resolvedHost.tags === "string"
+              ? resolvedHost.tags.split(",").filter(Boolean)
+              : resolvedHost.tags || [],
+          pin: !!resolvedHost.pin,
+          notes: resolvedHost.notes || null,
+        };
+
+        const exportData = isRemoteDesktop
+          ? {
+              ...baseExportData,
+              domain: resolvedHost.domain || null,
+              security: resolvedHost.security || null,
+              ignoreCert: !!resolvedHost.ignoreCert,
+              guacamoleConfig: resolvedHost.guacamoleConfig
+                ? JSON.parse(resolvedHost.guacamoleConfig as string)
+                : null,
+            }
+          : {
+              ...baseExportData,
+              authType: resolvedHost.authType,
+              key: resolvedHost.key || null,
+              keyPassword: resolvedHost.keyPassword || null,
+              keyType: resolvedHost.keyType || null,
+              credentialId: resolvedHost.credentialId || null,
+              overrideCredentialUsername:
+                !!resolvedHost.overrideCredentialUsername,
+              enableTerminal: !!resolvedHost.enableTerminal,
+              enableTunnel: !!resolvedHost.enableTunnel,
+              enableFileManager: !!resolvedHost.enableFileManager,
+              enableDocker: !!resolvedHost.enableDocker,
+              showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
+              showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
+              showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
+              showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
+              showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
+              defaultPath: resolvedHost.defaultPath,
+              sudoPassword: resolvedHost.sudoPassword || null,
+              tunnelConnections: resolvedHost.tunnelConnections
+                ? JSON.parse(resolvedHost.tunnelConnections as string)
+                : [],
+              jumpHosts: resolvedHost.jumpHosts
+                ? JSON.parse(resolvedHost.jumpHosts as string)
+                : null,
+              quickActions: resolvedHost.quickActions
+                ? JSON.parse(resolvedHost.quickActions as string)
+                : null,
+              statsConfig: resolvedHost.statsConfig
+                ? JSON.parse(resolvedHost.statsConfig as string)
+                : null,
+              dockerConfig: resolvedHost.dockerConfig
+                ? JSON.parse(resolvedHost.dockerConfig as string)
+                : null,
+              terminalConfig: resolvedHost.terminalConfig
+                ? JSON.parse(resolvedHost.terminalConfig as string)
+                : null,
+              forceKeyboardInteractive:
+                resolvedHost.forceKeyboardInteractive === "true",
+              useSocks5: !!resolvedHost.useSocks5,
+              socks5Host: resolvedHost.socks5Host || null,
+              socks5Port: resolvedHost.socks5Port || null,
+              socks5Username: resolvedHost.socks5Username || null,
+              socks5Password: resolvedHost.socks5Password || null,
+              socks5ProxyChain: resolvedHost.socks5ProxyChain
+                ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+                : null,
+            };
+
+        exportedHosts.push(exportData);
+      }
+
+      sshLogger.success("All hosts exported with decrypted credentials", {
+        operation: "hosts_export_all",
+        count: exportedHosts.length,
+        userId,
+      });
+
+      res.json({ hosts: exportedHosts });
+    } catch (err) {
+      sshLogger.error("Failed to export all SSH hosts", err, {
+        operation: "hosts_export_all",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to export SSH hosts" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
  *     description: Deletes an SSH host by its ID.
@@ -3378,6 +3540,9 @@ router.post(
           socks5ProxyChain: hostData.socks5ProxyChain
             ? JSON.stringify(hostData.socks5ProxyChain)
             : null,
+          portKnockSequence: hostData.portKnockSequence
+            ? JSON.stringify(hostData.portKnockSequence)
+            : null,
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
             : 0,
@@ -4861,6 +5026,54 @@ router.post(
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);
+
+router.post(
+  "/db/host/:id/wake",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = parseInt(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    try {
+      const host = await db
+        .select({ macAddress: hosts.macAddress })
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+        .then((rows) => rows[0]);
+
+      if (!host) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      if (!host.macAddress || !isValidMac(host.macAddress)) {
+        return res
+          .status(400)
+          .json({ error: "No valid MAC address configured" });
+      }
+
+      await sendWakeOnLan(host.macAddress);
+
+      sshLogger.info("Wake-on-LAN packet sent", {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Wake-on-LAN failed", error, {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+      res.status(500).json({
+        error:
+          error instanceof Error ? error.message : "Failed to send WoL packet",
       });
     }
   },

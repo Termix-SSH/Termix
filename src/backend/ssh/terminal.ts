@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
+import net from "net";
+import dgram from "dgram";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { parse as parseUrl } from "url";
 import axios from "axios";
@@ -18,6 +20,46 @@ import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { sessionManager } from "./terminal-session-manager.js";
+import {
+  detectTmux,
+  attachOrCreateTmuxSession,
+  queryNewestTmuxSession,
+} from "./tmux-helper.js";
+
+async function performPortKnocking(
+  host: string,
+  sequence: Array<{ port: number; protocol?: string; delay?: number }>,
+): Promise<void> {
+  for (const knock of sequence) {
+    const protocol = knock.protocol || "tcp";
+    const delay = knock.delay ?? 100;
+
+    await new Promise<void>((resolve) => {
+      if (protocol === "udp") {
+        const client = dgram.createSocket("udp4");
+        client.send(Buffer.alloc(0), knock.port, host, () => {
+          client.close();
+          resolve();
+        });
+      } else {
+        const socket = new net.Socket();
+        socket.once("connect", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.once("error", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.connect(knock.port, host);
+      }
+    });
+
+    if (delay > 0) {
+      await new Promise<void>((r) => setTimeout(r, delay));
+    }
+  }
+}
 
 interface ConnectToHostData {
   cols: number;
@@ -43,6 +85,11 @@ interface ConnectToHostData {
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    portKnockSequence?: Array<{
+      port: number;
+      protocol?: "tcp" | "udp";
+      delay?: number;
+    }>;
     terminalConfig?: {
       keepaliveInterval?: number;
       keepaliveCountMax?: number;
@@ -368,7 +415,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   try {
     const url = parseUrl(req.url!, true);
-    const token = url.query.token as string;
+    let token = url.query.token as string;
+
+    if (!token) {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
+    }
 
     if (!token) {
       ws.close(1008, "Authentication required");
@@ -447,11 +502,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
   const wsPingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       if (!wsAlive) {
-        sshLogger.warn("WebSocket pong timeout - terminating zombie connection", {
-          operation: "ws_pong_timeout",
-          userId,
-          sessionId: currentSessionId,
-        });
+        sshLogger.warn(
+          "WebSocket pong timeout - terminating zombie connection",
+          {
+            operation: "ws_pong_timeout",
+            userId,
+            sessionId: currentSessionId,
+          },
+        );
         ws.terminate();
         return;
       }
@@ -649,6 +707,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               hostName: s.hostName,
               createdAt: s.createdAt,
               lastDetachedAt: s.lastDetachedAt,
+              tmuxSessionName: s.tmuxSessionName,
             })),
           }),
         );
@@ -702,6 +761,52 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "ping":
         ws.send(JSON.stringify({ type: "pong" }));
         break;
+
+      case "tmux_attach": {
+        const tmuxData = data as { sessionName: string };
+        const session = currentSessionId
+          ? sessionManager.getSession(currentSessionId)
+          : null;
+        if (session?.sshStream) {
+          const existingName = tmuxData.sessionName || undefined;
+          attachOrCreateTmuxSession(session.sshStream, existingName);
+          if (existingName) {
+            session.tmuxSessionName = existingName;
+            sshLogger.info("User selected tmux session to attach", {
+              operation: "tmux_user_attach",
+              sessionName: existingName,
+              hostId: session.hostId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "tmux_session_attached",
+                sessionName: existingName,
+              }),
+            );
+          } else {
+            // New session from picker -- query name after startup
+            const sshConn = session.sshConn;
+            setTimeout(async () => {
+              const sessionName = sshConn
+                ? await queryNewestTmuxSession(sshConn)
+                : null;
+              session.tmuxSessionName = sessionName;
+              sshLogger.info("User requested new tmux session", {
+                operation: "tmux_user_create",
+                sessionName,
+                hostId: session.hostId,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "tmux_session_created",
+                  sessionName,
+                }),
+              );
+            }, 500);
+          }
+        }
+        break;
+      }
 
       case "totp_response": {
         const totpData = data as TOTPResponseData;
@@ -1083,7 +1188,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
     };
     const authMethodNotAvailable = false;
-    if (id && userId && (!password && !key)) {
+    if (id && userId && !password && !key) {
       try {
         const { resolveHostById } = await import("./host-resolver.js");
         const resolvedHost = await resolveHostById(id, userId);
@@ -1096,7 +1201,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
-          sendLog("auth", "info", "Credentials resolved from server-side host data");
+          sendLog(
+            "auth",
+            "info",
+            "Credentials resolved from server-side host data",
+          );
         }
       } catch (error) {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
@@ -1402,16 +1511,115 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
           });
 
-          if (initialPath && initialPath.trim() !== "") {
-            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
-            stream.write(cdCommand);
-          }
+          const autoTmux = hostConfig.terminalConfig?.autoTmux === true;
 
-          if (executeCommand && executeCommand.trim() !== "") {
+          // Helper to run initialPath/executeCommand after the shell
+          // (or tmux session) is ready
+          const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
-              const command = `${executeCommand}\r`;
-              stream.write(command);
-            }, 500);
+              if (initialPath && initialPath.trim() !== "") {
+                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
+                stream.write(cdCommand);
+              }
+              if (executeCommand && executeCommand.trim() !== "") {
+                setTimeout(() => {
+                  stream.write(`${executeCommand}\r`);
+                }, 300);
+              }
+            }, delay);
+          };
+
+          if (autoTmux && conn) {
+            (async () => {
+              try {
+                const detection = await detectTmux(conn);
+                if (!detection.available) {
+                  sshLogger.warn("tmux not found on remote host", {
+                    operation: "tmux_detection",
+                    hostId: id,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_unavailable",
+                      message:
+                        "tmux is not installed on the remote host. Falling back to standard shell.",
+                    }),
+                  );
+                  // tmux unavailable, run commands in plain shell
+                  runPostShellCommands(0);
+                } else if (detection.sessions.length === 0) {
+                  attachOrCreateTmuxSession(stream);
+                  // Query the name tmux assigned after a short delay
+                  setTimeout(async () => {
+                    const sessionName = await queryNewestTmuxSession(conn);
+                    const session = sessionManager.getSession(boundSessionId);
+                    if (session) {
+                      session.tmuxSessionName = sessionName;
+                    }
+                    sshLogger.info("Created new tmux session", {
+                      operation: "tmux_new_session",
+                      sessionName,
+                      hostId: id,
+                    });
+                    ws.send(
+                      JSON.stringify({
+                        type: "tmux_session_created",
+                        sessionName,
+                      }),
+                    );
+                  }, 500);
+                  // Wait for tmux to start before running commands inside it
+                  runPostShellCommands(500);
+                } else if (detection.sessions.length === 1) {
+                  attachOrCreateTmuxSession(stream, detection.sessions[0].name);
+                  const sessionName = detection.sessions[0].name;
+                  const session = sessionManager.getSession(boundSessionId);
+                  if (session) {
+                    session.tmuxSessionName = sessionName;
+                  }
+                  sshLogger.info("Auto-attached to existing tmux session", {
+                    operation: "tmux_auto_attach",
+                    sessionName,
+                    hostId: id,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_session_attached",
+                      sessionName,
+                    }),
+                  );
+                  // Reattaching to existing session -- don't re-run
+                  // initialPath/executeCommand since the session already
+                  // has its own state
+                } else {
+                  sshLogger.info(
+                    "Multiple tmux sessions found, sending list to frontend",
+                    {
+                      operation: "tmux_sessions_available",
+                      sessions: detection.sessions,
+                      hostId: id,
+                    },
+                  );
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_sessions_available",
+                      sessions: detection.sessions,
+                    }),
+                  );
+                  // Commands deferred until user picks a session
+                }
+              } catch (error) {
+                sshLogger.error("tmux detection failed", error, {
+                  operation: "tmux_detection_error",
+                  hostId: id,
+                });
+                // Fallback: run commands in plain shell
+                runPostShellCommands(0);
+              }
+            })();
+          } else {
+            // No tmux -- run commands directly as before
+            runPostShellCommands(0);
           }
 
           ws.send(
@@ -1984,6 +2192,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    if (
+      hostConfig.portKnockSequence &&
+      hostConfig.portKnockSequence.length > 0
+    ) {
+      try {
+        sshLogger.info(
+          `Port knocking ${hostConfig.ip} (${hostConfig.portKnockSequence.length} ports)`,
+          { operation: "port_knock", hostId: hostConfig.id },
+        );
+        await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
+      } catch (err) {
+        sshLogger.warn("Port knocking failed, attempting connection anyway", {
+          operation: "port_knock",
+          hostId: hostConfig.id,
+        });
+      }
     }
 
     const proxyConfig: SOCKS5Config | null =
