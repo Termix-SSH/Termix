@@ -516,11 +516,7 @@ export function HostManagerEditor({
           });
         }
         if (!data.keyType) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.keyTypeRequired", "Key type is required"),
-            path: ["keyType"],
-          });
+          data.keyType = "auto";
         }
       } else if (data.authType === "credential") {
         if (!data.credentialId) {
