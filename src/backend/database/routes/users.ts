@@ -2656,13 +2656,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
  *         description: Failed to list users.
  */
 router.get("/list", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
     const allUsers = await db
       .select({
         id: users.id,

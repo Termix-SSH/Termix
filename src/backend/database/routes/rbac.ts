@@ -535,46 +535,6 @@ router.get(
 router.get(
   "/roles",
   authenticateJWT,
-  permissionManager.requireAdmin(),
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const allRoles = await db
-        .select()
-        .from(roles)
-        .orderBy(roles.isSystem, roles.name);
-
-      const rolesWithParsedPermissions = allRoles.map((role) => ({
-        ...role,
-        permissions: JSON.parse(role.permissions),
-      }));
-
-      res.json({ roles: rolesWithParsedPermissions });
-    } catch (error) {
-      databaseLogger.error("Failed to get roles", error, {
-        operation: "get_roles",
-      });
-      res.status(500).json({ error: "Failed to get roles" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /rbac/roles:
- *   get:
- *     summary: Get all roles
- *     description: Retrieves a list of all roles.
- *     tags:
- *       - RBAC
- *     responses:
- *       200:
- *         description: A list of roles.
- *       500:
- *         description: Failed to get roles.
- */
-router.get(
-  "/roles",
-  authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rolesList = await db

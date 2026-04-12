@@ -67,11 +67,9 @@ export function useCommandTracker({
           const command = currentCommandRef.current.trim();
 
           if (command.length > 0) {
-            const historyEnabled =
-              localStorage.getItem("commandHistoryEnabled") !== "false";
             const isSensitive = SENSITIVE_PATTERNS.some((p) => p.test(command));
 
-            if (historyEnabled && !isSensitive) {
+            if (!isSensitive) {
               saveCommandToHistory(hostId, command).catch((error) => {
                 console.error("Failed to save command to history:", error);
               });

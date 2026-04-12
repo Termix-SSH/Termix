@@ -278,7 +278,8 @@
     "editTooltip": "Edit this snippet",
     "deleteTooltip": "Delete this snippet",
     "shareTooltip": "Share this snippet",
-    "sharedWithYou": "Shared with you",
+    "sharedWithYou": "Shared",
+    "sharedBy": "Shared by {{username}}",
     "shareSnippet": "Share Snippet",
     "user": "User",
     "role": "Role",
@@ -335,7 +336,9 @@
     "authRequiredRefresh": "Authentication required. Please refresh the page.",
     "dataAccessLockedReauth": "Data access locked. Please re-authenticate.",
     "loading": "Loading command history...",
-    "error": "Error Loading History"
+    "error": "Error Loading History",
+    "disabledTitle": "Command History is Disabled",
+    "disabledDescription": "Enable Command History Tracking in your profile under Appearance settings."
   },
   "splitScreen": {
     "title": "Split Screen",
