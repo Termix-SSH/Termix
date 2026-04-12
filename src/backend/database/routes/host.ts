@@ -36,6 +36,7 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
 
 const router = express.Router();
 
@@ -398,6 +399,7 @@ router.post(
       socks5ProxyChain,
       portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
@@ -483,6 +485,7 @@ router.post(
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
         : null,
+      macAddress: macAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -909,6 +912,7 @@ router.put(
       socks5ProxyChain,
       portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
@@ -994,6 +998,7 @@ router.put(
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
         : null,
+      macAddress: macAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -4879,6 +4884,51 @@ router.post(
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);
+
+router.post(
+  "/db/host/:id/wake",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = parseInt(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    try {
+      const host = await db
+        .select({ macAddress: hosts.macAddress })
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+        .then((rows) => rows[0]);
+
+      if (!host) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      if (!host.macAddress || !isValidMac(host.macAddress)) {
+        return res.status(400).json({ error: "No valid MAC address configured" });
+      }
+
+      await sendWakeOnLan(host.macAddress);
+
+      sshLogger.info("Wake-on-LAN packet sent", {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Wake-on-LAN failed", error, {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to send WoL packet",
       });
     }
   },

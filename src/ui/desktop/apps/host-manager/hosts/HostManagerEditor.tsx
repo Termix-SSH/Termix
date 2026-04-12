@@ -448,6 +448,7 @@ export function HostManagerEditor({
           }),
         )
         .optional(),
+      macAddress: z.string().optional(),
       portKnockSequence: z
         .array(
           z.object({
@@ -585,6 +586,7 @@ export function HostManagerEditor({
       socks5Username: "",
       socks5Password: "",
       socks5ProxyChain: [],
+      macAddress: "",
       portKnockSequence: [],
       enableDocker: false,
       domain: "",
@@ -827,6 +829,7 @@ export function HostManagerEditor({
         socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
           ? cleanedHost.socks5ProxyChain
           : [],
+        macAddress: (cleanedHost as any).macAddress || "",
         portKnockSequence: Array.isArray(cleanedHost.portKnockSequence)
           ? cleanedHost.portKnockSequence
           : [],

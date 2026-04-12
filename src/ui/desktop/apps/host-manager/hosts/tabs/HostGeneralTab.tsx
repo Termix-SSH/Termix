@@ -269,6 +269,30 @@ export function HostGeneralTab({
           }}
         />
       </div>
+      <div className="grid grid-cols-12 gap-4 mt-3">
+        <FormField
+          control={form.control}
+          name="macAddress"
+          render={({ field }) => (
+            <FormItem className="col-span-5">
+              <FormLabel>{t("hosts.macAddress")}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="AA:BB:CC:DD:EE:FF"
+                  {...field}
+                  onBlur={(e) => {
+                    field.onChange(e.target.value.trim());
+                    field.onBlur();
+                  }}
+                />
+              </FormControl>
+              <FormDescription>
+                {t("hosts.macAddressDesc")}
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+      </div>
       <FormLabel className="mb-3 mt-3 font-bold">
         {t("hosts.organization")}
       </FormLabel>
