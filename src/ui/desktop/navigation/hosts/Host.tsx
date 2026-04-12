@@ -22,7 +22,12 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getSSHHosts, getGuacamoleToken, logActivity, wakeOnLan } from "@/ui/main-axios";
+import {
+  getSSHHosts,
+  getGuacamoleToken,
+  logActivity,
+  wakeOnLan,
+} from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";

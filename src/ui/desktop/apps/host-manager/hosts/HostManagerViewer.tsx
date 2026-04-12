@@ -1270,7 +1270,11 @@ export function HostManagerViewer({
                 setOpenAccordions(folderKeys);
               }
             }}
-            title={openAccordions.length > 0 ? t("hosts.collapseAll", "Collapse All") : t("hosts.expandAll", "Expand All")}
+            title={
+              openAccordions.length > 0
+                ? t("hosts.collapseAll", "Collapse All")
+                : t("hosts.expandAll", "Expand All")
+            }
           >
             {openAccordions.length > 0 ? (
               <ChevronsDownUp className="h-4 w-4" />

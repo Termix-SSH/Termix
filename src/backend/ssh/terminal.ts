@@ -769,10 +769,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           : null;
         if (session?.sshStream) {
           const existingName = tmuxData.sessionName || undefined;
-          attachOrCreateTmuxSession(
-            session.sshStream,
-            existingName,
-          );
+          attachOrCreateTmuxSession(session.sshStream, existingName);
           if (existingName) {
             session.tmuxSessionName = existingName;
             sshLogger.info("User selected tmux session to attach", {
@@ -1514,8 +1511,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
           });
 
-          const autoTmux =
-            hostConfig.terminalConfig?.autoTmux === true;
+          const autoTmux = hostConfig.terminalConfig?.autoTmux === true;
 
           // Helper to run initialPath/executeCommand after the shell
           // (or tmux session) is ready
@@ -1555,10 +1551,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   attachOrCreateTmuxSession(stream);
                   // Query the name tmux assigned after a short delay
                   setTimeout(async () => {
-                    const sessionName =
-                      await queryNewestTmuxSession(conn);
-                    const session =
-                      sessionManager.getSession(boundSessionId);
+                    const sessionName = await queryNewestTmuxSession(conn);
+                    const session = sessionManager.getSession(boundSessionId);
                     if (session) {
                       session.tmuxSessionName = sessionName;
                     }
@@ -1577,13 +1571,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   // Wait for tmux to start before running commands inside it
                   runPostShellCommands(500);
                 } else if (detection.sessions.length === 1) {
-                  attachOrCreateTmuxSession(
-                    stream,
-                    detection.sessions[0].name,
-                  );
+                  attachOrCreateTmuxSession(stream, detection.sessions[0].name);
                   const sessionName = detection.sessions[0].name;
-                  const session =
-                    sessionManager.getSession(boundSessionId);
+                  const session = sessionManager.getSession(boundSessionId);
                   if (session) {
                     session.tmuxSessionName = sessionName;
                   }

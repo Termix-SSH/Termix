@@ -38,7 +38,9 @@ export function execCommand(conn: Client, command: string): Promise<string> {
       });
       stream.on("close", (code: number) => {
         if (code !== 0 && stdout === "") {
-          reject(new Error(stderr.trim() || `Command exited with code ${code}`));
+          reject(
+            new Error(stderr.trim() || `Command exited with code ${code}`),
+          );
         } else {
           resolve(stdout.trim());
         }
@@ -50,9 +52,7 @@ export function execCommand(conn: Client, command: string): Promise<string> {
 /**
  * Detect whether tmux is installed and list all existing sessions with details.
  */
-export async function detectTmux(
-  conn: Client,
-): Promise<TmuxDetectionResult> {
+export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
   try {
     await execCommand(conn, "command -v tmux");
   } catch {
@@ -120,8 +120,7 @@ export function attachOrCreateTmuxSession(
 ): void {
   let command: string;
   if (existingSessionName) {
-    command =
-      `tmux ${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)} && exit\r`;
+    command = `tmux ${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)} && exit\r`;
   } else {
     command = `tmux ${TMUX_OPTS} \\; new-session && exit\r`;
   }

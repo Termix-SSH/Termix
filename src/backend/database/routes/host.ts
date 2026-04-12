@@ -5051,7 +5051,9 @@ router.post(
       }
 
       if (!host.macAddress || !isValidMac(host.macAddress)) {
-        return res.status(400).json({ error: "No valid MAC address configured" });
+        return res
+          .status(400)
+          .json({ error: "No valid MAC address configured" });
       }
 
       await sendWakeOnLan(host.macAddress);
@@ -5070,7 +5072,8 @@ router.post(
         hostId,
       });
       res.status(500).json({
-        error: error instanceof Error ? error.message : "Failed to send WoL packet",
+        error:
+          error instanceof Error ? error.message : "Failed to send WoL packet",
       });
     }
   },

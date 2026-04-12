@@ -1221,8 +1221,12 @@ router.post(
     }
 
     try {
-      const { targetType = "user", targetUserId, targetRoleId, durationHours } =
-        req.body;
+      const {
+        targetType = "user",
+        targetUserId,
+        targetRoleId,
+        durationHours,
+      } = req.body;
 
       if (!["user", "role"].includes(targetType)) {
         return res
@@ -1373,9 +1377,7 @@ router.delete(
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      await db
-        .delete(snippetAccess)
-        .where(eq(snippetAccess.id, accessId));
+      await db.delete(snippetAccess).where(eq(snippetAccess.id, accessId));
 
       res.json({ success: true, message: "Snippet access revoked" });
     } catch (error) {
@@ -1429,8 +1431,7 @@ router.get(
           roleName: roles.name,
           roleDisplayName: roles.displayName,
           grantedBy: snippetAccess.grantedBy,
-          grantedByUsername:
-            sql<string>`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
+          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
           permissionLevel: snippetAccess.permissionLevel,
           expiresAt: snippetAccess.expiresAt,
           createdAt: snippetAccess.createdAt,

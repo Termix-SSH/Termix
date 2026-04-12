@@ -286,9 +286,7 @@ export function HostGeneralTab({
                   }}
                 />
               </FormControl>
-              <FormDescription>
-                {t("hosts.macAddressDesc")}
-              </FormDescription>
+              <FormDescription>{t("hosts.macAddressDesc")}</FormDescription>
             </FormItem>
           )}
         />
@@ -1464,9 +1462,7 @@ export function HostGeneralTab({
             </AccordionItem>
 
             <AccordionItem value="port-knocking">
-              <AccordionTrigger>
-                {t("hosts.portKnocking")}
-              </AccordionTrigger>
+              <AccordionTrigger>{t("hosts.portKnocking")}</AccordionTrigger>
               <AccordionContent className="space-y-3 pt-2">
                 <p className="text-sm text-muted-foreground">
                   {t("hosts.portKnockingDesc")}

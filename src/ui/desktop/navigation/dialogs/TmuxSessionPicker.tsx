@@ -19,7 +19,10 @@ interface TmuxSessionPickerProps {
   backgroundColor?: string;
 }
 
-function formatTimestamp(unix: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function formatTimestamp(
+  unix: number,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (!unix) return "---";
   const date = new Date(unix * 1000);
   const now = new Date();
@@ -76,17 +79,28 @@ export function TmuxSessionPicker({
                 {session.name}
               </div>
               <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1" title={t("terminal.tmuxWindows")}>
+                <span
+                  className="flex items-center gap-1"
+                  title={t("terminal.tmuxWindows")}
+                >
                   <Monitor className="w-3 h-3" />
                   {t("terminal.tmuxWindowCount", { count: session.windows })}
                 </span>
                 {session.attachedClients > 0 && (
-                  <span className="flex items-center gap-1" title={t("terminal.tmuxAttached")}>
+                  <span
+                    className="flex items-center gap-1"
+                    title={t("terminal.tmuxAttached")}
+                  >
                     <Users className="w-3 h-3" />
-                    {t("terminal.tmuxAttachedCount", { count: session.attachedClients })}
+                    {t("terminal.tmuxAttachedCount", {
+                      count: session.attachedClients,
+                    })}
                   </span>
                 )}
-                <span className="flex items-center gap-1" title={t("terminal.tmuxLastActivity")}>
+                <span
+                  className="flex items-center gap-1"
+                  title={t("terminal.tmuxLastActivity")}
+                >
                   <Clock className="w-3 h-3" />
                   {formatTimestamp(session.lastActivity, t)}
                 </span>

@@ -815,14 +815,10 @@ class AuthManager {
           // best effort
         }
       } catch (error) {
-        databaseLogger.error(
-          "Failed to revoke all sessions on logout",
-          error,
-          {
-            operation: "session_revoke_all_failed",
-            userId,
-          },
-        );
+        databaseLogger.error("Failed to revoke all sessions on logout", error, {
+          operation: "session_revoke_all_failed",
+          userId,
+        });
       }
       this.userCrypto.logoutUser(userId);
     }

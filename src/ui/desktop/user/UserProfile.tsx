@@ -121,10 +121,9 @@ export function UserProfile({
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") === "true",
   );
-  const [commandHistoryTracking, setCommandHistoryTracking] =
-    useState<boolean>(
-      () => localStorage.getItem("commandHistoryTracking") === "true",
-    );
+  const [commandHistoryTracking, setCommandHistoryTracking] = useState<boolean>(
+    () => localStorage.getItem("commandHistoryTracking") === "true",
+  );
   const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
     useState<boolean>(
       () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
@@ -535,7 +534,9 @@ export function UserProfile({
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent onMouseLeave={() => setThemePreview(null)}>
+                        <SelectContent
+                          onMouseLeave={() => setThemePreview(null)}
+                        >
                           <SelectItem
                             value="light"
                             onMouseEnter={() => setThemePreview("light")}
@@ -565,7 +566,9 @@ export function UserProfile({
                           </SelectItem>
                           <SelectItem
                             value="gentlemansChoice"
-                            onMouseEnter={() => setThemePreview("gentlemansChoice")}
+                            onMouseEnter={() =>
+                              setThemePreview("gentlemansChoice")
+                            }
                           >
                             <div className="flex items-center gap-2">
                               <Palette className="w-4 h-4" />
@@ -574,7 +577,9 @@ export function UserProfile({
                           </SelectItem>
                           <SelectItem
                             value="midnightEspresso"
-                            onMouseEnter={() => setThemePreview("midnightEspresso")}
+                            onMouseEnter={() =>
+                              setThemePreview("midnightEspresso")
+                            }
                           >
                             <div className="flex items-center gap-2">
                               <Palette className="w-4 h-4" />
@@ -583,7 +588,9 @@ export function UserProfile({
                           </SelectItem>
                           <SelectItem
                             value="catppuccinMocha"
-                            onMouseEnter={() => setThemePreview("catppuccinMocha")}
+                            onMouseEnter={() =>
+                              setThemePreview("catppuccinMocha")
+                            }
                           >
                             <div className="flex items-center gap-2">
                               <Palette className="w-4 h-4" />
