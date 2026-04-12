@@ -29,6 +29,161 @@ import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
 
+const MAX_OVERLAY_RECONNECT_ATTEMPTS = 5;
+const OVERLAY_BASE_DELAY = 2000;
+const OVERLAY_MAX_DELAY = 30000;
+
+function ConnectionLostOverlay({
+  onReconnected,
+}: {
+  onReconnected: () => void;
+}) {
+  const { t } = useTranslation();
+  const [attempt, setAttempt] = useState(0);
+  const [status, setStatus] = useState<"reconnecting" | "failed">(
+    "reconnecting",
+  );
+  const [nextRetryIn, setNextRetryIn] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const unmountedRef = useRef(false);
+
+  const tryReconnect = useCallback(async () => {
+    if (unmountedRef.current) return;
+
+    try {
+      await getUserInfo();
+      if (!unmountedRef.current) {
+        onReconnected();
+      }
+    } catch {
+      if (unmountedRef.current) return;
+      setAttempt((prev) => {
+        const next = prev + 1;
+        if (next >= MAX_OVERLAY_RECONNECT_ATTEMPTS) {
+          setStatus("failed");
+        } else {
+          const delay = Math.min(
+            OVERLAY_BASE_DELAY * Math.pow(2, next),
+            OVERLAY_MAX_DELAY,
+          );
+          setNextRetryIn(Math.ceil(delay / 1000));
+
+          countdownRef.current = setInterval(() => {
+            if (unmountedRef.current) return;
+            setNextRetryIn((prev) => {
+              if (prev <= 1) {
+                if (countdownRef.current) clearInterval(countdownRef.current);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+
+          timerRef.current = setTimeout(() => {
+            if (!unmountedRef.current) tryReconnect();
+          }, delay);
+        }
+        return next;
+      });
+    }
+  }, [onReconnected]);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    const initialDelay = setTimeout(() => {
+      tryReconnect();
+    }, OVERLAY_BASE_DELAY);
+
+    return () => {
+      unmountedRef.current = true;
+      clearTimeout(initialDelay);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [tryReconnect]);
+
+  const handleRetry = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setAttempt(0);
+    setStatus("reconnecting");
+    setNextRetryIn(0);
+    tryReconnect();
+  };
+
+  const handleReload = () => {
+    window.location.reload();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+        <div className="mb-4">
+          {status === "reconnecting" ? (
+            <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <svg
+                className="w-5 h-5 text-destructive"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        <h2 className="text-lg font-semibold text-foreground mb-2">
+          {t("common.connectionLost", "Connection Lost")}
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          {status === "reconnecting"
+            ? nextRetryIn > 0
+              ? t(
+                  "common.reconnectingIn",
+                  `Reconnecting in ${nextRetryIn}s... (attempt ${attempt}/${MAX_OVERLAY_RECONNECT_ATTEMPTS})`,
+                  { seconds: nextRetryIn, attempt, max: MAX_OVERLAY_RECONNECT_ATTEMPTS },
+                )
+              : t(
+                  "common.reconnectingNow",
+                  `Reconnecting... (attempt ${attempt}/${MAX_OVERLAY_RECONNECT_ATTEMPTS})`,
+                  { attempt, max: MAX_OVERLAY_RECONNECT_ATTEMPTS },
+                )
+            : t(
+                "common.reconnectFailed",
+                "Could not reconnect to the server.",
+              )}
+        </p>
+
+        <div className="flex gap-3 justify-center">
+          {status === "failed" && (
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              {t("common.retry", "Retry")}
+            </button>
+          )}
+          <button
+            onClick={handleReload}
+            className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
+          >
+            {t("common.reload", "Reload")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AppContent({
   onAuthStateChange,
 }: {
@@ -56,6 +211,10 @@ function AppContent({
 
   const isDarkMode =
     theme === "dark" ||
+    theme === "dracula" ||
+    theme === "gentlemansChoice" ||
+    theme === "midnightEspresso" ||
+    theme === "catppuccinMocha" ||
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
@@ -317,30 +476,6 @@ function AppContent({
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (dbConnectionFailed) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-background">
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={false}
-            authLoading={false}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-            onSelectView={() => {}}
-            initialDbError="Database connection failed"
-          />
-        </div>
-        <Toaster
-          position="bottom-right"
-          richColors={false}
-          closeButton
-          duration={5000}
-          offset={20}
-        />
       </div>
     );
   }
@@ -614,6 +749,15 @@ function AppContent({
             </>
           )}
         </div>
+      )}
+
+      {dbConnectionFailed && (
+        <ConnectionLostOverlay
+          onReconnected={() => {
+            setDbConnectionFailed(false);
+            toast.success(t("common.backendReconnected"));
+          }}
+        />
       )}
 
       <Toaster

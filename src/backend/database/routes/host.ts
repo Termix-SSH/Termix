@@ -50,6 +50,30 @@ function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
+const SENSITIVE_FIELDS = [
+  "password",
+  "key",
+  "keyPassword",
+  "sudoPassword",
+  "autostartPassword",
+  "autostartKey",
+  "autostartKeyPassword",
+  "socks5Password",
+];
+
+function stripSensitiveFields(
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...host };
+  result.hasPassword = !!host.password;
+  result.hasKey = !!host.key;
+  result.hasSudoPassword = !!host.sudoPassword;
+  for (const field of SENSITIVE_FIELDS) {
+    delete result[field];
+  }
+  return result;
+}
+
 function transformHostResponse(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -91,6 +115,9 @@ function transformHostResponse(
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
+    portKnockSequence: host.portKnockSequence
+      ? JSON.parse(host.portKnockSequence as string)
+      : [],
     domain: host.domain || undefined,
     security: host.security || undefined,
     ignoreCert: !!host.ignoreCert,
@@ -107,7 +134,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 
 /**
  * @openapi
- * /ssh/db/host/internal:
+ * /host/db/host/internal:
  *   get:
  *     summary: Get internal SSH host data
  *     description: Returns internal SSH host data for autostart tunnels. Requires internal auth token.
@@ -172,12 +199,6 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           ip: host.ip,
           port: host.port,
           username: host.username,
-          password: host.autostartPassword,
-          key: host.autostartKey,
-          keyPassword: host.autostartKeyPassword,
-          autostartPassword: host.autostartPassword,
-          autostartKey: host.autostartKey,
-          autostartKeyPassword: host.autostartKeyPassword,
           authType: host.authType,
           keyType: host.keyType,
           credentialId: host.credentialId,
@@ -207,7 +228,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host/internal/all:
+ * /host/db/host/internal/all:
  *   get:
  *     summary: Get all internal SSH host data
  *     description: Returns all internal SSH host data. Requires internal auth token.
@@ -253,12 +274,6 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         ip: host.ip,
         port: host.port,
         username: host.username,
-        password: host.autostartPassword || host.password,
-        key: host.autostartKey || host.key,
-        keyPassword: host.autostartKeyPassword || host.keyPassword,
-        autostartPassword: host.autostartPassword,
-        autostartKey: host.autostartKey,
-        autostartKeyPassword: host.autostartKeyPassword,
         authType: host.authType,
         keyType: host.keyType,
         credentialId: host.credentialId,
@@ -287,7 +302,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   post:
  *     summary: Create SSH host
  *     description: Creates a new SSH host configuration.
@@ -382,6 +397,7 @@ router.post(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
       macAddress,
     } = hostData;
@@ -470,6 +486,9 @@ router.post(
         ? JSON.stringify(socks5ProxyChain)
         : null,
       macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
+        : null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -598,7 +617,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/quick-connect:
+ * /host/quick-connect:
  *   post:
  *     summary: Create a temporary SSH connection without saving to database
  *     description: Returns a temporary host configuration for immediate use
@@ -781,7 +800,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   put:
  *     summary: Update SSH host
  *     description: Updates an existing SSH host configuration.
@@ -891,6 +910,7 @@ router.put(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
       macAddress,
     } = hostData;
@@ -979,6 +999,9 @@ router.put(
         ? JSON.stringify(socks5ProxyChain)
         : null,
       macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
+        : null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -1203,7 +1226,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   get:
  *     summary: Get all SSH hosts
  *     description: Retrieves all SSH hosts for the authenticated user.
@@ -1287,6 +1310,7 @@ router.get(
           socks5Username: hosts.socks5Username,
           socks5Password: hosts.socks5Password,
           socks5ProxyChain: hosts.socks5ProxyChain,
+          portKnockSequence: hosts.portKnockSequence,
           domain: hosts.domain,
           security: hosts.security,
           ignoreCert: hosts.ignoreCert,
@@ -1367,7 +1391,8 @@ router.get(
         }),
       );
 
-      res.json(result);
+      const sanitized = result.map((host) => stripSensitiveFields(host));
+      res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
         operation: "host_fetch",
@@ -1380,7 +1405,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   get:
  *     summary: Get SSH host by ID
  *     description: Retrieves a specific SSH host by its ID.
@@ -1441,8 +1466,9 @@ router.get(
 
       const host = data[0];
       const result = transformHostResponse(host);
+      const resolved = (await resolveHostCredentials(result, userId)) || result;
 
-      res.json((await resolveHostCredentials(result, userId)) || result);
+      res.json(stripSensitiveFields(resolved));
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -1456,7 +1482,79 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}/export:
+ * /host/db/host/{id}/password:
+ *   get:
+ *     summary: Get host password for clipboard copy
+ *     description: Returns the password for a specific host. Used by the copy-password feature.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: field
+ *         schema:
+ *           type: string
+ *           enum: [password, sudoPassword]
+ *     responses:
+ *       200:
+ *         description: The requested password value.
+ *       404:
+ *         description: Host not found or no password set.
+ */
+router.get(
+  "/db/host/:id/password",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = Number(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+    const field = (req.query.field as string) || "password";
+
+    if (!["password", "sudoPassword"].includes(field)) {
+      return res.status(400).json({ error: "Invalid field" });
+    }
+
+    try {
+      const data = await SimpleDBOps.select(
+        db
+          .select()
+          .from(hosts)
+          .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
+        "ssh_data",
+        userId,
+      );
+
+      if (data.length === 0) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const host = data[0];
+      const resolved = (await resolveHostCredentials(host, userId)) || host;
+      const value = resolved[field];
+
+      if (!value) {
+        return res.status(404).json({ error: "No password set" });
+      }
+
+      res.json({ value });
+    } catch (err) {
+      sshLogger.error("Failed to fetch host password", err, {
+        operation: "host_password_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch password" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /host/db/host/{id}/export:
  *   get:
  *     summary: Export SSH host
  *     description: Exports a specific SSH host with decrypted credentials.
@@ -1590,6 +1688,9 @@ router.get(
             socks5ProxyChain: resolvedHost.socks5ProxyChain
               ? JSON.parse(resolvedHost.socks5ProxyChain as string)
               : null,
+            portKnockSequence: resolvedHost.portKnockSequence
+              ? JSON.parse(resolvedHost.portKnockSequence as string)
+              : null,
           };
 
       sshLogger.success("Host exported with decrypted credentials", {
@@ -1612,7 +1713,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
  *     description: Deletes an SSH host by its ID.
@@ -1750,7 +1851,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   get:
  *     summary: Get recent files
  *     description: Retrieves a list of recent files for a specific host.
@@ -1813,7 +1914,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   post:
  *     summary: Add recent file
  *     description: Adds a file to the list of recent files for a host.
@@ -1889,7 +1990,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   delete:
  *     summary: Remove recent file
  *     description: Removes a file from the list of recent files for a host.
@@ -1947,7 +2048,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   get:
  *     summary: Get pinned files
  *     description: Retrieves a list of pinned files for a specific host.
@@ -2009,7 +2110,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   post:
  *     summary: Add pinned file
  *     description: Adds a file to the list of pinned files for a host.
@@ -2084,7 +2185,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   delete:
  *     summary: Remove pinned file
  *     description: Removes a file from the list of pinned files for a host.
@@ -2142,7 +2243,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   get:
  *     summary: Get shortcuts
  *     description: Retrieves a list of shortcuts for a specific host.
@@ -2204,7 +2305,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   post:
  *     summary: Add shortcut
  *     description: Adds a shortcut for a specific host.
@@ -2279,7 +2380,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   delete:
  *     summary: Remove shortcut
  *     description: Removes a shortcut for a specific host.
@@ -2337,7 +2438,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/command-history/{hostId}:
+ * /host/command-history/{hostId}:
  *   get:
  *     summary: Get command history
  *     description: Retrieves the command history for a specific host.
@@ -2406,7 +2507,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/command-history:
+ * /host/command-history:
  *   delete:
  *     summary: Delete command from history
  *     description: Deletes a specific command from the history of a host.
@@ -2564,7 +2665,7 @@ async function resolveHostCredentials(
 
 /**
  * @openapi
- * /ssh/folders/rename:
+ * /host/folders/rename:
  *   put:
  *     summary: Rename folder
  *     description: Renames a folder for SSH hosts and credentials.
@@ -2664,7 +2765,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders:
+ * /host/folders:
  *   get:
  *     summary: Get all folders
  *     description: Retrieves all folders for the authenticated user.
@@ -2703,7 +2804,7 @@ router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/folders/metadata:
+ * /host/folders/metadata:
  *   put:
  *     summary: Update folder metadata
  *     description: Updates the metadata (color, icon) of a folder.
@@ -2794,7 +2895,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders/{name}/hosts:
+ * /host/folders/{name}/hosts:
  *   delete:
  *     summary: Delete all hosts in folder
  *     description: Deletes all SSH hosts within a specific folder.
@@ -2940,7 +3041,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/bulk-import:
+ * /host/bulk-import:
  *   post:
  *     summary: Bulk import SSH hosts
  *     description: Bulk imports multiple SSH hosts.
@@ -2966,7 +3067,7 @@ router.delete(
 
 /**
  * @swagger
- * /ssh/bulk-update:
+ * /host/bulk-update:
  *   patch:
  *     summary: Bulk update partial fields on multiple SSH hosts
  *     tags: [SSH]
@@ -3211,6 +3312,41 @@ router.post(
           continue;
         }
 
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType === "credential" &&
+          hostData.credentialId
+        ) {
+          const cred = await db
+            .select({ id: sshCredentials.id })
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, hostData.credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            )
+            .limit(1);
+
+          if (cred.length === 0) {
+            const fallback = await db
+              .select({ id: sshCredentials.id })
+              .from(sshCredentials)
+              .where(eq(sshCredentials.userId, userId))
+              .limit(1);
+
+            if (fallback.length > 0) {
+              hostData.credentialId = fallback[0].id;
+            } else {
+              results.failed++;
+              results.errors.push(
+                `Host ${i + 1}: credentialId ${hostData.credentialId} not found and no fallback credential available`,
+              );
+              continue;
+            }
+          }
+        }
+
         const sshDataObj: Record<string, unknown> = {
           userId: userId,
           connectionType: effectiveConnectionType,
@@ -3261,6 +3397,9 @@ router.post(
           socks5Password: hostData.socks5Password || null,
           socks5ProxyChain: hostData.socks5ProxyChain
             ? JSON.stringify(hostData.socks5ProxyChain)
+            : null,
+          portKnockSequence: hostData.portKnockSequence
+            ? JSON.stringify(hostData.portKnockSequence)
             : null,
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
@@ -3336,7 +3475,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/folders/{folderName}/hosts:
+ * /host/folders/{folderName}/hosts:
  *   delete:
  *     summary: Delete all hosts in a folder
  *     description: Deletes all hosts within a specific folder.
@@ -3434,7 +3573,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/enable:
+ * /host/autostart/enable:
  *   post:
  *     summary: Enable autostart for SSH configuration
  *     description: Enables autostart for a specific SSH configuration.
@@ -3613,7 +3752,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/autostart/disable:
+ * /host/autostart/disable:
  *   delete:
  *     summary: Disable autostart for SSH configuration
  *     description: Disables autostart for a specific SSH configuration.
@@ -3682,7 +3821,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/status:
+ * /host/autostart/status:
  *   get:
  *     summary: Get autostart status
  *     description: Retrieves the autostart status for the user's SSH configurations.
@@ -3738,7 +3877,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   get:
  *     summary: Get OPKSSH token status for a host
  *     tags: [SSH]
@@ -3837,7 +3976,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   delete:
  *     summary: Delete OPKSSH token for a host
  *     tags: [SSH]
@@ -3990,7 +4129,7 @@ function rewriteOPKSSHHtml(
 
 /**
  * @openapi
- * /opkssh-chooser/{requestId}:
+ * /host/opkssh-chooser/{requestId}:
  *   get:
  *     summary: Proxy OPKSSH provider chooser page and all related resources
  *     tags: [SSH]
@@ -4304,7 +4443,7 @@ router.use(
 
 /**
  * @openapi
- * /opkssh-callback:
+ * /host/opkssh-callback:
  *   get:
  *     summary: Static OAuth callback from OIDC provider for OPKSSH authentication
  *     tags: [SSH]
@@ -4320,15 +4459,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
     sshLogger.info("OAuth callback received", {
       operation: "opkssh_static_callback_received",
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      headers: {
-        host: req.headers.host,
-        "x-forwarded-proto": req.headers["x-forwarded-proto"],
-        "x-forwarded-host": req.headers["x-forwarded-host"],
-        "x-forwarded-port": req.headers["x-forwarded-port"],
-      },
+      host: req.headers.host,
     });
 
     const { getUserIdFromRequest, getActiveSessionsForUser } =
@@ -4422,7 +4553,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /opkssh-callback/{requestId}:
+ * /host/opkssh-callback/{requestId}:
  *   get:
  *     summary: OAuth callback from OIDC provider for OPKSSH authentication (handles all sub-paths)
  *     tags: [SSH]
@@ -4684,7 +4815,7 @@ router.use(
 
 /**
  * @openapi
- * /db/proxy/test:
+ * /host/db/proxy/test:
  *   post:
  *     summary: Test proxy connectivity
  *     description: Tests connectivity through a proxy configuration to a target host.
