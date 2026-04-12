@@ -1,8 +1,9 @@
 import express from "express";
 import net from "net";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -31,7 +32,9 @@ import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
 function supportsMetrics(host: SSHHostWithCredentials): boolean {
   const connectionType = host.connectionType || "ssh";
-  return connectionType === "ssh";
+  if (connectionType !== "ssh") return false;
+  if (host.authType === "none" || host.authType === "opkssh") return false;
+  return true;
 }
 
 function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
@@ -865,7 +868,15 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
+          this.pollHostMetrics(
+            latestConfig.host,
+            latestConfig.viewerUserId,
+          ).catch((err) => {
+            statsLogger.error("Metrics polling failed", err, {
+              operation: "metrics_poll_unhandled",
+              hostId: host.id,
+            });
+          });
         }
       }, intervalMs);
     } else {
@@ -1153,37 +1164,7 @@ function validateHostId(
 }
 
 const app = express();
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
@@ -1373,8 +1354,13 @@ async function resolveHostCredentials(
             if (credential.password) {
               baseHost.password = credential.password;
             }
-            if (credential.key) {
-              baseHost.key = credential.key;
+            if (
+              credential.key ||
+              (credential as Record<string, unknown>).privateKey
+            ) {
+              baseHost.key =
+                credential.key ||
+                ((credential as Record<string, unknown>).privateKey as string);
             }
             if (credential.keyPassword) {
               baseHost.keyPassword = credential.keyPassword;
@@ -1485,18 +1471,7 @@ async function buildSshConfig(
         "ssh-rsa",
         "ssh-dss",
       ],
-      cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
-        "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
-        "aes128-cbc",
-        "3des-cbc",
-      ],
+      cipher: SSH_ALGORITHMS.cipher,
       hmac: [
         "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",
@@ -1913,7 +1888,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         } else if (
           error.message.includes("No password available") ||
           error.message.includes("Unsupported authentication type") ||
-          error.message.includes("No SSH key available")
+          error.message.includes("No SSH key available") ||
+          error.message.includes("Invalid SSH key format")
         ) {
           authFailureTracker.recordFailure(host.id, "AUTH", true);
         } else if (

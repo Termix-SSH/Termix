@@ -7,11 +7,21 @@ declare module "guacamole-common-js" {
       getDisplay(): Display;
       sendKeyEvent(pressed: number, keysym: number): void;
       sendMouseState(state: Mouse.State): void;
+      sendSize(width: number, height: number): void;
       setClipboard(stream: OutputStream, mimetype: string): void;
       createClipboardStream(mimetype: string): OutputStream;
       onstatechange: ((state: number) => void) | null;
       onerror: ((error: Status) => void) | null;
       onclipboard: ((stream: InputStream, mimetype: string) => void) | null;
+      onaudio: ((stream: InputStream, mimetype: string) => void) | null;
+    }
+
+    class AudioPlayer {
+      static getInstance(
+        stream: InputStream,
+        mimetype: string,
+      ): AudioPlayer | null;
+      sync(): void;
     }
 
     class Display {
