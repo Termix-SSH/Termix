@@ -2,6 +2,33 @@ import chalk from "chalk";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  success: 1,
+  warn: 2,
+  error: 3,
+};
+
+let globalLogLevel: LogLevel = "info";
+
+export function setGlobalLogLevel(level: string): void {
+  const normalized = level.toLowerCase();
+  if (normalized in LOG_LEVEL_PRIORITY) {
+    globalLogLevel = normalized as LogLevel;
+  }
+}
+
+export function getGlobalLogLevel(): LogLevel {
+  return globalLogLevel;
+}
+
+// Initialize from environment variable if set
+const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
+if (envLogLevel && envLogLevel in LOG_LEVEL_PRIORITY) {
+  globalLogLevel = envLogLevel as LogLevel;
+}
+
 export interface LogContext {
   service?: string;
   operation?: string;
@@ -140,7 +167,7 @@ export class Logger {
   }
 
   private shouldLog(level: LogLevel, message: string): boolean {
-    if (level === "debug" && process.env.NODE_ENV === "production") {
+    if (LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[globalLogLevel]) {
       return false;
     }
 
