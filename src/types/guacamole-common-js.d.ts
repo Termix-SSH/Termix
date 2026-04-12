@@ -17,7 +17,10 @@ declare module "guacamole-common-js" {
     }
 
     class AudioPlayer {
-      static getInstance(stream: InputStream, mimetype: string): AudioPlayer | null;
+      static getInstance(
+        stream: InputStream,
+        mimetype: string,
+      ): AudioPlayer | null;
       sync(): void;
     }
 

@@ -97,7 +97,9 @@ export function HostManager({
         lastProcessedHostIdRef.current = hostConfig.id;
         setIsAddingHost(false);
         exportSSHHostWithCredentials(hostConfig.id)
-          .then((fullHost) => setEditingHost({ ...hostConfig, ...fullHost } as SSHHost))
+          .then((fullHost) =>
+            setEditingHost({ ...hostConfig, ...fullHost } as SSHHost),
+          )
           .catch(() => setEditingHost(hostConfig));
       } else if (!hostConfig && editingHost) {
         setEditingHost(null);
@@ -117,7 +119,9 @@ export function HostManager({
         lastProcessedHostIdRef.current = hostConfig.id;
         setIsAddingHost(false);
         exportSSHHostWithCredentials(hostConfig.id)
-          .then((fullHost) => setEditingHost({ ...hostConfig, ...fullHost } as SSHHost))
+          .then((fullHost) =>
+            setEditingHost({ ...hostConfig, ...fullHost } as SSHHost),
+          )
           .catch(() => setEditingHost(hostConfig));
       }
     }

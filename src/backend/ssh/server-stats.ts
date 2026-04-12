@@ -868,13 +868,15 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId)
-            .catch((err) => {
-              statsLogger.error("Metrics polling failed", err, {
-                operation: "metrics_poll_unhandled",
-                hostId: host.id,
-              });
+          this.pollHostMetrics(
+            latestConfig.host,
+            latestConfig.viewerUserId,
+          ).catch((err) => {
+            statsLogger.error("Metrics polling failed", err, {
+              operation: "metrics_poll_unhandled",
+              hostId: host.id,
             });
+          });
         }
       }, intervalMs);
     } else {
@@ -1162,8 +1164,7 @@ function validateHostId(
 }
 
 const app = express();
-app.use(createCorsMiddleware()
-);
+app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
@@ -1353,8 +1354,13 @@ async function resolveHostCredentials(
             if (credential.password) {
               baseHost.password = credential.password;
             }
-            if (credential.key || (credential as Record<string, unknown>).privateKey) {
-              baseHost.key = credential.key || (credential as Record<string, unknown>).privateKey as string;
+            if (
+              credential.key ||
+              (credential as Record<string, unknown>).privateKey
+            ) {
+              baseHost.key =
+                credential.key ||
+                ((credential as Record<string, unknown>).privateKey as string);
             }
             if (credential.keyPassword) {
               baseHost.keyPassword = credential.keyPassword;

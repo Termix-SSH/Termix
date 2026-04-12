@@ -503,10 +503,7 @@ function scheduleSessionCleanup(sessionId: string) {
   }
 }
 
-function verifySessionOwnership(
-  session: SSHSession,
-  userId: string,
-): boolean {
+function verifySessionOwnership(session: SSHSession, userId: string): boolean {
   return !session.userId || session.userId === userId;
 }
 
@@ -782,7 +779,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
   // Resolve credentials server-side when frontend doesn't provide them
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
-  if (hostId && userId && (!password && !sshKey)) {
+  if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
@@ -3616,7 +3613,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
           });
 
           stream.stderr.on("error", (stderrErr) => {
-            fileLogger.error("Chunked fallback upload stderr error:", stderrErr);
+            fileLogger.error(
+              "Chunked fallback upload stderr error:",
+              stderrErr,
+            );
           });
 
           stream.on("close", (code) => {
@@ -5164,7 +5164,9 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
 
   const escapedArchive = archivePath.replace(/'/g, "'\"'\"'");
   const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
-  const escapedDecompressed = archivePath.replace(/\.gz$/, "").replace(/'/g, "'\"'\"'");
+  const escapedDecompressed = archivePath
+    .replace(/\.gz$/, "")
+    .replace(/'/g, "'\"'\"'");
 
   if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz")) {
     extractCommand = `tar -xzf '${escapedArchive}' -C '${escapedTarget}'`;
