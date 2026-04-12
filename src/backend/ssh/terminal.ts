@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
+import net from "net";
+import dgram from "dgram";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { parse as parseUrl } from "url";
 import axios from "axios";
@@ -18,6 +20,41 @@ import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { sessionManager } from "./terminal-session-manager.js";
+
+async function performPortKnocking(
+  host: string,
+  sequence: Array<{ port: number; protocol?: string; delay?: number }>,
+): Promise<void> {
+  for (const knock of sequence) {
+    const protocol = knock.protocol || "tcp";
+    const delay = knock.delay ?? 100;
+
+    await new Promise<void>((resolve) => {
+      if (protocol === "udp") {
+        const client = dgram.createSocket("udp4");
+        client.send(Buffer.alloc(0), knock.port, host, () => {
+          client.close();
+          resolve();
+        });
+      } else {
+        const socket = new net.Socket();
+        socket.once("connect", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.once("error", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.connect(knock.port, host);
+      }
+    });
+
+    if (delay > 0) {
+      await new Promise<void>((r) => setTimeout(r, delay));
+    }
+  }
+}
 
 interface ConnectToHostData {
   cols: number;
@@ -43,6 +80,11 @@ interface ConnectToHostData {
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    portKnockSequence?: Array<{
+      port: number;
+      protocol?: "tcp" | "udp";
+      delay?: number;
+    }>;
     terminalConfig?: {
       keepaliveInterval?: number;
       keepaliveCountMax?: number;
@@ -1984,6 +2026,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    if (
+      hostConfig.portKnockSequence &&
+      hostConfig.portKnockSequence.length > 0
+    ) {
+      try {
+        sshLogger.info(
+          `Port knocking ${hostConfig.ip} (${hostConfig.portKnockSequence.length} ports)`,
+          { operation: "port_knock", hostId: hostConfig.id },
+        );
+        await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
+      } catch (err) {
+        sshLogger.warn("Port knocking failed, attempting connection anyway", {
+          operation: "port_knock",
+          hostId: hostConfig.id,
+        });
+      }
     }
 
     const proxyConfig: SOCKS5Config | null =

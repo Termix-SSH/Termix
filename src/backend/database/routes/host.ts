@@ -114,6 +114,9 @@ function transformHostResponse(
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
+    portKnockSequence: host.portKnockSequence
+      ? JSON.parse(host.portKnockSequence as string)
+      : [],
     domain: host.domain || undefined,
     security: host.security || undefined,
     ignoreCert: !!host.ignoreCert,
@@ -393,6 +396,7 @@ router.post(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
@@ -478,6 +482,9 @@ router.post(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -900,6 +907,7 @@ router.put(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
@@ -985,6 +993,9 @@ router.put(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -1294,6 +1305,7 @@ router.get(
           socks5Username: hosts.socks5Username,
           socks5Password: hosts.socks5Password,
           socks5ProxyChain: hosts.socks5ProxyChain,
+          portKnockSequence: hosts.portKnockSequence,
           domain: hosts.domain,
           security: hosts.security,
           ignoreCert: hosts.ignoreCert,
@@ -1670,6 +1682,9 @@ router.get(
             socks5Password: resolvedHost.socks5Password || null,
             socks5ProxyChain: resolvedHost.socks5ProxyChain
               ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+              : null,
+            portKnockSequence: resolvedHost.portKnockSequence
+              ? JSON.parse(resolvedHost.portKnockSequence as string)
               : null,
           };
 
@@ -3377,6 +3392,9 @@ router.post(
           socks5Password: hostData.socks5Password || null,
           socks5ProxyChain: hostData.socks5ProxyChain
             ? JSON.stringify(hostData.socks5ProxyChain)
+            : null,
+          portKnockSequence: hostData.portKnockSequence
+            ? JSON.stringify(hostData.portKnockSequence)
             : null,
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1

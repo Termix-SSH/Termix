@@ -1438,6 +1438,122 @@ export function HostGeneralTab({
                 )}
               </AccordionContent>
             </AccordionItem>
+
+            <AccordionItem value="port-knocking">
+              <AccordionTrigger>
+                {t("hosts.portKnocking")}
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  {t("hosts.portKnockingDesc")}
+                </p>
+                <Controller
+                  control={form.control}
+                  name="portKnockSequence"
+                  render={({ field }) => {
+                    const sequence = field.value || [];
+                    return (
+                      <div className="space-y-2">
+                        {sequence.map(
+                          (
+                            knock: {
+                              port: number;
+                              protocol?: string;
+                              delay?: number;
+                            },
+                            index: number,
+                          ) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <Input
+                                type="number"
+                                placeholder={t("hosts.port")}
+                                value={knock.port || ""}
+                                onChange={(e) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    port: parseInt(e.target.value) || 0,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                                className="w-24"
+                              />
+                              <Select
+                                value={knock.protocol || "tcp"}
+                                onValueChange={(v) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    protocol: v,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                              >
+                                <SelectTrigger className="w-20">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="tcp">TCP</SelectItem>
+                                  <SelectItem value="udp">UDP</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number"
+                                placeholder={t("hosts.delayMs")}
+                                value={knock.delay ?? 100}
+                                onChange={(e) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    delay: parseInt(e.target.value) || 0,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                                className="w-20"
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                ms
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(
+                                    sequence.filter(
+                                      (_: unknown, i: number) => i !== index,
+                                    ),
+                                  );
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ),
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            field.onChange([
+                              ...sequence,
+                              { port: 0, protocol: "tcp", delay: 100 },
+                            ]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          {t("hosts.addKnock")}
+                        </Button>
+                      </div>
+                    );
+                  }}
+                />
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </>
       )}
