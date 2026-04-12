@@ -29,6 +29,7 @@ import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ui/desktop/navigation/dialogs/HostKeyVerificationDialog.tsx";
+import { TmuxSessionPicker } from "@/ui/desktop/navigation/dialogs/TmuxSessionPicker.tsx";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -118,11 +119,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { theme: appTheme } = useTheme();
     const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
 
-    const savedTheme = localStorage.getItem(`terminal_theme_host_${hostConfig.id}`);
-    const config = { 
-      ...DEFAULT_TERMINAL_CONFIG, 
+    const savedTheme = localStorage.getItem(
+      `terminal_theme_host_${hostConfig.id}`,
+    );
+    const config = {
+      ...DEFAULT_TERMINAL_CONFIG,
       ...hostConfig.terminalConfig,
-      theme: savedTheme || hostConfig.terminalConfig?.theme || DEFAULT_TERMINAL_CONFIG.theme
+      theme:
+        savedTheme ||
+        hostConfig.terminalConfig?.theme ||
+        DEFAULT_TERMINAL_CONFIG.theme,
     };
 
     const isDarkMode =
@@ -200,6 +206,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
+    const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
+      sessions: Array<{
+        name: string;
+        created: number;
+        lastActivity: number;
+        windows: number;
+        attachedClients: number;
+      }>;
+    } | null>(null);
+    const tmuxSessionNameRef = useRef<string | null>(null);
+    const tmuxCopyModeHintShownRef = useRef(false);
 
     const isVisibleRef = useRef<boolean>(false);
     const isFittingRef = useRef(false);
@@ -910,7 +927,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             if (!pongReceivedRef.current) {
-              console.warn("[WebSocket] Pong timeout - connection appears dead, closing");
+              console.warn(
+                "[WebSocket] Pong timeout - connection appears dead, closing",
+              );
               ws.close();
               return;
             }
@@ -960,7 +979,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                       hostConfig.password;
                     if (!passwordToFill && hostConfig.id) {
                       passwordToFill =
-                        (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+                        (await getHostPassword(
+                          hostConfig.id,
+                          "sudoPassword",
+                        )) ||
                         (await getHostPassword(hostConfig.id, "password")) ||
                         undefined;
                     }
@@ -1419,6 +1441,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const cols = terminal?.cols || 80;
             const rows = terminal?.rows || 24;
             connectToHost(cols, rows);
+          } else if (msg.type === "tmux_sessions_available") {
+            setTmuxSessionPicker({
+              sessions: msg.sessions,
+            });
+          } else if (
+            msg.type === "tmux_session_created" ||
+            msg.type === "tmux_session_attached"
+          ) {
+            const sessionName =
+              typeof msg.sessionName === "string" ? msg.sessionName : "";
+            tmuxSessionNameRef.current = sessionName || "(active)";
+            addLog({
+              type: "info",
+              stage: "connection",
+              message:
+                msg.type === "tmux_session_created"
+                  ? t("terminal.tmuxSessionCreated", {
+                      name: sessionName || "new",
+                    })
+                  : t("terminal.tmuxSessionAttached", {
+                      name: sessionName,
+                    }),
+            });
+          } else if (msg.type === "tmux_unavailable") {
+            setTimeout(() => {
+              toast.warning(t("terminal.tmuxUnavailable"), {
+                duration: 8000,
+              });
+            }, 500);
+            addLog({
+              type: "warning",
+              stage: "connection",
+              message: t("terminal.tmuxUnavailable"),
+            });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1696,7 +1752,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
-      terminal.options.bellStyle = config.bellStyle as "none" | "sound" | "visual" | "both";
+      terminal.options.bellStyle = config.bellStyle as
+        | "none"
+        | "sound"
+        | "visual"
+        | "both";
 
       terminal.options.theme = {
         background: themeColors.background,
@@ -1730,7 +1790,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [terminal, hostConfig.terminalConfig, previewTheme, isDarkMode, isFitted]);
+    }, [
+      terminal,
+      hostConfig.terminalConfig,
+      previewTheme,
+      isDarkMode,
+      isFitted,
+    ]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1858,10 +1924,30 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
       element?.addEventListener("paste", handlePaste);
 
+      let tmuxDragTracking = false;
+      const handleTmuxDragStart = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        if (!tmuxSessionNameRef.current) return;
+        tmuxDragTracking = true;
+      };
+      const handleTmuxDragMove = () => {
+        if (!tmuxDragTracking) return;
+        tmuxDragTracking = false;
+        if (tmuxCopyModeHintShownRef.current) return;
+        tmuxCopyModeHintShownRef.current = true;
+        toast.info(t("terminal.tmuxCopyHint"), { duration: 5000 });
+      };
+      const handleTmuxDragEnd = () => {
+        tmuxDragTracking = false;
+      };
+      element?.addEventListener("mousedown", handleTmuxDragStart);
+      element?.addEventListener("mousemove", handleTmuxDragMove);
+      element?.addEventListener("mouseup", handleTmuxDragEnd);
+
       const handleBackspaceMode = (e: KeyboardEvent) => {
         if (e.key !== "Backspace") return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        
+
         const config = {
           ...DEFAULT_TERMINAL_CONFIG,
           ...(hostConfig.terminalConfig as any),
@@ -1898,6 +1984,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
         element?.removeEventListener("paste", handlePaste);
+        element?.removeEventListener("mousedown", handleTmuxDragStart);
+        element?.removeEventListener("mousemove", handleTmuxDragMove);
+        element?.removeEventListener("mouseup", handleTmuxDragEnd);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -2421,6 +2510,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               setIsConnecting(false);
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
+        {tmuxSessionPicker && (
+          <TmuxSessionPicker
+            isOpen={true}
+            sessions={tmuxSessionPicker.sessions}
+            onSelect={(sessionName) => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName },
+                  }),
+                );
+              }
+            }}
+            onCreateNew={() => {
+              setTmuxSessionPicker(null);
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({
+                    type: "tmux_attach",
+                    data: { sessionName: "" },
+                  }),
+                );
+              }
+            }}
+            onCancel={() => setTmuxSessionPicker(null)}
             backgroundColor={backgroundColor}
           />
         )}

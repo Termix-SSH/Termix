@@ -60,6 +60,8 @@ import {
   Archive,
   HardDrive,
   Globe,
+  Share2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -79,6 +81,13 @@ import {
   renameSnippetFolder,
   deleteSnippetFolder,
   reorderSnippets,
+  getSharedSnippets,
+  shareSnippet,
+  getSnippetAccess,
+  revokeSnippetAccess,
+  getRoles,
+  getUserList,
+  type AccessRecord,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import type { Snippet, SnippetData, SnippetFolder } from "../../../../types";
@@ -180,6 +189,30 @@ export function SSHToolsSidebar({
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [snippetFolders, setSnippetFolders] = useState<SnippetFolder[]>([]);
+  const [sharedSnippetsList, setSharedSnippetsList] = useState<
+    Array<{
+      id: number;
+      name: string;
+      content: string;
+      description: string | null;
+      folder: string | null;
+      ownerUsername: string;
+    }>
+  >([]);
+  const [shareDialogSnippet, setShareDialogSnippet] = useState<Snippet | null>(
+    null,
+  );
+  const [shareTargetType, setShareTargetType] = useState<"user" | "role">(
+    "user",
+  );
+  const [shareUsers, setShareUsers] = useState<
+    Array<{ id: string; username: string }>
+  >([]);
+  const [shareRoles, setShareRoles] = useState<
+    Array<{ id: number; name: string; displayName?: string }>
+  >([]);
+  const [shareTargetId, setShareTargetId] = useState("");
+  const [shareAccessList, setShareAccessList] = useState<AccessRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
@@ -243,7 +276,9 @@ export function SSHToolsSidebar({
 
   useEffect(() => {
     const terminalIds = new Set(terminalTabs.map((t) => t.id));
-    setSelectedSnippetTabIds((prev) => prev.filter((id) => terminalIds.has(id)));
+    setSelectedSnippetTabIds((prev) =>
+      prev.filter((id) => terminalIds.has(id)),
+    );
   }, [terminalTabs.length]);
 
   const activeUiTab = tabs.find((tab) => tab.id === currentTab);
@@ -631,16 +666,19 @@ export function SSHToolsSidebar({
   const fetchSnippets = async () => {
     try {
       setLoading(true);
-      const [snippetsData, foldersData] = await Promise.all([
+      const [snippetsData, foldersData, sharedData] = await Promise.all([
         getSnippets(),
         getSnippetFolders(),
+        getSharedSnippets().catch(() => ({ sharedSnippets: [] })),
       ]);
       setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
       setSnippetFolders(Array.isArray(foldersData) ? foldersData : []);
+      setSharedSnippetsList(sharedData.sharedSnippets || []);
     } catch {
       toast.error(t("snippets.failedToFetch"));
       setSnippets([]);
       setSnippetFolders([]);
+      setSharedSnippetsList([]);
     } finally {
       setLoading(false);
     }
@@ -679,6 +717,63 @@ export function SSHToolsSidebar({
       },
       "destructive",
     );
+  };
+
+  const handleOpenShareDialog = async (snippet: Snippet) => {
+    setShareDialogSnippet(snippet);
+    setShareTargetId("");
+    setShareTargetType("user");
+    try {
+      const [usersData, rolesData, accessData] = await Promise.all([
+        getUserList(),
+        getRoles(),
+        getSnippetAccess(snippet.id),
+      ]);
+      setShareUsers(
+        (usersData || []).map((u: Record<string, unknown>) => ({
+          id: u.id as string,
+          username: u.username as string,
+        })),
+      );
+      setShareRoles(
+        (rolesData || []).map(
+          (r: { id: number; name: string; displayName?: string }) => r,
+        ),
+      );
+      setShareAccessList(accessData.accessList || []);
+    } catch {
+      toast.error(t("snippets.failedToLoadShareData"));
+    }
+  };
+
+  const handleShare = async () => {
+    if (!shareDialogSnippet || !shareTargetId) return;
+    try {
+      await shareSnippet(shareDialogSnippet.id, {
+        targetType: shareTargetType,
+        targetUserId: shareTargetType === "user" ? shareTargetId : undefined,
+        targetRoleId:
+          shareTargetType === "role" ? parseInt(shareTargetId) : undefined,
+      });
+      toast.success(t("snippets.shareSuccess"));
+      const accessData = await getSnippetAccess(shareDialogSnippet.id);
+      setShareAccessList(accessData.accessList || []);
+      setShareTargetId("");
+    } catch {
+      toast.error(t("snippets.shareFailed"));
+    }
+  };
+
+  const handleRevokeSnippetAccess = async (accessId: number) => {
+    if (!shareDialogSnippet) return;
+    try {
+      await revokeSnippetAccess(shareDialogSnippet.id, accessId);
+      toast.success(t("snippets.revokeSuccess"));
+      const accessData = await getSnippetAccess(shareDialogSnippet.id);
+      setShareAccessList(accessData.accessList || []);
+    } catch {
+      toast.error(t("snippets.revokeFailed"));
+    }
   };
 
   const handleSubmit = async () => {
@@ -1614,6 +1709,27 @@ export function SSHToolsSidebar({
                                                 </p>
                                               </TooltipContent>
                                             </Tooltip>
+
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleOpenShareDialog(
+                                                      snippet,
+                                                    )
+                                                  }
+                                                >
+                                                  <Share2 className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.shareTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
                                           </div>
                                         </div>
                                       ))}
@@ -1625,6 +1741,68 @@ export function SSHToolsSidebar({
                           )}
                         </div>
                       </TooltipProvider>
+                    )}
+
+                    {sharedSnippetsList.length > 0 && (
+                      <div className="mt-4">
+                        <Separator className="mb-3" />
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {t("snippets.sharedWithYou")}
+                          </span>
+                        </div>
+                        <TooltipProvider>
+                          <div className="space-y-2">
+                            {sharedSnippetsList.map((snippet) => (
+                              <div
+                                key={`shared-${snippet.id}`}
+                                className="rounded-md border border-border p-3 space-y-2 bg-muted/30"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-sm">
+                                    {snippet.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {snippet.ownerUsername}
+                                  </span>
+                                </div>
+                                {snippet.description && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {snippet.description}
+                                  </p>
+                                )}
+                                <pre className="text-xs bg-background rounded p-2 whitespace-pre-wrap break-all max-h-32 overflow-auto">
+                                  {snippet.content}
+                                </pre>
+                                <div className="flex gap-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(
+                                            snippet.content,
+                                          );
+                                          toast.success(
+                                            t("snippets.copiedToClipboard"),
+                                          );
+                                        }}
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{t("snippets.copyTooltip")}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </TooltipProvider>
+                      </div>
                     )}
                   </TabsContent>
 
@@ -2265,6 +2443,104 @@ export function SSHToolsSidebar({
                   : t("snippets.createFolder")}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {shareDialogSnippet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border-2 border-border rounded-lg p-6 w-full max-w-md space-y-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">
+                {t("snippets.shareSnippet")}
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShareDialogSnippet(null)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              {shareDialogSnippet.name}
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Select
+                  value={shareTargetType}
+                  onValueChange={(v: "user" | "role") => {
+                    setShareTargetType(v);
+                    setShareTargetId("");
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">{t("snippets.user")}</SelectItem>
+                    <SelectItem value="role">{t("snippets.role")}</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={shareTargetId} onValueChange={setShareTargetId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={t("snippets.selectTarget")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shareTargetType === "user"
+                      ? shareUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.username}
+                          </SelectItem>
+                        ))
+                      : shareRoles.map((r) => (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            {r.displayName || r.name}
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  onClick={handleShare}
+                  disabled={!shareTargetId}
+                  size="sm"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {shareAccessList.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-sm font-medium">
+                  {t("snippets.currentAccess")}
+                </span>
+                {shareAccessList.map((access) => (
+                  <div
+                    key={access.id}
+                    className="flex items-center justify-between rounded-md border p-2 text-sm"
+                  >
+                    <span>
+                      {access.username ||
+                        access.roleDisplayName ||
+                        access.roleName}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => handleRevokeSnippetAccess(access.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

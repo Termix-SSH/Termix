@@ -74,6 +74,8 @@ export interface Host {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
 
+  macAddress?: string;
+
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
   security?: string;
@@ -149,6 +151,8 @@ export interface HostData {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+
+  macAddress?: string;
 
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
@@ -429,6 +433,7 @@ export interface TerminalConfig {
   sudoPasswordAutoFill: boolean;
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
+  autoTmux: boolean;
 }
 
 // ============================================================================

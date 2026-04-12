@@ -13,6 +13,7 @@ import {
   Pencil,
   ArrowDownUp,
   Container,
+  Power,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,14 +24,17 @@ import {
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
 import {
   getSSHHosts,
+  getGuacamoleToken,
   getGuacamoleTokenFromHost,
   logActivity,
+  wakeOnLan,
 } from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
 import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
 import { cn } from "@/lib/utils.ts";
+import { toast } from "sonner";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
@@ -347,6 +351,22 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openDocker")}</span>
                   </DropdownMenuItem>
                 )}
+              {(host as any).macAddress && (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      await wakeOnLan(host.id);
+                      toast.success(t("hosts.wolSent"));
+                    } catch {
+                      toast.error(t("hosts.wolFailed"));
+                    }
+                  }}
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                >
+                  <Power className="h-4 w-4" />
+                  <span className="flex-1">{t("hosts.wakeOnLan")}</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({

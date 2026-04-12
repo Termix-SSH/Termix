@@ -239,7 +239,30 @@ async function createJumpHostChain(
 }
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  const userId = (req as unknown as { userId: string }).userId;
+  const url = parseUrl(req.url || "", true);
+  let token = url.query.token as string;
+
+  if (!token) {
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
+  }
+
+  if (!token) {
+    ws.close(1008, "Authentication required");
+    return;
+  }
+
+  const authManagerInstance = AuthManager.getInstance();
+  const payload = await authManagerInstance.verifyJWTToken(token);
+  if (!payload || !payload.userId) {
+    ws.close(1008, "Authentication required");
+    return;
+  }
+
+  const userId = payload.userId;
   const sessionId = `docker-console-${Date.now()}-${Math.random()}`;
   sshLogger.info("Docker console WebSocket connected", {
     operation: "docker_console_connect",
@@ -353,15 +376,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
               tcpKeepAliveInitialDelay: 30000,
             };
 
-            if (
-              resolvedHost.authType === "password" &&
-              resolvedHost.password
-            ) {
+            if (resolvedHost.authType === "password" && resolvedHost.password) {
               config.password = resolvedHost.password;
-            } else if (
-              resolvedHost.authType === "key" &&
-              resolvedHost.key
-            ) {
+            } else if (resolvedHost.authType === "key" && resolvedHost.key) {
               const cleanKey = resolvedHost.key
                 .trim()
                 .replace(/\r\n/g, "\n")
