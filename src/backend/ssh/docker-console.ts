@@ -28,7 +28,15 @@ const wss = new WebSocketServer({
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url || "", true);
-      const token = url.query.token as string;
+      let token = url.query.token as string;
+
+      if (!token) {
+        const cookieHeader = info.req.headers.cookie;
+        if (cookieHeader) {
+          const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+          if (match) token = decodeURIComponent(match[1]);
+        }
+      }
 
       if (!token) {
         return false;
@@ -75,8 +83,10 @@ async function detectShell(
               }
             });
 
-            stream.stderr.on("data", () => {
-              // Ignore stderr
+            stream.stderr.on("data", () => {});
+            stream.stderr.on("error", () => {});
+            stream.on("error", (streamErr) => {
+              reject(streamErr);
             });
           },
         );
@@ -229,7 +239,30 @@ async function createJumpHostChain(
 }
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  const userId = (req as unknown as { userId: string }).userId;
+  const url = parseUrl(req.url || "", true);
+  let token = url.query.token as string;
+
+  if (!token) {
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
+  }
+
+  if (!token) {
+    ws.close(1008, "Authentication required");
+    return;
+  }
+
+  const authManagerInstance = AuthManager.getInstance();
+  const payload = await authManagerInstance.verifyJWTToken(token);
+  if (!payload || !payload.userId) {
+    ws.close(1008, "Authentication required");
+    return;
+  }
+
+  const userId = payload.userId;
   const sessionId = `docker-console-${Date.now()}-${Math.random()}`;
   sshLogger.info("Docker console WebSocket connected", {
     operation: "docker_console_connect",
@@ -260,21 +293,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
               rows?: number;
             };
 
-          if (
-            typeof hostConfig.jumpHosts === "string" &&
-            hostConfig.jumpHosts
-          ) {
-            try {
-              hostConfig.jumpHosts = JSON.parse(hostConfig.jumpHosts);
-            } catch (e) {
-              sshLogger.error("Failed to parse jump hosts", e, {
-                hostId: hostConfig.id,
-              });
-              hostConfig.jumpHosts = [];
-            }
-          }
+          const hostId = hostConfig?.id;
 
-          if (!hostConfig || !containerId) {
+          if (!hostId || !containerId) {
             ws.send(
               JSON.stringify({
                 type: "error",
@@ -284,62 +305,69 @@ wss.on("connection", async (ws: WebSocket, req) => {
             return;
           }
 
+          if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerId)) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Invalid container ID",
+              }),
+            );
+            return;
+          }
+
+          const allowedShells = ["bash", "sh", "ash", "zsh"];
+          if (shell && !allowedShells.includes(shell)) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Invalid shell",
+              }),
+            );
+            return;
+          }
+
           if (!hostConfig.enableDocker) {
             ws.send(
               JSON.stringify({
                 type: "error",
-                message:
-                  "Docker is not enabled for this host. Enable it in Host Settings.",
+                message: "Docker is not enabled on this host",
               }),
             );
             return;
           }
 
           try {
-            let resolvedCredentials: {
-              password?: string;
-              sshKey?: string;
-              keyPassword?: string;
-              authType?: string;
-            } = {
-              password: hostConfig.password,
-              sshKey: hostConfig.key,
-              keyPassword: hostConfig.keyPassword,
-              authType: hostConfig.authType,
-            };
+            // Resolve host with credentials server-side
+            const { resolveHostById } = await import("./host-resolver.js");
+            const resolvedHost = await resolveHostById(hostId, userId);
 
-            if (hostConfig.credentialId) {
-              const credentials = await SimpleDBOps.select(
-                getDb()
-                  .select()
-                  .from(sshCredentials)
-                  .where(
-                    and(
-                      eq(sshCredentials.id, hostConfig.credentialId as number),
-                      eq(sshCredentials.userId, userId),
-                    ),
-                  ),
-                "ssh_credentials",
-                userId,
+            if (!resolvedHost) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Host not found",
+                }),
               );
+              return;
+            }
 
-              if (credentials.length > 0) {
-                const credential = credentials[0];
-                resolvedCredentials = {
-                  password: credential.password as string | undefined,
-                  sshKey: credential.privateKey as string | undefined,
-                  keyPassword: credential.keyPassword as string | undefined,
-                  authType: credential.authType as string | undefined,
-                };
-              }
+            if (!resolvedHost.enableDocker) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message:
+                    "Docker is not enabled for this host. Enable it in Host Settings.",
+                }),
+              );
+              return;
             }
 
             const client = new SSHClient();
 
             const config: Record<string, unknown> = {
-              host: hostConfig.ip?.replace(/^\[|\]$/g, "") || hostConfig.ip,
-              port: hostConfig.port || 22,
-              username: hostConfig.username,
+              host: resolvedHost.ip?.replace(/^\[|\]$/g, "") || resolvedHost.ip,
+              port: resolvedHost.port || 22,
+              username: resolvedHost.username,
               tryKeyboard: true,
               readyTimeout: 60000,
               keepaliveInterval: 30000,
@@ -348,28 +376,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
               tcpKeepAliveInitialDelay: 30000,
             };
 
-            if (
-              resolvedCredentials.authType === "password" &&
-              resolvedCredentials.password
-            ) {
-              config.password = resolvedCredentials.password;
-            } else if (
-              resolvedCredentials.authType === "key" &&
-              resolvedCredentials.sshKey
-            ) {
-              const cleanKey = resolvedCredentials.sshKey
+            if (resolvedHost.authType === "password" && resolvedHost.password) {
+              config.password = resolvedHost.password;
+            } else if (resolvedHost.authType === "key" && resolvedHost.key) {
+              const cleanKey = resolvedHost.key
                 .trim()
                 .replace(/\r\n/g, "\n")
                 .replace(/\r/g, "\n");
               config.privateKey = Buffer.from(cleanKey, "utf8");
-              if (resolvedCredentials.keyPassword) {
-                config.passphrase = resolvedCredentials.keyPassword;
+              if (resolvedHost.keyPassword) {
+                config.passphrase = resolvedHost.keyPassword;
               }
             }
 
-            if (hostConfig.jumpHosts && hostConfig.jumpHosts.length > 0) {
+            if (resolvedHost.jumpHosts && resolvedHost.jumpHosts.length > 0) {
               const jumpClient = await createJumpHostChain(
-                hostConfig.jumpHosts,
+                resolvedHost.jumpHosts,
                 userId,
               );
               if (jumpClient) {
@@ -378,8 +400,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
                     jumpClient.forwardOut(
                       "127.0.0.1",
                       0,
-                      hostConfig.ip,
-                      hostConfig.port || 22,
+                      resolvedHost.ip,
+                      resolvedHost.port || 22,
                       (err, stream) => {
                         if (err) return reject(err);
                         resolve(stream);
@@ -402,7 +424,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               stream: null,
               isConnected: true,
               containerId,
-              hostId: hostConfig.id,
+              hostId: resolvedHost.id,
             };
 
             activeSessions.set(sessionId, sshSession);
@@ -430,8 +452,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
                         }
                       });
 
-                      stream.stderr.on("data", () => {
-                        // Ignore stderr
+                      stream.stderr.on("data", () => {});
+                      stream.stderr.on("error", () => {});
+                      stream.on("error", (streamErr) => {
+                        reject(streamErr);
                       });
                     },
                   );
@@ -459,7 +483,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               operation: "docker_attach",
               sessionId,
               userId,
-              hostId: hostConfig.id,
+              hostId: resolvedHost.id,
               containerId,
             });
 
@@ -494,7 +518,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   operation: "docker_attach_success",
                   sessionId,
                   userId,
-                  hostId: hostConfig.id,
+                  hostId: resolvedHost.id,
                   containerId,
                 });
 
@@ -509,8 +533,23 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   }
                 });
 
-                stream.stderr.on("data", () => {
-                  // stderr output ignored
+                stream.stderr.on("data", () => {});
+                stream.stderr.on("error", () => {});
+
+                stream.on("error", (streamErr) => {
+                  sshLogger.error("Docker console stream error", streamErr, {
+                    operation: "docker_console_stream_error",
+                    sessionId,
+                    containerId,
+                  });
+                  if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        message: `Console error: ${streamErr.message}`,
+                      }),
+                    );
+                  }
                 });
 
                 stream.on("close", () => {

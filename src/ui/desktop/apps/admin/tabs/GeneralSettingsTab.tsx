@@ -19,6 +19,8 @@ import {
   updateGlobalMonitoringSettings,
   getGuacamoleSettings,
   updateGuacamoleSettings,
+  getSessionTimeout,
+  updateSessionTimeout,
 } from "@/ui/main-axios.ts";
 import { Button } from "@/components/ui/button.tsx";
 
@@ -66,9 +68,41 @@ export function GeneralSettingsTab({
   );
   const [monitoringLoading, setMonitoringLoading] = React.useState(false);
 
+  const [sessionTimeoutHours, setSessionTimeoutHours] = React.useState(24);
+  const [sessionTimeoutInput, setSessionTimeoutInput] = React.useState("24");
+  const [sessionTimeoutLoading, setSessionTimeoutLoading] =
+    React.useState(false);
+
   const [guacEnabled, setGuacEnabled] = React.useState(true);
   const [guacUrl, setGuacUrl] = React.useState("guacd:4822");
   const [guacLoading, setGuacLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    getSessionTimeout()
+      .then((data) => {
+        setSessionTimeoutHours(data.timeoutHours);
+        setSessionTimeoutInput(String(data.timeoutHours));
+      })
+      .catch(() => {
+        // Use default silently
+      });
+  }, []);
+
+  const handleSessionTimeoutBlur = async () => {
+    const num = parseInt(sessionTimeoutInput) || 24;
+    const clamped = Math.max(1, Math.min(720, num));
+    setSessionTimeoutHours(clamped);
+    setSessionTimeoutInput(String(clamped));
+    setSessionTimeoutLoading(true);
+    try {
+      await updateSessionTimeout(clamped);
+      toast.success(t("admin.sessionTimeoutSaved"));
+    } catch {
+      toast.error(t("admin.failedToSaveSessionTimeout"));
+    } finally {
+      setSessionTimeoutLoading(false);
+    }
+  };
 
   React.useEffect(() => {
     getGuacamoleSettings()
@@ -273,6 +307,34 @@ export function GeneralSettingsTab({
             </span>
           )}
         </label>
+      </div>
+
+      <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
+        <h3 className="text-lg font-semibold">{t("admin.sessionTimeout")}</h3>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.sessionTimeoutDesc")}
+        </p>
+        <div>
+          <label className="text-sm font-medium">
+            {t("admin.sessionTimeoutHours")}
+          </label>
+          <div className="flex gap-2 mt-1">
+            <Input
+              type="number"
+              min={1}
+              max={720}
+              value={sessionTimeoutInput}
+              onChange={(e) => setSessionTimeoutInput(e.target.value)}
+              onBlur={handleSessionTimeoutBlur}
+              disabled={sessionTimeoutLoading}
+              className="flex-1"
+            />
+            <span className="text-sm font-medium py-2">{t("admin.hours")}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("admin.sessionTimeoutNote")}
+          </p>
+        </div>
       </div>
 
       <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">

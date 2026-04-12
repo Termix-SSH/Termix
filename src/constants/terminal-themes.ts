@@ -671,6 +671,62 @@ export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
       brightWhite: "#a6adc8",
     },
   },
+
+  gentlemansChoice: {
+    name: "Gentleman's Choice",
+    category: "dark",
+    colors: {
+      background: "#1a1c1a",
+      foreground: "#d1c7a3",
+      cursor: "#d1c7a3",
+      cursorAccent: "#1a1c1a",
+      selectionBackground: "#3e4437",
+      black: "#1a1c1a",
+      red: "#9d3a3a",
+      green: "#5a7a3a",
+      yellow: "#b39a3a",
+      blue: "#3a5a7a",
+      magenta: "#7a3a5a",
+      cyan: "#3a7a7a",
+      white: "#d1c7a3",
+      brightBlack: "#3e4437",
+      brightRed: "#bf4a4a",
+      brightGreen: "#7a9a4a",
+      brightYellow: "#d1b34a",
+      brightBlue: "#4a7abf",
+      brightMagenta: "#9a4abf",
+      brightCyan: "#4abfbf",
+      brightWhite: "#e3dbc3",
+    },
+  },
+
+  midnightEspresso: {
+    name: "Midnight Espresso",
+    category: "dark",
+    colors: {
+      background: "#120f0d",
+      foreground: "#ceb195",
+      cursor: "#ceb195",
+      cursorAccent: "#120f0d",
+      selectionBackground: "#3d2b1f",
+      black: "#120f0d",
+      red: "#a05a4a",
+      green: "#7a8a5a",
+      yellow: "#b08a4a",
+      blue: "#5a7a9a",
+      magenta: "#8a5a7a",
+      cyan: "#5a8a8a",
+      white: "#ceb195",
+      brightBlack: "#3d2b1f",
+      brightRed: "#c07a6a",
+      brightGreen: "#9aaa7a",
+      brightYellow: "#d0aa6a",
+      brightBlue: "#7a9aba",
+      brightMagenta: "#aa7aba",
+      brightCyan: "#7ababa",
+      brightWhite: "#e0cbb5",
+    },
+  },
 };
 
 export const TERMINAL_FONTS = [
@@ -764,6 +820,7 @@ export const DEFAULT_TERMINAL_CONFIG = {
   sudoPasswordAutoFill: false,
   keepaliveInterval: undefined as number | undefined,
   keepaliveCountMax: undefined as number | undefined,
+  autoTmux: false,
 };
 
 export type TerminalConfigType = typeof DEFAULT_TERMINAL_CONFIG;

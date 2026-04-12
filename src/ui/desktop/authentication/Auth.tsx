@@ -31,6 +31,7 @@ import {
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
   getServerConfig,
+  saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
   isEmbeddedMode,
@@ -80,6 +81,10 @@ export function Auth({
 
   const isDarkMode =
     theme === "dark" ||
+    theme === "dracula" ||
+    theme === "gentlemansChoice" ||
+    theme === "midnightEspresso" ||
+    theme === "catppuccinMocha" ||
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
@@ -256,12 +261,6 @@ export function Auth({
   }, [setDbError, firstUserToastShown, showServerConfig, t]);
 
   useEffect(() => {
-    if (!registrationAllowed && !internalLoggedIn) {
-      toast.warning(t("messages.registrationDisabled"));
-    }
-  }, [registrationAllowed, internalLoggedIn, t]);
-
-  useEffect(() => {
     if (!passwordLoginAllowed && oidcConfigured && tab !== "external") {
       setTab("external");
     }
@@ -325,7 +324,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            "*",
+            window.location.origin,
           );
           setWebviewAuthSuccess(true);
           return;
@@ -534,7 +533,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            "*",
+            window.location.origin,
           );
           setWebviewAuthSuccess(true);
           setTotpLoading(false);
@@ -658,6 +657,11 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
+      const urlToken = urlParams.get("token");
+      if (urlToken && (isElectron() || isInElectronWebView())) {
+        localStorage.setItem("jwt", urlToken);
+      }
+
       getUserInfo()
         .then((meRes) => {
           if (isInElectronWebView()) {
@@ -672,7 +676,7 @@ export function Auth({
                     platform: "desktop",
                     timestamp: Date.now(),
                   },
-                  "*",
+                  window.location.origin,
                 );
                 setWebviewAuthSuccess(true);
                 setOidcLoading(false);
@@ -680,6 +684,13 @@ export function Auth({
               } catch (e) {
                 console.error("Error posting auth success message:", e);
               }
+            }
+          }
+
+          if (isElectron()) {
+            const token = getCookie("jwt");
+            if (token) {
+              localStorage.setItem("jwt", token);
             }
           }
 
@@ -772,7 +783,12 @@ export function Auth({
             getEmbeddedServerStatus(),
           ]);
 
-          if (status?.embedded && status?.running && !config?.serverUrl) {
+          if (
+            status?.embedded &&
+            status?.running &&
+            config &&
+            !config.serverUrl
+          ) {
             setCurrentServerUrl("");
             setShowServerConfig(false);
             return;
@@ -816,7 +832,11 @@ export function Auth({
           onServerConfigured={() => {
             window.location.reload();
           }}
-          onUseEmbedded={() => {
+          onUseEmbedded={async () => {
+            await saveServerConfig({
+              serverUrl: "",
+              lastUpdated: new Date().toISOString(),
+            });
             setShowServerConfig(false);
             setCurrentServerUrl("");
           }}
