@@ -4173,7 +4173,7 @@ function rewriteOPKSSHHtml(
   requestId: string,
   routePrefix: "opkssh-chooser" | "opkssh-callback",
 ): string {
-  const basePath = `/ssh/${routePrefix}/${requestId}`;
+  const basePath = `/host/${routePrefix}/${requestId}`;
 
   const attrPatterns = ["action", "href", "src"];
   for (const attr of attrPatterns) {
@@ -4300,7 +4300,7 @@ router.use(
 
     const fullPath = req.originalUrl || req.url;
     const pathAfterRequestIdTemp =
-      fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+      fullPath.split(`/host/opkssh-chooser/${requestId}`)[1] || "";
 
     sshLogger.info("OPKSSH chooser proxy request", {
       operation: "opkssh_chooser_proxy_request",
@@ -4313,7 +4313,8 @@ router.use(
     });
 
     try {
-      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const { getActiveAuthSession, registerOAuthState } =
+        await import("../../ssh/opkssh-auth.js");
       const session = getActiveAuthSession(requestId);
 
       if (!session) {
@@ -4381,7 +4382,7 @@ router.use(
 
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
-        fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+        fullPath.split(`/host/opkssh-chooser/${requestId}`)[1] || "";
       const targetPath = pathAfterRequestId || "/chooser";
 
       if (!session.localPort || session.localPort === 0) {
@@ -4481,7 +4482,7 @@ router.use(
         if (key.toLowerCase() === "location") {
           const location = value as string;
           if (location.startsWith("/")) {
-            res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${location}`);
+            res.setHeader(key, `/host/opkssh-chooser/${requestId}${location}`);
           } else {
             const localhostMatch = location.match(
               /^http:\/\/localhost:(\d+)(\/.*)?$/,
@@ -4490,24 +4491,45 @@ router.use(
               const port = parseInt(localhostMatch[1], 10);
               const path = localhostMatch[2] || "/";
               if (session.callbackPort && port === session.callbackPort) {
-                res.setHeader(key, `/ssh/opkssh-callback/${requestId}${path}`);
+                res.setHeader(key, `/host/opkssh-callback/${requestId}${path}`);
               } else if (port === session.localPort) {
-                res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${path}`);
+                res.setHeader(key, `/host/opkssh-chooser/${requestId}${path}`);
               } else {
                 const isCallback =
                   path.includes("login") || path.includes("callback");
                 const prefix = isCallback
                   ? "opkssh-callback"
                   : "opkssh-chooser";
-                res.setHeader(key, `/ssh/${prefix}/${requestId}${path}`);
+                res.setHeader(key, `/host/${prefix}/${requestId}${path}`);
               }
             } else {
+              // External redirect (e.g. to OIDC provider) — capture OAuth state for session binding
+              try {
+                const redirectUrl = new URL(location);
+                const oauthState = redirectUrl.searchParams.get("state");
+                if (oauthState) {
+                  registerOAuthState(oauthState, requestId);
+                }
+              } catch {
+                // Not a valid URL, skip state capture
+              }
               res.setHeader(key, value as string);
             }
           }
         } else {
           res.setHeader(key, value as string);
         }
+      });
+
+      // Set a cookie to correlate this browser with the requestId.
+      // OAuth state capture from Location headers only works for 3xx redirects;
+      // if OPKSSH redirects via JavaScript, the state is never registered.
+      // This cookie survives the OIDC round-trip and identifies the session on callback.
+      res.cookie("opkssh_request_id", requestId, {
+        path: "/host/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 5 * 60 * 1000,
       });
 
       const contentType = response.headers["content-type"] || "";
@@ -4604,8 +4626,13 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       host: req.headers.host,
     });
 
-    const { getUserIdFromRequest, getActiveSessionsForUser } =
-      await import("../../ssh/opkssh-auth.js");
+    const {
+      getUserIdFromRequest,
+      getActiveSessionsForUser,
+      getActiveAuthSession,
+      getRequestIdByOAuthState,
+      clearOAuthState,
+    } = await import("../../ssh/opkssh-auth.js");
 
     const userId = await getUserIdFromRequest({
       cookies: req.cookies,
@@ -4619,17 +4646,63 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       cookieKeys: Object.keys(req.cookies || {}),
     });
 
-    if (!userId) {
-      sshLogger.error("No userId from callback request", {
-        operation: "opkssh_callback_unauthorized",
-        cookies: Object.keys(req.cookies || {}),
-        headers: Object.keys(req.headers),
-      });
-      res.status(401).send("Unauthorized - no valid session");
-      return;
-    }
+    let userSessions: Awaited<ReturnType<typeof getActiveSessionsForUser>> = [];
 
-    const userSessions = getActiveSessionsForUser(userId);
+    if (userId) {
+      userSessions = getActiveSessionsForUser(userId);
+    } else {
+      // No JWT cookie (e.g. OAuth redirect landed in external browser).
+      // Try to find the correct session via the OAuth state parameter.
+      const oauthState = req.query.state as string | undefined;
+
+      if (oauthState) {
+        const mappedRequestId = getRequestIdByOAuthState(oauthState);
+        if (mappedRequestId) {
+          const mappedSession = getActiveAuthSession(mappedRequestId);
+          if (mappedSession) {
+            userSessions = [mappedSession];
+            clearOAuthState(oauthState);
+            sshLogger.info("Resolved session via OAuth state parameter", {
+              operation: "opkssh_callback_state_lookup",
+              requestId: mappedRequestId,
+            });
+          }
+        }
+      }
+
+      // Fallback: use the opkssh_request_id cookie set by the chooser proxy.
+      // State capture only works for 3xx redirects; if OPKSSH redirects via
+      // JavaScript in the HTML, the state is never registered in the map.
+      if (userSessions.length === 0) {
+        const cookieRequestId = req.cookies?.opkssh_request_id;
+        if (cookieRequestId) {
+          const cookieSession = getActiveAuthSession(cookieRequestId);
+          if (cookieSession) {
+            userSessions = [cookieSession];
+            res.clearCookie("opkssh_request_id", { path: "/host/" });
+            sshLogger.info("Resolved session via opkssh_request_id cookie", {
+              operation: "opkssh_callback_cookie_lookup",
+              requestId: cookieRequestId,
+            });
+          }
+        }
+      }
+
+      if (userSessions.length === 0) {
+        sshLogger.warn(
+          "OAuth callback with no JWT, no matching state, and no session cookie",
+          {
+            operation: "opkssh_callback_no_session_match",
+            hasState: !!oauthState,
+            hasCookie: !!req.cookies?.opkssh_request_id,
+          },
+        );
+        res
+          .status(401)
+          .send("Authentication callback failed: unable to identify session");
+        return;
+      }
+    }
 
     sshLogger.info("Active sessions for user", {
       operation: "opkssh_callback_session_lookup",
@@ -4671,7 +4744,11 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
     const queryString = req.url.includes("?")
       ? req.url.substring(req.url.indexOf("?"))
       : "";
-    const redirectUrl = `/ssh/opkssh-callback/${session.requestId}/login-callback${queryString}`;
+    // Proxy to the path OPKSSH registered its callback handler at.
+    // OPKSSH uses the pathname from --remote-redirect-uri for its local listener.
+    const remoteUrl = new URL(session.remoteRedirectUri);
+    const callbackPath = remoteUrl.pathname;
+    const redirectUrl = `/host/opkssh-callback/${session.requestId}${callbackPath}${queryString}`;
 
     sshLogger.info("Redirecting OAuth callback to dynamic route", {
       operation: "opkssh_static_callback_redirect",
@@ -4789,7 +4866,7 @@ router.use(
       const axios = (await import("axios")).default;
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
-        fullPath.split(`/ssh/opkssh-callback/${requestId}`)[1] || "";
+        fullPath.split(`/host/opkssh-callback/${requestId}`)[1] || "";
       const targetPath = pathAfterRequestId || "/login-callback";
 
       if (!session.callbackPort || session.callbackPort === 0) {
@@ -4872,7 +4949,7 @@ router.use(
         if (key.toLowerCase() === "location") {
           const location = value as string;
           if (location.startsWith("/")) {
-            res.setHeader(key, `/ssh/opkssh-callback/${requestId}${location}`);
+            res.setHeader(key, `/host/opkssh-callback/${requestId}${location}`);
           } else {
             res.setHeader(key, value as string);
           }

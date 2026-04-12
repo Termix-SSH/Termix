@@ -1623,6 +1623,7 @@
     "opksshTimeout": "Authentication timed out. Please try again.",
     "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
     "opksshConfigMissing": "OPKSSH configuration not found. Please create ~/.opk/config.yml with your OIDC provider settings. See documentation: https://github.com/openpubkey/opkssh#configuration",
+    "opksshSignInWith": "Sign in with {{provider}}",
     "sudoPasswordPopupTitle": "Insert Password?",
     "sudoPasswordPopupHint": "Press Enter to insert, Esc to dismiss",
     "sudoPasswordPopupConfirm": "Insert",
@@ -1647,7 +1648,8 @@
     "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
     "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
     "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
-    "sessionAttachTimeout": "Session attachment timed out. Creating new connection..."
+    "sessionAttachTimeout": "Session attachment timed out. Creating new connection...",
+    "openFileManagerHere": "Open File Manager Here"
   },
   "fileManager": {
     "title": "File Manager",
