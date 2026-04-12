@@ -830,7 +830,7 @@ export function HostManagerEditor({
         socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
           ? cleanedHost.socks5ProxyChain
           : [],
-        macAddress: (cleanedHost as any).macAddress || "",
+        macAddress: cleanedHost.macAddress || "",
         portKnockSequence: Array.isArray(cleanedHost.portKnockSequence)
           ? cleanedHost.portKnockSequence
           : [],

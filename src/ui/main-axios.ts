@@ -1080,6 +1080,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
       macAddress: hostData.macAddress || null,
+      portKnockSequence: hostData.portKnockSequence || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1168,6 +1169,7 @@ export async function updateSSHHost(
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
       macAddress: hostData.macAddress || null,
+      portKnockSequence: hostData.portKnockSequence || null,
     };
 
     if (!submitData.enableTunnel) {

@@ -75,6 +75,11 @@ export interface Host {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  portKnockSequence?: Array<{
+    port: number;
+    protocol?: "tcp" | "udp";
+    delay?: number;
+  }>;
 
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
@@ -153,6 +158,11 @@ export interface HostData {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  portKnockSequence?: Array<{
+    port: number;
+    protocol?: "tcp" | "udp";
+    delay?: number;
+  }>;
 
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
