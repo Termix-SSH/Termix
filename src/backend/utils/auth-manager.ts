@@ -206,15 +206,20 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const defaultExpiry = `${timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24}h`;
+
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
       if (options.rememberMe) {
         expiresIn = "30d";
       } else {
-        expiresIn = "24h";
+        expiresIn = defaultExpiry;
       }
     } else if (!expiresIn) {
-      expiresIn = "24h";
+      expiresIn = defaultExpiry;
     }
 
     const payload: JWTPayload = { userId };
@@ -567,6 +572,13 @@ class AuthManager {
         return res.status(401).json({ error: "Invalid token" });
       }
 
+      if (payload.pendingTOTP) {
+        return res.status(401).json({
+          error: "TOTP verification required",
+          code: "TOTP_REQUIRED",
+        });
+      }
+
       if (payload.sessionId) {
         try {
           const sessionRecords = await db
@@ -708,6 +720,13 @@ class AuthManager {
         return res.status(401).json({ error: "Invalid token" });
       }
 
+      if (payload.pendingTOTP) {
+        return res.status(401).json({
+          error: "TOTP verification required",
+          code: "TOTP_REQUIRED",
+        });
+      }
+
       try {
         const { db } = await import("../database/db/index.js");
         const { users } = await import("../database/db/schema.js");
@@ -785,6 +804,26 @@ class AuthManager {
         });
       }
     } else {
+      try {
+        await db.delete(sessions).where(eq(sessions.userId, userId));
+
+        try {
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
+          await saveMemoryDatabaseToFile();
+        } catch {
+          // best effort
+        }
+      } catch (error) {
+        databaseLogger.error(
+          "Failed to revoke all sessions on logout",
+          error,
+          {
+            operation: "session_revoke_all_failed",
+            userId,
+          },
+        );
+      }
       this.userCrypto.logoutUser(userId);
     }
   }

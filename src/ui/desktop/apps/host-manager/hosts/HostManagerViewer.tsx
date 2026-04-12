@@ -90,6 +90,8 @@ import {
   Monitor,
   MessagesSquare,
   Eye,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -1257,6 +1259,24 @@ export function HostManagerViewer({
           >
             <ListChecks className="h-4 w-4 mr-2" />
             {selectionMode ? t("hosts.exitSelectMode") : t("hosts.selectMode")}
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9"
+            onClick={() => {
+              if (openAccordions.length > 0) {
+                setOpenAccordions([]);
+              } else {
+                setOpenAccordions(folderKeys);
+              }
+            }}
+            title={openAccordions.length > 0 ? t("hosts.collapseAll", "Collapse All") : t("hosts.expandAll", "Expand All")}
+          >
+            {openAccordions.length > 0 ? (
+              <ChevronsDownUp className="h-4 w-4" />
+            ) : (
+              <ChevronsUpDown className="h-4 w-4" />
+            )}
           </Button>
         </div>
 

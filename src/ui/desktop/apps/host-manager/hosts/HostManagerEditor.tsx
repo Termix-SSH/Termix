@@ -448,6 +448,16 @@ export function HostManagerEditor({
           }),
         )
         .optional(),
+      macAddress: z.string().optional(),
+      portKnockSequence: z
+        .array(
+          z.object({
+            port: z.coerce.number().min(1).max(65535),
+            protocol: z.enum(["tcp", "udp"]).default("tcp"),
+            delay: z.coerce.number().min(0).max(60000).default(100),
+          }),
+        )
+        .optional(),
       enableDocker: z.boolean().default(false),
       domain: z.string().optional(),
       security: z.string().optional(),
@@ -507,11 +517,7 @@ export function HostManagerEditor({
           });
         }
         if (!data.keyType) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.keyTypeRequired", "Key type is required"),
-            path: ["keyType"],
-          });
+          data.keyType = "auto";
         }
       } else if (data.authType === "credential") {
         if (!data.credentialId) {
@@ -580,6 +586,8 @@ export function HostManagerEditor({
       socks5Username: "",
       socks5Password: "",
       socks5ProxyChain: [],
+      macAddress: "",
+      portKnockSequence: [],
       enableDocker: false,
       domain: "",
       security: "any",
@@ -820,6 +828,10 @@ export function HostManagerEditor({
         socks5Password: cleanedHost.socks5Password || "",
         socks5ProxyChain: Array.isArray(cleanedHost.socks5ProxyChain)
           ? cleanedHost.socks5ProxyChain
+          : [],
+        macAddress: (cleanedHost as any).macAddress || "",
+        portKnockSequence: Array.isArray(cleanedHost.portKnockSequence)
+          ? cleanedHost.portKnockSequence
           : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
         domain: (cleanedHost as any).domain || "",
@@ -1086,6 +1098,7 @@ export function HostManagerEditor({
     socks5Username: "general",
     socks5Password: "general",
     socks5ProxyChain: "general",
+    portKnockSequence: "general",
     quickActions: "general",
     enableTerminal: "terminal",
     terminalConfig: "terminal",

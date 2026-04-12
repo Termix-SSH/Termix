@@ -240,6 +240,12 @@ export function SSHToolsSidebar({
   const startWidthRef = React.useRef<number>(sidebarWidth);
 
   const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
+
+  useEffect(() => {
+    const terminalIds = new Set(terminalTabs.map((t) => t.id));
+    setSelectedSnippetTabIds((prev) => prev.filter((id) => terminalIds.has(id)));
+  }, [terminalTabs.length]);
+
   const activeUiTab = tabs.find((tab) => tab.id === currentTab);
   const activeTerminal =
     activeUiTab?.type === "terminal" ? activeUiTab : undefined;
@@ -736,7 +742,7 @@ export function SSHToolsSidebar({
       selectedSnippetTabIds.forEach((tabId) => {
         const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
-          tab.terminalRef.current.sendInput(snippet.content + "\n");
+          tab.terminalRef.current.sendInput(snippet.content + "\r");
         }
       });
       toast.success(
@@ -1296,6 +1302,30 @@ export function SSHToolsSidebar({
                                   })
                                 : t("snippets.executeOnCurrent")}
                             </p>
+                            <div className="flex gap-2 mb-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() =>
+                                  setSelectedSnippetTabIds(
+                                    terminalTabs.map((t) => t.id),
+                                  )
+                                }
+                              >
+                                {t("snippets.selectAll", "Select All")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() => setSelectedSnippetTabIds([])}
+                              >
+                                {t("snippets.deselectAll", "Deselect All")}
+                              </Button>
+                            </div>
                             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto thin-scrollbar">
                               {terminalTabs.map((tab) => (
                                 <Button

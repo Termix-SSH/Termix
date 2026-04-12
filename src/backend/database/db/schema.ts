@@ -141,6 +141,9 @@ export const hosts = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  macAddress: text("mac_address"),
+  portKnockSequence: text("port_knock_sequence"),
+
   hostKeyFingerprint: text("host_key_fingerprint"),
   hostKeyType: text("host_key_type"),
   hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
