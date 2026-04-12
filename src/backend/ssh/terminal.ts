@@ -410,7 +410,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   try {
     const url = parseUrl(req.url!, true);
-    const token = url.query.token as string;
+    let token = url.query.token as string;
+
+    if (!token) {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
+    }
 
     if (!token) {
       ws.close(1008, "Authentication required");
@@ -489,11 +497,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
   const wsPingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       if (!wsAlive) {
-        sshLogger.warn("WebSocket pong timeout - terminating zombie connection", {
-          operation: "ws_pong_timeout",
-          userId,
-          sessionId: currentSessionId,
-        });
+        sshLogger.warn(
+          "WebSocket pong timeout - terminating zombie connection",
+          {
+            operation: "ws_pong_timeout",
+            userId,
+            sessionId: currentSessionId,
+          },
+        );
         ws.terminate();
         return;
       }
@@ -1125,7 +1136,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
     };
     const authMethodNotAvailable = false;
-    if (id && userId && (!password && !key)) {
+    if (id && userId && !password && !key) {
       try {
         const { resolveHostById } = await import("./host-resolver.js");
         const resolvedHost = await resolveHostById(id, userId);
@@ -1138,7 +1149,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
-          sendLog("auth", "info", "Credentials resolved from server-side host data");
+          sendLog(
+            "auth",
+            "info",
+            "Credentials resolved from server-side host data",
+          );
         }
       } catch (error) {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {

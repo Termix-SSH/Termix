@@ -93,6 +93,11 @@ export async function resolveHostById(
             if (!host.overrideCredentialUsername) {
               host.username = sharedCred.username;
             }
+            host.authType = sharedCred.key
+              ? "key"
+              : sharedCred.password
+                ? "password"
+                : "none";
             return host as unknown as SSHHost;
           }
         } catch (e) {
@@ -127,6 +132,7 @@ export async function resolveHostById(
         if (!host.overrideCredentialUsername) {
           host.username = cred.username;
         }
+        host.authType = cred.key ? "key" : cred.password ? "password" : "none";
       }
     } catch (e) {
       sshLogger.warn("Failed to resolve credential for host", {
