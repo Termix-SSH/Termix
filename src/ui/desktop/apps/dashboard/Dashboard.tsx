@@ -68,7 +68,7 @@ export function Dashboard({
   const [versionStatus, setVersionStatus] = useState<
     "up_to_date" | "requires_update"
   >("up_to_date");
-  const [versionText, setVersionText] = useState<string>("v1.8.0");
+  const [versionText, setVersionText] = useState<string>("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [totalServers, setTotalServers] = useState<number>(0);
   const [totalTunnels, setTotalTunnels] = useState<number>(0);

@@ -1006,10 +1006,16 @@ function handleApiError(error: unknown, operation: string): never {
 export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
     const hostsResponse = await sshHostApi.get("/db/host");
-    const hosts: SSHHost[] = hostsResponse.data;
+    const hosts: SSHHost[] = Array.isArray(hostsResponse.data)
+      ? hostsResponse.data
+      : [];
 
-    const statusesResponse = await getAllServerStatuses();
-    const statuses = statusesResponse || {};
+    let statuses: Record<number, ServerStatus> = {};
+    try {
+      statuses = (await getAllServerStatuses()) || {};
+    } catch {
+      // Status fetch failure should not prevent host list from loading
+    }
 
     return hosts.map((host) => ({
       ...host,
@@ -1073,6 +1079,7 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1160,6 +1167,7 @@ export async function updateSSHHost(
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1187,6 +1195,15 @@ export async function updateSSHHost(
     }
   } catch (error) {
     throw handleApiError(error, "update SSH host");
+  }
+}
+
+export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
+  try {
+    const response = await sshHostApi.post(`/db/host/${hostId}/wake`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "wake on LAN");
   }
 }
 
@@ -1255,6 +1272,17 @@ export async function exportSSHHostWithCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "export SSH host with credentials");
+  }
+}
+
+export async function exportAllSSHHosts(): Promise<{
+  hosts: SSHHost[];
+}> {
+  try {
+    const response = await sshHostApi.get("/db/hosts/export");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export all SSH hosts");
   }
 }
 
@@ -2493,6 +2521,29 @@ export async function updateLogLevel(level: string): Promise<void> {
 }
 
 // ============================================================================
+// SESSION TIMEOUT SETTINGS
+// ============================================================================
+
+export async function getSessionTimeout(): Promise<{ timeoutHours: number }> {
+  try {
+    const response = await authApi.get("/users/session-timeout");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch session timeout");
+  }
+}
+
+export async function updateSessionTimeout(
+  timeoutHours: number,
+): Promise<void> {
+  try {
+    await authApi.patch("/users/session-timeout", { timeoutHours });
+  } catch (error) {
+    handleApiError(error, "update session timeout");
+  }
+}
+
+// ============================================================================
 // GUACAMOLE SETTINGS
 // ============================================================================
 
@@ -2559,7 +2610,7 @@ export async function loginUser(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -2571,7 +2622,7 @@ export async function loginUser(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3033,7 +3084,7 @@ export async function verifyTOTPLogin(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -3045,7 +3096,7 @@ export async function verifyTOTPLogin(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3225,6 +3276,20 @@ export async function getSSHHostWithCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch SSH host with credentials");
+  }
+}
+
+export async function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword" = "password",
+): Promise<string | null> {
+  try {
+    const response = await sshHostApi.get(
+      `/db/host/${hostId}/password?field=${field}`,
+    );
+    return response.data?.value || null;
+  } catch {
+    return null;
   }
 }
 
@@ -4150,6 +4215,75 @@ export async function revokeHostAccess(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "revoke host access");
+  }
+}
+
+// ============================================================================
+// SNIPPET SHARING
+// ============================================================================
+
+export async function shareSnippet(
+  snippetId: number,
+  shareData: {
+    targetType: "user" | "role";
+    targetUserId?: string;
+    targetRoleId?: number;
+    durationHours?: number;
+  },
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(
+      `/rbac/snippet/${snippetId}/share`,
+      shareData,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share snippet");
+  }
+}
+
+export async function getSnippetAccess(
+  snippetId: number,
+): Promise<{ accessList: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/snippet/${snippetId}/access`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch snippet access");
+  }
+}
+
+export async function revokeSnippetAccess(
+  snippetId: number,
+  accessId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(
+      `/rbac/snippet/${snippetId}/access/${accessId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "revoke snippet access");
+  }
+}
+
+export async function getSharedSnippets(): Promise<{
+  sharedSnippets: Array<{
+    id: number;
+    name: string;
+    content: string;
+    description: string | null;
+    folder: string | null;
+    ownerUsername: string;
+    permissionLevel: string;
+    expiresAt: string | null;
+  }>;
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/shared-snippets");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch shared snippets");
   }
 }
 

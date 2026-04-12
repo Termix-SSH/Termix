@@ -141,6 +141,9 @@ export const hosts = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  macAddress: text("mac_address"),
+  portKnockSequence: text("port_knock_sequence"),
+
   hostKeyFingerprint: text("host_key_fingerprint"),
   hostKeyType: text("host_key_type"),
   hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
@@ -291,6 +294,30 @@ export const snippetFolders = sqliteTable("snippet_folders", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const snippetAccess = sqliteTable("snippet_access", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  snippetId: integer("snippet_id")
+    .notNull()
+    .references(() => snippets.id, { onDelete: "cascade" }),
+
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  roleId: integer("role_id").references(() => roles.id, {
+    onDelete: "cascade",
+  }),
+
+  grantedBy: text("granted_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  permissionLevel: text("permission_level").notNull().default("view"),
+
+  expiresAt: text("expires_at"),
+
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });

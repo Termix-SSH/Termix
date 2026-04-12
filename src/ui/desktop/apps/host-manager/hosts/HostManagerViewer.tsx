@@ -35,6 +35,7 @@ import {
   updateSSHHost,
   renameFolder,
   exportSSHHostWithCredentials,
+  exportAllSSHHosts,
   getSSHFolders,
   updateFolderMetadata,
   deleteAllHostsInFolder,
@@ -89,6 +90,8 @@ import {
   Monitor,
   MessagesSquare,
   Eye,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -843,6 +846,39 @@ export function HostManagerViewer({
     URL.revokeObjectURL(url);
   };
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportAll = () => {
+    confirmWithToast(
+      t("hosts.exportAllSensitiveWarning"),
+      async () => {
+        setExporting(true);
+        try {
+          const data = await exportAllSSHHosts();
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `termix-hosts-export-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success(
+            t("hosts.exportedAllHosts", { count: data.hosts.length }),
+          );
+        } catch {
+          toast.error(t("hosts.failedToExportAllHosts"));
+        } finally {
+          setExporting(false);
+        }
+      },
+      "destructive",
+    );
+  };
+
   const handleJsonImport = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -1160,6 +1196,15 @@ export function HostManagerViewer({
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exporting || hosts.length === 0}
+              onClick={handleExportAll}
+            >
+              {exporting ? t("hosts.exporting") : t("hosts.exportAllJson")}
+            </Button>
+
             <Button variant="outline" size="sm" onClick={handleDownloadSample}>
               {t("hosts.downloadSample")}
             </Button>
@@ -1214,6 +1259,28 @@ export function HostManagerViewer({
           >
             <ListChecks className="h-4 w-4 mr-2" />
             {selectionMode ? t("hosts.exitSelectMode") : t("hosts.selectMode")}
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9"
+            onClick={() => {
+              if (openAccordions.length > 0) {
+                setOpenAccordions([]);
+              } else {
+                setOpenAccordions(folderKeys);
+              }
+            }}
+            title={
+              openAccordions.length > 0
+                ? t("hosts.collapseAll", "Collapse All")
+                : t("hosts.expandAll", "Expand All")
+            }
+          >
+            {openAccordions.length > 0 ? (
+              <ChevronsDownUp className="h-4 w-4" />
+            ) : (
+              <ChevronsUpDown className="h-4 w-4" />
+            )}
           </Button>
         </div>
 

@@ -735,7 +735,8 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
       .get();
     if (!row) {
-      return res.json(null);
+      const envConfig = getOIDCConfigFromEnv();
+      return res.json(envConfig);
     }
 
     let config = JSON.parse((row as Record<string, unknown>).value as string);
@@ -1227,7 +1228,7 @@ router.get("/oidc/callback", async (req, res) => {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
-            : 2 * 60 * 60 * 1000;
+            : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -1319,12 +1320,16 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    if (deviceInfo.type === "desktop" || deviceInfo.type === "mobile") {
+      redirectUrl.searchParams.set("token", token);
+    }
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : storedRememberMe
           ? 30 * 24 * 60 * 60 * 1000
-          : 2 * 60 * 60 * 1000;
+          : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
@@ -1578,7 +1583,13 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -2156,12 +2167,16 @@ router.post("/initiate-reset", async (req, res) => {
       authLogger.warn(
         `Password reset attempted for non-existent user: ${username}`,
       );
-      return res.status(404).json({ error: "User not found" });
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
+      });
     }
 
     if (user[0].isOidc) {
-      return res.status(403).json({
-        error: "Password reset not available for external authentication users",
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
       });
     }
 
@@ -2176,7 +2191,7 @@ router.post("/initiate-reset", async (req, res) => {
       );
 
     authLogger.info(
-      `Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
+      `Password reset code generated for user ${username} (expires at ${expiresAt.toLocaleString()}). Check admin panel or database settings table for code.`,
     );
 
     res.json({
@@ -3360,7 +3375,13 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -4293,6 +4314,77 @@ router.patch("/log-level", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to set log level", err);
     res.status(500).json({ error: "Failed to set log level" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   get:
+ *     summary: Get session timeout setting
+ *     description: Returns the configured session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current session timeout hours.
+ */
+router.get("/session-timeout", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    res.json({
+      timeoutHours: row ? parseInt(row.value, 10) : 24,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get session timeout", err);
+    res.status(500).json({ error: "Failed to get session timeout" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   patch:
+ *     summary: Update session timeout setting (admin only)
+ *     description: Sets the session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Session timeout updated.
+ *       400:
+ *         description: Invalid value.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/session-timeout", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { timeoutHours } = req.body;
+    if (
+      typeof timeoutHours !== "number" ||
+      timeoutHours < 1 ||
+      timeoutHours > 720
+    ) {
+      return res
+        .status(400)
+        .json({ error: "timeoutHours must be between 1 and 720" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('session_timeout_hours', ?)",
+      )
+      .run(String(timeoutHours));
+    res.json({ timeoutHours });
+  } catch (err) {
+    authLogger.error("Failed to set session timeout", err);
+    res.status(500).json({ error: "Failed to set session timeout" });
   }
 });
 

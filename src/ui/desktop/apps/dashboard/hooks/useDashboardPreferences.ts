@@ -30,7 +30,11 @@ export function useDashboardPreferences(enabled: boolean = true) {
     const fetchPreferences = async () => {
       try {
         const preferences = await getDashboardPreferences();
-        setLayout(preferences);
+        if (preferences?.cards && Array.isArray(preferences.cards)) {
+          setLayout(preferences);
+        } else {
+          setLayout(DEFAULT_LAYOUT);
+        }
       } catch (error) {
         setLayout(DEFAULT_LAYOUT);
       } finally {

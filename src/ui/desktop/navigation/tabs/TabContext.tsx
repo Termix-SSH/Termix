@@ -34,6 +34,8 @@ interface TabContextType {
     },
   ) => void;
   updateTab: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
+  previewTerminalTheme: string | null;
+  setPreviewTerminalTheme: (theme: string | null) => void;
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
@@ -122,6 +124,9 @@ export function TabProvider({ children }: TabProviderProps) {
     return 1;
   });
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
+  const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
+    string | null
+  >(null);
   const [initialMaxId] = useState(() => {
     let maxId = 1;
     tabs.forEach((tab) => {
@@ -293,7 +298,13 @@ export function TabProvider({ children }: TabProviderProps) {
         if (remainingSplitTabs.length > 0) {
           setCurrentTab(remainingSplitTabs[0]);
         } else {
-          setCurrentTab(remainingTabs[0].id);
+          // Switch to the adjacent tab (prefer the one after, then before)
+          const closedIndex = tabs.findIndex((t) => t.id === tabId);
+          const nextTab =
+            closedIndex < remainingTabs.length
+              ? remainingTabs[closedIndex]
+              : remainingTabs[remainingTabs.length - 1];
+          setCurrentTab(nextTab.id);
         }
       } else {
         setCurrentTab(1);
@@ -412,6 +423,8 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
+      previewTerminalTheme,
+      setPreviewTerminalTheme,
     }),
     [
       tabs,
@@ -424,6 +437,8 @@ export function TabProvider({ children }: TabProviderProps) {
       reorderTabs,
       updateHostConfig,
       updateTab,
+      previewTerminalTheme,
+      setPreviewTerminalTheme,
     ],
   );
 
