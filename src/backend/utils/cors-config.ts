@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { getRequestOrigin } from "./request-origin.js";
 
 const DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const ELECTRON_FILE_ORIGIN = "file://";
 
 function getAllowedOrigins(): string[] {
   const envOrigins = process.env.CORS_ALLOWED_ORIGINS;
@@ -34,6 +35,7 @@ export function createCorsMiddleware(
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         if (DEV_ORIGINS.includes(origin)) return callback(null, true);
+        if (origin === ELECTRON_FILE_ORIGIN) return callback(null, true);
 
         const configured = getAllowedOrigins();
         if (configured.includes(origin)) return callback(null, true);
