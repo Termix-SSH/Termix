@@ -310,9 +310,7 @@ export function GeneralSettingsTab({
       </div>
 
       <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">
-        <h3 className="text-lg font-semibold">
-          {t("admin.sessionTimeout")}
-        </h3>
+        <h3 className="text-lg font-semibold">{t("admin.sessionTimeout")}</h3>
         <p className="text-sm text-muted-foreground">
           {t("admin.sessionTimeoutDesc")}
         </p>
@@ -331,9 +329,7 @@ export function GeneralSettingsTab({
               disabled={sessionTimeoutLoading}
               className="flex-1"
             />
-            <span className="text-sm font-medium py-2">
-              {t("admin.hours")}
-            </span>
+            <span className="text-sm font-medium py-2">{t("admin.hours")}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {t("admin.sessionTimeoutNote")}

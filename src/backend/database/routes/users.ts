@@ -1586,7 +1586,9 @@ router.post("/login", async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
       .get() as { value: string } | undefined;
     const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -3376,7 +3378,9 @@ router.post("/totp/verify-login", async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
       .get() as { value: string } | undefined;
     const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : timeoutHours * 60 * 60 * 1000;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))

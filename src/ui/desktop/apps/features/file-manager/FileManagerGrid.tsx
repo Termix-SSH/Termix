@@ -1281,7 +1281,8 @@ export function FileManagerGrid({
                     <div className="flex-shrink-0 text-right w-24 hidden md:block">
                       {file.owner && (
                         <p className="text-xs text-muted-foreground truncate">
-                          {file.owner}{file.group ? `:${file.group}` : ""}
+                          {file.owner}
+                          {file.group ? `:${file.group}` : ""}
                         </p>
                       )}
                     </div>

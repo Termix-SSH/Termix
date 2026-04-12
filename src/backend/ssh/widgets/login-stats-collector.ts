@@ -49,10 +49,9 @@ export async function collectLoginStats(client: Client): Promise<LoginStats> {
             let parsedTime: string;
             try {
               const date = new Date(timeStr);
-              parsedTime =
-                isNaN(date.getTime())
-                  ? timeStr || "unknown"
-                  : date.toISOString();
+              parsedTime = isNaN(date.getTime())
+                ? timeStr || "unknown"
+                : date.toISOString();
             } catch {
               parsedTime = timeStr || "unknown";
             }
