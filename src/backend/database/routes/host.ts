@@ -1713,7 +1713,149 @@ router.get(
 
 /**
  * @openapi
- * /host/db/host/{id}:
+ * /ssh/db/hosts/export:
+ *   get:
+ *     summary: Export all SSH hosts
+ *     description: Exports all SSH hosts for the current user with decrypted credentials.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: All exported SSH hosts.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to export SSH hosts.
+ */
+router.get(
+  "/db/hosts/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    try {
+      const allHosts = await SimpleDBOps.select(
+        db.select().from(hosts).where(eq(hosts.userId, userId)),
+        "ssh_data",
+        userId,
+      );
+
+      const exportedHosts = [];
+
+      for (const host of allHosts) {
+        const resolvedHost =
+          (await resolveHostCredentials(host, userId)) || host;
+
+        const exportedConnectionType =
+          (resolvedHost.connectionType as string) || "ssh";
+        const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
+          exportedConnectionType,
+        );
+
+        const baseExportData = {
+          connectionType: exportedConnectionType,
+          name: resolvedHost.name,
+          ip: resolvedHost.ip,
+          port: resolvedHost.port,
+          username: resolvedHost.username,
+          password: resolvedHost.password || null,
+          folder: resolvedHost.folder,
+          tags:
+            typeof resolvedHost.tags === "string"
+              ? resolvedHost.tags.split(",").filter(Boolean)
+              : resolvedHost.tags || [],
+          pin: !!resolvedHost.pin,
+          notes: resolvedHost.notes || null,
+        };
+
+        const exportData = isRemoteDesktop
+          ? {
+              ...baseExportData,
+              domain: resolvedHost.domain || null,
+              security: resolvedHost.security || null,
+              ignoreCert: !!resolvedHost.ignoreCert,
+              guacamoleConfig: resolvedHost.guacamoleConfig
+                ? JSON.parse(resolvedHost.guacamoleConfig as string)
+                : null,
+            }
+          : {
+              ...baseExportData,
+              authType: resolvedHost.authType,
+              key: resolvedHost.key || null,
+              keyPassword: resolvedHost.keyPassword || null,
+              keyType: resolvedHost.keyType || null,
+              credentialId: resolvedHost.credentialId || null,
+              overrideCredentialUsername:
+                !!resolvedHost.overrideCredentialUsername,
+              enableTerminal: !!resolvedHost.enableTerminal,
+              enableTunnel: !!resolvedHost.enableTunnel,
+              enableFileManager: !!resolvedHost.enableFileManager,
+              enableDocker: !!resolvedHost.enableDocker,
+              showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
+              showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
+              showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
+              showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
+              showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
+              defaultPath: resolvedHost.defaultPath,
+              sudoPassword: resolvedHost.sudoPassword || null,
+              tunnelConnections: resolvedHost.tunnelConnections
+                ? JSON.parse(resolvedHost.tunnelConnections as string)
+                : [],
+              jumpHosts: resolvedHost.jumpHosts
+                ? JSON.parse(resolvedHost.jumpHosts as string)
+                : null,
+              quickActions: resolvedHost.quickActions
+                ? JSON.parse(resolvedHost.quickActions as string)
+                : null,
+              statsConfig: resolvedHost.statsConfig
+                ? JSON.parse(resolvedHost.statsConfig as string)
+                : null,
+              dockerConfig: resolvedHost.dockerConfig
+                ? JSON.parse(resolvedHost.dockerConfig as string)
+                : null,
+              terminalConfig: resolvedHost.terminalConfig
+                ? JSON.parse(resolvedHost.terminalConfig as string)
+                : null,
+              forceKeyboardInteractive:
+                resolvedHost.forceKeyboardInteractive === "true",
+              useSocks5: !!resolvedHost.useSocks5,
+              socks5Host: resolvedHost.socks5Host || null,
+              socks5Port: resolvedHost.socks5Port || null,
+              socks5Username: resolvedHost.socks5Username || null,
+              socks5Password: resolvedHost.socks5Password || null,
+              socks5ProxyChain: resolvedHost.socks5ProxyChain
+                ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+                : null,
+            };
+
+        exportedHosts.push(exportData);
+      }
+
+      sshLogger.success("All hosts exported with decrypted credentials", {
+        operation: "hosts_export_all",
+        count: exportedHosts.length,
+        userId,
+      });
+
+      res.json({ hosts: exportedHosts });
+    } catch (err) {
+      sshLogger.error("Failed to export all SSH hosts", err, {
+        operation: "hosts_export_all",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to export SSH hosts" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
  *     description: Deletes an SSH host by its ID.
