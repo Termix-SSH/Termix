@@ -12,6 +12,7 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
+import yaml from "js-yaml";
 import { getRequestOrigin } from "../utils/request-origin.js";
 
 const AUTH_TIMEOUT = 60 * 1000;
@@ -25,6 +26,7 @@ interface OPKSSHAuthSession {
   localPort: number;
   callbackPort: number;
   remoteRedirectUri: string;
+  providers: Array<{ alias: string; issuer: string }>;
   status:
     | "starting"
     | "waiting_for_auth"
@@ -47,6 +49,7 @@ interface OPKSSHAuthSession {
 }
 
 const activeAuthSessions = new Map<string, OPKSSHAuthSession>();
+const oauthStateToRequestId = new Map<string, string>();
 const cleanupInProgress = new Set<string>();
 
 function getOPKConfigPath(): string {
@@ -82,6 +85,7 @@ async function checkOPKConfigExists(): Promise<{
   exists: boolean;
   error?: string;
   configPath?: string;
+  providers?: Array<{ alias: string; issuer: string }>;
 }> {
   const configPath = getOPKConfigPath();
   const isDocker =
@@ -119,6 +123,29 @@ async function checkOPKConfigExists(): Promise<{
       };
     }
 
+    let providers: Array<{ alias: string; issuer: string }> = [];
+    try {
+      const parsed = yaml.load(content) as {
+        providers?: Array<{ alias?: string; issuer?: string }>;
+      };
+      if (parsed?.providers && Array.isArray(parsed.providers)) {
+        providers = parsed.providers
+          .filter(
+            (p): p is { alias: string; issuer: string } =>
+              typeof p.alias === "string" && typeof p.issuer === "string",
+          )
+          .map((p) => ({
+            alias: p.alias,
+            issuer: p.issuer.replace(/^https?:\/\//, ""),
+          }));
+      }
+    } catch (e) {
+      sshLogger.warn("Failed to parse OPKSSH config for providers", {
+        operation: "opkssh_config_parse_providers_error",
+        error: e,
+      });
+    }
+
     if (!content.includes("redirect_uris:")) {
       return {
         exists: false,
@@ -127,7 +154,7 @@ async function checkOPKConfigExists(): Promise<{
       };
     }
 
-    return { exists: true, configPath };
+    return { exists: true, configPath, providers };
   } catch {
     await createTemplateConfig();
     return {
@@ -189,6 +216,7 @@ export async function startOPKSSHAuth(
     localPort: 0,
     callbackPort: 0,
     remoteRedirectUri,
+    providers: configCheck.providers || [],
     status: "starting",
     ws,
     stdoutBuffer: "",
@@ -261,7 +289,12 @@ export async function startOPKSSHAuth(
         handleOPKSSHOutput(requestId, stderr);
       }
 
-      if (stderr.includes("provider not found") || stderr.includes("config")) {
+      if (
+        stderr.includes("provider not found") ||
+        stderr.includes("config error") ||
+        stderr.includes("invalid config") ||
+        stderr.includes("config not found")
+      ) {
         ws.send(
           JSON.stringify({
             type: "opkssh_config_error",
@@ -349,7 +382,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
     session.localPort = actualPort;
 
     const baseUrl = session.remoteRedirectUri.replace(
-      /\/ssh\/opkssh-callback$/,
+      /\/host\/opkssh-callback$/,
       "",
     );
     const proxiedChooserUrl = `${baseUrl}/host/opkssh-chooser/${requestId}`;
@@ -361,6 +394,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
         requestId,
         stage: "chooser",
         url: proxiedChooserUrl,
+        providers: session.providers,
         localUrl: localChooserUrl,
         message: "Please authenticate in your browser",
       }),
@@ -508,25 +542,6 @@ async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
         expiresAt: expiresAt.toISOString(),
       }),
     );
-
-    try {
-      await axios.post(
-        "http://localhost:30006/activity/log",
-        {
-          type: "opkssh_authentication",
-          hostId: session.hostId,
-          hostName: session.hostname,
-          status: "approved",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.INTERNAL_AUTH_TOKEN}`,
-          },
-        },
-      );
-    } catch (activityError) {
-      sshLogger.warn("Failed to log OPKSSH activity", activityError);
-    }
 
     await session.cleanup();
   } catch (error) {
@@ -720,6 +735,13 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
       }
     }
 
+    // Clean up any OAuth state mappings for this session
+    for (const [state, reqId] of oauthStateToRequestId.entries()) {
+      if (reqId === requestId) {
+        oauthStateToRequestId.delete(state);
+      }
+    }
+
     activeAuthSessions.delete(requestId);
   } finally {
     cleanupInProgress.delete(requestId);
@@ -751,6 +773,18 @@ export function getActiveSessionsForUser(userId: string): OPKSSHAuthSession[] {
 
 export function getActiveSessionsAll(): OPKSSHAuthSession[] {
   return Array.from(activeAuthSessions.values());
+}
+
+export function registerOAuthState(state: string, requestId: string): void {
+  oauthStateToRequestId.set(state, requestId);
+}
+
+export function getRequestIdByOAuthState(state: string): string | undefined {
+  return oauthStateToRequestId.get(state);
+}
+
+export function clearOAuthState(state: string): void {
+  oauthStateToRequestId.delete(state);
 }
 
 export async function getUserIdFromRequest(req: {

@@ -55,8 +55,8 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (
-    url.pathname.startsWith("/ssh/opkssh-chooser/") ||
-    url.pathname.startsWith("/ssh/opkssh-callback/")
+    url.pathname.startsWith("/host/opkssh-chooser/") ||
+    url.pathname.startsWith("/host/opkssh-callback/")
   ) {
     return;
   }
