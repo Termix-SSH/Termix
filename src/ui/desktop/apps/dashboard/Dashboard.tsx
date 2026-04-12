@@ -15,7 +15,7 @@ import {
   getServerMetricsById,
   registerMetricsViewer,
   sendMetricsHeartbeat,
-  getGuacamoleToken,
+  getGuacamoleTokenFromHost,
   type RecentActivityItem,
 } from "@/ui/main-axios.ts";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
@@ -388,17 +388,7 @@ export function Dashboard({
           hostConfig: host,
         });
       } else if (item.type === "telnet") {
-        getGuacamoleToken({
-          protocol: "telnet",
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        })
+        getGuacamoleTokenFromHost(host.id)
           .then((result) => {
             addTab({
               type: "telnet",
@@ -422,17 +412,7 @@ export function Dashboard({
             console.error("Failed to get telnet token:", error);
           });
       } else if (item.type === "vnc") {
-        getGuacamoleToken({
-          protocol: "vnc",
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        })
+        getGuacamoleTokenFromHost(host.id)
           .then((result) => {
             addTab({
               type: "vnc",
@@ -456,17 +436,7 @@ export function Dashboard({
             console.error("Failed to get vnc token:", error);
           });
       } else if (item.type === "rdp") {
-        getGuacamoleToken({
-          protocol: "rdp",
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        })
+        getGuacamoleTokenFromHost(host.id)
           .then((result) => {
             addTab({
               type: "rdp",
