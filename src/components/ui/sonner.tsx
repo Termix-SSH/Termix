@@ -39,9 +39,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
     message: rateLimitedToast,
   });
 
+  const darkCustomThemes = [
+    "dracula",
+    "gentlemansChoice",
+    "midnightEspresso",
+    "catppuccinMocha",
+  ];
+  const sonnerTheme: ToasterProps["theme"] = darkCustomThemes.includes(theme)
+    ? "dark"
+    : (theme as ToasterProps["theme"]);
+
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={sonnerTheme}
       className="toaster group"
       style={
         {

@@ -66,6 +66,16 @@ export function ThemeProvider({
     }
 
     root.classList.add(activeTheme);
+
+    const darkCustomThemes: Theme[] = [
+      "dracula",
+      "gentlemansChoice",
+      "midnightEspresso",
+      "catppuccinMocha",
+    ];
+    if (darkCustomThemes.includes(activeTheme)) {
+      root.classList.add("dark");
+    }
   }, [theme, previewTheme]);
 
   const value = {
