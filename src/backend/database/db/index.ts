@@ -1285,7 +1285,7 @@ const migrateSchema = () => {
   });
 };
 
-async function saveMemoryDatabaseToFile() {
+async function saveMemoryDatabaseToFile(): Promise<void> {
   if (!memoryDatabase) return;
 
   try {
