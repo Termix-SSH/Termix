@@ -6,6 +6,7 @@ import { db } from "../db/index.js";
 import {
   users,
   sessions,
+  trustedDevices,
   hosts,
   sshCredentials,
   fileManagerRecent,
@@ -2966,10 +2967,19 @@ router.post("/totp/enable", authenticateJWT, async (req, res) => {
         totpBackupCodes: JSON.stringify(backupCodes),
       })
       .where(eq(users.id, userId));
-    authLogger.info("Two-factor authentication enabled", {
-      operation: "totp_enable",
-      userId,
-    });
+
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(trustedDevices).where(eq(trustedDevices.userId, userId));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist TOTP enablement to disk", saveError, {
+        operation: "totp_enable_db_save_failed",
+        userId,
+      });
+    }
 
     res.json({
       message: "TOTP enabled successfully",
