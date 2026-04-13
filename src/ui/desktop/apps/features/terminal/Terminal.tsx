@@ -50,6 +50,7 @@ import {
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface HostConfig {
   id?: number;
@@ -2528,12 +2529,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
             style={{ backgroundColor }}
           >
-            <p className="text-sm text-muted-foreground">
-              {t("terminal.connectionLost")}
-            </p>
             <div className="flex gap-2">
-              <button
-                className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+              <Button
                 onClick={() => {
                   setShowDisconnectedOverlay(false);
                   isUnmountingRef.current = false;
@@ -2551,14 +2548,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 }}
               >
                 {t("terminal.reconnect")}
-              </button>
+              </Button>
               {onClose && (
-                <button
-                  className="px-4 py-2 text-sm rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
-                  onClick={onClose}
-                >
+                <Button variant="secondary" onClick={onClose}>
                   {t("terminal.closeTab")}
-                </button>
+                </Button>
               )}
             </div>
           </div>

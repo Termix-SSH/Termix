@@ -351,7 +351,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openDocker")}</span>
                   </DropdownMenuItem>
                 )}
-              {(host as any).macAddress && (
+              {host.macAddress && (
                 <DropdownMenuItem
                   onClick={async () => {
                     try {
