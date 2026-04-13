@@ -2022,7 +2022,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
-        if (!getUseRightClickCopyPaste() && !onOpenFileManager) return;
+        if (getUseRightClickCopyPaste()) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (terminal.hasSelection()) {
+            const text = terminal.getSelection();
+            navigator.clipboard
+              .writeText(text)
+              .then(() => terminal.clearSelection());
+          } else {
+            navigator.clipboard.readText().then((text) => {
+              if (text) terminal.paste(text);
+            });
+          }
+          return;
+        }
+        if (!onOpenFileManager) return;
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({
