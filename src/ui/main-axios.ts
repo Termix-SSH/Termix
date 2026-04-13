@@ -3165,9 +3165,13 @@ export async function getReleasesRSS(
   }
 }
 
-export async function getVersionInfo(): Promise<Record<string, unknown>> {
+export async function getVersionInfo(
+  checkRemote = true,
+): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/version");
+    const response = await authApi.get(
+      `/version${checkRemote ? "" : "?checkRemote=false"}`,
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch version info");

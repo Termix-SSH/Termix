@@ -275,6 +275,10 @@ app.get("/version", authenticateJWT, async (req, res) => {
     return res.status(404).send("Local Version Not Set");
   }
 
+  if (req.query.checkRemote === "false") {
+    return res.json({ localVersion, status: "update_check_disabled" });
+  }
+
   try {
     const cacheKey = "latest_release";
     const releaseData = await fetchGitHubAPI<GitHubRelease>(

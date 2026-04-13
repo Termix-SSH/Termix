@@ -1315,6 +1315,8 @@ router.get(
           security: hosts.security,
           ignoreCert: hosts.ignoreCert,
           guacamoleConfig: hosts.guacamoleConfig,
+          macAddress: hosts.macAddress,
+          dockerConfig: hosts.dockerConfig,
 
           ownerId: hosts.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,

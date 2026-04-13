@@ -165,7 +165,7 @@ export function UserProfile({
 
   const fetchVersion = async () => {
     try {
-      const info = await getVersionInfo();
+      const info = await getVersionInfo(!disableUpdateCheck);
       setVersionInfo({ version: info.localVersion });
     } catch {
       toast.error(t("user.failedToLoadVersionInfo"));
