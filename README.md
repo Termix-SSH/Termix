@@ -34,9 +34,6 @@
     <img alt="Termix Banner" src=./repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-If you would like, you can support the project here!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # Overview
 
 <p align="center">
