@@ -623,15 +623,6 @@ export function Dashboard({
                 <Button
                   className="font-semibold shrink-0 !bg-canvas"
                   variant="outline"
-                  onClick={() =>
-                    window.open("https://github.com/sponsors/LukeGus", "_blank")
-                  }
-                >
-                  {t("dashboard.donate")}
-                </Button>
-                <Button
-                  className="font-semibold shrink-0 !bg-canvas"
-                  variant="outline"
                   onClick={() => setSettingsDialogOpen(true)}
                 >
                   <SettingsIcon />
