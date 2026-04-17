@@ -43,11 +43,18 @@ async function performPortKnocking(
         });
       } else {
         const socket = new net.Socket();
+        const timeout = setTimeout(() => {
+          socket.destroy();
+          resolve();
+        }, 1000);
+
         socket.once("connect", () => {
+          clearTimeout(timeout);
           socket.destroy();
           resolve();
         });
         socket.once("error", () => {
+          clearTimeout(timeout);
           socket.destroy();
           resolve();
         });
@@ -1186,6 +1193,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
       keyType,
       authType,
     };
+    let portKnockSequence = hostConfig.portKnockSequence;
+
     const authMethodNotAvailable = false;
     if (id && userId && !password && !key) {
       try {
@@ -1200,6 +1209,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
+          if (resolvedHost.portKnockSequence) {
+            portKnockSequence = resolvedHost.portKnockSequence as Array<{
+              port: number;
+              protocol?: "tcp" | "udp";
+              delay?: number;
+            }>;
+          }
           sendLog(
             "auth",
             "info",
@@ -1226,6 +1242,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
+          if (resolvedHost.portKnockSequence) {
+            portKnockSequence = resolvedHost.portKnockSequence as Array<{
+              port: number;
+              protocol?: "tcp" | "udp";
+              delay?: number;
+            }>;
+          }
         }
       } catch (error) {
         sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
@@ -2181,20 +2204,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    if (
-      hostConfig.portKnockSequence &&
-      hostConfig.portKnockSequence.length > 0
-    ) {
+    if (portKnockSequence && portKnockSequence.length > 0) {
       try {
         sshLogger.info(
-          `Port knocking ${hostConfig.ip} (${hostConfig.portKnockSequence.length} ports)`,
-          { operation: "port_knock", hostId: hostConfig.id },
+          `Port knocking ${ip} (${portKnockSequence.length} ports)`,
+          { operation: "port_knock", hostId: id },
         );
-        await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
+        await performPortKnocking(ip, portKnockSequence);
       } catch (err) {
         sshLogger.warn("Port knocking failed, attempting connection anyway", {
           operation: "port_knock",
-          hostId: hostConfig.id,
+          hostId: id,
         });
       }
     }

@@ -6,10 +6,10 @@ import { hosts, sshCredentials } from "../database/db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../database/db/index.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { systemLogger } from "../utils/logger.js";
+import { dockerLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
 
-const sshLogger = systemLogger;
+const sshLogger = dockerLogger;
 
 interface SSHSession {
   client: SSHClient;

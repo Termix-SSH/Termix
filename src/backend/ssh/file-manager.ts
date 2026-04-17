@@ -2269,14 +2269,26 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
               const isDirectory = attrs.isDirectory();
               const isLink = attrs.isSymbolicLink();
 
+              let owner = String(attrs.uid);
+              let group = String(attrs.gid);
+
+              if (entry.longname) {
+                const parts = entry.longname.split(/\s+/);
+                // Standard ls -l format: permissions links owner group size ...
+                if (parts.length >= 4) {
+                  owner = parts[2];
+                  group = parts[3];
+                }
+              }
+
               const fileEntry = {
                 name: entry.filename,
                 type: isDirectory ? "directory" : isLink ? "link" : "file",
                 size: isDirectory ? undefined : attrs.size,
                 modified: formatMtime(attrs.mtime),
                 permissions,
-                owner: String(attrs.uid),
-                group: String(attrs.gid),
+                owner,
+                group,
                 linkTarget: undefined as string | undefined,
                 path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${entry.filename}`,
                 executable:

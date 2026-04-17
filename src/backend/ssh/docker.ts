@@ -6,7 +6,7 @@ import { Client as SSHClient } from "ssh2";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { logger } from "../utils/logger.js";
+import { dockerLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -18,7 +18,7 @@ import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 
-const sshLogger = logger;
+const sshLogger = dockerLogger;
 
 function createConnectionLog(
   type: "info" | "success" | "warning" | "error",
@@ -2948,9 +2948,15 @@ app.delete(
  */
 app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const { sessionId, containerId } = req.params;
-  const tail = req.query.tail ? parseInt(req.query.tail as string) : 100;
-  const timestamps = req.query.timestamps === "true";
-  const since = req.query.since as string;
+  let tail = req.query.tail ? parseInt(req.query.tail as string) : 100;
+  if (isNaN(tail) || tail < 0) {
+    tail = 100;
+  }
+  // Limit tail to a sane maximum to prevent memory issues
+  if (tail > 10000) {
+    tail = 10000;
+  }
+  const timestamps = req.query.timestamps === "true";  const since = req.query.since as string;
   const until = req.query.until as string;
   const userId = (req as unknown as { userId: string }).userId;
 
