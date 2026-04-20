@@ -1,4 +1,6 @@
 import express from "express";
+import http from "http";
+import net from "net";
 import bodyParser from "body-parser";
 import multer from "multer";
 import cookieParser from "cookie-parser";
@@ -1963,7 +1965,60 @@ app.get(
   },
 );
 
-app.listen(HTTP_PORT, async () => {
+const httpServer = http.createServer(app);
+
+httpServer.on(
+  "upgrade",
+  async (req: http.IncomingMessage, socket: net.Socket, head: Buffer) => {
+    const url = req.url || "";
+    const chooserMatch = url.match(
+      /^\/host\/opkssh-chooser\/([^/]+)(\/.*)?(\?.*)?$/,
+    );
+    if (!chooserMatch) return;
+
+    const requestId = chooserMatch[1];
+
+    // url after the requestId segment (includes query string)
+    const afterRequestId =
+      url.slice(url.indexOf(requestId) + requestId.length) || "/select";
+
+    if (!afterRequestId.startsWith("/select")) return;
+
+    try {
+      const { getActiveAuthSession } = await import("../ssh/opkssh-auth.js");
+      const session = getActiveAuthSession(requestId);
+
+      if (!session?.localPort) {
+        socket.destroy();
+        return;
+      }
+
+      const targetPort = session.localPort;
+      const targetPath = afterRequestId;
+
+      const upstream = net.connect(targetPort, "localhost", () => {
+        const reqLine = `GET ${targetPath} HTTP/1.1\r\n`;
+        const headers = Object.entries(req.headers)
+          .filter(([k]) => k.toLowerCase() !== "host")
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("\r\n");
+        upstream.write(
+          `${reqLine}host: localhost:${targetPort}\r\n${headers}\r\n\r\n`,
+        );
+        if (head.length) upstream.write(head);
+        socket.pipe(upstream);
+        upstream.pipe(socket);
+      });
+
+      upstream.on("error", () => socket.destroy());
+      socket.on("error", () => upstream.destroy());
+    } catch {
+      socket.destroy();
+    }
+  },
+);
+
+httpServer.listen(HTTP_PORT, async () => {
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });

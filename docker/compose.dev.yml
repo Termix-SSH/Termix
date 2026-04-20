@@ -18,7 +18,7 @@ services:
       - termix-dev-net
 
   guacd-dev:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd-dev
     restart: unless-stopped
     networks:

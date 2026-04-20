@@ -119,28 +119,6 @@ function ConnectionLostOverlay({
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
-        <div className="mb-4">
-          {status === "reconnecting" ? (
-            <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-              <svg
-                className="w-5 h-5 text-destructive"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          )}
-        </div>
-
         <h2 className="text-lg font-semibold text-foreground mb-2">
           {t("common.connectionLost", "Connection Lost")}
         </h2>

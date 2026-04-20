@@ -940,9 +940,11 @@ class PollingManager {
       return;
     }
 
-    const hasExistingMetrics = this.metricsStore.has(refreshedHost.id);
+    if (authFailureTracker.shouldSkip(host.id)) {
+      return;
+    }
 
-    if (hasExistingMetrics && pollingBackoff.shouldSkip(host.id)) {
+    if (pollingBackoff.shouldSkip(host.id)) {
       return;
     }
 
@@ -953,16 +955,38 @@ class PollingManager {
         timestamp: Date.now(),
       });
       pollingBackoff.reset(refreshedHost.id);
+      authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      const isAuthError =
+        error instanceof Error &&
+        (error.message.includes("authentication") ||
+          error.message.includes("Authentication") ||
+          error.message.includes("permission denied") ||
+          error.message.includes("Permission denied"));
+
+      if (isAuthError) {
+        // authFailureTracker already handles auth errors inside collectMetrics;
+        // only log on the first occurrence to avoid repeated spam
+        const alreadyTracked = authFailureTracker.shouldSkip(host.id);
+        if (!alreadyTracked) {
+          statsLogger.error("Stats collector connection failed", error, {
+            operation: "stats_connect_failed",
+            hostId: refreshedHost.id,
+          });
+        }
+        return;
+      }
+
       pollingBackoff.recordFailure(refreshedHost.id);
 
-      const latestConfig = this.pollingConfigs.get(refreshedHost.id);
-      if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
-        const backoffInfo = pollingBackoff.getBackoffInfo(refreshedHost.id);
+      // Only log when a new retry window opens, not on every skipped poll
+      const backoff = pollingBackoff.getBackoffInfo(refreshedHost.id);
+      const isNewFailure =
+        backoff !== null && !backoff.includes("polling suspended");
+      if (isNewFailure) {
         statsLogger.error("Stats collector connection failed", error, {
           operation: "stats_connect_failed",
           hostId: refreshedHost.id,
-          retryInfo: backoffInfo,
         });
       }
     }

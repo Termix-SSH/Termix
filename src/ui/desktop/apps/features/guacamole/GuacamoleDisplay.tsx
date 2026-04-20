@@ -147,8 +147,9 @@ export const GuacamoleDisplay = forwardRef<
           ? `ws://localhost:30008`
           : isElectron()
             ? (() => {
-                const configuredUrl = (window as { configuredServerUrl?: string })
-                  .configuredServerUrl;
+                const configuredUrl = (
+                  window as { configuredServerUrl?: string }
+                ).configuredServerUrl;
 
                 // Embedded mode or no configured remote server: connect directly
                 // to the local guacamole websocket service.
@@ -284,6 +285,7 @@ export const GuacamoleDisplay = forwardRef<
           break;
         case 3:
           setIsConnecting(false);
+          setIsReady(true);
           onConnect?.();
           break;
         case 4:

@@ -295,7 +295,15 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   ) : (
                     <Terminal className="h-4 w-4" />
                   )}
-                  <span className="flex-1">{t("hosts.openTerminal")}</span>
+                  <span className="flex-1">
+                    {host.connectionType === "rdp"
+                      ? t("hosts.openRdp")
+                      : host.connectionType === "vnc"
+                        ? t("hosts.openVnc")
+                        : host.connectionType === "telnet"
+                          ? t("hosts.openTelnet")
+                          : t("hosts.openTerminal")}
+                  </span>
                 </DropdownMenuItem>
               )}
               {isSSH &&
