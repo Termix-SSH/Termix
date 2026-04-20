@@ -4447,6 +4447,85 @@ router.use(
         return;
       }
 
+      // /select redirects (via one or more hops) to the external OAuth provider URL.
+      // Follow local redirects until we get an external URL, then send it to the browser.
+      if (targetPath.startsWith("/select")) {
+        const selectaxios = (await import("axios")).default;
+        const qs = targetPath.includes("?")
+          ? targetPath.slice(targetPath.indexOf("?"))
+          : "";
+
+        sshLogger.info("Proxying OPKSSH /select", {
+          operation: "opkssh_select_proxy",
+          requestId,
+          port: session.localPort,
+        });
+
+        try {
+          let nextUrl = `http://localhost:${session.localPort}/select/${qs}`;
+          let oauthUrl: string | undefined;
+
+          for (let i = 0; i < 5; i++) {
+            const r = await selectaxios({
+              method: "GET",
+              url: nextUrl,
+              maxRedirects: 0,
+              validateStatus: () => true,
+              timeout: 10000,
+            });
+
+            const loc = r.headers["location"] as string | undefined;
+            if (!loc) break;
+
+            // External URL (OAuth provider) — done
+            if (
+              loc.startsWith("http") &&
+              !loc.includes(`localhost:${session.localPort}`)
+            ) {
+              oauthUrl = loc;
+              break;
+            }
+
+            // Local relative redirect — resolve and follow
+            if (loc.startsWith("/")) {
+              nextUrl = `http://localhost:${session.localPort}${loc}`;
+            } else {
+              nextUrl = loc;
+            }
+          }
+
+          if (oauthUrl) {
+            try {
+              const parsed = new URL(oauthUrl);
+              const oauthState = parsed.searchParams.get("state");
+              if (oauthState) registerOAuthState(oauthState, requestId);
+            } catch {
+              /* not a valid URL */
+            }
+            sshLogger.info(
+              "OPKSSH /select redirecting browser to OAuth provider",
+              {
+                operation: "opkssh_select_redirect",
+                requestId,
+                oauthUrl,
+              },
+            );
+            res.redirect(302, oauthUrl);
+          } else {
+            res.status(500).send("Failed to get OAuth redirect from OPKSSH");
+          }
+        } catch (err) {
+          sshLogger.error("Error proxying OPKSSH /select", err, {
+            operation: "opkssh_select_proxy_error",
+            requestId,
+          });
+          res
+            .status(500)
+            .send("Failed to connect to OPKSSH authentication service");
+        }
+        return;
+      }
+
       const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
 
       sshLogger.info("Proxying to OPKSSH chooser", {

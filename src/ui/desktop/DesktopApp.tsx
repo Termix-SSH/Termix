@@ -28,6 +28,7 @@ import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 
 const MAX_OVERLAY_RECONNECT_ATTEMPTS = 5;
 const OVERLAY_BASE_DELAY = 2000;
@@ -144,19 +145,11 @@ function ConnectionLostOverlay({
 
         <div className="flex gap-3 justify-center">
           {status === "failed" && (
-            <button
-              onClick={handleRetry}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              {t("common.retry", "Retry")}
-            </button>
+            <Button onClick={handleRetry}>{t("common.retry", "Retry")}</Button>
           )}
-          <button
-            onClick={handleReload}
-            className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
-          >
+          <Button variant="outline" onClick={handleReload}>
             {t("common.reload", "Reload")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
