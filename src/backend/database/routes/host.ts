@@ -423,8 +423,11 @@ router.post(
       return res.status(400).json({ error: "Invalid SSH data" });
     }
 
-    const effectiveAuthType = authType || authMethod;
     const effectiveConnectionType = connectionType || "ssh";
+    const effectiveAuthType =
+      authType ||
+      authMethod ||
+      (effectiveConnectionType !== "ssh" ? "password" : undefined);
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
       connectionType: effectiveConnectionType,

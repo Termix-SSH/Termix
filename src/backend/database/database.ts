@@ -585,14 +585,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     const isOidcUser = !!user[0].isOidc;
 
-    if (!isOidcUser) {
-      if (!password) {
-        return res.status(400).json({
-          error: "Password required for export",
-          code: "PASSWORD_REQUIRED",
-        });
-      }
-
+    if (!isOidcUser && password) {
       const unlocked = await authManager.authenticateUser(
         userId,
         password,
@@ -601,7 +594,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       if (!unlocked) {
         return res.status(401).json({ error: "Invalid password" });
       }
-    } else if (!DataCrypto.getUserDataKey(userId)) {
+    } else if (isOidcUser && !DataCrypto.getUserDataKey(userId)) {
       const oidcUnlocked = await authManager.authenticateOIDCUser(
         userId,
         deviceInfo.type,
@@ -682,6 +675,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         CREATE TABLE ssh_data (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
+          connection_type TEXT NOT NULL DEFAULT 'ssh',
           name TEXT,
           ip TEXT NOT NULL,
           port INTEGER NOT NULL,
@@ -714,6 +708,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
           default_path TEXT,
           stats_config TEXT,
+          docker_config TEXT,
           terminal_config TEXT,
           quick_actions TEXT,
           notes TEXT,
@@ -723,6 +718,12 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           socks5_username TEXT,
           socks5_password TEXT,
           socks5_proxy_chain TEXT,
+          domain TEXT,
+          security TEXT,
+          ignore_cert INTEGER NOT NULL DEFAULT 0,
+          guacamole_config TEXT,
+          mac_address TEXT,
+          port_knock_sequence TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
@@ -822,8 +823,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         .from(hosts)
         .where(eq(hosts.userId, userId));
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, security, ignore_cert, guacamole_config, mac_address, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const host of sshHosts) {
@@ -836,6 +837,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         insertHost.run(
           decrypted.id,
           decrypted.userId,
+          decrypted.connectionType || "ssh",
           decrypted.name || null,
           decrypted.ip,
           decrypted.port,
@@ -868,6 +870,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.showServerStatsInSidebar ? 1 : 0,
           decrypted.defaultPath || null,
           decrypted.statsConfig || null,
+          decrypted.dockerConfig || null,
           decrypted.terminalConfig || null,
           decrypted.quickActions || null,
           decrypted.notes || null,
@@ -877,6 +880,12 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.socks5Username || null,
           decrypted.socks5Password || null,
           decrypted.socks5ProxyChain || null,
+          decrypted.domain || null,
+          decrypted.security || null,
+          decrypted.ignoreCert ? 1 : 0,
+          decrypted.guacamoleConfig || null,
+          decrypted.macAddress || null,
+          decrypted.portKnockSequence || null,
           decrypted.createdAt,
           decrypted.updatedAt,
         );

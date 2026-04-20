@@ -77,9 +77,9 @@ export function Tab({
 
     let passwordToCopy = "";
 
-    if (hasSshPassword) {
+    if (hasSshPw) {
       passwordToCopy = hostConfig.password || "";
-    } else if (hasSudoPassword) {
+    } else if (hasSudoPw) {
       passwordToCopy = hostConfig.sudoPassword;
     }
 
