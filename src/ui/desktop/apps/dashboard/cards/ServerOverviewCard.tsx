@@ -110,7 +110,7 @@ export function ServerOverviewCard({
             <div className="flex flex-row items-center min-w-0">
               <Server size={16} className="mr-3 shrink-0" />
               <p className="m-0 leading-none truncate">
-                {t("dashboard.totalServers")}
+                {t("dashboard.totalHosts")}
               </p>
             </div>
             <p className="m-0 leading-none text-muted-foreground font-semibold">

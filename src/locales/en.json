@@ -2599,7 +2599,7 @@
     "database": "Database",
     "healthy": "Healthy",
     "error": "Error",
-    "totalServers": "Total Servers",
+    "totalHosts": "Total Hosts",
     "totalTunnels": "Total Tunnels",
     "totalCredentials": "Total Credentials",
     "recentActivity": "Recent Activity",

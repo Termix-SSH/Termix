@@ -97,8 +97,8 @@ export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
 // - Enter: copy the (possibly adjusted) selection and exit copy mode
 // - pane-mode-changed hook: on copy-mode entry, show a brief hint so users
 //   know to press Enter to copy the selection
-// Using -q to suppress errors on older tmux versions that don't support
-// a particular option (e.g. set-clipboard on tmux < 2.5)
+// Using -q on set/set-hook to suppress errors on older tmux versions that don't support
+// a particular option (e.g. set-clipboard on tmux < 2.5). Note: set-hook doesn't support -q.
 const TMUX_OPTS =
   `set -gq mouse on` +
   ` \\; set -gq history-limit 50000` +
@@ -106,7 +106,7 @@ const TMUX_OPTS =
   ` \\; set -gq mode-keys vi` +
   ` \\; bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X stop-selection` +
   ` \\; bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel` +
-  ` \\; set-hook -gq pane-mode-changed` +
+  ` \\; set-hook -g pane-mode-changed` +
   ` 'if -F "#{pane_in_mode}"` +
   ` "display-message -d 2500 \\"Adjust selection and press Enter to copy\\""'`;
 
