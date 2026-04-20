@@ -14,6 +14,15 @@ function getAllowedOrigins(): string[] {
     .filter(Boolean);
 }
 
+function isLocalRequest(req: Request): boolean {
+  const remoteAddr = req.socket?.remoteAddress || req.ip || "";
+  return (
+    remoteAddr === "127.0.0.1" ||
+    remoteAddr === "::1" ||
+    remoteAddr === "::ffff:127.0.0.1"
+  );
+}
+
 export function createCorsMiddleware(
   methods: string[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   extraHeaders: string[] = [],
@@ -33,9 +42,15 @@ export function createCorsMiddleware(
   return (req: Request, res: Response, next: NextFunction) => {
     const handler = cors({
       origin: (origin, callback) => {
+        // No origin = same-origin or non-browser request (curl, internal service calls)
         if (!origin) return callback(null, true);
+
+        // Requests coming from localhost (nginx proxy, internal service calls)
+        if (isLocalRequest(req)) return callback(null, true);
+
         if (DEV_ORIGINS.includes(origin)) return callback(null, true);
-        if (origin === ELECTRON_FILE_ORIGIN) return callback(null, true);
+        if (origin.startsWith(ELECTRON_FILE_ORIGIN))
+          return callback(null, true);
 
         const configured = getAllowedOrigins();
         if (configured.includes(origin)) return callback(null, true);
