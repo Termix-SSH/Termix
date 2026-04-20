@@ -576,7 +576,6 @@ app.post("/encryption/regenerate-jwt", requireAdmin, async (req, res) => {
 app.post("/database/export", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
-    const { password } = req.body;
     const deviceInfo = parseUserAgent(req);
 
     const user = await getDb().select().from(users).where(eq(users.id, userId));
@@ -586,23 +585,20 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
     const isOidcUser = !!user[0].isOidc;
 
-    if (!isOidcUser && password) {
-      const unlocked = await authManager.authenticateUser(
-        userId,
-        password,
-        deviceInfo.type,
-      );
-      if (!unlocked) {
-        return res.status(401).json({ error: "Invalid password" });
-      }
-    } else if (isOidcUser && !DataCrypto.getUserDataKey(userId)) {
-      const oidcUnlocked = await authManager.authenticateOIDCUser(
-        userId,
-        deviceInfo.type,
-      );
-      if (!oidcUnlocked) {
+    if (!DataCrypto.getUserDataKey(userId)) {
+      if (isOidcUser) {
+        const oidcUnlocked = await authManager.authenticateOIDCUser(
+          userId,
+          deviceInfo.type,
+        );
+        if (!oidcUnlocked) {
+          return res.status(403).json({
+            error: "Failed to unlock user data with SSO credentials",
+          });
+        }
+      } else {
         return res.status(403).json({
-          error: "Failed to unlock user data with SSO credentials",
+          error: "User data is locked. Please log in again.",
         });
       }
     }
@@ -617,10 +613,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       throw new Error("User data not unlocked");
     }
 
-    const tempDir =
-      process.env.NODE_ENV === "production"
-        ? path.join(process.env.DATA_DIR || "./db/data", ".temp", "exports")
-        : path.join(os.tmpdir(), "termix-exports");
+    const tempDir = path.join(os.tmpdir(), "termix-exports");
 
     try {
       if (!fs.existsSync(tempDir)) {
@@ -737,7 +730,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           folder TEXT,
           tags TEXT,
           auth_type TEXT NOT NULL,
-          username TEXT NOT NULL,
+          username TEXT,
           password TEXT,
           key TEXT,
           private_key TEXT,
@@ -1128,7 +1121,6 @@ app.post(
       }
 
       const userId = (req as AuthenticatedRequest).userId;
-      const { password } = req.body;
       const mainDb = getDb();
       const deviceInfo = parseUserAgent(req);
 
@@ -1143,30 +1135,20 @@ app.post(
 
       const isOidcUser = !!userRecords[0].isOidc;
 
-      if (!isOidcUser) {
-        if (!password) {
-          return res.status(400).json({
-            error: "Password required for import",
-            code: "PASSWORD_REQUIRED",
-          });
-        }
-
-        const unlocked = await authManager.authenticateUser(
-          userId,
-          password,
-          deviceInfo.type,
-        );
-        if (!unlocked) {
-          return res.status(401).json({ error: "Invalid password" });
-        }
-      } else if (!DataCrypto.getUserDataKey(userId)) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(
-          userId,
-          deviceInfo.type,
-        );
-        if (!oidcUnlocked) {
+      if (!DataCrypto.getUserDataKey(userId)) {
+        if (isOidcUser) {
+          const oidcUnlocked = await authManager.authenticateOIDCUser(
+            userId,
+            deviceInfo.type,
+          );
+          if (!oidcUnlocked) {
+            return res.status(403).json({
+              error: "Failed to unlock user data with SSO credentials",
+            });
+          }
+        } else {
           return res.status(403).json({
-            error: "Failed to unlock user data with SSO credentials",
+            error: "User data is locked. Please log in again.",
           });
         }
       }
@@ -1180,15 +1162,6 @@ app.post(
       });
 
       let userDataKey = DataCrypto.getUserDataKey(userId);
-      if (!userDataKey && isOidcUser) {
-        const oidcUnlocked = await authManager.authenticateOIDCUser(
-          userId,
-          deviceInfo.type,
-        );
-        if (oidcUnlocked) {
-          userDataKey = DataCrypto.getUserDataKey(userId);
-        }
-      }
       if (!userDataKey) {
         throw new Error("User data not unlocked");
       }
