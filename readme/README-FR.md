@@ -44,33 +44,33 @@ Si vous le souhaitez, vous pouvez soutenir le projet ici !\
     <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
-Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jamais gratuite et auto-hébergée. Elle fournit une solution multiplateforme pour gérer vos serveurs et votre infrastructure à travers une interface unique et intuitive. Termix offre un accès terminal SSH, des capacités de tunneling SSH, la gestion de fichiers à distance, et de nombreux autres outils. Termix est l'alternative parfaite, gratuite et auto-hébergée à Termius, disponible sur toutes les plateformes.
+Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jamais gratuite et auto-hébergée. Elle fournit une solution multiplateforme pour gérer vos serveurs et votre infrastructure à travers une interface unique et intuitive. Termix offre un accès terminal SSH, le contrôle de bureau à distance (RDP, VNC, Telnet), des capacités de tunneling SSH, la gestion de fichiers SSH à distance et de nombreux autres outils. Termix est l'alternative parfaite, gratuite et auto-hébergée à Termius, disponible sur toutes les plateformes.
 
 # Fonctionnalités
 
-- **Accès terminal SSH** - Terminal complet avec support d'écran partagé (jusqu'à 4 panneaux) et un système d'onglets inspiré des navigateurs. Inclut la personnalisation du terminal avec des thèmes courants, des polices et d'autres composants
-- **Accès Bureau à Distance** - Support RDP, VNC et Telnet via navigateur avec personnalisation complète et écran partagé
-- **Gestion des tunnels SSH** - Créez et gérez des tunnels SSH avec reconnexion automatique et surveillance de l'état, avec support des connexions -l ou -r
-- **Gestionnaire de fichiers distant** - Gérez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'édition de code, images, audio et vidéo. Téléversez, téléchargez, renommez, supprimez et déplacez des fichiers de manière fluide avec support sudo
-- **Gestion Docker** - Démarrez, arrêtez, mettez en pause, supprimez des conteneurs. Consultez les statistiques des conteneurs. Contrôlez les conteneurs via le terminal docker exec. Non conçu pour remplacer Portainer ou Dockge, mais plutôt pour gérer simplement vos conteneurs plutôt que de les créer
-- **Gestionnaire d'hôtes SSH** - Enregistrez, organisez et gérez vos connexions SSH avec des tags et des dossiers, et sauvegardez facilement les informations de connexion réutilisables tout en automatisant le déploiement des clés SSH
-- **Statistiques serveur** - Visualisez l'utilisation du CPU, de la mémoire et du disque ainsi que le réseau, le temps de fonctionnement, les informations système, le pare-feu et le moniteur de ports sur la plupart des serveurs Linux
-- **Tableau de bord** - Consultez les informations de vos serveurs en un coup d'œil depuis votre tableau de bord
-- **RBAC** - Créez des rôles et partagez des hôtes entre utilisateurs/rôles
-- **Authentification des utilisateurs** - Gestion sécurisée des utilisateurs avec contrôles administrateur et support OIDC et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et révoquez les permissions. Liez vos comptes OIDC/locaux ensemble
-- **Chiffrement de la base de données** - Le backend est stocké sous forme de fichiers de base de données SQLite chiffrés. Consultez la [documentation](https://docs.termix.site/security) pour plus de détails
-- **Export/Import de données** - Exportez et importez les hôtes SSH, les identifiants et les données du gestionnaire de fichiers
-- **Configuration SSL automatique** - Génération et gestion intégrées de certificats SSL avec redirections HTTPS
-- **Interface moderne** - Interface épurée compatible desktop/mobile construite avec React, Tailwind CSS et Shadcn. Choisissez entre un thème sombre ou clair. Utilisez les routes URL pour ouvrir n'importe quelle connexion en plein écran
-- **Langues** - Support intégré d'environ 30 langues (géré par [Crowdin](https://docs.termix.site/translations))
-- **Support multiplateforme** - Disponible en tant qu'application web, application de bureau (Windows, Linux et macOS), PWA, et application mobile/tablette dédiée pour iOS et Android
-- **Outils SSH** - Créez des extraits de commandes réutilisables exécutables en un seul clic. Exécutez une commande simultanément sur plusieurs terminaux ouverts
-- **Historique des commandes** - Auto-complétion et consultation des commandes SSH précédemment exécutées
-- **Connexion rapide** - Connectez-vous à un serveur sans avoir à sauvegarder les données de connexion
-- **Palette de commandes** - Appuyez deux fois sur Shift gauche pour accéder rapidement aux connexions SSH avec votre clavier
-- **SSH riche en fonctionnalités** - Support des hôtes de rebond, Warpgate, connexions basées sur TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
-- **Graphe réseau** - Personnalisez votre tableau de bord pour visualiser votre homelab basé sur vos connexions SSH avec support des statuts
-- **Onglets Persistants** - Les sessions SSH et les onglets restent ouverts sur tous les appareils/actualisations si activé dans le profil utilisateur
+- **Accès terminal SSH** - Terminal complet avec support d'écran partagé (jusqu'à 4 panneaux) et un système d'onglets inspiré des navigateurs. Inclut la personnalisation du terminal avec des thèmes courants, des polices et d'autres composants.
+- **Accès Bureau à Distance** - Support RDP, VNC et Telnet via navigateur avec personnalisation complète et écran partagé.
+- **Gestion des tunnels SSH** - Créez et gérez des tunnels SSH avec reconnexion automatique et surveillance de l'état, avec support des connexions -l ou -r.
+- **Gestionnaire de fichiers distant** - Gérez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'édition de code, images, audio et vidéo. Téléversez, téléchargez, renommez, supprimez et déplacez des fichiers de manière fluide avec support sudo.
+- **Gestion Docker** - Démarrez, arrêtez, mettez en pause, supprimez des conteneurs. Consultez les statistiques des conteneurs. Contrôlez les conteneurs via le terminal docker exec. Non conçu pour remplacer Portainer ou Dockge, mais plutôt pour gérer simplement vos conteneurs plutôt que de les créer.
+- **Gestionnaire d'hôtes SSH** - Enregistrez, organisez et gérez vos connexions SSH avec des tags et des dossiers, et sauvegardez facilement les informations de connexion réutilisables tout en automatisant le déploiement des clés SSH.
+- **Statistiques serveur** - Visualisez l'utilisation du CPU, de la mémoire et du disque ainsi que le réseau, le temps de fonctionnement, les informations système, le pare-feu et le moniteur de ports sur la plupart des serveurs Linux.
+- **Tableau de bord** - Consultez les informations de vos serveurs en un coup d'œil depuis votre tableau de bord.
+- **RBAC** - Créez des rôles et partagez des hôtes entre utilisateurs/rôles.
+- **Authentification des utilisateurs** - Gestion sécurisée des utilisateurs avec contrôles administrateur et support OIDC (avec contrôle d'accès) et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et révoquez les permissions. Liez vos comptes OIDC/locaux ensemble.
+- **Chiffrement de la base de données** - Le backend est stocké sous forme de fichiers de base de données SQLite chiffrés. Consultez la [documentation](https://docs.termix.site/security) pour plus de détails.
+- **Export/Import de données** - Exportez et importez les hôtes SSH, les identifiants et les données du gestionnaire de fichiers.
+- **Configuration SSL automatique** - Génération et gestion intégrées de certificats SSL avec redirections HTTPS.
+- **Interface moderne** - Interface épurée compatible desktop/mobile construite avec React, Tailwind CSS et Shadcn. Choisissez parmi de nombreux thèmes d'interface utilisateur, notamment clair, sombre, Dracula, etc. Utilisez les routes URL pour ouvrir n'importe quelle connexion en plein écran.
+- **Langues** - Support intégré d'environ 30 langues (géré par [Crowdin](https://docs.termix.site/translations)).
+- **Support multiplateforme** - Disponible en tant qu'application web, application de bureau (Windows, Linux et macOS, peut être exécutée de manière autonome sans backend Termix), PWA, et application mobile/tablette dédiée pour iOS et Android.
+- **Outils SSH** - Créez des extraits de commandes réutilisables exécutables en un seul clic. Exécutez une commande simultanément sur plusieurs terminaux ouverts.
+- **Historique des commandes** - Auto-complétion et consultation des commandes SSH précédemment exécutées.
+- **Connexion rapide** - Connectez-vous à un serveur sans avoir à sauvegarder les données de connexion.
+- **Palette de commandes** - Appuyez deux fois sur Shift gauche pour accéder rapidement aux connexions SSH avec votre clavier.
+- **SSH riche en fonctionnalités** - Support des hôtes de rebond, Warpgate, connexions basées sur TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
+- **Graphe réseau** - Personnalisez votre tableau de bord pour visualiser votre homelab basé sur vos connexions SSH avec support des statuts.
+- **Onglets Persistants** - Les sessions SSH et les onglets restent ouverts sur tous les appareils/actualisations si activé dans le profil utilisateur.
 
 # Fonctionnalités prévues
 
@@ -102,7 +102,7 @@ Appareils supportés :
   - Google Play Store
   - APK
 
-Visitez la [documentation](https://docs.termix.site/install) de Termix pour plus d'informations sur l'installation de Termix sur toutes les plateformes. Sinon, voici un exemple de fichier Docker Compose :
+Visitez la [documentation](https://docs.termix.site/install) de Termix pour plus d'informations sur l'installation de Termix sur toutes les plateformes. Sinon, voici un exemple de fichier Docker Compose (vous pouvez omettre guacd et le réseau si vous ne prévoyez pas d'utiliser les fonctionnalités de bureau à distance) :
 
 ```yaml
 services:
@@ -151,11 +151,23 @@ networks:
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://tailscale.com/">
+    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://akamai.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
   </a>
 </p>
 

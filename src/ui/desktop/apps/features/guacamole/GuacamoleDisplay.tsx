@@ -240,6 +240,9 @@ export const GuacamoleDisplay = forwardRef<
       displayRef.current.appendChild(displayElement);
     }
 
+    displayElement.setAttribute("tabindex", "0");
+    displayElement.style.outline = "none";
+
     display.onresize = () => {
       rescaleDisplay(true);
       setIsReady(true);
@@ -247,6 +250,7 @@ export const GuacamoleDisplay = forwardRef<
 
     const mouse = new Guacamole.Mouse(displayElement);
     const sendMouseState = (state: Guacamole.Mouse.State) => {
+      displayElement.focus({ preventScroll: true });
       const scale = scaleRef.current;
       const adjustedX = Math.round(state.x / scale);
       const adjustedY = Math.round(state.y / scale);
@@ -265,7 +269,7 @@ export const GuacamoleDisplay = forwardRef<
     };
     mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
 
-    const keyboard = new Guacamole.Keyboard(document);
+    const keyboard = new Guacamole.Keyboard(displayElement);
     keyboardRef.current = keyboard;
     keyboard.onkeydown = (keysym: number) => {
       client.sendKeyEvent(1, keysym);

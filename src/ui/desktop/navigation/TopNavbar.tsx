@@ -390,6 +390,7 @@ export function TopNavbar({
             const isUserProfile = tab.type === "user_profile";
             const isRdp = tab.type === "rdp";
             const isVnc = tab.type === "vnc";
+            const isTelnet = tab.type === "telnet";
             const isSplittable =
               isTerminal || isServer || isFileManager || isTunnel || isDocker;
             const disableSplit = !isSplittable;
@@ -510,6 +511,7 @@ export function TopNavbar({
                     isUserProfile ||
                     isRdp ||
                     isVnc ||
+                    isTelnet ||
                     tab.type === "network_graph"
                       ? () => handleTabClose(tab.id)
                       : undefined
@@ -529,6 +531,7 @@ export function TopNavbar({
                     isUserProfile ||
                     isRdp ||
                     isVnc ||
+                    isTelnet ||
                     tab.type === "network_graph"
                   }
                   disableActivate={disableActivate}

@@ -44,11 +44,11 @@ Projeyi desteklemek isterseniz, buradan destek olabilirsiniz!\
     <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
-Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındırabileceğiniz hepsi bir arada sunucu yönetim platformudur. Sunucularınızı ve altyapınızı tek bir sezgisel arayüz üzerinden yönetmek için çok platformlu bir çözüm sunar. Termix, SSH terminal erişimi, SSH tünelleme yetenekleri, uzak dosya yönetimi ve daha birçok araç sağlar. Termix, tüm platformlarda kullanılabilen Termius'un mükemmel ücretsiz ve kendi barındırmalı alternatifidir.
+Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındırabileceğiniz hepsi bir arada sunucu yönetim platformudur. Sunucularınızı ve altyapınızı tek bir sezgisel arayüz üzerinden yönetmek için çok platformlu bir çözüm sunar. Termix, SSH terminal erişimi, uzak masaüstü kontrolü (RDP, VNC, Telnet), SSH tünelleme yetenekleri, uzak SSH dosya yönetimi ve daha birçok araç sağlar. Termix, tüm platformlarda kullanılabilen Termius'un mükemmel ücretsiz ve kendi barındırmalı alternatifidir.
 
 # Özellikler
 
-- **SSH Terminal Erişimi** - Tarayıcı benzeri sekme sistemiyle bölünmüş ekran desteğine sahip (4 panele kadar) tam özellikli terminal. Yaygın terminal temaları, yazı tipleri ve diğer bileşenler dahil olmak üzere terminal özelleştirme desteği içerir
+- **SSH Terminal Erişimi** - Tarayıcı benzeri sekme sistemiyle bölünmüş ekran desteğine sahip (4 panele kadar) tam özellikli terminal. Yaygın terminal temaları, yazı tipleri ve diğer bileşenler dahil olmak üzere terminal özelleştirme desteği içerir.
 - **Uzak Masaüstü Erişimi** - Tam özelleştirme ve bölünmüş ekran ile tarayıcı üzerinden RDP, VNC ve Telnet desteği
 - **SSH Tünel Yönetimi** - Otomatik yeniden bağlanma ve sağlık izleme ile SSH tünelleri oluşturun ve yönetin, -l veya -r bağlantıları desteğiyle
 - **Uzak Dosya Yöneticisi** - Uzak sunuculardaki dosyaları doğrudan yönetin; kod, görüntü, ses ve video görüntüleme ve düzenleme desteğiyle. Sudo desteğiyle dosyaları sorunsuzca yükleyin, indirin, yeniden adlandırın, silin ve taşıyın.
@@ -57,18 +57,18 @@ Termix, açık kaynaklı, sonsuza kadar ücretsiz, kendi sunucunuzda barındıra
 - **Sunucu İstatistikleri** - Çoğu Linux tabanlı sunucularda CPU, bellek ve disk kullanımını ağ, çalışma süresi, sistem bilgisi, güvenlik duvarı, port izleme ile birlikte görüntüleyin
 - **Kontrol Paneli** - Kontrol panelinizde sunucu bilgilerini bir bakışta görüntüleyin
 - **RBAC** - Roller oluşturun ve ana bilgisayarları kullanıcılar/roller arasında paylaşın
-- **Kullanıcı Kimlik Doğrulama** - Yönetici kontrolleri, OIDC ve 2FA (TOTP) desteğiyle güvenli kullanıcı yönetimi. Tüm platformlardaki aktif kullanıcı oturumlarını görüntüleyin ve izinleri iptal edin. OIDC/Yerel hesaplarınızı birbirine bağlayın.
+- **Kullanıcı Kimlik Doğrulama** - Yönetici kontrolleri, OIDC (erişim kontrollü) ve 2FA (TOTP) desteğiyle güvenli kullanıcı yönetimi. Tüm platformlardaki aktif kullanıcı oturumlarını görüntüleyin ve izinleri iptal edin. OIDC/Yerel hesaplarınızı birbirine bağlayın.
 - **Veritabanı Şifreleme** - Arka uç, şifrelenmiş SQLite veritabanı dosyaları olarak depolanır. Daha fazla bilgi için [belgelere](https://docs.termix.site/security) bakın.
 - **Veri Dışa/İçe Aktarma** - SSH ana bilgisayarlarını, kimlik bilgilerini ve dosya yöneticisi verilerini dışa ve içe aktarın
 - **Otomatik SSL Kurulumu** - HTTPS yönlendirmeleriyle yerleşik SSL sertifika oluşturma ve yönetimi
-- **Modern Arayüz** - React, Tailwind CSS ve Shadcn ile oluşturulmuş temiz masaüstü/mobil uyumlu arayüz. Karanlık veya açık tema arasında seçim yapın. Herhangi bir bağlantıyı tam ekranda açmak için URL yollarını kullanın.
+- **Modern Arayüz** - React, Tailwind CSS ve Shadcn ile oluşturulmuş temiz masaüstü/mobil uyumlu arayüz. Işık, karanlık, Dracula vb. dahil olmak üzere birçok farklı UI teması arasından seçim yapın. Herhangi bir bağlantıyı tam ekranda açmak için URL yollarını kullanın.
 - **Diller** - ~30 dil için yerleşik destek ([Crowdin](https://docs.termix.site/translations) tarafından yönetilir)
-- **Platform Desteği** - Web uygulaması, masaüstü uygulaması (Windows, Linux ve macOS), PWA ve iOS ile Android için özel mobil/tablet uygulaması olarak kullanılabilir.
+- **Platform Desteği** - Web uygulaması, masaüstü uygulaması (Windows, Linux ve macOS, Termix arka ucu olmadan tek başına çalıştırılabilir), PWA ve iOS ile Android için özel mobil/tablet uygulaması olarak kullanılabilir.
 - **SSH Araçları** - Tek tıklamayla çalıştırılan yeniden kullanılabilir komut parçacıkları oluşturun. Birden fazla açık terminalde aynı anda tek bir komut çalıştırın.
 - **Komut Geçmişi** - Daha önce çalıştırılan SSH komutlarını otomatik tamamlayın ve görüntüleyin
 - **Hızlı Bağlantı** - Bağlantı verilerini kaydetmeden bir sunucuya bağlanın
 - **Komut Paleti** - Sol shift tuşuna iki kez basarak SSH bağlantılarına klavyenizle hızlıca erişin
-- **SSH Zengin Özellikler** - Atlama ana bilgisayarları, Warpgate, TOTP tabanlı bağlantılar, SOCKS5, ana bilgisayar anahtar doğrulama, otomatik şifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh) vb. destekler.
+- **SSH Zengin Özellikler** - Atlama ana bilgisayarları, Warpgate, TOTP tabanlı bağlantılar, SOCKS5, ana bilgisayar anahtar doğrulama, otomatik şifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking vb. destekler.
 - **Ağ Grafiği** - Kontrol panelinizi, SSH bağlantılarınıza dayalı olarak ev laboratuvarınızı durum desteğiyle görselleştirmek için özelleştirin
 - **Kalıcı Sekmeler** - Kullanıcı profilinde etkinleştirilmişse SSH oturumları ve sekmeler cihazlar/yenilemeler arasında açık kalır
 
@@ -102,7 +102,7 @@ Desteklenen Cihazlar:
   - Google Play Store
   - APK
 
-Termix'i tüm platformlara nasıl kuracağınız hakkında daha fazla bilgi için Termix [Belgelerine](https://docs.termix.site/install) bakın. Aksi takdirde, örnek bir Docker Compose dosyasını burada görüntüleyin:
+Termix'i tüm platformlara nasıl kuracağınız hakkında daha fazla bilgi için Termix [Belgelerine](https://docs.termix.site/install) bakın. Aksi takdirde, örnek bir Docker Compose dosyasını burada görüntüleyin (uzak masaüstü özelliklerini kullanmayı planlamıyorsanız guacd'yi ve ağı çıkarabilirsiniz):
 
 ```yaml
 services:
@@ -151,11 +151,23 @@ networks:
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://tailscale.com/">
+    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://akamai.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
   </a>
 </p>
 
@@ -169,33 +181,33 @@ Lütfen sorununuzu mümkün olduğunca ayrıntılı yazın, tercihen İngilizce 
 [![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
-  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
-  <img src="../repo-images/Image%202.png" width="400" alt="Termix Demo 2"/>
+  <img src="../repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
+  <img src="../repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%203.png" width="400" alt="Termix Demo 3"/>
-  <img src="../repo-images/Image%204.png" width="400" alt="Termix Demo 4"/>
+  <img src="../repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
+  <img src="../repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%205.png" width="400" alt="Termix Demo 5"/>
-  <img src="../repo-images/Image%206.png" width="400" alt="Termix Demo 6"/>
+  <img src="../repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
+  <img src="../repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%207.png" width="400" alt="Termix Demo 7"/>
-  <img src="../repo-images/Image%208.png" width="400" alt="Termix Demo 8"/>
+  <img src="../repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+  <img src="../repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%209.png" width="400" alt="Termix Demo 9"/>
-  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
+  <img src="../repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
+  <img src="../repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
-  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
+  <img src="../repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="../repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 Bazı videolar ve görseller güncel olmayabilir veya özellikleri tam olarak yansıtmayabilir.

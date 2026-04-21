@@ -381,10 +381,10 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
     session.localPort = actualPort;
 
-    const baseUrl = session.remoteRedirectUri.replace(
-      /\/host\/opkssh-callback$/,
-      "",
-    );
+    const baseUrl = session.remoteRedirectUri
+      .replace(/\/host\/opkssh-callback$/, "")
+      // In direct dev mode the WS server (30002) is separate from the HTTP API (30001)
+      .replace(/:30002\b/, ":30001");
     const proxiedChooserUrl = `${baseUrl}/host/opkssh-chooser/${requestId}`;
 
     session.status = "waiting_for_auth";

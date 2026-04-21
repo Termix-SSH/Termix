@@ -279,7 +279,13 @@ export function TabProvider({ children }: TabProviderProps) {
       tab.terminalRef.current.disconnect();
     }
 
-    setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
+    setTabs((prev) => {
+      const filtered = prev.filter((tab) => tab.id !== tabId);
+      if (filtered.length === 0) {
+        return [{ id: 1, type: "home", title: t("nav.home") }];
+      }
+      return filtered;
+    });
 
     setAllSplitScreenTab((prev) => {
       const newSplits = prev.filter((id) => id !== tabId);

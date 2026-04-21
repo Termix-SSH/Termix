@@ -6,10 +6,12 @@ export function getRequestOrigin(req: Request | IncomingMessage): string {
   const protoHeader = req.headers["x-forwarded-proto"];
 
   if (protoHeader) {
-    protocol =
+    const raw =
       typeof protoHeader === "string"
         ? protoHeader.split(",")[0].trim()
         : protoHeader[0];
+    // Normalize WebSocket protocols to their HTTP equivalents
+    protocol = raw === "wss" ? "https" : raw === "ws" ? "http" : raw;
   } else if ("protocol" in req && req.protocol) {
     protocol = req.protocol;
   } else {
