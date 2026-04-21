@@ -149,8 +149,10 @@ export function Auth({
   const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
+  const [electronAuthSucceeded, setElectronAuthSucceeded] = useState(false);
 
   const handleElectronAuthSuccess = useCallback(async () => {
+    setElectronAuthSucceeded(true);
     try {
       const meRes = await getUserInfo();
       setInternalLoggedIn(true);
@@ -165,6 +167,7 @@ export function Auth({
       });
       toast.success(t("messages.loginSuccess"));
     } catch (_err) {
+      setElectronAuthSucceeded(false);
       toast.error(t("errors.failedUserInfo"));
     }
   }, [
@@ -897,6 +900,7 @@ export function Auth({
             onChangeServer={() => {
               setShowServerConfig(true);
             }}
+            authSucceeded={electronAuthSucceeded}
           />
         </div>
       </div>

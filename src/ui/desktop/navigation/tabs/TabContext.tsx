@@ -156,6 +156,13 @@ export function TabProvider({ children }: TabProviderProps) {
     }
   }, [tabs, currentTab]);
 
+  // Safety net: if currentTab points to a tab that no longer exists, fall back to home
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.some((t) => t.id === currentTab)) {
+      setCurrentTab(1);
+    }
+  }, [tabs, currentTab]);
+
   React.useEffect(() => {
     setTabs((prev) =>
       prev.map((tab) =>
@@ -269,6 +276,8 @@ export function TabProvider({ children }: TabProviderProps) {
     return id;
   };
 
+  const pendingCurrentTabRef = useRef<number | null>(null);
+
   const removeTab = (tabId: number) => {
     const tab = tabs.find((t) => t.id === tabId);
     if (
@@ -280,42 +289,32 @@ export function TabProvider({ children }: TabProviderProps) {
     }
 
     setTabs((prev) => {
-      const filtered = prev.filter((tab) => tab.id !== tabId);
+      const closedIndex = prev.findIndex((t) => t.id === tabId);
+      const filtered = prev.filter((t) => t.id !== tabId);
+
       if (filtered.length === 0) {
+        pendingCurrentTabRef.current = 1;
         return [{ id: 1, type: "home", title: t("nav.home") }];
       }
+
+      // If the closed tab was active, compute the next tab to activate
+      // using the latest prev so rapid closes don't use stale data
+      const nextIndex =
+        closedIndex < filtered.length ? closedIndex : filtered.length - 1;
+      pendingCurrentTabRef.current = filtered[Math.max(0, nextIndex)]?.id ?? 1;
+
       return filtered;
     });
 
     setAllSplitScreenTab((prev) => {
       const newSplits = prev.filter((id) => id !== tabId);
-      if (newSplits.length <= 1) {
-        return [];
-      }
-      return newSplits;
+      return newSplits.length <= 1 ? [] : newSplits;
     });
 
-    if (currentTab === tabId) {
-      const remainingTabs = tabs.filter((tab) => tab.id !== tabId);
-      if (remainingTabs.length > 0) {
-        const remainingSplitTabs = allSplitScreenTab.filter(
-          (id) => id !== tabId,
-        );
-        if (remainingSplitTabs.length > 0) {
-          setCurrentTab(remainingSplitTabs[0]);
-        } else {
-          // Switch to the adjacent tab (prefer the one after, then before)
-          const closedIndex = tabs.findIndex((t) => t.id === tabId);
-          const nextTab =
-            closedIndex < remainingTabs.length
-              ? remainingTabs[closedIndex]
-              : remainingTabs[remainingTabs.length - 1];
-          setCurrentTab(nextTab.id);
-        }
-      } else {
-        setCurrentTab(1);
-      }
-    }
+    setCurrentTab((prevCurrentTab) => {
+      if (prevCurrentTab !== tabId) return prevCurrentTab;
+      return pendingCurrentTabRef.current ?? 1;
+    });
   };
 
   const setSplitScreenTab = (tabId: number) => {

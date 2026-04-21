@@ -9,12 +9,14 @@ interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: () => void;
   onChangeServer: () => void;
+  authSucceeded?: boolean;
 }
 
 export function ElectronLoginForm({
   serverUrl,
   onAuthSuccess,
   onChangeServer,
+  authSucceeded = false,
 }: ElectronLoginFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -242,6 +244,20 @@ export function ElectronLoginForm({
 
   const displayUrl = currentUrl.replace(/^https?:\/\//, "");
   const isEmbeddedServer = serverUrl.includes("localhost:30001");
+
+  if (authSucceeded) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-canvas flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">
+            {t("messages.loginSuccess")}
+          </h2>
+          <p className="text-muted-foreground">{t("auth.redirectingToApp")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-canvas flex flex-col">
