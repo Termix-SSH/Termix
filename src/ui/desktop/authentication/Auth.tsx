@@ -153,23 +153,26 @@ export function Auth({
 
   const handleElectronAuthSuccess = useCallback(async () => {
     setElectronAuthSucceeded(true);
+    let isAdmin = false;
+    let username: string | null = null;
+    let userId: string | null = null;
+
     try {
       const meRes = await getUserInfo();
-      setInternalLoggedIn(true);
-      setLoggedIn(true);
-      setIsAdmin(!!meRes.is_admin);
-      setUsername(meRes.username || null);
-      setUserId(meRes.userId || null);
-      onAuthSuccess({
-        isAdmin: !!meRes.is_admin,
-        username: meRes.username || null,
-        userId: meRes.userId || null,
-      });
-      toast.success(t("messages.loginSuccess"));
+      isAdmin = !!meRes.is_admin;
+      username = meRes.username || null;
+      userId = meRes.userId || null;
     } catch (_err) {
-      setElectronAuthSucceeded(false);
-      toast.error(t("errors.failedUserInfo"));
+      // JWT is valid but user info fetch failed — proceed with login anyway
     }
+
+    setInternalLoggedIn(true);
+    setLoggedIn(true);
+    setIsAdmin(isAdmin);
+    setUsername(username);
+    setUserId(userId);
+    onAuthSuccess({ isAdmin, username, userId });
+    toast.success(t("messages.loginSuccess"));
   }, [
     onAuthSuccess,
     setLoggedIn,
