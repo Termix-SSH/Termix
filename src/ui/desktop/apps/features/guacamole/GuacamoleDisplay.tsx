@@ -141,7 +141,8 @@ export const GuacamoleDisplay = forwardRef<
 
         const width = connectionConfig.width || containerWidth || 1280;
         const height = connectionConfig.height || containerHeight || 720;
-        const dpi = connectionConfig.dpi || 96;
+        const protocol = connectionConfig.protocol || connectionConfig.type;
+        const dpi = protocol === "rdp" ? connectionConfig.dpi || 96 : null;
 
         const wsBase = isDev
           ? `ws://localhost:30008`
@@ -167,7 +168,13 @@ export const GuacamoleDisplay = forwardRef<
               })()
             : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/guacamole/websocket/`;
 
-        return `${wsBase}?token=${encodeURIComponent(token)}&width=${width}&height=${height}&dpi=${dpi}`;
+        const params = new URLSearchParams({
+          token,
+          width: String(width),
+          height: String(height),
+        });
+        if (dpi !== null) params.set("dpi", String(dpi));
+        return `${wsBase}?${params.toString()}`;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
