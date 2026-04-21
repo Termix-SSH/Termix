@@ -149,30 +149,24 @@ export function Auth({
   const [currentServerUrl, setCurrentServerUrl] = useState<string>("");
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
-  const [electronAuthSucceeded, setElectronAuthSucceeded] = useState(false);
 
   const handleElectronAuthSuccess = useCallback(async () => {
-    setElectronAuthSucceeded(true);
-    let isAdmin = false;
-    let username: string | null = null;
-    let userId: string | null = null;
-
     try {
       const meRes = await getUserInfo();
-      isAdmin = !!meRes.is_admin;
-      username = meRes.username || null;
-      userId = meRes.userId || null;
+      setInternalLoggedIn(true);
+      setLoggedIn(true);
+      setIsAdmin(!!meRes.is_admin);
+      setUsername(meRes.username || null);
+      setUserId(meRes.userId || null);
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
+      toast.success(t("messages.loginSuccess"));
     } catch (_err) {
-      // JWT is valid but user info fetch failed — proceed with login anyway
+      toast.error(t("errors.failedUserInfo"));
     }
-
-    setInternalLoggedIn(true);
-    setLoggedIn(true);
-    setIsAdmin(isAdmin);
-    setUsername(username);
-    setUserId(userId);
-    onAuthSuccess({ isAdmin, username, userId });
-    toast.success(t("messages.loginSuccess"));
   }, [
     onAuthSuccess,
     setLoggedIn,
@@ -903,7 +897,6 @@ export function Auth({
             onChangeServer={() => {
               setShowServerConfig(true);
             }}
-            authSucceeded={electronAuthSucceeded}
           />
         </div>
       </div>

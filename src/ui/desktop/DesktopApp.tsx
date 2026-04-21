@@ -383,15 +383,6 @@ function AppContent({
         setUsername(authData.username);
         setTransitionPhase("fadeIn");
 
-        if (!authData.username) {
-          getUserInfo()
-            .then((meRes) => {
-              setIsAdmin(!!meRes.is_admin);
-              setUsername(meRes.username || null);
-            })
-            .catch(() => {});
-        }
-
         setTimeout(() => {
           setIsTransitioning(false);
           setTransitionPhase("idle");

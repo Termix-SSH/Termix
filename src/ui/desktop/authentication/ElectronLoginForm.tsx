@@ -3,20 +3,18 @@ import { Button } from "@/components/ui/button.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
-import { getCookie } from "@/ui/main-axios.ts";
+import { getCookie, setCookie } from "@/ui/main-axios.ts";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: () => void;
   onChangeServer: () => void;
-  authSucceeded?: boolean;
 }
 
 export function ElectronLoginForm({
   serverUrl,
   onAuthSuccess,
   onChangeServer,
-  authSucceeded = false,
 }: ElectronLoginFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -26,10 +24,6 @@ export function ElectronLoginForm({
   const hasAuthenticatedRef = useRef(false);
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
   const hasLoadedOnce = useRef(false);
-
-  useEffect(() => {
-    localStorage.removeItem("jwt");
-  }, []);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -52,12 +46,7 @@ export function ElectronLoginForm({
             setIsAuthenticating(true);
 
             try {
-              localStorage.setItem("jwt", data.token);
-
-              const savedToken = localStorage.getItem("jwt");
-              if (!savedToken) {
-                throw new Error("Failed to save JWT to localStorage");
-              }
+              setCookie("jwt", data.token);
 
               await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -244,20 +233,6 @@ export function ElectronLoginForm({
 
   const displayUrl = currentUrl.replace(/^https?:\/\//, "");
   const isEmbeddedServer = serverUrl.includes("localhost:30001");
-
-  if (authSucceeded) {
-    return (
-      <div className="fixed inset-0 w-screen h-screen bg-canvas flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">
-            {t("messages.loginSuccess")}
-          </h2>
-          <p className="text-muted-foreground">{t("auth.redirectingToApp")}</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-canvas flex flex-col">
