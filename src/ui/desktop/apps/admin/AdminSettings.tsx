@@ -148,7 +148,6 @@ export function AdminSettings({
           console.warn("Failed to fetch current user info", err);
         }
       });
-    fetchUsers();
     fetchSessions();
   }, []);
 
@@ -340,7 +339,15 @@ export function AdminSettings({
         <Separator className="p-0.25 w-full" />
 
         <div className="px-6 py-4 overflow-auto thin-scrollbar">
-          <Tabs defaultValue="registration" className="w-full">
+          <Tabs
+            defaultValue="registration"
+            onValueChange={(value) => {
+              if (value === "users") {
+                fetchUsers();
+              }
+            }}
+            className="w-full"
+          >
             <TabsList className="mb-4 bg-elevated border-2 border-edge">
               <TabsTrigger
                 value="registration"
