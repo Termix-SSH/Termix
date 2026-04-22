@@ -20,11 +20,16 @@ import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/comm
 import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
 import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
-import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
+import { ElectronServerConfig } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
-import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
+import {
+  clearBackendChangeSession,
+  getUserInfo,
+  logoutUser,
+  isElectron,
+} from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
@@ -53,6 +58,7 @@ function AppContent({
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
+  const [showServerConfigModal, setShowServerConfigModal] = useState(false);
 
   const isDarkMode =
     theme === "dark" ||
@@ -99,6 +105,12 @@ function AppContent({
       );
       dbHealthMonitor.off("session-expired", handleSessionExpired);
     };
+  }, []);
+
+  const handleServerConfigComplete = useCallback(async () => {
+    setShowServerConfigModal(false);
+    await clearBackendChangeSession();
+    window.location.reload();
   }, []);
 
   useEffect(() => {
@@ -292,6 +304,24 @@ function AppContent({
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
 
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI?.onMenuAction) {
+      return;
+    }
+
+    const unsubscribe = window.electronAPI.onMenuAction((action) => {
+      if (action !== "change-server" || !isAuthenticated) {
+        return;
+      }
+
+      setShowServerConfigModal(true);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [isAuthenticated]);
+
   if (authLoading && !dbConnectionFailed) {
     return (
       <div
@@ -437,6 +467,18 @@ function AppContent({
               setRightSidebarWidth(width);
             }}
           />
+
+          {showServerConfigModal && (
+            <div className="fixed inset-0 z-[25000] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+              <ElectronServerConfig
+                layout="embedded"
+                isFirstTime={false}
+                onCancel={() => setShowServerConfigModal(false)}
+                onServerConfigured={handleServerConfigComplete}
+                onUseEmbedded={handleServerConfigComplete}
+              />
+            </div>
+          )}
         </LeftSidebar>
       )}
 
