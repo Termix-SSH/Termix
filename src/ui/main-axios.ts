@@ -521,12 +521,52 @@ function isDev(): boolean {
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 let configuredServerUrl: string | null = null;
-let embeddedMode = false;
+let backendMode: "embedded" | "remote" | null = null;
+
+export type BackendMode = "embedded" | "remote";
+export type EmbeddedBackendReason =
+  | "missing_backend_build"
+  | "startup_failed"
+  | "unsupported_environment";
+
+export interface ElectronBackendConfig {
+  backendMode: BackendMode;
+  remoteServerUrl: string | null;
+  lastUpdated: string;
+}
+
+export interface EmbeddedServerStatus {
+  running: boolean;
+  embedded: boolean;
+  available: boolean;
+  backendMode?: BackendMode | null;
+  dataDir: string | null;
+  entryPath: string | null;
+  reason: EmbeddedBackendReason | null;
+}
+
+export interface SaveBackendConfigResult {
+  success: boolean;
+  config?: ElectronBackendConfig;
+  error?: string;
+  reason?: EmbeddedBackendReason | null;
+}
 
 export interface ServerConfig {
   serverUrl: string;
   lastUpdated: string;
 }
+
+type ElectronWindow = Window &
+  typeof globalThis & {
+    IS_ELECTRON?: boolean;
+    electronAPI?: {
+      invoke?: (channel: string, ...args: unknown[]) => Promise<unknown>;
+      clearSessionCookies?: () => Promise<void>;
+    };
+    configuredServerUrl?: string | null;
+    backendMode?: BackendMode | null;
+  };
 
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
@@ -541,55 +581,121 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
-export async function getServerConfig(): Promise<ServerConfig | null> {
+function normalizeBackendConfig(
+  config: Partial<ElectronBackendConfig & ServerConfig> | null | undefined,
+): ElectronBackendConfig | null {
+  if (!config || typeof config !== "object") {
+    return null;
+  }
+
+  if (typeof config.serverUrl === "string" && config.serverUrl.trim()) {
+    return {
+      backendMode: "remote",
+      remoteServerUrl: config.serverUrl.trim().replace(/\/$/, ""),
+      lastUpdated: config.lastUpdated || new Date().toISOString(),
+    };
+  }
+
+  const normalizedMode: BackendMode =
+    config.backendMode === "remote" ? "remote" : "embedded";
+  const normalizedRemoteUrl =
+    normalizedMode === "remote" &&
+    typeof config.remoteServerUrl === "string" &&
+    config.remoteServerUrl.trim()
+      ? config.remoteServerUrl.trim().replace(/\/$/, "")
+      : null;
+
+  if (normalizedMode === "remote" && !normalizedRemoteUrl) {
+    return null;
+  }
+
+  return {
+    backendMode: normalizedMode,
+    remoteServerUrl: normalizedRemoteUrl,
+    lastUpdated: config.lastUpdated || new Date().toISOString(),
+  };
+}
+
+function setElectronBackendGlobals(config: ElectronBackendConfig | null): void {
+  if (!isElectron()) return;
+
+  backendMode = config?.backendMode || "embedded";
+  configuredServerUrl =
+    config?.backendMode === "remote" ? config.remoteServerUrl : null;
+
+  const electronWindow = window as ElectronWindow;
+  electronWindow.backendMode = backendMode;
+  electronWindow.configuredServerUrl = configuredServerUrl;
+}
+
+export async function getBackendConfig(): Promise<ElectronBackendConfig | null> {
   if (!isElectron()) return null;
 
   try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).electronAPI?.invoke("get-server-config");
-    return result;
+    const result = await (window as ElectronWindow).electronAPI?.invoke?.(
+      "get-backend-config",
+    );
+    return normalizeBackendConfig(result as ElectronBackendConfig | null);
   } catch (error) {
-    console.error("Failed to get server config:", error);
+    console.error("Failed to get backend config:", error);
     return null;
   }
 }
 
-export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
-  if (!isElectron()) return false;
+export async function saveBackendConfig(
+  config: ElectronBackendConfig,
+): Promise<SaveBackendConfigResult> {
+  if (!isElectron()) {
+    return { success: false, error: "Not in Electron environment" };
+  }
 
   try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).electronAPI?.invoke("save-server-config", config);
-    if (result?.success) {
-      configuredServerUrl = config.serverUrl;
-      (
-        window as Window &
-          typeof globalThis & {
-            IS_ELECTRON?: boolean;
-            electronAPI?: unknown;
-            configuredServerUrl?: string;
-          }
-      ).configuredServerUrl = configuredServerUrl;
-      updateApiInstances();
-      return true;
+    const normalizedConfig = normalizeBackendConfig(config);
+    if (!normalizedConfig) {
+      return { success: false, error: "Invalid backend config" };
     }
-    return false;
+
+    const result = (await (window as ElectronWindow).electronAPI?.invoke?.(
+      "save-backend-config",
+      normalizedConfig,
+    )) as SaveBackendConfigResult | undefined;
+    if (result?.success) {
+      setElectronBackendGlobals(normalizedConfig);
+      updateApiInstances();
+      return { ...result, config: normalizedConfig };
+    }
+    return (
+      result || { success: false, error: "Failed to save backend config" }
+    );
   } catch (error) {
-    console.error("Failed to save server config:", error);
-    return false;
+    console.error("Failed to save backend config:", error);
+    return { success: false, error: "Failed to save backend config" };
   }
+}
+
+export async function getServerConfig(): Promise<ServerConfig | null> {
+  const config = await getBackendConfig();
+  if (!config || config.backendMode !== "remote" || !config.remoteServerUrl) {
+    return null;
+  }
+
+  return {
+    serverUrl: config.remoteServerUrl,
+    lastUpdated: config.lastUpdated,
+  };
+}
+
+export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
+  const result = await saveBackendConfig({
+    backendMode: "remote",
+    remoteServerUrl: config.serverUrl.replace(/\/$/, ""),
+    lastUpdated: config.lastUpdated,
+  });
+  return result.success;
+}
+
+export function getBackendMode(): BackendMode | null {
+  return backendMode;
 }
 
 export function getConfiguredServerUrl(): string | null {
@@ -616,14 +722,10 @@ export async function testServerConnection(
     return { success: false, error: "Not in Electron environment" };
 
   try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).electronAPI?.invoke("test-server-connection", serverUrl);
+    const result = (await (window as ElectronWindow).electronAPI?.invoke?.(
+      "test-server-connection",
+      serverUrl,
+    )) as { success: boolean; error?: string };
     return result;
   } catch (error) {
     console.error("Failed to test server connection:", error);
@@ -651,14 +753,24 @@ export async function checkElectronUpdate(): Promise<{
     return { success: false, error: "Not in Electron environment" };
 
   try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).electronAPI?.invoke("check-electron-update");
+    const result = (await (window as ElectronWindow).electronAPI?.invoke?.(
+      "check-electron-update",
+    )) as {
+      success: boolean;
+      status?: "up_to_date" | "requires_update";
+      localVersion?: string;
+      remoteVersion?: string;
+      latest_release?: {
+        tag_name: string;
+        name: string;
+        published_at: string;
+        html_url: string;
+        body: string;
+      };
+      cached?: boolean;
+      cache_age?: number;
+      error?: string;
+    };
     return result;
   } catch (error) {
     console.error("Failed to check Electron update:", error);
@@ -666,42 +778,38 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
-export async function getEmbeddedServerStatus(): Promise<{
-  running: boolean;
-  embedded: boolean;
-  dataDir: string | null;
-} | null> {
+export async function getEmbeddedServerStatus(): Promise<EmbeddedServerStatus | null> {
   if (!isElectron()) return null;
 
   try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: {
-            invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-          };
-        }
-    ).electronAPI?.invoke("get-embedded-server-status");
-    return result as {
-      running: boolean;
-      embedded: boolean;
-      dataDir: string | null;
-    } | null;
+    const result = await (window as ElectronWindow).electronAPI?.invoke?.(
+      "get-embedded-server-status",
+    );
+    return result as EmbeddedServerStatus | null;
   } catch {
     return null;
   }
 }
 
 export function isEmbeddedMode(): boolean {
-  return embeddedMode;
+  return backendMode !== "remote";
 }
 
-export function setEmbeddedMode(value: boolean): void {
-  embeddedMode = value;
-  if (value) {
-    configuredServerUrl = null;
-    initializeApiInstances();
+export async function clearBackendChangeSession(): Promise<void> {
+  clearTermixSessionStorage();
+
+  if (isElectron()) {
+    localStorage.removeItem("jwt");
+    electronSettingsCache.delete("jwt");
+    await (window as ElectronWindow).electronAPI?.clearSessionCookies?.().catch(
+      () => {},
+    );
+  } else {
+    const isSecure = window.location.protocol === "https:";
+    const cookieString = isSecure
+      ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict"
+      : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+    document.cookie = cookieString;
   }
 }
 
@@ -710,16 +818,16 @@ function getApiUrl(path: string, defaultPort: number): string {
   const electronMode = isElectron();
 
   if (electronMode) {
-    if (embeddedMode && !configuredServerUrl) {
-      return `http://localhost:${defaultPort}${path}`;
-    }
-    if (configuredServerUrl) {
+    if (backendMode === "remote") {
+      if (!configuredServerUrl) {
+        console.warn("Electron remote mode is missing a configured server URL");
+        return "http://no-server-configured";
+      }
       const baseUrl = configuredServerUrl.replace(/\/$/, "");
-      const url = `${baseUrl}${path}`;
-      return url;
+      return `${baseUrl}${path}`;
     }
-    console.warn("Electron mode but no server configured!");
-    return "http://no-server-configured";
+
+    return `http://localhost:${defaultPort}${path}`;
   } else if (devMode) {
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     const sslPort = protocol === "https" ? 8443 : defaultPort;
@@ -788,25 +896,16 @@ export let dockerApi: AxiosInstance;
 
 function initializeApp() {
   if (isElectron()) {
-    Promise.all([getServerConfig(), getEmbeddedServerStatus()])
-      .then(([config, status]) => {
-        if (status?.embedded && status?.running) {
-          embeddedMode = true;
-        }
-        if (config?.serverUrl) {
-          configuredServerUrl = config.serverUrl;
-          (
-            window as Window &
-              typeof globalThis & {
-                IS_ELECTRON?: boolean;
-                electronAPI?: unknown;
-                configuredServerUrl?: string;
-              }
-          ).configuredServerUrl = configuredServerUrl;
-        } else if (embeddedMode) {
-          // Embedded backend running, no remote server needed
+    Promise.all([getBackendConfig()])
+      .then(([config]) => {
+        if (config) {
+          setElectronBackendGlobals(config);
         } else {
-          console.warn("No server URL in config");
+          setElectronBackendGlobals({
+            backendMode: "embedded",
+            remoteServerUrl: null,
+            lastUpdated: new Date().toISOString(),
+          });
         }
         initializeApiInstances();
       })
@@ -831,22 +930,21 @@ if (document.readyState === "loading") {
 function updateApiInstances() {
   systemLogger.info("Updating API instances with new server configuration", {
     operation: "api_instance_update",
+    backendMode,
     configuredServerUrl,
   });
 
   initializeApiInstances();
 
-  (
-    window as Window &
-      typeof globalThis & {
-        IS_ELECTRON?: boolean;
-        electronAPI?: unknown;
-        configuredServerUrl?: string;
-      }
-  ).configuredServerUrl = configuredServerUrl;
+  if (isElectron()) {
+    const electronWindow = window as ElectronWindow;
+    electronWindow.configuredServerUrl = configuredServerUrl;
+    electronWindow.backendMode = backendMode;
+  }
 
   systemLogger.success("All API instances updated successfully", {
     operation: "api_instance_update_complete",
+    backendMode,
     configuredServerUrl,
   });
 }

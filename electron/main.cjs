@@ -91,9 +91,80 @@ let mainWindow = null;
 let backendProcess = null;
 let tray = null;
 let isQuitting = false;
+let embeddedBackendReason = null;
+let menuContext = {
+  remoteAuthActive: false,
+  canReloadRemoteAuth: false,
+};
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+
+function normalizeBackendConfig(config) {
+  if (!config || typeof config !== "object") {
+    return null;
+  }
+
+  if (typeof config.serverUrl === "string" && config.serverUrl.trim()) {
+    return {
+      backendMode: "remote",
+      remoteServerUrl: config.serverUrl.trim().replace(/\/$/, ""),
+      lastUpdated: config.lastUpdated || new Date().toISOString(),
+    };
+  }
+
+  const backendMode =
+    config.backendMode === "remote" ? "remote" : "embedded";
+  const remoteServerUrl =
+    backendMode === "remote" && typeof config.remoteServerUrl === "string"
+      ? config.remoteServerUrl.trim().replace(/\/$/, "")
+      : null;
+
+  if (backendMode === "remote" && !remoteServerUrl) {
+    return null;
+  }
+
+  return {
+    backendMode,
+    remoteServerUrl,
+    lastUpdated: config.lastUpdated || new Date().toISOString(),
+  };
+}
+
+function getBackendConfigPath() {
+  return path.join(app.getPath("userData"), "server-config.json");
+}
+
+function readBackendConfig() {
+  try {
+    const configPath = getBackendConfigPath();
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+
+    const configData = fs.readFileSync(configPath, "utf8");
+    return normalizeBackendConfig(JSON.parse(configData));
+  } catch (error) {
+    console.error("Error reading backend config:", error);
+    return null;
+  }
+}
+
+function writeBackendConfig(config) {
+  const normalizedConfig = normalizeBackendConfig(config);
+  if (!normalizedConfig) {
+    throw new Error("Invalid backend config");
+  }
+  const userDataPath = app.getPath("userData");
+  const configPath = getBackendConfigPath();
+
+  if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+  }
+
+  fs.writeFileSync(configPath, JSON.stringify(normalizedConfig, null, 2));
+  return normalizedConfig;
+}
 
 function getBackendEntryPath() {
   if (isDev) {
@@ -111,15 +182,58 @@ function getBackendDataDir() {
   return dataDir;
 }
 
+function getEmbeddedBackendStatus() {
+  const entryPath = getBackendEntryPath();
+  const entryExists = fs.existsSync(entryPath);
+  const available = entryExists && embeddedBackendReason !== "startup_failed";
+
+  let reason = null;
+  if (!entryExists) {
+    reason = "missing_backend_build";
+  } else if (embeddedBackendReason === "startup_failed") {
+    reason = "startup_failed";
+  }
+
+  return {
+    running: backendProcess !== null && !backendProcess.killed,
+    embedded: true,
+    available,
+    backendMode: readBackendConfig()?.backendMode || null,
+    dataDir: available ? getBackendDataDir() : null,
+    entryPath,
+    reason,
+  };
+}
+
+function getEmbeddedBackendErrorMessage(reason) {
+  if (reason === "missing_backend_build") {
+    return "Embedded backend is unavailable because the local backend build was not found.";
+  }
+
+  if (reason === "startup_failed") {
+    return "Embedded backend is unavailable because the local backend could not be started.";
+  }
+
+  return "Embedded backend is unavailable in this environment.";
+}
+
 function startBackendServer() {
   return new Promise((resolve) => {
+    if (backendProcess && !backendProcess.killed) {
+      embeddedBackendReason = null;
+      resolve(true);
+      return;
+    }
+
     const entryPath = getBackendEntryPath();
+    embeddedBackendReason = null;
 
     logToFile("isDev:", isDev, "appRoot:", appRoot);
     logToFile("app.isPackaged:", app.isPackaged);
     logToFile("process.env.NODE_ENV:", process.env.NODE_ENV);
 
     if (!fs.existsSync(entryPath)) {
+      embeddedBackendReason = "missing_backend_build";
       logToFile("Backend entry not found:", entryPath);
       resolve(false);
       return;
@@ -187,6 +301,7 @@ function startBackendServer() {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
       backendProcess = null;
       if (!resolved) {
+        embeddedBackendReason = "startup_failed";
         resolved = true;
         clearTimeout(readyTimeout);
         resolve(false);
@@ -195,6 +310,7 @@ function startBackendServer() {
 
     backendProcess.on("error", (err) => {
       logToFile("Failed to start backend process:", err.message);
+      embeddedBackendReason = "startup_failed";
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -228,6 +344,44 @@ function stopBackendServer() {
     clearTimeout(forceKillTimeout);
     backendProcess = null;
   });
+}
+
+async function persistAndApplyBackendConfig(config) {
+  const normalizedConfig = normalizeBackendConfig(config);
+  if (!normalizedConfig) {
+    throw new Error("Invalid backend config");
+  }
+
+  if (normalizedConfig.backendMode === "remote") {
+    const writtenConfig = writeBackendConfig(normalizedConfig);
+    stopBackendServer();
+    embeddedBackendReason = null;
+    return { success: true, config: writtenConfig };
+  }
+
+  const embeddedStatus = getEmbeddedBackendStatus();
+  if (!embeddedStatus.available) {
+    return {
+      success: false,
+      error: getEmbeddedBackendErrorMessage(embeddedStatus.reason),
+      reason: embeddedStatus.reason,
+    };
+  }
+
+  const writtenConfig = writeBackendConfig(normalizedConfig);
+  const started = await startBackendServer();
+
+  if (!started) {
+    return {
+      success: false,
+      error: getEmbeddedBackendErrorMessage(
+        embeddedBackendReason || "startup_failed",
+      ),
+      reason: embeddedBackendReason || "startup_failed",
+    };
+  }
+
+  return { success: true, config: writtenConfig };
 }
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -345,7 +499,8 @@ function createWindow() {
   );
 
   if (process.platform !== "darwin") {
-    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setAutoHideMenuBar(false);
+    mainWindow.setMenuBarVisibility(true);
   }
 
   const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
@@ -581,40 +736,39 @@ ipcMain.handle("get-platform", () => {
 });
 
 ipcMain.handle("get-embedded-server-status", () => {
-  return {
-    running: backendProcess !== null && !backendProcess.killed,
-    embedded: !isDev,
-    dataDir: isDev ? null : getBackendDataDir(),
-  };
+  return getEmbeddedBackendStatus();
+});
+
+ipcMain.handle("get-backend-config", () => {
+  try {
+    return readBackendConfig();
+  } catch (error) {
+    console.error("Error reading backend config:", error);
+    return null;
+  }
 });
 
 ipcMain.handle("get-server-config", () => {
   try {
-    const userDataPath = app.getPath("userData");
-    const configPath = path.join(userDataPath, "server-config.json");
-
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, "utf8");
-      return JSON.parse(configData);
-    }
-    return null;
+    return readBackendConfig();
   } catch (error) {
     console.error("Error reading server config:", error);
     return null;
   }
 });
 
-ipcMain.handle("save-server-config", (event, config) => {
+ipcMain.handle("save-backend-config", async (event, config) => {
   try {
-    const userDataPath = app.getPath("userData");
-    const configPath = path.join(userDataPath, "server-config.json");
+    return await persistAndApplyBackendConfig(config);
+  } catch (error) {
+    console.error("Error saving backend config:", error);
+    return { success: false, error: error.message };
+  }
+});
 
-    if (!fs.existsSync(userDataPath)) {
-      fs.mkdirSync(userDataPath, { recursive: true });
-    }
-
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    return { success: true };
+ipcMain.handle("save-server-config", async (event, config) => {
+  try {
+    return await persistAndApplyBackendConfig(config);
   } catch (error) {
     console.error("Error saving server config:", error);
     return { success: false, error: error.message };
@@ -792,13 +946,52 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   }
 });
 
+ipcMain.handle("set-menu-context", async (event, context) => {
+  menuContext = {
+    remoteAuthActive: !!context?.remoteAuthActive,
+    canReloadRemoteAuth: !!context?.canReloadRemoteAuth,
+  };
+  createMenu();
+});
+
+function sendMenuAction(action) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send("menu-action", action);
+}
+
 function createMenu() {
+  const serverMenu = {
+    label: "Server",
+    submenu: [
+      {
+        label: "Change Server",
+        accelerator: "CmdOrCtrl+Shift+S",
+        click: () => sendMenuAction("change-server"),
+      },
+      {
+        label: "Reload Remote Login",
+        accelerator: "CmdOrCtrl+Shift+R",
+        enabled: !!menuContext.canReloadRemoteAuth,
+        click: () => sendMenuAction("reload-remote-auth"),
+      },
+    ],
+  };
+
   if (process.platform === "darwin") {
     const template = [
       {
         label: app.name,
         submenu: [
           { role: "about" },
+          { type: "separator" },
+          {
+            label: "Change Server",
+            accelerator: "CmdOrCtrl+Shift+S",
+            click: () => sendMenuAction("change-server"),
+          },
           { type: "separator" },
           { role: "services" },
           { type: "separator" },
@@ -821,6 +1014,7 @@ function createMenu() {
           { role: "selectAll" },
         ],
       },
+      serverMenu,
       {
         label: "View",
         submenu: [
@@ -847,9 +1041,59 @@ function createMenu() {
         ],
       },
     ];
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    return;
   }
+
+  const template = [
+    {
+      label: "Termix",
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        {
+          label: "Change Server",
+          accelerator: "CmdOrCtrl+Shift+S",
+          click: () => sendMenuAction("change-server"),
+        },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    serverMenu,
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
+    {
+      label: "Window",
+      submenu: [{ role: "minimize" }, { role: "close" }],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 app.whenReady().then(async () => {
@@ -864,12 +1108,17 @@ app.whenReady().then(async () => {
   );
   createMenu();
 
-  if (!isDev) {
+  const backendConfig = readBackendConfig();
+  const embeddedStatus = getEmbeddedBackendStatus();
+
+  if (backendConfig?.backendMode !== "remote" && embeddedStatus.available) {
     const result = await startBackendServer();
     logToFile("startBackendServer result:", result);
   } else {
     logToFile(
-      "Skipping embedded backend (isDev=true) - expecting separate dev:backend process",
+      backendConfig?.backendMode === "remote"
+        ? "Skipping embedded backend startup because remote mode is configured"
+        : `Skipping embedded backend startup: ${embeddedStatus.reason || "unsupported_environment"}`,
     );
   }
 

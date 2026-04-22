@@ -1,3 +1,39 @@
+type BackendMode = "embedded" | "remote";
+type EmbeddedBackendReason =
+  | "missing_backend_build"
+  | "startup_failed"
+  | "unsupported_environment";
+
+interface ElectronBackendConfig {
+  backendMode: BackendMode;
+  remoteServerUrl: string | null;
+  lastUpdated: string;
+}
+
+interface EmbeddedServerStatus {
+  running: boolean;
+  embedded: boolean;
+  available: boolean;
+  backendMode: BackendMode | null;
+  dataDir: string | null;
+  entryPath: string | null;
+  reason: EmbeddedBackendReason | null;
+}
+
+interface SaveBackendConfigResult {
+  success: boolean;
+  config?: ElectronBackendConfig;
+  error?: string;
+  reason?: EmbeddedBackendReason | null;
+}
+
+interface ElectronMenuContext {
+  remoteAuthActive: boolean;
+  canReloadRemoteAuth: boolean;
+}
+
+type ElectronMenuAction = "change-server" | "reload-remote-auth";
+
 interface ServerConfig {
   serverUrl?: string;
   [key: string]: unknown;
@@ -29,9 +65,18 @@ export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
 
+  getBackendConfig: () => Promise<ElectronBackendConfig | null>;
+  saveBackendConfig: (
+    config: ElectronBackendConfig,
+  ) => Promise<SaveBackendConfigResult>;
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
   testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  getEmbeddedServerStatus: () => Promise<EmbeddedServerStatus | null>;
+  setMenuContext: (context: ElectronMenuContext) => Promise<void>;
+  onMenuAction: (
+    callback: (action: ElectronMenuAction) => void,
+  ) => () => void;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;
@@ -92,5 +137,7 @@ declare global {
       writeText(text: string): void;
       readText(): string;
     };
+    configuredServerUrl?: string | null;
+    backendMode?: BackendMode | null;
   }
 }
