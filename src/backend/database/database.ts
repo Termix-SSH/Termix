@@ -1939,6 +1939,21 @@ app.get(
 
 const httpServer = http.createServer(app);
 
+httpServer.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    databaseLogger.error(
+      `Port ${HTTP_PORT} is already in use. Kill the existing process and retry.`,
+      err,
+      {
+        operation: "http_server_port_conflict",
+        port: HTTP_PORT,
+      },
+    );
+    process.exit(1);
+  }
+  throw err;
+});
+
 httpServer.listen(HTTP_PORT, async () => {
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
