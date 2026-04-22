@@ -431,6 +431,7 @@ jobs:
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
@@ -488,6 +489,7 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
             npm run build
@@ -956,6 +958,7 @@ jobs:
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
