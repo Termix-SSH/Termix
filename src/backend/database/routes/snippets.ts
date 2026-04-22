@@ -7,6 +7,7 @@ import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
+import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 
 const router = express.Router();
 
@@ -473,7 +474,8 @@ router.delete(
  * /snippets/reorder:
  *   put:
  *     summary: Reorder snippets
- *     description: Bulk updates the order and folder of snippets.
+ *     description: Bulk updates the order and folder of snippets. Accepts
+ *       `snippets` and the legacy `updates` payload key.
  *     tags:
  *       - Snippets
  *     requestBody:
@@ -508,14 +510,14 @@ router.put(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { snippets: snippetUpdates } = req.body;
+    const snippetUpdates = extractSnippetReorderUpdates(req.body);
 
     if (!isNonEmptyString(userId)) {
       authLogger.warn("Invalid userId for snippet reorder");
       return res.status(400).json({ error: "Invalid userId" });
     }
 
-    if (!Array.isArray(snippetUpdates) || snippetUpdates.length === 0) {
+    if (!snippetUpdates || snippetUpdates.length === 0) {
       authLogger.warn("Invalid snippet reorder data", {
         operation: "snippet_reorder",
         userId,
