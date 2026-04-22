@@ -139,10 +139,10 @@ export const GuacamoleDisplay = forwardRef<
           token = data.token;
         }
 
-        const width = connectionConfig.width || containerWidth || 1280;
-        const height = connectionConfig.height || containerHeight || 720;
-        const protocol = connectionConfig.protocol || connectionConfig.type;
-        const dpi = protocol === "rdp" ? connectionConfig.dpi || 96 : null;
+        const width = connectionConfig.width ?? containerWidth ?? 1280;
+        const height = connectionConfig.height ?? containerHeight ?? 720;
+        const protocol = connectionConfig.protocol ?? connectionConfig.type;
+        const dpi = protocol === "rdp" ? connectionConfig.dpi ?? 96 : null;
 
         const wsBase = isDev
           ? `ws://localhost:30008`
@@ -173,7 +173,9 @@ export const GuacamoleDisplay = forwardRef<
           width: String(width),
           height: String(height),
         });
-        if (dpi !== null) params.set("dpi", String(dpi));
+        if (dpi !== null && dpi !== undefined) {
+          params.set("dpi", String(dpi));
+        }
         return `${wsBase}?${params.toString()}`;
       } catch (error) {
         const errorMessage =

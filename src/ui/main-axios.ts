@@ -4108,6 +4108,39 @@ export interface GuacamoleTokenResponse {
   token: string;
 }
 
+type GuacamoleConfigSource = {
+  guacamoleConfig?: string | Record<string, unknown> | null;
+};
+
+export function getGuacamoleDpi(
+  source?: GuacamoleConfigSource,
+): number | undefined {
+  const config = source?.guacamoleConfig;
+  if (!config) return undefined;
+
+  let dpi: unknown;
+  if (typeof config === "string") {
+    try {
+      dpi = JSON.parse(config).dpi;
+    } catch {
+      return undefined;
+    }
+  } else {
+    dpi = config.dpi;
+  }
+
+  const parsedDpi = typeof dpi === "string" ? Number(dpi) : dpi;
+  if (
+    typeof parsedDpi !== "number" ||
+    !Number.isFinite(parsedDpi) ||
+    parsedDpi <= 0
+  ) {
+    return undefined;
+  }
+
+  return Math.trunc(parsedDpi);
+}
+
 function toGuacamoleParams(
   config: GuacamoleTokenRequest["guacamoleConfig"],
 ): Record<string, unknown> {
