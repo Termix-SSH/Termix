@@ -1249,7 +1249,10 @@ export function HostManagerEditor({
   };
 
   const handleSshConfigClick = (config: string, index: number) => {
-    form.setValue(`tunnelConnections.${index}.endpointHost`, config);
+    form.setValue(`tunnelConnections.${index}.endpointHost`, config, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
     setSshConfigDropdownOpen((prev) => ({ ...prev, [index]: false }));
   };
 
