@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import {
@@ -36,6 +37,13 @@ import {
   logoutUser,
   isElectron,
   getUserRoles,
+  getBackendConfig,
+  saveBackendConfig,
+  getEmbeddedServerStatus,
+  testServerConnection,
+  clearBackendChangeSession,
+  type BackendMode,
+  type EmbeddedServerStatus,
   type UserRole,
 } from "@/ui/main-axios.ts";
 import { PasswordReset } from "@/ui/desktop/user/PasswordReset.tsx";
@@ -154,11 +162,66 @@ export function UserProfile({
     return saved === "true";
   });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [backendMode, setBackendMode] = useState<BackendMode>("embedded");
+  const [remoteServerUrl, setRemoteServerUrl] = useState("");
+  const [backendConfigLoading, setBackendConfigLoading] = useState(false);
+  const [backendConfigSaving, setBackendConfigSaving] = useState(false);
+  const [backendConfigError, setBackendConfigError] = useState<string | null>(
+    null,
+  );
+  const [embeddedStatus, setEmbeddedStatus] =
+    useState<EmbeddedServerStatus | null>(null);
 
   useEffect(() => {
     fetchUserInfo();
     fetchVersion();
   }, []);
+
+  useEffect(() => {
+    if (!isElectron()) return;
+
+    let cancelled = false;
+
+    const loadBackendConfig = async () => {
+      setBackendConfigLoading(true);
+      setBackendConfigError(null);
+
+      try {
+        const [config, status] = await Promise.all([
+          getBackendConfig(),
+          getEmbeddedServerStatus(),
+        ]);
+        if (cancelled) return;
+
+        setEmbeddedStatus(status);
+
+        if (config?.backendMode === "remote") {
+          setBackendMode("remote");
+          setRemoteServerUrl(config.remoteServerUrl || "");
+        } else if (status?.available === false) {
+          setBackendMode("remote");
+          setRemoteServerUrl("");
+        } else {
+          setBackendMode("embedded");
+          setRemoteServerUrl("");
+        }
+      } catch {
+        if (!cancelled) {
+          setBackendConfigError(t("profile.failedToLoadDesktopAppSettings"));
+        }
+      } finally {
+        if (!cancelled) {
+          setBackendConfigLoading(false);
+        }
+      }
+    };
+
+    loadBackendConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const fetchVersion = async () => {
     try {
@@ -253,6 +316,75 @@ export function UserProfile({
       "enableTerminalSessionPersistence",
       enabled.toString(),
     );
+  };
+
+  const handleSaveBackendConfig = async () => {
+    if (!isElectron()) return;
+
+    setBackendConfigSaving(true);
+    setBackendConfigError(null);
+
+    try {
+      const normalizedUrl = remoteServerUrl.trim().replace(/\/$/, "");
+
+      if (backendMode === "remote") {
+        if (!normalizedUrl) {
+          setBackendConfigError(t("profile.desktopAppEnterServerUrl"));
+          setBackendConfigSaving(false);
+          return;
+        }
+
+        if (
+          !normalizedUrl.startsWith("http://") &&
+          !normalizedUrl.startsWith("https://")
+        ) {
+          setBackendConfigError(t("serverConfig.mustIncludeProtocol"));
+          setBackendConfigSaving(false);
+          return;
+        }
+
+        const connectionResult = await testServerConnection(normalizedUrl);
+        if (!connectionResult.success) {
+          setBackendConfigError(
+            connectionResult.error || t("serverConfig.connectionFailed"),
+          );
+          setBackendConfigSaving(false);
+          return;
+        }
+      }
+
+      const result = await saveBackendConfig({
+        backendMode,
+        remoteServerUrl: backendMode === "remote" ? normalizedUrl : null,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      if (!result.success) {
+        setBackendConfigError(
+          result.error || t("profile.desktopAppSaveFailed"),
+        );
+        setBackendConfigSaving(false);
+        return;
+      }
+
+      await clearBackendChangeSession();
+      window.location.reload();
+    } catch {
+      setBackendConfigError(t("profile.desktopAppSaveFailed"));
+      setBackendConfigSaving(false);
+    }
+  };
+
+  const getEmbeddedUnavailableMessage = () => {
+    if (embeddedStatus?.reason === "startup_failed") {
+      return t("profile.embeddedBackendStartupFailed");
+    }
+
+    if (embeddedStatus?.reason === "missing_backend_build") {
+      return t("profile.embeddedBackendMissing");
+    }
+
+    return t("profile.serverModeEmbeddedUnavailable");
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
@@ -549,6 +681,114 @@ export function UserProfile({
                     </div>
                   </div>
                 </div>
+
+                {isElectron() && (
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.desktopApp")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-foreground-secondary">
+                          {t("profile.serverMode")}
+                        </Label>
+                        <Select
+                          value={backendMode}
+                          onValueChange={(value) => {
+                            setBackendMode(value as BackendMode);
+                            setBackendConfigError(null);
+                          }}
+                          disabled={backendConfigLoading || backendConfigSaving}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="embedded"
+                              disabled={embeddedStatus?.available === false}
+                            >
+                              {t("profile.serverModeEmbedded")}
+                            </SelectItem>
+                            <SelectItem value="remote">
+                              {t("profile.serverModeRemote")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          {backendMode === "embedded" &&
+                          embeddedStatus?.available === false
+                            ? t("profile.serverModeEmbeddedUnavailable")
+                            : backendMode === "embedded"
+                            ? t("profile.serverModeEmbeddedDesc")
+                            : t("profile.serverModeRemoteDesc")}
+                        </p>
+                      </div>
+
+                      {embeddedStatus?.available === false && (
+                        <Alert>
+                          <AlertTitle>
+                            {t("profile.serverModeEmbeddedUnavailable")}
+                          </AlertTitle>
+                          <AlertDescription>
+                            {getEmbeddedUnavailableMessage()}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {backendMode === "remote" && (
+                        <div className="space-y-2">
+                          <Label className="text-foreground-secondary">
+                            {t("serverConfig.serverUrl")}
+                          </Label>
+                          <Input
+                            value={remoteServerUrl}
+                            onChange={(e) => {
+                              setRemoteServerUrl(e.target.value);
+                              setBackendConfigError(null);
+                            }}
+                            placeholder="https://your-server.com"
+                            disabled={
+                              backendConfigLoading || backendConfigSaving
+                            }
+                          />
+                        </div>
+                      )}
+
+                      <Alert>
+                        <AlertTitle>{t("common.warning")}</AlertTitle>
+                        <AlertDescription>
+                          {t("profile.desktopAppRestartWarning")}
+                        </AlertDescription>
+                      </Alert>
+
+                      {backendConfigError && (
+                        <Alert variant="destructive">
+                          <AlertTitle>{t("common.error")}</AlertTitle>
+                          <AlertDescription>
+                            {backendConfigError}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleSaveBackendConfig}
+                          disabled={
+                            backendConfigLoading ||
+                            backendConfigSaving ||
+                            (backendMode === "remote" &&
+                              !remoteServerUrl.trim())
+                          }
+                        >
+                          {backendConfigSaving
+                            ? t("serverConfig.saving")
+                            : t("common.save")}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="rounded-lg border-2 border-edge bg-elevated p-4">
                   <h3 className="text-lg font-semibold mb-4">
