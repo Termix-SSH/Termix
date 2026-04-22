@@ -4616,7 +4616,7 @@ router.use(
         maxAge: 5 * 60 * 1000,
       });
 
-      const contentType = response.headers["content-type"] || "";
+      const contentType = String(response.headers["content-type"] || "");
       if (contentType.includes("text/html")) {
         const html = rewriteOPKSSHHtml(
           response.data.toString("utf-8"),
@@ -5042,7 +5042,7 @@ router.use(
         }
       });
 
-      const contentType = response.headers["content-type"] || "";
+      const contentType = String(response.headers["content-type"] || "");
       if (contentType.includes("text/html")) {
         const html = rewriteOPKSSHHtml(
           response.data.toString("utf-8"),

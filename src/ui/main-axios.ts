@@ -149,28 +149,12 @@ interface OIDCAuthorize {
 // ============================================================================
 
 export function isElectron(): boolean {
-  const hasISElectron =
-    (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).IS_ELECTRON === true;
+  const win = window as any;
+  const hasISElectron = win.IS_ELECTRON === true;
+  const hasElectronAPI = !!win.electronAPI;
+  const isElectronProp = win.electronAPI?.isElectron === true;
 
-  const hasElectronAPI = !!(
-    window as Window &
-      typeof globalThis & {
-        IS_ELECTRON?: boolean;
-        electronAPI?: unknown;
-        configuredServerUrl?: string;
-      }
-  ).electronAPI;
-
-  const result = hasISElectron || hasElectronAPI;
-
-  return result;
+  return hasISElectron || hasElectronAPI || isElectronProp;
 }
 
 function getLoggerForService(serviceName: string) {
@@ -199,20 +183,22 @@ const electronSettingsCache = new Map<string, string>();
 if (isElectron()) {
   (async () => {
     try {
-      const electronAPI = (
-        window as Window &
-          typeof globalThis & {
-            electronAPI?: any;
-          }
-      ).electronAPI;
+      const electronAPI = (window as any).electronAPI;
 
       if (electronAPI?.getSetting) {
         const settingsToLoad = ["rightClickCopyPaste", "jwt"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
-            electronSettingsCache.set(key, value);
-            localStorage.setItem(key, value);
+            // Only populate if not already set to prevent overwriting new values during login
+            if (!localStorage.getItem(key)) {
+              electronSettingsCache.set(key, value);
+              localStorage.setItem(key, value);
+              console.log(`[Electron] Loaded setting ${key} from main process`);
+            } else {
+              // Even if we don't overwrite localStorage, update the cache
+              electronSettingsCache.set(key, localStorage.getItem(key)!);
+            }
           }
         }
       }
@@ -312,16 +298,27 @@ function createApiInstance(
 
     const logger = getLoggerForService(serviceName);
 
-    if (process.env.NODE_ENV === "development") {
+    const requestBaseURL = config.baseURL || "";
+    const isDevMode = process.env.NODE_ENV === "development";
+
+    if (isDevMode) {
       logger.requestStart(method, fullUrl, context);
     }
 
     if (isElectron()) {
-      config.headers["X-Electron-App"] = "true";
+      if (config.headers.set) {
+        config.headers.set("X-Electron-App", "true");
+      } else {
+        config.headers["X-Electron-App"] = "true";
+      }
 
       const token = localStorage.getItem("jwt");
       if (token) {
-        config.headers["Authorization"] = `Bearer ${token}`;
+        if (config.headers.set) {
+          config.headers.set("Authorization", `Bearer ${token}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${token}`;
+        }
         userWasAuthenticated = true;
       }
     }
@@ -339,15 +336,42 @@ function createApiInstance(
           platform = "iOS";
         }
       }
-      config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
+      if (config.headers.set) {
+        config.headers.set("User-Agent", `Termix-Mobile/${platform}`);
+      } else {
+        config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
+      }
     }
 
     if (!isElectron()) {
-      const token = document.cookie
+      const tokenCookie = document.cookie
         .split("; ")
         .find((row) => row.startsWith("jwt="));
-      if (token) {
-        userWasAuthenticated = true;
+
+      if (tokenCookie) {
+        const tokenValue = tokenCookie.split("=")[1];
+        if (tokenValue) {
+          // Always add Authorization header as fallback if token is present,
+          // especially important for cross-origin requests where cookies might be blocked
+          const decodedToken = decodeURIComponent(tokenValue);
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${decodedToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${decodedToken}`;
+          }
+          userWasAuthenticated = true;
+        }
+      } else {
+        // Check localStorage as fallback even in browser mode
+        const localToken = localStorage.getItem("jwt");
+        if (localToken) {
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${localToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${localToken}`;
+          }
+          userWasAuthenticated = true;
+        }
       }
     }
 
@@ -457,7 +481,24 @@ function createApiInstance(
           errorMessage === "Authentication required" ||
           errorMessage === "Missing authentication token";
 
-        if (isSessionExpired || isSessionNotFound || isInvalidToken) {
+        const headers = error.config?.headers;
+        let hasAuthHeader = false;
+        if (headers) {
+          if (typeof headers.get === "function") {
+            hasAuthHeader = !!(
+              headers.get("Authorization") || headers.get("authorization")
+            );
+          } else {
+            hasAuthHeader = !!(
+              headers["Authorization"] || headers["authorization"]
+            );
+          }
+        }
+
+        if (
+          (isSessionExpired || isSessionNotFound || isInvalidToken) &&
+          hasAuthHeader
+        ) {
           const wasAuthenticated = userWasAuthenticated;
 
           localStorage.removeItem("jwt");
@@ -785,6 +826,9 @@ export let rbacApi: AxiosInstance;
 
 // Docker Management API (port 30007)
 export let dockerApi: AxiosInstance;
+
+// Pre-initialize with default values to avoid undefined errors during early mounting
+initializeApiInstances();
 
 function initializeApp() {
   if (isElectron()) {

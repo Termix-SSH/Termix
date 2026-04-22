@@ -319,8 +319,12 @@ function AppContent({
     }
   }, [addTab]);
 
+  const isCheckingAuth = useRef(false);
+
   useEffect(() => {
     const checkAuth = () => {
+      if (isCheckingAuth.current) return;
+      isCheckingAuth.current = true;
       setAuthLoading(true);
       getUserInfo()
         .then((meRes) => {
@@ -328,7 +332,6 @@ function AppContent({
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
@@ -340,8 +343,6 @@ function AppContent({
           setIsAdmin(false);
           setUsername(null);
 
-          localStorage.removeItem("jwt");
-
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
             console.warn("Session expired - please log in again");
@@ -349,6 +350,7 @@ function AppContent({
         })
         .finally(() => {
           setAuthLoading(false);
+          isCheckingAuth.current = false;
         });
     };
 

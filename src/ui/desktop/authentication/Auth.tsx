@@ -57,6 +57,7 @@ interface AuthProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
   authLoading: boolean;
   setDbError: (error: string | null) => void;
+  dbError?: string | null;
   onAuthSuccess: (authData: {
     isAdmin: boolean;
     username: string | null;
@@ -73,6 +74,7 @@ export function Auth({
   loggedIn,
   authLoading,
   setDbError,
+  dbError: _dbError,
   onAuthSuccess,
   ...props
 }: AuthProps) {
@@ -98,7 +100,7 @@ export function Auth({
         return true;
       }
     } catch (_e) {
-      return false;
+      return true;
     }
     return false;
   };
@@ -152,7 +154,24 @@ export function Auth({
 
   const handleElectronAuthSuccess = useCallback(async () => {
     try {
-      const meRes = await getUserInfo();
+      let retries = 5;
+      let meRes = null;
+      while (retries-- > 0) {
+        try {
+          meRes = await getUserInfo();
+          break;
+        } catch (err: any) {
+          const isNoServer =
+            err?.code === "NO_SERVER_CONFIGURED" ||
+            err?.message?.includes("no-server-configured");
+          if (isNoServer && retries > 0) {
+            await new Promise((r) => setTimeout(r, 500));
+          } else {
+            throw err;
+          }
+        }
+      }
+      if (!meRes) throw new Error("Failed to get user info");
       setInternalLoggedIn(true);
       setLoggedIn(true);
       setIsAdmin(!!meRes.is_admin);
@@ -324,7 +343,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            window.location.origin,
+            "*",
           );
           setWebviewAuthSuccess(true);
           return;
@@ -533,7 +552,7 @@ export function Auth({
               platform: "desktop",
               timestamp: Date.now(),
             },
-            window.location.origin,
+            "*",
           );
           setWebviewAuthSuccess(true);
           setTotpLoading(false);
@@ -676,7 +695,7 @@ export function Auth({
                     platform: "desktop",
                     timestamp: Date.now(),
                   },
-                  window.location.origin,
+                  "*",
                 );
                 setWebviewAuthSuccess(true);
                 setOidcLoading(false);
