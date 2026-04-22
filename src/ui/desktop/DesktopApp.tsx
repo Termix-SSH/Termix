@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useRef,
   Component,
-  type ErrorInfo,
   type ReactNode,
 } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
@@ -21,6 +20,7 @@ import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
 import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
 import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
 import { ElectronServerConfig } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
+import { Auth } from "@/ui/desktop/authentication/Auth.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
 import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
@@ -57,7 +57,6 @@ function AppContent({
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
-  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [showServerConfigModal, setShowServerConfigModal] = useState(false);
 
   const isDarkMode =
@@ -71,41 +70,16 @@ function AppContent({
   const lastAltPressTime = useRef(0);
 
   useEffect(() => {
-    const handleDatabaseConnectionLost = () => {
-      setDbConnectionFailed(true);
-    };
-
-    const handleDatabaseConnectionRestored = () => {
-      setDbConnectionFailed(false);
-      toast.success(t("common.backendReconnected"));
-    };
-
     const handleSessionExpired = () => {
       setIsAuthenticated(false);
     };
 
-    dbHealthMonitor.on(
-      "database-connection-lost",
-      handleDatabaseConnectionLost,
-    );
-    dbHealthMonitor.on(
-      "database-connection-restored",
-      handleDatabaseConnectionRestored,
-    );
     dbHealthMonitor.on("session-expired", handleSessionExpired);
 
     return () => {
-      dbHealthMonitor.off(
-        "database-connection-lost",
-        handleDatabaseConnectionLost,
-      );
-      dbHealthMonitor.off(
-        "database-connection-restored",
-        handleDatabaseConnectionRestored,
-      );
       dbHealthMonitor.off("session-expired", handleSessionExpired);
     };
-  }, []);
+  }, [t]);
 
   const handleServerConfigComplete = useCallback(async () => {
     setShowServerConfigModal(false);
@@ -255,13 +229,13 @@ function AppContent({
       username: string | null;
       userId: string | null;
     }) => {
+      setIsAuthenticated(true);
+      setIsAdmin(authData.isAdmin);
+      setUsername(authData.username);
       setIsTransitioning(true);
       setTransitionPhase("fadeOut");
 
       setTimeout(() => {
-        setIsAuthenticated(true);
-        setIsAdmin(authData.isAdmin);
-        setUsername(authData.username);
         setTransitionPhase("fadeIn");
 
         setTimeout(() => {
@@ -322,48 +296,160 @@ function AppContent({
     };
   }, [isAuthenticated]);
 
-  if (authLoading && !dbConnectionFailed) {
-    return (
-      <div
-        className="fixed inset-0 flex items-center justify-center"
-        style={{
-          background: "var(--bg-elevated)",
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 35px,
-            ${lineColor} 35px,
-            ${lineColor} 37px
-          )`,
-        }}
-      >
-        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {t("common.checkingAuthentication")}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (dbConnectionFailed) {
+  if (!isAuthenticated) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-background">
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={false}
-            authLoading={false}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-            onSelectView={() => {}}
-            initialDbError="Database connection failed"
-          />
-        </div>
+        <Auth
+          setLoggedIn={setIsAuthenticated}
+          setIsAdmin={setIsAdmin}
+          setUsername={setUsername}
+          setUserId={() => {}}
+          loggedIn={isAuthenticated}
+          authLoading={authLoading}
+          setDbError={() => {}}
+          onAuthSuccess={handleAuthSuccess}
+          layoutMode={isElectron() ? "electron-fullscreen" : "default"}
+        />
+        {isTransitioning && (
+          <div
+            className={`fixed inset-0 z-[20000] transition-opacity duration-700 ${
+              transitionPhase === "fadeOut" ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              background: "var(--bg-elevated)",
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 35px,
+                ${lineColor} 35px,
+                ${lineColor} 37px
+              )`,
+            }}
+          >
+            {transitionPhase === "fadeOut" && (
+              <>
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                  <div
+                    className="absolute w-0 h-0 bg-primary/10 rounded-full"
+                    style={{
+                      animation:
+                        "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      animationDelay: "0ms",
+                      willChange: "width, height, opacity",
+                      transform: "translateZ(0)",
+                    }}
+                  />
+                  <div
+                    className="absolute w-0 h-0 bg-primary/7 rounded-full"
+                    style={{
+                      animation:
+                        "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      animationDelay: "200ms",
+                      willChange: "width, height, opacity",
+                      transform: "translateZ(0)",
+                    }}
+                  />
+                  <div
+                    className="absolute w-0 h-0 bg-primary/5 rounded-full"
+                    style={{
+                      animation:
+                        "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      animationDelay: "400ms",
+                      willChange: "width, height, opacity",
+                      transform: "translateZ(0)",
+                    }}
+                  />
+                  <div
+                    className="absolute w-0 h-0 bg-primary/3 rounded-full"
+                    style={{
+                      animation:
+                        "ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      animationDelay: "600ms",
+                      willChange: "width, height, opacity",
+                      transform: "translateZ(0)",
+                    }}
+                  />
+                  <div
+                    className="relative z-10 text-center"
+                    style={{
+                      animation:
+                        "logoFade 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                      willChange: "opacity, transform",
+                    }}
+                  >
+                    <div
+                      className="text-7xl font-bold tracking-wider"
+                      style={{
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                        animation:
+                          "logoGlow 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                        willChange: "color, text-shadow",
+                      }}
+                    >
+                      {t("common.appName").toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+                <style>{`
+                  @keyframes ripple {
+                    0% {
+                      width: 0;
+                      height: 0;
+                      opacity: 0;
+                    }
+                    20% {
+                      opacity: 1;
+                    }
+                    100% {
+                      width: 200vmax;
+                      height: 200vmax;
+                      opacity: 0;
+                    }
+                  }
+
+                  @keyframes logoFade {
+                    0% {
+                      opacity: 0;
+                      transform: translateY(10px) translateZ(0);
+                    }
+                    25% {
+                      opacity: 1;
+                      transform: translateY(0) translateZ(0);
+                    }
+                    75% {
+                      opacity: 1;
+                      transform: translateY(0) translateZ(0);
+                    }
+                    100% {
+                      opacity: 0;
+                      transform: translateY(-5px) translateZ(0);
+                    }
+                  }
+
+                  @keyframes logoGlow {
+                    0% {
+                      color: hsl(var(--foreground));
+                      text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+                    }
+                    25% {
+                      color: hsl(var(--primary));
+                      text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
+                    }
+                    75% {
+                      color: hsl(var(--primary));
+                      text-shadow: 0 0 30px hsl(var(--primary) / 0.7);
+                    }
+                    100% {
+                      color: hsl(var(--primary));
+                      text-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+                    }
+                  }
+                `}</style>
+              </>
+            )}
+          </div>
+        )}
         <Toaster
           position="bottom-right"
           richColors={false}
@@ -381,17 +467,6 @@ function AppContent({
         isOpen={isCommandPaletteOpen}
         setIsOpen={setIsCommandPaletteOpen}
       />
-      {!isAuthenticated && (
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={isAuthenticated}
-            authLoading={authLoading}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-          />
-        </div>
-      )}
-
       {isAuthenticated && (
         <LeftSidebar
           disabled={!isAuthenticated || authLoading}
@@ -685,7 +760,7 @@ class TabErrorBoundary extends Component<
     throw error;
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error) {
     if (error.message?.includes("useTabs must be used within a TabProvider")) {
       console.warn(
         "TabProvider mounting race condition detected, recovering...",

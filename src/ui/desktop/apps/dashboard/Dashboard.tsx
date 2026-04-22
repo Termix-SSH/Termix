@@ -577,14 +577,13 @@ export function Dashboard({
             setUserId={setUserId}
             loggedIn={loggedIn}
             authLoading={authLoading}
-            dbError={dbError}
             setDbError={setDbError}
             onAuthSuccess={onAuthSuccess}
           />
         </div>
       ) : (
         <div
-          className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden flex min-w-0"
+          className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden flex min-w-0 w-full"
           style={{
             marginLeft: leftMarginPx,
             marginRight: rightSidebarOpen

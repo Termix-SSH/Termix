@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
@@ -10,7 +9,6 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  TabsContent,
 } from "@/components/ui/tabs.tsx";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
@@ -30,13 +28,13 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getServerConfig,
-  isElectron,
+  getBackendConfig,
   getEmbeddedServerStatus,
-  isEmbeddedMode,
+  isElectron,
 } from "../../main-axios.ts";
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
+import { ElectronAuthShell } from "@/ui/desktop/authentication/ElectronAuthShell.tsx";
 
 function getCookie(name: string): string | undefined {
   const value = `; ${document.cookie}`;
@@ -61,6 +59,7 @@ interface AuthProps extends React.ComponentProps<"div"> {
     username: string | null;
     userId: string | null;
   }) => void;
+  layoutMode?: "default" | "electron-fullscreen";
 }
 
 export function Auth({
@@ -73,6 +72,7 @@ export function Auth({
   authLoading,
   setDbError,
   onAuthSuccess,
+  layoutMode = "default",
   ...props
 }: AuthProps) {
   const { t } = useTranslation();
@@ -84,7 +84,7 @@ export function Auth({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
-  const isInElectronWebView = () => {
+  const isInElectronWebView = useCallback(() => {
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
     }
@@ -92,11 +92,13 @@ export function Auth({
       if (window.self !== window.top) {
         return true;
       }
-    } catch (_e) {
+    } catch {
       return false;
     }
     return false;
-  };
+  }, []);
+  const isElectronFullscreen =
+    layoutMode === "electron-fullscreen" && !isInElectronWebView();
 
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",
@@ -159,7 +161,7 @@ export function Auth({
         userId: meRes.userId || null,
       });
       toast.success(t("messages.loginSuccess"));
-    } catch (_err) {
+    } catch {
       toast.error(t("errors.failedUserInfo"));
     }
   }, [
@@ -194,7 +196,7 @@ export function Auth({
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });
-  }, []);
+  }, [setDbError, isInElectronWebView]);
 
   useEffect(() => {
     getPasswordLoginAllowed()
@@ -227,7 +229,7 @@ export function Auth({
   }, []);
 
   useEffect(() => {
-    if (showServerConfig) {
+    if (showServerConfig === null || showServerConfig) {
       return;
     }
 
@@ -767,19 +769,35 @@ export function Auth({
 
       if (isElectron()) {
         try {
-          const [config, status] = await Promise.all([
-            getServerConfig(),
-            getEmbeddedServerStatus(),
-          ]);
+          const config = await getBackendConfig();
 
-          if (status?.embedded && status?.running && !config?.serverUrl) {
+          if (!config) {
             setCurrentServerUrl("");
+            setShowServerConfig(true);
+            return;
+          }
+
+          if (config.backendMode === "remote" && config.remoteServerUrl) {
+            setCurrentServerUrl(config.remoteServerUrl);
+            setDbConnectionFailed(false);
+            setDbError(null);
             setShowServerConfig(false);
             return;
           }
 
-          setCurrentServerUrl(config?.serverUrl || "");
-          setShowServerConfig(!config || !config.serverUrl);
+          const embeddedStatus = await getEmbeddedServerStatus();
+          if (embeddedStatus?.available === false) {
+            setCurrentServerUrl("");
+            setDbConnectionFailed(false);
+            setDbError(null);
+            setShowServerConfig(true);
+            return;
+          }
+
+          setCurrentServerUrl("");
+          setDbConnectionFailed(false);
+          setDbError(null);
+          setShowServerConfig(false);
         } catch {
           setShowServerConfig(true);
         }
@@ -789,9 +807,28 @@ export function Auth({
     };
 
     checkServerConfig();
-  }, []);
+  }, [isInElectronWebView, setDbError]);
+
+  const renderStatusCard = (message: string) => (
+    <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
+      <div className="flex items-center justify-center h-32">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   if (showServerConfig === null && !isInElectronWebView()) {
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="form">
+          {renderStatusCard(t("common.checkingAuthentication"))}
+        </ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
@@ -806,6 +843,29 @@ export function Auth({
   }
 
   if (showServerConfig && !isInElectronWebView()) {
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="form">
+          <ServerConfigComponent
+            layout="shell"
+            onServerConfigured={() => {
+              window.location.reload();
+            }}
+            onUseEmbedded={() => {
+              setShowServerConfig(false);
+              setCurrentServerUrl("");
+              setDbConnectionFailed(false);
+              setDbError(null);
+            }}
+            onCancel={() => {
+              setShowServerConfig(false);
+            }}
+            isFirstTime={!currentServerUrl}
+          />
+        </ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className={`w-[420px] max-w-full p-6 flex flex-col bg-canvas border-2 border-edge rounded-md overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300 ${className || ""}`}
@@ -813,12 +873,15 @@ export function Auth({
         {...props}
       >
         <ServerConfigComponent
+          layout="shell"
           onServerConfigured={() => {
             window.location.reload();
           }}
           onUseEmbedded={() => {
             setShowServerConfig(false);
             setCurrentServerUrl("");
+            setDbConnectionFailed(false);
+            setDbError(null);
           }}
           onCancel={() => {
             setShowServerConfig(false);
@@ -835,6 +898,14 @@ export function Auth({
     authLoading &&
     !isInElectronWebView()
   ) {
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="form">
+          {renderStatusCard(t("common.checkingAuthentication"))}
+        </ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
@@ -865,6 +936,20 @@ export function Auth({
   }
 
   if (isElectron() && currentServerUrl && !loggedIn && !isInElectronWebView()) {
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="fullbleed">
+          <ElectronLoginForm
+            serverUrl={currentServerUrl}
+            onAuthSuccess={handleElectronAuthSuccess}
+            onChangeServer={() => {
+              setShowServerConfig(true);
+            }}
+          />
+        </ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className="w-full h-screen flex items-center justify-center p-4"
@@ -883,7 +968,23 @@ export function Auth({
     );
   }
 
+  if (isElectronFullscreen && authLoading && !isInElectronWebView()) {
+    return (
+      <ElectronAuthShell contentMode="form">
+        {renderStatusCard(t("common.checkingAuthentication"))}
+      </ElectronAuthShell>
+    );
+  }
+
   if (dbHealthChecking && !dbConnectionFailed) {
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="form">
+          {renderStatusCard(t("common.checkingDatabase"))}
+        </ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
@@ -914,6 +1015,88 @@ export function Auth({
   }
 
   if (dbConnectionFailed) {
+    const dbErrorContent = (
+      <div
+        className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300"
+        style={{ maxHeight: "calc(100vh - 1rem)" }}
+      >
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-bold mb-1">
+            {t("errors.databaseConnection")}
+          </h2>
+          <p className="text-muted-foreground">
+            {t("messages.databaseConnectionFailed")}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 text-base font-semibold"
+            disabled={dbHealthChecking}
+            onClick={() => window.location.reload()}
+          >
+            {t("common.refresh")}
+          </Button>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-edge space-y-4">
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                const isDark =
+                  theme === "dark" ||
+                  (theme === "system" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches);
+                setTheme(isDark ? "light" : "dark");
+              }}
+            >
+              {theme === "dark" ||
+              (theme === "system" &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
+                <Moon className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+            </Button>
+            <LanguageSwitcher />
+          </div>
+          {isElectron() && currentServerUrl && (
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm text-muted-foreground">
+                  Server
+                </Label>
+                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {currentServerUrl}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowServerConfig(true)}
+                className="h-8 px-3"
+              >
+                Edit
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    if (isElectronFullscreen) {
+      return (
+        <ElectronAuthShell contentMode="form">{dbErrorContent}</ElectronAuthShell>
+      );
+    }
+
     return (
       <div
         className={`fixed inset-0 flex items-center justify-center ${className || ""}`}
@@ -929,80 +1112,7 @@ export function Auth({
         }}
         {...props}
       >
-        <div
-          className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300"
-          style={{ maxHeight: "calc(100vh - 1rem)" }}
-        >
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold mb-1">
-              {t("errors.databaseConnection")}
-            </h2>
-            <p className="text-muted-foreground">
-              {t("messages.databaseConnectionFailed")}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11 text-base font-semibold"
-              disabled={dbHealthChecking}
-              onClick={() => window.location.reload()}
-            >
-              {t("common.refresh")}
-            </Button>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-edge space-y-4">
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => {
-                  const isDark =
-                    theme === "dark" ||
-                    (theme === "system" &&
-                      window.matchMedia("(prefers-color-scheme: dark)")
-                        .matches);
-                  setTheme(isDark ? "light" : "dark");
-                }}
-              >
-                {theme === "dark" ||
-                (theme === "system" &&
-                  window.matchMedia("(prefers-color-scheme: dark)").matches) ? (
-                  <Moon className="w-4 h-4" />
-                ) : (
-                  <Sun className="w-4 h-4" />
-                )}
-              </Button>
-              <LanguageSwitcher />
-            </div>
-            {isElectron() && currentServerUrl && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm text-muted-foreground">
-                    Server
-                  </Label>
-                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {currentServerUrl}
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowServerConfig(true)}
-                  className="h-8 px-3"
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+        {dbErrorContent}
       </div>
     );
   }
