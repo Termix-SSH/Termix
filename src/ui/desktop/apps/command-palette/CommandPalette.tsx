@@ -33,6 +33,7 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   getRecentActivity,
   getSSHHosts,
+  getGuacamoleDpi,
   getGuacamoleTokenFromHost,
   logActivity,
 } from "@/ui/main-axios.ts";
@@ -252,6 +253,7 @@ export function CommandPalette({
             domain: host.domain,
             security: host.security,
             "ignore-cert": host.ignoreCert,
+            dpi: getGuacamoleDpi(host),
           },
         });
 

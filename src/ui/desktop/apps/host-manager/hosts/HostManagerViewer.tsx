@@ -42,6 +42,7 @@ import {
   refreshServerPolling,
   isElectron,
   getConfiguredServerUrl,
+  getGuacamoleDpi,
   getGuacamoleTokenFromHost,
   logActivity,
 } from "@/ui/main-axios.ts";
@@ -2007,6 +2008,9 @@ export function HostManagerViewer({
                                                       security: host.security,
                                                       "ignore-cert":
                                                         host.ignoreCert,
+                                                      dpi: getGuacamoleDpi(
+                                                        host,
+                                                      ),
                                                     },
                                                   });
 

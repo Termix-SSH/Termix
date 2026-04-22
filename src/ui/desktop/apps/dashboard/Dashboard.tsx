@@ -16,6 +16,7 @@ import {
   getServerMetricsById,
   registerMetricsViewer,
   sendMetricsHeartbeat,
+  getGuacamoleDpi,
   getGuacamoleTokenFromHost,
   type RecentActivityItem,
 } from "@/ui/main-axios.ts";
@@ -456,6 +457,7 @@ export function Dashboard({
                 domain: host.domain,
                 security: host.security,
                 "ignore-cert": host.ignoreCert,
+                dpi: getGuacamoleDpi(host),
               },
             });
           })
@@ -480,6 +482,7 @@ export function Dashboard({
                 domain: host.domain,
                 security: host.security,
                 "ignore-cert": host.ignoreCert,
+                dpi: getGuacamoleDpi(host),
               },
             });
           })
@@ -504,6 +507,7 @@ export function Dashboard({
                 domain: host.domain,
                 security: host.security,
                 "ignore-cert": host.ignoreCert,
+                dpi: getGuacamoleDpi(host),
               },
             });
           })
