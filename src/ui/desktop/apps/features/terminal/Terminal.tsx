@@ -23,6 +23,7 @@ import {
   deleteCommandFromHistory,
   getCommandHistory,
   getHostPassword,
+  getServerConfig,
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
@@ -900,7 +901,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }, delay);
     }
 
-    function connectToHost(cols: number, rows: number) {
+    async function connectToHost(cols: number, rows: number) {
       if (isConnectingRef.current) {
         return;
       }
@@ -932,26 +933,52 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      const baseWsUrl = isDev
-        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
-        : isElectron()
-          ? (() => {
-              const configuredUrl = (window as { configuredServerUrl?: string })
-                .configuredServerUrl;
-              // Embedded mode or localhost: connect directly to the WebSocket server port
-              if (isEmbeddedMode() || !configuredUrl) {
-                return "ws://127.0.0.1:30002";
-              }
-              // Remote server: use the /ssh/websocket/ path (expects reverse proxy)
-              const wsProtocol = configuredUrl.startsWith("https://")
-                ? "wss://"
-                : "ws://";
-              const wsHost = configuredUrl
-                .replace(/^https?:\/\//, "")
-                .replace(/\/$/, "");
-              return `${wsProtocol}${wsHost}/ssh/websocket/`;
-            })()
-          : `${getBasePath()}/ssh/websocket/`;
+      let baseWsUrl: string;
+
+      if (isDev) {
+        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
+      } else if (isElectron()) {
+        let configuredUrl = (window as { configuredServerUrl?: string | null })
+          .configuredServerUrl;
+
+        if (!configuredUrl && !isEmbeddedMode()) {
+          try {
+            const serverConfig = await getServerConfig();
+            configuredUrl = serverConfig?.serverUrl || null;
+            if (configuredUrl) {
+              (
+                window as Window &
+                  typeof globalThis & {
+                    configuredServerUrl?: string | null;
+                  }
+              ).configuredServerUrl = configuredUrl;
+            }
+          } catch (error) {
+            console.error("Failed to resolve Electron server URL:", error);
+          }
+        }
+
+        if (isEmbeddedMode()) {
+          baseWsUrl = "ws://127.0.0.1:30002";
+        } else if (!configuredUrl) {
+          console.error("No configured server URL available for Electron SSH");
+          setIsConnected(false);
+          setIsConnecting(false);
+          updateConnectionError(t("errors.failedToLoadServer"));
+          isConnectingRef.current = false;
+          return;
+        } else {
+          const wsProtocol = configuredUrl.startsWith("https://")
+            ? "wss://"
+            : "ws://";
+          const wsHost = configuredUrl
+            .replace(/^https?:\/\//, "")
+            .replace(/\/$/, "");
+          baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
+        }
+      } else {
+        baseWsUrl = `${getBasePath()}/ssh/websocket/`;
+      }
 
       if (
         webSocketRef.current &&
