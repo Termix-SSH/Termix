@@ -3851,7 +3851,9 @@ export async function reorderSnippets(
   updates: Array<{ id: number; order: number; folder?: string }>,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.post("/snippets/reorder", { updates });
+    const response = await authApi.post("/snippets/reorder", {
+      snippets: updates,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reorder snippets");
