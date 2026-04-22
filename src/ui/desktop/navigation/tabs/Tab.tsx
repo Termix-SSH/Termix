@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { useTranslation } from "react-i18next";
+import { getHostPassword } from "@/ui/main-axios.ts";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -18,6 +19,7 @@ import {
   Container as DockerIcon,
   Key,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { SSHHost } from "@/types";
 
 interface TabProps {
@@ -66,42 +68,61 @@ export function Tab({
 
     if (!hostConfig) return;
 
-    const hasSshPassword =
-      hostConfig.authType === "password" && hostConfig.password;
-    const hasSudoPassword = hostConfig.sudoPassword;
+    const hasSshPw =
+      hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password);
+    const hasSudoPw = hostConfig.hasSudoPassword || hostConfig.sudoPassword;
 
-    if (!hasSshPassword && !hasSudoPassword) {
-      return;
+    if (!hasSshPw && !hasSudoPw) return;
+
+    let passwordToCopy = "";
+
+    if (hasSshPw) {
+      passwordToCopy = hostConfig.password || "";
+    } else if (hasSudoPw) {
+      passwordToCopy = hostConfig.sudoPassword;
     }
 
+    if (!passwordToCopy) return;
+
     try {
-      let passwordToCopy = "";
-
-      if (hasSshPassword) {
-        passwordToCopy = hostConfig.password || "";
-      } else if (hasSudoPassword) {
-        passwordToCopy = hostConfig.sudoPassword;
-      }
-
       await navigator.clipboard.writeText(passwordToCopy);
-    } catch {}
+      toast.success(t("nav.passwordCopied"));
+    } catch {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = passwordToCopy;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        toast.success(t("nav.passwordCopied"));
+      } catch {
+        toast.error(t("nav.failedToCopyPassword"));
+      }
+    }
   };
 
   const hasPassword =
     hostConfig &&
-    ((hostConfig.authType === "password" && hostConfig.password) ||
+    ((hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password)) ||
+      hostConfig.hasSudoPassword ||
       hostConfig.sudoPassword);
 
   const getPasswordButtonTitle = () => {
     if (!hostConfig) return "";
 
-    const hasSshPassword =
-      hostConfig.authType === "password" && hostConfig.password;
-    const hasSudoPassword = hostConfig.sudoPassword;
+    const hasSshPw =
+      hostConfig.authType === "password" &&
+      (hostConfig.hasPassword || hostConfig.password);
+    const hasSudoPw = hostConfig.hasSudoPassword || hostConfig.sudoPassword;
 
-    if (hasSshPassword) {
+    if (hasSshPw) {
       return t("nav.copyPassword");
-    } else if (hasSudoPassword) {
+    } else if (hasSudoPw) {
       return t("nav.copySudoPassword");
     }
     return t("nav.noPasswordAvailable");

@@ -1,8 +1,9 @@
 import express from "express";
 import net from "net";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -31,7 +32,9 @@ import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 
 function supportsMetrics(host: SSHHostWithCredentials): boolean {
   const connectionType = host.connectionType || "ssh";
-  return connectionType === "ssh";
+  if (connectionType !== "ssh") return false;
+  if (host.authType === "none" || host.authType === "opkssh") return false;
+  return true;
 }
 
 function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
@@ -865,7 +868,15 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(latestConfig.host, latestConfig.viewerUserId);
+          this.pollHostMetrics(
+            latestConfig.host,
+            latestConfig.viewerUserId,
+          ).catch((err) => {
+            statsLogger.error("Metrics polling failed", err, {
+              operation: "metrics_poll_unhandled",
+              hostId: host.id,
+            });
+          });
         }
       }, intervalMs);
     } else {
@@ -929,9 +940,11 @@ class PollingManager {
       return;
     }
 
-    const hasExistingMetrics = this.metricsStore.has(refreshedHost.id);
+    if (authFailureTracker.shouldSkip(host.id)) {
+      return;
+    }
 
-    if (hasExistingMetrics && pollingBackoff.shouldSkip(host.id)) {
+    if (pollingBackoff.shouldSkip(host.id)) {
       return;
     }
 
@@ -942,16 +955,38 @@ class PollingManager {
         timestamp: Date.now(),
       });
       pollingBackoff.reset(refreshedHost.id);
+      authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      const isAuthError =
+        error instanceof Error &&
+        (error.message.includes("authentication") ||
+          error.message.includes("Authentication") ||
+          error.message.includes("permission denied") ||
+          error.message.includes("Permission denied"));
+
+      if (isAuthError) {
+        // authFailureTracker already handles auth errors inside collectMetrics;
+        // only log on the first occurrence to avoid repeated spam
+        const alreadyTracked = authFailureTracker.shouldSkip(host.id);
+        if (!alreadyTracked) {
+          statsLogger.error("Stats collector connection failed", error, {
+            operation: "stats_connect_failed",
+            hostId: refreshedHost.id,
+          });
+        }
+        return;
+      }
+
       pollingBackoff.recordFailure(refreshedHost.id);
 
-      const latestConfig = this.pollingConfigs.get(refreshedHost.id);
-      if (latestConfig && latestConfig.statsConfig.metricsEnabled) {
-        const backoffInfo = pollingBackoff.getBackoffInfo(refreshedHost.id);
+      // Only log when a new retry window opens, not on every skipped poll
+      const backoff = pollingBackoff.getBackoffInfo(refreshedHost.id);
+      const isNewFailure =
+        backoff !== null && !backoff.includes("polling suspended");
+      if (isNewFailure) {
         statsLogger.error("Stats collector connection failed", error, {
           operation: "stats_connect_failed",
           hostId: refreshedHost.id,
-          retryInfo: backoffInfo,
         });
       }
     }
@@ -1071,7 +1106,18 @@ class PollingManager {
     });
 
     if (this.activeViewers.get(hostId)!.size === 1) {
-      this.startMetricsForHost(hostId, userId);
+      // Fire-and-forget: never let background metrics start-up failures
+      // propagate up to the HTTP handler that registered the viewer.
+      Promise.resolve()
+        .then(() => this.startMetricsForHost(hostId, userId))
+        .catch((err) => {
+          statsLogger.warn("startMetricsForHost rejected (non-fatal)", {
+            operation: "start_metrics_unhandled",
+            hostId,
+            userId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
     }
   }
 
@@ -1153,37 +1199,7 @@ function validateHostId(
 }
 
 const app = express();
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
@@ -1315,8 +1331,9 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -1373,8 +1390,13 @@ async function resolveHostCredentials(
             if (credential.password) {
               baseHost.password = credential.password;
             }
-            if (credential.key) {
-              baseHost.key = credential.key;
+            if (
+              credential.key ||
+              (credential as Record<string, unknown>).privateKey
+            ) {
+              baseHost.key =
+                credential.key ||
+                ((credential as Record<string, unknown>).privateKey as string);
             }
             if (credential.keyPassword) {
               baseHost.keyPassword = credential.keyPassword;
@@ -1485,18 +1507,7 @@ async function buildSshConfig(
         "ssh-rsa",
         "ssh-dss",
       ],
-      cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
-        "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
-        "aes128-cbc",
-        "3des-cbc",
-      ],
+      cipher: SSH_ALGORITHMS.cipher,
       hmac: [
         "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",
@@ -1546,7 +1557,7 @@ async function buildSshConfig(
   } else if (host.authType === "none") {
     // no credentials needed
   } else if (host.authType === "opkssh") {
-    // handled externally
+    // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1585,6 +1596,19 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
   return async () => {
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    // Set up OPKSSH cert auth if needed (requires client instance)
+    if (host.authType === "opkssh" && host.userId) {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(host.userId, host.id);
+      if (!token) {
+        throw new Error(
+          "OPKSSH authentication required. Please open a Terminal connection first.",
+        );
+      }
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(config, client, token, host.username);
+    }
 
     const proxyConfig: SOCKS5Config | null =
       host.useSocks5 &&
@@ -1913,7 +1937,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         } else if (
           error.message.includes("No password available") ||
           error.message.includes("Unsupported authentication type") ||
-          error.message.includes("No SSH key available")
+          error.message.includes("No SSH key available") ||
+          error.message.includes("Invalid SSH key format")
         ) {
           authFailureTracker.recordFailure(host.id, "AUTH", true);
         } else if (
@@ -2412,6 +2437,27 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    if (host.authType === "opkssh" && host.userId) {
+      const { getOPKSSHToken } = await import("./opkssh-auth.js");
+      const token = await getOPKSSHToken(host.userId, host.id);
+      if (!token) {
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            "auth",
+            "OPKSSH authentication required. Please open a Terminal connection first.",
+          ),
+        );
+        return res.status(401).json({
+          error: "OPKSSH authentication required",
+          requiresOPKSSHAuth: true,
+          connectionLogs,
+        });
+      }
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(config, client, token, host.username);
+    }
 
     const connectionPromise = new Promise<{
       success: boolean;
@@ -3028,8 +3074,70 @@ app.post("/metrics/register-viewer", async (req, res) => {
   }
 
   try {
+    // Graceful no-op if host is inaccessible, metrics disabled, or host type
+    // does not support metrics. The client may call this speculatively, so
+    // avoid returning 5xx for expected "no metrics available" scenarios.
+    let host: SSHHostWithCredentials | undefined;
+    try {
+      host = await fetchHostById(hostId, userId);
+    } catch (lookupErr) {
+      statsLogger.warn(
+        "register-viewer host lookup failed (treating as no-op)",
+        {
+          operation: "register_viewer_lookup",
+          hostId,
+          userId,
+          error:
+            lookupErr instanceof Error ? lookupErr.message : String(lookupErr),
+        },
+      );
+    }
+
+    if (!host) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "host_not_found",
+      });
+    }
+
+    if (!supportsMetrics(host)) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "metrics_unsupported",
+      });
+    }
+
+    const statsConfig = pollingManager.parseStatsConfig(host.statsConfig);
+    if (!statsConfig.metricsEnabled) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "metrics_disabled",
+      });
+    }
+
     const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    pollingManager.registerViewer(hostId, viewerSessionId, userId);
+    try {
+      pollingManager.registerViewer(hostId, viewerSessionId, userId);
+    } catch (regErr) {
+      statsLogger.warn(
+        "pollingManager.registerViewer threw (treating as no-op)",
+        {
+          operation: "register_viewer_internal",
+          hostId,
+          userId,
+          error: regErr instanceof Error ? regErr.message : String(regErr),
+        },
+      );
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "register_failed_noop",
+      });
+    }
+
     res.json({ success: true, viewerSessionId });
   } catch (error) {
     statsLogger.error("Failed to register viewer", {
@@ -3038,7 +3146,14 @@ app.post("/metrics/register-viewer", async (req, res) => {
       userId,
       error: error instanceof Error ? error.message : String(error),
     });
-    res.status(500).json({ error: "Failed to register viewer" });
+    // Even on unexpected errors we prefer a graceful client experience: the
+    // viewer-registration is purely an optimization and should never break
+    // the UI. Report success:false but HTTP 200 so the client can decide.
+    res.status(200).json({
+      success: false,
+      skipped: true,
+      reason: "internal_error",
+    });
   }
 });
 

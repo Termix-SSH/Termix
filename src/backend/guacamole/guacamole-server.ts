@@ -58,7 +58,7 @@ const clientOptions = {
   },
   allowedUnencryptedConnectionSettings: {
     rdp: ["width", "height", "dpi"],
-    vnc: ["width", "height", "dpi"],
+    vnc: ["width", "height"],
     telnet: ["width", "height"],
   },
   connectionDefaultSettings: {
@@ -74,6 +74,7 @@ const clientOptions = {
       width: 1280,
       height: 720,
       dpi: 96,
+      audio: ["audio/L16"],
     },
     vnc: {
       "swap-red-blue": false,

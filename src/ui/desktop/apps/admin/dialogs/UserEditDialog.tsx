@@ -42,9 +42,9 @@ import {
 interface User {
   id: string;
   username: string;
-  is_admin: boolean;
-  is_oidc: boolean;
-  password_hash?: string;
+  isAdmin: boolean;
+  isOidc: boolean;
+  passwordHash?: string;
 }
 
 interface UserEditDialogProps {
@@ -81,7 +81,7 @@ export function UserEditDialog({
 
   useEffect(() => {
     if (open && user) {
-      setIsAdmin(user.is_admin);
+      setIsAdmin(user.isAdmin);
       loadRoles();
     }
   }, [open, user]);
@@ -135,19 +135,18 @@ export function UserEditDialog({
     setAdminLoading(true);
     try {
       if (checked) {
-        await makeUserAdmin(userToUpdate.username);
+        await makeUserAdmin(userToUpdate.id);
         toast.success(
           t("admin.userIsNowAdmin", { username: userToUpdate.username }),
         );
       } else {
-        await removeAdminStatus(userToUpdate.username);
+        await removeAdminStatus(userToUpdate.id);
         toast.success(
           t("admin.adminStatusRemoved", { username: userToUpdate.username }),
         );
       }
       setIsAdmin(checked);
       onSuccess();
-      onOpenChange(true);
     } catch (error) {
       console.error("Failed to toggle admin status:", error);
       toast.error(
@@ -332,9 +331,9 @@ export function UserEditDialog({
 
   const getAuthTypeDisplay = (): string => {
     if (!user) return "";
-    if (user.is_oidc && user.password_hash) {
+    if (user.isOidc && user.passwordHash) {
       return t("admin.dualAuth");
-    } else if (user.is_oidc) {
+    } else if (user.isOidc) {
       return t("admin.externalOIDC");
     } else {
       return t("admin.localPassword");
@@ -344,7 +343,7 @@ export function UserEditDialog({
   if (!user) return null;
 
   const showPasswordReset =
-    allowPasswordLogin && (user.password_hash || !user.is_oidc);
+    allowPasswordLogin && (user.passwordHash || !user.isOidc);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

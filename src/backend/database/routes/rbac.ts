@@ -8,6 +8,8 @@ import {
   roles,
   userRoles,
   sharedCredentials,
+  snippets,
+  snippetAccess,
 } from "../db/schema.js";
 import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Response } from "express";
@@ -512,46 +514,6 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to get shared hosts" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /rbac/roles:
- *   get:
- *     summary: Get all roles
- *     description: Retrieves a list of all roles.
- *     tags:
- *       - RBAC
- *     responses:
- *       200:
- *         description: A list of roles.
- *       500:
- *         description: Failed to get roles.
- */
-router.get(
-  "/roles",
-  authenticateJWT,
-  permissionManager.requireAdmin(),
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const allRoles = await db
-        .select()
-        .from(roles)
-        .orderBy(roles.isSystem, roles.name);
-
-      const rolesWithParsedPermissions = allRoles.map((role) => ({
-        ...role,
-        permissions: JSON.parse(role.permissions),
-      }));
-
-      res.json({ roles: rolesWithParsedPermissions });
-    } catch (error) {
-      databaseLogger.error("Failed to get roles", error, {
-        operation: "get_roles",
-      });
-      res.status(500).json({ error: "Failed to get roles" });
     }
   },
 );
@@ -1189,6 +1151,371 @@ router.get(
         targetUserId,
       });
       res.status(500).json({ error: "Failed to get user roles" });
+    }
+  },
+);
+
+// ============================================================================
+// SNIPPET SHARING
+// ============================================================================
+
+/**
+ * @openapi
+ * /rbac/snippet/{id}/share:
+ *   post:
+ *     summary: Share a snippet
+ *     description: Shares a snippet with a user or role.
+ *     tags:
+ *       - RBAC
+ */
+router.post(
+  "/snippet/:id/share",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const snippetId = parseInt(id, 10);
+    const userId = req.userId!;
+
+    if (isNaN(snippetId)) {
+      return res.status(400).json({ error: "Invalid snippet ID" });
+    }
+
+    try {
+      const {
+        targetType = "user",
+        targetUserId,
+        targetRoleId,
+        durationHours,
+      } = req.body;
+
+      if (!["user", "role"].includes(targetType)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid target type. Must be 'user' or 'role'" });
+      }
+
+      if (targetType === "user" && !isNonEmptyString(targetUserId)) {
+        return res
+          .status(400)
+          .json({ error: "Target user ID is required when sharing with user" });
+      }
+      if (targetType === "role" && !targetRoleId) {
+        return res
+          .status(400)
+          .json({ error: "Target role ID is required when sharing with role" });
+      }
+
+      const snippet = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
+        .limit(1);
+
+      if (snippet.length === 0) {
+        return res.status(403).json({ error: "Not snippet owner" });
+      }
+
+      if (targetType === "user") {
+        const targetUser = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, targetUserId))
+          .limit(1);
+        if (targetUser.length === 0) {
+          return res.status(404).json({ error: "Target user not found" });
+        }
+      } else {
+        const targetRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.id, targetRoleId))
+          .limit(1);
+        if (targetRole.length === 0) {
+          return res.status(404).json({ error: "Target role not found" });
+        }
+      }
+
+      let expiresAt: string | null = null;
+      if (
+        durationHours &&
+        typeof durationHours === "number" &&
+        durationHours > 0
+      ) {
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + durationHours);
+        expiresAt = expiryDate.toISOString();
+      }
+
+      const whereConditions = [eq(snippetAccess.snippetId, snippetId)];
+      if (targetType === "user") {
+        whereConditions.push(eq(snippetAccess.userId, targetUserId));
+      } else {
+        whereConditions.push(eq(snippetAccess.roleId, targetRoleId));
+      }
+
+      const existing = await db
+        .select()
+        .from(snippetAccess)
+        .where(and(...whereConditions))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(snippetAccess)
+          .set({ expiresAt })
+          .where(eq(snippetAccess.id, existing[0].id));
+
+        return res.json({
+          success: true,
+          message: "Snippet access updated",
+          expiresAt,
+        });
+      }
+
+      await db.insert(snippetAccess).values({
+        snippetId,
+        userId: targetType === "user" ? targetUserId : null,
+        roleId: targetType === "role" ? targetRoleId : null,
+        grantedBy: userId,
+        permissionLevel: "view",
+        expiresAt,
+      });
+
+      databaseLogger.success("Snippet shared successfully", {
+        operation: "rbac_snippet_share",
+        userId,
+      });
+
+      res.json({
+        success: true,
+        message: `Snippet shared successfully with ${targetType}`,
+        expiresAt,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to share snippet", error, {
+        operation: "share_snippet",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share snippet" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/snippet/{id}/access/{accessId}:
+ *   delete:
+ *     summary: Revoke snippet access
+ *     description: Revokes a user's or role's access to a snippet.
+ *     tags:
+ *       - RBAC
+ */
+router.delete(
+  "/snippet/:id/access/:accessId",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const accessIdParam = Array.isArray(req.params.accessId)
+      ? req.params.accessId[0]
+      : req.params.accessId;
+    const snippetId = parseInt(id, 10);
+    const accessId = parseInt(accessIdParam, 10);
+    const userId = req.userId!;
+
+    if (isNaN(snippetId) || isNaN(accessId)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    try {
+      const snippet = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
+        .limit(1);
+
+      if (snippet.length === 0) {
+        return res.status(403).json({ error: "Not snippet owner" });
+      }
+
+      await db.delete(snippetAccess).where(eq(snippetAccess.id, accessId));
+
+      res.json({ success: true, message: "Snippet access revoked" });
+    } catch (error) {
+      databaseLogger.error("Failed to revoke snippet access", error, {
+        operation: "revoke_snippet_access",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to revoke access" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/snippet/{id}/access:
+ *   get:
+ *     summary: Get snippet access list
+ *     description: Retrieves the list of users and roles with access to a snippet.
+ *     tags:
+ *       - RBAC
+ */
+router.get(
+  "/snippet/:id/access",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const snippetId = parseInt(id, 10);
+    const userId = req.userId!;
+
+    if (isNaN(snippetId)) {
+      return res.status(400).json({ error: "Invalid snippet ID" });
+    }
+
+    try {
+      const snippet = await db
+        .select()
+        .from(snippets)
+        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
+        .limit(1);
+
+      if (snippet.length === 0) {
+        return res.status(403).json({ error: "Not snippet owner" });
+      }
+
+      const rawAccessList = await db
+        .select({
+          id: snippetAccess.id,
+          userId: snippetAccess.userId,
+          roleId: snippetAccess.roleId,
+          username: users.username,
+          roleName: roles.name,
+          roleDisplayName: roles.displayName,
+          grantedBy: snippetAccess.grantedBy,
+          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
+          permissionLevel: snippetAccess.permissionLevel,
+          expiresAt: snippetAccess.expiresAt,
+          createdAt: snippetAccess.createdAt,
+        })
+        .from(snippetAccess)
+        .leftJoin(users, eq(snippetAccess.userId, users.id))
+        .leftJoin(roles, eq(snippetAccess.roleId, roles.id))
+        .where(eq(snippetAccess.snippetId, snippetId))
+        .orderBy(desc(snippetAccess.createdAt));
+
+      const accessList = rawAccessList.map((access) => ({
+        id: access.id,
+        targetType: access.userId ? "user" : "role",
+        userId: access.userId,
+        roleId: access.roleId,
+        username: access.username,
+        roleName: access.roleName,
+        roleDisplayName: access.roleDisplayName,
+        grantedBy: access.grantedBy,
+        grantedByUsername: access.grantedByUsername,
+        permissionLevel: access.permissionLevel,
+        expiresAt: access.expiresAt,
+        createdAt: access.createdAt,
+      }));
+
+      res.json({ accessList });
+    } catch (error) {
+      databaseLogger.error("Failed to get snippet access list", error, {
+        operation: "get_snippet_access_list",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to get access list" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/shared-snippets:
+ *   get:
+ *     summary: Get shared snippets
+ *     description: Retrieves snippets shared with the current user.
+ *     tags:
+ *       - RBAC
+ */
+router.get(
+  "/shared-snippets",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+
+    try {
+      const now = new Date().toISOString();
+
+      const directShared = await db
+        .select({
+          id: snippets.id,
+          name: snippets.name,
+          content: snippets.content,
+          description: snippets.description,
+          folder: snippets.folder,
+          ownerUsername: users.username,
+          permissionLevel: snippetAccess.permissionLevel,
+          expiresAt: snippetAccess.expiresAt,
+        })
+        .from(snippetAccess)
+        .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
+        .innerJoin(users, eq(snippets.userId, users.id))
+        .where(
+          and(
+            eq(snippetAccess.userId, userId),
+            or(
+              isNull(snippetAccess.expiresAt),
+              gte(snippetAccess.expiresAt, now),
+            ),
+          ),
+        );
+
+      const userRoleRows = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleRows.map((r) => r.roleId);
+
+      let roleShared: typeof directShared = [];
+      if (roleIds.length > 0) {
+        const directIds = directShared.map((s) => s.id);
+        const roleResults = await db
+          .select({
+            id: snippets.id,
+            name: snippets.name,
+            content: snippets.content,
+            description: snippets.description,
+            folder: snippets.folder,
+            ownerUsername: users.username,
+            permissionLevel: snippetAccess.permissionLevel,
+            expiresAt: snippetAccess.expiresAt,
+          })
+          .from(snippetAccess)
+          .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
+          .innerJoin(users, eq(snippets.userId, users.id))
+          .where(
+            and(
+              or(
+                isNull(snippetAccess.expiresAt),
+                gte(snippetAccess.expiresAt, now),
+              ),
+              sql`${snippetAccess.roleId} IN (${sql.join(
+                roleIds.map((id) => sql`${id}`),
+                sql`, `,
+              )})`,
+            ),
+          );
+
+        roleShared = roleResults.filter((s) => !directIds.includes(s.id));
+      }
+
+      res.json({ sharedSnippets: [...directShared, ...roleShared] });
+    } catch (error) {
+      databaseLogger.error("Failed to get shared snippets", error, {
+        operation: "get_shared_snippets",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to get shared snippets" });
     }
   },
 );

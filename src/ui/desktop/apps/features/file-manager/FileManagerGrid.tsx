@@ -1177,6 +1177,9 @@ export function FileManagerGrid({
                       <ArrowDown className="w-3 h-3" />
                     ))}
                 </div>
+                <div className="flex-shrink-0 w-24 text-right hidden md:block">
+                  {t("fileManager.owner", "Owner")}
+                </div>
                 <div className="flex-shrink-0 w-20 text-right">
                   {t("fileManager.permissions")}
                 </div>
@@ -1275,6 +1278,14 @@ export function FileManagerGrid({
                         )}
                     </div>
 
+                    <div className="flex-shrink-0 text-right w-24 hidden md:block">
+                      {file.owner && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {file.owner}
+                          {file.group ? `:${file.group}` : ""}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex-shrink-0 text-right w-20">
                       {file.permissions && (
                         <p className="text-xs text-muted-foreground font-mono">

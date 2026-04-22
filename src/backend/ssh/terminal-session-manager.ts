@@ -19,7 +19,6 @@ export interface TerminalSession {
   sshConn: Client | null;
   sshStream: ClientChannel | null;
   jumpClient: Client | null;
-  opksshTempFiles: { keyPath: string; certPath: string } | null;
 
   cols: number;
   rows: number;
@@ -32,6 +31,7 @@ export interface TerminalSession {
 
   outputBuffer: string[];
   outputBufferBytes: number;
+  tmuxSessionName: string | null;
 }
 
 class TerminalSessionManager {
@@ -99,7 +99,6 @@ class TerminalSessionManager {
       sshConn: null,
       sshStream: null,
       jumpClient: null,
-      opksshTempFiles: null,
       cols,
       rows,
       isConnected: false,
@@ -109,6 +108,7 @@ class TerminalSessionManager {
       detachTimeout: null,
       outputBuffer: [],
       outputBufferBytes: 0,
+      tmuxSessionName: null,
     };
     this.sessions.set(id, session);
 
@@ -132,7 +132,6 @@ class TerminalSessionManager {
     conn: Client,
     stream: ClientChannel,
     jumpClient?: Client | null,
-    opksshTempFiles?: { keyPath: string; certPath: string } | null,
   ): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
@@ -140,7 +139,6 @@ class TerminalSessionManager {
     session.sshConn = conn;
     session.sshStream = stream;
     session.jumpClient = jumpClient ?? null;
-    session.opksshTempFiles = opksshTempFiles ?? null;
     session.isConnected = true;
   }
 
@@ -326,12 +324,6 @@ class TerminalSessionManager {
       session.jumpClient = null;
     }
 
-    if (session.opksshTempFiles) {
-      const tempFiles = session.opksshTempFiles;
-      session.opksshTempFiles = null;
-      this.cleanupOpksshFiles(tempFiles);
-    }
-
     session.isConnected = false;
     session.outputBuffer = [];
     session.outputBufferBytes = 0;
@@ -446,32 +438,6 @@ class TerminalSessionManager {
 
     for (const id of toDestroy) {
       this.destroySession(id);
-    }
-  }
-
-  private async cleanupOpksshFiles(tempFiles: {
-    keyPath: string;
-    certPath: string;
-  }): Promise<void> {
-    try {
-      const { promises: fs } = await import("fs");
-      const results = await Promise.allSettled([
-        fs.unlink(tempFiles.keyPath),
-        fs.unlink(tempFiles.certPath),
-      ]);
-      results.forEach((result, index) => {
-        if (result.status === "rejected") {
-          sshLogger.warn("Failed to cleanup OPKSSH temp file", {
-            operation: "opkssh_temp_cleanup_failed",
-            file: index === 0 ? "keyPath" : "certPath",
-          });
-        }
-      });
-    } catch (error) {
-      sshLogger.error("Failed to cleanup OPKSSH temp files", {
-        operation: "opkssh_temp_cleanup_error",
-        error,
-      });
     }
   }
 

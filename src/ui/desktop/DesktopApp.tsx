@@ -52,10 +52,13 @@ function AppContent({
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
-  const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
 
   const isDarkMode =
     theme === "dark" ||
+    theme === "dracula" ||
+    theme === "gentlemansChoice" ||
+    theme === "midnightEspresso" ||
+    theme === "catppuccinMocha" ||
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
@@ -65,12 +68,29 @@ function AppContent({
   const lastAltPressTime = useRef(0);
 
   useEffect(() => {
-    const handleDatabaseConnectionLost = () => {
-      setDbConnectionFailed(true);
+    const DEGRADED_TOAST_ID = "db-connection-degraded";
+
+    const handleDatabaseConnectionDegraded = () => {
+      // Non-blocking, non-dismissible status toast that stays visible until
+      // connectivity is recovered. A Reload action lets users force-refresh
+      // the page if they want to, but the app itself remains fully usable.
+      toast.loading(
+        t("common.connectionDegraded", "Server connection lost, recovering…"),
+        {
+          id: DEGRADED_TOAST_ID,
+          duration: Infinity,
+          dismissible: false,
+          closeButton: false,
+          action: {
+            label: t("common.reload", "Reload"),
+            onClick: () => window.location.reload(),
+          },
+        },
+      );
     };
 
-    const handleDatabaseConnectionRestored = () => {
-      setDbConnectionFailed(false);
+    const handleDatabaseConnectionDegradedCleared = () => {
+      toast.dismiss(DEGRADED_TOAST_ID);
       toast.success(t("common.backendReconnected"));
     };
 
@@ -79,27 +99,28 @@ function AppContent({
     };
 
     dbHealthMonitor.on(
-      "database-connection-lost",
-      handleDatabaseConnectionLost,
+      "database-connection-degraded",
+      handleDatabaseConnectionDegraded,
     );
     dbHealthMonitor.on(
-      "database-connection-restored",
-      handleDatabaseConnectionRestored,
+      "database-connection-degraded-cleared",
+      handleDatabaseConnectionDegradedCleared,
     );
     dbHealthMonitor.on("session-expired", handleSessionExpired);
 
     return () => {
       dbHealthMonitor.off(
-        "database-connection-lost",
-        handleDatabaseConnectionLost,
+        "database-connection-degraded",
+        handleDatabaseConnectionDegraded,
       );
       dbHealthMonitor.off(
-        "database-connection-restored",
-        handleDatabaseConnectionRestored,
+        "database-connection-degraded-cleared",
+        handleDatabaseConnectionDegradedCleared,
       );
       dbHealthMonitor.off("session-expired", handleSessionExpired);
+      toast.dismiss(DEGRADED_TOAST_ID);
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -156,8 +177,9 @@ function AppContent({
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } =
-            await import("@/ui/main-axios.ts");
+          const { getSSHHostById, getSSHHosts } = await import(
+            "@/ui/main-axios.ts"
+          );
           let host = null;
 
           if (/^\d+$/.test(hostIdentifier)) {
@@ -188,8 +210,12 @@ function AppContent({
     }
   }, [addTab]);
 
+  const isCheckingAuth = useRef(false);
+
   useEffect(() => {
     const checkAuth = () => {
+      if (isCheckingAuth.current) return;
+      isCheckingAuth.current = true;
       setAuthLoading(true);
       getUserInfo()
         .then((meRes) => {
@@ -197,7 +223,6 @@ function AppContent({
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
@@ -209,8 +234,6 @@ function AppContent({
           setIsAdmin(false);
           setUsername(null);
 
-          localStorage.removeItem("jwt");
-
           const errorCode = err?.response?.data?.code;
           if (errorCode === "SESSION_EXPIRED") {
             console.warn("Session expired - please log in again");
@@ -218,6 +241,7 @@ function AppContent({
         })
         .finally(() => {
           setAuthLoading(false);
+          isCheckingAuth.current = false;
         });
     };
 
@@ -292,7 +316,7 @@ function AppContent({
   const showAdmin = currentTabData?.type === "admin";
   const showProfile = currentTabData?.type === "user_profile";
 
-  if (authLoading && !dbConnectionFailed) {
+  if (authLoading) {
     return (
       <div
         className="fixed inset-0 flex items-center justify-center"
@@ -317,30 +341,6 @@ function AppContent({
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (dbConnectionFailed) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-background">
-        <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={false}
-            authLoading={false}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-            onSelectView={() => {}}
-            initialDbError="Database connection failed"
-          />
-        </div>
-        <Toaster
-          position="bottom-right"
-          richColors={false}
-          closeButton
-          duration={5000}
-          offset={20}
-        />
       </div>
     );
   }

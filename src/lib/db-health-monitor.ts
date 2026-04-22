@@ -1,13 +1,25 @@
+/**
+ * DatabaseHealthMonitor
+ *
+ * Non-blocking health tracker for backend/database connectivity. The
+ * monitor no longer gates the whole UI: there is no full-screen overlay.
+ * When a transient failure is observed we emit a "degraded" event so the
+ * UI can surface a persistent but non-intrusive toast. A success from any
+ * API request clears the state. Session-expired events are also relayed
+ * to the UI.
+ *
+ * The previous "database-connection-lost" / "database-connection-restored"
+ * events have been retired along with the overlay. Listeners should use
+ * "database-connection-degraded" / "database-connection-degraded-cleared"
+ * to reflect the current UX contract: users can keep working regardless
+ * of backend hiccups and are simply informed via a toast.
+ */
 type EventListener = (...args: any[]) => void;
 
 class DatabaseHealthMonitor {
   private static instance: DatabaseHealthMonitor;
-  private dbHealthy: boolean = true;
-  private lastCheckTime: number = 0;
-  private checkInProgress: boolean = false;
   private listeners: Map<string, EventListener[]> = new Map();
-  private consecutiveErrorTimer: ReturnType<typeof setTimeout> | null = null;
-  private confirmedUnhealthy: boolean = false;
+  private degradedActive: boolean = false;
 
   private constructor() {}
 
@@ -49,71 +61,56 @@ class DatabaseHealthMonitor {
   reportDatabaseError(error: any, _wasAuthenticated: boolean = false) {
     const errorMessage = error?.response?.data?.error || error?.message || "";
     const errorCode = error?.response?.data?.code || error?.code;
+    const lowerMessage = errorMessage.toLowerCase();
 
     const isDatabaseError =
-      errorMessage.toLowerCase().includes("database") ||
-      errorMessage.toLowerCase().includes("sqlite") ||
-      errorMessage.toLowerCase().includes("drizzle") ||
+      lowerMessage.includes("database") ||
+      lowerMessage.includes("sqlite") ||
+      lowerMessage.includes("drizzle") ||
       errorCode === "DATABASE_ERROR" ||
       errorCode === "DB_CONNECTION_FAILED";
 
     const isBackendUnreachable =
       errorCode === "ERR_NETWORK" ||
       errorCode === "ECONNREFUSED" ||
-      (errorMessage.toLowerCase().includes("network error") &&
-        error?.response === undefined);
+      errorCode === "ECONNABORTED" ||
+      errorCode === "ECONNRESET" ||
+      errorCode === "ETIMEDOUT" ||
+      errorCode === "ERR_CANCELED" ||
+      (lowerMessage.includes("network error") &&
+        error?.response === undefined) ||
+      lowerMessage.includes("request aborted") ||
+      lowerMessage.includes("timeout");
 
     if (!(isDatabaseError || isBackendUnreachable)) {
       return;
     }
 
-    if (this.dbHealthy && !this.consecutiveErrorTimer) {
-      this.consecutiveErrorTimer = setTimeout(() => {
-        this.consecutiveErrorTimer = null;
-        if (this.dbHealthy) {
-          this.dbHealthy = false;
-          this.confirmedUnhealthy = true;
-          this.emit("database-connection-lost", {
-            error: errorMessage || "Backend server unreachable",
-            code: errorCode,
-            timestamp: Date.now(),
-          });
-        }
-      }, 10000);
+    if (!this.degradedActive) {
+      this.degradedActive = true;
+      this.emit("database-connection-degraded", {
+        error: errorMessage || "Background request failed",
+        code: errorCode,
+        timestamp: Date.now(),
+      });
     }
   }
 
   reportDatabaseSuccess() {
-    this.clearErrorTimer();
-
-    if (this.confirmedUnhealthy) {
-      this.dbHealthy = true;
-      this.confirmedUnhealthy = false;
-      this.emit("database-connection-restored", {
+    if (this.degradedActive) {
+      this.degradedActive = false;
+      this.emit("database-connection-degraded-cleared", {
         timestamp: Date.now(),
       });
-    } else if (!this.dbHealthy) {
-      this.dbHealthy = true;
     }
   }
 
-  private clearErrorTimer(): void {
-    if (this.consecutiveErrorTimer !== null) {
-      clearTimeout(this.consecutiveErrorTimer);
-      this.consecutiveErrorTimer = null;
-    }
-  }
-
-  isDatabaseHealthy(): boolean {
-    return this.dbHealthy;
+  isDegraded(): boolean {
+    return this.degradedActive;
   }
 
   reset() {
-    this.dbHealthy = true;
-    this.confirmedUnhealthy = false;
-    this.lastCheckTime = 0;
-    this.checkInProgress = false;
-    this.clearErrorTimer();
+    this.degradedActive = false;
   }
 }
 

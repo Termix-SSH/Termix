@@ -13,6 +13,7 @@ import {
   Pencil,
   ArrowDownUp,
   Container,
+  Power,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,12 +22,20 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
-import { getSSHHosts, getGuacamoleToken, logActivity } from "@/ui/main-axios";
+import {
+  getSSHHosts,
+  getGuacamoleToken,
+  getGuacamoleDpi,
+  getGuacamoleTokenFromHost,
+  logActivity,
+  wakeOnLan,
+} from "@/ui/main-axios";
 import type { HostProps } from "../../../../types";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import { useTranslation } from "react-i18next";
 import { useHostStatus } from "@/ui/contexts/ServerStatusContext";
 import { cn } from "@/lib/utils.ts";
+import { toast } from "sonner";
 
 export function Host({ host: initialHost }: HostProps): React.ReactElement {
   const { addTab } = useTabs();
@@ -118,17 +127,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     ) {
       try {
         const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
-        const result = await getGuacamoleToken({
-          protocol,
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        });
+        const result = await getGuacamoleTokenFromHost(host.id);
         addTab({
           type: protocol,
           title,
@@ -144,6 +143,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
             domain: host.domain,
             security: host.security,
             "ignore-cert": host.ignoreCert,
+            dpi: getGuacamoleDpi(host),
           },
         });
 
@@ -297,7 +297,15 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                   ) : (
                     <Terminal className="h-4 w-4" />
                   )}
-                  <span className="flex-1">{t("hosts.openTerminal")}</span>
+                  <span className="flex-1">
+                    {host.connectionType === "rdp"
+                      ? t("hosts.openRdp")
+                      : host.connectionType === "vnc"
+                        ? t("hosts.openVnc")
+                        : host.connectionType === "telnet"
+                          ? t("hosts.openTelnet")
+                          : t("hosts.openTerminal")}
+                  </span>
                 </DropdownMenuItem>
               )}
               {isSSH &&
@@ -353,6 +361,22 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
                     <span className="flex-1">{t("hosts.openDocker")}</span>
                   </DropdownMenuItem>
                 )}
+              {host.macAddress && (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      await wakeOnLan(host.id);
+                      toast.success(t("hosts.wolSent"));
+                    } catch {
+                      toast.error(t("hosts.wolFailed"));
+                    }
+                  }}
+                  className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-hover text-foreground-secondary"
+                >
+                  <Power className="h-4 w-4" />
+                  <span className="flex-1">{t("hosts.wakeOnLan")}</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() =>
                   addTab({

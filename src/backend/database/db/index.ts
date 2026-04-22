@@ -776,6 +776,34 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT id FROM snippet_access LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS snippet_access (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          snippet_id INTEGER NOT NULL,
+          user_id TEXT,
+          role_id INTEGER,
+          granted_by TEXT NOT NULL,
+          permission_level TEXT NOT NULL DEFAULT 'view',
+          expires_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (snippet_id) REFERENCES snippets (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create snippet_access table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
     sqlite
       .prepare("SELECT id FROM sessions LIMIT 1")
       .get();
@@ -955,6 +983,8 @@ const migrateSchema = () => {
     { column: "host_key_first_seen", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_first_seen TEXT" },
     { column: "host_key_last_verified", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_last_verified TEXT" },
     { column: "host_key_changed_count", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_changed_count INTEGER NOT NULL DEFAULT 0" },
+    { column: "mac_address", sql: "ALTER TABLE ssh_data ADD COLUMN mac_address TEXT" },
+    { column: "port_knock_sequence", sql: "ALTER TABLE ssh_data ADD COLUMN port_knock_sequence TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -1255,7 +1285,7 @@ const migrateSchema = () => {
   });
 };
 
-async function saveMemoryDatabaseToFile() {
+async function saveMemoryDatabaseToFile(): Promise<void> {
   if (!memoryDatabase) return;
 
   try {

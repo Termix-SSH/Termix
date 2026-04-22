@@ -1,8 +1,9 @@
 import express from "express";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -117,37 +118,7 @@ function formatMtime(mtime: number): string {
 
 const app = express();
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
@@ -399,6 +370,7 @@ interface SSHSession {
   sudoPassword?: string;
   sftp?: import("ssh2").SFTPWrapper;
   poolKey?: string;
+  userId?: string;
 }
 
 interface PendingTOTPSession {
@@ -529,6 +501,10 @@ function scheduleSessionCleanup(sessionId: string) {
       30 * 60 * 1000,
     );
   }
+}
+
+function verifySessionOwnership(session: SSHSession, userId: string): boolean {
+  return !session.userId || session.userId === userId;
 }
 
 function getMimeType(fileName: string): string {
@@ -801,151 +777,62 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     ),
   );
 
+  // Resolve credentials server-side when frontend doesn't provide them
   let resolvedCredentials = { password, sshKey, keyPassword, authType };
-  if (credentialId && hostId && userId) {
-    const hostRow = await getDb()
-      .select({ userId: hosts.userId })
-      .from(hosts)
-      .where(eq(hosts.id, hostId))
-      .limit(1);
-    const ownerId = hostRow[0]?.userId ?? null;
-
-    if (ownerId && userId !== ownerId) {
-      try {
-        const { SharedCredentialManager } =
-          await import("../utils/shared-credential-manager.js");
-        const sharedCredManager = SharedCredentialManager.getInstance();
-        const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-          hostId,
-          userId,
-        );
-
-        if (sharedCred) {
-          resolvedCredentials = {
-            password: sharedCred.password,
-            sshKey: sharedCred.key,
-            keyPassword: sharedCred.keyPassword,
-            authType: sharedCred.authType,
-          };
-          connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "sftp_auth",
-              "Credentials resolved from shared credential store",
-            ),
-          );
-        } else {
-          fileLogger.warn(`No shared credentials found for host ${hostId}`, {
-            operation: "ssh_credentials",
-            hostId,
-            userId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "warning",
-              "sftp_auth",
-              "No shared credentials found, using provided credentials",
-            ),
-          );
-        }
-      } catch (error) {
-        fileLogger.warn(
-          `Failed to resolve shared credential for host ${hostId}`,
-          {
-            operation: "ssh_credentials",
-            hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
-          },
-        );
+  if (hostId && userId && !password && !sshKey) {
+    try {
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(hostId, userId);
+      if (resolvedHost) {
+        resolvedCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          authType: resolvedHost.authType,
+        };
         connectionLogs.push(
           createConnectionLog(
-            "warning",
+            "info",
             "sftp_auth",
-            `Failed to resolve shared credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
+            "Credentials resolved from server-side host data",
           ),
         );
       }
-    } else if (ownerId) {
-      try {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, credentialId),
-                eq(sshCredentials.userId, ownerId),
-              ),
-            ),
-          "ssh_credentials",
-          ownerId,
-        );
-
-        if (credentials.length > 0) {
-          const credential = credentials[0];
-          resolvedCredentials = {
-            password: credential.password,
-            sshKey: credential.privateKey,
-            keyPassword: credential.keyPassword,
-            authType: credential.authType,
-          };
-          connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "sftp_auth",
-              "Credentials resolved from credential store",
-            ),
-          );
-        } else {
-          fileLogger.warn(`No credentials found for host ${hostId}`, {
-            operation: "ssh_credentials",
-            hostId,
-            credentialId,
-            userId: ownerId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "warning",
-              "sftp_auth",
-              "No stored credentials found, using provided credentials",
-            ),
-          );
-        }
-      } catch (error) {
-        fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
-          operation: "ssh_credentials",
-          hostId,
-          credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        connectionLogs.push(
-          createConnectionLog(
-            "warning",
-            "sftp_auth",
-            `Failed to resolve credentials: ${error instanceof Error ? error.message : "Unknown error"}`,
-          ),
-        );
-      }
-    } else {
-      fileLogger.warn(
-        "Missing userId for credential resolution in file manager",
-        {
-          operation: "ssh_credentials",
-          hostId,
-          credentialId,
-        },
-      );
+    } catch (error) {
+      fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
+        operation: "ssh_credentials",
+        hostId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  } else if (credentialId && hostId) {
-    fileLogger.warn(
-      "Missing userId for credential resolution in file manager",
-      {
+  } else if (credentialId && hostId && userId) {
+    // Legacy: credential resolution from credentialId
+    try {
+      const { resolveHostById } = await import("./host-resolver.js");
+      const resolvedHost = await resolveHostById(hostId, userId);
+      if (resolvedHost) {
+        resolvedCredentials = {
+          password: resolvedHost.password,
+          sshKey: resolvedHost.key,
+          keyPassword: resolvedHost.keyPassword,
+          authType: resolvedHost.authType,
+        };
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "sftp_auth",
+            "Credentials resolved from credential store",
+          ),
+        );
+      }
+    } catch (error) {
+      fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
         credentialId,
-        hasUserId: !!userId,
-      },
-    );
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   const config: Record<string, unknown> = {
@@ -1001,18 +888,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         "ssh-rsa",
         "ssh-dss",
       ],
-      cipher: [
-        "chacha20-poly1305@openssh.com",
-        "aes256-gcm@openssh.com",
-        "aes128-gcm@openssh.com",
-        "aes256-ctr",
-        "aes192-ctr",
-        "aes128-ctr",
-        "aes256-cbc",
-        "aes192-cbc",
-        "aes128-cbc",
-        "3des-cbc",
-      ],
+      cipher: SSH_ALGORITHMS.cipher,
       hmac: [
         "hmac-sha2-512-etm@openssh.com",
         "hmac-sha2-256-etm@openssh.com",
@@ -1112,18 +988,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         });
       }
 
-      const { promises: fs } = await import("fs");
-      const path = await import("path");
-      const os = await import("os");
-
-      const tempDir = os.tmpdir();
-      const keyPath = path.join(tempDir, `opkssh-fm-${userId}-${hostId}`);
-      const certPath = `${keyPath}-cert.pub`;
-
-      await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
-      await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
-
-      config.privateKey = await fs.readFile(keyPath);
+      const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+      await setupOPKSSHCertAuth(
+        config as import("ssh2").ConnectConfig,
+        client,
+        token,
+        username,
+      );
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -1131,32 +1002,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           "Using OPKSSH certificate authentication",
         ),
       );
-
-      setTimeout(async () => {
-        try {
-          const cleanupResults = await Promise.allSettled([
-            fs.unlink(keyPath),
-            fs.unlink(certPath),
-          ]);
-
-          cleanupResults.forEach((result, index) => {
-            if (result.status === "rejected") {
-              fileLogger.warn(`Failed to cleanup OPKSSH temp file`, {
-                operation: "opkssh_temp_cleanup_failed",
-                file: index === 0 ? "keyPath" : "certPath",
-                sessionId,
-                error: result.reason,
-              });
-            }
-          });
-        } catch (error) {
-          fileLogger.error("Failed to cleanup OPKSSH temp files", {
-            operation: "opkssh_temp_cleanup_error",
-            sessionId,
-            error,
-          });
-        }
-      }, 60000);
     } catch (opksshError) {
       fileLogger.error("OPKSSH authentication error for file manager", {
         operation: "file_connect",
@@ -1263,6 +1108,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       isConnected: true,
       lastActive: Date.now(),
       activeOperations: 0,
+      userId,
     };
     scheduleSessionCleanup(sessionId);
     res.json({
@@ -1906,6 +1752,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2107,6 +1954,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2236,9 +2084,13 @@ app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
  */
 app.post("/ssh/file_manager/sudo-password", (req, res) => {
   const { sessionId, password } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
   const session = sshSessions[sessionId];
   if (!session || !session.isConnected) {
     return res.status(400).json({ error: "Invalid or disconnected session" });
+  }
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
   session.sudoPassword = password;
   session.lastActive = Date.now();
@@ -2265,7 +2117,12 @@ app.post("/ssh/file_manager/sudo-password", (req, res) => {
  */
 app.get("/ssh/file_manager/ssh/status", (req, res) => {
   const sessionId = req.query.sessionId as string;
-  const isConnected = !!sshSessions[sessionId]?.isConnected;
+  const userId = (req as AuthenticatedRequest).userId;
+  const session = sshSessions[sessionId];
+  if (session && !verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+  const isConnected = !!session?.isConnected;
   res.json({ status: "success", connected: isConnected });
 });
 
@@ -2294,6 +2151,7 @@ app.get("/ssh/file_manager/ssh/status", (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2306,6 +2164,10 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
       error: "SSH session not found or not connected",
       connected: false,
     });
+  }
+
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
@@ -2358,6 +2220,10 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   sshConn.lastActive = Date.now();
@@ -2472,6 +2338,10 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
       sshConn.client.exec(
@@ -3099,7 +2969,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
  * /ssh/file_manager/ssh/writeFile:
  *   post:
  *     summary: Write to a file
- *     description: Writes content to a file on the remote host.
+ *     description: Writes content to a file on the remote host and preserves the existing permissions when the file already exists.
  *     tags:
  *       - File Manager
  *     requestBody:
@@ -3155,6 +3025,112 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   });
   sshConn.lastActive = Date.now();
 
+  let preservedMode: number | undefined;
+
+  const restoreOriginalMode = (
+    sftp: import("ssh2").SFTPWrapper | null,
+    onComplete: () => void,
+  ) => {
+    if (preservedMode === undefined) {
+      onComplete();
+      return;
+    }
+
+    const permissions = preservedMode.toString(8);
+
+    if (sftp) {
+      sftp.chmod(filePath, preservedMode, (chmodErr) => {
+        if (chmodErr) {
+          fileLogger.warn("Failed to restore file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+            error: chmodErr.message,
+          });
+        } else {
+          fileLogger.info("Restored file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+          });
+        }
+
+        onComplete();
+      });
+      return;
+    }
+
+    const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+    const chmodCommand = `chmod ${permissions} '${escapedPath}' && echo "SUCCESS"`;
+
+    sshConn.client.exec(chmodCommand, (err, stream) => {
+      if (err) {
+        fileLogger.warn("Failed to restore file permissions after save", {
+          operation: "file_write_restore_permissions",
+          sessionId,
+          userId,
+          path: filePath,
+          permissions,
+          error: err.message,
+        });
+        onComplete();
+        return;
+      }
+
+      let outputData = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        outputData += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        if (outputData.includes("SUCCESS")) {
+          fileLogger.info("Restored file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+          });
+        } else {
+          fileLogger.warn("Failed to restore file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+            exitCode: code,
+            error:
+              errorData || "Permission restore command did not report success",
+          });
+        }
+
+        onComplete();
+      });
+
+      stream.on("error", (streamErr) => {
+        fileLogger.warn("Failed to restore file permissions after save", {
+          operation: "file_write_restore_permissions",
+          sessionId,
+          userId,
+          path: filePath,
+          permissions,
+          error: streamErr.message,
+        });
+        onComplete();
+      });
+    });
+  };
+
   const trySFTP = () => {
     try {
       fileLogger.info("Opening SFTP channel", {
@@ -3193,75 +3169,88 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
             return;
           }
 
-          const writeStream = sftp.createWriteStream(filePath);
-
-          let hasError = false;
-          let hasFinished = false;
-
-          writeStream.on("error", (streamErr) => {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write failed, trying fallback method: ${streamErr.message}`,
-            );
-            tryFallbackMethod();
-          });
-
-          writeStream.on("finish", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File written successfully", {
-              operation: "file_write_success",
-              sessionId,
-              userId,
-              path: filePath,
-              bytes: fileBuffer.length,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
+          sftp.stat(filePath, (statErr, stats) => {
+            if (statErr) {
+              fileLogger.warn(
+                "Failed to read existing file permissions before save",
+                {
+                  operation: "file_write_stat",
+                  sessionId,
+                  userId,
+                  path: filePath,
+                  error: statErr.message,
                 },
+              );
+            } else if (stats.isFile()) {
+              preservedMode = stats.mode & 0o7777;
+            }
+
+            const writeStream = sftp.createWriteStream(filePath);
+
+            let hasError = false;
+            let hasFinished = false;
+            let isFinalizing = false;
+
+            const finalizeSuccess = () => {
+              if (hasError || hasFinished) return;
+              hasFinished = true;
+              isFinalizing = false;
+              fileLogger.success("File written successfully", {
+                operation: "file_write_success",
+                sessionId,
+                userId,
+                path: filePath,
+                bytes: fileBuffer.length,
               });
+              if (!res.headersSent) {
+                res.json({
+                  message: "File written successfully",
+                  path: filePath,
+                  toast: {
+                    type: "success",
+                    message: `File written: ${filePath}`,
+                  },
+                });
+              }
+            };
+
+            writeStream.on("error", (streamErr) => {
+              if (hasError || hasFinished || isFinalizing) return;
+              hasError = true;
+              isFinalizing = false;
+              fileLogger.warn(
+                `SFTP write failed, trying fallback method: ${streamErr.message}`,
+              );
+              tryFallbackMethod();
+            });
+
+            const finishWrite = () => {
+              if (hasError || hasFinished || isFinalizing) return;
+              isFinalizing = true;
+              restoreOriginalMode(sftp, finalizeSuccess);
+            };
+
+            writeStream.on("finish", () => {
+              finishWrite();
+            });
+
+            writeStream.on("close", () => {
+              finishWrite();
+            });
+
+            try {
+              writeStream.write(fileBuffer);
+              writeStream.end();
+            } catch (writeErr) {
+              if (hasError || hasFinished) return;
+              hasError = true;
+              isFinalizing = false;
+              fileLogger.warn(
+                `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
+              );
+              tryFallbackMethod();
             }
           });
-
-          writeStream.on("close", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File written successfully", {
-              operation: "file_write_success",
-              sessionId,
-              userId,
-              path: filePath,
-              bytes: fileBuffer.length,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
-                },
-              });
-            }
-          });
-
-          try {
-            writeStream.write(fileBuffer);
-            writeStream.end();
-          } catch (writeErr) {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
-            );
-            tryFallbackMethod();
-          }
         })
         .catch((err: Error) => {
           fileLogger.warn(
@@ -3278,6 +3267,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       let contentBuffer: Buffer;
       if (typeof content === "string") {
@@ -3327,16 +3320,18 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
         stream.on("close", (code) => {
           if (outputData.includes("SUCCESS")) {
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
-                },
-              });
-            }
+            restoreOriginalMode(null, () => {
+              if (!res.headersSent) {
+                res.json({
+                  message: "File written successfully",
+                  path: filePath,
+                  toast: {
+                    type: "success",
+                    message: `File written: ${filePath}`,
+                  },
+                });
+              }
+            });
           } else {
             fileLogger.error(
               `Fallback write failed with code ${code}: ${errorData}`,
@@ -3564,6 +3559,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
   };
 
   const tryFallbackMethod = () => {
+    if (!sshConn?.isConnected) {
+      sshConn.activeOperations--;
+      return res.status(500).json({ error: "SSH session disconnected" });
+    }
     try {
       let contentBuffer: Buffer;
       if (typeof content === "string") {
@@ -3586,6 +3585,20 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
       for (let i = 0; i < base64Content.length; i += chunkSize) {
         chunks.push(base64Content.slice(i, i + chunkSize));
+      }
+
+      if (!sshConn?.isConnected) {
+        fileLogger.error("SSH connection lost before fallback upload", {
+          operation: "file_upload_fallback",
+          sessionId,
+          path: fullPath,
+        });
+        if (!res.headersSent) {
+          return res
+            .status(500)
+            .json({ error: "SSH connection lost during upload" });
+        }
+        return;
       }
 
       if (chunks.length === 1) {
@@ -3613,6 +3626,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
           stream.stderr.on("data", (chunk: Buffer) => {
             errorData += chunk.toString();
+          });
+
+          stream.stderr.on("error", (stderrErr) => {
+            fileLogger.error("Fallback upload stderr error:", stderrErr);
           });
 
           stream.on("close", (code) => {
@@ -3683,6 +3700,13 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
           stream.stderr.on("data", (chunk: Buffer) => {
             errorData += chunk.toString();
+          });
+
+          stream.stderr.on("error", (stderrErr) => {
+            fileLogger.error(
+              "Chunked fallback upload stderr error:",
+              stderrErr,
+            );
           });
 
           stream.on("close", (code) => {
@@ -5228,26 +5252,32 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const targetPath =
     extractPath || archivePath.substring(0, archivePath.lastIndexOf("/"));
 
+  const escapedArchive = archivePath.replace(/'/g, "'\"'\"'");
+  const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
+  const escapedDecompressed = archivePath
+    .replace(/\.gz$/, "")
+    .replace(/'/g, "'\"'\"'");
+
   if (fileExt.endsWith(".tar.gz") || fileExt.endsWith(".tgz")) {
-    extractCommand = `tar -xzf "${archivePath}" -C "${targetPath}"`;
+    extractCommand = `tar -xzf '${escapedArchive}' -C '${escapedTarget}'`;
   } else if (fileExt.endsWith(".tar.bz2") || fileExt.endsWith(".tbz2")) {
-    extractCommand = `tar -xjf "${archivePath}" -C "${targetPath}"`;
+    extractCommand = `tar -xjf '${escapedArchive}' -C '${escapedTarget}'`;
   } else if (fileExt.endsWith(".tar.xz")) {
-    extractCommand = `tar -xJf "${archivePath}" -C "${targetPath}"`;
+    extractCommand = `tar -xJf '${escapedArchive}' -C '${escapedTarget}'`;
   } else if (fileExt.endsWith(".tar")) {
-    extractCommand = `tar -xf "${archivePath}" -C "${targetPath}"`;
+    extractCommand = `tar -xf '${escapedArchive}' -C '${escapedTarget}'`;
   } else if (fileExt.endsWith(".zip")) {
-    extractCommand = `unzip -o "${archivePath}" -d "${targetPath}"`;
+    extractCommand = `unzip -o '${escapedArchive}' -d '${escapedTarget}'`;
   } else if (fileExt.endsWith(".gz") && !fileExt.endsWith(".tar.gz")) {
-    extractCommand = `gunzip -c "${archivePath}" > "${archivePath.replace(/\.gz$/, "")}"`;
+    extractCommand = `gunzip -c '${escapedArchive}' > '${escapedDecompressed}'`;
   } else if (fileExt.endsWith(".bz2") && !fileExt.endsWith(".tar.bz2")) {
-    extractCommand = `bunzip2 -k "${archivePath}"`;
+    extractCommand = `bunzip2 -k '${escapedArchive}'`;
   } else if (fileExt.endsWith(".xz") && !fileExt.endsWith(".tar.xz")) {
-    extractCommand = `unxz -k "${archivePath}"`;
+    extractCommand = `unxz -k '${escapedArchive}'`;
   } else if (fileExt.endsWith(".7z")) {
-    extractCommand = `7z x "${archivePath}" -o"${targetPath}"`;
+    extractCommand = `7z x '${escapedArchive}' -o'${escapedTarget}'`;
   } else if (fileExt.endsWith(".rar")) {
-    extractCommand = `unrar x "${archivePath}" "${targetPath}/"`;
+    extractCommand = `unrar x '${escapedArchive}' '${escapedTarget}/'`;
   } else {
     return res.status(400).json({ error: "Unsupported archive format" });
   }
@@ -5433,10 +5463,12 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const firstPath = paths[0];
   const workingDir = firstPath.substring(0, firstPath.lastIndexOf("/")) || "/";
 
+  const escapeShell = (s: string) => s.replace(/'/g, "'\"'\"'");
+
   const fileNames = paths
     .map((p) => {
       const name = p.split("/").pop();
-      return `"${name}"`;
+      return `'${escapeShell(name || "")}'`;
     })
     .join(" ");
 
@@ -5449,18 +5481,21 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
       : `${workingDir}/${archiveName}`;
   }
 
+  const escapedDir = escapeShell(workingDir);
+  const escapedArchive = escapeShell(archivePath);
+
   if (compressionFormat === "zip") {
-    compressCommand = `cd "${workingDir}" && zip -r "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && zip -r '${escapedArchive}' ${fileNames}`;
   } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
-    compressCommand = `cd "${workingDir}" && tar -czf "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -czf '${escapedArchive}' ${fileNames}`;
   } else if (compressionFormat === "tar.bz2" || compressionFormat === "tbz2") {
-    compressCommand = `cd "${workingDir}" && tar -cjf "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cjf '${escapedArchive}' ${fileNames}`;
   } else if (compressionFormat === "tar.xz") {
-    compressCommand = `cd "${workingDir}" && tar -cJf "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cJf '${escapedArchive}' ${fileNames}`;
   } else if (compressionFormat === "tar") {
-    compressCommand = `cd "${workingDir}" && tar -cf "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cf '${escapedArchive}' ${fileNames}`;
   } else if (compressionFormat === "7z") {
-    compressCommand = `cd "${workingDir}" && 7z a "${archivePath}" ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && 7z a '${escapedArchive}' ${fileNames}`;
   } else {
     return res.status(400).json({ error: "Unsupported compression format" });
   }

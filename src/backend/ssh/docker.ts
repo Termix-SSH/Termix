@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -40,6 +41,7 @@ interface SSHSession {
   timeout?: NodeJS.Timeout;
   activeOperations: number;
   hostId?: number;
+  userId?: string;
 }
 
 interface PendingTOTPSession {
@@ -424,39 +426,7 @@ async function executeDockerCommand(
 
 const app = express();
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("https://")) {
-        return callback(null, true);
-      }
-
-      if (origin.startsWith("http://")) {
-        return callback(null, true);
-      }
-
-      const allowedOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "User-Agent",
-      "X-Electron-App",
-    ],
-  }),
-);
+app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
 app.use(express.json({ limit: "100mb" }));
@@ -468,6 +438,16 @@ app.use((_req, res, next) => {
 
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
+
+const CONTAINER_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
+const DOCKER_TIMESTAMP_RE = /^[0-9T:.Z+-]+$/;
+
+app.param("containerId", (req, res, next, value) => {
+  if (!CONTAINER_ID_RE.test(value)) {
+    return res.status(400).json({ error: "Invalid container ID" });
+  }
+  next();
+});
 
 /**
  * @openapi
@@ -791,18 +771,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
           });
         }
 
-        const { promises: fs } = await import("fs");
-        const path = await import("path");
-        const os = await import("os");
-
-        const tempDir = os.tmpdir();
-        const keyPath = path.join(tempDir, `opkssh-docker-${userId}-${hostId}`);
-        const certPath = `${keyPath}-cert.pub`;
-
-        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
-        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
-
-        config.privateKey = await fs.readFile(keyPath);
+        const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+        await setupOPKSSHCertAuth(
+          config as import("ssh2").ConnectConfig,
+          client,
+          token,
+          host.username,
+        );
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -810,32 +785,6 @@ app.post("/docker/ssh/connect", async (req, res) => {
             "Using OPKSSH certificate authentication",
           ),
         );
-
-        setTimeout(async () => {
-          try {
-            const cleanupResults = await Promise.allSettled([
-              fs.unlink(keyPath),
-              fs.unlink(certPath),
-            ]);
-
-            cleanupResults.forEach((result, index) => {
-              if (result.status === "rejected") {
-                sshLogger.warn(`Failed to cleanup OPKSSH temp file`, {
-                  operation: "opkssh_temp_cleanup_failed",
-                  file: index === 0 ? "keyPath" : "certPath",
-                  sessionId,
-                  error: result.reason,
-                });
-              }
-            });
-          } catch (error) {
-            sshLogger.error("Failed to cleanup OPKSSH temp files", {
-              operation: "opkssh_temp_cleanup_error",
-              sessionId,
-              error,
-            });
-          }
-        }, 60000);
       } catch (opksshError) {
         sshLogger.error("OPKSSH authentication error for Docker", {
           operation: "docker_connect",
@@ -983,6 +932,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId,
+        userId,
       };
 
       scheduleSessionCleanup(sessionId);
@@ -1665,6 +1615,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId: session.hostId,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1850,6 +1801,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
         lastActive: Date.now(),
         activeOperations: 0,
         hostId: session.hostId,
+        userId,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1953,6 +1905,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
  */
 app.post("/docker/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -1965,6 +1918,10 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
       error: "SSH session not found or not connected",
       connected: false,
     });
+  }
+
+  if (session.userId && session.userId !== userId) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
@@ -3016,18 +2973,18 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
     let command = `docker logs ${containerId}`;
 
     if (tail && tail > 0) {
-      command += ` --tail ${tail}`;
+      command += ` --tail ${Math.floor(tail)}`;
     }
 
     if (timestamps) {
       command += " --timestamps";
     }
 
-    if (since) {
+    if (since && DOCKER_TIMESTAMP_RE.test(since)) {
       command += ` --since ${since}`;
     }
 
-    if (until) {
+    if (until && DOCKER_TIMESTAMP_RE.test(until)) {
       command += ` --until ${until}`;
     }
 

@@ -224,49 +224,73 @@ export function HostGeneralTab({
           )}
         />
 
+        {connectionType !== "vnc" && (
+          <FormField
+            control={form.control}
+            name="username"
+            render={({ field }) => {
+              const isCredentialAuth = authTab === "credential";
+              const credentialId = form.watch("credentialId");
+              const overrideEnabled = form.watch("overrideCredentialUsername");
+              const selectedCredential = credentials.find(
+                (c) => c.id === credentialId,
+              );
+              const shouldDisable =
+                isCredentialAuth &&
+                selectedCredential?.username &&
+                !overrideEnabled;
+
+              return (
+                <FormItem className="col-span-6">
+                  <FormLabel>{t("hosts.username")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t("placeholders.username")}
+                      disabled={shouldDisable}
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e.target.value);
+                        if (
+                          isCredentialAuth &&
+                          selectedCredential &&
+                          !selectedCredential.username &&
+                          e.target.value.trim() !== ""
+                        ) {
+                          form.setValue("overrideCredentialUsername", true);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        field.onChange(e.target.value.trim());
+                        field.onBlur();
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              );
+            }}
+          />
+        )}
+      </div>
+      <div className="grid grid-cols-12 gap-4 mt-3">
         <FormField
           control={form.control}
-          name="username"
-          render={({ field }) => {
-            const isCredentialAuth = authTab === "credential";
-            const credentialId = form.watch("credentialId");
-            const overrideEnabled = form.watch("overrideCredentialUsername");
-            const selectedCredential = credentials.find(
-              (c) => c.id === credentialId,
-            );
-            const shouldDisable =
-              isCredentialAuth &&
-              selectedCredential?.username &&
-              !overrideEnabled;
-
-            return (
-              <FormItem className="col-span-6">
-                <FormLabel>{t("hosts.username")}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t("placeholders.username")}
-                    disabled={shouldDisable}
-                    {...field}
-                    onChange={(e) => {
-                      field.onChange(e.target.value);
-                      if (
-                        isCredentialAuth &&
-                        selectedCredential &&
-                        !selectedCredential.username &&
-                        e.target.value.trim() !== ""
-                      ) {
-                        form.setValue("overrideCredentialUsername", true);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      field.onChange(e.target.value.trim());
-                      field.onBlur();
-                    }}
-                  />
-                </FormControl>
-              </FormItem>
-            );
-          }}
+          name="macAddress"
+          render={({ field }) => (
+            <FormItem className="col-span-5">
+              <FormLabel>{t("hosts.macAddress")}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="AA:BB:CC:DD:EE:FF"
+                  {...field}
+                  onBlur={(e) => {
+                    field.onChange(e.target.value.trim());
+                    field.onBlur();
+                  }}
+                />
+              </FormControl>
+              <FormDescription>{t("hosts.macAddressDesc")}</FormDescription>
+            </FormItem>
+          )}
         />
       </div>
       <FormLabel className="mb-3 mt-3 font-bold">
@@ -1436,6 +1460,120 @@ export function HostGeneralTab({
                     })()}
                   </div>
                 )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="port-knocking">
+              <AccordionTrigger>{t("hosts.portKnocking")}</AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  {t("hosts.portKnockingDesc")}
+                </p>
+                <Controller
+                  control={form.control}
+                  name="portKnockSequence"
+                  render={({ field }) => {
+                    const sequence = field.value || [];
+                    return (
+                      <div className="space-y-2">
+                        {sequence.map(
+                          (
+                            knock: {
+                              port: number;
+                              protocol?: string;
+                              delay?: number;
+                            },
+                            index: number,
+                          ) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <Input
+                                type="number"
+                                placeholder={t("hosts.port")}
+                                value={knock.port || ""}
+                                onChange={(e) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    port: parseInt(e.target.value) || 0,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                                className="w-24"
+                              />
+                              <Select
+                                value={knock.protocol || "tcp"}
+                                onValueChange={(v) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    protocol: v,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                              >
+                                <SelectTrigger className="w-20">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="tcp">TCP</SelectItem>
+                                  <SelectItem value="udp">UDP</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number"
+                                placeholder={t("hosts.delayMs")}
+                                value={knock.delay ?? 100}
+                                onChange={(e) => {
+                                  const updated = [...sequence];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    delay: parseInt(e.target.value) || 0,
+                                  };
+                                  field.onChange(updated);
+                                }}
+                                className="w-20"
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                ms
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(
+                                    sequence.filter(
+                                      (_: unknown, i: number) => i !== index,
+                                    ),
+                                  );
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ),
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            field.onChange([
+                              ...sequence,
+                              { port: 0, protocol: "tcp", delay: 100 },
+                            ]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          {t("hosts.addKnock")}
+                        </Button>
+                      </div>
+                    );
+                  }}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

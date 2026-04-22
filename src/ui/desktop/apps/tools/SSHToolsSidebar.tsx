@@ -60,6 +60,8 @@ import {
   Archive,
   HardDrive,
   Globe,
+  Share2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -79,6 +81,13 @@ import {
   renameSnippetFolder,
   deleteSnippetFolder,
   reorderSnippets,
+  getSharedSnippets,
+  shareSnippet,
+  getSnippetAccess,
+  revokeSnippetAccess,
+  getRoles,
+  getUserList,
+  type AccessRecord,
 } from "@/ui/main-axios.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import type { Snippet, SnippetData, SnippetFolder } from "../../../../types";
@@ -180,6 +189,30 @@ export function SSHToolsSidebar({
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [snippetFolders, setSnippetFolders] = useState<SnippetFolder[]>([]);
+  const [sharedSnippetsList, setSharedSnippetsList] = useState<
+    Array<{
+      id: number;
+      name: string;
+      content: string;
+      description: string | null;
+      folder: string | null;
+      ownerUsername: string;
+    }>
+  >([]);
+  const [shareDialogSnippet, setShareDialogSnippet] = useState<Snippet | null>(
+    null,
+  );
+  const [shareTargetType, setShareTargetType] = useState<"user" | "role">(
+    "user",
+  );
+  const [shareUsers, setShareUsers] = useState<
+    Array<{ id: string; username: string }>
+  >([]);
+  const [shareRoles, setShareRoles] = useState<
+    Array<{ id: number; name: string; displayName?: string }>
+  >([]);
+  const [shareTargetId, setShareTargetId] = useState("");
+  const [shareAccessList, setShareAccessList] = useState<AccessRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
@@ -222,6 +255,9 @@ export function SSHToolsSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [historyRefreshCounter, setHistoryRefreshCounter] = useState(0);
   const commandHistoryScrollRef = React.useRef<HTMLDivElement>(null);
+  const [commandHistoryEnabled, setCommandHistoryEnabled] = useState<boolean>(
+    () => localStorage.getItem("commandHistoryTracking") === "true",
+  );
 
   const [splitMode, setSplitMode] = useState<
     "none" | "2" | "3" | "4" | "5" | "6"
@@ -240,6 +276,14 @@ export function SSHToolsSidebar({
   const startWidthRef = React.useRef<number>(sidebarWidth);
 
   const terminalTabs = tabs.filter((tab: TabData) => tab.type === "terminal");
+
+  useEffect(() => {
+    const terminalIds = new Set(terminalTabs.map((t) => t.id));
+    setSelectedSnippetTabIds((prev) =>
+      prev.filter((id) => terminalIds.has(id)),
+    );
+  }, [terminalTabs.length]);
+
   const activeUiTab = tabs.find((tab) => tab.id === currentTab);
   const activeTerminal =
     activeUiTab?.type === "terminal" ? activeUiTab : undefined;
@@ -326,6 +370,17 @@ export function SSHToolsSidebar({
       return () => clearInterval(refreshInterval);
     }
   }, [isOpen, activeTab, activeTerminalHostId]);
+
+  useEffect(() => {
+    const handleChange = () => {
+      setCommandHistoryEnabled(
+        localStorage.getItem("commandHistoryTracking") === "true",
+      );
+    };
+    window.addEventListener("commandHistoryTrackingChanged", handleChange);
+    return () =>
+      window.removeEventListener("commandHistoryTrackingChanged", handleChange);
+  }, []);
 
   const filteredCommands = searchQuery
     ? commandHistory.filter((cmd) =>
@@ -625,16 +680,19 @@ export function SSHToolsSidebar({
   const fetchSnippets = async () => {
     try {
       setLoading(true);
-      const [snippetsData, foldersData] = await Promise.all([
+      const [snippetsData, foldersData, sharedData] = await Promise.all([
         getSnippets(),
         getSnippetFolders(),
+        getSharedSnippets().catch(() => ({ sharedSnippets: [] })),
       ]);
       setSnippets(Array.isArray(snippetsData) ? snippetsData : []);
       setSnippetFolders(Array.isArray(foldersData) ? foldersData : []);
+      setSharedSnippetsList(sharedData.sharedSnippets || []);
     } catch {
       toast.error(t("snippets.failedToFetch"));
       setSnippets([]);
       setSnippetFolders([]);
+      setSharedSnippetsList([]);
     } finally {
       setLoading(false);
     }
@@ -673,6 +731,63 @@ export function SSHToolsSidebar({
       },
       "destructive",
     );
+  };
+
+  const handleOpenShareDialog = async (snippet: Snippet) => {
+    setShareDialogSnippet(snippet);
+    setShareTargetId("");
+    setShareTargetType("user");
+    try {
+      const [usersData, rolesData, accessData] = await Promise.all([
+        getUserList(),
+        getRoles(),
+        getSnippetAccess(snippet.id),
+      ]);
+      setShareUsers(
+        (usersData?.users || []).map((u: Record<string, unknown>) => ({
+          id: u.id as string,
+          username: u.username as string,
+        })),
+      );
+      setShareRoles(
+        (rolesData?.roles || []).map(
+          (r: { id: number; name: string; displayName?: string }) => r,
+        ),
+      );
+      setShareAccessList(accessData.accessList || []);
+    } catch {
+      toast.error(t("snippets.failedToLoadShareData"));
+    }
+  };
+
+  const handleShare = async () => {
+    if (!shareDialogSnippet || !shareTargetId) return;
+    try {
+      await shareSnippet(shareDialogSnippet.id, {
+        targetType: shareTargetType,
+        targetUserId: shareTargetType === "user" ? shareTargetId : undefined,
+        targetRoleId:
+          shareTargetType === "role" ? parseInt(shareTargetId) : undefined,
+      });
+      toast.success(t("snippets.shareSuccess"));
+      const accessData = await getSnippetAccess(shareDialogSnippet.id);
+      setShareAccessList(accessData.accessList || []);
+      setShareTargetId("");
+    } catch {
+      toast.error(t("snippets.shareFailed"));
+    }
+  };
+
+  const handleRevokeSnippetAccess = async (accessId: number) => {
+    if (!shareDialogSnippet) return;
+    try {
+      await revokeSnippetAccess(shareDialogSnippet.id, accessId);
+      toast.success(t("snippets.revokeSuccess"));
+      const accessData = await getSnippetAccess(shareDialogSnippet.id);
+      setShareAccessList(accessData.accessList || []);
+    } catch {
+      toast.error(t("snippets.revokeFailed"));
+    }
   };
 
   const handleSubmit = async () => {
@@ -736,7 +851,7 @@ export function SSHToolsSidebar({
       selectedSnippetTabIds.forEach((tabId) => {
         const tab = tabs.find((t: TabData) => t.id === tabId);
         if (tab?.terminalRef?.current?.sendInput) {
-          tab.terminalRef.current.sendInput(snippet.content + "\n");
+          tab.terminalRef.current.sendInput(snippet.content + "\r");
         }
       });
       toast.success(
@@ -1296,6 +1411,30 @@ export function SSHToolsSidebar({
                                   })
                                 : t("snippets.executeOnCurrent")}
                             </p>
+                            <div className="flex gap-2 mb-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() =>
+                                  setSelectedSnippetTabIds(
+                                    terminalTabs.map((t) => t.id),
+                                  )
+                                }
+                              >
+                                {t("snippets.selectAll", "Select All")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-6 px-2"
+                                onClick={() => setSelectedSnippetTabIds([])}
+                              >
+                                {t("snippets.deselectAll", "Deselect All")}
+                              </Button>
+                            </div>
                             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto thin-scrollbar">
                               {terminalTabs.map((tab) => (
                                 <Button
@@ -1375,6 +1514,118 @@ export function SSHToolsSidebar({
                     ) : (
                       <TooltipProvider>
                         <div className="space-y-3 overflow-y-auto flex-1 min-h-0 thin-scrollbar">
+                          {sharedSnippetsList.length > 0 &&
+                            (() => {
+                              const isCollapsed =
+                                collapsedFolders.has("__shared__");
+                              const FolderIcon = getFolderIcon("__shared__");
+                              return (
+                                <div key="__shared__">
+                                  <div className="flex items-center gap-2 mb-2 hover:bg-hover-alt p-2 rounded-lg transition-colors group/folder">
+                                    <div
+                                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                                      onClick={() => toggleFolder("__shared__")}
+                                    >
+                                      {isCollapsed ? (
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                      <FolderIcon className="h-4 w-4" />
+                                      <span className="text-sm font-semibold">
+                                        {t("snippets.sharedWithYou")}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground ml-auto">
+                                        {sharedSnippetsList.length}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 pointer-events-none">
+                                      <div className="h-6 w-6" />
+                                      <div className="h-6 w-6" />
+                                    </div>
+                                  </div>
+                                  {!isCollapsed && (
+                                    <div className="space-y-2 ml-6">
+                                      {sharedSnippetsList.map((snippet) => (
+                                        <div
+                                          key={`shared-${snippet.id}`}
+                                          className="bg-field border border-input rounded-lg hover:shadow-lg hover:border-edge-hover hover:bg-hover-alt transition-all duration-200 p-3 group"
+                                        >
+                                          <div className="mb-2 flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                              <h3 className="text-sm font-medium text-foreground mb-1">
+                                                {snippet.name}
+                                              </h3>
+                                              {snippet.description && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  {snippet.description}
+                                                </p>
+                                              )}
+                                              <p className="text-xs text-muted-foreground mt-1">
+                                                {t("snippets.sharedBy", {
+                                                  username:
+                                                    snippet.ownerUsername,
+                                                })}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <div className="bg-muted/30 rounded p-2 mb-3">
+                                            <code className="text-xs font-mono break-all line-clamp-2 text-muted-foreground">
+                                              {snippet.content}
+                                            </code>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="default"
+                                                  className="flex-1"
+                                                  onClick={() =>
+                                                    handleExecute(
+                                                      snippet as unknown as Snippet,
+                                                    )
+                                                  }
+                                                >
+                                                  <Play className="w-3 h-3 mr-1" />
+                                                  {t("snippets.run")}
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.runTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleCopy(
+                                                      snippet as unknown as Snippet,
+                                                    )
+                                                  }
+                                                >
+                                                  <Copy className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.copyTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
                           {Array.from(groupSnippetsByFolder()).map(
                             ([folderName, folderSnippets]) => {
                               const folderMetadata = snippetFolders.find(
@@ -1584,6 +1835,27 @@ export function SSHToolsSidebar({
                                                 </p>
                                               </TooltipContent>
                                             </Tooltip>
+
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() =>
+                                                    handleOpenShareDialog(
+                                                      snippet,
+                                                    )
+                                                  }
+                                                >
+                                                  <Share2 className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>
+                                                  {t("snippets.shareTooltip")}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
                                           </div>
                                         </div>
                                       ))}
@@ -1602,131 +1874,151 @@ export function SSHToolsSidebar({
                     value="command-history"
                     className="flex flex-col flex-1 overflow-hidden"
                   >
-                    <div className="space-y-2 flex-shrink-0 mb-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder={t("commandHistory.searchPlaceholder")}
-                          value={searchQuery}
-                          onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                          }}
-                          className="pl-10 pr-10"
-                        />
-                        {searchQuery && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                            onClick={() => setSearchQuery("")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                    {!commandHistoryEnabled ? (
+                      <div className="flex flex-col items-center justify-center flex-1 py-8 text-center px-4">
+                        <div className="bg-muted/40 border rounded-lg p-5 space-y-2">
+                          <p className="font-medium text-sm">
+                            {t("commandHistory.disabledTitle")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("commandHistory.disabledDescription")}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground bg-muted/30 px-2 py-1.5 rounded">
-                        {t("commandHistory.tabHint")}
-                      </p>
-                    </div>
-
-                    <div className="flex-1 overflow-hidden min-h-0">
-                      {historyError ? (
-                        <div className="text-center py-8">
-                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
-                            <p className="text-destructive font-medium mb-2">
-                              {t("commandHistory.error")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {historyError}
-                            </p>
+                    ) : (
+                      <>
+                        <div className="space-y-2 flex-shrink-0 mb-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder={t(
+                                "commandHistory.searchPlaceholder",
+                              )}
+                              value={searchQuery}
+                              onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                              }}
+                              className="pl-10 pr-10"
+                            />
+                            {searchQuery && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                                onClick={() => setSearchQuery("")}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
-                          <Button
-                            onClick={() =>
-                              setHistoryRefreshCounter((prev) => prev + 1)
-                            }
-                            variant="outline"
-                          >
-                            {t("common.retry")}
-                          </Button>
-                        </div>
-                      ) : !activeTerminal ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
-                          <p className="mb-2 font-medium">
-                            {t("commandHistory.noTerminal")}{" "}
-                          </p>
-                          <p className="text-sm">
-                            {t("commandHistory.noTerminalHint")}
+                          <p className="text-xs text-muted-foreground bg-muted/30 px-2 py-1.5 rounded">
+                            {t("commandHistory.tabHint")}
                           </p>
                         </div>
-                      ) : isHistoryLoading && commandHistory.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          <Loader2 className="h-12 w-12 mb-4 opacity-20 mx-auto animate-spin" />
-                          <p className="mb-2 font-medium">
-                            {t("commandHistory.loading")}{" "}
-                          </p>
-                        </div>
-                      ) : filteredCommands.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          {searchQuery ? (
-                            <>
-                              <Search className="h-12 w-12 mb-2 opacity-20 mx-auto" />
+
+                        <div className="flex-1 overflow-hidden min-h-0">
+                          {historyError ? (
+                            <div className="text-center py-8">
+                              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+                                <p className="text-destructive font-medium mb-2">
+                                  {t("commandHistory.error")}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {historyError}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() =>
+                                  setHistoryRefreshCounter((prev) => prev + 1)
+                                }
+                                variant="outline"
+                              >
+                                {t("common.retry")}
+                              </Button>
+                            </div>
+                          ) : !activeTerminal ? (
+                            <div className="text-center text-muted-foreground py-8">
+                              <Terminal className="h-12 w-12 mb-4 opacity-20 mx-auto" />
                               <p className="mb-2 font-medium">
-                                {t("commandHistory.noResults")}
+                                {t("commandHistory.noTerminal")}{" "}
                               </p>
                               <p className="text-sm">
-                                {t("commandHistory.noResultsHint", {
-                                  query: searchQuery,
-                                })}
+                                {t("commandHistory.noTerminalHint")}
                               </p>
-                            </>
+                            </div>
+                          ) : isHistoryLoading &&
+                            commandHistory.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-8">
+                              <Loader2 className="h-12 w-12 mb-4 opacity-20 mx-auto animate-spin" />
+                              <p className="mb-2 font-medium">
+                                {t("commandHistory.loading")}{" "}
+                              </p>
+                            </div>
+                          ) : filteredCommands.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-8">
+                              {searchQuery ? (
+                                <>
+                                  <Search className="h-12 w-12 mb-2 opacity-20 mx-auto" />
+                                  <p className="mb-2 font-medium">
+                                    {t("commandHistory.noResults")}
+                                  </p>
+                                  <p className="text-sm">
+                                    {t("commandHistory.noResultsHint", {
+                                      query: searchQuery,
+                                    })}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="mb-2 font-medium">
+                                    {t("commandHistory.empty")}
+                                  </p>
+                                  <p className="text-sm">
+                                    {t("commandHistory.emptyHint")}
+                                  </p>
+                                </>
+                              )}
+                            </div>
                           ) : (
-                            <>
-                              <p className="mb-2 font-medium">
-                                {t("commandHistory.empty")}
-                              </p>
-                              <p className="text-sm">
-                                {t("commandHistory.emptyHint")}
-                              </p>
-                            </>
+                            <div
+                              ref={commandHistoryScrollRef}
+                              className="space-y-2 overflow-y-auto h-full thin-scrollbar"
+                            >
+                              {filteredCommands.map((command, index) => (
+                                <div
+                                  key={index}
+                                  className="bg-canvas border-2 border-edge rounded-md px-3 py-2.5 hover:bg-hover-alt hover:border-edge-hover transition-all duration-200 group h-12 flex items-center"
+                                >
+                                  <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                                    <span
+                                      className="flex-1 font-mono text-sm cursor-pointer text-foreground truncate"
+                                      onClick={() =>
+                                        handleCommandSelect(command)
+                                      }
+                                      title={command}
+                                    >
+                                      {command}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 flex-shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCommandDelete(command);
+                                      }}
+                                      title={t("commandHistory.deleteTooltip")}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
-                      ) : (
-                        <div
-                          ref={commandHistoryScrollRef}
-                          className="space-y-2 overflow-y-auto h-full thin-scrollbar"
-                        >
-                          {filteredCommands.map((command, index) => (
-                            <div
-                              key={index}
-                              className="bg-canvas border-2 border-edge rounded-md px-3 py-2.5 hover:bg-hover-alt hover:border-edge-hover transition-all duration-200 group h-12 flex items-center"
-                            >
-                              <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                                <span
-                                  className="flex-1 font-mono text-sm cursor-pointer text-foreground truncate"
-                                  onClick={() => handleCommandSelect(command)}
-                                  title={command}
-                                >
-                                  {command}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 flex-shrink-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCommandDelete(command);
-                                  }}
-                                  title={t("commandHistory.deleteTooltip")}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </TabsContent>
 
                   <TabsContent
@@ -2235,6 +2527,104 @@ export function SSHToolsSidebar({
                   : t("snippets.createFolder")}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {shareDialogSnippet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border-2 border-border rounded-lg p-6 w-full max-w-md space-y-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">
+                {t("snippets.shareSnippet")}
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShareDialogSnippet(null)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              {shareDialogSnippet.name}
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Select
+                  value={shareTargetType}
+                  onValueChange={(v: "user" | "role") => {
+                    setShareTargetType(v);
+                    setShareTargetId("");
+                  }}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">{t("snippets.user")}</SelectItem>
+                    <SelectItem value="role">{t("snippets.role")}</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={shareTargetId} onValueChange={setShareTargetId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={t("snippets.selectTarget")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shareTargetType === "user"
+                      ? shareUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.username}
+                          </SelectItem>
+                        ))
+                      : shareRoles.map((r) => (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            {r.displayName || r.name}
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  onClick={handleShare}
+                  disabled={!shareTargetId}
+                  size="sm"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {shareAccessList.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-sm font-semibold">
+                  {t("snippets.currentAccess")}
+                </span>
+                {shareAccessList.map((access) => (
+                  <div
+                    key={access.id}
+                    className="flex items-center justify-between rounded-md border p-2 text-sm"
+                  >
+                    <span>
+                      {access.username ||
+                        access.roleDisplayName ||
+                        access.roleName}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => handleRevokeSnippetAccess(access.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

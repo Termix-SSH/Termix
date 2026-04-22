@@ -1,7 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light" | "system";
+type Theme =
+  | "dark"
+  | "light"
+  | "system"
+  | "dracula"
+  | "gentlemansChoice"
+  | "midnightEspresso"
+  | "catppuccinMocha";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -12,11 +19,13 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  setThemePreview: (theme: Theme | null) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
+  setThemePreview: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -30,13 +39,23 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
   );
+  const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark");
+    root.classList.remove(
+      "light",
+      "dark",
+      "dracula",
+      "gentlemansChoice",
+      "midnightEspresso",
+      "catppuccinMocha",
+    );
 
-    if (theme === "system") {
+    const activeTheme = previewTheme || theme;
+
+    if (activeTheme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
         .matches
         ? "dark"
@@ -46,14 +65,27 @@ export function ThemeProvider({
       return;
     }
 
-    root.classList.add(theme);
-  }, [theme]);
+    root.classList.add(activeTheme);
+
+    const darkCustomThemes: Theme[] = [
+      "dracula",
+      "gentlemansChoice",
+      "midnightEspresso",
+      "catppuccinMocha",
+    ];
+    if (darkCustomThemes.includes(activeTheme)) {
+      root.classList.add("dark");
+    }
+  }, [theme, previewTheme]);
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
       localStorage.setItem(storageKey, theme);
       setTheme(theme);
+    },
+    setThemePreview: (theme: Theme | null) => {
+      setPreviewTheme(theme);
     },
   };
 

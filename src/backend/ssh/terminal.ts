@@ -1,5 +1,8 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
+import net from "net";
+import dgram from "dgram";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { parse as parseUrl } from "url";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
@@ -17,6 +20,46 @@ import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { sessionManager } from "./terminal-session-manager.js";
+import {
+  detectTmux,
+  attachOrCreateTmuxSession,
+  queryNewestTmuxSession,
+} from "./tmux-helper.js";
+
+async function performPortKnocking(
+  host: string,
+  sequence: Array<{ port: number; protocol?: string; delay?: number }>,
+): Promise<void> {
+  for (const knock of sequence) {
+    const protocol = knock.protocol || "tcp";
+    const delay = knock.delay ?? 100;
+
+    await new Promise<void>((resolve) => {
+      if (protocol === "udp") {
+        const client = dgram.createSocket("udp4");
+        client.send(Buffer.alloc(0), knock.port, host, () => {
+          client.close();
+          resolve();
+        });
+      } else {
+        const socket = new net.Socket();
+        socket.once("connect", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.once("error", () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.connect(knock.port, host);
+      }
+    });
+
+    if (delay > 0) {
+      await new Promise<void>((r) => setTimeout(r, delay));
+    }
+  }
+}
 
 interface ConnectToHostData {
   cols: number;
@@ -42,6 +85,11 @@ interface ConnectToHostData {
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
+    portKnockSequence?: Array<{
+      port: number;
+      protocol?: "tcp" | "udp";
+      delay?: number;
+    }>;
     terminalConfig?: {
       keepaliveInterval?: number;
       keepaliveCountMax?: number;
@@ -255,7 +303,7 @@ async function createJumpHostChain(
           host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
-          tryKeyboard: true,
+          tryKeyboard: jumpHostConfig.authType !== "none",
           readyTimeout: 30000,
           hostVerifier: jumpHostVerifier,
         };
@@ -320,7 +368,15 @@ const wss = new WebSocketServer({
   verifyClient: async (info) => {
     try {
       const url = parseUrl(info.req.url!, true);
-      const token = url.query.token as string;
+      let token = url.query.token as string;
+
+      if (!token) {
+        const cookieHeader = info.req.headers.cookie;
+        if (cookieHeader) {
+          const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+          if (match) token = decodeURIComponent(match[1]);
+        }
+      }
 
       if (!token) {
         return false;
@@ -338,7 +394,7 @@ const wss = new WebSocketServer({
 
       const existingConnections = userConnections.get(payload.userId);
 
-      if (existingConnections && existingConnections.size >= 3) {
+      if (existingConnections && existingConnections.size >= 10) {
         return false;
       }
 
@@ -359,7 +415,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   try {
     const url = parseUrl(req.url!, true);
-    const token = url.query.token as string;
+    let token = url.query.token as string;
+
+    if (!token) {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
+    }
 
     if (!token) {
       ws.close(1008, "Authentication required");
@@ -427,10 +491,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
-  let opksshTempFiles: { keyPath: string; certPath: string } | null = null;
+
+  let wsAlive = true;
+
+  ws.on("pong", () => {
+    wsAlive = true;
+  });
 
   const wsPingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
+      if (!wsAlive) {
+        sshLogger.warn(
+          "WebSocket pong timeout - terminating zombie connection",
+          {
+            operation: "ws_pong_timeout",
+            userId,
+            sessionId: currentSessionId,
+          },
+        );
+        ws.terminate();
+        return;
+      }
+      wsAlive = false;
       ws.ping();
     }
   }, 30000);
@@ -624,6 +706,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               hostName: s.hostName,
               createdAt: s.createdAt,
               lastDetachedAt: s.lastDetachedAt,
+              tmuxSessionName: s.tmuxSessionName,
             })),
           }),
         );
@@ -677,6 +760,52 @@ wss.on("connection", async (ws: WebSocket, req) => {
       case "ping":
         ws.send(JSON.stringify({ type: "pong" }));
         break;
+
+      case "tmux_attach": {
+        const tmuxData = data as { sessionName: string };
+        const session = currentSessionId
+          ? sessionManager.getSession(currentSessionId)
+          : null;
+        if (session?.sshStream) {
+          const existingName = tmuxData.sessionName || undefined;
+          attachOrCreateTmuxSession(session.sshStream, existingName);
+          if (existingName) {
+            session.tmuxSessionName = existingName;
+            sshLogger.info("User selected tmux session to attach", {
+              operation: "tmux_user_attach",
+              sessionName: existingName,
+              hostId: session.hostId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "tmux_session_attached",
+                sessionName: existingName,
+              }),
+            );
+          } else {
+            // New session from picker -- query name after startup
+            const sshConn = session.sshConn;
+            setTimeout(async () => {
+              const sessionName = sshConn
+                ? await queryNewestTmuxSession(sshConn)
+                : null;
+              session.tmuxSessionName = sessionName;
+              sshLogger.info("User requested new tmux session", {
+                operation: "tmux_user_create",
+                sessionName,
+                hostId: session.hostId,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "tmux_session_created",
+                  sessionName,
+                }),
+              );
+            }, 500);
+          }
+        }
+        break;
+      }
 
       case "totp_response": {
         const totpData = data as TOTPResponseData;
@@ -1048,6 +1177,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
+    // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
       username,
       password,
@@ -1057,94 +1187,52 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
     };
     const authMethodNotAvailable = false;
-    if (credentialId && id) {
-      const hostRow = await getDb()
-        .select({ userId: hosts.userId })
-        .from(hosts)
-        .where(eq(hosts.id, id))
-        .limit(1);
-      const ownerId = hostRow[0]?.userId ?? null;
-
-      if (ownerId && userId !== ownerId) {
-        try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            id,
-            userId,
+    if (id && userId && !password && !key) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        const resolvedHost = await resolveHostById(id, userId);
+        if (resolvedHost) {
+          resolvedCredentials = {
+            username: resolvedHost.username || username,
+            password: resolvedHost.password,
+            key: resolvedHost.key,
+            keyPassword: resolvedHost.keyPassword,
+            keyType: resolvedHost.keyType,
+            authType: resolvedHost.authType,
+          };
+          sendLog(
+            "auth",
+            "info",
+            "Credentials resolved from server-side host data",
           );
-
-          if (sharedCred) {
-            resolvedCredentials = {
-              username: sharedCred.username || username,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authType: sharedCred.authType,
-            };
-          } else {
-            sshLogger.warn(`No shared credentials found for host ${id}`, {
-              operation: "ssh_credentials",
-              userId,
-              hostId: id,
-            });
-          }
-        } catch (error) {
-          sshLogger.warn(`Failed to resolve shared credential for host ${id}`, {
-            operation: "ssh_credentials",
-            hostId: id,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
         }
-      } else if (ownerId) {
-        try {
-          const credentials = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, credentialId),
-                  eq(sshCredentials.userId, ownerId),
-                ),
-              ),
-            "ssh_credentials",
-            ownerId,
-          );
-
-          if (credentials.length > 0) {
-            const credential = credentials[0];
-            resolvedCredentials = {
-              username: (credential.username as string | undefined) || username,
-              password: credential.password as string | undefined,
-              key: credential.privateKey as string | undefined,
-              keyPassword: credential.keyPassword as string | undefined,
-              keyType: credential.keyType as string | undefined,
-              authType: credential.authType as string | undefined,
-            };
-          } else {
-            sshLogger.warn(`No credentials found for host ${id}`, {
-              operation: "ssh_credentials",
-              hostId: id,
-              credentialId,
-              userId: ownerId,
-            });
-          }
-        } catch (error) {
-          sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
-            operation: "ssh_credentials",
-            hostId: id,
-            credentialId,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
+          operation: "ssh_credentials",
+          hostId: id,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    } else if (credentialId && id && userId) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        const resolvedHost = await resolveHostById(id, userId);
+        if (resolvedHost) {
+          resolvedCredentials = {
+            username: resolvedHost.username || username,
+            password: resolvedHost.password,
+            key: resolvedHost.key,
+            keyPassword: resolvedHost.keyPassword,
+            keyType: resolvedHost.keyType,
+            authType: resolvedHost.authType,
+          };
         }
-      } else {
-        sshLogger.warn("Missing userId for credential resolution in terminal", {
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve credentials for host ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
@@ -1331,7 +1419,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
               sshConn!,
               stream,
               lastJumpClient,
-              opksshTempFiles,
             );
             sessionManager.attachWs(currentSessionId, userId, ws);
 
@@ -1422,16 +1509,115 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
           });
 
-          if (initialPath && initialPath.trim() !== "") {
-            const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\n`;
-            stream.write(cdCommand);
-          }
+          const autoTmux = hostConfig.terminalConfig?.autoTmux === true;
 
-          if (executeCommand && executeCommand.trim() !== "") {
+          // Helper to run initialPath/executeCommand after the shell
+          // (or tmux session) is ready
+          const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
-              const command = `${executeCommand}\n`;
-              stream.write(command);
-            }, 500);
+              if (initialPath && initialPath.trim() !== "") {
+                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
+                stream.write(cdCommand);
+              }
+              if (executeCommand && executeCommand.trim() !== "") {
+                setTimeout(() => {
+                  stream.write(`${executeCommand}\r`);
+                }, 300);
+              }
+            }, delay);
+          };
+
+          if (autoTmux && conn) {
+            (async () => {
+              try {
+                const detection = await detectTmux(conn);
+                if (!detection.available) {
+                  sshLogger.warn("tmux not found on remote host", {
+                    operation: "tmux_detection",
+                    hostId: id,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_unavailable",
+                      message:
+                        "tmux is not installed on the remote host. Falling back to standard shell.",
+                    }),
+                  );
+                  // tmux unavailable, run commands in plain shell
+                  runPostShellCommands(0);
+                } else if (detection.sessions.length === 0) {
+                  attachOrCreateTmuxSession(stream);
+                  // Query the name tmux assigned after a short delay
+                  setTimeout(async () => {
+                    const sessionName = await queryNewestTmuxSession(conn);
+                    const session = sessionManager.getSession(boundSessionId);
+                    if (session) {
+                      session.tmuxSessionName = sessionName;
+                    }
+                    sshLogger.info("Created new tmux session", {
+                      operation: "tmux_new_session",
+                      sessionName,
+                      hostId: id,
+                    });
+                    ws.send(
+                      JSON.stringify({
+                        type: "tmux_session_created",
+                        sessionName,
+                      }),
+                    );
+                  }, 500);
+                  // Wait for tmux to start before running commands inside it
+                  runPostShellCommands(500);
+                } else if (detection.sessions.length === 1) {
+                  attachOrCreateTmuxSession(stream, detection.sessions[0].name);
+                  const sessionName = detection.sessions[0].name;
+                  const session = sessionManager.getSession(boundSessionId);
+                  if (session) {
+                    session.tmuxSessionName = sessionName;
+                  }
+                  sshLogger.info("Auto-attached to existing tmux session", {
+                    operation: "tmux_auto_attach",
+                    sessionName,
+                    hostId: id,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_session_attached",
+                      sessionName,
+                    }),
+                  );
+                  // Reattaching to existing session -- don't re-run
+                  // initialPath/executeCommand since the session already
+                  // has its own state
+                } else {
+                  sshLogger.info(
+                    "Multiple tmux sessions found, sending list to frontend",
+                    {
+                      operation: "tmux_sessions_available",
+                      sessions: detection.sessions,
+                      hostId: id,
+                    },
+                  );
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_sessions_available",
+                      sessions: detection.sessions,
+                    }),
+                  );
+                  // Commands deferred until user picks a session
+                }
+              } catch (error) {
+                sshLogger.error("tmux detection failed", error, {
+                  operation: "tmux_detection_error",
+                  hostId: id,
+                });
+                // Fallback: run commands in plain shell
+                runPostShellCommands(0);
+              }
+            })();
+          } else {
+            // No tmux -- run commands directly as before
+            runPostShellCommands(0);
           }
 
           ws.send(
@@ -1801,7 +1987,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: true,
+      tryKeyboard: resolvedCredentials.authType !== "none",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval
@@ -1859,18 +2045,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           "ssh-rsa",
           "ssh-dss",
         ],
-        cipher: [
-          "chacha20-poly1305@openssh.com",
-          "aes256-gcm@openssh.com",
-          "aes128-gcm@openssh.com",
-          "aes256-ctr",
-          "aes192-ctr",
-          "aes128-ctr",
-          "aes256-cbc",
-          "aes192-cbc",
-          "aes128-cbc",
-          "3des-cbc",
-        ],
+        cipher: SSH_ALGORITHMS.cipher,
         hmac: [
           "hmac-sha2-512-etm@openssh.com",
           "hmac-sha2-256-etm@openssh.com",
@@ -1974,19 +2149,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         sendLog("auth", "info", "Using cached OPKSSH certificate");
 
-        const { promises: fs } = await import("fs");
-        const path = await import("path");
-        const os = await import("os");
-
-        const tempDir = os.tmpdir();
-        const keyPath = path.join(tempDir, `opkssh-${userId}-${id}`);
-        const certPath = `${keyPath}-cert.pub`;
-
-        await fs.writeFile(keyPath, token.privateKey, { mode: 0o600 });
-        await fs.writeFile(certPath, token.sshCert, { mode: 0o600 });
-
-        opksshTempFiles = { keyPath, certPath };
-        connectConfig.privateKey = await fs.readFile(keyPath);
+        const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+        await setupOPKSSHCertAuth(connectConfig, sshConn, token, username);
       } catch (opksshError) {
         sshLogger.error("OPKSSH authentication error", opksshError, {
           operation: "opkssh_auth_error",
@@ -2015,6 +2179,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    if (
+      hostConfig.portKnockSequence &&
+      hostConfig.portKnockSequence.length > 0
+    ) {
+      try {
+        sshLogger.info(
+          `Port knocking ${hostConfig.ip} (${hostConfig.portKnockSequence.length} ports)`,
+          { operation: "port_knock", hostId: hostConfig.id },
+        );
+        await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
+      } catch (err) {
+        sshLogger.warn("Port knocking failed, attempting connection anyway", {
+          operation: "port_knock",
+          hostId: hostConfig.id,
+        });
+      }
     }
 
     const proxyConfig: SOCKS5Config | null =
@@ -2171,6 +2353,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else {
       sendLog("handshake", "info", "Starting SSH session");
       sendLog("auth", "info", `Authenticating as ${username}`);
+
       sshLogger.info("Initiating SSH connection", {
         operation: "terminal_ssh_connect_attempt",
         sessionId,
@@ -2219,7 +2402,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshStream = null;
     sshConn = null;
     lastJumpClient = null;
-    opksshTempFiles = null;
 
     resetConnectionState();
     isCleaningUp = false;

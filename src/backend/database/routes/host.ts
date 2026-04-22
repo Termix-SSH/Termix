@@ -36,6 +36,7 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseSaveTrigger } from "../db/index.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
 
 const router = express.Router();
 
@@ -47,6 +48,30 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
+}
+
+const SENSITIVE_FIELDS = [
+  "password",
+  "key",
+  "keyPassword",
+  "sudoPassword",
+  "autostartPassword",
+  "autostartKey",
+  "autostartKeyPassword",
+  "socks5Password",
+];
+
+function stripSensitiveFields(
+  host: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...host };
+  result.hasPassword = !!host.password;
+  result.hasKey = !!host.key;
+  result.hasSudoPassword = !!host.sudoPassword;
+  for (const field of SENSITIVE_FIELDS) {
+    delete result[field];
+  }
+  return result;
 }
 
 function transformHostResponse(
@@ -90,6 +115,9 @@ function transformHostResponse(
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],
+    portKnockSequence: host.portKnockSequence
+      ? JSON.parse(host.portKnockSequence as string)
+      : [],
     domain: host.domain || undefined,
     security: host.security || undefined,
     ignoreCert: !!host.ignoreCert,
@@ -106,7 +134,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 
 /**
  * @openapi
- * /ssh/db/host/internal:
+ * /host/db/host/internal:
  *   get:
  *     summary: Get internal SSH host data
  *     description: Returns internal SSH host data for autostart tunnels. Requires internal auth token.
@@ -171,12 +199,6 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
           ip: host.ip,
           port: host.port,
           username: host.username,
-          password: host.autostartPassword,
-          key: host.autostartKey,
-          keyPassword: host.autostartKeyPassword,
-          autostartPassword: host.autostartPassword,
-          autostartKey: host.autostartKey,
-          autostartKeyPassword: host.autostartKeyPassword,
           authType: host.authType,
           keyType: host.keyType,
           credentialId: host.credentialId,
@@ -206,7 +228,7 @@ router.get("/db/host/internal", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host/internal/all:
+ * /host/db/host/internal/all:
  *   get:
  *     summary: Get all internal SSH host data
  *     description: Returns all internal SSH host data. Requires internal auth token.
@@ -252,12 +274,6 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
         ip: host.ip,
         port: host.port,
         username: host.username,
-        password: host.autostartPassword || host.password,
-        key: host.autostartKey || host.key,
-        keyPassword: host.autostartKeyPassword || host.keyPassword,
-        autostartPassword: host.autostartPassword,
-        autostartKey: host.autostartKey,
-        autostartKeyPassword: host.autostartKeyPassword,
         authType: host.authType,
         keyType: host.keyType,
         credentialId: host.credentialId,
@@ -286,7 +302,7 @@ router.get("/db/host/internal/all", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   post:
  *     summary: Create SSH host
  *     description: Creates a new SSH host configuration.
@@ -381,7 +397,9 @@ router.post(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
@@ -405,8 +423,11 @@ router.post(
       return res.status(400).json({ error: "Invalid SSH data" });
     }
 
-    const effectiveAuthType = authType || authMethod;
     const effectiveConnectionType = connectionType || "ssh";
+    const effectiveAuthType =
+      authType ||
+      authMethod ||
+      (effectiveConnectionType !== "ssh" ? "password" : undefined);
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
       connectionType: effectiveConnectionType,
@@ -466,6 +487,10 @@ router.post(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -595,7 +620,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/quick-connect:
+ * /host/quick-connect:
  *   post:
  *     summary: Create a temporary SSH connection without saving to database
  *     description: Returns a temporary host configuration for immediate use
@@ -778,7 +803,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   put:
  *     summary: Update SSH host
  *     description: Updates an existing SSH host configuration.
@@ -888,7 +913,9 @@ router.put(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      portKnockSequence,
       overrideCredentialUsername,
+      macAddress,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
@@ -973,6 +1000,10 @@ router.put(
       socks5Password: socks5Password || null,
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
+        : null,
+      macAddress: macAddress || null,
+      portKnockSequence: portKnockSequence
+        ? JSON.stringify(portKnockSequence)
         : null,
     };
 
@@ -1198,7 +1229,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/db/host:
+ * /host/db/host:
  *   get:
  *     summary: Get all SSH hosts
  *     description: Retrieves all SSH hosts for the authenticated user.
@@ -1282,10 +1313,13 @@ router.get(
           socks5Username: hosts.socks5Username,
           socks5Password: hosts.socks5Password,
           socks5ProxyChain: hosts.socks5ProxyChain,
+          portKnockSequence: hosts.portKnockSequence,
           domain: hosts.domain,
           security: hosts.security,
           ignoreCert: hosts.ignoreCert,
           guacamoleConfig: hosts.guacamoleConfig,
+          macAddress: hosts.macAddress,
+          dockerConfig: hosts.dockerConfig,
 
           ownerId: hosts.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,
@@ -1362,7 +1396,8 @@ router.get(
         }),
       );
 
-      res.json(result);
+      const sanitized = result.map((host) => stripSensitiveFields(host));
+      res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
         operation: "host_fetch",
@@ -1375,7 +1410,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   get:
  *     summary: Get SSH host by ID
  *     description: Retrieves a specific SSH host by its ID.
@@ -1436,8 +1471,9 @@ router.get(
 
       const host = data[0];
       const result = transformHostResponse(host);
+      const resolved = (await resolveHostCredentials(result, userId)) || result;
 
-      res.json((await resolveHostCredentials(result, userId)) || result);
+      res.json(stripSensitiveFields(resolved));
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -1451,7 +1487,79 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}/export:
+ * /host/db/host/{id}/password:
+ *   get:
+ *     summary: Get host password for clipboard copy
+ *     description: Returns the password for a specific host. Used by the copy-password feature.
+ *     tags:
+ *       - SSH
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: field
+ *         schema:
+ *           type: string
+ *           enum: [password, sudoPassword]
+ *     responses:
+ *       200:
+ *         description: The requested password value.
+ *       404:
+ *         description: Host not found or no password set.
+ */
+router.get(
+  "/db/host/:id/password",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = Number(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+    const field = (req.query.field as string) || "password";
+
+    if (!["password", "sudoPassword"].includes(field)) {
+      return res.status(400).json({ error: "Invalid field" });
+    }
+
+    try {
+      const data = await SimpleDBOps.select(
+        db
+          .select()
+          .from(hosts)
+          .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
+        "ssh_data",
+        userId,
+      );
+
+      if (data.length === 0) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      const host = data[0];
+      const resolved = (await resolveHostCredentials(host, userId)) || host;
+      const value = resolved[field];
+
+      if (!value) {
+        return res.status(404).json({ error: "No password set" });
+      }
+
+      res.json({ value });
+    } catch (err) {
+      sshLogger.error("Failed to fetch host password", err, {
+        operation: "host_password_fetch",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to fetch password" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /host/db/host/{id}/export:
  *   get:
  *     summary: Export SSH host
  *     description: Exports a specific SSH host with decrypted credentials.
@@ -1585,6 +1693,9 @@ router.get(
             socks5ProxyChain: resolvedHost.socks5ProxyChain
               ? JSON.parse(resolvedHost.socks5ProxyChain as string)
               : null,
+            portKnockSequence: resolvedHost.portKnockSequence
+              ? JSON.parse(resolvedHost.portKnockSequence as string)
+              : null,
           };
 
       sshLogger.success("Host exported with decrypted credentials", {
@@ -1601,6 +1712,148 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to export SSH host" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /ssh/db/hosts/export:
+ *   get:
+ *     summary: Export all SSH hosts
+ *     description: Exports all SSH hosts for the current user with decrypted credentials.
+ *     tags:
+ *       - SSH
+ *     responses:
+ *       200:
+ *         description: All exported SSH hosts.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to export SSH hosts.
+ */
+router.get(
+  "/db/hosts/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    try {
+      const allHosts = await SimpleDBOps.select(
+        db.select().from(hosts).where(eq(hosts.userId, userId)),
+        "ssh_data",
+        userId,
+      );
+
+      const exportedHosts = [];
+
+      for (const host of allHosts) {
+        const resolvedHost =
+          (await resolveHostCredentials(host, userId)) || host;
+
+        const exportedConnectionType =
+          (resolvedHost.connectionType as string) || "ssh";
+        const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
+          exportedConnectionType,
+        );
+
+        const baseExportData = {
+          connectionType: exportedConnectionType,
+          name: resolvedHost.name,
+          ip: resolvedHost.ip,
+          port: resolvedHost.port,
+          username: resolvedHost.username,
+          password: resolvedHost.password || null,
+          folder: resolvedHost.folder,
+          tags:
+            typeof resolvedHost.tags === "string"
+              ? resolvedHost.tags.split(",").filter(Boolean)
+              : resolvedHost.tags || [],
+          pin: !!resolvedHost.pin,
+          notes: resolvedHost.notes || null,
+        };
+
+        const exportData = isRemoteDesktop
+          ? {
+              ...baseExportData,
+              domain: resolvedHost.domain || null,
+              security: resolvedHost.security || null,
+              ignoreCert: !!resolvedHost.ignoreCert,
+              guacamoleConfig: resolvedHost.guacamoleConfig
+                ? JSON.parse(resolvedHost.guacamoleConfig as string)
+                : null,
+            }
+          : {
+              ...baseExportData,
+              authType: resolvedHost.authType,
+              key: resolvedHost.key || null,
+              keyPassword: resolvedHost.keyPassword || null,
+              keyType: resolvedHost.keyType || null,
+              credentialId: resolvedHost.credentialId || null,
+              overrideCredentialUsername:
+                !!resolvedHost.overrideCredentialUsername,
+              enableTerminal: !!resolvedHost.enableTerminal,
+              enableTunnel: !!resolvedHost.enableTunnel,
+              enableFileManager: !!resolvedHost.enableFileManager,
+              enableDocker: !!resolvedHost.enableDocker,
+              showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
+              showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
+              showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
+              showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
+              showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
+              defaultPath: resolvedHost.defaultPath,
+              sudoPassword: resolvedHost.sudoPassword || null,
+              tunnelConnections: resolvedHost.tunnelConnections
+                ? JSON.parse(resolvedHost.tunnelConnections as string)
+                : [],
+              jumpHosts: resolvedHost.jumpHosts
+                ? JSON.parse(resolvedHost.jumpHosts as string)
+                : null,
+              quickActions: resolvedHost.quickActions
+                ? JSON.parse(resolvedHost.quickActions as string)
+                : null,
+              statsConfig: resolvedHost.statsConfig
+                ? JSON.parse(resolvedHost.statsConfig as string)
+                : null,
+              dockerConfig: resolvedHost.dockerConfig
+                ? JSON.parse(resolvedHost.dockerConfig as string)
+                : null,
+              terminalConfig: resolvedHost.terminalConfig
+                ? JSON.parse(resolvedHost.terminalConfig as string)
+                : null,
+              forceKeyboardInteractive:
+                resolvedHost.forceKeyboardInteractive === "true",
+              useSocks5: !!resolvedHost.useSocks5,
+              socks5Host: resolvedHost.socks5Host || null,
+              socks5Port: resolvedHost.socks5Port || null,
+              socks5Username: resolvedHost.socks5Username || null,
+              socks5Password: resolvedHost.socks5Password || null,
+              socks5ProxyChain: resolvedHost.socks5ProxyChain
+                ? JSON.parse(resolvedHost.socks5ProxyChain as string)
+                : null,
+            };
+
+        exportedHosts.push(exportData);
+      }
+
+      sshLogger.success("All hosts exported with decrypted credentials", {
+        operation: "hosts_export_all",
+        count: exportedHosts.length,
+        userId,
+      });
+
+      res.json({ hosts: exportedHosts });
+    } catch (err) {
+      sshLogger.error("Failed to export all SSH hosts", err, {
+        operation: "hosts_export_all",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to export SSH hosts" });
     }
   },
 );
@@ -1745,7 +1998,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   get:
  *     summary: Get recent files
  *     description: Retrieves a list of recent files for a specific host.
@@ -1808,7 +2061,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   post:
  *     summary: Add recent file
  *     description: Adds a file to the list of recent files for a host.
@@ -1884,7 +2137,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/recent:
+ * /host/file_manager/recent:
  *   delete:
  *     summary: Remove recent file
  *     description: Removes a file from the list of recent files for a host.
@@ -1942,7 +2195,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   get:
  *     summary: Get pinned files
  *     description: Retrieves a list of pinned files for a specific host.
@@ -2004,7 +2257,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   post:
  *     summary: Add pinned file
  *     description: Adds a file to the list of pinned files for a host.
@@ -2079,7 +2332,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/pinned:
+ * /host/file_manager/pinned:
  *   delete:
  *     summary: Remove pinned file
  *     description: Removes a file from the list of pinned files for a host.
@@ -2137,7 +2390,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   get:
  *     summary: Get shortcuts
  *     description: Retrieves a list of shortcuts for a specific host.
@@ -2199,7 +2452,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   post:
  *     summary: Add shortcut
  *     description: Adds a shortcut for a specific host.
@@ -2274,7 +2527,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/file_manager/shortcuts:
+ * /host/file_manager/shortcuts:
  *   delete:
  *     summary: Remove shortcut
  *     description: Removes a shortcut for a specific host.
@@ -2332,7 +2585,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/command-history/{hostId}:
+ * /host/command-history/{hostId}:
  *   get:
  *     summary: Get command history
  *     description: Retrieves the command history for a specific host.
@@ -2401,7 +2654,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/command-history:
+ * /host/command-history:
  *   delete:
  *     summary: Delete command from history
  *     description: Deletes a specific command from the history of a host.
@@ -2559,7 +2812,7 @@ async function resolveHostCredentials(
 
 /**
  * @openapi
- * /ssh/folders/rename:
+ * /host/folders/rename:
  *   put:
  *     summary: Rename folder
  *     description: Renames a folder for SSH hosts and credentials.
@@ -2659,7 +2912,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders:
+ * /host/folders:
  *   get:
  *     summary: Get all folders
  *     description: Retrieves all folders for the authenticated user.
@@ -2698,7 +2951,7 @@ router.get("/folders", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /ssh/folders/metadata:
+ * /host/folders/metadata:
  *   put:
  *     summary: Update folder metadata
  *     description: Updates the metadata (color, icon) of a folder.
@@ -2789,7 +3042,7 @@ router.put(
 
 /**
  * @openapi
- * /ssh/folders/{name}/hosts:
+ * /host/folders/{name}/hosts:
  *   delete:
  *     summary: Delete all hosts in folder
  *     description: Deletes all SSH hosts within a specific folder.
@@ -2935,7 +3188,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/bulk-import:
+ * /host/bulk-import:
  *   post:
  *     summary: Bulk import SSH hosts
  *     description: Bulk imports multiple SSH hosts.
@@ -2961,7 +3214,7 @@ router.delete(
 
 /**
  * @swagger
- * /ssh/bulk-update:
+ * /host/bulk-update:
  *   patch:
  *     summary: Bulk update partial fields on multiple SSH hosts
  *     tags: [SSH]
@@ -3206,6 +3459,41 @@ router.post(
           continue;
         }
 
+        if (
+          effectiveConnectionType === "ssh" &&
+          hostData.authType === "credential" &&
+          hostData.credentialId
+        ) {
+          const cred = await db
+            .select({ id: sshCredentials.id })
+            .from(sshCredentials)
+            .where(
+              and(
+                eq(sshCredentials.id, hostData.credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            )
+            .limit(1);
+
+          if (cred.length === 0) {
+            const fallback = await db
+              .select({ id: sshCredentials.id })
+              .from(sshCredentials)
+              .where(eq(sshCredentials.userId, userId))
+              .limit(1);
+
+            if (fallback.length > 0) {
+              hostData.credentialId = fallback[0].id;
+            } else {
+              results.failed++;
+              results.errors.push(
+                `Host ${i + 1}: credentialId ${hostData.credentialId} not found and no fallback credential available`,
+              );
+              continue;
+            }
+          }
+        }
+
         const sshDataObj: Record<string, unknown> = {
           userId: userId,
           connectionType: effectiveConnectionType,
@@ -3256,6 +3544,9 @@ router.post(
           socks5Password: hostData.socks5Password || null,
           socks5ProxyChain: hostData.socks5ProxyChain
             ? JSON.stringify(hostData.socks5ProxyChain)
+            : null,
+          portKnockSequence: hostData.portKnockSequence
+            ? JSON.stringify(hostData.portKnockSequence)
             : null,
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
@@ -3331,7 +3622,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/folders/{folderName}/hosts:
+ * /host/folders/{folderName}/hosts:
  *   delete:
  *     summary: Delete all hosts in a folder
  *     description: Deletes all hosts within a specific folder.
@@ -3429,7 +3720,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/enable:
+ * /host/autostart/enable:
  *   post:
  *     summary: Enable autostart for SSH configuration
  *     description: Enables autostart for a specific SSH configuration.
@@ -3608,7 +3899,7 @@ router.post(
 
 /**
  * @openapi
- * /ssh/autostart/disable:
+ * /host/autostart/disable:
  *   delete:
  *     summary: Disable autostart for SSH configuration
  *     description: Disables autostart for a specific SSH configuration.
@@ -3677,7 +3968,7 @@ router.delete(
 
 /**
  * @openapi
- * /ssh/autostart/status:
+ * /host/autostart/status:
  *   get:
  *     summary: Get autostart status
  *     description: Retrieves the autostart status for the user's SSH configurations.
@@ -3733,7 +4024,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   get:
  *     summary: Get OPKSSH token status for a host
  *     tags: [SSH]
@@ -3832,7 +4123,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/opkssh/token/{hostId}:
+ * /host/opkssh/token/{hostId}:
  *   delete:
  *     summary: Delete OPKSSH token for a host
  *     tags: [SSH]
@@ -3882,14 +4173,165 @@ router.delete(
   },
 );
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Replicates openpubkey's client/choosers/web_chooser.go IssuerToName().
+// OPKSSH's /select handler keys its providerMap by this derived name, NOT by the
+// `alias` field in config.yml. We need the same mapping so we can normalize any
+// `op=` query param we receive (which can be alias, issuer with protocol, or
+// issuer without protocol depending on client version) to what OPKSSH expects.
+function opksshIssuerToName(issuer: string): string | null {
+  if (!issuer) return null;
+  const withScheme =
+    issuer.startsWith("http://") || issuer.startsWith("https://")
+      ? issuer
+      : `https://${issuer}`;
+  if (withScheme.startsWith("https://accounts.google.com")) return "google";
+  if (withScheme.startsWith("https://login.microsoftonline.com"))
+    return "azure";
+  if (withScheme.startsWith("https://gitlab.com")) return "gitlab";
+  if (withScheme.startsWith("https://issuer.hello.coop")) return "hello";
+  if (withScheme.startsWith("https://")) {
+    const host = withScheme.slice("https://".length).split("/")[0];
+    return host || null;
+  }
+  return null;
+}
+
+function normalizeSelectOpParam(
+  rawOp: string,
+  providers: Array<{ alias: string; issuer: string }>,
+): string {
+  if (!rawOp) return rawOp;
+  const knownNames = new Set(
+    providers
+      .map((p) => opksshIssuerToName(p.issuer))
+      .filter((n): n is string => typeof n === "string" && n.length > 0),
+  );
+  if (knownNames.has(rawOp)) return rawOp;
+
+  const derivedFromRaw = opksshIssuerToName(rawOp);
+  if (derivedFromRaw && knownNames.has(derivedFromRaw)) return derivedFromRaw;
+
+  const matchByAlias = providers.find((p) => p.alias === rawOp);
+  if (matchByAlias) {
+    const name = opksshIssuerToName(matchByAlias.issuer);
+    if (name) return name;
+  }
+
+  return rawOp;
+}
+
+interface OpksshErrorPageOptions {
+  title: string;
+  heading: string;
+  message: string;
+  details?: string;
+  requestId?: string;
+  statusCode?: number;
+}
+
+function renderOpksshErrorPage(opts: OpksshErrorPageOptions): string {
+  const title = escapeHtml(opts.title);
+  const heading = escapeHtml(opts.heading);
+  const message = escapeHtml(opts.message);
+  const detailsBlock = opts.details
+    ? `<pre class="details">${escapeHtml(opts.details)}</pre>`
+    : "";
+  const requestIdBlock = opts.requestId
+    ? `<p class="request-id">Request ID: ${escapeHtml(opts.requestId)}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>${title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #18181b;
+      color: #fafafa;
+      padding: 1rem;
+    }
+    .container {
+      text-align: center;
+      background: #27272a;
+      padding: 3rem 2rem;
+      border-radius: 0.625rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 720px;
+      width: 100%;
+    }
+    h1 {
+      color: #fafafa;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      color: #9ca3af;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    p + p { margin-top: 0.5rem; }
+    .details {
+      color: #d4d4d8;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      margin-top: 1.25rem;
+      padding: 0.875rem 1rem;
+      background: #0f0f11;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-x: auto;
+    }
+    .request-id {
+      color: #6b7280;
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>${heading}</h1>
+    <p>${message}</p>
+    ${detailsBlock}
+    ${requestIdBlock}
+  </div>
+</body>
+</html>`;
+}
+
 function rewriteOPKSSHHtml(
   html: string,
   requestId: string,
   routePrefix: "opkssh-chooser" | "opkssh-callback",
 ): string {
-  const basePath = `/ssh/${routePrefix}/${requestId}`;
+  const basePath = `/host/${routePrefix}/${requestId}`;
+  const localHostPattern = "(?:localhost|127\\.0\\.0\\.1)";
 
-  const attrPatterns = ["action", "href", "src"];
+  const attrPatterns = ["action", "href", "src", "formaction"];
   for (const attr of attrPatterns) {
     html = html.replace(
       new RegExp(`${attr}="(/[^"]*)`, "g"),
@@ -3901,48 +4343,75 @@ function rewriteOPKSSHHtml(
     );
   }
 
-  html = html.replace(
-    /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `href="${basePath}/$1`,
-  );
-  html = html.replace(
-    /action=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `action="${basePath}/$1`,
-  );
-  html = html.replace(
-    /src=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `src="${basePath}/$1`,
-  );
+  for (const attr of ["href", "action", "src", "formaction"]) {
+    html = html.replace(
+      new RegExp(
+        `${attr}=["']?http:\\/\\/${localHostPattern}:\\d+\\/([^"'\\s]*)`,
+        "g",
+      ),
+      `${attr}="${basePath}/$1`,
+    );
+  }
 
   html = html.replace(
-    /(window\.location\.href\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(window\\.location\\.href\\s*=\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
   html = html.replace(
-    /(window\.location\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(window\\.location\\s*=\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
   html = html.replace(
-    /(fetch\(["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
-    `$1${basePath}/$2$3`,
-  );
-
-  html = html.replace(
-    /(location\.assign\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
-    `$1${basePath}/$2$3`,
-  );
-  html = html.replace(
-    /(location\.replace\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    new RegExp(
+      `(fetch\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
   html = html.replace(
-    /(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*url=)http:\/\/localhost:\d+\/([^"']+)(["'][^>]*>)/gi,
+    new RegExp(
+      `(location\\.assign\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["']\\))`,
+      "g",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    new RegExp(
+      `(location\\.replace\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["']\\))`,
+      "g",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+
+  // XMLHttpRequest.open("GET", "http://localhost:PORT/path", ...)
+  html = html.replace(
+    new RegExp(
+      `(\\.open\\(["']\\w+["']\\s*,\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
   html = html.replace(
-    /(data-[\w-]+=["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\\s*url=)http:\\/\\/${localHostPattern}:\\d+\\/([^"']+)(["'][^>]*>)`,
+      "gi",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+
+  html = html.replace(
+    new RegExp(
+      `(data-[\\w-]+=["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
@@ -3985,7 +4454,7 @@ function rewriteOPKSSHHtml(
 
 /**
  * @openapi
- * /opkssh-chooser/{requestId}:
+ * /host/opkssh-chooser/{requestId}:
  *   get:
  *     summary: Proxy OPKSSH provider chooser page and all related resources
  *     tags: [SSH]
@@ -4014,7 +4483,7 @@ router.use(
 
     const fullPath = req.originalUrl || req.url;
     const pathAfterRequestIdTemp =
-      fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+      fullPath.split(`/host/opkssh-chooser/${requestId}`)[1] || "";
 
     sshLogger.info("OPKSSH chooser proxy request", {
       operation: "opkssh_chooser_proxy_request",
@@ -4027,7 +4496,8 @@ router.use(
     });
 
     try {
-      const { getActiveAuthSession } = await import("../../ssh/opkssh-auth.js");
+      const { getActiveAuthSession, registerOAuthState } =
+        await import("../../ssh/opkssh-auth.js");
       const session = getActiveAuthSession(requestId);
 
       if (!session) {
@@ -4035,59 +4505,14 @@ router.use(
           operation: "opkssh_chooser_session_not_found",
           requestId,
         });
-        res.status(404).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Session Not Found</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              .icon {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                color: #f87171;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Session Not Found</h1>
-              <p>This authentication session has expired or is invalid.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(404).send(
+          renderOpksshErrorPage({
+            title: "Session Not Found",
+            heading: "Session Not Found",
+            message: "This authentication session has expired or is invalid.",
+            requestId,
+          }),
+        );
         return;
       }
 
@@ -4095,7 +4520,7 @@ router.use(
 
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
-        fullPath.split(`/ssh/opkssh-chooser/${requestId}`)[1] || "";
+        fullPath.split(`/host/opkssh-chooser/${requestId}`)[1] || "";
       const targetPath = pathAfterRequestId || "/chooser";
 
       if (!session.localPort || session.localPort === 0) {
@@ -4104,64 +4529,316 @@ router.use(
           requestId,
           sessionStatus: session.status,
         });
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Error</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Authentication Error</h1>
-              <p>Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(500).send(
+          renderOpksshErrorPage({
+            title: "Error",
+            heading: "Authentication Error",
+            message:
+              "Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.",
+            requestId,
+          }),
+        );
         return;
       }
 
-      const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
+      // /select on OPKSSH's chooser redirects (possibly via multiple local hops) to the
+      // external OAuth provider URL. The hops we may see:
+      //   1. /select -> /select/ (Go ServeMux canonicalization, same chooser port)
+      //   2. /select/?op=ALIAS -> http://localhost:CALLBACK_PORT/login (OPKSSH's separate callback listener)
+      //   3. /login on the callback listener -> https://<provider>/authorize?... (external OAuth URL)
+      if (targetPath.startsWith("/select")) {
+        const selectaxios = (await import("axios")).default;
+        const rawQs = targetPath.includes("?")
+          ? targetPath.slice(targetPath.indexOf("?"))
+          : "";
+
+        let qs = rawQs;
+        let opMappedFrom: string | undefined;
+        if (rawQs) {
+          try {
+            const params = new URLSearchParams(rawQs.replace(/^\?/, ""));
+            const rawOp = params.get("op");
+            if (rawOp) {
+              const mappedOp = normalizeSelectOpParam(
+                rawOp,
+                session.providers || [],
+              );
+              if (mappedOp !== rawOp) {
+                params.set("op", mappedOp);
+                qs = `?${params.toString()}`;
+                opMappedFrom = rawOp;
+              }
+            }
+          } catch {
+            /* keep rawQs if parsing fails */
+          }
+        }
+
+        const chooserHost = `127.0.0.1:${session.localPort}`;
+        const startUrl = `http://${chooserHost}/select/${qs}`;
+
+        sshLogger.info("Proxying OPKSSH /select", {
+          operation: "opkssh_select_proxy",
+          requestId,
+          targetUrl: startUrl,
+          opMappedFrom,
+        });
+
+        const isLocalHostname = (host: string): boolean => {
+          const bare = host.split(":")[0];
+          return (
+            bare === "127.0.0.1" || bare === "localhost" || bare === "[::1]"
+          );
+        };
+
+        interface UpstreamResponse {
+          status: number;
+          location?: string;
+          contentType: string;
+          body: string;
+          targetUrl: string;
+          elapsedMs: number;
+        }
+
+        const fetchUpstream = async (
+          url: string,
+        ): Promise<UpstreamResponse> => {
+          const started = Date.now();
+          let hostHeader = chooserHost;
+          try {
+            hostHeader = new URL(url).host;
+          } catch {
+            /* fall back to chooser host */
+          }
+          const r = await selectaxios({
+            method: "GET",
+            url,
+            maxRedirects: 0,
+            validateStatus: () => true,
+            timeout: 10000,
+            responseType: "text",
+            transformResponse: (v) => v,
+            headers: { host: hostHeader },
+          });
+          const locHeader = r.headers["location"];
+          const location = Array.isArray(locHeader) ? locHeader[0] : locHeader;
+          const ctHeader = r.headers["content-type"];
+          const ctRaw = Array.isArray(ctHeader) ? ctHeader[0] : ctHeader;
+          const contentType = typeof ctRaw === "string" ? ctRaw : "";
+          const body =
+            typeof r.data === "string" ? r.data : String(r.data ?? "");
+          return {
+            status: r.status,
+            location: typeof location === "string" ? location : undefined,
+            contentType,
+            body,
+            targetUrl: url,
+            elapsedMs: Date.now() - started,
+          };
+        };
+
+        const logResponse = (response: UpstreamResponse): void => {
+          sshLogger.info("OPKSSH /select upstream response", {
+            operation: "opkssh_select_upstream_response",
+            requestId,
+            targetUrl: response.targetUrl,
+            status: response.status,
+            location: response.location,
+            contentType: response.contentType,
+            elapsedMs: response.elapsedMs,
+            bodyPreview: response.body.slice(0, 256),
+          });
+        };
+
+        const MAX_HOPS = 4;
+
+        try {
+          let response = await fetchUpstream(startUrl);
+          logResponse(response);
+
+          for (let hop = 0; hop < MAX_HOPS; hop++) {
+            if (
+              response.status < 300 ||
+              response.status >= 400 ||
+              !response.location
+            ) {
+              break;
+            }
+            const loc = response.location;
+
+            // Relative path: resolve against the current upstream.
+            if (loc.startsWith("/")) {
+              let currentHost = chooserHost;
+              try {
+                currentHost = new URL(response.targetUrl).host;
+              } catch {
+                /* keep default */
+              }
+              response = await fetchUpstream(`http://${currentHost}${loc}`);
+              logResponse(response);
+              continue;
+            }
+
+            // Absolute URL: if it points to a localhost OPKSSH endpoint, capture
+            // the port. Then redirect the BROWSER to the proxied path so that
+            // Set-Cookie headers from OPKSSH's /login handler reach the browser
+            // directly — following them server-side would swallow the cookie.
+            if (/^https?:\/\//i.test(loc)) {
+              try {
+                const parsed = new URL(loc);
+                if (isLocalHostname(parsed.host)) {
+                  // Capture callback listener port if not yet known.
+                  if (!session.callbackPort) {
+                    const port = parseInt(parsed.port, 10);
+                    if (!Number.isNaN(port)) {
+                      session.callbackPort = port;
+                      sshLogger.info(
+                        "Captured OPKSSH callback listener port from /select redirect",
+                        {
+                          operation: "opkssh_select_callback_port_detected",
+                          requestId,
+                          callbackPort: port,
+                        },
+                      );
+                    }
+                  }
+                  // Redirect browser through the chooser proxy so it can receive
+                  // the state cookie that OPKSSH sets on /login.
+                  const browserPath = `/host/opkssh-chooser/${requestId}${parsed.pathname}${parsed.search}`;
+                  sshLogger.info(
+                    "Redirecting browser to OPKSSH callback listener via proxy",
+                    {
+                      operation: "opkssh_select_browser_redirect_to_login",
+                      requestId,
+                      browserPath,
+                      callbackPort: session.callbackPort,
+                    },
+                  );
+                  res.redirect(302, browserPath);
+                  return;
+                }
+                // External OAuth provider URL — done, handled below.
+                break;
+              } catch {
+                break;
+              }
+            }
+
+            break;
+          }
+
+          const isExternalRedirect =
+            response.status >= 300 &&
+            response.status < 400 &&
+            !!response.location &&
+            /^https?:\/\//i.test(response.location) &&
+            (() => {
+              try {
+                return !isLocalHostname(
+                  new URL(response.location as string).host,
+                );
+              } catch {
+                return false;
+              }
+            })();
+
+          if (isExternalRedirect) {
+            const oauthUrl = response.location as string;
+            try {
+              const parsed = new URL(oauthUrl);
+              const oauthState = parsed.searchParams.get("state");
+              if (oauthState) registerOAuthState(oauthState, requestId);
+            } catch {
+              /* already validated above */
+            }
+            sshLogger.info(
+              "OPKSSH /select redirecting browser to OAuth provider",
+              {
+                operation: "opkssh_select_redirect",
+                requestId,
+                oauthUrl,
+              },
+            );
+            res.redirect(302, oauthUrl);
+            return;
+          }
+
+          const bodyPreview = response.body.slice(0, 512);
+          const detailLines = [
+            `Upstream: ${response.targetUrl}`,
+            `Status: ${response.status}`,
+            response.location ? `Location: ${response.location}` : undefined,
+            `Content-Type: ${response.contentType || "(none)"}`,
+            `Elapsed: ${response.elapsedMs}ms`,
+            "",
+            bodyPreview
+              ? `Body (first 512 chars):\n${bodyPreview}`
+              : "Body: (empty)",
+          ].filter(Boolean) as string[];
+
+          sshLogger.error("OPKSSH /select did not produce an OAuth redirect", {
+            operation: "opkssh_select_no_oauth_redirect",
+            requestId,
+            status: response.status,
+            location: response.location,
+            contentType: response.contentType,
+            bodyPreview,
+          });
+
+          res.status(502).send(
+            renderOpksshErrorPage({
+              title: "OPKSSH error",
+              heading: "Failed to get OAuth redirect",
+              message:
+                "OPKSSH did not return an external OAuth provider URL. " +
+                "This typically indicates a configuration mismatch between the provider's redirect_uris " +
+                "and the Termix callback path. Check the server log for the OPKSSH response body.",
+              details: detailLines.join("\n"),
+              requestId,
+            }),
+          );
+        } catch (err) {
+          sshLogger.error("Error proxying OPKSSH /select", err, {
+            operation: "opkssh_select_proxy_error",
+            requestId,
+            targetUrl: startUrl,
+          });
+          const errMsg = err instanceof Error ? err.message : String(err);
+          res.status(502).send(
+            renderOpksshErrorPage({
+              title: "OPKSSH error",
+              heading: "Failed to reach OPKSSH service",
+              message:
+                "Termix could not connect to the local OPKSSH authentication service. " +
+                "The OPKSSH process may have exited or is not listening yet.",
+              details: `Upstream: ${startUrl}\nError: ${errMsg}`,
+              requestId,
+            }),
+          );
+        }
+        return;
+      }
+
+      // Paths served by the callback listener, not the chooser.
+      // The browser is redirected here so it receives Set-Cookie from OPKSSH.
+      const isCallbackListenerPath =
+        targetPath === "/login" ||
+        targetPath.startsWith("/login?") ||
+        targetPath === "/login-callback" ||
+        targetPath.startsWith("/login-callback?");
+
+      const upstreamPort =
+        isCallbackListenerPath && session.callbackPort
+          ? session.callbackPort
+          : session.localPort;
+
+      const targetUrl = `http://127.0.0.1:${upstreamPort}${targetPath}`;
 
       sshLogger.info("Proxying to OPKSSH chooser", {
         operation: "opkssh_chooser_proxy_request_to_opkssh",
         requestId,
         targetUrl,
-        localPort: session.localPort,
+        upstreamPort,
         targetPath,
       });
 
@@ -4170,7 +4847,7 @@ router.use(
         url: targetUrl,
         headers: {
           ...req.headers,
-          host: `localhost:${session.localPort}`,
+          host: `127.0.0.1:${upstreamPort}`,
         },
         data: req.body,
         timeout: 10000,
@@ -4195,36 +4872,73 @@ router.use(
         if (key.toLowerCase() === "location") {
           const location = value as string;
           if (location.startsWith("/")) {
-            res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${location}`);
+            res.setHeader(key, `/host/opkssh-chooser/${requestId}${location}`);
           } else {
             const localhostMatch = location.match(
-              /^http:\/\/localhost:(\d+)(\/.*)?$/,
+              /^http:\/\/(?:localhost|127\.0\.0\.1):(\d+)(\/.*)?$/,
             );
             if (localhostMatch) {
               const port = parseInt(localhostMatch[1], 10);
               const path = localhostMatch[2] || "/";
               if (session.callbackPort && port === session.callbackPort) {
-                res.setHeader(key, `/ssh/opkssh-callback/${requestId}${path}`);
+                res.setHeader(key, `/host/opkssh-callback/${requestId}${path}`);
               } else if (port === session.localPort) {
-                res.setHeader(key, `/ssh/opkssh-chooser/${requestId}${path}`);
+                res.setHeader(key, `/host/opkssh-chooser/${requestId}${path}`);
               } else {
                 const isCallback =
                   path.includes("login") || path.includes("callback");
                 const prefix = isCallback
                   ? "opkssh-callback"
                   : "opkssh-chooser";
-                res.setHeader(key, `/ssh/${prefix}/${requestId}${path}`);
+                res.setHeader(key, `/host/${prefix}/${requestId}${path}`);
               }
             } else {
+              // External redirect (e.g. to OIDC provider) — capture OAuth state for session binding
+              try {
+                const redirectUrl = new URL(location);
+                const oauthState = redirectUrl.searchParams.get("state");
+                if (oauthState) {
+                  registerOAuthState(oauthState, requestId);
+                }
+              } catch {
+                // Not a valid URL, skip state capture
+              }
               res.setHeader(key, value as string);
             }
           }
+        } else if (key.toLowerCase() === "set-cookie") {
+          // Rewrite cookies from OPKSSH's internal listener so they are scoped
+          // to the Termix proxy path instead of OPKSSH's internal path.
+          // The state cookie set by /login must survive to /login-callback.
+          const cookies = Array.isArray(value) ? value : [value as string];
+          const rewritten = cookies.map((cookie) => {
+            return cookie
+              .replace(/;\s*domain=[^;]*/gi, "")
+              .replace(/;\s*path=[^;]*/gi, "; Path=/host/opkssh-callback/")
+              .concat(
+                cookie.match(/;\s*path=/i)
+                  ? ""
+                  : "; Path=/host/opkssh-callback/",
+              );
+          });
+          res.setHeader(key, rewritten);
         } else {
           res.setHeader(key, value as string);
         }
       });
 
-      const contentType = response.headers["content-type"] || "";
+      // Set a cookie to correlate this browser with the requestId.
+      // OAuth state capture from Location headers only works for 3xx redirects;
+      // if OPKSSH redirects via JavaScript, the state is never registered.
+      // This cookie survives the OIDC round-trip and identifies the session on callback.
+      res.cookie("opkssh_request_id", requestId, {
+        path: "/host/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 5 * 60 * 1000,
+      });
+
+      const contentType = String(response.headers["content-type"] || "");
       if (contentType.includes("text/html")) {
         const html = rewriteOPKSSHHtml(
           response.data.toString("utf-8"),
@@ -4240,66 +4954,21 @@ router.use(
         operation: "opkssh_chooser_proxy_error",
         requestId,
       });
-      res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Error</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background: #18181b;
-              color: #fafafa;
-              padding: 1rem;
-            }
-            .container {
-              text-align: center;
-              background: #27272a;
-              padding: 3rem 2rem;
-              border-radius: 0.625rem;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              max-width: 400px;
-              width: 100%;
-            }
-            .icon {
-              font-size: 3rem;
-              margin-bottom: 1rem;
-              color: #f87171;
-            }
-            h1 {
-              color: #fafafa;
-              font-size: 1.5rem;
-              font-weight: 600;
-              margin-bottom: 0.75rem;
-            }
-            p {
-              color: #9ca3af;
-              font-size: 0.95rem;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Error</h1>
-            <p>Failed to load authentication page. Please try again.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(500).send(
+        renderOpksshErrorPage({
+          title: "Error",
+          heading: "Error",
+          message: "Failed to load authentication page. Please try again.",
+          requestId,
+        }),
+      );
     }
   },
 );
 
 /**
  * @openapi
- * /opkssh-callback:
+ * /host/opkssh-callback:
  *   get:
  *     summary: Static OAuth callback from OIDC provider for OPKSSH authentication
  *     tags: [SSH]
@@ -4315,19 +4984,16 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
   try {
     sshLogger.info("OAuth callback received", {
       operation: "opkssh_static_callback_received",
-      url: req.url,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      headers: {
-        host: req.headers.host,
-        "x-forwarded-proto": req.headers["x-forwarded-proto"],
-        "x-forwarded-host": req.headers["x-forwarded-host"],
-        "x-forwarded-port": req.headers["x-forwarded-port"],
-      },
+      host: req.headers.host,
     });
 
-    const { getUserIdFromRequest, getActiveSessionsForUser } =
-      await import("../../ssh/opkssh-auth.js");
+    const {
+      getUserIdFromRequest,
+      getActiveSessionsForUser,
+      getActiveAuthSession,
+      getRequestIdByOAuthState,
+      clearOAuthState,
+    } = await import("../../ssh/opkssh-auth.js");
 
     const userId = await getUserIdFromRequest({
       cookies: req.cookies,
@@ -4341,17 +5007,63 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
       cookieKeys: Object.keys(req.cookies || {}),
     });
 
-    if (!userId) {
-      sshLogger.error("No userId from callback request", {
-        operation: "opkssh_callback_unauthorized",
-        cookies: Object.keys(req.cookies || {}),
-        headers: Object.keys(req.headers),
-      });
-      res.status(401).send("Unauthorized - no valid session");
-      return;
-    }
+    let userSessions: Awaited<ReturnType<typeof getActiveSessionsForUser>> = [];
 
-    const userSessions = getActiveSessionsForUser(userId);
+    if (userId) {
+      userSessions = getActiveSessionsForUser(userId);
+    } else {
+      // No JWT cookie (e.g. OAuth redirect landed in external browser).
+      // Try to find the correct session via the OAuth state parameter.
+      const oauthState = req.query.state as string | undefined;
+
+      if (oauthState) {
+        const mappedRequestId = getRequestIdByOAuthState(oauthState);
+        if (mappedRequestId) {
+          const mappedSession = getActiveAuthSession(mappedRequestId);
+          if (mappedSession) {
+            userSessions = [mappedSession];
+            clearOAuthState(oauthState);
+            sshLogger.info("Resolved session via OAuth state parameter", {
+              operation: "opkssh_callback_state_lookup",
+              requestId: mappedRequestId,
+            });
+          }
+        }
+      }
+
+      // Fallback: use the opkssh_request_id cookie set by the chooser proxy.
+      // State capture only works for 3xx redirects; if OPKSSH redirects via
+      // JavaScript in the HTML, the state is never registered in the map.
+      if (userSessions.length === 0) {
+        const cookieRequestId = req.cookies?.opkssh_request_id;
+        if (cookieRequestId) {
+          const cookieSession = getActiveAuthSession(cookieRequestId);
+          if (cookieSession) {
+            userSessions = [cookieSession];
+            res.clearCookie("opkssh_request_id", { path: "/host/" });
+            sshLogger.info("Resolved session via opkssh_request_id cookie", {
+              operation: "opkssh_callback_cookie_lookup",
+              requestId: cookieRequestId,
+            });
+          }
+        }
+      }
+
+      if (userSessions.length === 0) {
+        sshLogger.warn(
+          "OAuth callback with no JWT, no matching state, and no session cookie",
+          {
+            operation: "opkssh_callback_no_session_match",
+            hasState: !!oauthState,
+            hasCookie: !!req.cookies?.opkssh_request_id,
+          },
+        );
+        res
+          .status(401)
+          .send("Authentication callback failed: unable to identify session");
+        return;
+      }
+    }
 
     sshLogger.info("Active sessions for user", {
       operation: "opkssh_callback_session_lookup",
@@ -4393,7 +5105,9 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
     const queryString = req.url.includes("?")
       ? req.url.substring(req.url.indexOf("?"))
       : "";
-    const redirectUrl = `/ssh/opkssh-callback/${session.requestId}/login-callback${queryString}`;
+    // OPKSSH's internal callback listener handles `/login-callback` regardless of the
+    // path used in --remote-redirect-uri. The dynamic route below defaults to that path.
+    const redirectUrl = `/host/opkssh-callback/${session.requestId}${queryString}`;
 
     sshLogger.info("Redirecting OAuth callback to dynamic route", {
       operation: "opkssh_static_callback_redirect",
@@ -4417,7 +5131,7 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /opkssh-callback/{requestId}:
+ * /host/opkssh-callback/{requestId}:
  *   get:
  *     summary: OAuth callback from OIDC provider for OPKSSH authentication (handles all sub-paths)
  *     tags: [SSH]
@@ -4448,71 +5162,29 @@ router.use(
       const session = getActiveAuthSession(requestId);
 
       if (!session) {
-        res.status(404).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Session Not Found</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              .icon {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                color: #f87171;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-              p + p {
-                margin-top: 0.5rem;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Session Not Found</h1>
-              <p>Authentication session expired or invalid.</p>
-              <p>Please close this window and try again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(404).send(
+          renderOpksshErrorPage({
+            title: "Session Not Found",
+            heading: "Session Not Found",
+            message:
+              "Authentication session expired or invalid. Please close this window and try again.",
+            requestId,
+          }),
+        );
         return;
       }
 
       const axios = (await import("axios")).default;
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
-        fullPath.split(`/ssh/opkssh-callback/${requestId}`)[1] || "";
-      const targetPath = pathAfterRequestId || "/login-callback";
+        fullPath.split(`/host/opkssh-callback/${requestId}`)[1] || "";
+      // pathAfterRequestId may be "", "?query=...", "/subpath", or "/subpath?query=..."
+      // OPKSSH's internal listener serves /login-callback, so when no sub-path is present
+      // (query-only or empty), prepend it.
+      const targetPath =
+        pathAfterRequestId === "" || pathAfterRequestId.startsWith("?")
+          ? `/login-callback${pathAfterRequestId}`
+          : pathAfterRequestId;
 
       if (!session.callbackPort || session.callbackPort === 0) {
         sshLogger.error("OPKSSH callback session has no callback port", {
@@ -4520,65 +5192,26 @@ router.use(
           requestId,
           sessionStatus: session.status,
         });
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Error</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Callback Error</h1>
-              <p>OPKSSH callback listener not ready. Please try authenticating again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(500).send(
+          renderOpksshErrorPage({
+            title: "Error",
+            heading: "Callback Error",
+            message:
+              "OPKSSH callback listener not ready. Please try authenticating again.",
+            requestId,
+          }),
+        );
         return;
       }
 
-      const targetUrl = `http://localhost:${session.callbackPort}${targetPath}`;
+      const targetUrl = `http://127.0.0.1:${session.callbackPort}${targetPath}`;
 
       const response = await axios({
         method: req.method,
         url: targetUrl,
         headers: {
           ...req.headers,
-          host: `localhost:${session.callbackPort}`,
+          host: `127.0.0.1:${session.callbackPort}`,
         },
         data: req.body,
         timeout: 10000,
@@ -4594,7 +5227,7 @@ router.use(
         if (key.toLowerCase() === "location") {
           const location = value as string;
           if (location.startsWith("/")) {
-            res.setHeader(key, `/ssh/opkssh-callback/${requestId}${location}`);
+            res.setHeader(key, `/host/opkssh-callback/${requestId}${location}`);
           } else {
             res.setHeader(key, value as string);
           }
@@ -4603,7 +5236,7 @@ router.use(
         }
       });
 
-      const contentType = response.headers["content-type"] || "";
+      const contentType = String(response.headers["content-type"] || "");
       if (contentType.includes("text/html")) {
         const html = rewriteOPKSSHHtml(
           response.data.toString("utf-8"),
@@ -4620,66 +5253,21 @@ router.use(
         requestId,
       });
 
-      res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Error</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background: #18181b;
-              color: #fafafa;
-              padding: 1rem;
-            }
-            .container {
-              text-align: center;
-              background: #27272a;
-              padding: 3rem 2rem;
-              border-radius: 0.625rem;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              max-width: 400px;
-              width: 100%;
-            }
-            .icon {
-              font-size: 3rem;
-              margin-bottom: 1rem;
-              color: #f87171;
-            }
-            h1 {
-              color: #fafafa;
-              font-size: 1.5rem;
-              font-weight: 600;
-              margin-bottom: 0.75rem;
-            }
-            p {
-              color: #9ca3af;
-              font-size: 0.95rem;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Error</h1>
-            <p>An unexpected error occurred. Please try again.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(500).send(
+        renderOpksshErrorPage({
+          title: "Error",
+          heading: "Error",
+          message: "An unexpected error occurred. Please try again.",
+          requestId,
+        }),
+      );
     }
   },
 );
 
 /**
  * @openapi
- * /db/proxy/test:
+ * /host/db/proxy/test:
  *   post:
  *     summary: Test proxy connectivity
  *     description: Tests connectivity through a proxy configuration to a target host.
@@ -4748,6 +5336,54 @@ router.post(
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);
+
+router.post(
+  "/db/host/:id/wake",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = parseInt(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    try {
+      const host = await db
+        .select({ macAddress: hosts.macAddress })
+        .from(hosts)
+        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+        .then((rows) => rows[0]);
+
+      if (!host) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      if (!host.macAddress || !isValidMac(host.macAddress)) {
+        return res
+          .status(400)
+          .json({ error: "No valid MAC address configured" });
+      }
+
+      await sendWakeOnLan(host.macAddress);
+
+      sshLogger.info("Wake-on-LAN packet sent", {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Wake-on-LAN failed", error, {
+        operation: "wake_on_lan",
+        userId,
+        hostId,
+      });
+      res.status(500).json({
+        error:
+          error instanceof Error ? error.message : "Failed to send WoL packet",
       });
     }
   },

@@ -246,7 +246,7 @@ export function ContainerCard({
   return (
     <>
       <Card
-        className={`cursor-pointer transition-all hover:shadow-lg ${
+        className={`cursor-pointer transition-all hover:shadow-lg overflow-hidden min-w-0 ${
           isSelected
             ? "ring-2 ring-primary border-primary"
             : `border-2 ${colors.border}`
@@ -267,27 +267,27 @@ export function ContainerCard({
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-3">
           <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-muted-foreground min-w-[50px] text-xs">
                 {t("docker.image")}
               </span>
-              <span className="truncate text-foreground text-xs">
+              <span className="flex-1 min-w-0 truncate text-foreground text-xs">
                 {container.image}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-muted-foreground min-w-[50px] text-xs">
                 {t("docker.idLabel")}
               </span>
-              <span className="font-mono text-xs text-foreground">
+              <span className="flex-1 min-w-0 truncate font-mono text-xs text-foreground">
                 {container.id.substring(0, 12)}
               </span>
             </div>
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 min-w-0">
               <span className="text-muted-foreground min-w-[50px] text-xs shrink-0">
                 {t("docker.ports")}
               </span>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-1 min-w-0 flex-wrap gap-1">
                 {portsList.length > 0 ? (
                   portsList.map((port, idx) => (
                     <Badge
@@ -308,11 +308,11 @@ export function ContainerCard({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="text-muted-foreground min-w-[50px] text-xs">
                 {t("docker.created")}
               </span>
-              <span className="text-foreground text-xs">
+              <span className="flex-1 min-w-0 truncate text-foreground text-xs">
                 {formatCreatedDate(container.created)}
               </span>
             </div>

@@ -7,7 +7,11 @@ import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
-import { systemLogger, versionLogger } from "./utils/logger.js";
+import {
+  systemLogger,
+  versionLogger,
+  setGlobalLogLevel,
+} from "./utils/logger.js";
 
 (async () => {
   const initStartTime = Date.now();
@@ -112,28 +116,27 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await authManager.initialize();
     DataCrypto.initialize();
 
-    const { OPKSSHBinaryManager } =
-      await import("./utils/opkssh-binary-manager.js");
-    try {
-      await OPKSSHBinaryManager.ensureBinary();
-    } catch (error) {
-      const dataDir =
-        process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
-      systemLogger.warn(
-        "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
-        {
-          operation: "opkssh_binary_init_failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-          platform: process.platform,
-          arch: process.arch,
-          dataDir,
-        },
-      );
-    }
+    import("./utils/opkssh-binary-manager.js").then(
+      ({ OPKSSHBinaryManager }) => {
+        OPKSSHBinaryManager.ensureBinary().catch((error) => {
+          const dataDir =
+            process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
+          systemLogger.warn(
+            "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
+            {
+              operation: "opkssh_binary_init_failed",
+              error: error instanceof Error ? error.message : "Unknown error",
+              stack: error instanceof Error ? error.stack : undefined,
+              platform: process.platform,
+              arch: process.arch,
+              dataDir,
+            },
+          );
+        });
+      },
+    );
 
     await import("./database/database.js");
-
     await import("./ssh/terminal.js");
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");
@@ -141,6 +144,19 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
     await import("./ssh/docker.js");
     await import("./ssh/docker-console.js");
     await import("./dashboard.js");
+
+    // Initialize log level from database settings
+    const { getDb: getDbForSettings } = await import("./database/db/index.js");
+    const settingsDb = getDbForSettings();
+    const logLevelRow = settingsDb.$client
+      .prepare("SELECT value FROM settings WHERE key = 'log_level'")
+      .get() as { value: string } | undefined;
+    if (logLevelRow) {
+      setGlobalLogLevel(logLevelRow.value);
+      systemLogger.info(`Log level set to: ${logLevelRow.value}`, {
+        operation: "log_level_init",
+      });
+    }
 
     // Initialize Guacamole server for RDP/VNC/Telnet support
     const { getDb: getDbForGuac } = await import("./database/db/index.js");
@@ -153,20 +169,21 @@ import { systemLogger, versionLogger } from "./utils/logger.js";
       : true;
 
     if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
-      try {
-        await import("./guacamole/guacamole-server.js");
-        systemLogger.info("Guacamole server initialized", {
-          operation: "guac_init",
+      import("./guacamole/guacamole-server.js")
+        .then(() => {
+          systemLogger.info("Guacamole server initialized", {
+            operation: "guac_init",
+          });
+        })
+        .catch((error) => {
+          systemLogger.warn(
+            "Failed to initialize Guacamole server (guacd may not be available)",
+            {
+              operation: "guac_init_skip",
+              error: error instanceof Error ? error.message : "Unknown error",
+            },
+          );
         });
-      } catch (error) {
-        systemLogger.warn(
-          "Failed to initialize Guacamole server (guacd may not be available)",
-          {
-            operation: "guac_init_skip",
-            error: error instanceof Error ? error.message : "Unknown error",
-          },
-        );
-      }
     }
 
     systemLogger.success("Termix backend started successfully", {

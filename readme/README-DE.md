@@ -44,33 +44,33 @@ Wenn Sie möchten, können Sie das Projekt hier unterstützen!\
     <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
-Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-Serververwaltungsplattform. Sie bietet eine plattformübergreifende Lösung zur Verwaltung Ihrer Server und Infrastruktur über eine einzige, intuitive Oberfläche. Termix bietet SSH-Terminalzugriff, SSH-Tunneling-Funktionen, Remote-Dateiverwaltung und viele weitere Werkzeuge. Termix ist die perfekte kostenlose und selbst gehostete Alternative zu Termius, verfügbar für alle Plattformen.
+Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-Serververwaltungsplattform. Sie bietet eine plattformübergreifende Lösung zur Verwaltung Ihrer Server und Infrastruktur über eine einzige, intuitive Oberfläche. Termix bietet SSH-Terminalzugriff, Remote-Desktop-Steuerung (RDP, VNC, Telnet), SSH-Tunneling-Funktionen, Remote-SSH-Dateiverwaltung und viele weitere Werkzeuge. Termix ist die perfekte kostenlose und selbst gehostete Alternative zu Termius, verfügbar für alle Plattformen.
 
 # Funktionen
 
-- **SSH-Terminalzugriff** - Voll ausgestattetes Terminal mit Split-Screen-Unterstützung (bis zu 4 Panels) mit einem browserähnlichen Tab-System. Enthält Unterstützung für die Anpassung des Terminals einschließlich gängiger Terminal-Themes, Schriftarten und anderer Komponenten
-- **Remote-Desktop-Zugriff** - RDP-, VNC- und Telnet-Unterstützung über den Browser mit vollständiger Anpassung und Split-Screen
-- **SSH-Tunnelverwaltung** - Erstellen und verwalten Sie SSH-Tunnel mit automatischer Wiederverbindung und Gesundheitsüberwachung sowie Unterstützung für -l oder -r Verbindungen
+- **SSH-Terminalzugriff** - Voll ausgestattetes Terminal mit Split-Screen-Unterstützung (bis zu 4 Panels) mit einem browserähnlichen Tab-System. Enthält Unterstützung für die Anpassung des Terminals einschließlich gängiger Terminal-Themes, Schriftarten und anderer Komponenten.
+- **Remote-Desktop-Zugriff** - RDP-, VNC- und Telnet-Unterstützung über den Browser mit vollständiger Anpassung und Split-Screen.
+- **SSH-Tunnelverwaltung** - Erstellen und verwalten Sie SSH-Tunnel mit automatischer Wiederverbindung und Gesundheitsüberwachung sowie Unterstützung für -l oder -r Verbindungen.
 - **Remote-Dateimanager** - Verwalten Sie Dateien direkt auf Remote-Servern mit Unterstützung für das Anzeigen und Bearbeiten von Code, Bildern, Audio und Video. Laden Sie Dateien hoch, herunter, benennen Sie sie um, löschen oder verschieben Sie sie nahtlos mit Sudo-Unterstützung.
 - **Docker-Verwaltung** - Container starten, stoppen, pausieren, entfernen. Container-Statistiken anzeigen. Container über Docker-Exec-Terminal steuern. Es wurde nicht entwickelt, um Portainer oder Dockge zu ersetzen, sondern um Ihre Container einfach zu verwalten, anstatt sie zu erstellen.
-- **SSH-Host-Manager** - Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Möglichkeit, die Bereitstellung von SSH-Schlüsseln zu automatisieren
-- **Serverstatistiken** - CPU-, Arbeitsspeicher- und Festplattenauslastung sowie Netzwerk, Betriebszeit, Systeminformationen, Firewall, Port-Monitor auf den meisten Linux-basierten Servern anzeigen
-- **Dashboard** - Serverinformationen auf einen Blick auf Ihrem Dashboard anzeigen
-- **RBAC** - Rollen erstellen und Hosts über Benutzer/Rollen teilen
-- **Benutzerauthentifizierung** - Sichere Benutzerverwaltung mit Admin-Kontrollen und OIDC- sowie 2FA (TOTP)-Unterstützung. Aktive Benutzersitzungen über alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknüpfen.
+- **SSH-Host-Manager** - Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Möglichkeit, die Bereitstellung von SSH-Schlüsseln zu automatisieren.
+- **Serverstatistiken** - CPU-, Arbeitsspeicher- und Festplattenauslastung sowie Netzwerk, Betriebszeit, Systeminformationen, Firewall, Port-Monitor auf den meisten Linux-basierten Servern anzeigen.
+- **Dashboard** - Serverinformationen auf einen Blick auf Ihrem Dashboard anzeigen.
+- **RBAC** - Rollen erstellen und Hosts über Benutzer/Rollen teilen.
+- **Benutzerauthentifizierung** - Sichere Benutzerverwaltung mit Admin-Kontrollen und OIDC- (mit Zugriffskontrolle) sowie 2FA (TOTP)-Unterstützung. Aktive Benutzersitzungen über alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknüpfen.
 - **Datenbankverschlüsselung** - Backend gespeichert als verschlüsselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site/security).
-- **Datenexport/-import** - SSH-Hosts, Anmeldeinformationen und Dateimanager-Daten exportieren und importieren
-- **Automatische SSL-Einrichtung** - Integrierte SSL-Zertifikatsgenerierung und -verwaltung mit HTTPS-Weiterleitungen
-- **Moderne Benutzeroberfläche** - Saubere desktop-/mobilfreundliche Oberfläche, erstellt mit React, Tailwind CSS und Shadcn. Wählen Sie zwischen dunklem oder hellem Modus. Verwenden Sie URL-Routen, um jede Verbindung im Vollbildmodus zu öffnen.
-- **Sprachen** - Integrierte Unterstützung für ~30 Sprachen (verwaltet über [Crowdin](https://docs.termix.site/translations))
-- **Plattformunterstützung** - Verfügbar als Web-App, Desktop-Anwendung (Windows, Linux und macOS), PWA und dedizierte Mobil-/Tablet-App für iOS und Android.
+- **Datenexport/-import** - SSH-Hosts, Anmeldeinformationen und Dateimanager-Daten exportieren und importieren.
+- **Automatische SSL-Einrichtung** - Integrierte SSL-Zertifikatsgenerierung und -verwaltung mit HTTPS-Weiterleitungen.
+- **Moderne Benutzeroberfläche** - Saubere desktop-/mobilfreundliche Oberfläche, erstellt mit React, Tailwind CSS und Shadcn. Wählen Sie zwischen vielen verschiedenen UI-Themes einschließlich Hell, Dunkel, Dracula usw. Verwenden Sie URL-Routen, um jede Verbindung im Vollbildmodus zu öffnen.
+- **Sprachen** - Integrierte Unterstützung für ~30 Sprachen (verwaltet über [Crowdin](https://docs.termix.site/translations)).
+- **Plattformunterstützung** - Verfügbar als Web-App, Desktop-Anwendung (Windows, Linux und macOS, kann eigenständig ohne Termix-Backend ausgeführt werden), PWA und dedizierte Mobil-/Tablet-App für iOS und Android.
 - **SSH-Werkzeuge** - Erstellen Sie wiederverwendbare Befehlsvorlagen, die mit einem einzigen Klick ausgeführt werden. Führen Sie einen Befehl gleichzeitig in mehreren geöffneten Terminals aus.
-- **Befehlsverlauf** - Autovervollständigung und Anzeige zuvor ausgeführter SSH-Befehle
-- **Schnellverbindung** - Verbinden Sie sich mit einem Server, ohne die Verbindungsdaten speichern zu müssen
-- **Befehlspalette** - Doppeltippen Sie die linke Umschalttaste, um schnell auf SSH-Verbindungen mit Ihrer Tastatur zuzugreifen
-- **SSH-Funktionsreich** - Unterstützt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh) usw.
-- **Netzwerkgraph** - Passen Sie Ihr Dashboard an, um Ihr Homelab basierend auf Ihren SSH-Verbindungen mit Statusunterstützung zu visualisieren
-- **Persistente Tabs** - SSH-Sitzungen und Tabs bleiben über Geräte/Aktualisierungen hinweg offen, wenn im Benutzerprofil aktiviert
+- **Befehlsverlauf** - Autovervollständigung und Anzeige zuvor ausgeführter SSH-Befehle.
+- **Schnellverbindung** - Verbinden Sie sich mit einem Server, ohne die Verbindungsdaten speichern zu müssen.
+- **Befehlspalette** - Doppeltippen Sie die linke Umschalttaste, um schnell auf SSH-Verbindungen mit Ihrer Tastatur zuzugreifen.
+- **SSH-Funktionsreich** - Unterstützt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking usw.
+- **Netzwerkgraph** - Passen Sie Ihr Dashboard an, um Ihr Homelab basierend auf Ihren SSH-Verbindungen mit Statusunterstützung zu visualisieren.
+- **Persistente Tabs** - SSH-Sitzungen und Tabs bleiben über Geräte/Aktualisierungen hinweg offen, wenn im Benutzerprofil aktiviert.
 
 # Geplante Funktionen
 
@@ -102,7 +102,7 @@ Unterstützte Geräte:
   - Google Play Store
   - APK
 
-Besuchen Sie die Termix-[Dokumentation](https://docs.termix.site/install) für weitere Informationen zur Installation von Termix auf allen Plattformen. Alternativ finden Sie hier eine Docker Compose-Beispieldatei:
+Besuchen Sie die Termix-[Dokumentation](https://docs.termix.site/install) für weitere Informationen zur Installation von Termix auf allen Plattformen. Alternativ finden Sie hier eine Docker Compose-Beispieldatei (Sie können guacd und das Netzwerk weglassen, wenn Sie keine Remote-Desktop-Funktionen nutzen möchten):
 
 ```yaml
 services:
@@ -151,11 +151,23 @@ networks:
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://tailscale.com/">
+    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://akamai.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
   </a>
 </p>
 

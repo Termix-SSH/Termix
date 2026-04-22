@@ -1,10 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Label } from "@/components/ui/label.tsx";
-import { Shield, Copy, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Shield, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 interface OPKSSHDialogProps {
   isOpen: boolean;
@@ -12,8 +9,10 @@ interface OPKSSHDialogProps {
   requestId: string;
   stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
   error?: string;
+  providers?: Array<{ alias: string; issuer: string }>;
   onCancel: () => void;
   onOpenUrl: () => void;
+  onSelectProvider?: (alias: string) => void;
   backgroundColor?: string;
 }
 
@@ -23,25 +22,14 @@ export function OPKSSHDialog({
   requestId,
   stage,
   error,
+  providers,
   onCancel,
   onOpenUrl,
+  onSelectProvider,
   backgroundColor,
 }: OPKSSHDialogProps) {
   const { t } = useTranslation();
-  const hasOpenedRef = React.useRef(false);
-
-  useEffect(() => {}, [isOpen, authUrl, stage, onOpenUrl]);
-
   if (!isOpen) return null;
-
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(authUrl);
-      toast.success(t("common.copied"));
-    } catch (error) {
-      toast.error(t("common.copyFailed"));
-    }
-  };
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
@@ -58,47 +46,54 @@ export function OPKSSHDialog({
         </div>
 
         <div className="space-y-4">
-          {stage === "chooser" && authUrl && (
+          {stage === "chooser" && (
             <>
               <p className="text-muted-foreground">
                 {t("terminal.opksshAuthDescription")}
               </p>
-              <div>
-                <Label htmlFor="opksshUrl" className="text-base font-semibold">
-                  {t("terminal.opksshAuthUrl")}
-                </Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    id="opksshUrl"
-                    type="text"
-                    value={authUrl}
-                    readOnly
-                    className="flex-1 font-mono text-xs"
-                  />
+              {providers && providers.length > 0 && onSelectProvider ? (
+                <div className="space-y-2">
+                  {providers.map((provider) => (
+                    <Button
+                      key={provider.alias}
+                      type="button"
+                      onClick={() => onSelectProvider(provider.alias)}
+                      className="w-full flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {t("terminal.opksshSignInWith", {
+                        provider:
+                          provider.alias.charAt(0).toUpperCase() +
+                          provider.alias.slice(1),
+                      })}
+                    </Button>
+                  ))}
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    onClick={handleCopyUrl}
-                    title={t("common.copy")}
+                    className="w-full"
+                    onClick={onCancel}
                   >
-                    <Copy className="w-4 h-4" />
+                    {t("common.cancel")}
                   </Button>
                 </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button
-                  type="button"
-                  onClick={onOpenUrl}
-                  className="flex-1 flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  {t("terminal.opksshOpenBrowser")}
-                </Button>
-                <Button type="button" variant="outline" onClick={onCancel}>
-                  {t("common.cancel")}
-                </Button>
-              </div>
+              ) : authUrl ? (
+                <div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      onClick={onOpenUrl}
+                      className="flex-1 flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {t("terminal.opksshOpenBrowser")}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                      {t("common.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
 
@@ -121,7 +116,9 @@ export function OPKSSHDialog({
                   <p className="text-sm font-medium text-destructive">
                     {t("common.error")}
                   </p>
-                  <p className="text-sm text-destructive/90 mt-1">{error}</p>
+                  <p className="text-sm text-destructive/90 mt-1 whitespace-pre-wrap break-words">
+                    {error}
+                  </p>
                 </div>
               </div>
               <div className="flex justify-end pt-2">

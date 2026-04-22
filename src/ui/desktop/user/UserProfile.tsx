@@ -97,7 +97,7 @@ export function UserProfile({
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, setThemePreview } = useTheme();
   const [userInfo, setUserInfo] = useState<{
     username: string;
     is_admin: boolean;
@@ -120,6 +120,9 @@ export function UserProfile({
   );
   const [commandAutocomplete, setCommandAutocomplete] = useState<boolean>(
     localStorage.getItem("commandAutocomplete") === "true",
+  );
+  const [commandHistoryTracking, setCommandHistoryTracking] = useState<boolean>(
+    () => localStorage.getItem("commandHistoryTracking") === "true",
   );
   const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] =
     useState<boolean>(
@@ -162,7 +165,7 @@ export function UserProfile({
 
   const fetchVersion = async () => {
     try {
-      const info = await getVersionInfo();
+      const info = await getVersionInfo(!disableUpdateCheck);
       setVersionInfo({ version: info.localVersion });
     } catch {
       toast.error(t("user.failedToLoadVersionInfo"));
@@ -212,6 +215,12 @@ export function UserProfile({
   const handleCommandAutocompleteToggle = (enabled: boolean) => {
     setCommandAutocomplete(enabled);
     localStorage.setItem("commandAutocomplete", enabled.toString());
+  };
+
+  const handleCommandHistoryTrackingToggle = (enabled: boolean) => {
+    setCommandHistoryTracking(enabled);
+    localStorage.setItem("commandHistoryTracking", enabled.toString());
+    window.dispatchEvent(new Event("commandHistoryTrackingChanged"));
   };
 
   const handleTerminalSyntaxHighlightingToggle = (enabled: boolean) => {
@@ -525,20 +534,73 @@ export function UserProfile({
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">
+                        <SelectContent
+                          onMouseLeave={() => setThemePreview(null)}
+                        >
+                          <SelectItem
+                            value="light"
+                            onMouseEnter={() => setThemePreview("light")}
+                          >
                             <div className="flex items-center gap-2">
                               <Sun className="w-4 h-4" />
                               {t("profile.themeLight")}
                             </div>
                           </SelectItem>
-                          <SelectItem value="dark">
+                          <SelectItem
+                            value="dark"
+                            onMouseEnter={() => setThemePreview("dark")}
+                          >
                             <div className="flex items-center gap-2">
                               <Moon className="w-4 h-4" />
                               {t("profile.themeDark")}
                             </div>
                           </SelectItem>
-                          <SelectItem value="system">
+                          <SelectItem
+                            value="dracula"
+                            onMouseEnter={() => setThemePreview("dracula")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Dracula
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="gentlemansChoice"
+                            onMouseEnter={() =>
+                              setThemePreview("gentlemansChoice")
+                            }
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Gentleman's Choice
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="midnightEspresso"
+                            onMouseEnter={() =>
+                              setThemePreview("midnightEspresso")
+                            }
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Midnight Espresso
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="catppuccinMocha"
+                            onMouseEnter={() =>
+                              setThemePreview("catppuccinMocha")
+                            }
+                          >
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-4 h-4" />
+                              Catppuccin Mocha
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="system"
+                            onMouseEnter={() => setThemePreview("system")}
+                          >
                             <div className="flex items-center gap-2">
                               <Monitor className="w-4 h-4" />
                               {t("profile.themeSystem")}
@@ -589,6 +651,20 @@ export function UserProfile({
                       <Switch
                         checked={commandAutocomplete}
                         onCheckedChange={handleCommandAutocompleteToggle}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.commandHistoryTracking")}
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("profile.commandHistoryTrackingDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={commandHistoryTracking}
+                        onCheckedChange={handleCommandHistoryTrackingToggle}
                       />
                     </div>
                     <div className="flex items-center justify-between">

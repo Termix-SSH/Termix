@@ -31,6 +31,7 @@ import {
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
   getServerConfig,
+  saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
   isEmbeddedMode,
@@ -56,6 +57,7 @@ interface AuthProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
   authLoading: boolean;
   setDbError: (error: string | null) => void;
+  dbError?: string | null;
   onAuthSuccess: (authData: {
     isAdmin: boolean;
     username: string | null;
@@ -72,6 +74,7 @@ export function Auth({
   loggedIn,
   authLoading,
   setDbError,
+  dbError: _dbError,
   onAuthSuccess,
   ...props
 }: AuthProps) {
@@ -80,6 +83,10 @@ export function Auth({
 
   const isDarkMode =
     theme === "dark" ||
+    theme === "dracula" ||
+    theme === "gentlemansChoice" ||
+    theme === "midnightEspresso" ||
+    theme === "catppuccinMocha" ||
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
@@ -93,7 +100,7 @@ export function Auth({
         return true;
       }
     } catch (_e) {
-      return false;
+      return true;
     }
     return false;
   };
@@ -147,7 +154,24 @@ export function Auth({
 
   const handleElectronAuthSuccess = useCallback(async () => {
     try {
-      const meRes = await getUserInfo();
+      let retries = 5;
+      let meRes = null;
+      while (retries-- > 0) {
+        try {
+          meRes = await getUserInfo();
+          break;
+        } catch (err: any) {
+          const isNoServer =
+            err?.code === "NO_SERVER_CONFIGURED" ||
+            err?.message?.includes("no-server-configured");
+          if (isNoServer && retries > 0) {
+            await new Promise((r) => setTimeout(r, 500));
+          } else {
+            throw err;
+          }
+        }
+      }
+      if (!meRes) throw new Error("Failed to get user info");
       setInternalLoggedIn(true);
       setLoggedIn(true);
       setIsAdmin(!!meRes.is_admin);
@@ -254,12 +278,6 @@ export function Auth({
         setDbHealthChecking(false);
       });
   }, [setDbError, firstUserToastShown, showServerConfig, t]);
-
-  useEffect(() => {
-    if (!registrationAllowed && !internalLoggedIn) {
-      toast.warning(t("messages.registrationDisabled"));
-    }
-  }, [registrationAllowed, internalLoggedIn, t]);
 
   useEffect(() => {
     if (!passwordLoginAllowed && oidcConfigured && tab !== "external") {
@@ -658,6 +676,11 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
+      const urlToken = urlParams.get("token");
+      if (urlToken && (isElectron() || isInElectronWebView())) {
+        localStorage.setItem("jwt", urlToken);
+      }
+
       getUserInfo()
         .then((meRes) => {
           if (isInElectronWebView()) {
@@ -680,6 +703,13 @@ export function Auth({
               } catch (e) {
                 console.error("Error posting auth success message:", e);
               }
+            }
+          }
+
+          if (isElectron()) {
+            const token = getCookie("jwt");
+            if (token) {
+              localStorage.setItem("jwt", token);
             }
           }
 
@@ -772,7 +802,12 @@ export function Auth({
             getEmbeddedServerStatus(),
           ]);
 
-          if (status?.embedded && status?.running && !config?.serverUrl) {
+          if (
+            status?.embedded &&
+            status?.running &&
+            config &&
+            !config.serverUrl
+          ) {
             setCurrentServerUrl("");
             setShowServerConfig(false);
             return;
@@ -816,7 +851,11 @@ export function Auth({
           onServerConfigured={() => {
             window.location.reload();
           }}
-          onUseEmbedded={() => {
+          onUseEmbedded={async () => {
+            await saveServerConfig({
+              serverUrl: "",
+              lastUpdated: new Date().toISOString(),
+            });
             setShowServerConfig(false);
             setCurrentServerUrl("");
           }}

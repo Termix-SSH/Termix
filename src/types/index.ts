@@ -74,6 +74,13 @@ export interface Host {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
 
+  macAddress?: string;
+  portKnockSequence?: Array<{
+    port: number;
+    protocol?: "tcp" | "udp";
+    delay?: number;
+  }>;
+
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
   security?: string;
@@ -82,6 +89,10 @@ export interface Host {
 
   createdAt: string;
   updatedAt: string;
+
+  hasPassword?: boolean;
+  hasKey?: boolean;
+  hasSudoPassword?: boolean;
 
   isShared?: boolean;
   permissionLevel?: "view";
@@ -145,6 +156,13 @@ export interface HostData {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+
+  macAddress?: string;
+  portKnockSequence?: Array<{
+    port: number;
+    protocol?: "tcp" | "udp";
+    delay?: number;
+  }>;
 
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
   domain?: string;
@@ -425,6 +443,7 @@ export interface TerminalConfig {
   sudoPasswordAutoFill: boolean;
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
+  autoTmux: boolean;
 }
 
 // ============================================================================

@@ -33,7 +33,8 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   getRecentActivity,
   getSSHHosts,
-  getGuacamoleToken,
+  getGuacamoleDpi,
+  getGuacamoleTokenFromHost,
   logActivity,
 } from "@/ui/main-axios.ts";
 import type { RecentActivityItem } from "@/ui/main-axios.ts";
@@ -235,17 +236,7 @@ export function CommandPalette({
     ) {
       try {
         const protocol = host.connectionType as "rdp" | "vnc" | "telnet";
-        const result = await getGuacamoleToken({
-          protocol,
-          hostname: host.ip,
-          port: host.port,
-          username: host.username,
-          password: host.password,
-          domain: host.domain,
-          security: host.security,
-          ignoreCert: host.ignoreCert,
-          guacamoleConfig: host.guacamoleConfig as any,
-        });
+        const result = await getGuacamoleTokenFromHost(host.id);
 
         addTab({
           type: protocol,
@@ -262,6 +253,7 @@ export function CommandPalette({
             domain: host.domain,
             security: host.security,
             "ignore-cert": host.ignoreCert,
+            dpi: getGuacamoleDpi(host),
           },
         });
 

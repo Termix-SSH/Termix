@@ -1,6 +1,21 @@
 import { useRef, useCallback } from "react";
 import { saveCommandToHistory } from "@/ui/main-axios.ts";
 
+const SENSITIVE_PATTERNS = [
+  /\bpassw(or)?d\b/i,
+  /\bsecret\b/i,
+  /\btoken\b/i,
+  /\bapi.?key\b/i,
+  /\bPASS(WORD)?=/i,
+  /\bAWS_SECRET/i,
+  /\bmysql\b.*-p/i,
+  /\bsudo\s+-S\b/,
+  /\bhtpasswd\b/i,
+  /\bsshpass\b/i,
+  /\bcurl\b.*-u\s/i,
+  /\bexport\b.*(?:PASSWORD|SECRET|TOKEN|KEY)=/i,
+];
+
 interface UseCommandTrackerOptions {
   hostId?: number;
   enabled?: boolean;
@@ -52,9 +67,13 @@ export function useCommandTracker({
           const command = currentCommandRef.current.trim();
 
           if (command.length > 0) {
-            saveCommandToHistory(hostId, command).catch((error) => {
-              console.error("Failed to save command to history:", error);
-            });
+            const isSensitive = SENSITIVE_PATTERNS.some((p) => p.test(command));
+
+            if (!isSensitive) {
+              saveCommandToHistory(hostId, command).catch((error) => {
+                console.error("Failed to save command to history:", error);
+              });
+            }
 
             if (onCommandExecuted) {
               onCommandExecuted(command);

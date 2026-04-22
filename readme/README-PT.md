@@ -44,11 +44,11 @@ Se desejar, você pode apoiar o projeto aqui!\
     <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
 </p>
 
-Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código aberto, sempre gratuita e auto-hospedada. Ela fornece uma solução multiplataforma para gerenciar seus servidores e infraestrutura através de uma interface única e intuitiva. Termix oferece acesso a terminal SSH, capacidades de tunelamento SSH, gerenciamento remoto de arquivos e muitas outras ferramentas. Termix é a alternativa perfeita, gratuita e auto-hospedada ao Termius, disponível para todas as plataformas.
+Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código aberto, sempre gratuita e auto-hospedada. Ela fornece uma solução multiplataforma para gerenciar seus servidores e infraestrutura através de uma interface única e intuitiva. Termix oferece acesso a terminal SSH, controle de desktop remoto (RDP, VNC, Telnet), capacidades de tunelamento SSH, gerenciamento remoto de arquivos SSH e muitas outras ferramentas. Termix é a alternativa perfeita, gratuita e auto-hospedada ao Termius, disponível para todas as plataformas.
 
 # Funcionalidades
 
-- **Acesso ao Terminal SSH** - Terminal completo com suporte a tela dividida (até 4 painéis) com um sistema de abas similar ao navegador. Inclui suporte para personalização do terminal incluindo temas comuns de terminal, fontes e outros componentes
+- **Acesso ao Terminal SSH** - Terminal completo com suporte a tela dividida (até 4 painéis) com um sistema de abas similar ao navegador. Inclui suporte para personalização do terminal incluindo temas comuns de terminal, fontes e outros componentes.
 - **Acesso à Área de Trabalho Remota** - Suporte a RDP, VNC e Telnet pelo navegador com personalização completa e tela dividida
 - **Gerenciamento de Túneis SSH** - Crie e gerencie túneis SSH com reconexão automática e monitoramento de saúde, com suporte para conexões -l ou -r
 - **Gerenciador Remoto de Arquivos** - Gerencie arquivos diretamente em servidores remotos com suporte para visualizar e editar código, imagens, áudio e vídeo. Faça upload, download, renomeie, exclua e mova arquivos facilmente com suporte sudo.
@@ -57,18 +57,18 @@ Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código a
 - **Estatísticas do Servidor** - Visualize o uso de CPU, memória e disco junto com rede, tempo de atividade, informações do sistema, firewall, monitor de portas na maioria dos servidores baseados em Linux
 - **Dashboard** - Visualize informações do servidor de relance no seu dashboard
 - **RBAC** - Crie funções e compartilhe hosts entre usuários/funções
-- **Autenticação de Usuários** - Gerenciamento seguro de usuários com controles de administrador e suporte para OIDC e 2FA (TOTP). Visualize sessões ativas de usuários em todas as plataformas e revogue permissões. Vincule suas contas OIDC/Locais entre si.
+- **Autenticação de Usuários** - Gerenciamento seguro de usuários com controles de administrador e suporte para OIDC (com controle de acesso) e 2FA (TOTP). Visualize sessões ativas de usuários em todas as plataformas e revogue permissões. Vincule suas contas OIDC/Locais entre si.
 - **Criptografia de Banco de Dados** - Backend armazenado como arquivos de banco de dados SQLite criptografados. Consulte a [documentação](https://docs.termix.site/security) para mais informações.
 - **Exportação/Importação de Dados** - Exporte e importe hosts SSH, credenciais e dados do gerenciador de arquivos
 - **Configuração Automática de SSL** - Geração e gerenciamento integrado de certificados SSL com redirecionamentos HTTPS
-- **Interface Moderna** - Interface limpa compatível com desktop/mobile construída com React, Tailwind CSS e Shadcn. Escolha entre modo escuro ou claro. Use rotas de URL para abrir qualquer conexão em tela cheia.
+- **Interface Moderna** - Interface limpa compatível com desktop/mobile construída com React, Tailwind CSS e Shadcn. Escolha entre muitos temas de interface diferentes, incluindo claro, escuro, Drácula, etc. Use rotas de URL para abrir qualquer conexão em tela cheia.
 - **Idiomas** - Suporte integrado para ~30 idiomas (gerenciado pelo [Crowdin](https://docs.termix.site/translations))
-- **Suporte a Plataformas** - Disponível como aplicação web, aplicação desktop (Windows, Linux e macOS), PWA e aplicativo dedicado para celular/tablet para iOS e Android.
+- **Suporte a Plataformas** - Disponível como aplicação web, aplicação desktop (Windows, Linux e macOS, pode ser executado de forma independente sem o backend Termix), PWA e aplicativo dedicado para celular/tablet para iOS e Android.
 - **Ferramentas SSH** - Crie trechos de comandos reutilizáveis que são executados com um único clique. Execute um comando simultaneamente em múltiplos terminais abertos.
 - **Histórico de Comandos** - Autocompletar e visualizar comandos SSH executados anteriormente
 - **Conexão Rápida** - Conecte-se a um servidor sem precisar salvar os dados de conexão
 - **Paleta de Comandos** - Pressione duas vezes a tecla Shift esquerda para acessar rapidamente as conexões SSH com seu teclado
-- **SSH Rico em Funcionalidades** - Suporta jump hosts, Warpgate, conexões baseadas em TOTP, SOCKS5, verificação de chave do host, preenchimento automático de senhas, [OPKSSH](https://github.com/openpubkey/opkssh), etc.
+- **SSH Rico em Funcionalidades** - Suporta jump hosts, Warpgate, conexões baseadas em TOTP, SOCKS5, verificação de chave do host, preenchimento automático de senhas, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
 - **Gráfico de Rede** - Personalize seu Dashboard para visualizar seu homelab baseado nas suas conexões SSH com suporte de status
 - **Abas Persistentes** - Sessões SSH e abas permanecem abertas entre dispositivos/atualizações se habilitado no perfil do usuário
 
@@ -102,7 +102,7 @@ Dispositivos suportados:
   - Google Play Store
   - APK
 
-Visite a [documentação](https://docs.termix.site/install) do Termix para mais informações sobre como instalar o Termix em todas as plataformas. Caso contrário, veja um arquivo Docker Compose de exemplo aqui:
+Visite a [documentação](https://docs.termix.site/install) do Termix para mais informações sobre como instalar o Termix em todas as plataformas. Caso contrário, veja um arquivo Docker Compose de exemplo aqui (você pode omitir o guacd e a rede se não planeja usar recursos de área de trabalho remota):
 
 ```yaml
 services:
@@ -151,11 +151,23 @@ networks:
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Crowdin">
+    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Crowdin">
+    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://tailscale.com/">
+    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://akamai.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://aws.amazon.com/">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
   </a>
 </p>
 
@@ -169,33 +181,33 @@ Por favor, seja o mais detalhado possível no seu relato, preferencialmente escr
 [![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
-  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
-  <img src="../repo-images/Image%202.png" width="400" alt="Termix Demo 2"/>
+  <img src="../repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
+  <img src="../repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%203.png" width="400" alt="Termix Demo 3"/>
-  <img src="../repo-images/Image%204.png" width="400" alt="Termix Demo 4"/>
+  <img src="../repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
+  <img src="../repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%205.png" width="400" alt="Termix Demo 5"/>
-  <img src="../repo-images/Image%206.png" width="400" alt="Termix Demo 6"/>
+  <img src="../repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
+  <img src="../repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%207.png" width="400" alt="Termix Demo 7"/>
-  <img src="../repo-images/Image%208.png" width="400" alt="Termix Demo 8"/>
+  <img src="../repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
+  <img src="../repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%209.png" width="400" alt="Termix Demo 9"/>
-  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
+  <img src="../repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
+  <img src="../repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
-  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
+  <img src="../repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
+  <img src="../repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 Alguns vídeos e imagens podem estar desatualizados ou podem não mostrar perfeitamente as funcionalidades.

@@ -1,11 +1,13 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { restartGuacServer } from "../../guacamole/guacamole-server.js";
+import { setGlobalLogLevel, getGlobalLogLevel } from "../../utils/logger.js";
 import crypto from "crypto";
 import { db } from "../db/index.js";
 import {
   users,
   sessions,
+  trustedDevices,
   hosts,
   sshCredentials,
   fileManagerRecent,
@@ -734,7 +736,8 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
       .get();
     if (!row) {
-      return res.json(null);
+      const envConfig = getOIDCConfigFromEnv();
+      return res.json(envConfig);
     }
 
     let config = JSON.parse((row as Record<string, unknown>).value as string);
@@ -1226,7 +1229,7 @@ router.get("/oidc/callback", async (req, res) => {
         const sessionDurationMs =
           deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
             ? 30 * 24 * 60 * 60 * 1000
-            : 2 * 60 * 60 * 1000;
+            : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
         await db.delete(users).where(eq(users.id, id));
@@ -1318,12 +1321,16 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    if (deviceInfo.type === "desktop" || deviceInfo.type === "mobile") {
+      redirectUrl.searchParams.set("token", token);
+    }
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
         : storedRememberMe
           ? 30 * 24 * 60 * 60 * 1000
-          : 2 * 60 * 60 * 1000;
+          : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
@@ -1577,7 +1584,13 @@ router.post("/login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -2155,12 +2168,16 @@ router.post("/initiate-reset", async (req, res) => {
       authLogger.warn(
         `Password reset attempted for non-existent user: ${username}`,
       );
-      return res.status(404).json({ error: "User not found" });
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
+      });
     }
 
     if (user[0].isOidc) {
-      return res.status(403).json({
-        error: "Password reset not available for external authentication users",
+      return res.json({
+        message:
+          "If the user exists, a password reset code has been generated. Check docker logs for the code.",
       });
     }
 
@@ -2175,7 +2192,7 @@ router.post("/initiate-reset", async (req, res) => {
       );
 
     authLogger.info(
-      `Password reset code for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
+      `Password reset code generated for user ${username} (expires at ${expiresAt.toLocaleString()}). Check admin panel or database settings table for code.`,
     );
 
     res.json({
@@ -2640,13 +2657,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
  *         description: Failed to list users.
  */
 router.get("/list", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
     const allUsers = await db
       .select({
         id: users.id,
@@ -2679,13 +2690,17 @@ router.get("/list", authenticateJWT, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: Preferred unique user identifier.
  *               username:
  *                 type: string
+ *                 description: Legacy fallback identifier.
  *     responses:
  *       200:
  *         description: User is now an admin.
  *       400:
- *         description: Username is required or user is already an admin.
+ *         description: User ID or username is required, or the user is already an admin.
  *       403:
  *         description: Not authorized.
  *       404:
@@ -2695,10 +2710,14 @@ router.get("/list", authenticateJWT, async (req, res) => {
  */
 router.post("/make-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { username } = req.body;
+  const { userId: targetUserId, username } = req.body;
+  const resolvedUserId = isNonEmptyString(targetUserId)
+    ? targetUserId.trim()
+    : null;
+  const resolvedUsername = isNonEmptyString(username) ? username.trim() : null;
 
-  if (!isNonEmptyString(username)) {
-    return res.status(400).json({ error: "Username is required" });
+  if (!resolvedUserId && !resolvedUsername) {
+    return res.status(400).json({ error: "User ID or username is required" });
   }
 
   try {
@@ -2710,7 +2729,12 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     const targetUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      )
+      .limit(1);
     if (!targetUser || targetUser.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -2722,7 +2746,11 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({ isAdmin: true })
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      );
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
@@ -2730,7 +2758,8 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     } catch (saveError) {
       authLogger.error("Failed to persist admin promotion to disk", saveError, {
         operation: "make_admin_save_failed",
-        username,
+        userId: targetUser[0].id,
+        username: targetUser[0].username,
       });
     }
 
@@ -2738,9 +2767,9 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
       operation: "admin_grant",
       adminId: userId,
       targetUserId: targetUser[0].id,
-      targetUsername: username,
+      targetUsername: targetUser[0].username,
     });
-    res.json({ message: `User ${username} is now an admin` });
+    res.json({ message: `User ${targetUser[0].username} is now an admin` });
   } catch (err) {
     authLogger.error("Failed to make user admin", err);
     res.status(500).json({ error: "Failed to make user admin" });
@@ -2762,13 +2791,17 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: Preferred unique user identifier.
  *               username:
  *                 type: string
+ *                 description: Legacy fallback identifier.
  *     responses:
  *       200:
  *         description: Admin status removed from user.
  *       400:
- *         description: Username is required or cannot remove your own admin status.
+ *         description: User ID or username is required, or cannot remove your own admin status.
  *       403:
  *         description: Not authorized.
  *       404:
@@ -2778,10 +2811,14 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
  */
 router.post("/remove-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { username } = req.body;
+  const { userId: targetUserId, username } = req.body;
+  const resolvedUserId = isNonEmptyString(targetUserId)
+    ? targetUserId.trim()
+    : null;
+  const resolvedUsername = isNonEmptyString(username) ? username.trim() : null;
 
-  if (!isNonEmptyString(username)) {
-    return res.status(400).json({ error: "Username is required" });
+  if (!resolvedUserId && !resolvedUsername) {
+    return res.status(400).json({ error: "User ID or username is required" });
   }
 
   try {
@@ -2790,7 +2827,10 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (adminUser[0].username === username) {
+    if (
+      (resolvedUserId && adminUser[0].id === resolvedUserId) ||
+      (resolvedUsername && adminUser[0].username === resolvedUsername)
+    ) {
       return res
         .status(400)
         .json({ error: "Cannot remove your own admin status" });
@@ -2799,7 +2839,12 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     const targetUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      )
+      .limit(1);
     if (!targetUser || targetUser.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -2811,7 +2856,11 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({ isAdmin: false })
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      );
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
@@ -2819,7 +2868,8 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     } catch (saveError) {
       authLogger.error("Failed to persist admin removal to disk", saveError, {
         operation: "remove_admin_save_failed",
-        username,
+        userId: targetUser[0].id,
+        username: targetUser[0].username,
       });
     }
 
@@ -2827,9 +2877,11 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       operation: "admin_revoke",
       adminId: userId,
       targetUserId: targetUser[0].id,
-      targetUsername: username,
+      targetUsername: targetUser[0].username,
     });
-    res.json({ message: `Admin status removed from ${username}` });
+    res.json({
+      message: `Admin status removed from ${targetUser[0].username}`,
+    });
   } catch (err) {
     authLogger.error("Failed to remove admin status", err);
     res.status(500).json({ error: "Failed to remove admin status" });
@@ -2966,10 +3018,19 @@ router.post("/totp/enable", authenticateJWT, async (req, res) => {
         totpBackupCodes: JSON.stringify(backupCodes),
       })
       .where(eq(users.id, userId));
-    authLogger.info("Two-factor authentication enabled", {
-      operation: "totp_enable",
-      userId,
-    });
+
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(trustedDevices).where(eq(trustedDevices.userId, userId));
+
+    try {
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+    } catch (saveError) {
+      authLogger.error("Failed to persist TOTP enablement to disk", saveError, {
+        operation: "totp_enable_db_save_failed",
+        userId,
+      });
+    }
 
     res.json({
       message: "TOTP enabled successfully",
@@ -3359,7 +3420,13 @@ router.post("/totp/verify-login", async (req, res) => {
       response.token = token;
     }
 
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
+    const timeoutRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const maxAge = rememberMe
+      ? 30 * 24 * 60 * 60 * 1000
+      : timeoutHours * 60 * 60 * 1000;
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -4223,6 +4290,146 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to update guacamole settings", err);
     res.status(500).json({ error: "Failed to update guacamole settings" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/log-level:
+ *   get:
+ *     summary: Get log level setting
+ *     description: Returns the configured log verbosity level.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current log level.
+ */
+router.get("/log-level", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'log_level'")
+      .get() as { value: string } | undefined;
+    res.json({
+      level: row ? row.value : getGlobalLogLevel(),
+    });
+  } catch (err) {
+    authLogger.error("Failed to get log level", err);
+    res.status(500).json({ error: "Failed to get log level" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/log-level:
+ *   patch:
+ *     summary: Update log level setting (admin only)
+ *     description: Sets the log verbosity level.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Log level updated.
+ *       400:
+ *         description: Invalid log level.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/log-level", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { level } = req.body;
+    const validLevels = ["debug", "info", "warn", "error"];
+    if (typeof level !== "string" || !validLevels.includes(level)) {
+      return res
+        .status(400)
+        .json({ error: "level must be one of: debug, info, warn, error" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('log_level', ?)",
+      )
+      .run(level);
+    setGlobalLogLevel(level);
+    res.json({ level });
+  } catch (err) {
+    authLogger.error("Failed to set log level", err);
+    res.status(500).json({ error: "Failed to set log level" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   get:
+ *     summary: Get session timeout setting
+ *     description: Returns the configured session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current session timeout hours.
+ */
+router.get("/session-timeout", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
+      .get() as { value: string } | undefined;
+    res.json({
+      timeoutHours: row ? parseInt(row.value, 10) : 24,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get session timeout", err);
+    res.status(500).json({ error: "Failed to get session timeout" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/session-timeout:
+ *   patch:
+ *     summary: Update session timeout setting (admin only)
+ *     description: Sets the session timeout in hours.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Session timeout updated.
+ *       400:
+ *         description: Invalid value.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/session-timeout", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { timeoutHours } = req.body;
+    if (
+      typeof timeoutHours !== "number" ||
+      timeoutHours < 1 ||
+      timeoutHours > 720
+    ) {
+      return res
+        .status(400)
+        .json({ error: "timeoutHours must be between 1 and 720" });
+    }
+    db.$client
+      .prepare(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('session_timeout_hours', ?)",
+      )
+      .run(String(timeoutHours));
+    res.json({ timeoutHours });
+  } catch (err) {
+    authLogger.error("Failed to set session timeout", err);
+    res.status(500).json({ error: "Failed to set session timeout" });
   }
 });
 

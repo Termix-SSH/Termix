@@ -149,28 +149,12 @@ interface OIDCAuthorize {
 // ============================================================================
 
 export function isElectron(): boolean {
-  const hasISElectron =
-    (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-          configuredServerUrl?: string;
-        }
-    ).IS_ELECTRON === true;
+  const win = window as any;
+  const hasISElectron = win.IS_ELECTRON === true;
+  const hasElectronAPI = !!win.electronAPI;
+  const isElectronProp = win.electronAPI?.isElectron === true;
 
-  const hasElectronAPI = !!(
-    window as Window &
-      typeof globalThis & {
-        IS_ELECTRON?: boolean;
-        electronAPI?: unknown;
-        configuredServerUrl?: string;
-      }
-  ).electronAPI;
-
-  const result = hasISElectron || hasElectronAPI;
-
-  return result;
+  return hasISElectron || hasElectronAPI || isElectronProp;
 }
 
 function getLoggerForService(serviceName: string) {
@@ -199,20 +183,22 @@ const electronSettingsCache = new Map<string, string>();
 if (isElectron()) {
   (async () => {
     try {
-      const electronAPI = (
-        window as Window &
-          typeof globalThis & {
-            electronAPI?: any;
-          }
-      ).electronAPI;
+      const electronAPI = (window as any).electronAPI;
 
       if (electronAPI?.getSetting) {
         const settingsToLoad = ["rightClickCopyPaste", "jwt"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
-            electronSettingsCache.set(key, value);
-            localStorage.setItem(key, value);
+            // Only populate if not already set to prevent overwriting new values during login
+            if (!localStorage.getItem(key)) {
+              electronSettingsCache.set(key, value);
+              localStorage.setItem(key, value);
+              console.log(`[Electron] Loaded setting ${key} from main process`);
+            } else {
+              // Even if we don't overwrite localStorage, update the cache
+              electronSettingsCache.set(key, localStorage.getItem(key)!);
+            }
           }
         }
       }
@@ -312,16 +298,27 @@ function createApiInstance(
 
     const logger = getLoggerForService(serviceName);
 
-    if (process.env.NODE_ENV === "development") {
+    const requestBaseURL = config.baseURL || "";
+    const isDevMode = process.env.NODE_ENV === "development";
+
+    if (isDevMode) {
       logger.requestStart(method, fullUrl, context);
     }
 
     if (isElectron()) {
-      config.headers["X-Electron-App"] = "true";
+      if (config.headers.set) {
+        config.headers.set("X-Electron-App", "true");
+      } else {
+        config.headers["X-Electron-App"] = "true";
+      }
 
       const token = localStorage.getItem("jwt");
       if (token) {
-        config.headers["Authorization"] = `Bearer ${token}`;
+        if (config.headers.set) {
+          config.headers.set("Authorization", `Bearer ${token}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${token}`;
+        }
         userWasAuthenticated = true;
       }
     }
@@ -339,15 +336,42 @@ function createApiInstance(
           platform = "iOS";
         }
       }
-      config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
+      if (config.headers.set) {
+        config.headers.set("User-Agent", `Termix-Mobile/${platform}`);
+      } else {
+        config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
+      }
     }
 
     if (!isElectron()) {
-      const token = document.cookie
+      const tokenCookie = document.cookie
         .split("; ")
         .find((row) => row.startsWith("jwt="));
-      if (token) {
-        userWasAuthenticated = true;
+
+      if (tokenCookie) {
+        const tokenValue = tokenCookie.split("=")[1];
+        if (tokenValue) {
+          // Always add Authorization header as fallback if token is present,
+          // especially important for cross-origin requests where cookies might be blocked
+          const decodedToken = decodeURIComponent(tokenValue);
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${decodedToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${decodedToken}`;
+          }
+          userWasAuthenticated = true;
+        }
+      } else {
+        // Check localStorage as fallback even in browser mode
+        const localToken = localStorage.getItem("jwt");
+        if (localToken) {
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${localToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${localToken}`;
+          }
+          userWasAuthenticated = true;
+        }
       }
     }
 
@@ -426,8 +450,11 @@ function createApiInstance(
       };
 
       const logger = getLoggerForService(serviceName);
+      // A caller can mark a request as a silent retry (see progressive /status
+      // retry) so we don't spam error logs / health events on each attempt.
+      const isSilentRetry = !!(error.config as any)?.__silentRetry;
 
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development" && !isSilentRetry) {
         if (status === 401) {
           logger.authError(method, fullUrl, context);
         } else if (status === 0 || !status) {
@@ -457,7 +484,24 @@ function createApiInstance(
           errorMessage === "Authentication required" ||
           errorMessage === "Missing authentication token";
 
-        if (isSessionExpired || isSessionNotFound || isInvalidToken) {
+        const headers = error.config?.headers;
+        let hasAuthHeader = false;
+        if (headers) {
+          if (typeof headers.get === "function") {
+            hasAuthHeader = !!(
+              headers.get("Authorization") || headers.get("authorization")
+            );
+          } else {
+            hasAuthHeader = !!(
+              headers["Authorization"] || headers["authorization"]
+            );
+          }
+        }
+
+        if (
+          (isSessionExpired || isSessionNotFound || isInvalidToken) &&
+          hasAuthHeader
+        ) {
           const wasAuthenticated = userWasAuthenticated;
 
           localStorage.removeItem("jwt");
@@ -488,7 +532,7 @@ function createApiInstance(
 
           userWasAuthenticated = false;
         }
-      } else {
+      } else if (!isSilentRetry) {
         const wasAuthenticated = !!localStorage.getItem("jwt");
         dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
       }
@@ -786,6 +830,9 @@ export let rbacApi: AxiosInstance;
 // Docker Management API (port 30007)
 export let dockerApi: AxiosInstance;
 
+// Pre-initialize with default values to avoid undefined errors during early mounting
+initializeApiInstances();
+
 function initializeApp() {
   if (isElectron()) {
     Promise.all([getServerConfig(), getEmbeddedServerStatus()])
@@ -1006,10 +1053,16 @@ function handleApiError(error: unknown, operation: string): never {
 export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
   try {
     const hostsResponse = await sshHostApi.get("/db/host");
-    const hosts: SSHHost[] = hostsResponse.data;
+    const hosts: SSHHost[] = Array.isArray(hostsResponse.data)
+      ? hostsResponse.data
+      : [];
 
-    const statusesResponse = await getAllServerStatuses();
-    const statuses = statusesResponse || {};
+    let statuses: Record<number, ServerStatus> = {};
+    try {
+      statuses = (await getAllServerStatuses()) || {};
+    } catch {
+      // Status fetch failure should not prevent host list from loading
+    }
 
     return hosts.map((host) => ({
       ...host,
@@ -1073,6 +1126,8 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
+      portKnockSequence: hostData.portKnockSequence || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1160,6 +1215,8 @@ export async function updateSSHHost(
       socks5Username: hostData.socks5Username || null,
       socks5Password: hostData.socks5Password || null,
       socks5ProxyChain: hostData.socks5ProxyChain || null,
+      macAddress: hostData.macAddress || null,
+      portKnockSequence: hostData.portKnockSequence || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1187,6 +1244,15 @@ export async function updateSSHHost(
     }
   } catch (error) {
     throw handleApiError(error, "update SSH host");
+  }
+}
+
+export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
+  try {
+    const response = await sshHostApi.post(`/db/host/${hostId}/wake`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "wake on LAN");
   }
 }
 
@@ -1255,6 +1321,17 @@ export async function exportSSHHostWithCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "export SSH host with credentials");
+  }
+}
+
+export async function exportAllSSHHosts(): Promise<{
+  hosts: SSHHost[];
+}> {
+  try {
+    const response = await sshHostApi.get("/db/hosts/export");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export all SSH hosts");
   }
 }
 
@@ -2299,15 +2376,81 @@ export async function removeFolderShortcut(
 // SERVER STATISTICS
 // ============================================================================
 
+/**
+ * Progressive retry schedule for the background /status poll.
+ *
+ * Each entry describes one attempt's per-request timeout and the pause to
+ * observe before the next attempt. The pause on the last entry is `null`:
+ * after that final failure we surface the network error, which flows
+ * through the response interceptor + dbHealthMonitor (which decides
+ * between the degraded toast and the full-outage overlay based on whether
+ * any WebSocket is still alive).
+ *
+ * Sequence: try(2s) -> wait 3s -> try(5s) -> wait 5s -> try(8s) -> fail.
+ * Worst-case wall-clock = 23s, which fits inside the 30s ServerStatusContext
+ * poll cadence, so the next tick acts as the next retry without overlap.
+ */
+const STATUS_RETRY_SCHEDULE: ReadonlyArray<{
+  timeoutMs: number;
+  pauseAfterMs: number | null;
+}> = [
+  { timeoutMs: 2000, pauseAfterMs: 3000 },
+  { timeoutMs: 5000, pauseAfterMs: 5000 },
+  { timeoutMs: 8000, pauseAfterMs: null },
+];
+
+function isTransientStatusError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  if (error.response) {
+    // Definitive server response (even 5xx) is not something more retries
+    // will fix in a useful timeframe; bail out and report it normally.
+    return false;
+  }
+  const code = error.code;
+  if (!code) {
+    // No code + no response means classic network error (offline / DNS / TCP)
+    return true;
+  }
+  return (
+    code === "ECONNABORTED" ||
+    code === "ETIMEDOUT" ||
+    code === "ERR_NETWORK" ||
+    code === "ECONNREFUSED" ||
+    code === "ECONNRESET"
+  );
+}
+
 export async function getAllServerStatuses(): Promise<
   Record<number, ServerStatus>
 > {
-  try {
-    const response = await statsApi.get("/status");
-    return response.data || {};
-  } catch (error) {
-    handleApiError(error, "fetch server statuses");
+  let lastError: unknown = null;
+
+  for (let i = 0; i < STATUS_RETRY_SCHEDULE.length; i++) {
+    const { timeoutMs, pauseAfterMs } = STATUS_RETRY_SCHEDULE[i];
+    const isFinalAttempt = i === STATUS_RETRY_SCHEDULE.length - 1;
+
+    try {
+      const response = await statsApi.get("/status", {
+        timeout: timeoutMs,
+        // Silence per-attempt interceptor logging & health-monitor side
+        // effects on all attempts except the final one, so background
+        // blips don't look like real outages.
+        __silentRetry: !isFinalAttempt,
+      } as AxiosRequestConfig & { __silentRetry?: boolean });
+      return response.data || {};
+    } catch (error) {
+      lastError = error;
+      if (!isTransientStatusError(error)) {
+        break;
+      }
+      if (pauseAfterMs === null) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, pauseAfterMs));
+    }
   }
+
+  handleApiError(lastError, "fetch server statuses");
 }
 
 export async function getServerStatusById(id: number): Promise<ServerStatus> {
@@ -2320,11 +2463,25 @@ export async function getServerStatusById(id: number): Promise<ServerStatus> {
   }
 }
 
-export async function getServerMetricsById(id: number): Promise<ServerMetrics> {
+export async function getServerMetricsById(
+  id: number,
+): Promise<ServerMetrics | null> {
   try {
-    const response = await statsApi.get(`/metrics/${id}`);
+    const response = await statsApi.get(`/metrics/${id}`, {
+      // Treat 404 as an expected "no metrics yet / disabled" signal rather
+      // than an error so we don't spam warn logs on the client.
+      validateStatus: (status) => status === 200 || status === 404,
+    });
+    if (response.status === 404) {
+      return null;
+    }
     return response.data;
   } catch (error) {
+    // If a 404 still slips through (e.g. intercepted before reaching here),
+    // swallow it quietly; everything else still flows through handleApiError.
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
     handleApiError(error, "fetch server metrics");
     throw error;
   }
@@ -2378,9 +2535,12 @@ export async function sendMetricsHeartbeat(
   }
 }
 
-export async function registerMetricsViewer(
-  hostId: number,
-): Promise<{ success: boolean; viewerSessionId: string }> {
+export async function registerMetricsViewer(hostId: number): Promise<{
+  success: boolean;
+  viewerSessionId?: string;
+  skipped?: boolean;
+  reason?: string;
+}> {
   try {
     const response = await statsApi.post("/metrics/register-viewer", {
       hostId,
@@ -2472,6 +2632,50 @@ export async function updateGlobalMonitoringSettings(settings: {
 }
 
 // ============================================================================
+// LOG LEVEL SETTINGS
+// ============================================================================
+
+export async function getLogLevel(): Promise<{ level: string }> {
+  try {
+    const response = await authApi.get("/users/log-level");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch log level");
+  }
+}
+
+export async function updateLogLevel(level: string): Promise<void> {
+  try {
+    await authApi.patch("/users/log-level", { level });
+  } catch (error) {
+    handleApiError(error, "update log level");
+  }
+}
+
+// ============================================================================
+// SESSION TIMEOUT SETTINGS
+// ============================================================================
+
+export async function getSessionTimeout(): Promise<{ timeoutHours: number }> {
+  try {
+    const response = await authApi.get("/users/session-timeout");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch session timeout");
+  }
+}
+
+export async function updateSessionTimeout(
+  timeoutHours: number,
+): Promise<void> {
+  try {
+    await authApi.patch("/users/session-timeout", { timeoutHours });
+  } catch (error) {
+    handleApiError(error, "update session timeout");
+  }
+}
+
+// ============================================================================
 // GUACAMOLE SETTINGS
 // ============================================================================
 
@@ -2538,7 +2742,7 @@ export async function loginUser(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -2550,7 +2754,7 @@ export async function loginUser(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -2831,10 +3035,10 @@ export async function revokeAllUserSessions(
 }
 
 export async function makeUserAdmin(
-  username: string,
+  userId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/users/make-admin", { username });
+    const response = await authApi.post("/users/make-admin", { userId });
     return response.data;
   } catch (error) {
     handleApiError(error, "make user admin");
@@ -2842,10 +3046,10 @@ export async function makeUserAdmin(
 }
 
 export async function removeAdminStatus(
-  username: string,
+  userId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/users/remove-admin", { username });
+    const response = await authApi.post("/users/remove-admin", { userId });
     return response.data;
   } catch (error) {
     handleApiError(error, "remove admin status");
@@ -3012,7 +3216,7 @@ export async function verifyTOTPLogin(
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && hasToken) {
+    if (isInIframe && isElectron() && hasToken) {
       localStorage.setItem("jwt", response.data.token);
 
       try {
@@ -3024,7 +3228,7 @@ export async function verifyTOTPLogin(
             platform: "desktop",
             timestamp: Date.now(),
           },
-          "*",
+          window.location.origin,
         );
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
@@ -3091,9 +3295,13 @@ export async function getReleasesRSS(
   }
 }
 
-export async function getVersionInfo(): Promise<Record<string, unknown>> {
+export async function getVersionInfo(
+  checkRemote = true,
+): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/version");
+    const response = await authApi.get(
+      `/version${checkRemote ? "" : "?checkRemote=false"}`,
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch version info");
@@ -3204,6 +3412,20 @@ export async function getSSHHostWithCredentials(
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch SSH host with credentials");
+  }
+}
+
+export async function getHostPassword(
+  hostId: number,
+  field: "password" | "sudoPassword" = "password",
+): Promise<string | null> {
+  try {
+    const response = await sshHostApi.get(
+      `/db/host/${hostId}/password?field=${field}`,
+    );
+    return response.data?.value || null;
+  } catch {
+    return null;
   }
 }
 
@@ -3629,7 +3851,9 @@ export async function reorderSnippets(
   updates: Array<{ id: number; order: number; folder?: string }>,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.post("/snippets/reorder", { updates });
+    const response = await authApi.post("/snippets/reorder", {
+      snippets: updates,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reorder snippets");
@@ -3886,6 +4110,39 @@ export interface GuacamoleTokenResponse {
   token: string;
 }
 
+type GuacamoleConfigSource = {
+  guacamoleConfig?: string | Record<string, unknown> | null;
+};
+
+export function getGuacamoleDpi(
+  source?: GuacamoleConfigSource,
+): number | undefined {
+  const config = source?.guacamoleConfig;
+  if (!config) return undefined;
+
+  let dpi: unknown;
+  if (typeof config === "string") {
+    try {
+      dpi = JSON.parse(config).dpi;
+    } catch {
+      return undefined;
+    }
+  } else {
+    dpi = config.dpi;
+  }
+
+  const parsedDpi = typeof dpi === "string" ? Number(dpi) : dpi;
+  if (
+    typeof parsedDpi !== "number" ||
+    !Number.isFinite(parsedDpi) ||
+    parsedDpi <= 0
+  ) {
+    return undefined;
+  }
+
+  return Math.trunc(parsedDpi);
+}
+
 function toGuacamoleParams(
   config: GuacamoleTokenRequest["guacamoleConfig"],
 ): Record<string, unknown> {
@@ -4129,6 +4386,75 @@ export async function revokeHostAccess(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "revoke host access");
+  }
+}
+
+// ============================================================================
+// SNIPPET SHARING
+// ============================================================================
+
+export async function shareSnippet(
+  snippetId: number,
+  shareData: {
+    targetType: "user" | "role";
+    targetUserId?: string;
+    targetRoleId?: number;
+    durationHours?: number;
+  },
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.post(
+      `/rbac/snippet/${snippetId}/share`,
+      shareData,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share snippet");
+  }
+}
+
+export async function getSnippetAccess(
+  snippetId: number,
+): Promise<{ accessList: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/snippet/${snippetId}/access`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch snippet access");
+  }
+}
+
+export async function revokeSnippetAccess(
+  snippetId: number,
+  accessId: number,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await rbacApi.delete(
+      `/rbac/snippet/${snippetId}/access/${accessId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "revoke snippet access");
+  }
+}
+
+export async function getSharedSnippets(): Promise<{
+  sharedSnippets: Array<{
+    id: number;
+    name: string;
+    content: string;
+    description: string | null;
+    folder: string | null;
+    ownerUsername: string;
+    permissionLevel: string;
+    expiresAt: string | null;
+  }>;
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/shared-snippets");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch shared snippets");
   }
 }
 

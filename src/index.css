@@ -233,6 +233,266 @@
   --bg-overlay: rgba(0, 0, 0, 0.7);
 }
 
+.dracula {
+  --background: #282a36;
+  --foreground: #ffffff;
+  --card: #343746;
+  --card-foreground: #ffffff;
+  --popover: #343746;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #282a36;
+  --secondary: #44475a;
+  --secondary-foreground: #ffffff;
+  --muted: #343746;
+  --muted-foreground: #a6accd;
+  --accent: #44475a;
+  --accent-foreground: #ffffff;
+  --destructive: #ff5555;
+  --border: #44475a;
+  --input: #343746;
+  --ring: #8be9fd;
+  --chart-1: #8be9fd;
+  --chart-2: #50fa7b;
+  --chart-3: #ffb86c;
+  --chart-4: #bd93f9;
+  --chart-5: #ff79c6;
+  --sidebar: #1e1f29;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #8be9fd;
+  --sidebar-primary-foreground: #1e1f29;
+  --sidebar-accent: #44475a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #44475a;
+  --sidebar-ring: #8be9fd;
+
+  --bg-base: #282a36;
+  --bg-elevated: #343746;
+  --bg-surface: #343746;
+  --bg-surface-hover: #44475a;
+  --bg-input: #343746;
+  --bg-deepest: #1e1f29;
+  --bg-header: #1e1f29;
+  --bg-button: #343746;
+  --bg-active: #44475a;
+  --bg-light: #343746;
+  --bg-subtle: #1e1f29;
+  --bg-interact: #44475a;
+  --border-base: #44475a;
+  --border-panel: #1e1f29;
+  --border-subtle: #44475a;
+  --border-medium: #44475a;
+  --bg-hover: #44475a;
+  --bg-hover-alt: #44475a;
+  --bg-pressed: #1e1f29;
+  --border-hover: #6272a4;
+  --border-active: #8be9fd;
+
+  --foreground-secondary: #a6accd;
+  --foreground-subtle: #6272a4;
+
+  --scrollbar-thumb: #44475a;
+  --scrollbar-thumb-hover: #6272a4;
+  --scrollbar-track: #282a36;
+
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+}
+
+.gentlemansChoice {
+  --background: #1a1c1a;
+  --foreground: #d1c7a3;
+  --card: #2a2c2a;
+  --card-foreground: #d1c7a3;
+  --popover: #2a2c2a;
+  --popover-foreground: #d1c7a3;
+  --primary: #d1c7a3;
+  --primary-foreground: #1a1c1a;
+  --secondary: #3e4437;
+  --secondary-foreground: #d1c7a3;
+  --muted: #2a2c2a;
+  --muted-foreground: #8e8463;
+  --accent: #3e4437;
+  --accent-foreground: #d1c7a3;
+  --destructive: #9d3a3a;
+  --border: #3e4437;
+  --input: #2a2c2a;
+  --ring: #5a7a3a;
+  --chart-1: #5a7a3a;
+  --chart-2: #3a5a7a;
+  --chart-3: #b39a3a;
+  --chart-4: #7a3a5a;
+  --chart-5: #3a7a7a;
+  --sidebar: #151715;
+  --sidebar-foreground: #d1c7a3;
+  --sidebar-primary: #5a7a3a;
+  --sidebar-primary-foreground: #151715;
+  --sidebar-accent: #3e4437;
+  --sidebar-accent-foreground: #d1c7a3;
+  --sidebar-border: #3e4437;
+  --sidebar-ring: #5a7a3a;
+
+  --bg-base: #1a1c1a;
+  --bg-elevated: #2a2c2a;
+  --bg-surface: #2a2c2a;
+  --bg-surface-hover: #3e4437;
+  --bg-input: #2a2c2a;
+  --bg-deepest: #151715;
+  --bg-header: #151715;
+  --bg-button: #2a2c2a;
+  --bg-active: #3e4437;
+  --bg-light: #2a2c2a;
+  --bg-subtle: #151715;
+  --bg-interact: #3e4437;
+  --border-base: #3e4437;
+  --border-panel: #151715;
+  --border-subtle: #3e4437;
+  --border-medium: #3e4437;
+  --bg-hover: #3e4437;
+  --bg-hover-alt: #3e4437;
+  --bg-pressed: #151715;
+  --border-hover: #5a7a3a;
+  --border-active: #d1c7a3;
+
+  --foreground-secondary: #8e8463;
+  --foreground-subtle: #5e5841;
+
+  --scrollbar-thumb: #3e4437;
+  --scrollbar-thumb-hover: #5e5841;
+  --scrollbar-track: #1a1c1a;
+
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+}
+
+.midnightEspresso {
+  --background: #120f0d;
+  --foreground: #ceb195;
+  --card: #1f1a17;
+  --card-foreground: #ceb195;
+  --popover: #1f1a17;
+  --popover-foreground: #ceb195;
+  --primary: #ceb195;
+  --primary-foreground: #120f0d;
+  --secondary: #3d2b1f;
+  --secondary-foreground: #ceb195;
+  --muted: #1f1a17;
+  --muted-foreground: #9a8a7a;
+  --accent: #3d2b1f;
+  --accent-foreground: #ceb195;
+  --destructive: #a05a4a;
+  --border: #3d2b1f;
+  --input: #1f1a17;
+  --ring: #7a8a5a;
+  --chart-1: #7a8a5a;
+  --chart-2: #5a7a9a;
+  --chart-3: #b08a4a;
+  --chart-4: #8a5a7a;
+  --chart-5: #5a8a8a;
+  --sidebar: #0d0b0a;
+  --sidebar-foreground: #ceb195;
+  --sidebar-primary: #7a8a5a;
+  --sidebar-primary-foreground: #0d0b0a;
+  --sidebar-accent: #3d2b1f;
+  --sidebar-accent-foreground: #ceb195;
+  --sidebar-border: #3d2b1f;
+  --sidebar-ring: #7a8a5a;
+
+  --bg-base: #120f0d;
+  --bg-elevated: #1f1a17;
+  --bg-surface: #1f1a17;
+  --bg-surface-hover: #3d2b1f;
+  --bg-input: #1f1a17;
+  --bg-deepest: #0d0b0a;
+  --bg-header: #0d0b0a;
+  --bg-button: #1f1a17;
+  --bg-active: #3d2b1f;
+  --bg-light: #1f1a17;
+  --bg-subtle: #0d0b0a;
+  --bg-interact: #3d2b1f;
+  --border-base: #3d2b1f;
+  --border-panel: #0d0b0a;
+  --border-subtle: #3d2b1f;
+  --border-medium: #3d2b1f;
+  --bg-hover: #3d2b1f;
+  --bg-hover-alt: #3d2b1f;
+  --bg-pressed: #0d0b0a;
+  --border-hover: #7a8a5a;
+  --border-active: #ceb195;
+
+  --foreground-secondary: #9a8a7a;
+  --foreground-subtle: #6a5a4a;
+
+  --scrollbar-thumb: #3d2b1f;
+  --scrollbar-thumb-hover: #6a5a4a;
+  --scrollbar-track: #120f0d;
+
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+}
+
+.catppuccinMocha {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #181825;
+  --card-foreground: #cdd6f4;
+  --popover: #181825;
+  --popover-foreground: #cdd6f4;
+  --primary: #cdd6f4;
+  --primary-foreground: #1e1e2e;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --muted: #181825;
+  --muted-foreground: #a6adc8;
+  --accent: #313244;
+  --accent-foreground: #cdd6f4;
+  --destructive: #f38ba8;
+  --border: #313244;
+  --input: #181825;
+  --ring: #89b4fa;
+  --chart-1: #89b4fa;
+  --chart-2: #a6e3a1;
+  --chart-3: #f9e2af;
+  --chart-4: #f5c2e7;
+  --chart-5: #94e2d5;
+  --sidebar: #11111b;
+  --sidebar-foreground: #cdd6f4;
+  --sidebar-primary: #89b4fa;
+  --sidebar-primary-foreground: #11111b;
+  --sidebar-accent: #313244;
+  --sidebar-accent-foreground: #cdd6f4;
+  --sidebar-border: #313244;
+  --sidebar-ring: #89b4fa;
+
+  --bg-base: #1e1e2e;
+  --bg-elevated: #181825;
+  --bg-surface: #181825;
+  --bg-surface-hover: #313244;
+  --bg-input: #181825;
+  --bg-deepest: #11111b;
+  --bg-header: #11111b;
+  --bg-button: #181825;
+  --bg-active: #313244;
+  --bg-light: #181825;
+  --bg-subtle: #11111b;
+  --bg-interact: #313244;
+  --border-base: #313244;
+  --border-panel: #11111b;
+  --border-subtle: #313244;
+  --border-medium: #313244;
+  --bg-hover: #313244;
+  --bg-hover-alt: #313244;
+  --bg-pressed: #11111b;
+  --border-hover: #89b4fa;
+  --border-active: #cdd6f4;
+
+  --foreground-secondary: #a6adc8;
+  --foreground-subtle: #7f849c;
+
+  --scrollbar-thumb: #313244;
+  --scrollbar-thumb-hover: #45475a;
+  --scrollbar-track: #1e1e2e;
+
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+}
+
 @layer base {
   html,
   body {

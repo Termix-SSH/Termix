@@ -12,9 +12,12 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
+import yaml from "js-yaml";
 import { getRequestOrigin } from "../utils/request-origin.js";
 
 const AUTH_TIMEOUT = 60 * 1000;
+
+export const OPKSSH_CALLBACK_PATH = "/host/opkssh-callback";
 
 interface OPKSSHAuthSession {
   requestId: string;
@@ -25,6 +28,7 @@ interface OPKSSHAuthSession {
   localPort: number;
   callbackPort: number;
   remoteRedirectUri: string;
+  providers: Array<{ alias: string; issuer: string }>;
   status:
     | "starting"
     | "waiting_for_auth"
@@ -47,6 +51,7 @@ interface OPKSSHAuthSession {
 }
 
 const activeAuthSessions = new Map<string, OPKSSHAuthSession>();
+const oauthStateToRequestId = new Map<string, string>();
 const cleanupInProgress = new Set<string>();
 
 function getOPKConfigPath(): string {
@@ -78,10 +83,17 @@ async function createTemplateConfig(): Promise<void> {
   }
 }
 
+interface ProviderRedirectInfo {
+  alias: string;
+  issuer: string;
+  redirectUris: string[];
+}
+
 async function checkOPKConfigExists(): Promise<{
   exists: boolean;
   error?: string;
   configPath?: string;
+  providers?: ProviderRedirectInfo[];
 }> {
   const configPath = getOPKConfigPath();
   const isDocker =
@@ -119,15 +131,44 @@ async function checkOPKConfigExists(): Promise<{
       };
     }
 
-    if (!content.includes("redirect_uris:")) {
-      return {
-        exists: false,
-        configPath,
-        error: `OPKSSH configuration is missing 'redirect_uris' field. This field must contain the Termix callback URL that you registered with your OAuth provider (e.g., http://localhost:8080/host/opkssh-callback for Docker). The static callback route will internally redirect to the dynamic route for proper URL rewriting.`,
+    let providers: ProviderRedirectInfo[] = [];
+    try {
+      const parsed = yaml.load(content) as {
+        providers?: Array<{
+          alias?: string;
+          issuer?: string;
+          redirect_uris?: string[];
+        }>;
       };
+      if (parsed?.providers && Array.isArray(parsed.providers)) {
+        providers = parsed.providers
+          .filter(
+            (
+              p,
+            ): p is {
+              alias: string;
+              issuer: string;
+              redirect_uris?: string[];
+            } => typeof p.alias === "string" && typeof p.issuer === "string",
+          )
+          .map((p) => ({
+            alias: p.alias,
+            issuer: p.issuer.replace(/^https?:\/\//, ""),
+            redirectUris: Array.isArray(p.redirect_uris)
+              ? p.redirect_uris.filter(
+                  (u): u is string => typeof u === "string",
+                )
+              : [],
+          }));
+      }
+    } catch (e) {
+      sshLogger.warn("Failed to parse OPKSSH config for providers", {
+        operation: "opkssh_config_parse_providers_error",
+        error: e,
+      });
     }
 
-    return { exists: true, configPath };
+    return { exists: true, configPath, providers };
   } catch {
     await createTemplateConfig();
     return {
@@ -136,6 +177,63 @@ async function checkOPKConfigExists(): Promise<{
       error: `OPKSSH configuration not found. A template config file has been created at:\n${configPath}\n\nPlease edit this file and configure your OIDC provider (Google, GitHub, Microsoft, etc.).\nSee documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md${dockerHint}`,
     };
   }
+}
+
+// OPKSSH's `redirect_uris` field lists candidate LOCAL ports for the callback listener
+// that OPKSSH binds on the host running the binary. The openpubkey library enforces these
+// must be localhost, a non-localhost entry causes ECONNRESET on /select/ at runtime.
+// The publicly registered OAuth redirect URI is what Termix passes via --remote-redirect-uri
+// (derived from request origin); users do NOT put that URL in this config field.
+function validateRedirectUrisAreLocalhost(
+  providers: ProviderRedirectInfo[],
+): { ok: true } | { ok: false; message: string } {
+  const isLocalHost = (host: string): boolean => {
+    const bare = host.replace(/^\[|\]$/g, "");
+    return (
+      bare === "localhost" ||
+      bare === "127.0.0.1" ||
+      bare === "::1" ||
+      bare === "0:0:0:0:0:0:0:1" ||
+      bare.startsWith("localhost:") ||
+      bare.startsWith("127.0.0.1:")
+    );
+  };
+
+  const issues: string[] = [];
+  for (const p of providers) {
+    const uris = p.redirectUris || [];
+    if (uris.length === 0) continue;
+    const nonLocal = uris.filter((u) => {
+      try {
+        return !isLocalHost(new URL(u).hostname);
+      } catch {
+        return true;
+      }
+    });
+    if (nonLocal.length > 0) {
+      issues.push(
+        `Provider '${p.alias}': non-localhost entries in redirect_uris: ${nonLocal.join(", ")}`,
+      );
+    }
+  }
+
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      message:
+        `OPKSSH configuration error: 'redirect_uris' must only contain localhost URLs.\n\n` +
+        `${issues.join("\n")}\n\n` +
+        `This field is OPKSSH's local callback listener, it must be localhost (or omitted to use ` +
+        `the defaults http://localhost:3000/login-callback, :10001, :11110). ` +
+        `The public Termix callback URL is supplied automatically by Termix via --remote-redirect-uri; ` +
+        `you do not put it here. Register the PUBLIC Termix URL with your OAuth provider instead ` +
+        `(e.g. https://your-domain${OPKSSH_CALLBACK_PATH}).\n\n` +
+        `Fix: remove the non-localhost entries above, or delete the whole 'redirect_uris' block to use defaults.\n\n` +
+        `Docs: https://docs.termix.site/opkssh`,
+    };
+  }
+
+  return { ok: true };
 }
 
 export async function startOPKSSHAuth(
@@ -178,8 +276,37 @@ export async function startOPKSSHAuth(
     return "";
   }
 
+  const redirectValidation = validateRedirectUrisAreLocalhost(
+    configCheck.providers || [],
+  );
+  if (redirectValidation.ok === false) {
+    sshLogger.warn("OPKSSH config redirect_uris validation failed", {
+      operation: "opkssh_config_redirect_uris_not_localhost",
+      configPath: configCheck.configPath,
+    });
+    ws.send(
+      JSON.stringify({
+        type: "opkssh_config_error",
+        requestId: "",
+        error: redirectValidation.message,
+        instructions: redirectValidation.message,
+      }),
+    );
+    return "";
+  }
+
   const requestId = randomUUID();
-  const remoteRedirectUri = `${requestOrigin}/host/opkssh-callback`;
+  const remoteRedirectUri = `${requestOrigin}${OPKSSH_CALLBACK_PATH}`;
+
+  sshLogger.info("Starting OPKSSH auth session", {
+    operation: "opkssh_start_auth_remote_redirect_uri",
+    requestId,
+    userId,
+    hostId,
+    requestOrigin,
+    remoteRedirectUri,
+    providerAliases: (configCheck.providers || []).map((p) => p.alias),
+  });
 
   const session: Partial<OPKSSHAuthSession> = {
     requestId,
@@ -189,6 +316,7 @@ export async function startOPKSSHAuth(
     localPort: 0,
     callbackPort: 0,
     remoteRedirectUri,
+    providers: configCheck.providers || [],
     status: "starting",
     ws,
     stdoutBuffer: "",
@@ -261,7 +389,80 @@ export async function startOPKSSHAuth(
         handleOPKSSHOutput(requestId, stderr);
       }
 
-      if (stderr.includes("provider not found") || stderr.includes("config")) {
+      const lowerStderr = stderr.toLowerCase();
+
+      // OPKSSH's openpubkey library rejects non-localhost `redirect_uris` at runtime
+      // with the distinctive message "redirectURI must be localhost". Surface that
+      // directly with actionable guidance.
+      if (lowerStderr.includes("redirecturi must be localhost")) {
+        sshLogger.warn("OPKSSH rejected non-localhost entry in redirect_uris", {
+          operation: "opkssh_stderr_redirect_uris_not_localhost",
+          requestId,
+          remoteRedirectUri,
+          stderrSnippet: stderr.slice(0, 500),
+        });
+        ws.send(
+          JSON.stringify({
+            type: "opkssh_config_error",
+            requestId,
+            error:
+              `OPKSSH rejected the local callback URI: every entry in 'redirect_uris' must be localhost.\n\n` +
+              `OPKSSH output:\n${stderr.trim()}\n\n` +
+              `The 'redirect_uris' config field is OPKSSH's LOCAL listener — it is not the public Termix callback. ` +
+              `Remove any non-localhost entries from redirect_uris (or delete the whole block to use OPKSSH's ` +
+              `defaults of :3000, :10001, :11110). Register the public Termix callback URL with your OAuth ` +
+              `provider instead, Termix passes it to OPKSSH automatically via --remote-redirect-uri.`,
+            instructions: "See documentation: https://docs.termix.site/opkssh",
+          }),
+        );
+        await cleanup();
+        return;
+      }
+
+      // Generic redirect-uri/mismatch errors (OAuth provider side, OPKSSH config side, etc.)
+      const genericRedirectIndicators = [
+        "redirect_uri",
+        "redirect uri",
+        "invalid redirect",
+        "no matching redirect",
+        "allowed redirect",
+        "mismatching redirection",
+      ];
+      const hasGenericRedirectError = genericRedirectIndicators.some((s) =>
+        lowerStderr.includes(s),
+      );
+
+      if (hasGenericRedirectError) {
+        sshLogger.warn("OPKSSH stderr reported redirect_uri error", {
+          operation: "opkssh_stderr_redirect_uri_error",
+          requestId,
+          remoteRedirectUri,
+          stderrSnippet: stderr.slice(0, 500),
+        });
+        ws.send(
+          JSON.stringify({
+            type: "opkssh_config_error",
+            requestId,
+            error:
+              `OPKSSH or the OAuth provider rejected the redirect URI.\n\n` +
+              `Computed Termix callback URI (sent to provider): ${remoteRedirectUri}\n\n` +
+              `OPKSSH output:\n${stderr.trim()}\n\n` +
+              `Register '${remoteRedirectUri}' as an authorized redirect URI with your OAuth provider ` +
+              `(e.g. in Google Cloud Console → OAuth client). ` +
+              `Also confirm any 'redirect_uris' in your OPKSSH config contain ONLY localhost URLs.`,
+            instructions: "See documentation: https://docs.termix.site/opkssh",
+          }),
+        );
+        await cleanup();
+        return;
+      }
+
+      if (
+        stderr.includes("provider not found") ||
+        stderr.includes("config error") ||
+        stderr.includes("invalid config") ||
+        stderr.includes("config not found")
+      ) {
         ws.send(
           JSON.stringify({
             type: "opkssh_config_error",
@@ -340,18 +541,18 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   session.stdoutBuffer += output;
 
   const chooserUrlMatch = session.stdoutBuffer.match(
-    /(?:Opening browser to|Open your browser to:)\s*http:\/\/localhost:(\d+)\/chooser/,
+    /(?:Opening browser to|Open your browser to:)\s*http:\/\/(?:localhost|127\.0\.0\.1):(\d+)\/chooser/,
   );
   if (chooserUrlMatch && session.status === "starting") {
     const actualPort = parseInt(chooserUrlMatch[1], 10);
-    const localChooserUrl = `http://localhost:${actualPort}/chooser`;
+    const localChooserUrl = `http://127.0.0.1:${actualPort}/chooser`;
 
     session.localPort = actualPort;
 
-    const baseUrl = session.remoteRedirectUri.replace(
-      /\/ssh\/opkssh-callback$/,
-      "",
-    );
+    const baseUrl = session.remoteRedirectUri
+      .replace(/\/host\/opkssh-callback$/, "")
+      // In direct dev mode the WS server (30002) is separate from the HTTP API (30001)
+      .replace(/:30002\b/, ":30001");
     const proxiedChooserUrl = `${baseUrl}/host/opkssh-chooser/${requestId}`;
 
     session.status = "waiting_for_auth";
@@ -361,6 +562,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
         requestId,
         stage: "chooser",
         url: proxiedChooserUrl,
+        providers: session.providers,
         localUrl: localChooserUrl,
         message: "Please authenticate in your browser",
       }),
@@ -368,7 +570,7 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
   }
 
   const callbackPortMatch = session.stdoutBuffer.match(
-    /listening on http:\/\/127\.0\.0\.1:(\d+)\//,
+    /listening on http:\/\/(?:127\.0\.0\.1|localhost):(\d+)\//,
   );
   if (callbackPortMatch && !session.callbackPort) {
     session.callbackPort = parseInt(callbackPortMatch[1], 10);
@@ -509,25 +711,6 @@ async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
       }),
     );
 
-    try {
-      await axios.post(
-        "http://localhost:30006/activity/log",
-        {
-          type: "opkssh_authentication",
-          hostId: session.hostId,
-          hostName: session.hostname,
-          status: "approved",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.INTERNAL_AUTH_TOKEN}`,
-          },
-        },
-      );
-    } catch (activityError) {
-      sshLogger.warn("Failed to log OPKSSH activity", activityError);
-    }
-
     await session.cleanup();
   } catch (error) {
     sshLogger.error(
@@ -657,7 +840,7 @@ export async function handleOAuthCallback(
   }
 
   try {
-    const callbackUrl = `http://localhost:${session.localPort}/login-callback?${queryString}`;
+    const callbackUrl = `http://127.0.0.1:${session.localPort}/login-callback?${queryString}`;
     await axios.get(callbackUrl, {
       timeout: 10000,
       validateStatus: () => true,
@@ -720,6 +903,13 @@ async function cleanupAuthSession(requestId: string): Promise<void> {
       }
     }
 
+    // Clean up any OAuth state mappings for this session
+    for (const [state, reqId] of oauthStateToRequestId.entries()) {
+      if (reqId === requestId) {
+        oauthStateToRequestId.delete(state);
+      }
+    }
+
     activeAuthSessions.delete(requestId);
   } finally {
     cleanupInProgress.delete(requestId);
@@ -751,6 +941,18 @@ export function getActiveSessionsForUser(userId: string): OPKSSHAuthSession[] {
 
 export function getActiveSessionsAll(): OPKSSHAuthSession[] {
   return Array.from(activeAuthSessions.values());
+}
+
+export function registerOAuthState(state: string, requestId: string): void {
+  oauthStateToRequestId.set(state, requestId);
+}
+
+export function getRequestIdByOAuthState(state: string): string | undefined {
+  return oauthStateToRequestId.get(state);
+}
+
+export function clearOAuthState(state: string): void {
+  oauthStateToRequestId.delete(state);
 }
 
 export async function getUserIdFromRequest(req: {

@@ -663,6 +663,49 @@ ipcMain.handle("set-setting", (event, key, value) => {
   }
 });
 
+ipcMain.handle("get-iframe-jwt", async () => {
+  try {
+    if (!mainWindow) return null;
+    const frames = mainWindow.webContents.mainFrame.framesInSubtree;
+    logToFile(`[get-iframe-jwt] scanning ${frames.length} frames`);
+    for (const frame of frames) {
+      if (frame === mainWindow.webContents.mainFrame) continue;
+      try {
+        const token = await frame.executeJavaScript(
+          `(function() {
+            try {
+              const t = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+              return t || null;
+            } catch(e) { return null; }
+          })()`,
+        );
+        logToFile(
+          `[get-iframe-jwt] frame url=${frame.url} token found=${!!token} length=${token?.length}`,
+        );
+        if (token && token.length > 20) return token;
+      } catch (err) {
+        logToFile(`[get-iframe-jwt] frame exec error:`, err.message);
+      }
+    }
+    return null;
+  } catch (error) {
+    logToFile("[get-iframe-jwt] error:", error.message);
+    return null;
+  }
+});
+
+ipcMain.handle("get-session-cookie", async (_event, name) => {
+  try {
+    const ses = mainWindow?.webContents?.session;
+    if (!ses) return null;
+    const cookies = await ses.cookies.get({ name });
+    return cookies.length > 0 ? cookies[0].value : null;
+  } catch (error) {
+    console.error("Failed to get session cookie:", error);
+    return null;
+  }
+});
+
 ipcMain.handle("clear-session-cookies", async () => {
   try {
     const ses = mainWindow?.webContents?.session;
