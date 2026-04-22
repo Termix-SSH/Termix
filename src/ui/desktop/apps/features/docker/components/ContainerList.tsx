@@ -55,7 +55,7 @@ export function ContainerList({
 
   if (containers.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full min-h-0">
         <div className="text-center space-y-2">
           <p className="text-muted-foreground text-lg">
             {t("docker.noContainersFound")}
@@ -69,7 +69,7 @@ export function ContainerList({
   }
 
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col h-full min-h-0 gap-3">
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -106,7 +106,7 @@ export function ContainerList({
       </div>
 
       {filteredContainers.length === 0 ? (
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex items-center justify-center flex-1 min-h-0">
           <div className="text-center space-y-2">
             <p className="text-muted-foreground">
               {t("docker.noContainersMatchFilters")}
@@ -117,17 +117,19 @@ export function ContainerList({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 overflow-auto thin-scrollbar pb-2">
-          {filteredContainers.map((container) => (
-            <ContainerCard
-              key={container.id}
-              container={container}
-              sessionId={sessionId}
-              onSelect={() => onSelectContainer(container.id)}
-              isSelected={selectedContainerId === container.id}
-              onRefresh={onRefresh}
-            />
-          ))}
+        <div className="min-h-0 flex-1 overflow-auto thin-scrollbar pr-1">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full pb-2">
+            {filteredContainers.map((container) => (
+              <ContainerCard
+                key={container.id}
+                container={container}
+                sessionId={sessionId}
+                onSelect={() => onSelectContainer(container.id)}
+                isSelected={selectedContainerId === container.id}
+                onRefresh={onRefresh}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
