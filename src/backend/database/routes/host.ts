@@ -4584,16 +4584,6 @@ router.use(
           opMappedFrom,
         });
 
-        const isKnownLocalHost = (host: string): boolean => {
-          if (host === chooserHost) return true;
-          if (host === `localhost:${session.localPort}`) return true;
-          if (session.callbackPort) {
-            if (host === `127.0.0.1:${session.callbackPort}`) return true;
-            if (host === `localhost:${session.callbackPort}`) return true;
-          }
-          return false;
-        };
-
         const isLocalHostname = (host: string): boolean => {
           const bare = host.split(":")[0];
           return (
