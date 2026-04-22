@@ -2690,13 +2690,17 @@ router.get("/list", authenticateJWT, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: Preferred unique user identifier.
  *               username:
  *                 type: string
+ *                 description: Legacy fallback identifier.
  *     responses:
  *       200:
  *         description: User is now an admin.
  *       400:
- *         description: Username is required or user is already an admin.
+ *         description: User ID or username is required, or the user is already an admin.
  *       403:
  *         description: Not authorized.
  *       404:
@@ -2706,10 +2710,14 @@ router.get("/list", authenticateJWT, async (req, res) => {
  */
 router.post("/make-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { username } = req.body;
+  const { userId: targetUserId, username } = req.body;
+  const resolvedUserId = isNonEmptyString(targetUserId)
+    ? targetUserId.trim()
+    : null;
+  const resolvedUsername = isNonEmptyString(username) ? username.trim() : null;
 
-  if (!isNonEmptyString(username)) {
-    return res.status(400).json({ error: "Username is required" });
+  if (!resolvedUserId && !resolvedUsername) {
+    return res.status(400).json({ error: "User ID or username is required" });
   }
 
   try {
@@ -2721,7 +2729,12 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     const targetUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      )
+      .limit(1);
     if (!targetUser || targetUser.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -2733,7 +2746,11 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({ isAdmin: true })
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      );
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
@@ -2741,7 +2758,8 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
     } catch (saveError) {
       authLogger.error("Failed to persist admin promotion to disk", saveError, {
         operation: "make_admin_save_failed",
-        username,
+        userId: targetUser[0].id,
+        username: targetUser[0].username,
       });
     }
 
@@ -2749,9 +2767,9 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
       operation: "admin_grant",
       adminId: userId,
       targetUserId: targetUser[0].id,
-      targetUsername: username,
+      targetUsername: targetUser[0].username,
     });
-    res.json({ message: `User ${username} is now an admin` });
+    res.json({ message: `User ${targetUser[0].username} is now an admin` });
   } catch (err) {
     authLogger.error("Failed to make user admin", err);
     res.status(500).json({ error: "Failed to make user admin" });
@@ -2773,13 +2791,17 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: Preferred unique user identifier.
  *               username:
  *                 type: string
+ *                 description: Legacy fallback identifier.
  *     responses:
  *       200:
  *         description: Admin status removed from user.
  *       400:
- *         description: Username is required or cannot remove your own admin status.
+ *         description: User ID or username is required, or cannot remove your own admin status.
  *       403:
  *         description: Not authorized.
  *       404:
@@ -2789,10 +2811,14 @@ router.post("/make-admin", authenticateJWT, async (req, res) => {
  */
 router.post("/remove-admin", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { username } = req.body;
+  const { userId: targetUserId, username } = req.body;
+  const resolvedUserId = isNonEmptyString(targetUserId)
+    ? targetUserId.trim()
+    : null;
+  const resolvedUsername = isNonEmptyString(username) ? username.trim() : null;
 
-  if (!isNonEmptyString(username)) {
-    return res.status(400).json({ error: "Username is required" });
+  if (!resolvedUserId && !resolvedUsername) {
+    return res.status(400).json({ error: "User ID or username is required" });
   }
 
   try {
@@ -2801,7 +2827,10 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (adminUser[0].username === username) {
+    if (
+      (resolvedUserId && adminUser[0].id === resolvedUserId) ||
+      (resolvedUsername && adminUser[0].username === resolvedUsername)
+    ) {
       return res
         .status(400)
         .json({ error: "Cannot remove your own admin status" });
@@ -2810,7 +2839,12 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     const targetUser = await db
       .select()
       .from(users)
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      )
+      .limit(1);
     if (!targetUser || targetUser.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -2822,7 +2856,11 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     await db
       .update(users)
       .set({ isAdmin: false })
-      .where(eq(users.username, username));
+      .where(
+        resolvedUserId
+          ? eq(users.id, resolvedUserId)
+          : eq(users.username, resolvedUsername!),
+      );
 
     try {
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
@@ -2830,7 +2868,8 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
     } catch (saveError) {
       authLogger.error("Failed to persist admin removal to disk", saveError, {
         operation: "remove_admin_save_failed",
-        username,
+        userId: targetUser[0].id,
+        username: targetUser[0].username,
       });
     }
 
@@ -2838,9 +2877,11 @@ router.post("/remove-admin", authenticateJWT, async (req, res) => {
       operation: "admin_revoke",
       adminId: userId,
       targetUserId: targetUser[0].id,
-      targetUsername: username,
+      targetUsername: targetUser[0].username,
     });
-    res.json({ message: `Admin status removed from ${username}` });
+    res.json({
+      message: `Admin status removed from ${targetUser[0].username}`,
+    });
   } catch (err) {
     authLogger.error("Failed to remove admin status", err);
     res.status(500).json({ error: "Failed to remove admin status" });
