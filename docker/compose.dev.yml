@@ -6,11 +6,11 @@ services:
     container_name: termix-dev
     restart: unless-stopped
     ports:
-      - '8081:8080'
+      - "8081:8080"
     volumes:
       - termix-dev-data:/app/data
     environment:
-      PORT: '8080'
+      PORT: "8080"
       NODE_ENV: development
     depends_on:
       - guacd-dev

@@ -677,9 +677,11 @@ ipcMain.handle("get-iframe-jwt", async () => {
               const t = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
               return t || null;
             } catch(e) { return null; }
-          })()`
+          })()`,
         );
-        logToFile(`[get-iframe-jwt] frame url=${frame.url} token found=${!!token} length=${token?.length}`);
+        logToFile(
+          `[get-iframe-jwt] frame url=${frame.url} token found=${!!token} length=${token?.length}`,
+        );
         if (token && token.length > 20) return token;
       } catch (err) {
         logToFile(`[get-iframe-jwt] frame exec error:`, err.message);

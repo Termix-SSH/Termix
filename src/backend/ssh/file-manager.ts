@@ -3109,7 +3109,8 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
             path: filePath,
             permissions,
             exitCode: code,
-            error: errorData || "Permission restore command did not report success",
+            error:
+              errorData || "Permission restore command did not report success",
           });
         }
 

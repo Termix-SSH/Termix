@@ -147,7 +147,7 @@ export const GuacamoleDisplay = forwardRef<
         const width = connectionConfig.width ?? containerWidth ?? 1280;
         const height = connectionConfig.height ?? containerHeight ?? 720;
         const protocol = connectionConfig.protocol ?? connectionConfig.type;
-        const dpi = protocol === "rdp" ? connectionConfig.dpi ?? 96 : null;
+        const dpi = protocol === "rdp" ? (connectionConfig.dpi ?? 96) : null;
 
         const wsBase = isDev
           ? `ws://localhost:30008`
