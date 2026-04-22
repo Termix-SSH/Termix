@@ -661,7 +661,7 @@ function DockerManagerInner({
 
         <div className="flex-1 overflow-hidden min-h-0 relative">
           {viewMode === "list" ? (
-            <div className="h-full px-4 py-4">
+            <div className="h-full min-h-0 px-4 py-4">
               {sessionId ? (
                 isLoadingContainers && containers.length === 0 ? (
                   <SimpleLoader
