@@ -3035,10 +3035,10 @@ export async function revokeAllUserSessions(
 }
 
 export async function makeUserAdmin(
-  username: string,
+  userId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/users/make-admin", { username });
+    const response = await authApi.post("/users/make-admin", { userId });
     return response.data;
   } catch (error) {
     handleApiError(error, "make user admin");
@@ -3046,10 +3046,10 @@ export async function makeUserAdmin(
 }
 
 export async function removeAdminStatus(
-  username: string,
+  userId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/users/remove-admin", { username });
+    const response = await authApi.post("/users/remove-admin", { userId });
     return response.data;
   } catch (error) {
     handleApiError(error, "remove admin status");

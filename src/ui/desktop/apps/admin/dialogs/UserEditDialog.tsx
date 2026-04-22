@@ -135,12 +135,12 @@ export function UserEditDialog({
     setAdminLoading(true);
     try {
       if (checked) {
-        await makeUserAdmin(userToUpdate.username);
+        await makeUserAdmin(userToUpdate.id);
         toast.success(
           t("admin.userIsNowAdmin", { username: userToUpdate.username }),
         );
       } else {
-        await removeAdminStatus(userToUpdate.username);
+        await removeAdminStatus(userToUpdate.id);
         toast.success(
           t("admin.adminStatusRemoved", { username: userToUpdate.username }),
         );
