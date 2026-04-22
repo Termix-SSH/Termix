@@ -2969,7 +2969,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
  * /ssh/file_manager/ssh/writeFile:
  *   post:
  *     summary: Write to a file
- *     description: Writes content to a file on the remote host.
+ *     description: Writes content to a file on the remote host and preserves the existing permissions when the file already exists.
  *     tags:
  *       - File Manager
  *     requestBody:
@@ -3025,6 +3025,111 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
   });
   sshConn.lastActive = Date.now();
 
+  let preservedMode: number | undefined;
+
+  const restoreOriginalMode = (
+    sftp: import("ssh2").SFTPWrapper | null,
+    onComplete: () => void,
+  ) => {
+    if (preservedMode === undefined) {
+      onComplete();
+      return;
+    }
+
+    const permissions = preservedMode.toString(8);
+
+    if (sftp) {
+      sftp.chmod(filePath, preservedMode, (chmodErr) => {
+        if (chmodErr) {
+          fileLogger.warn("Failed to restore file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+            error: chmodErr.message,
+          });
+        } else {
+          fileLogger.info("Restored file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+          });
+        }
+
+        onComplete();
+      });
+      return;
+    }
+
+    const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+    const chmodCommand = `chmod ${permissions} '${escapedPath}' && echo "SUCCESS"`;
+
+    sshConn.client.exec(chmodCommand, (err, stream) => {
+      if (err) {
+        fileLogger.warn("Failed to restore file permissions after save", {
+          operation: "file_write_restore_permissions",
+          sessionId,
+          userId,
+          path: filePath,
+          permissions,
+          error: err.message,
+        });
+        onComplete();
+        return;
+      }
+
+      let outputData = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        outputData += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        if (outputData.includes("SUCCESS")) {
+          fileLogger.info("Restored file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+          });
+        } else {
+          fileLogger.warn("Failed to restore file permissions after save", {
+            operation: "file_write_restore_permissions",
+            sessionId,
+            userId,
+            path: filePath,
+            permissions,
+            exitCode: code,
+            error: errorData || "Permission restore command did not report success",
+          });
+        }
+
+        onComplete();
+      });
+
+      stream.on("error", (streamErr) => {
+        fileLogger.warn("Failed to restore file permissions after save", {
+          operation: "file_write_restore_permissions",
+          sessionId,
+          userId,
+          path: filePath,
+          permissions,
+          error: streamErr.message,
+        });
+        onComplete();
+      });
+    });
+  };
+
   const trySFTP = () => {
     try {
       fileLogger.info("Opening SFTP channel", {
@@ -3063,75 +3168,88 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
             return;
           }
 
-          const writeStream = sftp.createWriteStream(filePath);
-
-          let hasError = false;
-          let hasFinished = false;
-
-          writeStream.on("error", (streamErr) => {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write failed, trying fallback method: ${streamErr.message}`,
-            );
-            tryFallbackMethod();
-          });
-
-          writeStream.on("finish", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File written successfully", {
-              operation: "file_write_success",
-              sessionId,
-              userId,
-              path: filePath,
-              bytes: fileBuffer.length,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
+          sftp.stat(filePath, (statErr, stats) => {
+            if (statErr) {
+              fileLogger.warn(
+                "Failed to read existing file permissions before save",
+                {
+                  operation: "file_write_stat",
+                  sessionId,
+                  userId,
+                  path: filePath,
+                  error: statErr.message,
                 },
+              );
+            } else if (stats.isFile()) {
+              preservedMode = stats.mode & 0o7777;
+            }
+
+            const writeStream = sftp.createWriteStream(filePath);
+
+            let hasError = false;
+            let hasFinished = false;
+            let isFinalizing = false;
+
+            const finalizeSuccess = () => {
+              if (hasError || hasFinished) return;
+              hasFinished = true;
+              isFinalizing = false;
+              fileLogger.success("File written successfully", {
+                operation: "file_write_success",
+                sessionId,
+                userId,
+                path: filePath,
+                bytes: fileBuffer.length,
               });
+              if (!res.headersSent) {
+                res.json({
+                  message: "File written successfully",
+                  path: filePath,
+                  toast: {
+                    type: "success",
+                    message: `File written: ${filePath}`,
+                  },
+                });
+              }
+            };
+
+            writeStream.on("error", (streamErr) => {
+              if (hasError || hasFinished || isFinalizing) return;
+              hasError = true;
+              isFinalizing = false;
+              fileLogger.warn(
+                `SFTP write failed, trying fallback method: ${streamErr.message}`,
+              );
+              tryFallbackMethod();
+            });
+
+            const finishWrite = () => {
+              if (hasError || hasFinished || isFinalizing) return;
+              isFinalizing = true;
+              restoreOriginalMode(sftp, finalizeSuccess);
+            };
+
+            writeStream.on("finish", () => {
+              finishWrite();
+            });
+
+            writeStream.on("close", () => {
+              finishWrite();
+            });
+
+            try {
+              writeStream.write(fileBuffer);
+              writeStream.end();
+            } catch (writeErr) {
+              if (hasError || hasFinished) return;
+              hasError = true;
+              isFinalizing = false;
+              fileLogger.warn(
+                `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
+              );
+              tryFallbackMethod();
             }
           });
-
-          writeStream.on("close", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File written successfully", {
-              operation: "file_write_success",
-              sessionId,
-              userId,
-              path: filePath,
-              bytes: fileBuffer.length,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
-                },
-              });
-            }
-          });
-
-          try {
-            writeStream.write(fileBuffer);
-            writeStream.end();
-          } catch (writeErr) {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
-            );
-            tryFallbackMethod();
-          }
         })
         .catch((err: Error) => {
           fileLogger.warn(
@@ -3201,16 +3319,18 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
         stream.on("close", (code) => {
           if (outputData.includes("SUCCESS")) {
-            if (!res.headersSent) {
-              res.json({
-                message: "File written successfully",
-                path: filePath,
-                toast: {
-                  type: "success",
-                  message: `File written: ${filePath}`,
-                },
-              });
-            }
+            restoreOriginalMode(null, () => {
+              if (!res.headersSent) {
+                res.json({
+                  message: "File written successfully",
+                  path: filePath,
+                  toast: {
+                    type: "success",
+                    message: `File written: ${filePath}`,
+                  },
+                });
+              }
+            });
           } else {
             fileLogger.error(
               `Fallback write failed with code ${code}: ${errorData}`,
