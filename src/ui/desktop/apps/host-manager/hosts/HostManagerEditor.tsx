@@ -529,19 +529,6 @@ export function HostManagerEditor({
           });
         }
       }
-
-      data.tunnelConnections.forEach((connection, index) => {
-        if (
-          connection.endpointHost &&
-          !sshConfigurations.includes(connection.endpointHost)
-        ) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("hosts.mustSelectValidSshConfig"),
-            path: ["tunnelConnections", index, "endpointHost"],
-          });
-        }
-      });
     });
 
   type FormData = z.infer<typeof formSchema>;

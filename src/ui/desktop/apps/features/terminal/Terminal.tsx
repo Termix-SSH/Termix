@@ -2234,7 +2234,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !e.metaKey &&
           e.key.toLowerCase() === "v"
         ) {
-          // Let the browser handle Ctrl+V natively — the paste event
+          // Let the browser handle Ctrl+V natively, the paste event
           // listener will intercept the result without triggering the
           // clipboard permission popup
           return false;

@@ -4182,6 +4182,53 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// Replicates openpubkey's client/choosers/web_chooser.go IssuerToName().
+// OPKSSH's /select handler keys its providerMap by this derived name, NOT by the
+// `alias` field in config.yml. We need the same mapping so we can normalize any
+// `op=` query param we receive (which can be alias, issuer with protocol, or
+// issuer without protocol depending on client version) to what OPKSSH expects.
+function opksshIssuerToName(issuer: string): string | null {
+  if (!issuer) return null;
+  const withScheme =
+    issuer.startsWith("http://") || issuer.startsWith("https://")
+      ? issuer
+      : `https://${issuer}`;
+  if (withScheme.startsWith("https://accounts.google.com")) return "google";
+  if (withScheme.startsWith("https://login.microsoftonline.com"))
+    return "azure";
+  if (withScheme.startsWith("https://gitlab.com")) return "gitlab";
+  if (withScheme.startsWith("https://issuer.hello.coop")) return "hello";
+  if (withScheme.startsWith("https://")) {
+    const host = withScheme.slice("https://".length).split("/")[0];
+    return host || null;
+  }
+  return null;
+}
+
+function normalizeSelectOpParam(
+  rawOp: string,
+  providers: Array<{ alias: string; issuer: string }>,
+): string {
+  if (!rawOp) return rawOp;
+  const knownNames = new Set(
+    providers
+      .map((p) => opksshIssuerToName(p.issuer))
+      .filter((n): n is string => typeof n === "string" && n.length > 0),
+  );
+  if (knownNames.has(rawOp)) return rawOp;
+
+  const derivedFromRaw = opksshIssuerToName(rawOp);
+  if (derivedFromRaw && knownNames.has(derivedFromRaw)) return derivedFromRaw;
+
+  const matchByAlias = providers.find((p) => p.alias === rawOp);
+  if (matchByAlias) {
+    const name = opksshIssuerToName(matchByAlias.issuer);
+    if (name) return name;
+  }
+
+  return rawOp;
+}
+
 interface OpksshErrorPageOptions {
   title: string;
   heading: string;
@@ -4501,9 +4548,31 @@ router.use(
       //   3. /login on the callback listener -> https://<provider>/authorize?... (external OAuth URL)
       if (targetPath.startsWith("/select")) {
         const selectaxios = (await import("axios")).default;
-        const qs = targetPath.includes("?")
+        const rawQs = targetPath.includes("?")
           ? targetPath.slice(targetPath.indexOf("?"))
           : "";
+
+        let qs = rawQs;
+        let opMappedFrom: string | undefined;
+        if (rawQs) {
+          try {
+            const params = new URLSearchParams(rawQs.replace(/^\?/, ""));
+            const rawOp = params.get("op");
+            if (rawOp) {
+              const mappedOp = normalizeSelectOpParam(
+                rawOp,
+                session.providers || [],
+              );
+              if (mappedOp !== rawOp) {
+                params.set("op", mappedOp);
+                qs = `?${params.toString()}`;
+                opMappedFrom = rawOp;
+              }
+            }
+          } catch {
+            /* keep rawQs if parsing fails */
+          }
+        }
 
         const chooserHost = `127.0.0.1:${session.localPort}`;
         const startUrl = `http://${chooserHost}/select/${qs}`;
@@ -4512,6 +4581,7 @@ router.use(
           operation: "opkssh_select_proxy",
           requestId,
           targetUrl: startUrl,
+          opMappedFrom,
         });
 
         const isKnownLocalHost = (host: string): boolean => {
@@ -4619,23 +4689,15 @@ router.use(
               continue;
             }
 
-            // Absolute URL: only follow if it's another local OPKSSH endpoint
-            // (e.g. chooser -> callback listener on a different port). Otherwise
-            // it is the external OAuth provider URL — break and redirect the browser.
+            // Absolute URL: if it points to a localhost OPKSSH endpoint, capture
+            // the port. Then redirect the BROWSER to the proxied path so that
+            // Set-Cookie headers from OPKSSH's /login handler reach the browser
+            // directly — following them server-side would swallow the cookie.
             if (/^https?:\/\//i.test(loc)) {
               try {
                 const parsed = new URL(loc);
-                if (isKnownLocalHost(parsed.host)) {
-                  // Known chooser or callback listener — follow internally.
-                  response = await fetchUpstream(
-                    `http://${parsed.host}${parsed.pathname}${parsed.search}`,
-                  );
-                  logResponse(response);
-                  continue;
-                }
                 if (isLocalHostname(parsed.host)) {
-                  // Unknown localhost port — OPKSSH's callback listener whose port
-                  // we haven't captured yet. Record it and follow internally.
+                  // Capture callback listener port if not yet known.
                   if (!session.callbackPort) {
                     const port = parseInt(parsed.port, 10);
                     if (!Number.isNaN(port)) {
@@ -4650,13 +4712,22 @@ router.use(
                       );
                     }
                   }
-                  response = await fetchUpstream(
-                    `http://${parsed.host}${parsed.pathname}${parsed.search}`,
+                  // Redirect browser through the chooser proxy so it can receive
+                  // the state cookie that OPKSSH sets on /login.
+                  const browserPath = `/host/opkssh-chooser/${requestId}${parsed.pathname}${parsed.search}`;
+                  sshLogger.info(
+                    "Redirecting browser to OPKSSH callback listener via proxy",
+                    {
+                      operation: "opkssh_select_browser_redirect_to_login",
+                      requestId,
+                      browserPath,
+                      callbackPort: session.callbackPort,
+                    },
                   );
-                  logResponse(response);
-                  continue;
+                  res.redirect(302, browserPath);
+                  return;
                 }
-                // External URL — done.
+                // External OAuth provider URL — done, handled below.
                 break;
               } catch {
                 break;
@@ -4758,13 +4829,26 @@ router.use(
         return;
       }
 
-      const targetUrl = `http://127.0.0.1:${session.localPort}${targetPath}`;
+      // Paths served by the callback listener, not the chooser.
+      // The browser is redirected here so it receives Set-Cookie from OPKSSH.
+      const isCallbackListenerPath =
+        targetPath === "/login" ||
+        targetPath.startsWith("/login?") ||
+        targetPath === "/login-callback" ||
+        targetPath.startsWith("/login-callback?");
+
+      const upstreamPort =
+        isCallbackListenerPath && session.callbackPort
+          ? session.callbackPort
+          : session.localPort;
+
+      const targetUrl = `http://127.0.0.1:${upstreamPort}${targetPath}`;
 
       sshLogger.info("Proxying to OPKSSH chooser", {
         operation: "opkssh_chooser_proxy_request_to_opkssh",
         requestId,
         targetUrl,
-        localPort: session.localPort,
+        upstreamPort,
         targetPath,
       });
 
@@ -4773,7 +4857,7 @@ router.use(
         url: targetUrl,
         headers: {
           ...req.headers,
-          host: `127.0.0.1:${session.localPort}`,
+          host: `127.0.0.1:${upstreamPort}`,
         },
         data: req.body,
         timeout: 10000,
@@ -4832,6 +4916,22 @@ router.use(
               res.setHeader(key, value as string);
             }
           }
+        } else if (key.toLowerCase() === "set-cookie") {
+          // Rewrite cookies from OPKSSH's internal listener so they are scoped
+          // to the Termix proxy path instead of OPKSSH's internal path.
+          // The state cookie set by /login must survive to /login-callback.
+          const cookies = Array.isArray(value) ? value : [value as string];
+          const rewritten = cookies.map((cookie) => {
+            return cookie
+              .replace(/;\s*domain=[^;]*/gi, "")
+              .replace(/;\s*path=[^;]*/gi, "; Path=/host/opkssh-callback/")
+              .concat(
+                cookie.match(/;\s*path=/i)
+                  ? ""
+                  : "; Path=/host/opkssh-callback/",
+              );
+          });
+          res.setHeader(key, rewritten);
         } else {
           res.setHeader(key, value as string);
         }
@@ -5015,11 +5115,9 @@ router.get("/opkssh-callback", async (req: Request, res: Response) => {
     const queryString = req.url.includes("?")
       ? req.url.substring(req.url.indexOf("?"))
       : "";
-    // Proxy to the path OPKSSH registered its callback handler at.
-    // OPKSSH uses the pathname from --remote-redirect-uri for its local listener.
-    const remoteUrl = new URL(session.remoteRedirectUri);
-    const callbackPath = remoteUrl.pathname;
-    const redirectUrl = `/host/opkssh-callback/${session.requestId}${callbackPath}${queryString}`;
+    // OPKSSH's internal callback listener handles `/login-callback` regardless of the
+    // path used in --remote-redirect-uri. The dynamic route below defaults to that path.
+    const redirectUrl = `/host/opkssh-callback/${session.requestId}${queryString}`;
 
     sshLogger.info("Redirecting OAuth callback to dynamic route", {
       operation: "opkssh_static_callback_redirect",
@@ -5090,7 +5188,13 @@ router.use(
       const fullPath = req.originalUrl || req.url;
       const pathAfterRequestId =
         fullPath.split(`/host/opkssh-callback/${requestId}`)[1] || "";
-      const targetPath = pathAfterRequestId || "/login-callback";
+      // pathAfterRequestId may be "", "?query=...", "/subpath", or "/subpath?query=..."
+      // OPKSSH's internal listener serves /login-callback, so when no sub-path is present
+      // (query-only or empty), prepend it.
+      const targetPath =
+        pathAfterRequestId === "" || pathAfterRequestId.startsWith("?")
+          ? `/login-callback${pathAfterRequestId}`
+          : pathAfterRequestId;
 
       if (!session.callbackPort || session.callbackPort === 0) {
         sshLogger.error("OPKSSH callback session has no callback port", {

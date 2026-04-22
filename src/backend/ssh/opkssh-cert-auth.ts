@@ -40,7 +40,7 @@ export async function setupOPKSSHCertAuth(
   );
   if (!pubSSHSym) {
     throw new Error(
-      "Cannot find public SSH symbol on parsed key — ssh2 internals may have changed",
+      "Cannot find public SSH symbol on parsed key, ssh2 internals may have changed",
     );
   }
   privKey[pubSSHSym] = certBlob;

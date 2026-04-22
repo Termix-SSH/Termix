@@ -181,7 +181,7 @@ async function checkOPKConfigExists(): Promise<{
 
 // OPKSSH's `redirect_uris` field lists candidate LOCAL ports for the callback listener
 // that OPKSSH binds on the host running the binary. The openpubkey library enforces these
-// must be localhost — a non-localhost entry causes ECONNRESET on /select/ at runtime.
+// must be localhost, a non-localhost entry causes ECONNRESET on /select/ at runtime.
 // The publicly registered OAuth redirect URI is what Termix passes via --remote-redirect-uri
 // (derived from request origin); users do NOT put that URL in this config field.
 function validateRedirectUrisAreLocalhost(
@@ -223,7 +223,7 @@ function validateRedirectUrisAreLocalhost(
       message:
         `OPKSSH configuration error: 'redirect_uris' must only contain localhost URLs.\n\n` +
         `${issues.join("\n")}\n\n` +
-        `This field is OPKSSH's local callback listener — it must be localhost (or omitted to use ` +
+        `This field is OPKSSH's local callback listener, it must be localhost (or omitted to use ` +
         `the defaults http://localhost:3000/login-callback, :10001, :11110). ` +
         `The public Termix callback URL is supplied automatically by Termix via --remote-redirect-uri; ` +
         `you do not put it here. Register the PUBLIC Termix URL with your OAuth provider instead ` +
@@ -411,7 +411,7 @@ export async function startOPKSSHAuth(
               `The 'redirect_uris' config field is OPKSSH's LOCAL listener — it is not the public Termix callback. ` +
               `Remove any non-localhost entries from redirect_uris (or delete the whole block to use OPKSSH's ` +
               `defaults of :3000, :10001, :11110). Register the public Termix callback URL with your OAuth ` +
-              `provider instead — Termix passes it to OPKSSH automatically via --remote-redirect-uri.`,
+              `provider instead, Termix passes it to OPKSSH automatically via --remote-redirect-uri.`,
             instructions: "See documentation: https://docs.termix.site/opkssh",
           }),
         );
