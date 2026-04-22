@@ -4173,14 +4173,118 @@ router.delete(
   },
 );
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+interface OpksshErrorPageOptions {
+  title: string;
+  heading: string;
+  message: string;
+  details?: string;
+  requestId?: string;
+  statusCode?: number;
+}
+
+function renderOpksshErrorPage(opts: OpksshErrorPageOptions): string {
+  const title = escapeHtml(opts.title);
+  const heading = escapeHtml(opts.heading);
+  const message = escapeHtml(opts.message);
+  const detailsBlock = opts.details
+    ? `<pre class="details">${escapeHtml(opts.details)}</pre>`
+    : "";
+  const requestIdBlock = opts.requestId
+    ? `<p class="request-id">Request ID: ${escapeHtml(opts.requestId)}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>${title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #18181b;
+      color: #fafafa;
+      padding: 1rem;
+    }
+    .container {
+      text-align: center;
+      background: #27272a;
+      padding: 3rem 2rem;
+      border-radius: 0.625rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 720px;
+      width: 100%;
+    }
+    h1 {
+      color: #fafafa;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      color: #9ca3af;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    p + p { margin-top: 0.5rem; }
+    .details {
+      color: #d4d4d8;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      margin-top: 1.25rem;
+      padding: 0.875rem 1rem;
+      background: #0f0f11;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-x: auto;
+    }
+    .request-id {
+      color: #6b7280;
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>${heading}</h1>
+    <p>${message}</p>
+    ${detailsBlock}
+    ${requestIdBlock}
+  </div>
+</body>
+</html>`;
+}
+
 function rewriteOPKSSHHtml(
   html: string,
   requestId: string,
   routePrefix: "opkssh-chooser" | "opkssh-callback",
 ): string {
   const basePath = `/host/${routePrefix}/${requestId}`;
+  const localHostPattern = "(?:localhost|127\\.0\\.0\\.1)";
 
-  const attrPatterns = ["action", "href", "src"];
+  const attrPatterns = ["action", "href", "src", "formaction"];
   for (const attr of attrPatterns) {
     html = html.replace(
       new RegExp(`${attr}="(/[^"]*)`, "g"),
@@ -4192,48 +4296,75 @@ function rewriteOPKSSHHtml(
     );
   }
 
-  html = html.replace(
-    /href=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `href="${basePath}/$1`,
-  );
-  html = html.replace(
-    /action=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `action="${basePath}/$1`,
-  );
-  html = html.replace(
-    /src=["']?http:\/\/localhost:\d+\/([^"'\s]*)/g,
-    `src="${basePath}/$1`,
-  );
+  for (const attr of ["href", "action", "src", "formaction"]) {
+    html = html.replace(
+      new RegExp(
+        `${attr}=["']?http:\\/\\/${localHostPattern}:\\d+\\/([^"'\\s]*)`,
+        "g",
+      ),
+      `${attr}="${basePath}/$1`,
+    );
+  }
 
   html = html.replace(
-    /(window\.location\.href\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(window\\.location\\.href\\s*=\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
   html = html.replace(
-    /(window\.location\s*=\s*["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(window\\.location\\s*=\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
   html = html.replace(
-    /(fetch\(["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
-    `$1${basePath}/$2$3`,
-  );
-
-  html = html.replace(
-    /(location\.assign\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
-    `$1${basePath}/$2$3`,
-  );
-  html = html.replace(
-    /(location\.replace\(["'])http:\/\/localhost:\d+\/([^"']*)(["']\))/g,
+    new RegExp(
+      `(fetch\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
   html = html.replace(
-    /(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\s*url=)http:\/\/localhost:\d+\/([^"']+)(["'][^>]*>)/gi,
+    new RegExp(
+      `(location\\.assign\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["']\\))`,
+      "g",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+  html = html.replace(
+    new RegExp(
+      `(location\\.replace\\(["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["']\\))`,
+      "g",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+
+  // XMLHttpRequest.open("GET", "http://localhost:PORT/path", ...)
+  html = html.replace(
+    new RegExp(
+      `(\\.open\\(["']\\w+["']\\s*,\\s*["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
   html = html.replace(
-    /(data-[\w-]+=["'])http:\/\/localhost:\d+\/([^"']*)(["'])/g,
+    new RegExp(
+      `(<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^;]+;\\s*url=)http:\\/\\/${localHostPattern}:\\d+\\/([^"']+)(["'][^>]*>)`,
+      "gi",
+    ),
+    `$1${basePath}/$2$3`,
+  );
+
+  html = html.replace(
+    new RegExp(
+      `(data-[\\w-]+=["'])http:\\/\\/${localHostPattern}:\\d+\\/([^"']*)(["'])`,
+      "g",
+    ),
     `$1${basePath}/$2$3`,
   );
 
@@ -4327,59 +4458,14 @@ router.use(
           operation: "opkssh_chooser_session_not_found",
           requestId,
         });
-        res.status(404).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Session Not Found</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              .icon {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                color: #f87171;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Session Not Found</h1>
-              <p>This authentication session has expired or is invalid.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(404).send(
+          renderOpksshErrorPage({
+            title: "Session Not Found",
+            heading: "Session Not Found",
+            message: "This authentication session has expired or is invalid.",
+            requestId,
+          }),
+        );
         return;
       }
 
@@ -4396,111 +4482,213 @@ router.use(
           requestId,
           sessionStatus: session.status,
         });
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Error</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Authentication Error</h1>
-              <p>Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(500).send(
+          renderOpksshErrorPage({
+            title: "Error",
+            heading: "Authentication Error",
+            message:
+              "Failed to load authentication page. OPKSSH process may not be ready yet. Please try again.",
+            requestId,
+          }),
+        );
         return;
       }
 
-      // /select redirects (via one or more hops) to the external OAuth provider URL.
-      // Follow local redirects until we get an external URL, then send it to the browser.
+      // /select on OPKSSH's chooser redirects (possibly via multiple local hops) to the
+      // external OAuth provider URL. The hops we may see:
+      //   1. /select -> /select/ (Go ServeMux canonicalization, same chooser port)
+      //   2. /select/?op=ALIAS -> http://localhost:CALLBACK_PORT/login (OPKSSH's separate callback listener)
+      //   3. /login on the callback listener -> https://<provider>/authorize?... (external OAuth URL)
       if (targetPath.startsWith("/select")) {
         const selectaxios = (await import("axios")).default;
         const qs = targetPath.includes("?")
           ? targetPath.slice(targetPath.indexOf("?"))
           : "";
 
+        const chooserHost = `127.0.0.1:${session.localPort}`;
+        const startUrl = `http://${chooserHost}/select/${qs}`;
+
         sshLogger.info("Proxying OPKSSH /select", {
           operation: "opkssh_select_proxy",
           requestId,
-          port: session.localPort,
+          targetUrl: startUrl,
         });
 
+        const isKnownLocalHost = (host: string): boolean => {
+          if (host === chooserHost) return true;
+          if (host === `localhost:${session.localPort}`) return true;
+          if (session.callbackPort) {
+            if (host === `127.0.0.1:${session.callbackPort}`) return true;
+            if (host === `localhost:${session.callbackPort}`) return true;
+          }
+          return false;
+        };
+
+        const isLocalHostname = (host: string): boolean => {
+          const bare = host.split(":")[0];
+          return (
+            bare === "127.0.0.1" || bare === "localhost" || bare === "[::1]"
+          );
+        };
+
+        interface UpstreamResponse {
+          status: number;
+          location?: string;
+          contentType: string;
+          body: string;
+          targetUrl: string;
+          elapsedMs: number;
+        }
+
+        const fetchUpstream = async (
+          url: string,
+        ): Promise<UpstreamResponse> => {
+          const started = Date.now();
+          let hostHeader = chooserHost;
+          try {
+            hostHeader = new URL(url).host;
+          } catch {
+            /* fall back to chooser host */
+          }
+          const r = await selectaxios({
+            method: "GET",
+            url,
+            maxRedirects: 0,
+            validateStatus: () => true,
+            timeout: 10000,
+            responseType: "text",
+            transformResponse: (v) => v,
+            headers: { host: hostHeader },
+          });
+          const locHeader = r.headers["location"];
+          const location = Array.isArray(locHeader) ? locHeader[0] : locHeader;
+          const ctHeader = r.headers["content-type"];
+          const ctRaw = Array.isArray(ctHeader) ? ctHeader[0] : ctHeader;
+          const contentType = typeof ctRaw === "string" ? ctRaw : "";
+          const body =
+            typeof r.data === "string" ? r.data : String(r.data ?? "");
+          return {
+            status: r.status,
+            location: typeof location === "string" ? location : undefined,
+            contentType,
+            body,
+            targetUrl: url,
+            elapsedMs: Date.now() - started,
+          };
+        };
+
+        const logResponse = (response: UpstreamResponse): void => {
+          sshLogger.info("OPKSSH /select upstream response", {
+            operation: "opkssh_select_upstream_response",
+            requestId,
+            targetUrl: response.targetUrl,
+            status: response.status,
+            location: response.location,
+            contentType: response.contentType,
+            elapsedMs: response.elapsedMs,
+            bodyPreview: response.body.slice(0, 256),
+          });
+        };
+
+        const MAX_HOPS = 4;
+
         try {
-          let nextUrl = `http://localhost:${session.localPort}/select/${qs}`;
-          let oauthUrl: string | undefined;
+          let response = await fetchUpstream(startUrl);
+          logResponse(response);
 
-          for (let i = 0; i < 5; i++) {
-            const r = await selectaxios({
-              method: "GET",
-              url: nextUrl,
-              maxRedirects: 0,
-              validateStatus: () => true,
-              timeout: 10000,
-            });
-
-            const loc = r.headers["location"] as string | undefined;
-            if (!loc) break;
-
-            // External URL (OAuth provider) — done
+          for (let hop = 0; hop < MAX_HOPS; hop++) {
             if (
-              loc.startsWith("http") &&
-              !loc.includes(`localhost:${session.localPort}`)
+              response.status < 300 ||
+              response.status >= 400 ||
+              !response.location
             ) {
-              oauthUrl = loc;
               break;
             }
+            const loc = response.location;
 
-            // Local relative redirect — resolve and follow
+            // Relative path: resolve against the current upstream.
             if (loc.startsWith("/")) {
-              nextUrl = `http://localhost:${session.localPort}${loc}`;
-            } else {
-              nextUrl = loc;
+              let currentHost = chooserHost;
+              try {
+                currentHost = new URL(response.targetUrl).host;
+              } catch {
+                /* keep default */
+              }
+              response = await fetchUpstream(`http://${currentHost}${loc}`);
+              logResponse(response);
+              continue;
             }
+
+            // Absolute URL: only follow if it's another local OPKSSH endpoint
+            // (e.g. chooser -> callback listener on a different port). Otherwise
+            // it is the external OAuth provider URL — break and redirect the browser.
+            if (/^https?:\/\//i.test(loc)) {
+              try {
+                const parsed = new URL(loc);
+                if (isKnownLocalHost(parsed.host)) {
+                  // Known chooser or callback listener — follow internally.
+                  response = await fetchUpstream(
+                    `http://${parsed.host}${parsed.pathname}${parsed.search}`,
+                  );
+                  logResponse(response);
+                  continue;
+                }
+                if (isLocalHostname(parsed.host)) {
+                  // Unknown localhost port — OPKSSH's callback listener whose port
+                  // we haven't captured yet. Record it and follow internally.
+                  if (!session.callbackPort) {
+                    const port = parseInt(parsed.port, 10);
+                    if (!Number.isNaN(port)) {
+                      session.callbackPort = port;
+                      sshLogger.info(
+                        "Captured OPKSSH callback listener port from /select redirect",
+                        {
+                          operation: "opkssh_select_callback_port_detected",
+                          requestId,
+                          callbackPort: port,
+                        },
+                      );
+                    }
+                  }
+                  response = await fetchUpstream(
+                    `http://${parsed.host}${parsed.pathname}${parsed.search}`,
+                  );
+                  logResponse(response);
+                  continue;
+                }
+                // External URL — done.
+                break;
+              } catch {
+                break;
+              }
+            }
+
+            break;
           }
 
-          if (oauthUrl) {
+          const isExternalRedirect =
+            response.status >= 300 &&
+            response.status < 400 &&
+            !!response.location &&
+            /^https?:\/\//i.test(response.location) &&
+            (() => {
+              try {
+                return !isLocalHostname(
+                  new URL(response.location as string).host,
+                );
+              } catch {
+                return false;
+              }
+            })();
+
+          if (isExternalRedirect) {
+            const oauthUrl = response.location as string;
             try {
               const parsed = new URL(oauthUrl);
               const oauthState = parsed.searchParams.get("state");
               if (oauthState) registerOAuthState(oauthState, requestId);
             } catch {
-              /* not a valid URL */
+              /* already validated above */
             }
             sshLogger.info(
               "OPKSSH /select redirecting browser to OAuth provider",
@@ -4511,22 +4699,66 @@ router.use(
               },
             );
             res.redirect(302, oauthUrl);
-          } else {
-            res.status(500).send("Failed to get OAuth redirect from OPKSSH");
+            return;
           }
+
+          const bodyPreview = response.body.slice(0, 512);
+          const detailLines = [
+            `Upstream: ${response.targetUrl}`,
+            `Status: ${response.status}`,
+            response.location ? `Location: ${response.location}` : undefined,
+            `Content-Type: ${response.contentType || "(none)"}`,
+            `Elapsed: ${response.elapsedMs}ms`,
+            "",
+            bodyPreview
+              ? `Body (first 512 chars):\n${bodyPreview}`
+              : "Body: (empty)",
+          ].filter(Boolean) as string[];
+
+          sshLogger.error("OPKSSH /select did not produce an OAuth redirect", {
+            operation: "opkssh_select_no_oauth_redirect",
+            requestId,
+            status: response.status,
+            location: response.location,
+            contentType: response.contentType,
+            bodyPreview,
+          });
+
+          res.status(502).send(
+            renderOpksshErrorPage({
+              title: "OPKSSH error",
+              heading: "Failed to get OAuth redirect",
+              message:
+                "OPKSSH did not return an external OAuth provider URL. " +
+                "This typically indicates a configuration mismatch between the provider's redirect_uris " +
+                "and the Termix callback path. Check the server log for the OPKSSH response body.",
+              details: detailLines.join("\n"),
+              requestId,
+            }),
+          );
         } catch (err) {
           sshLogger.error("Error proxying OPKSSH /select", err, {
             operation: "opkssh_select_proxy_error",
             requestId,
+            targetUrl: startUrl,
           });
-          res
-            .status(500)
-            .send("Failed to connect to OPKSSH authentication service");
+          const errMsg = err instanceof Error ? err.message : String(err);
+          res.status(502).send(
+            renderOpksshErrorPage({
+              title: "OPKSSH error",
+              heading: "Failed to reach OPKSSH service",
+              message:
+                "Termix could not connect to the local OPKSSH authentication service. " +
+                "The OPKSSH process may have exited or is not listening yet.",
+              details: `Upstream: ${startUrl}\nError: ${errMsg}`,
+              requestId,
+            }),
+          );
         }
         return;
       }
 
-      const targetUrl = `http://localhost:${session.localPort}${targetPath}`;
+      const targetUrl = `http://127.0.0.1:${session.localPort}${targetPath}`;
 
       sshLogger.info("Proxying to OPKSSH chooser", {
         operation: "opkssh_chooser_proxy_request_to_opkssh",
@@ -4541,7 +4773,7 @@ router.use(
         url: targetUrl,
         headers: {
           ...req.headers,
-          host: `localhost:${session.localPort}`,
+          host: `127.0.0.1:${session.localPort}`,
         },
         data: req.body,
         timeout: 10000,
@@ -4569,7 +4801,7 @@ router.use(
             res.setHeader(key, `/host/opkssh-chooser/${requestId}${location}`);
           } else {
             const localhostMatch = location.match(
-              /^http:\/\/localhost:(\d+)(\/.*)?$/,
+              /^http:\/\/(?:localhost|127\.0\.0\.1):(\d+)(\/.*)?$/,
             );
             if (localhostMatch) {
               const port = parseInt(localhostMatch[1], 10);
@@ -4632,59 +4864,14 @@ router.use(
         operation: "opkssh_chooser_proxy_error",
         requestId,
       });
-      res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Error</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background: #18181b;
-              color: #fafafa;
-              padding: 1rem;
-            }
-            .container {
-              text-align: center;
-              background: #27272a;
-              padding: 3rem 2rem;
-              border-radius: 0.625rem;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              max-width: 400px;
-              width: 100%;
-            }
-            .icon {
-              font-size: 3rem;
-              margin-bottom: 1rem;
-              color: #f87171;
-            }
-            h1 {
-              color: #fafafa;
-              font-size: 1.5rem;
-              font-weight: 600;
-              margin-bottom: 0.75rem;
-            }
-            p {
-              color: #9ca3af;
-              font-size: 0.95rem;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Error</h1>
-            <p>Failed to load authentication page. Please try again.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(500).send(
+        renderOpksshErrorPage({
+          title: "Error",
+          heading: "Error",
+          message: "Failed to load authentication page. Please try again.",
+          requestId,
+        }),
+      );
     }
   },
 );
@@ -4887,63 +5074,15 @@ router.use(
       const session = getActiveAuthSession(requestId);
 
       if (!session) {
-        res.status(404).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Session Not Found</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              .icon {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                color: #f87171;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-              p + p {
-                margin-top: 0.5rem;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Session Not Found</h1>
-              <p>Authentication session expired or invalid.</p>
-              <p>Please close this window and try again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(404).send(
+          renderOpksshErrorPage({
+            title: "Session Not Found",
+            heading: "Session Not Found",
+            message:
+              "Authentication session expired or invalid. Please close this window and try again.",
+            requestId,
+          }),
+        );
         return;
       }
 
@@ -4959,65 +5098,26 @@ router.use(
           requestId,
           sessionStatus: session.status,
         });
-        res.status(500).send(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Error</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #18181b;
-                color: #fafafa;
-                padding: 1rem;
-              }
-              .container {
-                text-align: center;
-                background: #27272a;
-                padding: 3rem 2rem;
-                border-radius: 0.625rem;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-width: 400px;
-                width: 100%;
-              }
-              h1 {
-                color: #fafafa;
-                font-size: 1.5rem;
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-              }
-              p {
-                color: #9ca3af;
-                font-size: 0.95rem;
-                line-height: 1.5;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Callback Error</h1>
-              <p>OPKSSH callback listener not ready. Please try authenticating again.</p>
-            </div>
-          </body>
-          </html>
-        `);
+        res.status(500).send(
+          renderOpksshErrorPage({
+            title: "Error",
+            heading: "Callback Error",
+            message:
+              "OPKSSH callback listener not ready. Please try authenticating again.",
+            requestId,
+          }),
+        );
         return;
       }
 
-      const targetUrl = `http://localhost:${session.callbackPort}${targetPath}`;
+      const targetUrl = `http://127.0.0.1:${session.callbackPort}${targetPath}`;
 
       const response = await axios({
         method: req.method,
         url: targetUrl,
         headers: {
           ...req.headers,
-          host: `localhost:${session.callbackPort}`,
+          host: `127.0.0.1:${session.callbackPort}`,
         },
         data: req.body,
         timeout: 10000,
@@ -5059,59 +5159,14 @@ router.use(
         requestId,
       });
 
-      res.status(500).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Error</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background: #18181b;
-              color: #fafafa;
-              padding: 1rem;
-            }
-            .container {
-              text-align: center;
-              background: #27272a;
-              padding: 3rem 2rem;
-              border-radius: 0.625rem;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              max-width: 400px;
-              width: 100%;
-            }
-            .icon {
-              font-size: 3rem;
-              margin-bottom: 1rem;
-              color: #f87171;
-            }
-            h1 {
-              color: #fafafa;
-              font-size: 1.5rem;
-              font-weight: 600;
-              margin-bottom: 0.75rem;
-            }
-            p {
-              color: #9ca3af;
-              font-size: 0.95rem;
-              line-height: 1.5;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Error</h1>
-            <p>An unexpected error occurred. Please try again.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      res.status(500).send(
+        renderOpksshErrorPage({
+          title: "Error",
+          heading: "Error",
+          message: "An unexpected error occurred. Please try again.",
+          requestId,
+        }),
+      );
     }
   },
 );

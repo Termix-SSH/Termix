@@ -12,7 +12,7 @@ interface OPKSSHDialogProps {
   providers?: Array<{ alias: string; issuer: string }>;
   onCancel: () => void;
   onOpenUrl: () => void;
-  onSelectProvider?: (issuer: string) => void;
+  onSelectProvider?: (alias: string) => void;
   backgroundColor?: string;
 }
 
@@ -55,9 +55,9 @@ export function OPKSSHDialog({
                 <div className="space-y-2">
                   {providers.map((provider) => (
                     <Button
-                      key={provider.issuer}
+                      key={provider.alias}
                       type="button"
-                      onClick={() => onSelectProvider(provider.issuer)}
+                      onClick={() => onSelectProvider(provider.alias)}
                       className="w-full flex items-center justify-center gap-2"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -116,7 +116,9 @@ export function OPKSSHDialog({
                   <p className="text-sm font-medium text-destructive">
                     {t("common.error")}
                   </p>
-                  <p className="text-sm text-destructive/90 mt-1">{error}</p>
+                  <p className="text-sm text-destructive/90 mt-1 whitespace-pre-wrap break-words">
+                    {error}
+                  </p>
                 </div>
               </div>
               <div className="flex justify-end pt-2">

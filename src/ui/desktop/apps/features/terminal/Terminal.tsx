@@ -2646,9 +2646,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 );
               }
             }}
-            onSelectProvider={(issuer) => {
+            onSelectProvider={(alias) => {
               if (!opksshDialog.authUrl) return;
-              const selectUrl = `${opksshDialog.authUrl}/select?op=${encodeURIComponent(issuer)}`;
+              const selectUrl = `${opksshDialog.authUrl}/select?op=${encodeURIComponent(alias)}`;
               window.open(selectUrl, "_blank");
               if (webSocketRef.current) {
                 webSocketRef.current.send(
