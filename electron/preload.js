@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
+  setMenuContext: (context) => ipcRenderer.invoke("set-menu-context", context),
+  onMenuAction: (callback) => {
+    const listener = (_event, action) => callback(action);
+    ipcRenderer.on("menu-action", listener);
+    return () => ipcRenderer.removeListener("menu-action", listener);
+  },
 
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });

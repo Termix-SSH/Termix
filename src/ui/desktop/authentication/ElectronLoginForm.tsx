@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button.tsx";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
-import { getCookie } from "@/ui/main-axios.ts";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
@@ -22,7 +20,6 @@ export function ElectronLoginForm({
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasAuthenticatedRef = useRef(false);
-  const [currentUrl, setCurrentUrl] = useState(serverUrl);
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
@@ -60,7 +57,7 @@ export function ElectronLoginForm({
               await new Promise((resolve) => setTimeout(resolve, 500));
 
               onAuthSuccess();
-            } catch (err) {
+            } catch {
               setError(t("errors.authTokenSaveFailed"));
               setIsAuthenticating(false);
               hasAuthenticatedRef.current = false;
@@ -87,14 +84,6 @@ export function ElectronLoginForm({
       setLoading(false);
       hasLoadedOnce.current = true;
       setError(null);
-
-      try {
-        if (iframe.contentWindow) {
-          setCurrentUrl(iframe.contentWindow.location.href);
-        }
-      } catch (e) {
-        setCurrentUrl(serverUrl);
-      }
 
       try {
         const injectedScript = `
@@ -189,7 +178,7 @@ export function ElectronLoginForm({
           if (iframe.contentWindow) {
             try {
               iframe.contentWindow.eval(injectedScript);
-            } catch (evalError) {
+            } catch {
               iframe.contentWindow.postMessage(
                 { type: "INJECT_SCRIPT", script: injectedScript },
                 "*",
@@ -220,53 +209,46 @@ export function ElectronLoginForm({
     };
   }, [t]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (iframeRef.current) {
       iframeRef.current.src = serverUrl;
       setLoading(true);
       setError(null);
     }
-  };
+  }, [serverUrl]);
 
-  const handleBack = () => {
-    onChangeServer();
-  };
+  useEffect(() => {
+    const electronApi = window.electronAPI;
+    if (!electronApi?.setMenuContext || !electronApi?.onMenuAction) {
+      return;
+    }
 
-  const displayUrl = currentUrl.replace(/^https?:\/\//, "");
-  const isEmbeddedServer = serverUrl.includes("localhost:30001");
+    electronApi.setMenuContext({
+      remoteAuthActive: true,
+      canReloadRemoteAuth: true,
+    });
+
+    const unsubscribe = electronApi.onMenuAction((action) => {
+      if (action === "reload-remote-auth") {
+        handleRefresh();
+      } else if (action === "change-server") {
+        onChangeServer();
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+      electronApi.setMenuContext({
+        remoteAuthActive: false,
+        canReloadRemoteAuth: false,
+      });
+    };
+  }, [handleRefresh, onChangeServer]);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-canvas flex flex-col">
-      <div className="flex items-center justify-between p-4 bg-canvas border-b border-edge">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
-          disabled={isAuthenticating}
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="text-base font-medium">
-            {t("serverConfig.changeServer")}
-          </span>
-        </button>
-        {!isEmbeddedServer && (
-          <div className="flex-1 mx-4 text-center">
-            <span className="text-muted-foreground text-sm truncate block">
-              {displayUrl}
-            </span>
-          </div>
-        )}
-        {isEmbeddedServer && <div className="flex-1" />}
-        <button
-          onClick={handleRefresh}
-          className="p-2 text-foreground hover:text-primary transition-colors"
-          disabled={loading || isAuthenticating}
-        >
-          <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
-        </button>
-      </div>
-
+    <div className="relative h-full w-full overflow-hidden bg-canvas">
       {error && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-50 flex justify-center px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t("common.error")}</AlertTitle>
@@ -276,10 +258,7 @@ export function ElectronLoginForm({
       )}
 
       {loading && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-canvas z-40"
-          style={{ marginTop: "60px" }}
-        >
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-canvas/95 backdrop-blur-sm">
           <div className="flex items-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-3 text-muted-foreground">
@@ -289,16 +268,14 @@ export function ElectronLoginForm({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden">
-        <iframe
-          ref={iframeRef}
-          src={serverUrl}
-          className="w-full h-full border-0"
-          title="Server Authentication"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
-          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation"
-        />
-      </div>
+      <iframe
+        ref={iframeRef}
+        src={serverUrl}
+        className="h-full w-full border-0"
+        title="Server Authentication"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
+        allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation"
+      />
     </div>
   );
 }
