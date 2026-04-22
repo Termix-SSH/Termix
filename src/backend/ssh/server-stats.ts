@@ -1106,7 +1106,18 @@ class PollingManager {
     });
 
     if (this.activeViewers.get(hostId)!.size === 1) {
-      this.startMetricsForHost(hostId, userId);
+      // Fire-and-forget: never let background metrics start-up failures
+      // propagate up to the HTTP handler that registered the viewer.
+      Promise.resolve()
+        .then(() => this.startMetricsForHost(hostId, userId))
+        .catch((err) => {
+          statsLogger.warn("startMetricsForHost rejected (non-fatal)", {
+            operation: "start_metrics_unhandled",
+            hostId,
+            userId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
     }
   }
 
@@ -1320,8 +1331,9 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
+          const { SharedCredentialManager } = await import(
+            "../utils/shared-credential-manager.js"
+          );
           const sharedCredManager = SharedCredentialManager.getInstance();
           const sharedCred = await sharedCredManager.getSharedCredentialForUser(
             host.id as number,
@@ -3062,8 +3074,70 @@ app.post("/metrics/register-viewer", async (req, res) => {
   }
 
   try {
+    // Graceful no-op if host is inaccessible, metrics disabled, or host type
+    // does not support metrics. The client may call this speculatively, so
+    // avoid returning 5xx for expected "no metrics available" scenarios.
+    let host: SSHHostWithCredentials | undefined;
+    try {
+      host = await fetchHostById(hostId, userId);
+    } catch (lookupErr) {
+      statsLogger.warn(
+        "register-viewer host lookup failed (treating as no-op)",
+        {
+          operation: "register_viewer_lookup",
+          hostId,
+          userId,
+          error:
+            lookupErr instanceof Error ? lookupErr.message : String(lookupErr),
+        },
+      );
+    }
+
+    if (!host) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "host_not_found",
+      });
+    }
+
+    if (!supportsMetrics(host)) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "metrics_unsupported",
+      });
+    }
+
+    const statsConfig = pollingManager.parseStatsConfig(host.statsConfig);
+    if (!statsConfig.metricsEnabled) {
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "metrics_disabled",
+      });
+    }
+
     const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    pollingManager.registerViewer(hostId, viewerSessionId, userId);
+    try {
+      pollingManager.registerViewer(hostId, viewerSessionId, userId);
+    } catch (regErr) {
+      statsLogger.warn(
+        "pollingManager.registerViewer threw (treating as no-op)",
+        {
+          operation: "register_viewer_internal",
+          hostId,
+          userId,
+          error: regErr instanceof Error ? regErr.message : String(regErr),
+        },
+      );
+      return res.json({
+        success: true,
+        skipped: true,
+        reason: "register_failed_noop",
+      });
+    }
+
     res.json({ success: true, viewerSessionId });
   } catch (error) {
     statsLogger.error("Failed to register viewer", {
@@ -3072,7 +3146,14 @@ app.post("/metrics/register-viewer", async (req, res) => {
       userId,
       error: error instanceof Error ? error.message : String(error),
     });
-    res.status(500).json({ error: "Failed to register viewer" });
+    // Even on unexpected errors we prefer a graceful client experience: the
+    // viewer-registration is purely an optimization and should never break
+    // the UI. Report success:false but HTTP 200 so the client can decide.
+    res.status(200).json({
+      success: false,
+      skipped: true,
+      reason: "internal_error",
+    });
   }
 });
 
