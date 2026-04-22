@@ -525,6 +525,8 @@
     "checkingDatabase": "Checking database connection...",
     "checkingAuthentication": "Checking authentication...",
     "backendReconnected": "Server connection restored",
+    "connectionDegraded": "Server connection lost, recovering…",
+    "reload": "Reload",
     "actions": "Actions",
     "remove": "Remove",
     "revoke": "Revoke",

@@ -479,7 +479,7 @@ function ServerStatsInner({
           if (cancelled) return;
           try {
             const data = await getServerMetricsById(currentHostConfig.id);
-            if (!cancelled) {
+            if (!cancelled && data) {
               setMetrics(data);
               setMetricsHistory((prev) => {
                 const newHistory = [...prev, data];
@@ -636,7 +636,9 @@ function ServerStatsInner({
                       const data = await getServerMetricsById(
                         currentHostConfig.id,
                       );
-                      setMetrics(data);
+                      if (data) {
+                        setMetrics(data);
+                      }
                       setShowStatsUI(true);
                     } catch (error: unknown) {
                       const err = error as {

@@ -8,7 +8,7 @@ import {
   hostAccess,
   dashboardPreferences,
 } from "./database/db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
@@ -258,21 +258,48 @@ app.post("/activity/log", async (req, res) => {
       userId,
     )) as unknown as { id: number };
 
-    const allActivities = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(recentActivity)
-        .where(eq(recentActivity.userId, userId))
-        .orderBy(desc(recentActivity.timestamp)),
-      "recent_activity",
-      userId,
-    );
+    // Best-effort trim of old activity entries; failures here should not
+    // cause the primary /activity/log request to 500.
+    try {
+      const allActivities = await SimpleDBOps.select<{
+        id: number;
+        timestamp: string;
+      }>(
+        getDb()
+          .select({
+            id: recentActivity.id,
+            timestamp: recentActivity.timestamp,
+          })
+          .from(recentActivity)
+          .where(eq(recentActivity.userId, userId))
+          .orderBy(desc(recentActivity.timestamp)),
+        "recent_activity",
+        userId,
+      );
 
-    if (allActivities.length > 100) {
-      const toDelete = allActivities.slice(100);
-      for (let i = 0; i < toDelete.length; i++) {
-        await SimpleDBOps.delete(recentActivity, "recent_activity", userId);
+      if (allActivities.length > 100) {
+        const idsToDelete = allActivities
+          .slice(100)
+          .map((a) => a.id)
+          .filter((id) => typeof id === "number");
+
+        if (idsToDelete.length > 0) {
+          await SimpleDBOps.delete(
+            recentActivity,
+            "recent_activity",
+            and(
+              eq(recentActivity.userId, userId),
+              inArray(recentActivity.id, idsToDelete),
+            ),
+          );
+        }
       }
+    } catch (trimErr) {
+      dashboardLogger.warn("Failed to trim recent_activity (non-fatal)", {
+        operation: "trim_recent_activity",
+        userId,
+        error: trimErr instanceof Error ? trimErr.message : String(trimErr),
+      });
     }
 
     res.json({ message: "Activity logged", id: result.id });
