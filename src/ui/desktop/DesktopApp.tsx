@@ -237,6 +237,22 @@ function AppContent({
   }, [addTab]);
 
   const isCheckingAuth = useRef(false);
+  const clientTunnelAutoStartStarted = useRef(false);
+
+  const startClientTunnelAutoStart = useCallback(() => {
+    if (
+      clientTunnelAutoStartStarted.current ||
+      !window.electronAPI?.isElectron
+    ) {
+      return;
+    }
+
+    clientTunnelAutoStartStarted.current = true;
+    window.electronAPI.startC2SAutoStartTunnels?.().catch((error) => {
+      clientTunnelAutoStartStarted.current = false;
+      console.error("Failed to start client tunnel auto-start entries:", error);
+    });
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -253,6 +269,7 @@ function AppContent({
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
+            startClientTunnelAutoStart();
           }
         })
         .catch((err) => {
@@ -277,7 +294,7 @@ function AppContent({
     window.addEventListener("storage", handleStorageChange);
 
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [startClientTunnelAutoStart]);
 
   useEffect(() => {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
@@ -300,6 +317,7 @@ function AppContent({
         setIsAuthenticated(true);
         setIsAdmin(authData.isAdmin);
         setUsername(authData.username);
+        startClientTunnelAutoStart();
         setTransitionPhase("fadeIn");
 
         setTimeout(() => {
@@ -308,7 +326,7 @@ function AppContent({
         }, 800);
       }, 1200);
     },
-    [],
+    [startClientTunnelAutoStart],
   );
 
   const handleLogout = useCallback(async () => {

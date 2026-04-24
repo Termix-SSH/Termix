@@ -41,6 +41,19 @@ export interface ElectronAPI {
     port: number,
   ) => Promise<{ available: boolean; error?: string }>;
   getC2STunnelPresetDefaultName: () => Promise<string>;
+  startC2STunnel: (
+    tunnel: unknown,
+    index: number,
+  ) => Promise<{ success: boolean; tunnelName?: string; error?: string }>;
+  stopC2STunnel: (
+    tunnelName: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  getC2STunnelStatuses: () => Promise<Record<string, unknown>>;
+  startC2SAutoStartTunnels: () => Promise<{
+    success: boolean;
+    started: number;
+    errors: string[];
+  }>;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;

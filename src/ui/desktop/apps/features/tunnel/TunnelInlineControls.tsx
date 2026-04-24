@@ -46,6 +46,7 @@ export function TunnelInlineControls({
 }: TunnelInlineControlsProps) {
   const { t } = useTranslation();
   const kind = getStatusKind(status);
+  const isDisconnected = kind === "disconnected";
   const statusText =
     kind === "connected"
       ? t("tunnels.connected")
@@ -94,20 +95,9 @@ export function TunnelInlineControls({
           className="h-8 px-3 text-xs text-muted-foreground border-border"
         >
           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          {kind === "connected" ? t("tunnels.stop") : t("tunnels.start")}
+          {isDisconnected ? t("tunnels.start") : t("tunnels.stop")}
         </Button>
-      ) : kind === "connected" ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onStop}
-          className="h-8 px-3 text-xs text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50"
-        >
-          <Square className="h-3 w-3 mr-1" />
-          {t("tunnels.stop")}
-        </Button>
-      ) : kind === "disconnected" ? (
+      ) : isDisconnected ? (
         <Button
           type="button"
           size="sm"
@@ -120,7 +110,18 @@ export function TunnelInlineControls({
           <Play className="h-3 w-3 mr-1" />
           {t("tunnels.start")}
         </Button>
-      ) : null}
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onStop}
+          className="h-8 px-3 text-xs text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50"
+        >
+          <Square className="h-3 w-3 mr-1" />
+          {t("tunnels.stop")}
+        </Button>
+      )}
     </div>
   );
 }

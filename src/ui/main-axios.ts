@@ -1378,6 +1378,30 @@ export async function getTunnelStatuses(): Promise<
   }
 }
 
+export function subscribeTunnelStatuses(
+  onStatuses: (statuses: Record<string, TunnelStatus>) => void,
+  onError?: () => void,
+): () => void {
+  const baseURL = (tunnelApi.defaults.baseURL || "").replace(/\/$/, "");
+  const source = new EventSource(`${baseURL}/tunnel/status/stream`, {
+    withCredentials: true,
+  });
+
+  source.addEventListener("statuses", (event) => {
+    try {
+      onStatuses(JSON.parse(event.data) as Record<string, TunnelStatus>);
+    } catch {
+      onError?.();
+    }
+  });
+
+  source.onerror = () => {
+    onError?.();
+  };
+
+  return () => source.close();
+}
+
 export async function getTunnelStatusByName(
   tunnelName: string,
 ): Promise<TunnelStatus | undefined> {

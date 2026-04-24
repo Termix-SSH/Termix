@@ -48,18 +48,6 @@ export interface HostTunnelTabProps {
   form: UseFormReturn<FormData>;
   hosts: SSHHost[];
   editingHost?: SSHHost | null;
-  sshConfigDropdownOpen: { [key: number]: boolean };
-  setSshConfigDropdownOpen: React.Dispatch<
-    React.SetStateAction<{ [key: number]: boolean }>
-  >;
-  sshConfigInputRefs: React.MutableRefObject<{
-    [key: number]: HTMLInputElement | null;
-  }>;
-  sshConfigDropdownRefs: React.MutableRefObject<{
-    [key: number]: HTMLDivElement | null;
-  }>;
-  getFilteredSshConfigs: (index: number) => string[];
-  handleSshConfigClick: (config: string, index: number) => void;
   t: (key: string) => string;
 }
 

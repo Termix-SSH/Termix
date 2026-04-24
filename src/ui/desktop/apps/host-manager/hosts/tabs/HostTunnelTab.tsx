@@ -9,12 +9,25 @@ import { Input } from "@/components/ui/input.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
 import { TunnelInlineControls } from "@/ui/desktop/apps/features/tunnel/TunnelInlineControls.tsx";
+import { TunnelModeSelector } from "@/ui/desktop/apps/features/tunnel/TunnelModeSelector.tsx";
+import {
+  getTunnelModeDescription,
+  getTunnelPortLabels,
+  getTunnelTypeForMode,
+} from "@/ui/desktop/apps/features/tunnel/tunnel-form-utils.ts";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   connectTunnel,
   disconnectTunnel,
-  getTunnelStatuses,
+  subscribeTunnelStatuses,
 } from "@/ui/main-axios.ts";
 import type { SSHHost, TunnelConfig, TunnelStatus } from "@/types/index.js";
 import { useEffect, useState } from "react";
@@ -25,12 +38,6 @@ export function HostTunnelTab({
   form,
   hosts,
   editingHost,
-  sshConfigDropdownOpen,
-  setSshConfigDropdownOpen,
-  sshConfigInputRefs,
-  sshConfigDropdownRefs,
-  getFilteredSshConfigs,
-  handleSshConfigClick,
   t,
 }: HostTunnelTabProps) {
   const { tabs, addTab, setCurrentTab, updateTab } = useTabs();
@@ -43,18 +50,10 @@ export function HostTunnelTab({
   const supportsC2S =
     typeof window !== "undefined" && window.electronAPI?.isElectron === true;
 
-  const fetchTunnelStatuses = async () => {
-    try {
-      setTunnelStatuses(await getTunnelStatuses());
-    } catch {
-      // The form should stay usable even when the tunnel service is unavailable.
-    }
-  };
-
   useEffect(() => {
-    fetchTunnelStatuses();
-    const interval = window.setInterval(fetchTunnelStatuses, 1000);
-    return () => window.clearInterval(interval);
+    return subscribeTunnelStatuses(setTunnelStatuses, () => {
+      // The form should stay usable if the tunnel status stream reconnects.
+    });
   }, []);
 
   const openC2SPresets = () => {
@@ -170,7 +169,6 @@ export function HostTunnelTab({
         await disconnectTunnel(tunnelName);
       }
 
-      await fetchTunnelStatuses();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -330,6 +328,8 @@ export function HostTunnelTab({
                     scope: "s2s",
                     mode: "remote",
                     tunnelType: "remote",
+                    bindHost: "127.0.0.1",
+                    targetHost: "127.0.0.1",
                     sourcePort: 22,
                     endpointPort: 224,
                     endpointHost: "",
@@ -352,6 +352,14 @@ export function HostTunnelTab({
               const mode = form.watch(`${fieldName}.${index}.mode`) || "remote";
               const isC2S = scope === "c2s";
               const currentHost = getCurrentHost();
+              const endpointConfigOptions = hosts
+                .filter(
+                  (item) =>
+                    item.id !== currentHost?.id &&
+                    (item.connectionType || "ssh") === "ssh",
+                )
+                .map((item) => item.name || `${item.username}@${item.ip}`)
+                .sort((a, b) => a.localeCompare(b));
               const tunnelName = currentHost
                 ? getTunnelName(currentHost, index)
                 : "";
@@ -361,68 +369,20 @@ export function HostTunnelTab({
               const isTunnelActionLoading = tunnelName
                 ? Boolean(tunnelActions[tunnelName])
                 : false;
-              const sourcePortLabel = isC2S
-                ? mode === "remote"
-                  ? t("tunnels.remotePort")
-                  : t("tunnels.localPort")
-                : mode === "remote"
-                  ? t("tunnels.endpointPort")
-                  : t("tunnels.currentHostPort");
-              const endpointPortLabel = isC2S
-                ? mode === "remote"
-                  ? t("tunnels.localPort")
-                  : t("tunnels.remotePort")
-                : mode === "remote"
-                  ? t("tunnels.currentHostPort")
-                  : t("tunnels.endpointPort");
-              const modeDescription =
-                mode === "dynamic"
-                  ? isC2S
-                    ? t("tunnels.forwardDescriptionClientDynamic", {
-                        sourcePort:
-                          form.watch(`${fieldName}.${index}.sourcePort`) ||
-                          "1080",
-                      })
-                    : t("tunnels.forwardDescriptionServerDynamic", {
-                        sourcePort:
-                          form.watch(`${fieldName}.${index}.sourcePort`) ||
-                          "1080",
-                      })
-                  : mode === "local"
-                    ? isC2S
-                      ? t("tunnels.forwardDescriptionClientLocal", {
-                          sourcePort:
-                            form.watch(`${fieldName}.${index}.sourcePort`) ||
-                            "22",
-                          endpointPort:
-                            form.watch(`${fieldName}.${index}.endpointPort`) ||
-                            "22",
-                        })
-                      : t("tunnels.forwardDescriptionServerLocal", {
-                          sourcePort:
-                            form.watch(`${fieldName}.${index}.sourcePort`) ||
-                            "22",
-                          endpointPort:
-                            form.watch(`${fieldName}.${index}.endpointPort`) ||
-                            "224",
-                        })
-                    : isC2S
-                      ? t("tunnels.forwardDescriptionClientRemote", {
-                          sourcePort:
-                            form.watch(`${fieldName}.${index}.sourcePort`) ||
-                            "22",
-                          endpointPort:
-                            form.watch(`${fieldName}.${index}.endpointPort`) ||
-                            "22",
-                        })
-                      : t("tunnels.forwardDescriptionServerRemote", {
-                          sourcePort:
-                            form.watch(`${fieldName}.${index}.sourcePort`) ||
-                            "22",
-                          endpointPort:
-                            form.watch(`${fieldName}.${index}.endpointPort`) ||
-                            "224",
-                        });
+              const formScope = isC2S ? "client" : "server";
+              const { sourcePortLabel, endpointPortLabel } =
+                getTunnelPortLabels(formScope, mode, t);
+              const modeDescription = getTunnelModeDescription(
+                formScope,
+                mode,
+                {
+                  sourcePort:
+                    form.watch(`${fieldName}.${index}.sourcePort`) || "22",
+                  endpointPort:
+                    form.watch(`${fieldName}.${index}.endpointPort`) || "22",
+                },
+                t,
+              );
 
               return (
                 <div key={index} className="p-4 border rounded-lg bg-muted/50">
@@ -466,66 +426,21 @@ export function HostTunnelTab({
                         <FormItem>
                           <FormLabel>{t("tunnels.type")}</FormLabel>
                           <FormControl>
-                            <div className="grid gap-3 lg:grid-cols-3">
-                              <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  value="local"
-                                  checked={field.value === "local"}
-                                  onChange={() => field.onChange("local")}
-                                  className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                                />
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {t("tunnels.typeLocal")}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {isC2S
-                                      ? t("tunnels.typeClientLocalDesc")
-                                      : t("tunnels.typeServerLocalDesc")}
-                                  </span>
-                                </div>
-                              </label>
-                              <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  value="remote"
-                                  checked={field.value === "remote"}
-                                  onChange={() => field.onChange("remote")}
-                                  className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                                />
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {t("tunnels.typeRemote")}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {isC2S
-                                      ? t("tunnels.typeClientRemoteDesc")
-                                      : t("tunnels.typeServerRemoteDesc")}
-                                  </span>
-                                </div>
-                              </label>
-                              <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  value="dynamic"
-                                  checked={field.value === "dynamic"}
-                                  onChange={() => field.onChange("dynamic")}
-                                  className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                                />
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {t("tunnels.typeDynamic", "Dynamic (-D)")}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {t(
-                                      "tunnels.typeDynamicDesc",
-                                      "Forward SOCKS5 CONNECT traffic through SSH",
-                                    )}
-                                  </span>
-                                </div>
-                              </label>
-                            </div>
+                            <TunnelModeSelector
+                              mode={field.value || "remote"}
+                              scope={isC2S ? "client" : "server"}
+                              onChange={(nextMode) => {
+                                field.onChange(nextMode);
+                                form.setValue(
+                                  `${fieldName}.${index}.tunnelType`,
+                                  getTunnelTypeForMode(nextMode),
+                                  {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  },
+                                );
+                              }}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -537,68 +452,29 @@ export function HostTunnelTab({
                         control={form.control}
                         name={`${fieldName}.${index}.endpointHost`}
                         render={({ field: endpointHostField }) => (
-                          <FormItem className="col-span-12 md:col-span-6 relative">
+                          <FormItem className="col-span-12 md:col-span-6">
                             <FormLabel>
                               {t("tunnels.endpointSshConfig")}
                             </FormLabel>
                             <FormControl>
-                              <Input
-                                ref={(el) => {
-                                  sshConfigInputRefs.current[index] = el;
-                                }}
-                                placeholder={t("placeholders.sshConfig")}
-                                className="min-h-[40px]"
-                                autoComplete="off"
+                              <Select
                                 value={endpointHostField.value || ""}
-                                onFocus={() =>
-                                  setSshConfigDropdownOpen((prev) => ({
-                                    ...prev,
-                                    [index]: true,
-                                  }))
-                                }
-                                onChange={(e) => {
-                                  endpointHostField.onChange(e);
-                                  setSshConfigDropdownOpen((prev) => ({
-                                    ...prev,
-                                    [index]: true,
-                                  }));
-                                }}
-                                onBlur={(e) => {
-                                  endpointHostField.onChange(
-                                    e.target.value.trim(),
-                                  );
-                                  endpointHostField.onBlur();
-                                }}
-                              />
+                                onValueChange={endpointHostField.onChange}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue
+                                    placeholder={t("placeholders.sshConfig")}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {endpointConfigOptions.map((config) => (
+                                    <SelectItem key={config} value={config}>
+                                      {config}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </FormControl>
-                            {sshConfigDropdownOpen[index] &&
-                              getFilteredSshConfigs(index).length > 0 && (
-                                <div
-                                  ref={(el) => {
-                                    sshConfigDropdownRefs.current[index] = el;
-                                  }}
-                                  className="absolute top-full left-0 z-50 mt-1 w-full bg-canvas border border-input rounded-md shadow-lg max-h-40 overflow-y-auto thin-scrollbar p-1"
-                                >
-                                  <div className="grid grid-cols-1 gap-1 p-0">
-                                    {getFilteredSshConfigs(index).map(
-                                      (config) => (
-                                        <Button
-                                          key={config}
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="w-full justify-start text-left rounded px-2 py-1.5 hover:bg-surface-hover focus:bg-surface-hover focus:outline-none"
-                                          onClick={() =>
-                                            handleSshConfigClick(config, index)
-                                          }
-                                        >
-                                          {config}
-                                        </Button>
-                                      ),
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                           </FormItem>
                         )}
                       />
@@ -618,6 +494,30 @@ export function HostTunnelTab({
                                 {...endpointPortField}
                               />
                             </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {!isC2S && (
+                      <FormField
+                        control={form.control}
+                        name={
+                          mode === "remote"
+                            ? `${fieldName}.${index}.targetHost`
+                            : `${fieldName}.${index}.bindHost`
+                        }
+                        render={({ field: currentHostIpField }) => (
+                          <FormItem className="col-span-12 md:col-span-6">
+                            <FormLabel>{t("tunnels.currentHostIp")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="127.0.0.1"
+                                {...currentHostIpField}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t("tunnels.currentHostIpDescription")}
+                            </FormDescription>
                           </FormItem>
                         )}
                       />

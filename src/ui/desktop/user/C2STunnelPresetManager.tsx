@@ -11,6 +11,11 @@ import {
 } from "@/components/ui/select.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { TunnelInlineControls } from "@/ui/desktop/apps/features/tunnel/TunnelInlineControls.tsx";
+import { TunnelModeSelector } from "@/ui/desktop/apps/features/tunnel/TunnelModeSelector.tsx";
+import {
+  getTunnelModeDescription,
+  getTunnelTypeForMode,
+} from "@/ui/desktop/apps/features/tunnel/tunnel-form-utils.ts";
 import {
   createC2STunnelPreset,
   deleteC2STunnelPreset,
@@ -22,6 +27,7 @@ import type {
   C2STunnelPreset,
   SSHHost,
   TunnelConnection,
+  TunnelStatus,
 } from "@/types/index.js";
 import { Download, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -101,6 +107,12 @@ export function C2STunnelPresetManager(): React.ReactElement {
   >([]);
   const [hosts, setHosts] = React.useState<SSHHost[]>([]);
   const [presets, setPresets] = React.useState<C2STunnelPreset[]>([]);
+  const [tunnelStatuses, setTunnelStatuses] = React.useState<
+    Record<string, TunnelStatus>
+  >({});
+  const [tunnelActions, setTunnelActions] = React.useState<
+    Record<string, boolean>
+  >({});
   const [selectedPresetId, setSelectedPresetId] = React.useState("");
   const [presetName, setPresetName] = React.useState("");
   const isElectron =
@@ -129,6 +141,20 @@ export function C2STunnelPresetManager(): React.ReactElement {
     [savedLocalConfig, localConfig],
   );
   const hasPresets = presets.length > 0;
+
+  const getTunnelName = React.useCallback(
+    (tunnel: ClientTunnel, index: number) =>
+      [
+        "c2s",
+        index,
+        tunnel.sourceHostId || 0,
+        tunnel.mode || tunnel.tunnelType || "local",
+        tunnel.bindHost || "127.0.0.1",
+        tunnel.sourcePort,
+        tunnel.endpointPort || 0,
+      ].join("::"),
+    [],
+  );
 
   const refreshPresets = React.useCallback(async () => {
     const nextPresets = await getC2STunnelPresets();
@@ -162,6 +188,17 @@ export function C2STunnelPresetManager(): React.ReactElement {
     });
   }, [isElectron, refreshLocalConfig, refreshPresets]);
 
+  React.useEffect(() => {
+    if (!isElectron) return;
+
+    const refreshStatuses = async () => {
+      const statuses = await window.electronAPI.getC2STunnelStatuses();
+      setTunnelStatuses(statuses as Record<string, TunnelStatus>);
+    };
+
+    refreshStatuses().catch(() => {});
+  }, [isElectron]);
+
   const validateLocalConfig = (config: ClientTunnel[]) => {
     const autoStartListeners = new Set<string>();
 
@@ -177,6 +214,9 @@ export function C2STunnelPresetManager(): React.ReactElement {
       }
       if (!tunnel.sourceHostId) {
         return t("tunnels.endpointSshHostRequired");
+      }
+      if (tunnel.mode === "remote" && tunnel.autoStart) {
+        return t("tunnels.clientRemoteAutoStartUnavailable");
       }
       if (tunnel.autoStart) {
         const listenerKey = `${tunnel.bindHost}:${tunnel.sourcePort}`;
@@ -239,6 +279,51 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.error(
         error instanceof Error ? error.message : t("tunnels.localSaveError"),
       );
+    }
+  };
+
+  const handleTunnelStart = async (tunnel: ClientTunnel, index: number) => {
+    const tunnelName = getTunnelName(tunnel, index);
+    setTunnelActions((current) => ({ ...current, [tunnelName]: true }));
+
+    try {
+      const result = await window.electronAPI.startC2STunnel(
+        { ...normalizeClientTunnel(tunnel), name: tunnelName },
+        index,
+      );
+      if (!result.success) {
+        throw new Error(result.error || t("tunnels.manualControlError"));
+      }
+      const statuses = await window.electronAPI.getC2STunnelStatuses();
+      setTunnelStatuses(statuses as Record<string, TunnelStatus>);
+      toast.success(t("tunnels.clientTunnelStarted"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("tunnels.manualControlError"),
+      );
+    } finally {
+      setTunnelActions((current) => ({ ...current, [tunnelName]: false }));
+    }
+  };
+
+  const handleTunnelStop = async (tunnel: ClientTunnel, index: number) => {
+    const tunnelName = getTunnelName(tunnel, index);
+    setTunnelActions((current) => ({ ...current, [tunnelName]: true }));
+
+    try {
+      const result = await window.electronAPI.stopC2STunnel(tunnelName);
+      if (!result.success) {
+        throw new Error(result.error || t("tunnels.manualControlError"));
+      }
+      const statuses = await window.electronAPI.getC2STunnelStatuses();
+      setTunnelStatuses(statuses as Record<string, TunnelStatus>);
+      toast.success(t("tunnels.clientTunnelStopped"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("tunnels.manualControlError"),
+      );
+    } finally {
+      setTunnelActions((current) => ({ ...current, [tunnelName]: false }));
     }
   };
 
@@ -353,20 +438,24 @@ export function C2STunnelPresetManager(): React.ReactElement {
         <div className="space-y-4">
           {localConfig.length > 0 ? (
             localConfig.map((tunnel, index) => {
-              const modeDescription =
-                tunnel.mode === "dynamic"
-                  ? t("tunnels.forwardDescriptionClientDynamic", {
-                      sourcePort: tunnel.sourcePort,
-                    })
-                  : tunnel.mode === "local"
-                    ? t("tunnels.forwardDescriptionClientLocal", {
-                        sourcePort: tunnel.sourcePort,
-                        endpointPort: tunnel.endpointPort,
-                      })
-                    : t("tunnels.forwardDescriptionClientRemote", {
-                        sourcePort: tunnel.sourcePort,
-                        endpointPort: tunnel.endpointPort,
-                      });
+              const modeDescription = getTunnelModeDescription(
+                "client",
+                tunnel.mode || "local",
+                {
+                  sourcePort: tunnel.sourcePort,
+                  endpointPort: tunnel.endpointPort,
+                },
+                t,
+              );
+              const tunnelName = getTunnelName(tunnel, index);
+              const tunnelStatus = tunnelStatuses[tunnelName];
+              const isTunnelActionLoading = Boolean(tunnelActions[tunnelName]);
+              const startDisabled =
+                tunnel.mode === "remote" || !tunnel.sourceHostId;
+              const startDisabledReason =
+                tunnel.mode === "remote"
+                  ? t("tunnels.clientRemoteUnavailable")
+                  : t("tunnels.endpointSshHostRequired");
 
               return (
                 <div key={index} className="p-4 border rounded-lg bg-muted/50">
@@ -376,9 +465,12 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     </h4>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <TunnelInlineControls
-                        onStart={() =>
-                          toast.info(t("tunnels.clientManualStartUnavailable"))
-                        }
+                        status={tunnelStatus}
+                        loading={isTunnelActionLoading}
+                        onStart={() => handleTunnelStart(tunnel, index)}
+                        onStop={() => handleTunnelStop(tunnel, index)}
+                        startDisabled={startDisabled}
+                        startDisabledReason={startDisabledReason}
                       />
                       <Button
                         type="button"
@@ -401,80 +493,24 @@ export function C2STunnelPresetManager(): React.ReactElement {
                   <div className="grid gap-4 mb-4">
                     <div>
                       <Label>{t("tunnels.type")}</Label>
-                      <div className="grid gap-3 lg:grid-cols-3 mt-2">
-                        <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            value="local"
-                            checked={tunnel.mode === "local"}
-                            onChange={() =>
-                              updateTunnel(index, {
-                                mode: "local",
-                                tunnelType: "local",
-                              })
-                            }
-                            className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {t("tunnels.typeLocal")}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t("tunnels.typeClientLocalDesc")}
-                            </span>
-                          </div>
-                        </label>
-                        <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            value="remote"
-                            checked={tunnel.mode === "remote"}
-                            onChange={() =>
-                              updateTunnel(index, {
-                                mode: "remote",
-                                tunnelType: "remote",
-                              })
-                            }
-                            className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {t("tunnels.typeRemote")}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t("tunnels.typeClientRemoteDesc")}
-                            </span>
-                          </div>
-                        </label>
-                        <label className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            value="dynamic"
-                            checked={tunnel.mode === "dynamic"}
-                            onChange={() =>
-                              updateTunnel(index, {
-                                mode: "dynamic",
-                                tunnelType: "local",
-                              })
-                            }
-                            className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {t("tunnels.typeDynamic")}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t("tunnels.typeClientDynamicDesc")}
-                            </span>
-                          </div>
-                        </label>
+                      <div className="mt-2">
+                        <TunnelModeSelector
+                          mode={tunnel.mode || "local"}
+                          scope="client"
+                          onChange={(mode) =>
+                            updateTunnel(index, {
+                              mode,
+                              tunnelType: getTunnelTypeForMode(mode),
+                            })
+                          }
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{t("tunnels.endpointSshHost")}</Label>
+                      <Label>{t("tunnels.endpointSshConfig")}</Label>
                       <Select
                         value={
                           tunnel.sourceHostId
@@ -586,6 +622,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                         <Label>{t("tunnels.autoStart")}</Label>
                         <Switch
                           checked={tunnel.autoStart}
+                          disabled={tunnel.mode === "remote"}
                           onCheckedChange={(checked) =>
                             updateTunnel(index, { autoStart: checked })
                           }
@@ -593,7 +630,9 @@ export function C2STunnelPresetManager(): React.ReactElement {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t(
-                          tunnel.autoStart
+                          tunnel.mode === "remote"
+                            ? "tunnels.clientRemoteAutoStartUnavailable"
+                            : tunnel.autoStart
                             ? "tunnels.clientAutoStartDesc"
                             : "tunnels.clientManualStartDesc",
                         )}

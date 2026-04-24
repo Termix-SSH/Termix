@@ -15,6 +15,7 @@ const http = require("http");
 const net = require("net");
 const { URL } = require("url");
 const { fork } = require("child_process");
+const WebSocket = require("ws");
 
 const logFile = path.join(app.getPath("userData"), "termix-main.log");
 function logToFile(...args) {
@@ -676,6 +677,13 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
     const autoStartListeners = new Set();
     for (const tunnel of config) {
       if (!tunnel?.autoStart) continue;
+      const mode = tunnel.mode || tunnel.tunnelType || "local";
+      if (mode === "remote") {
+        return {
+          success: false,
+          error: "Client remote forwarding cannot use auto-start yet",
+        };
+      }
 
       const bindHost = tunnel.bindHost || "127.0.0.1";
       const sourcePort = Number(tunnel.sourcePort);
@@ -694,7 +702,12 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
         bindHost,
         Number(sourcePort),
       );
-      if (!result.available) {
+      const ownedByClientTunnel = Array.from(c2sTunnelRuntimes.values()).some(
+        (runtime) =>
+          runtime.bindHost === bindHost &&
+          runtime.sourcePort === Number(sourcePort),
+      );
+      if (!result.available && !ownedByClientTunnel) {
         return {
           success: false,
           error: `Cannot auto-start client tunnel on ${listenerKey}: ${result.error || "port is already in use"}`,
@@ -726,6 +739,389 @@ function checkLocalPortAvailable(host, port) {
   });
 }
 
+const c2sTunnelRuntimes = new Map();
+
+function getServerConfigSync() {
+  try {
+    const configPath = path.join(app.getPath("userData"), "server-config.json");
+    if (!fs.existsSync(configPath)) return null;
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function getC2SRelayUrl() {
+  const config = getServerConfigSync();
+  const serverUrl =
+    config?.serverUrl || (!isDev ? "http://127.0.0.1:30003" : null);
+  if (!serverUrl) {
+    throw new Error("No Termix server configured");
+  }
+
+  const base = serverUrl.replace(/\/$/, "");
+  const relayHttpUrl = base.endsWith(":30003")
+    ? `${base}/ssh/tunnel/c2s/stream`
+    : `${base}/ssh/tunnel/c2s/stream`;
+  return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+}
+
+async function getC2SRelayHeaders(relayUrl) {
+  if (!mainWindow?.webContents?.session) return {};
+
+  const cookieUrl = relayUrl.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
+  const cookies = await mainWindow.webContents.session.cookies.get({
+    url: cookieUrl,
+    name: "jwt",
+  });
+  const jwt = cookies[0]?.value;
+  if (!jwt) return {};
+
+  return {
+    Cookie: `jwt=${encodeURIComponent(jwt)}`,
+  };
+}
+
+function getC2STunnelName(tunnel, index = 0) {
+  if (tunnel.name) return tunnel.name;
+  return [
+    "c2s",
+    index,
+    tunnel.sourceHostId || 0,
+    tunnel.mode || tunnel.tunnelType || "local",
+    tunnel.bindHost || "127.0.0.1",
+    tunnel.sourcePort,
+    tunnel.endpointPort || 0,
+  ].join("::");
+}
+
+function getC2STunnelStatus(tunnelName) {
+  return (
+    c2sTunnelRuntimes.get(tunnelName)?.status || {
+      connected: false,
+      status: "DISCONNECTED",
+    }
+  );
+}
+
+function setC2STunnelStatus(tunnelName, status) {
+  const runtime = c2sTunnelRuntimes.get(tunnelName);
+  if (runtime) {
+    runtime.status = status;
+  }
+}
+
+function parseSocks5Target(buffer) {
+  if (buffer.length < 7 || buffer[0] !== 0x05 || buffer[1] !== 0x01) {
+    return null;
+  }
+
+  const addressType = buffer[3];
+  let offset = 4;
+  let host;
+
+  if (addressType === 0x01) {
+    if (buffer.length < offset + 4 + 2) return null;
+    host = Array.from(buffer.subarray(offset, offset + 4)).join(".");
+    offset += 4;
+  } else if (addressType === 0x03) {
+    const length = buffer[offset];
+    offset += 1;
+    if (buffer.length < offset + length + 2) return null;
+    host = buffer.subarray(offset, offset + length).toString("utf8");
+    offset += length;
+  } else if (addressType === 0x04) {
+    if (buffer.length < offset + 16 + 2) return null;
+    const parts = [];
+    for (let i = 0; i < 16; i += 2) {
+      parts.push(buffer.readUInt16BE(offset + i).toString(16));
+    }
+    host = parts.join(":");
+    offset += 16;
+  } else {
+    throw new Error("Unsupported SOCKS5 address type");
+  }
+
+  const port = buffer.readUInt16BE(offset);
+  return { host, port, bytesRead: offset + 2 };
+}
+
+async function openC2SRelay(tunnel, targetHost, targetPort, socket, initialData) {
+  const relayUrl = getC2SRelayUrl();
+  const headers = await getC2SRelayHeaders(relayUrl);
+  const ws = new WebSocket(relayUrl, {
+    headers,
+    rejectUnauthorized: false,
+  });
+  const pendingChunks = [];
+  let ready = false;
+  let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    try {
+      socket.destroy();
+    } catch {
+      // expected during shutdown
+    }
+    try {
+      ws.close();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  const sendChunk = (chunk) => {
+    if (ready && ws.readyState === WebSocket.OPEN) {
+      ws.send(chunk);
+    } else {
+      pendingChunks.push(chunk);
+    }
+  };
+
+  socket.on("data", sendChunk);
+  socket.on("close", cleanup);
+  socket.on("error", cleanup);
+  ws.on("close", cleanup);
+  ws.on("error", cleanup);
+
+  ws.on("open", () => {
+    ws.send(
+      JSON.stringify({
+        type: "open",
+        tunnelConfig: tunnel,
+        targetHost,
+        targetPort,
+      }),
+    );
+  });
+
+  ws.on("message", (data, isBinary) => {
+    if (isBinary) {
+      socket.write(Buffer.isBuffer(data) ? data : Buffer.from(data));
+      return;
+    }
+
+    try {
+      const message = JSON.parse(data.toString());
+      if (message.type === "ready") {
+        ready = true;
+        if (initialData?.length) {
+          ws.send(initialData);
+        }
+        while (pendingChunks.length > 0) {
+          ws.send(pendingChunks.shift());
+        }
+      } else if (message.type === "error") {
+        logToFile("[c2s] relay error:", message.error);
+        cleanup();
+      }
+    } catch (error) {
+      logToFile("[c2s] invalid relay message:", error.message);
+      cleanup();
+    }
+  });
+}
+
+function handleC2SDynamicConnection(tunnel, socket) {
+  let buffer = Buffer.alloc(0);
+  let stage = "greeting";
+
+  const fail = (code = 0x01) => {
+    if (!socket.destroyed) {
+      socket.write(Buffer.from([0x05, code, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+      socket.destroy();
+    }
+  };
+
+  const onData = (chunk) => {
+    buffer = Buffer.concat([buffer, chunk]);
+
+    try {
+      if (stage === "greeting") {
+        if (buffer.length < 2) return;
+        if (buffer[0] !== 0x05) {
+          fail();
+          return;
+        }
+        const methodsLength = buffer[1];
+        if (buffer.length < 2 + methodsLength) return;
+        socket.write(Buffer.from([0x05, 0x00]));
+        buffer = buffer.subarray(2 + methodsLength);
+        stage = "connect";
+      }
+
+      if (stage === "connect") {
+        const target = parseSocks5Target(buffer);
+        if (!target) return;
+
+        stage = "piping";
+        socket.off("data", onData);
+        const remainder = buffer.subarray(target.bytesRead);
+        socket.write(Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+        openC2SRelay(tunnel, target.host, target.port, socket, remainder).catch(
+          (error) => {
+            logToFile("[c2s] dynamic relay failed:", error.message);
+            fail(0x05);
+          },
+        );
+      }
+    } catch (error) {
+      logToFile("[c2s] SOCKS5 parse failed:", error.message);
+      fail();
+    }
+  };
+
+  socket.on("data", onData);
+  socket.on("error", () => socket.destroy());
+}
+
+function handleC2SLocalConnection(tunnel, socket) {
+  const targetHost = tunnel.targetHost || "127.0.0.1";
+  const targetPort = Number(tunnel.endpointPort);
+  openC2SRelay(tunnel, targetHost, targetPort, socket).catch((error) => {
+    logToFile("[c2s] local relay failed:", error.message);
+    socket.destroy();
+  });
+}
+
+async function startC2STunnel(tunnel, index = 0) {
+  const mode = tunnel.mode || tunnel.tunnelType || "local";
+  const tunnelName = getC2STunnelName(tunnel, index);
+  const bindHost = tunnel.bindHost || "127.0.0.1";
+  const sourcePort = Number(tunnel.sourcePort);
+
+  if (mode === "remote") {
+    return {
+      success: false,
+      error: "Client remote forwarding is not available yet",
+    };
+  }
+  if (!tunnel.sourceHostId) {
+    return { success: false, error: "Endpoint SSH host is required" };
+  }
+  if (!Number.isInteger(sourcePort) || sourcePort < 1 || sourcePort > 65535) {
+    return { success: false, error: "Invalid local port" };
+  }
+
+  const existing = c2sTunnelRuntimes.get(tunnelName);
+  if (existing) {
+    return { success: true, tunnelName };
+  }
+
+  for (const runtime of c2sTunnelRuntimes.values()) {
+    if (runtime.bindHost === bindHost && runtime.sourcePort === sourcePort) {
+      return {
+        success: false,
+        error: `Another client tunnel already uses ${bindHost}:${sourcePort}`,
+      };
+    }
+  }
+
+  const availability = await checkLocalPortAvailable(bindHost, sourcePort);
+  if (!availability.available) {
+    return {
+      success: false,
+      error: availability.error || "Port is already in use",
+    };
+  }
+
+  const sockets = new Set();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+    if (mode === "dynamic") {
+      handleC2SDynamicConnection({ ...tunnel, name: tunnelName, mode }, socket);
+    } else {
+      handleC2SLocalConnection({ ...tunnel, name: tunnelName, mode }, socket);
+    }
+  });
+
+  c2sTunnelRuntimes.set(tunnelName, {
+    server,
+    sockets,
+    bindHost,
+    sourcePort,
+    status: { connected: false, status: "CONNECTING" },
+  });
+
+  return new Promise((resolve) => {
+    server.once("error", (error) => {
+      c2sTunnelRuntimes.delete(tunnelName);
+      resolve({ success: false, error: error.message });
+    });
+    server.listen({ host: bindHost, port: sourcePort }, () => {
+      setC2STunnelStatus(tunnelName, {
+        connected: true,
+        status: "CONNECTED",
+      });
+      resolve({ success: true, tunnelName });
+    });
+  });
+}
+
+async function stopC2STunnel(tunnelName) {
+  const runtime = c2sTunnelRuntimes.get(tunnelName);
+  if (!runtime) {
+    return { success: true };
+  }
+
+  setC2STunnelStatus(tunnelName, {
+    connected: false,
+    status: "DISCONNECTING",
+  });
+
+  return new Promise((resolve) => {
+    for (const socket of runtime.sockets || []) {
+      socket.destroy();
+    }
+    runtime.server.close(() => {
+      c2sTunnelRuntimes.delete(tunnelName);
+      resolve({ success: true });
+    });
+  });
+}
+
+function stopAllC2STunnels() {
+  for (const [tunnelName, runtime] of c2sTunnelRuntimes.entries()) {
+    try {
+      for (const socket of runtime.sockets || []) {
+        socket.destroy();
+      }
+      runtime.server.close();
+    } catch (error) {
+      logToFile(`[c2s] failed to stop tunnel ${tunnelName}:`, error.message);
+    }
+    c2sTunnelRuntimes.delete(tunnelName);
+  }
+}
+
+async function startC2SAutoStartTunnels() {
+  const configPath = getC2STunnelConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return { success: true, started: 0, errors: [] };
+  }
+
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  const tunnels = Array.isArray(config) ? config : [];
+  const errors = [];
+  let started = 0;
+
+  for (let index = 0; index < tunnels.length; index += 1) {
+    const tunnel = tunnels[index];
+    if (!tunnel?.autoStart) continue;
+    const result = await startC2STunnel(tunnel, index);
+    if (result.success) {
+      started += 1;
+    } else {
+      errors.push(result.error || "Failed to start client tunnel");
+    }
+  }
+
+  return { success: errors.length === 0, started, errors };
+}
+
 ipcMain.handle("check-local-port-available", async (_event, host, port) => {
   const sourcePort = Number(port);
   if (
@@ -737,6 +1133,38 @@ ipcMain.handle("check-local-port-available", async (_event, host, port) => {
     return { available: false, error: "Invalid local bind address or port" };
   }
   return checkLocalPortAvailable(host, sourcePort);
+});
+
+ipcMain.handle("start-c2s-tunnel", async (_event, tunnel, index) => {
+  try {
+    return await startC2STunnel(tunnel, Number(index) || 0);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("stop-c2s-tunnel", async (_event, tunnelName) => {
+  try {
+    return await stopC2STunnel(tunnelName);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("get-c2s-tunnel-statuses", () => {
+  const statuses = {};
+  for (const [tunnelName] of c2sTunnelRuntimes.entries()) {
+    statuses[tunnelName] = getC2STunnelStatus(tunnelName);
+  }
+  return statuses;
+});
+
+ipcMain.handle("start-c2s-autostart-tunnels", async () => {
+  try {
+    return await startC2SAutoStartTunnels();
+  } catch (error) {
+    return { success: false, started: 0, errors: [error.message] };
+  }
 });
 
 ipcMain.handle("get-c2s-tunnel-preset-default-name", () => {
@@ -1040,6 +1468,7 @@ app.on("before-quit", () => {
 
 app.on("will-quit", () => {
   console.log("App will quit...");
+  stopAllC2STunnels();
   stopBackendServer();
 });
 

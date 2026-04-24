@@ -148,6 +148,18 @@ interface SSHManagerHostEditorProps {
   onBack?: () => void;
 }
 
+function isValidIPv4(value: string) {
+  const parts = value.split(".");
+  return (
+    parts.length === 4 &&
+    parts.every((part) => {
+      if (!/^\d+$/.test(part)) return false;
+      const parsed = Number(part);
+      return parsed >= 0 && parsed <= 255;
+    })
+  );
+}
+
 export function HostManagerEditor({
   editingHost,
   onFormSubmit,
@@ -162,7 +174,6 @@ export function HostManagerEditor({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const editorTheme = isDarkMode ? oneDark : githubLight;
   const [folders, setFolders] = useState<string[]>([]);
-  const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [snippets, setSnippets] = useState<
@@ -220,16 +231,7 @@ export function HostManagerEditor({
           ),
         ].sort();
 
-        const uniqueConfigurations = [
-          ...new Set(
-            hostsData
-              .filter((host) => host.name && host.name.trim() !== "")
-              .map((host) => host.name),
-          ),
-        ].sort();
-
         setFolders(uniqueFolders);
-        setSshConfigurations(uniqueConfigurations);
       } catch (error) {
         console.error("Host manager operation failed:", error);
       }
@@ -499,6 +501,20 @@ export function HostManagerEditor({
               "Endpoint SSH configuration is required",
             ),
             path: ["serverTunnels", index, "endpointHost"],
+          });
+        }
+
+        const currentHostIp =
+          tunnel.mode === "remote" ? tunnel.targetHost : tunnel.bindHost;
+        if (currentHostIp && !isValidIPv4(currentHostIp)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("tunnels.invalidCurrentHostIp"),
+            path: [
+              "serverTunnels",
+              index,
+              tunnel.mode === "remote" ? "targetHost" : "bindHost",
+            ],
           });
         }
       });
@@ -1245,91 +1261,6 @@ export function HostManagerEditor({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [keyTypeDropdownOpen]);
 
-  const [sshConfigDropdownOpen, setSshConfigDropdownOpen] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const sshConfigInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {},
-  );
-  const sshConfigDropdownRefs = useRef<{
-    [key: number]: HTMLDivElement | null;
-  }>({});
-
-  const getFilteredSshConfigs = (index: number) => {
-    const value = form.watch(`serverTunnels.${index}.endpointHost`);
-
-    const currentHostId = editingHost?.id;
-
-    let filtered = sshConfigurations;
-
-    if (currentHostId) {
-      const currentHostName = hosts.find((h) => h.id === currentHostId)?.name;
-      if (currentHostName) {
-        filtered = sshConfigurations.filter(
-          (config) => config !== currentHostName,
-        );
-      }
-    } else {
-      const currentHostName =
-        form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
-      filtered = sshConfigurations.filter(
-        (config) => config !== currentHostName,
-      );
-    }
-
-    if (value) {
-      filtered = filtered.filter((config) =>
-        config.toLowerCase().includes(value.toLowerCase()),
-      );
-    }
-
-    return filtered;
-  };
-
-  const handleSshConfigClick = (config: string, index: number) => {
-    form.setValue(`serverTunnels.${index}.endpointHost`, config, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-    setSshConfigDropdownOpen((prev) => ({ ...prev, [index]: false }));
-  };
-
-  useEffect(() => {
-    function handleSshConfigClickOutside(event: MouseEvent) {
-      const openDropdowns = Object.keys(sshConfigDropdownOpen).filter(
-        (key) => sshConfigDropdownOpen[parseInt(key)],
-      );
-
-      openDropdowns.forEach((indexStr: string) => {
-        const index = parseInt(indexStr);
-        if (
-          sshConfigDropdownRefs.current[index] &&
-          !sshConfigDropdownRefs.current[index]?.contains(
-            event.target as Node,
-          ) &&
-          sshConfigInputRefs.current[index] &&
-          !sshConfigInputRefs.current[index]?.contains(event.target as Node)
-        ) {
-          setSshConfigDropdownOpen((prev) => ({ ...prev, [index]: false }));
-        }
-      });
-    }
-
-    const hasOpenDropdowns = Object.values(sshConfigDropdownOpen).some(
-      (open) => open,
-    );
-
-    if (hasOpenDropdowns) {
-      document.addEventListener("mousedown", handleSshConfigClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleSshConfigClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleSshConfigClickOutside);
-    };
-  }, [sshConfigDropdownOpen]);
-
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 w-full relative">
       <SimpleLoader
@@ -1530,12 +1461,6 @@ export function HostManagerEditor({
                         form={form}
                         hosts={hosts}
                         editingHost={editingHost}
-                        sshConfigDropdownOpen={sshConfigDropdownOpen}
-                        setSshConfigDropdownOpen={setSshConfigDropdownOpen}
-                        sshConfigInputRefs={sshConfigInputRefs}
-                        sshConfigDropdownRefs={sshConfigDropdownRefs}
-                        getFilteredSshConfigs={getFilteredSshConfigs}
-                        handleSshConfigClick={handleSshConfigClick}
                         t={t}
                       />
                     </TabsContent>
