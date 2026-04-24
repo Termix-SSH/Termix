@@ -553,3 +553,7 @@
 .skinny-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
+
+.h-fade {
+  mask-image: linear-gradient(transparent, #000 6%, #000 94%, transparent);
+}

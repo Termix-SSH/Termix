@@ -69,7 +69,7 @@ export function ContainerList({
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-3">
+    <div className="flex flex-col h-full min-h-0">
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -117,7 +117,7 @@ export function ContainerList({
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto thin-scrollbar pr-1">
+        <div className="min-h-0 flex-1 overflow-auto thin-scrollbar h-fade pr-1 pb-2 pt-4">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 auto-rows-min content-start w-full pb-2">
             {filteredContainers.map((container) => (
               <ContainerCard
