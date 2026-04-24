@@ -1652,8 +1652,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnecting(false);
           shouldNotReconnectRef.current = true;
 
-          localStorage.removeItem("jwt");
-
           return;
         }
 

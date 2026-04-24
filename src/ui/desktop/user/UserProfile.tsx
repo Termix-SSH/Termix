@@ -58,8 +58,6 @@ async function handleLogout() {
     await logoutUser();
 
     if (isElectron()) {
-      localStorage.removeItem("jwt");
-
       const configuredServerUrl = (
         window as Window &
           typeof globalThis & {

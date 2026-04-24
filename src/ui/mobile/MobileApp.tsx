@@ -14,7 +14,10 @@ import {
   TabProvider,
   useTabs,
 } from "@/ui/mobile/navigation/tabs/TabContext.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import {
+  getUserInfo,
+  isCurrentAuthInvalidationError,
+} from "@/ui/main-axios.ts";
 import { Auth } from "@/ui/mobile/authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
@@ -33,6 +36,11 @@ const AppContent: FC = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const isAuthenticatedRef = React.useRef(false);
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -43,7 +51,6 @@ const AppContent: FC = () => {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
@@ -51,15 +58,18 @@ const AppContent: FC = () => {
           }
         })
         .catch((err) => {
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-          setUsername(null);
-
-          localStorage.removeItem("jwt");
-
-          const errorCode = err?.response?.data?.code;
-          if (errorCode === "SESSION_EXPIRED") {
+          if (isCurrentAuthInvalidationError(err)) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
             console.warn(t("errors.sessionExpired"));
+            return;
+          }
+
+          if (!isAuthenticatedRef.current) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
           }
         })
         .finally(() => setAuthLoading(false));

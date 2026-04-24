@@ -17,6 +17,7 @@ import {
   sendMetricsHeartbeat,
   getGuacamoleDpi,
   getGuacamoleTokenFromHost,
+  isCurrentAuthInvalidationError,
   type RecentActivityItem,
 } from "@/ui/main-axios.ts";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
@@ -127,12 +128,10 @@ export function Dashboard({
           setDbError(null);
         })
         .catch((err) => {
-          setIsAdmin(false);
-          setUsername(null);
-          setUserId(null);
-
-          const errorCode = err?.response?.data?.code;
-          if (errorCode === "SESSION_EXPIRED") {
+          if (isCurrentAuthInvalidationError(err)) {
+            setIsAdmin(false);
+            setUsername(null);
+            setUserId(null);
             console.warn("Session expired - please log in again");
             setDbError("Session expired - please log in again");
           } else {

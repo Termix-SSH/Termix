@@ -20,7 +20,12 @@ import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/comm
 import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
-import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
+import {
+  getUserInfo,
+  logoutUser,
+  isElectron,
+  isCurrentAuthInvalidationError,
+} from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
@@ -78,6 +83,7 @@ function AppContent({
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
+  const isAuthenticatedRef = useRef(false);
 
   const isDarkMode =
     theme === "dark" ||
@@ -273,13 +279,18 @@ function AppContent({
           }
         })
         .catch((err) => {
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-          setUsername(null);
-
-          const errorCode = err?.response?.data?.code;
-          if (errorCode === "SESSION_EXPIRED") {
+          if (isCurrentAuthInvalidationError(err)) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
             console.warn("Session expired - please log in again");
+            return;
+          }
+
+          if (!isAuthenticatedRef.current) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
           }
         })
         .finally(() => {
@@ -302,6 +313,7 @@ function AppContent({
 
   useEffect(() => {
     onAuthStateChange?.(isAuthenticated);
+    isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, onAuthStateChange]);
 
   const handleAuthSuccess = useCallback(

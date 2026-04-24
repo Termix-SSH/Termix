@@ -1670,6 +1670,7 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       is_oidc: !!user[0].isOidc,
       is_dual_auth: isDualAuth,
       totp_enabled: !!user[0].totpEnabled,
+      data_unlocked: authManager.isUserUnlocked(userId),
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);
@@ -3529,8 +3530,13 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
  *         description: Failed to unlock data.
  */
 router.post("/unlock-data", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
+  const authReq = req as AuthenticatedRequest;
+  const userId = authReq.userId;
   const { password } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
   if (!password) {
     return res.status(400).json({ error: "Password is required" });
@@ -3539,6 +3545,19 @@ router.post("/unlock-data", authenticateJWT, async (req, res) => {
   try {
     const unlocked = await authManager.authenticateUser(userId, password);
     if (unlocked) {
+      const refreshedSession =
+        userId && authReq.sessionId
+          ? await authManager.refreshSessionToken(userId, authReq.sessionId)
+          : null;
+
+      if (refreshedSession) {
+        res.cookie(
+          "jwt",
+          refreshedSession.token,
+          authManager.getSecureCookieOptions(req, refreshedSession.maxAge),
+        );
+      }
+
       res.json({
         success: true,
         message: "Data unlocked successfully",
@@ -3577,9 +3596,10 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
   try {
+    const unlocked = authManager.isUserUnlocked(userId);
     res.json({
-      unlocked: true,
-      message: "Data is unlocked",
+      unlocked,
+      message: unlocked ? "Data is unlocked" : "Data is locked",
     });
   } catch (err) {
     authLogger.error("Failed to check data status", err, {

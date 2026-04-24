@@ -7,6 +7,7 @@ class SystemCrypto {
   private static instance: SystemCrypto;
   private jwtSecret: string | null = null;
   private databaseKey: Buffer | null = null;
+  private encryptionKey: Buffer | null = null;
   private internalAuthToken: string | null = null;
   private credentialSharingKey: Buffer | null = null;
 
@@ -112,6 +113,46 @@ class SystemCrypto {
       await this.initializeDatabaseKey();
     }
     return this.databaseKey!;
+  }
+
+  async initializeEncryptionKey(): Promise<void> {
+    try {
+      const dataDir = process.env.DATA_DIR || "./db/data";
+      const envPath = path.join(dataDir, ".env");
+
+      const envKey = process.env.ENCRYPTION_KEY;
+      if (envKey && envKey.length >= 64) {
+        this.encryptionKey = Buffer.from(envKey, "hex");
+        return;
+      }
+
+      try {
+        const envContent = await fs.readFile(envPath, "utf8");
+        const keyMatch = envContent.match(/^ENCRYPTION_KEY=(.+)$/m);
+        if (keyMatch && keyMatch[1] && keyMatch[1].length >= 64) {
+          this.encryptionKey = Buffer.from(keyMatch[1], "hex");
+          process.env.ENCRYPTION_KEY = keyMatch[1];
+          return;
+        }
+      } catch {
+        // expected - env file may not exist
+      }
+
+      await this.generateAndGuideEncryptionKey();
+    } catch (error) {
+      databaseLogger.error("Failed to initialize encryption key", error, {
+        operation: "encryption_key_init_failed",
+        dataDir: process.env.DATA_DIR || "./db/data",
+      });
+      throw new Error("Encryption key initialization failed");
+    }
+  }
+
+  async getEncryptionKey(): Promise<Buffer> {
+    if (!this.encryptionKey) {
+      await this.initializeEncryptionKey();
+    }
+    return this.encryptionKey!;
   }
 
   async initializeInternalAuthToken(): Promise<void> {
@@ -227,6 +268,23 @@ class SystemCrypto {
       instanceId,
       envVarName: "DATABASE_KEY",
       note: "Ready for use - no restart required",
+    });
+  }
+
+  private async generateAndGuideEncryptionKey(): Promise<void> {
+    const newKey = crypto.randomBytes(32);
+    const newKeyHex = newKey.toString("hex");
+    const instanceId = crypto.randomBytes(8).toString("hex");
+
+    this.encryptionKey = newKey;
+
+    await this.updateEnvFile("ENCRYPTION_KEY", newKeyHex);
+
+    databaseLogger.success("Encryption key auto-generated and saved to .env", {
+      operation: "encryption_key_auto_generated",
+      instanceId,
+      envVarName: "ENCRYPTION_KEY",
+      note: "Used to wrap session data keys - no restart required",
     });
   }
 

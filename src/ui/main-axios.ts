@@ -182,8 +182,6 @@ function getLoggerForService(serviceName: string) {
 const electronSettingsCache = new Map<string, string>();
 
 if (isElectron()) {
-  localStorage.removeItem("jwt");
-
   (async () => {
     try {
       const electronAPI = (window as any).electronAPI;
@@ -279,6 +277,40 @@ export function getCookie(name: string): string | undefined {
 }
 
 let userWasAuthenticated = false;
+let latestAuthSuccessAt = 0;
+
+function markUserAuthenticated(): void {
+  userWasAuthenticated = true;
+  latestAuthSuccessAt =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+export function isCurrentAuthInvalidationError(error: unknown): boolean {
+  const authError = error as {
+    __staleAuthInvalidation?: boolean;
+  };
+
+  if (authError.__staleAuthInvalidation) {
+    return false;
+  }
+
+  const axiosError = error as AxiosError;
+  const responseData = axiosError.response?.data as
+    | Record<string, unknown>
+    | undefined;
+  const errorCode = responseData?.code;
+  const errorMessage = responseData?.error;
+
+  return (
+    axiosError.response?.status === 401 &&
+    (errorCode === "SESSION_EXPIRED" ||
+      errorCode === "SESSION_NOT_FOUND" ||
+      errorCode === "AUTH_REQUIRED" ||
+      errorMessage === "Invalid token" ||
+      errorMessage === "Authentication required" ||
+      errorMessage === "Missing authentication token")
+  );
+}
 
 function createApiInstance(
   baseURL: string,
@@ -456,12 +488,25 @@ function createApiInstance(
           errorMessage === "Missing authentication token";
 
         if (isSessionExpired || isSessionNotFound || isInvalidToken) {
+          const requestStartedAt =
+            typeof error.config?.startTime === "number"
+              ? error.config.startTime
+              : 0;
+          const isStaleAuthInvalidation =
+            latestAuthSuccessAt > 0 &&
+            requestStartedAt > 0 &&
+            requestStartedAt < latestAuthSuccessAt;
+
+          if (isStaleAuthInvalidation) {
+            (
+              error as { __staleAuthInvalidation?: boolean }
+            ).__staleAuthInvalidation = true;
+            return Promise.reject(error);
+          }
+
           const wasAuthenticated = userWasAuthenticated;
 
-          localStorage.removeItem("jwt");
-
           if (isElectron()) {
-            electronSettingsCache.delete("jwt");
             const electronAPI = (
               window as unknown as {
                 electronAPI?: { clearSessionCookies?: () => Promise<void> };
@@ -2785,7 +2830,7 @@ export async function loginUser(
     }
 
     if (response.data.success && !response.data.requires_totp) {
-      userWasAuthenticated = true;
+      markUserAuthenticated();
     }
 
     return {
@@ -2814,8 +2859,6 @@ export async function logoutUser(): Promise<{
     clearTermixSessionStorage();
 
     if (isElectron()) {
-      localStorage.removeItem("jwt");
-      electronSettingsCache.delete("jwt");
       const electronAPI = (
         window as unknown as {
           electronAPI?: { clearSessionCookies?: () => Promise<void> };
@@ -2835,8 +2878,6 @@ export async function logoutUser(): Promise<{
     clearTermixSessionStorage();
 
     if (isElectron()) {
-      localStorage.removeItem("jwt");
-      electronSettingsCache.delete("jwt");
       const electronAPI = (
         window as unknown as {
           electronAPI?: { clearSessionCookies?: () => Promise<void> };
@@ -2857,6 +2898,7 @@ export async function logoutUser(): Promise<{
 export async function getUserInfo(): Promise<UserInfo> {
   try {
     const response = await authApi.get("/users/me");
+    markUserAuthenticated();
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
@@ -3253,7 +3295,7 @@ export async function verifyTOTPLogin(
     }
 
     if (response.data.success) {
-      userWasAuthenticated = true;
+      markUserAuthenticated();
     }
 
     return response.data;

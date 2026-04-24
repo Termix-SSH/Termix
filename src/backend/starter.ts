@@ -98,6 +98,7 @@ import {
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();
+    await systemCrypto.initializeEncryptionKey();
     await systemCrypto.initializeInternalAuthToken();
 
     await AutoSSLSetup.initialize();

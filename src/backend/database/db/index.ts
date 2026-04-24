@@ -439,7 +439,15 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM sessions").run();
+    const result = sqlite
+      .prepare("DELETE FROM sessions WHERE expires_at <= ?")
+      .run(new Date().toISOString());
+    if (result.changes > 0) {
+      databaseLogger.info("Expired sessions cleaned up on startup", {
+        operation: "db_init_session_cleanup",
+        deletedSessions: result.changes,
+      });
+    }
   } catch (e) {
     databaseLogger.warn("Could not clear expired sessions on startup", {
       operation: "db_init_session_cleanup_failed",
