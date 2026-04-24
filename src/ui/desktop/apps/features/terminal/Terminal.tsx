@@ -27,6 +27,7 @@ import {
 } from "@/ui/main-axios.ts";
 import { TOTPDialog } from "@/ui/desktop/navigation/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
+import { PassphraseDialog } from "@/ui/desktop/navigation/dialogs/PassphraseDialog.tsx";
 import { WarpgateDialog } from "@/ui/desktop/navigation/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ui/desktop/navigation/dialogs/OPKSSHDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ui/desktop/navigation/dialogs/HostKeyVerificationDialog.tsx";
@@ -288,6 +289,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [authDialogReason, setAuthDialogReason] = useState<
       "no_keyboard" | "auth_failed" | "timeout"
     >("no_keyboard");
+    const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
     const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
       useState(false);
     const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
@@ -700,6 +702,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     function handleAuthDialogCancel() {
       setShowAuthDialog(false);
+      if (onClose) onClose();
+    }
+
+    function handlePassphraseSubmit(passphrase: string) {
+      if (webSocketRef.current && terminal) {
+        webSocketRef.current.send(
+          JSON.stringify({
+            type: "reconnect_with_credentials",
+            data: {
+              cols: terminal.cols,
+              rows: terminal.rows,
+              keyPassword: passphrase,
+              hostConfig: {
+                ...hostConfig,
+                keyPassword: passphrase,
+              },
+            },
+          }),
+        );
+        setShowPassphraseDialog(false);
+        setIsConnecting(true);
+      }
+    }
+
+    function handlePassphraseCancel() {
+      setShowPassphraseDialog(false);
       if (onClose) onClose();
     }
 
@@ -1497,6 +1525,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "auth_method_not_available") {
             setAuthDialogReason("no_keyboard");
             setShowAuthDialog(true);
+            setIsConnecting(false);
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else if (msg.type === "passphrase_required") {
+            setShowPassphraseDialog(true);
             setIsConnecting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
@@ -2620,6 +2655,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           reason={authDialogReason}
           onSubmit={handleAuthDialogSubmit}
           onCancel={handleAuthDialogCancel}
+          hostInfo={{
+            ip: hostConfig.ip,
+            port: hostConfig.port,
+            username: hostConfig.username,
+            name: hostConfig.name,
+          }}
+          backgroundColor={backgroundColor}
+        />
+
+        <PassphraseDialog
+          isOpen={showPassphraseDialog}
+          onSubmit={handlePassphraseSubmit}
+          onCancel={handlePassphraseCancel}
           hostInfo={{
             ip: hostConfig.ip,
             port: hostConfig.port,
