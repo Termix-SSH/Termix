@@ -12,6 +12,7 @@ const fs = require("fs");
 const os = require("os");
 const https = require("https");
 const http = require("http");
+const net = require("net");
 const { URL } = require("url");
 const { fork } = require("child_process");
 
@@ -666,10 +667,38 @@ ipcMain.handle("get-c2s-tunnel-config", () => {
   }
 });
 
-ipcMain.handle("save-c2s-tunnel-config", (_event, config) => {
+ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
   try {
     if (!Array.isArray(config)) {
       return { success: false, error: "C2S tunnel config must be an array" };
+    }
+    const autoStartListeners = new Set();
+    for (const tunnel of config) {
+      if (!tunnel?.autoStart) continue;
+
+      const bindHost = tunnel.bindHost || "127.0.0.1";
+      const sourcePort = Number(tunnel.sourcePort);
+      const listenerKey = `${bindHost}:${sourcePort}`;
+      if (autoStartListeners.has(listenerKey)) {
+        return {
+          success: false,
+          error: `Another auto-start client tunnel already uses ${listenerKey}`,
+        };
+      }
+      autoStartListeners.add(listenerKey);
+    }
+    for (const listenerKey of autoStartListeners) {
+      const [bindHost, sourcePort] = listenerKey.split(":");
+      const result = await checkLocalPortAvailable(
+        bindHost,
+        Number(sourcePort),
+      );
+      if (!result.available) {
+        return {
+          success: false,
+          error: `Cannot auto-start client tunnel on ${listenerKey}: ${result.error || "port is already in use"}`,
+        };
+      }
     }
     const userDataPath = app.getPath("userData");
     if (!fs.existsSync(userDataPath)) {
@@ -681,6 +710,32 @@ ipcMain.handle("save-c2s-tunnel-config", (_event, config) => {
     console.error("Error saving C2S tunnel config:", error);
     return { success: false, error: error.message };
   }
+});
+
+function checkLocalPortAvailable(host, port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", (error) => {
+      resolve({ available: false, error: error.message });
+    });
+    server.once("listening", () => {
+      server.close(() => resolve({ available: true }));
+    });
+    server.listen({ host, port });
+  });
+}
+
+ipcMain.handle("check-local-port-available", async (_event, host, port) => {
+  const sourcePort = Number(port);
+  if (
+    !host ||
+    !Number.isInteger(sourcePort) ||
+    sourcePort < 1 ||
+    sourcePort > 65535
+  ) {
+    return { available: false, error: "Invalid local bind address or port" };
+  }
+  return checkLocalPortAvailable(host, sourcePort);
 });
 
 ipcMain.handle("get-c2s-tunnel-preset-default-name", () => {

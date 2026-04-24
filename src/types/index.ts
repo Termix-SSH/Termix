@@ -256,9 +256,11 @@ export interface TunnelConnection {
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
   bindHost?: string;
+  sourceHostId?: number;
+  sourceHostName?: string;
   sourcePort: number;
   endpointPort: number;
-  endpointHost: string;
+  endpointHost?: string;
   targetHost?: string;
 
   endpointPassword?: string;

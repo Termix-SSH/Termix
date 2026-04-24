@@ -36,6 +36,10 @@ export interface ElectronAPI {
   saveC2STunnelConfig: (
     config: unknown[],
   ) => Promise<{ success: boolean; error?: string }>;
+  checkLocalPortAvailable: (
+    host: string,
+    port: number,
+  ) => Promise<{ available: boolean; error?: string }>;
   getC2STunnelPresetDefaultName: () => Promise<string>;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;

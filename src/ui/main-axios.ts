@@ -1471,7 +1471,10 @@ export async function getC2STunnelPresets(): Promise<C2STunnelPreset[]> {
     const response = await authApi.get("/c2s-tunnel-presets");
     return response.data || [];
   } catch (error) {
-    handleApiError(error, "fetch C2S tunnel presets");
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return [];
+    }
+    handleApiError(error, "fetch client tunnel presets");
   }
 }
 
@@ -1485,7 +1488,7 @@ export async function createC2STunnelPreset(data: {
     const response = await authApi.post("/c2s-tunnel-presets", data);
     return response.data;
   } catch (error) {
-    handleApiError(error, "create C2S tunnel preset");
+    handleApiError(error, "create client tunnel preset");
   }
 }
 
@@ -1502,7 +1505,7 @@ export async function updateC2STunnelPreset(
     const response = await authApi.put(`/c2s-tunnel-presets/${id}`, data);
     return response.data;
   } catch (error) {
-    handleApiError(error, "update C2S tunnel preset");
+    handleApiError(error, "update client tunnel preset");
   }
 }
 
@@ -1513,7 +1516,7 @@ export async function deleteC2STunnelPreset(
     const response = await authApi.delete(`/c2s-tunnel-presets/${id}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "delete C2S tunnel preset");
+    handleApiError(error, "delete client tunnel preset");
   }
 }
 

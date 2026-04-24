@@ -26,6 +26,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Network,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
@@ -43,11 +44,13 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { toast } from "sonner";
+import { C2STunnelPresetManager } from "@/ui/desktop/user/C2STunnelPresetManager.tsx";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  initialTab?: string;
 }
 
 async function handleLogout() {
@@ -94,6 +97,7 @@ export function UserProfile({
   isTopbarOpen = true,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
+  initialTab = "profile",
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
@@ -157,6 +161,16 @@ export function UserProfile({
     return saved === "true";
   });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const supportsClientTunnels = isElectron();
+
+  useEffect(() => {
+    setActiveTab(
+      initialTab === "c2s-tunnels" && !supportsClientTunnels
+        ? "profile"
+        : initialTab,
+    );
+  }, [initialTab, supportsClientTunnels]);
 
   useEffect(() => {
     fetchUserInfo();
@@ -366,7 +380,11 @@ export function UserProfile({
           <Separator className="p-0.25 w-full" />
 
           <div className="px-6 py-4 overflow-auto thin-scrollbar flex-1">
-            <Tabs defaultValue="profile" className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="mb-4 bg-elevated border-2 border-edge">
                 <TabsTrigger
                   value="profile"
@@ -382,6 +400,15 @@ export function UserProfile({
                   <Palette className="w-4 h-4" />
                   {t("profile.appearance")}
                 </TabsTrigger>
+                {supportsClientTunnels && (
+                  <TabsTrigger
+                    value="c2s-tunnels"
+                    className="flex items-center gap-2 data-[state=active]:bg-button"
+                  >
+                    <Network className="w-4 h-4" />
+                    {t("tunnels.clientTunnels")}
+                  </TabsTrigger>
+                )}
                 {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
                   <TabsTrigger
                     value="security"
@@ -800,6 +827,12 @@ export function UserProfile({
                   </div>
                 </div>
               </TabsContent>
+
+              {supportsClientTunnels && (
+                <TabsContent value="c2s-tunnels" className="space-y-4">
+                  <C2STunnelPresetManager />
+                </TabsContent>
+              )}
 
               <TabsContent value="security" className="space-y-4">
                 <TOTPSetup

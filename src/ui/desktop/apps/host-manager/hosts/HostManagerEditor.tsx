@@ -273,6 +273,25 @@ export function HostManagerEditor({
     };
   }, []);
 
+  const tunnelConnectionSchema = z.object({
+    scope: z.enum(["s2s", "c2s"]).default("s2s").optional(),
+    mode: z.enum(["local", "remote", "dynamic"]).default("remote").optional(),
+    tunnelType: z.enum(["local", "remote"]).default("remote").optional(),
+    bindHost: z.string().optional(),
+    sourcePort: z.coerce.number().min(1).max(65535),
+    endpointPort: z.coerce.number().min(1).max(65535),
+    endpointHost: z.string().optional(),
+    targetHost: z.string().optional(),
+    endpointPassword: z.string().optional(),
+    endpointKey: z.string().optional(),
+    endpointKeyPassword: z.string().optional(),
+    endpointAuthType: z.string().optional(),
+    endpointKeyType: z.string().optional(),
+    maxRetries: z.coerce.number().min(0).max(100).default(3),
+    retryInterval: z.coerce.number().min(1).max(3600).default(10),
+    autoStart: z.boolean().default(false),
+  });
+
   const formSchema = z
     .object({
       connectionType: z.enum(["ssh", "rdp", "vnc", "telnet"]).default("ssh"),
@@ -304,34 +323,8 @@ export function HostManagerEditor({
         .optional(),
       enableTerminal: z.boolean().default(true),
       enableTunnel: z.boolean().default(true),
-      tunnelConnections: z
-        .array(
-          z.object({
-            scope: z.enum(["s2s", "c2s"]).default("s2s").optional(),
-            mode: z
-              .enum(["local", "remote", "dynamic"])
-              .default("remote")
-              .optional(),
-            tunnelType: z
-              .enum(["local", "remote"])
-              .default("remote")
-              .optional(),
-            bindHost: z.string().optional(),
-            sourcePort: z.coerce.number().min(1).max(65535),
-            endpointPort: z.coerce.number().min(1).max(65535),
-            endpointHost: z.string().min(1),
-            targetHost: z.string().optional(),
-            endpointPassword: z.string().optional(),
-            endpointKey: z.string().optional(),
-            endpointKeyPassword: z.string().optional(),
-            endpointAuthType: z.string().optional(),
-            endpointKeyType: z.string().optional(),
-            maxRetries: z.coerce.number().min(0).max(100).default(3),
-            retryInterval: z.coerce.number().min(1).max(3600).default(10),
-            autoStart: z.boolean().default(false),
-          }),
-        )
-        .default([]),
+      tunnelConnections: z.array(tunnelConnectionSchema).default([]),
+      serverTunnels: z.array(tunnelConnectionSchema).default([]),
       enableFileManager: z.boolean().default(true),
       defaultPath: z.string().optional(),
       statsConfig: z
@@ -492,6 +485,24 @@ export function HostManagerEditor({
         }
       }
 
+      const serverTunnels = data.serverTunnels;
+
+      serverTunnels.forEach((tunnel, index) => {
+        if (
+          (tunnel.scope || "s2s") === "s2s" &&
+          (!tunnel.endpointHost || tunnel.endpointHost.trim() === "")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t(
+              "tunnels.endpointSshConfigRequired",
+              "Endpoint SSH configuration is required",
+            ),
+            path: ["serverTunnels", index, "endpointHost"],
+          });
+        }
+      });
+
       if (data.authType === "none") {
         return;
       }
@@ -569,6 +580,7 @@ export function HostManagerEditor({
       showServerStatsInSidebar: false,
       defaultPath: "/",
       tunnelConnections: [],
+      serverTunnels: [],
       jumpHosts: [],
       quickActions: [],
       statsConfig: DEFAULT_STATS_CONFIG,
@@ -886,6 +898,10 @@ export function HostManagerEditor({
         formData.credentialId = cleanedHost.credentialId;
       }
 
+      const serverTunnels = Array.isArray(formData.tunnelConnections)
+        ? formData.tunnelConnections.filter((tunnel) => tunnel.scope !== "c2s")
+        : [];
+      formData.serverTunnels = serverTunnels;
       form.reset(formData as FormData);
     } else {
       setAuthTab("password");
@@ -910,6 +926,7 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        serverTunnels: [],
         jumpHosts: [],
         quickActions: [],
         statsConfig: DEFAULT_STATS_CONFIG,
@@ -954,6 +971,17 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
+      delete (submitData as any).serverTunnels;
+
+      const serverTunnels = Array.isArray(data.serverTunnels)
+        ? data.serverTunnels
+        : [];
+      const serverTunnelConnections = serverTunnels.map((tunnel) => ({
+        ...tunnel,
+        scope: "s2s" as const,
+      }));
+
+      submitData.tunnelConnections = serverTunnelConnections;
 
       (submitData as any).connectionType = data.connectionType;
       (submitData as any).domain = data.domain;
@@ -1014,8 +1042,8 @@ export function HostManagerEditor({
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
       }
 
-      if (savedHost && savedHost.id && data.tunnelConnections) {
-        const hasAutoStartTunnels = data.tunnelConnections.some(
+      if (savedHost && savedHost.id && serverTunnelConnections) {
+        const hasAutoStartTunnels = serverTunnelConnections.some(
           (tunnel) => tunnel.autoStart,
         );
 
@@ -1028,7 +1056,7 @@ export function HostManagerEditor({
               error,
             );
             toast.warning(
-              t("hosts.autoStartEnableFailed", { name: data.name }),
+              t("tunnels.autoStartEnableFailed", { name: data.name }),
             );
           }
         } else {
@@ -1107,6 +1135,7 @@ export function HostManagerEditor({
     connectionType: "general",
     enableTunnel: "tunnel",
     tunnelConnections: "tunnel",
+    serverTunnels: "tunnel",
     enableFileManager: "file_manager",
     defaultPath: "file_manager",
     statsConfig: "statistics",
@@ -1227,7 +1256,7 @@ export function HostManagerEditor({
   }>({});
 
   const getFilteredSshConfigs = (index: number) => {
-    const value = form.watch(`tunnelConnections.${index}.endpointHost`);
+    const value = form.watch(`serverTunnels.${index}.endpointHost`);
 
     const currentHostId = editingHost?.id;
 
@@ -1258,7 +1287,7 @@ export function HostManagerEditor({
   };
 
   const handleSshConfigClick = (config: string, index: number) => {
-    form.setValue(`tunnelConnections.${index}.endpointHost`, config, {
+    form.setValue(`serverTunnels.${index}.endpointHost`, config, {
       shouldValidate: true,
       shouldDirty: true,
     });
@@ -1499,6 +1528,8 @@ export function HostManagerEditor({
                     <TabsContent value="tunnel">
                       <HostTunnelTab
                         form={form}
+                        hosts={hosts}
+                        editingHost={editingHost}
                         sshConfigDropdownOpen={sshConfigDropdownOpen}
                         setSshConfigDropdownOpen={setSshConfigDropdownOpen}
                         sshConfigInputRefs={sshConfigInputRefs}
@@ -1558,18 +1589,20 @@ export function HostManagerEditor({
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
             {!editingHost?.isShared && !isSubmitting && (
-              <Button
-                className="translate-y-2"
-                type="submit"
-                variant="outline"
-                disabled={!isFormValid}
-              >
-                {editingHost
-                  ? editingHost.id
-                    ? t("hosts.updateHost")
-                    : t("hosts.cloneHost")
-                  : t("hosts.addHost")}
-              </Button>
+              <div className="flex items-center gap-3 translate-y-2">
+                <Button type="submit" variant="outline" disabled={!isFormValid}>
+                  {editingHost
+                    ? editingHost.id
+                      ? t("hosts.updateHost")
+                      : t("hosts.cloneHost")
+                    : t("hosts.addHost")}
+                </Button>
+                {form.formState.isDirty && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("common.unsavedChanges")}
+                  </span>
+                )}
+              </div>
             )}
           </footer>
         </form>
