@@ -1,0 +1,7 @@
+{
+  "name": "rimraf",
+  "version": "6.1.3",
+  "description": "Small Node 24-compatible rimraf API shim for legacy temp cleanup usage.",
+  "main": "index.cjs",
+  "license": "MIT"
+}

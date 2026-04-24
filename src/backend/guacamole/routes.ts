@@ -129,7 +129,7 @@ router.post(
   async (req: express.Request, res: express.Response) => {
     try {
       const userId = (req as AuthenticatedRequest).userId!;
-      const hostId = parseInt(req.params.hostId, 10);
+      const hostId = Number.parseInt(String(req.params.hostId), 10);
 
       if (!hostId || isNaN(hostId)) {
         return res.status(400).json({ error: "Invalid host ID" });

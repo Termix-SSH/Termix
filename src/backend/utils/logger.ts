@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import type { ChalkInstance } from "chalk";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 
@@ -149,7 +150,7 @@ export class Logger {
     return `${timestamp} ${levelTag} ${serviceTag} ${message}${contextStr}`;
   }
 
-  private getLevelColor(level: LogLevel): chalk.Chalk {
+  private getLevelColor(level: LogLevel): ChalkInstance {
     switch (level) {
       case "debug":
         return chalk.magenta;

@@ -239,7 +239,9 @@ class AuthManager {
     wrapped: WrappedDataKey,
   ): Promise<Buffer> {
     if (wrapped.version !== "v1") {
-      throw new Error(`Unsupported wrapped data key version: ${wrapped.version}`);
+      throw new Error(
+        `Unsupported wrapped data key version: ${wrapped.version}`,
+      );
     }
 
     const encryptionKey = await this.systemCrypto.getEncryptionKey();
@@ -278,7 +280,10 @@ class AuthManager {
     payload: JWTPayload,
     sessionExpiresAt?: string,
   ): Promise<void> {
-    if (!payload.dataKeyWrap || this.userCrypto.getUserDataKey(payload.userId)) {
+    if (
+      !payload.dataKeyWrap ||
+      this.userCrypto.getUserDataKey(payload.userId)
+    ) {
       return;
     }
 

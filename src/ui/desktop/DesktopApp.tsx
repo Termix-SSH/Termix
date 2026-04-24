@@ -209,9 +209,8 @@ function AppContent({
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } = await import(
-            "@/ui/main-axios.ts"
-          );
+          const { getSSHHostById, getSSHHosts } =
+            await import("@/ui/main-axios.ts");
           let host = null;
 
           if (/^\d+$/.test(hostIdentifier)) {

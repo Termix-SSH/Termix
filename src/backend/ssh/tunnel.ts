@@ -2092,19 +2092,18 @@ app.get(
     tunnelStatusClients.add(res);
     sendTunnelStatusSnapshot(res);
 
-    let heartbeat: NodeJS.Timeout;
-    const closeStream = () => {
-      clearInterval(heartbeat);
-      tunnelStatusClients.delete(res);
-    };
-
-    heartbeat = setInterval(() => {
+    const heartbeat = setInterval(() => {
       try {
         res.write(": keepalive\n\n");
       } catch {
         closeStream();
       }
     }, 30000);
+
+    const closeStream = () => {
+      clearInterval(heartbeat);
+      tunnelStatusClients.delete(res);
+    };
 
     req.on("close", closeStream);
   },

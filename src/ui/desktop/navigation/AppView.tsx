@@ -13,7 +13,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable.tsx";
-import * as ResizablePrimitive from "react-resizable-panels";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -625,7 +624,7 @@ export function AppView({
       const groupId = isRoot ? `main-${node.direction}` : `group-${path}`;
 
       const groupContent = (
-        <ResizablePrimitive.PanelGroup
+        <ResizablePanelGroup
           key={groupKey}
           direction={node.direction}
           className="h-full w-full"
@@ -650,7 +649,7 @@ export function AppView({
               panel,
             ];
           })}
-        </ResizablePrimitive.PanelGroup>
+        </ResizablePanelGroup>
       );
 
       if (isRoot) return groupContent;

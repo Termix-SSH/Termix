@@ -10,6 +10,7 @@
     "moduleDetection": "force",
     "esModuleInterop": true,
     "noEmit": false,
+    "rootDir": "./src",
     "outDir": "./dist/backend",
     "strict": false,
     "noUnusedLocals": false,

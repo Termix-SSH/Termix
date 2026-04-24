@@ -225,7 +225,6 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
       } else if (action === "cancel") {
         await cancelTunnel(tunnelName);
       }
-
     } catch (error) {
       console.error("Tunnel action failed:", {
         action,

@@ -5346,7 +5346,7 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = parseInt(req.params.id);
+    const hostId = Number.parseInt(String(req.params.id), 10);
     const userId = (req as AuthenticatedRequest).userId;
 
     try {

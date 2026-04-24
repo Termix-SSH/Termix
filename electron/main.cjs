@@ -769,7 +769,9 @@ function getC2SRelayUrl() {
 async function getC2SRelayHeaders(relayUrl) {
   if (!mainWindow?.webContents?.session) return {};
 
-  const cookieUrl = relayUrl.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
+  const cookieUrl = relayUrl
+    .replace(/^ws:/, "http:")
+    .replace(/^wss:/, "https:");
   const cookies = await mainWindow.webContents.session.cookies.get({
     url: cookieUrl,
     name: "jwt",
@@ -846,7 +848,13 @@ function parseSocks5Target(buffer) {
   return { host, port, bytesRead: offset + 2 };
 }
 
-async function openC2SRelay(tunnel, targetHost, targetPort, socket, initialData) {
+async function openC2SRelay(
+  tunnel,
+  targetHost,
+  targetPort,
+  socket,
+  initialData,
+) {
   const relayUrl = getC2SRelayUrl();
   const headers = await getC2SRelayHeaders(relayUrl);
   const ws = new WebSocket(relayUrl, {

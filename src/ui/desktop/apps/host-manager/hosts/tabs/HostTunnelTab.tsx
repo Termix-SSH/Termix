@@ -168,7 +168,6 @@ export function HostTunnelTab({
       } else {
         await disconnectTunnel(tunnelName);
       }
-
     } catch (error) {
       toast.error(
         error instanceof Error

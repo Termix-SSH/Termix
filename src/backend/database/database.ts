@@ -14,7 +14,6 @@ import guacamoleRoutes from "../guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
-import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -169,7 +168,7 @@ async function fetchGitHubAPI<T>(
         "User-Agent": "TermixUpdateChecker/1.0",
         "X-GitHub-Api-Version": "2022-11-28",
       },
-      agent: getProxyAgent(url),
+      dispatcher: getProxyAgent(url),
     });
 
     if (!response.ok) {

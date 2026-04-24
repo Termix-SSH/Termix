@@ -265,11 +265,7 @@ class UserCrypto {
     return session.dataKey;
   }
 
-  restoreUserDataKey(
-    userId: string,
-    dataKey: Buffer,
-    expiresAt: number,
-  ): void {
+  restoreUserDataKey(userId: string, dataKey: Buffer, expiresAt: number): void {
     const oldSession = this.userSessions.get(userId);
     if (oldSession) {
       oldSession.dataKey.fill(0);

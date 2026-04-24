@@ -34,24 +34,21 @@ export function ElectronLoginForm({
     onAuthSuccessRef.current = onAuthSuccess;
   }, [onAuthSuccess]);
 
-  const handleAuthSuccess = useCallback(
-    async () => {
-      if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
-      hasAuthenticatedRef.current = true;
-      isAuthenticatingRef.current = true;
-      setIsAuthenticating(true);
+  const handleAuthSuccess = useCallback(async () => {
+    if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
+    hasAuthenticatedRef.current = true;
+    isAuthenticatingRef.current = true;
+    setIsAuthenticating(true);
 
-      try {
-        onAuthSuccessRef.current();
-      } catch (_err) {
-        setError(t("errors.authTokenSaveFailed"));
-        isAuthenticatingRef.current = false;
-        setIsAuthenticating(false);
-        hasAuthenticatedRef.current = false;
-      }
-    },
-    [t],
-  );
+    try {
+      onAuthSuccessRef.current();
+    } catch (_err) {
+      setError(t("errors.authTokenSaveFailed"));
+      isAuthenticatingRef.current = false;
+      setIsAuthenticating(false);
+      hasAuthenticatedRef.current = false;
+    }
+  }, [t]);
 
   // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.
   useEffect(() => {

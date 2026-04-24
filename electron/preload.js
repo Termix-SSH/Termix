@@ -21,8 +21,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("start-c2s-tunnel", tunnel, index),
   stopC2STunnel: (tunnelName) =>
     ipcRenderer.invoke("stop-c2s-tunnel", tunnelName),
-  getC2STunnelStatuses: () =>
-    ipcRenderer.invoke("get-c2s-tunnel-statuses"),
+  getC2STunnelStatuses: () => ipcRenderer.invoke("get-c2s-tunnel-statuses"),
   startC2SAutoStartTunnels: () =>
     ipcRenderer.invoke("start-c2s-autostart-tunnels"),
 

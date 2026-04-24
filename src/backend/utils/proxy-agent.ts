@@ -1,7 +1,7 @@
-import { HttpsProxyAgent } from "https-proxy-agent";
-import type { Agent } from "http";
+import { ProxyAgent } from "undici";
+import type { Dispatcher } from "undici-types";
 
-export function getProxyAgent(targetUrl?: string): Agent | undefined {
+export function getProxyAgent(targetUrl?: string): Dispatcher | undefined {
   const proxyUrl =
     process.env.https_proxy ||
     process.env.HTTPS_PROXY ||
@@ -26,5 +26,5 @@ export function getProxyAgent(targetUrl?: string): Agent | undefined {
     }
   }
 
-  return new HttpsProxyAgent(proxyUrl);
+  return new ProxyAgent(proxyUrl) as unknown as Dispatcher;
 }

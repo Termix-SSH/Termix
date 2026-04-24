@@ -299,7 +299,9 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.success(t("tunnels.clientTunnelStarted"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("tunnels.manualControlError"),
+        error instanceof Error
+          ? error.message
+          : t("tunnels.manualControlError"),
       );
     } finally {
       setTunnelActions((current) => ({ ...current, [tunnelName]: false }));
@@ -320,7 +322,9 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.success(t("tunnels.clientTunnelStopped"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("tunnels.manualControlError"),
+        error instanceof Error
+          ? error.message
+          : t("tunnels.manualControlError"),
       );
     } finally {
       setTunnelActions((current) => ({ ...current, [tunnelName]: false }));
@@ -633,8 +637,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
                           tunnel.mode === "remote"
                             ? "tunnels.clientRemoteAutoStartUnavailable"
                             : tunnel.autoStart
-                            ? "tunnels.clientAutoStartDesc"
-                            : "tunnels.clientManualStartDesc",
+                              ? "tunnels.clientAutoStartDesc"
+                              : "tunnels.clientManualStartDesc",
                         )}
                       </p>
                     </div>
