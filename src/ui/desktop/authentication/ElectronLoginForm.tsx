@@ -2,13 +2,18 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
-import { setCookie } from "@/ui/main-axios.ts";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: () => void;
   onChangeServer: () => void;
 }
+
+const AUTH_MESSAGE_SOURCES = new Set([
+  "auth_component",
+  "totp_auth_component",
+  "oidc_callback",
+]);
 
 export function ElectronLoginForm({
   serverUrl,
@@ -29,16 +34,14 @@ export function ElectronLoginForm({
     onAuthSuccessRef.current = onAuthSuccess;
   }, [onAuthSuccess]);
 
-  const handleAuthToken = useCallback(
-    async (token: string) => {
+  const handleAuthSuccess = useCallback(
+    async () => {
       if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
       hasAuthenticatedRef.current = true;
       isAuthenticatingRef.current = true;
       setIsAuthenticating(true);
 
       try {
-        setCookie("jwt", token);
-        await new Promise((resolve) => setTimeout(resolve, 300));
         onAuthSuccessRef.current();
       } catch (_err) {
         setError(t("errors.authTokenSaveFailed"));
@@ -50,14 +53,21 @@ export function ElectronLoginForm({
     [t],
   );
 
-  // postMessage from server's Auth.tsx (works if server has postMessage code)
+  // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
+        const expectedOrigin = new URL(serverUrl).origin;
+        if (event.origin !== expectedOrigin) return;
+        if (event.source !== iframeRef.current?.contentWindow) return;
         if (!event.data || typeof event.data !== "object") return;
-        const { type, token, platform } = event.data;
-        if (type === "AUTH_SUCCESS" && token && platform === "desktop") {
-          await handleAuthToken(token);
+        const { type, platform, source } = event.data;
+        if (
+          type === "AUTH_SUCCESS" &&
+          platform === "desktop" &&
+          AUTH_MESSAGE_SOURCES.has(source)
+        ) {
+          await handleAuthSuccess();
         }
       } catch (_err) {
         // ignore
@@ -66,28 +76,7 @@ export function ElectronLoginForm({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleAuthToken]);
-
-  // Poll iframe localStorage via main process executeJavaScriptInFrame (bypasses cross-origin)
-  useEffect(() => {
-    if (loading) return;
-    const electronAPI = (window as any).electronAPI;
-    if (!electronAPI?.invoke) return;
-
-    const poll = setInterval(async () => {
-      if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
-      try {
-        const token = await electronAPI.invoke("get-iframe-jwt");
-        if (token && token.length > 20) {
-          await handleAuthToken(token);
-        }
-      } catch (_e) {
-        // ignore
-      }
-    }, 500);
-
-    return () => clearInterval(poll);
-  }, [loading, handleAuthToken]);
+  }, [handleAuthSuccess, serverUrl]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -204,7 +193,7 @@ export function ElectronLoginForm({
           className="w-full h-full border-0"
           title="Server Authentication"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
-          allow="clipboard-read; clipboard-write; cross-origin-isolated; camera; microphone; geolocation"
+          allow="clipboard-read; clipboard-write"
         />
       </div>
     </div>

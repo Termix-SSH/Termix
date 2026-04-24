@@ -17,7 +17,7 @@ import { getBasePath } from "@/lib/base-path";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
-import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { isElectron } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 
@@ -226,15 +226,6 @@ export function ConsoleTerminal({
     setIsConnecting(true);
 
     try {
-      const token = isElectron()
-        ? localStorage.getItem("jwt")
-        : getCookie("jwt");
-      if (!token) {
-        toast.error(t("docker.authenticationRequired"));
-        setIsConnecting(false);
-        return;
-      }
-
       if (fitAddonRef.current) {
         fitAddonRef.current.fit();
       }

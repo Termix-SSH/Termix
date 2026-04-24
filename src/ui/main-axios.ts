@@ -115,7 +115,6 @@ export type ServerMetrics = {
 };
 
 interface AuthResponse {
-  token: string;
   success?: boolean;
   is_admin?: boolean;
   username?: string;
@@ -183,12 +182,14 @@ function getLoggerForService(serviceName: string) {
 const electronSettingsCache = new Map<string, string>();
 
 if (isElectron()) {
+  localStorage.removeItem("jwt");
+
   (async () => {
     try {
       const electronAPI = (window as any).electronAPI;
 
       if (electronAPI?.getSetting) {
-        const settingsToLoad = ["rightClickCopyPaste", "jwt"];
+        const settingsToLoad = ["rightClickCopyPaste"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
@@ -210,12 +211,16 @@ if (isElectron()) {
   })();
 }
 
-export function setCookie(name: string, value: string, days = 7): void {
+export function setCookie(
+  name: string,
+  value: string,
+  days = 7,
+): void | Promise<void> {
   if (isElectron()) {
     try {
-      electronSettingsCache.set(name, value);
-
-      localStorage.setItem(name, value);
+      if (name === "jwt") {
+        return;
+      }
 
       const electronAPI = (
         window as Window &
@@ -225,12 +230,14 @@ export function setCookie(name: string, value: string, days = 7): void {
       ).electronAPI;
 
       if (electronAPI?.setSetting) {
+        electronSettingsCache.set(name, value);
+        localStorage.setItem(name, value);
         electronAPI.setSetting(name, value).catch((err: Error) => {
           console.error(`[Electron] Failed to persist setting ${name}:`, err);
         });
       }
 
-      console.log(`[Electron] Set setting: ${name} = ${value}`);
+      console.log(`[Electron] Set setting: ${name}`);
     } catch (error) {
       console.error(`[Electron] Failed to set setting: ${name}`, error);
     }
@@ -243,6 +250,10 @@ export function setCookie(name: string, value: string, days = 7): void {
 export function getCookie(name: string): string | undefined {
   if (isElectron()) {
     try {
+      if (name === "jwt") {
+        return undefined;
+      }
+
       if (electronSettingsCache.has(name)) {
         return electronSettingsCache.get(name);
       }
@@ -313,16 +324,6 @@ function createApiInstance(
       } else {
         config.headers["X-Electron-App"] = "true";
       }
-
-      const token = localStorage.getItem("jwt");
-      if (token) {
-        if (config.headers.set) {
-          config.headers.set("Authorization", `Bearer ${token}`);
-        } else {
-          config.headers["Authorization"] = `Bearer ${token}`;
-        }
-        userWasAuthenticated = true;
-      }
     }
 
     if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
@@ -342,38 +343,6 @@ function createApiInstance(
         config.headers.set("User-Agent", `Termix-Mobile/${platform}`);
       } else {
         config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
-      }
-    }
-
-    if (!isElectron()) {
-      const tokenCookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("jwt="));
-
-      if (tokenCookie) {
-        const tokenValue = tokenCookie.split("=")[1];
-        if (tokenValue) {
-          // Always add Authorization header as fallback if token is present,
-          // especially important for cross-origin requests where cookies might be blocked
-          const decodedToken = decodeURIComponent(tokenValue);
-          if (config.headers.set) {
-            config.headers.set("Authorization", `Bearer ${decodedToken}`);
-          } else {
-            config.headers["Authorization"] = `Bearer ${decodedToken}`;
-          }
-          userWasAuthenticated = true;
-        }
-      } else {
-        // Check localStorage as fallback even in browser mode
-        const localToken = localStorage.getItem("jwt");
-        if (localToken) {
-          if (config.headers.set) {
-            config.headers.set("Authorization", `Bearer ${localToken}`);
-          } else {
-            config.headers["Authorization"] = `Bearer ${localToken}`;
-          }
-          userWasAuthenticated = true;
-        }
       }
     }
 
@@ -486,24 +455,7 @@ function createApiInstance(
           errorMessage === "Authentication required" ||
           errorMessage === "Missing authentication token";
 
-        const headers = error.config?.headers;
-        let hasAuthHeader = false;
-        if (headers) {
-          if (typeof headers.get === "function") {
-            hasAuthHeader = !!(
-              headers.get("Authorization") || headers.get("authorization")
-            );
-          } else {
-            hasAuthHeader = !!(
-              headers["Authorization"] || headers["authorization"]
-            );
-          }
-        }
-
-        if (
-          (isSessionExpired || isSessionNotFound || isInvalidToken) &&
-          hasAuthHeader
-        ) {
+        if (isSessionExpired || isSessionNotFound || isInvalidToken) {
           const wasAuthenticated = userWasAuthenticated;
 
           localStorage.removeItem("jwt");
@@ -535,7 +487,7 @@ function createApiInstance(
           userWasAuthenticated = false;
         }
       } else if (!isSilentRetry) {
-        const wasAuthenticated = !!localStorage.getItem("jwt");
+        const wasAuthenticated = userWasAuthenticated;
         dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
       }
 
@@ -2789,23 +2741,14 @@ export async function loginUser(
       rememberMe,
     });
 
-    const hasToken = response.data.token;
-
-    if (isElectron() && hasToken) {
-      localStorage.setItem("jwt", response.data.token);
-    }
-
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && isElectron() && hasToken) {
-      localStorage.setItem("jwt", response.data.token);
-
+    if (isInIframe && isElectron() && response.data.success) {
       try {
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
-            token: response.data.token,
             source: "login_api",
             platform: "desktop",
             timestamp: Date.now(),
@@ -2817,8 +2760,11 @@ export async function loginUser(
       }
     }
 
+    if (response.data.success && !response.data.requires_totp) {
+      userWasAuthenticated = true;
+    }
+
     return {
-      token: response.data.token || "cookie-based",
       success: response.data.success,
       is_admin: response.data.is_admin,
       username: response.data.username,
@@ -3053,8 +2999,8 @@ export async function getSessions(): Promise<{
     createdAt: string;
     expiresAt: string;
     lastActiveAt: string;
-    jwtToken: string;
     isRevoked?: boolean;
+    isCurrentSession?: boolean;
   }[];
 }> {
   try {
@@ -3263,23 +3209,14 @@ export async function verifyTOTPLogin(
       rememberMe,
     });
 
-    const hasToken = response.data.token;
-
-    if (isElectron() && hasToken) {
-      localStorage.setItem("jwt", response.data.token);
-    }
-
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
 
-    if (isInIframe && isElectron() && hasToken) {
-      localStorage.setItem("jwt", response.data.token);
-
+    if (isInIframe && isElectron() && response.data.success) {
       try {
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
-            token: response.data.token,
             source: "totp_verify",
             platform: "desktop",
             timestamp: Date.now(),
@@ -3289,6 +3226,10 @@ export async function verifyTOTPLogin(
       } catch (e) {
         console.error("[main-axios] Error posting message to parent:", e);
       }
+    }
+
+    if (response.data.success) {
+      userWasAuthenticated = true;
     }
 
     return response.data;

@@ -356,12 +356,13 @@ function createWindow() {
     (webContents, permission, callback) => {
       if (
         permission === "clipboard-read" ||
+        permission === "clipboard-write" ||
         permission === "clipboard-sanitized-write"
       ) {
         callback(true);
         return;
       }
-      callback(true);
+      callback(false);
     },
   );
 
@@ -791,37 +792,6 @@ ipcMain.handle("set-setting", (event, key, value) => {
   } catch (error) {
     console.error("Error saving setting:", error);
     return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle("get-iframe-jwt", async () => {
-  try {
-    if (!mainWindow) return null;
-    const frames = mainWindow.webContents.mainFrame.framesInSubtree;
-    logToFile(`[get-iframe-jwt] scanning ${frames.length} frames`);
-    for (const frame of frames) {
-      if (frame === mainWindow.webContents.mainFrame) continue;
-      try {
-        const token = await frame.executeJavaScript(
-          `(function() {
-            try {
-              const t = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-              return t || null;
-            } catch(e) { return null; }
-          })()`,
-        );
-        logToFile(
-          `[get-iframe-jwt] frame url=${frame.url} token found=${!!token} length=${token?.length}`,
-        );
-        if (token && token.length > 20) return token;
-      } catch (err) {
-        logToFile(`[get-iframe-jwt] frame exec error:`, err.message);
-      }
-    }
-    return null;
-  } catch (error) {
-    logToFile("[get-iframe-jwt] error:", error.message);
-    return null;
   }
 });
 

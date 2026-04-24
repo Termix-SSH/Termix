@@ -24,7 +24,6 @@ import {
   verifyTOTPLogin,
   logoutUser,
   isElectron,
-  getCookie,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
@@ -32,22 +31,15 @@ function isReactNativeWebView(): boolean {
   return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
 }
 
-function postJWTToWebView() {
+function postAuthSuccessToWebView() {
   if (!isReactNativeWebView()) {
     return;
   }
 
   try {
-    const jwt = getCookie("jwt") || localStorage.getItem("jwt");
-
-    if (!jwt) {
-      return;
-    }
-
     (window as any).ReactNativeWebView.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
-        token: jwt,
         source: "explicit",
         platform: "mobile",
         timestamp: Date.now(),
@@ -263,7 +255,7 @@ export function Auth({
       setUsername(meRes.username || null);
       setUserId(meRes.userId || null);
       setDbError(null);
-      postJWTToWebView();
+      postAuthSuccessToWebView();
 
       if (isReactNativeWebView()) {
         setMobileAuthSuccess(true);
@@ -458,16 +450,12 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      if (isElectron() && res.token) {
-        localStorage.setItem("jwt", res.token);
-      }
-
       setIsAdmin(!!res.is_admin);
       setUsername(res.username || null);
       setUserId(res.userId || null);
       setDbError(null);
 
-      postJWTToWebView();
+      postAuthSuccessToWebView();
 
       if (isReactNativeWebView()) {
         setMobileAuthSuccess(true);
@@ -589,11 +577,6 @@ export function Auth({
       setOidcLoading(true);
       setError(null);
 
-      const urlToken = urlParams.get("token");
-      if (urlToken && (isElectron() || isReactNativeWebView())) {
-        localStorage.setItem("jwt", urlToken);
-      }
-
       window.history.replaceState({}, document.title, window.location.pathname);
 
       setTimeout(() => {
@@ -603,7 +586,7 @@ export function Auth({
             setUsername(meRes.username || null);
             setUserId(meRes.userId || null);
             setDbError(null);
-            postJWTToWebView();
+            postAuthSuccessToWebView();
 
             if (isReactNativeWebView()) {
               setMobileAuthSuccess(true);

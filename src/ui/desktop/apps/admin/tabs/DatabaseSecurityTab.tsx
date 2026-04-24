@@ -42,12 +42,6 @@ export function DatabaseSecurityTab({
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      if (isElectron()) {
-        const token = localStorage.getItem("jwt");
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-      }
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -110,17 +104,8 @@ export function DatabaseSecurityTab({
       const formData = new FormData();
       formData.append("file", importFile);
 
-      const importHeaders: Record<string, string> = {};
-      if (isElectron()) {
-        const token = localStorage.getItem("jwt");
-        if (token) {
-          importHeaders["Authorization"] = `Bearer ${token}`;
-        }
-      }
-
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: importHeaders,
         credentials: "include",
         body: formData,
       });

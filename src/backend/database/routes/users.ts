@@ -1321,10 +1321,6 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
-    if (deviceInfo.type === "desktop" || deviceInfo.type === "mobile") {
-      redirectUrl.searchParams.set("token", token);
-    }
-
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -1576,14 +1572,6 @@ router.post("/login", async (req, res) => {
       username: userRecord.username,
     };
 
-    const isElectron =
-      req.headers["x-electron-app"] === "true" ||
-      req.headers["X-Electron-App"] === "true";
-
-    if (isElectron) {
-      response.token = token;
-    }
-
     const timeoutRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
       .get() as { value: string } | undefined;
@@ -1621,18 +1609,7 @@ router.post("/logout", authenticateJWT, async (req, res) => {
     const userId = authReq.userId;
 
     if (userId) {
-      const token =
-        req.cookies?.jwt || req.headers["authorization"]?.split(" ")[1];
-      let sessionId: string | undefined;
-
-      if (token) {
-        try {
-          const payload = await authManager.verifyJWTToken(token);
-          sessionId = payload?.sessionId;
-        } catch {
-          // expected - token verification may fail during logout
-        }
-      }
+      const sessionId = authReq.sessionId;
 
       await authManager.logoutUser(userId, sessionId);
       authLogger.info("User logged out", {
@@ -3396,10 +3373,6 @@ router.post("/totp/verify-login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
-    const isElectron =
-      req.headers["x-electron-app"] === "true" ||
-      req.headers["X-Electron-App"] === "true";
-
     authLogger.success("TOTP verification successful", {
       operation: "totp_verify_success",
       userId: userRecord.id,
@@ -3415,10 +3388,6 @@ router.post("/totp/verify-login", async (req, res) => {
       is_oidc: !!userRecord.isOidc,
       totp_enabled: !!userRecord.totpEnabled,
     };
-
-    if (isElectron) {
-      response.token = token;
-    }
 
     const timeoutRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
@@ -3638,7 +3607,9 @@ router.get("/data-status", authenticateJWT, async (req, res) => {
  *         description: Failed to get sessions.
  */
 router.get("/sessions", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
+  const authReq = req as AuthenticatedRequest;
+  const userId = authReq.userId;
+  const currentSessionId = authReq.sessionId;
 
   try {
     const user = await db.select().from(users).where(eq(users.id, userId));
@@ -3661,8 +3632,16 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
             .limit(1);
 
           return {
-            ...session,
+            id: session.id,
+            userId: session.userId,
             username: sessionUser[0]?.username || "Unknown",
+            deviceType: session.deviceType,
+            deviceInfo: session.deviceInfo,
+            createdAt: session.createdAt,
+            expiresAt: session.expiresAt,
+            lastActiveAt: session.lastActiveAt,
+            isRevoked: session.isRevoked,
+            isCurrentSession: session.id === currentSessionId,
           };
         }),
       );
@@ -3670,7 +3649,19 @@ router.get("/sessions", authenticateJWT, async (req, res) => {
       return res.json({ sessions: enrichedSessions });
     } else {
       sessionList = await authManager.getUserSessions(userId);
-      return res.json({ sessions: sessionList });
+      return res.json({
+        sessions: sessionList.map((session) => ({
+          id: session.id,
+          userId: session.userId,
+          deviceType: session.deviceType,
+          deviceInfo: session.deviceInfo,
+          createdAt: session.createdAt,
+          expiresAt: session.expiresAt,
+          lastActiveAt: session.lastActiveAt,
+          isRevoked: session.isRevoked,
+          isCurrentSession: session.id === currentSessionId,
+        })),
+      });
     }
   } catch (err) {
     authLogger.error("Failed to get sessions", err);
@@ -3812,12 +3803,7 @@ router.post("/sessions/revoke-all", authenticateJWT, async (req, res) => {
 
     let currentSessionId: string | undefined;
     if (exceptCurrent) {
-      const token =
-        req.cookies?.jwt || req.headers?.authorization?.split(" ")[1];
-      if (token) {
-        const payload = await authManager.verifyJWTToken(token);
-        currentSessionId = payload?.sessionId;
-      }
+      currentSessionId = (req as AuthenticatedRequest).sessionId;
     }
 
     const revokedCount = await authManager.revokeAllUserSessions(
@@ -4205,7 +4191,7 @@ router.post("/unlink-oidc-from-password", authenticateJWT, async (req, res) => {
  *       500:
  *         description: Failed to get guacamole settings.
  */
-router.get("/guacamole-settings", async (req, res) => {
+router.get("/guacamole-settings", authenticateJWT, async (req, res) => {
   try {
     const enabledRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
@@ -4305,7 +4291,7 @@ router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
  *       200:
  *         description: Current log level.
  */
-router.get("/log-level", async (_req, res) => {
+router.get("/log-level", authenticateJWT, async (_req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'log_level'")
@@ -4374,7 +4360,7 @@ router.patch("/log-level", authenticateJWT, async (req, res) => {
  *       200:
  *         description: Current session timeout hours.
  */
-router.get("/session-timeout", async (_req, res) => {
+router.get("/session-timeout", authenticateJWT, async (_req, res) => {
   try {
     const row = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")

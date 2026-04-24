@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button.tsx";
 import {
   getUserInfo,
   getDatabaseHealth,
-  getCookie,
   getUptime,
   getVersionInfo,
   getSSHHosts,
@@ -120,40 +119,38 @@ export function Dashboard({
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (getCookie("jwt")) {
-        getUserInfo()
-          .then((meRes) => {
-            setIsAdmin(!!meRes.is_admin);
-            setUsername(meRes.username || null);
-            setUserId(meRes.userId || null);
-            setDbError(null);
-          })
-          .catch((err) => {
-            setIsAdmin(false);
-            setUsername(null);
-            setUserId(null);
+      getUserInfo()
+        .then((meRes) => {
+          setIsAdmin(!!meRes.is_admin);
+          setUsername(meRes.username || null);
+          setUserId(meRes.userId || null);
+          setDbError(null);
+        })
+        .catch((err) => {
+          setIsAdmin(false);
+          setUsername(null);
+          setUserId(null);
 
-            const errorCode = err?.response?.data?.code;
-            if (errorCode === "SESSION_EXPIRED") {
-              console.warn("Session expired - please log in again");
-              setDbError("Session expired - please log in again");
-            } else {
-              setDbError(null);
-            }
-          });
-
-        getDatabaseHealth()
-          .then(() => {
+          const errorCode = err?.response?.data?.code;
+          if (errorCode === "SESSION_EXPIRED") {
+            console.warn("Session expired - please log in again");
+            setDbError("Session expired - please log in again");
+          } else {
             setDbError(null);
-          })
-          .catch((err) => {
-            if (err?.response?.data?.error?.includes("Database")) {
-              setDbError(
-                "Could not connect to the database. Please try again later.",
-              );
-            }
-          });
-      }
+          }
+        });
+
+      getDatabaseHealth()
+        .then(() => {
+          setDbError(null);
+        })
+        .catch((err) => {
+          if (err?.response?.data?.error?.includes("Database")) {
+            setDbError(
+              "Could not connect to the database. Please try again later.",
+            );
+          }
+        });
     }
   }, [isAuthenticated]);
 

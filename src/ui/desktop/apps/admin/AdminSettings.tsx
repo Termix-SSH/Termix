@@ -102,8 +102,8 @@ export function AdminSettings({
       createdAt: string;
       expiresAt: string;
       lastActiveAt: string;
-      jwtToken: string;
       isRevoked?: boolean;
+      isCurrentSession?: boolean;
     }>
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);

@@ -209,16 +209,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     },
     ref,
   ) {
-    if (
-      typeof window !== "undefined" &&
-      !(window as { testJWT?: () => string | null }).testJWT
-    ) {
-      (window as { testJWT?: () => string | null }).testJWT = () => {
-        const jwt = getCookie("jwt");
-        return jwt;
-      };
-    }
-
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
     const commandHistoryContext = useCommandHistory();
@@ -535,12 +525,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       const checkAuth = () => {
-        const jwtToken = getCookie("jwt");
-        const isAuth = !!(jwtToken && jwtToken.trim() !== "");
-
         setIsAuthenticated((prev) => {
-          if (prev !== isAuth) {
-            return isAuth;
+          if (!prev) {
+            return true;
           }
           return prev;
         });
@@ -873,21 +860,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        const jwtToken = getCookie("jwt");
-        if (!jwtToken || jwtToken.trim() === "") {
-          console.warn("Reconnection cancelled - no authentication token");
-          isReconnectingRef.current = false;
-          updateConnectionError(t("terminal.authenticationRequired"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
-          addLog({
-            type: "error",
-            stage: "auth",
-            message: t("terminal.authenticationRequired"),
-          });
-          return;
-        }
-
         if (terminal && hostConfig) {
           if (!isAttachingSessionRef.current) {
             terminal.clear();
@@ -921,17 +893,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
           window.location.port === "");
-
-      const jwtToken = getCookie("jwt");
-
-      if (!jwtToken || jwtToken.trim() === "") {
-        console.error("No JWT token available for WebSocket connection");
-        setIsConnected(false);
-        setIsConnecting(false);
-        updateConnectionError("Authentication required");
-        isConnectingRef.current = false;
-        return;
-      }
 
       let baseWsUrl: string;
 

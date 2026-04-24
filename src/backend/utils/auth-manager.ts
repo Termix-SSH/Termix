@@ -35,6 +35,7 @@ interface JWTPayload {
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
+  sessionId?: string;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
 }
@@ -537,7 +538,7 @@ class AuthManager {
     maxAge: number = 24 * 60 * 60 * 1000,
   ) {
     return {
-      httpOnly: false,
+      httpOnly: true,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
       sameSite: "strict" as const,
       maxAge: maxAge,
@@ -547,7 +548,7 @@ class AuthManager {
 
   getClearCookieOptions(req: RequestWithHeaders) {
     return {
-      httpOnly: false,
+      httpOnly: true,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
       sameSite: "strict" as const,
       path: "/",
@@ -684,6 +685,7 @@ class AuthManager {
       }
 
       authReq.userId = payload.userId;
+      authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
       next();
     };
@@ -755,6 +757,7 @@ class AuthManager {
 
         const authReq = req as AuthenticatedRequest;
         authReq.userId = payload.userId;
+        authReq.sessionId = payload.sessionId;
         authReq.pendingTOTP = payload.pendingTOTP;
         next();
       } catch (error) {

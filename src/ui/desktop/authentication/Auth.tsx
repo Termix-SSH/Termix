@@ -39,12 +39,6 @@ import {
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
 
-function getCookie(name: string): string | undefined {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift();
-}
-
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
 }
@@ -332,13 +326,11 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      if (isInElectronWebView() && res.token) {
+      if (isInElectronWebView()) {
         try {
-          localStorage.setItem("jwt", res.token);
           window.parent.postMessage(
             {
               type: "AUTH_SUCCESS",
-              token: res.token,
               source: "auth_component",
               platform: "desktop",
               timestamp: Date.now(),
@@ -537,17 +529,11 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
-      if (isElectron() && res.token) {
-        localStorage.setItem("jwt", res.token);
-      }
-
-      if (isInElectronWebView() && res.token) {
+      if (isInElectronWebView()) {
         try {
-          localStorage.setItem("jwt", res.token);
           window.parent.postMessage(
             {
               type: "AUTH_SUCCESS",
-              token: res.token,
               source: "totp_auth_component",
               platform: "desktop",
               timestamp: Date.now(),
@@ -676,40 +662,24 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
-      const urlToken = urlParams.get("token");
-      if (urlToken && (isElectron() || isInElectronWebView())) {
-        localStorage.setItem("jwt", urlToken);
-      }
-
       getUserInfo()
         .then((meRes) => {
           if (isInElectronWebView()) {
-            const token = getCookie("jwt") || localStorage.getItem("jwt");
-            if (token) {
-              try {
-                window.parent.postMessage(
-                  {
-                    type: "AUTH_SUCCESS",
-                    token: token,
-                    source: "oidc_callback",
-                    platform: "desktop",
-                    timestamp: Date.now(),
-                  },
-                  "*",
-                );
-                setWebviewAuthSuccess(true);
-                setOidcLoading(false);
-                return;
-              } catch (e) {
-                console.error("Error posting auth success message:", e);
-              }
-            }
-          }
-
-          if (isElectron()) {
-            const token = getCookie("jwt");
-            if (token) {
-              localStorage.setItem("jwt", token);
+            try {
+              window.parent.postMessage(
+                {
+                  type: "AUTH_SUCCESS",
+                  source: "oidc_callback",
+                  platform: "desktop",
+                  timestamp: Date.now(),
+                },
+                "*",
+              );
+              setWebviewAuthSuccess(true);
+              setOidcLoading(false);
+              return;
+            } catch (e) {
+              console.error("Error posting auth success message:", e);
             }
           }
 

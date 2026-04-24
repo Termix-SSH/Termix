@@ -1,6 +1,5 @@
 import { Client as SSHClient } from "ssh2";
 import { WebSocketServer, WebSocket } from "ws";
-import { parse as parseUrl } from "url";
 import { AuthManager } from "../utils/auth-manager.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { and, eq } from "drizzle-orm";
@@ -27,14 +26,18 @@ const wss = new WebSocketServer({
   port: 30009,
   verifyClient: async (info) => {
     try {
-      const url = parseUrl(info.req.url || "", true);
-      let token = url.query.token as string;
+      let token: string | undefined;
+
+      const cookieHeader = info.req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
 
       if (!token) {
-        const cookieHeader = info.req.headers.cookie;
-        if (cookieHeader) {
-          const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-          if (match) token = decodeURIComponent(match[1]);
+        const authHeader = info.req.headers.authorization;
+        if (authHeader?.startsWith("Bearer ")) {
+          token = authHeader.slice("Bearer ".length);
         }
       }
 
@@ -239,14 +242,18 @@ async function createJumpHostChain(
 }
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  const url = parseUrl(req.url || "", true);
-  let token = url.query.token as string;
+  let token: string | undefined;
+
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+    if (match) token = decodeURIComponent(match[1]);
+  }
 
   if (!token) {
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length);
     }
   }
 
