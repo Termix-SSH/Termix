@@ -996,7 +996,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      let wsUrl = baseWsUrl;
+      if (isElectron() && jwtToken) {
+        const separator = wsUrl.includes("?") ? "&" : "?";
+        wsUrl = `${wsUrl}${separator}token=${encodeURIComponent(jwtToken)}`;
+      }
+
+      const ws = new WebSocket(wsUrl);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);
