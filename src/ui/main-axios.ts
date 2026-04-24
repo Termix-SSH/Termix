@@ -679,7 +679,7 @@ export async function testServerConnection(
 
 export async function checkElectronUpdate(): Promise<{
   success: boolean;
-  status?: "up_to_date" | "requires_update";
+  status?: "up_to_date" | "requires_update" | "beta";
   localVersion?: string;
   remoteVersion?: string;
   latest_release?: {

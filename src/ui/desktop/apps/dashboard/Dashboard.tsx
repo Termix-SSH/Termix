@@ -68,7 +68,7 @@ export function Dashboard({
 
   const [uptime, setUptime] = useState<string>("0d 0h 0m");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update"
+    "up_to_date" | "requires_update" | "beta"
   >("up_to_date");
   const [versionText, setVersionText] = useState<string>("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
@@ -173,7 +173,8 @@ export function Dashboard({
           setVersionText(`v${versionInfo.localVersion}`);
           if (
             versionInfo.status === "up_to_date" ||
-            versionInfo.status === "requires_update"
+            versionInfo.status === "requires_update" ||
+            versionInfo.status === "beta"
           ) {
             setVersionStatus(versionInfo.status);
           }

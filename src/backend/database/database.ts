@@ -119,6 +119,31 @@ class GitHubCache {
 
 const githubCache = new GitHubCache();
 
+function parseSemver(
+  version: string | undefined,
+): [number, number, number] | null {
+  const match = String(version || "").match(/(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!match) return null;
+
+  return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
+}
+
+function compareSemver(
+  a: string | undefined,
+  b: string | undefined,
+): number | null {
+  const parsedA = parseSemver(a);
+  const parsedB = parseSemver(b);
+  if (!parsedA || !parsedB) return null;
+
+  for (let i = 0; i < 3; i += 1) {
+    if (parsedA[i] > parsedB[i]) return 1;
+    if (parsedA[i] < parsedB[i]) return -1;
+  }
+
+  return 0;
+}
+
 const GITHUB_API_BASE = "https://api.github.com";
 const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Termix";
@@ -300,12 +325,19 @@ app.get("/version", authenticateJWT, async (req, res) => {
       return res.status(401).send("Remote Version Not Found");
     }
 
-    const isUpToDate = localVersion === remoteVersion;
+    const versionComparison = compareSemver(localVersion, remoteVersion);
+    const status =
+      versionComparison === null || versionComparison === 0
+        ? "up_to_date"
+        : versionComparison > 0
+          ? "beta"
+          : "requires_update";
 
     const response = {
-      status: isUpToDate ? "up_to_date" : "requires_update",
+      status,
       localVersion: localVersion,
       version: remoteVersion,
+      remoteVersion: remoteVersion,
       latest_release: {
         tag_name: releaseData.data.tag_name,
         name: releaseData.data.name,

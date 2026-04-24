@@ -48,8 +48,9 @@ interface RSSResponse {
 }
 
 interface VersionResponse {
-  status: "up_to_date" | "requires_update";
+  status: "up_to_date" | "requires_update" | "beta";
   version: string;
+  localVersion?: string;
   latest_release: {
     name: string;
     published_at: string;
@@ -132,6 +133,19 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
                 <AlertDescription className="text-foreground-secondary">
                   {t("common.newVersionAvailable", {
                     version: versionInfo.version,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+            {versionInfo && versionInfo.status === "beta" && (
+              <Alert className="bg-elevated border-edge text-foreground mb-3">
+                <AlertTitle className="text-foreground">
+                  {t("versionCheck.betaVersion")}
+                </AlertTitle>
+                <AlertDescription className="text-foreground-secondary">
+                  {t("versionCheck.betaVersionDesc", {
+                    current: versionInfo.localVersion,
+                    latest: versionInfo.version,
                   })}
                 </AlertDescription>
               </Alert>

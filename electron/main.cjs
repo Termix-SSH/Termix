@@ -30,6 +30,26 @@ function logToFile(...args) {
   console.log(...args);
 }
 
+function parseSemver(version) {
+  const match = String(version || "").match(/(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!match) return null;
+
+  return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
+}
+
+function compareSemver(a, b) {
+  const parsedA = parseSemver(a);
+  const parsedB = parseSemver(b);
+  if (!parsedA || !parsedB) return null;
+
+  for (let i = 0; i < 3; i += 1) {
+    if (parsedA[i] > parsedB[i]) return 1;
+    if (parsedA[i] < parsedB[i]) return -1;
+  }
+
+  return 0;
+}
+
 function httpFetch(url, options = {}) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
@@ -548,11 +568,17 @@ ipcMain.handle("check-electron-update", async () => {
       };
     }
 
-    const isUpToDate = localVersion === remoteVersion;
+    const versionComparison = compareSemver(localVersion, remoteVersion);
+    const status =
+      versionComparison === null || versionComparison === 0
+        ? "up_to_date"
+        : versionComparison > 0
+          ? "beta"
+          : "requires_update";
 
     const result = {
       success: true,
-      status: isUpToDate ? "up_to_date" : "requires_update",
+      status,
       localVersion: localVersion,
       remoteVersion: remoteVersion,
       latest_release: {

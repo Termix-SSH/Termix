@@ -14,7 +14,7 @@ import { UpdateLog } from "@/ui/desktop/apps/dashboard/apps/UpdateLog";
 interface ServerOverviewCardProps {
   loggedIn: boolean;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update";
+  versionStatus: "up_to_date" | "requires_update" | "beta";
   uptime: string;
   dbHealth: "healthy" | "error";
   totalServers: number;
@@ -61,11 +61,13 @@ export function ServerOverviewCard({
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
+                    className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : versionStatus === "beta" ? "text-blue-400" : "text-yellow-400"}`}
                   >
                     {versionStatus === "up_to_date"
                       ? t("dashboard.upToDate")
-                      : t("dashboard.updateAvailable")}
+                      : versionStatus === "beta"
+                        ? t("dashboard.beta")
+                        : t("dashboard.updateAvailable")}
                   </Button>
                   <UpdateLog loggedIn={loggedIn} />
                 </>
