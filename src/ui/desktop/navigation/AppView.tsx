@@ -1,14 +1,12 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Terminal } from "@/ui/desktop/apps/features/terminal/Terminal.tsx";
-import { ServerStats as ServerView } from "@/ui/desktop/apps/features/server-stats/ServerStats.tsx";
-import { FileManager } from "@/ui/desktop/apps/features/file-manager/FileManager.tsx";
-import {
-  GuacamoleDisplay,
-  type GuacamoleConnectionConfig,
-} from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
-import { TunnelManager } from "@/ui/desktop/apps/features/tunnel/TunnelManager.tsx";
-import { DockerManager } from "@/ui/desktop/apps/features/docker/DockerManager.tsx";
-import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
+import React, {
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
+import type { GuacamoleConnectionConfig } from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -26,6 +24,54 @@ import {
 } from "@/constants/terminal-themes";
 import { useTheme } from "@/components/theme-provider";
 import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
+
+const Terminal = lazy(() =>
+  import("@/ui/desktop/apps/features/terminal/Terminal.tsx").then((module) => ({
+    default: module.Terminal,
+  })),
+);
+const ServerView = lazy(() =>
+  import("@/ui/desktop/apps/features/server-stats/ServerStats.tsx").then(
+    (module) => ({
+      default: module.ServerStats,
+    }),
+  ),
+);
+const FileManager = lazy(() =>
+  import("@/ui/desktop/apps/features/file-manager/FileManager.tsx").then(
+    (module) => ({
+      default: module.FileManager,
+    }),
+  ),
+);
+const GuacamoleDisplay = lazy(() =>
+  import("@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx").then(
+    (module) => ({
+      default: module.GuacamoleDisplay,
+    }),
+  ),
+);
+const TunnelManager = lazy(() =>
+  import("@/ui/desktop/apps/features/tunnel/TunnelManager.tsx").then(
+    (module) => ({
+      default: module.TunnelManager,
+    }),
+  ),
+);
+const DockerManager = lazy(() =>
+  import("@/ui/desktop/apps/features/docker/DockerManager.tsx").then(
+    (module) => ({
+      default: module.DockerManager,
+    }),
+  ),
+);
+const NetworkGraphCard = lazy(() =>
+  import("@/ui/desktop/apps/dashboard/cards/NetworkGraphCard").then(
+    (module) => ({
+      default: module.NetworkGraphCard,
+    }),
+  ),
+);
 
 interface TabData {
   id: number;
@@ -402,94 +448,96 @@ export function AppView({
                     : "var(--bg-base)",
                 }}
               >
-                {t.type === "terminal" ? (
-                  <Terminal
-                    key={`term-${t.id}-${t.instanceId || ""}`}
-                    ref={t.terminalRef}
-                    hostConfig={t.hostConfig}
-                    isVisible={effectiveVisible}
-                    title={t.title}
-                    showTitle={false}
-                    splitScreen={allSplitScreenTab.length > 0}
-                    onClose={() => removeTab(t.id)}
-                    onTitleChange={(title) => updateTab(t.id, { title })}
-                    onOpenFileManager={
-                      (t.hostConfig as any)?.enableFileManager
-                        ? () =>
-                            addTab({
-                              type: "file_manager",
-                              title: t.title,
-                              hostConfig: t.hostConfig,
-                            })
-                        : undefined
-                    }
-                    previewTheme={
-                      t.id === currentTab ? previewTerminalTheme : null
-                    }
-                  />
-                ) : t.type === "server_stats" ? (
-                  <ServerView
-                    key={`stats-${t.id}-${t.instanceId || ""}`}
-                    hostConfig={t.hostConfig}
-                    title={t.title}
-                    isVisible={effectiveVisible}
-                    isTopbarOpen={isTopbarOpen}
-                    embedded
-                  />
-                ) : t.type === "rdp" ||
-                  t.type === "vnc" ||
-                  t.type === "telnet" ? (
-                  t.connectionConfig ? (
-                    <GuacamoleDisplay
-                      key={`guac-${t.id}-${t.instanceId || ""}`}
-                      connectionConfig={t.connectionConfig}
+                <Suspense fallback={null}>
+                  {t.type === "terminal" ? (
+                    <Terminal
+                      key={`term-${t.id}-${t.instanceId || ""}`}
+                      ref={t.terminalRef}
+                      hostConfig={t.hostConfig}
                       isVisible={effectiveVisible}
-                      onDisconnect={() => removeTab(t.id)}
-                      onError={(err) => {
-                        toast.error(err);
-                        removeTab(t.id);
-                      }}
+                      title={t.title}
+                      showTitle={false}
+                      splitScreen={allSplitScreenTab.length > 0}
+                      onClose={() => removeTab(t.id)}
+                      onTitleChange={(title) => updateTab(t.id, { title })}
+                      onOpenFileManager={
+                        (t.hostConfig as any)?.enableFileManager
+                          ? () =>
+                              addTab({
+                                type: "file_manager",
+                                title: t.title,
+                                hostConfig: t.hostConfig,
+                              })
+                          : undefined
+                      }
+                      previewTheme={
+                        t.id === currentTab ? previewTerminalTheme : null
+                      }
+                    />
+                  ) : t.type === "server_stats" ? (
+                    <ServerView
+                      key={`stats-${t.id}-${t.instanceId || ""}`}
+                      hostConfig={t.hostConfig}
+                      title={t.title}
+                      isVisible={effectiveVisible}
+                      isTopbarOpen={isTopbarOpen}
+                      embedded
+                    />
+                  ) : t.type === "rdp" ||
+                    t.type === "vnc" ||
+                    t.type === "telnet" ? (
+                    t.connectionConfig ? (
+                      <GuacamoleDisplay
+                        key={`guac-${t.id}-${t.instanceId || ""}`}
+                        connectionConfig={t.connectionConfig}
+                        isVisible={effectiveVisible}
+                        onDisconnect={() => removeTab(t.id)}
+                        onError={(err) => {
+                          toast.error(err);
+                          removeTab(t.id);
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-red-500">
+                        Missing connection configuration
+                      </div>
+                    )
+                  ) : t.type === "network_graph" ? (
+                    <NetworkGraphCard
+                      key={`netgraph-${t.id}-${t.instanceId || ""}`}
+                      isTopbarOpen={isTopbarOpen}
+                      rightSidebarOpen={rightSidebarOpen}
+                      rightSidebarWidth={rightSidebarWidth}
+                      embedded={false}
+                    />
+                  ) : t.type === "tunnel" ? (
+                    <TunnelManager
+                      key={`tunnel-${t.id}-${t.instanceId || ""}`}
+                      hostConfig={t.hostConfig}
+                      title={t.title}
+                      isVisible={effectiveVisible}
+                      isTopbarOpen={isTopbarOpen}
+                      embedded
+                    />
+                  ) : t.type === "docker" ? (
+                    <DockerManager
+                      key={`docker-${t.id}-${t.instanceId || ""}`}
+                      hostConfig={t.hostConfig}
+                      title={t.title}
+                      isVisible={effectiveVisible}
+                      isTopbarOpen={isTopbarOpen}
+                      embedded
+                      onClose={() => removeTab(t.id)}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-red-500">
-                      Missing connection configuration
-                    </div>
-                  )
-                ) : t.type === "network_graph" ? (
-                  <NetworkGraphCard
-                    key={`netgraph-${t.id}-${t.instanceId || ""}`}
-                    isTopbarOpen={isTopbarOpen}
-                    rightSidebarOpen={rightSidebarOpen}
-                    rightSidebarWidth={rightSidebarWidth}
-                    embedded={false}
-                  />
-                ) : t.type === "tunnel" ? (
-                  <TunnelManager
-                    key={`tunnel-${t.id}-${t.instanceId || ""}`}
-                    hostConfig={t.hostConfig}
-                    title={t.title}
-                    isVisible={effectiveVisible}
-                    isTopbarOpen={isTopbarOpen}
-                    embedded
-                  />
-                ) : t.type === "docker" ? (
-                  <DockerManager
-                    key={`docker-${t.id}-${t.instanceId || ""}`}
-                    hostConfig={t.hostConfig}
-                    title={t.title}
-                    isVisible={effectiveVisible}
-                    isTopbarOpen={isTopbarOpen}
-                    embedded
-                    onClose={() => removeTab(t.id)}
-                  />
-                ) : (
-                  <FileManager
-                    key={`filemgr-${t.id}-${t.instanceId || ""}`}
-                    embedded
-                    initialHost={t.hostConfig}
-                    onClose={() => removeTab(t.id)}
-                  />
-                )}
+                    <FileManager
+                      key={`filemgr-${t.id}-${t.instanceId || ""}`}
+                      embedded
+                      initialHost={t.hostConfig}
+                      onClose={() => removeTab(t.id)}
+                    />
+                  )}
+                </Suspense>
               </div>
             </div>
           );

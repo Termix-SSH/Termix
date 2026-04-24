@@ -1,16 +1,16 @@
 import React, {
-  useState,
-  useEffect,
   useCallback,
-  useRef,
   Component,
+  Suspense,
+  lazy,
   type ErrorInfo,
   type ReactNode,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
-import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
@@ -18,16 +18,42 @@ import {
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
-import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
-import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
-import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
-import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
 import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
+
+const Dashboard = lazy(() =>
+  import("@/ui/desktop/apps/dashboard/Dashboard.tsx").then((module) => ({
+    default: module.Dashboard,
+  })),
+);
+const HostManager = lazy(() =>
+  import("@/ui/desktop/apps/host-manager/hosts/HostManager.tsx").then(
+    (module) => ({
+      default: module.HostManager,
+    }),
+  ),
+);
+const AdminSettings = lazy(() =>
+  import("@/ui/desktop/apps/admin/AdminSettings.tsx").then((module) => ({
+    default: module.AdminSettings,
+  })),
+);
+const UserProfile = lazy(() =>
+  import("@/ui/desktop/user/UserProfile.tsx").then((module) => ({
+    default: module.UserProfile,
+  })),
+);
+const CommandPalette = lazy(() =>
+  import("@/ui/desktop/apps/command-palette/CommandPalette.tsx").then(
+    (module) => ({
+      default: module.CommandPalette,
+    }),
+  ),
+);
 
 function AppContent({
   onAuthStateChange,
@@ -347,18 +373,22 @@ function AppContent({
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background">
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        setIsOpen={setIsCommandPaletteOpen}
-      />
+      <Suspense fallback={null}>
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          setIsOpen={setIsCommandPaletteOpen}
+        />
+      </Suspense>
       {!isAuthenticated && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={isAuthenticated}
-            authLoading={authLoading}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-          />
+          <Suspense fallback={null}>
+            <Dashboard
+              isAuthenticated={isAuthenticated}
+              authLoading={authLoading}
+              onAuthSuccess={handleAuthSuccess}
+              isTopbarOpen={isTopbarOpen}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -382,49 +412,58 @@ function AppContent({
 
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Dashboard
-                isAuthenticated={isAuthenticated}
-                authLoading={authLoading}
-                onAuthSuccess={handleAuthSuccess}
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense fallback={null}>
+                <Dashboard
+                  isAuthenticated={isAuthenticated}
+                  authLoading={authLoading}
+                  onAuthSuccess={handleAuthSuccess}
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                />
+              </Suspense>
             </div>
           )}
 
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <HostManager
-                isTopbarOpen={isTopbarOpen}
-                initialTab={currentTabData?.initialTab}
-                hostConfig={currentTabData?.hostConfig}
-                _updateTimestamp={currentTabData?._updateTimestamp}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-                currentTabId={currentTab}
-                updateTab={updateTab}
-              />
+              <Suspense fallback={null}>
+                <HostManager
+                  isTopbarOpen={isTopbarOpen}
+                  initialTab={currentTabData?.initialTab}
+                  hostConfig={currentTabData?.hostConfig}
+                  _updateTimestamp={currentTabData?._updateTimestamp}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                  currentTabId={currentTab}
+                  updateTab={updateTab}
+                />
+              </Suspense>
             </div>
           )}
 
           {showAdmin && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <AdminSettings
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense fallback={null}>
+                <AdminSettings
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                />
+              </Suspense>
             </div>
           )}
 
           {showProfile && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
-              <UserProfile
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense fallback={null}>
+                <UserProfile
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                  initialTab={currentTabData?.initialTab}
+                />
+              </Suspense>
             </div>
           )}
 

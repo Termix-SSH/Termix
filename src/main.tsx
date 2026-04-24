@@ -1,20 +1,39 @@
 /* eslint-disable react-refresh/only-export-components */
-import { StrictMode, useEffect, useState, useRef } from "react";
+import { StrictMode, Suspense, lazy, useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import DesktopApp from "@/ui/desktop/DesktopApp.tsx";
-import { MobileApp } from "@/ui/mobile/MobileApp.tsx";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
 import { isElectron } from "./ui/main-axios.ts";
-import HostManagerApp from "./ui/desktop/apps/host-manager/HostManagerApp.tsx";
-import TerminalApp from "./ui/desktop/apps/features/terminal/TerminalApp.tsx";
-import FileManagerApp from "./ui/desktop/apps/features/file-manager/FileManagerApp.tsx";
-import TunnelApp from "./ui/desktop/apps/features/tunnel/TunnelApp.tsx";
-import ServerStatsApp from "./ui/desktop/apps/features/server-stats/ServerStatsApp.tsx";
-import DockerApp from "./ui/desktop/apps/features/docker/DockerApp.tsx";
-import GuacamoleApp from "@/ui/desktop/apps/features/guacamole/GuacamoleApp.tsx";
+
+const DesktopApp = lazy(() => import("@/ui/desktop/DesktopApp.tsx"));
+const MobileApp = lazy(() =>
+  import("@/ui/mobile/MobileApp.tsx").then((module) => ({
+    default: module.MobileApp,
+  })),
+);
+const HostManagerApp = lazy(
+  () => import("./ui/desktop/apps/host-manager/HostManagerApp.tsx"),
+);
+const TerminalApp = lazy(
+  () => import("./ui/desktop/apps/features/terminal/TerminalApp.tsx"),
+);
+const FileManagerApp = lazy(
+  () => import("./ui/desktop/apps/features/file-manager/FileManagerApp.tsx"),
+);
+const TunnelApp = lazy(
+  () => import("./ui/desktop/apps/features/tunnel/TunnelApp.tsx"),
+);
+const ServerStatsApp = lazy(
+  () => import("./ui/desktop/apps/features/server-stats/ServerStatsApp.tsx"),
+);
+const DockerApp = lazy(
+  () => import("./ui/desktop/apps/features/docker/DockerApp.tsx"),
+);
+const GuacamoleApp = lazy(
+  () => import("@/ui/desktop/apps/features/guacamole/GuacamoleApp.tsx"),
+);
 
 const FullscreenApp: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
@@ -146,7 +165,7 @@ function RootApp() {
             isAuthenticated={false}
           />
         ) : (
-          renderApp()
+          <Suspense fallback={null}>{renderApp()}</Suspense>
         )}
       </div>
     </>
