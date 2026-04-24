@@ -87,7 +87,7 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
-  onOpenFileManager?: () => void;
+  onOpenFileManager?: (path?: string) => void;
   previewTheme?: string | null;
 }
 
@@ -1363,6 +1363,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "cwd") {
+            onOpenFileManager?.(msg.path as string);
           } else if (msg.type === "host_key_verification_required") {
             setHostKeyVerification({
               isOpen: true,
@@ -2627,6 +2629,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
+
+        {contextMenu && (
+          <TerminalContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            hasSelection={contextMenu.hasSelection}
+            showCopyPaste={getUseRightClickCopyPaste()}
+            showOpenFileManager={!!onOpenFileManager}
+            onCopy={async () => {
+              const selection = terminal?.getSelection();
+              if (selection) {
+                await writeTextToClipboard(selection);
+                terminal?.clearSelection();
+              }
+            }}
+            onPaste={async () => {
+              const text = await readTextFromClipboard();
+              if (text) terminal?.paste(text);
+            }}
+            onOpenFileManager={() => {
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "get_cwd" }),
+                );
+              } else {
+                onOpenFileManager?.();
+              }
+            }}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
       </div>
     );
   },
