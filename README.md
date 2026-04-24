@@ -37,7 +37,7 @@ free and self-hosted alternative to Termius available for all platforms.
 
 - **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
 - **Remote Desktop Access** - RDP, VNC, and Telnet support over the browser with complete customization and split screening
-- **SSH Tunnel Management** - Create and manage SSH tunnels with automatic reconnection and health monitoring and support for -l or -r connections
+- **SSH Tunnel Management** - Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding powered by `ssh2` port-forwarding primitives. Desktop client-to-server tunnel settings are stored locally per desktop install; optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
 - **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
 - **Docker Management** - Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys

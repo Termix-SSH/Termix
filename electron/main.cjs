@@ -621,6 +621,56 @@ ipcMain.handle("save-server-config", (event, config) => {
   }
 });
 
+function getC2STunnelConfigPath() {
+  return path.join(app.getPath("userData"), "c2s-tunnels.json");
+}
+
+ipcMain.handle("get-c2s-tunnel-config", () => {
+  try {
+    const configPath = getC2STunnelConfigPath();
+    if (!fs.existsSync(configPath)) {
+      return [];
+    }
+    const configData = fs.readFileSync(configPath, "utf8");
+    const parsed = JSON.parse(configData);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error("Error reading C2S tunnel config:", error);
+    return [];
+  }
+});
+
+ipcMain.handle("save-c2s-tunnel-config", (_event, config) => {
+  try {
+    if (!Array.isArray(config)) {
+      return { success: false, error: "C2S tunnel config must be an array" };
+    }
+    const userDataPath = app.getPath("userData");
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+    fs.writeFileSync(getC2STunnelConfigPath(), JSON.stringify(config, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error("Error saving C2S tunnel config:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("get-c2s-tunnel-preset-default-name", () => {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const platform =
+    process.platform === "darwin"
+      ? "macOS"
+      : process.platform === "win32"
+        ? "Windows"
+        : "Linux";
+  const release = os.release();
+  const computerName = os.hostname();
+  return `[${date}] ${computerName} (${platform} ${release})`;
+});
+
 ipcMain.handle("get-setting", (event, key) => {
   try {
     const userDataPath = app.getPath("userData");

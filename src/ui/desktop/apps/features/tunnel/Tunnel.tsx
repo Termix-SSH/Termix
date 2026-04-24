@@ -168,6 +168,15 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
 
         const tunnelConfig = {
           name: tunnelName,
+          scope: tunnel.scope || "s2s",
+          mode: tunnel.mode || tunnel.tunnelType || "remote",
+          bindHost: tunnel.bindHost,
+          targetHost: tunnel.targetHost,
+          tunnelType:
+            tunnel.tunnelType ||
+            (tunnel.mode === "local" || tunnel.mode === "remote"
+              ? tunnel.mode
+              : "remote"),
           sourceHostId: host.id,
           tunnelIndex: tunnelIndex,
           hostName: host.name || `${host.username}@${host.ip}`,

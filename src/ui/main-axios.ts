@@ -8,6 +8,8 @@ import type {
   SSHFolder,
   TunnelConfig,
   TunnelStatus,
+  TunnelConnection,
+  C2STunnelPreset,
   FileManagerFile,
   FileManagerShortcut,
   DockerContainer,
@@ -1461,6 +1463,57 @@ export async function cancelTunnel(
     return response.data;
   } catch (error) {
     handleApiError(error, "cancel tunnel");
+  }
+}
+
+export async function getC2STunnelPresets(): Promise<C2STunnelPreset[]> {
+  try {
+    const response = await authApi.get("/c2s-tunnel-presets");
+    return response.data || [];
+  } catch (error) {
+    handleApiError(error, "fetch C2S tunnel presets");
+  }
+}
+
+export async function createC2STunnelPreset(data: {
+  name: string;
+  config: TunnelConnection[];
+  platform?: string;
+  computerName?: string;
+}): Promise<C2STunnelPreset> {
+  try {
+    const response = await authApi.post("/c2s-tunnel-presets", data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "create C2S tunnel preset");
+  }
+}
+
+export async function updateC2STunnelPreset(
+  id: number,
+  data: Partial<{
+    name: string;
+    config: TunnelConnection[];
+    platform: string;
+    computerName: string;
+  }>,
+): Promise<C2STunnelPreset> {
+  try {
+    const response = await authApi.put(`/c2s-tunnel-presets/${id}`, data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update C2S tunnel preset");
+  }
+}
+
+export async function deleteC2STunnelPreset(
+  id: number,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.delete(`/c2s-tunnel-presets/${id}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "delete C2S tunnel preset");
   }
 }
 

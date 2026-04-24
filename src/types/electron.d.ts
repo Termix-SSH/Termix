@@ -32,6 +32,11 @@ export interface ElectronAPI {
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
   testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  getC2STunnelConfig: () => Promise<unknown[]>;
+  saveC2STunnelConfig: (
+    config: unknown[],
+  ) => Promise<{ success: boolean; error?: string }>;
+  getC2STunnelPresetDefaultName: () => Promise<string>;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;

@@ -298,6 +298,23 @@ export const snippetFolders = sqliteTable("snippet_folders", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const c2sTunnelPresets = sqliteTable("c2s_tunnel_presets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  config: text("config").notNull(),
+  platform: text("platform"),
+  computerName: text("computer_name"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const snippetAccess = sqliteTable("snippet_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   snippetId: integer("snippet_id")

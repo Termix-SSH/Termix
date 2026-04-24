@@ -317,6 +317,18 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS c2s_tunnel_presets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        config TEXT NOT NULL,
+        platform TEXT,
+        computer_name TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS ssh_folders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -797,6 +809,31 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create snippet_access table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM c2s_tunnel_presets LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS c2s_tunnel_presets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          config TEXT NOT NULL,
+          platform TEXT,
+          computer_name TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create c2s_tunnel_presets table", {
         operation: "schema_migration",
         error: createError,
       });

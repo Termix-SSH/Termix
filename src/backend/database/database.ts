@@ -8,6 +8,7 @@ import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
+import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import guacamoleRoutes from "../guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
@@ -1161,7 +1162,7 @@ app.post(
         mimetype: req.file.mimetype,
       });
 
-      let userDataKey = DataCrypto.getUserDataKey(userId);
+      const userDataKey = DataCrypto.getUserDataKey(userId);
       if (!userDataKey) {
         throw new Error("User data not unlocked");
       }
@@ -1719,6 +1720,7 @@ app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
+app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/guacamole", guacamoleRoutes);
 app.use("/network-topology", networkTopologyRoutes);

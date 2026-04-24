@@ -161,7 +161,7 @@ export function HostTunnelTab({
                         <div className="mb-4">
                           <FormField
                             control={form.control}
-                            name={`tunnelConnections.${index}.tunnelType`}
+                            name={`tunnelConnections.${index}.mode`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>{t("hosts.tunnelType")}</FormLabel>
@@ -200,6 +200,31 @@ export function HostTunnelTab({
                                         </span>
                                         <span className="text-xs text-muted-foreground">
                                           {t("hosts.tunnelTypeRemoteDesc")}
+                                        </span>
+                                      </div>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        value="dynamic"
+                                        checked={field.value === "dynamic"}
+                                        onChange={() =>
+                                          field.onChange("dynamic")
+                                        }
+                                        className="w-4 h-4 text-primary border-input focus:ring-ring"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-medium">
+                                          {t(
+                                            "hosts.tunnelTypeDynamic",
+                                            "Dynamic SOCKS",
+                                          )}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {t(
+                                            "hosts.tunnelTypeDynamicDesc",
+                                            "Forward SOCKS5 CONNECT traffic through SSH",
+                                          )}
                                         </span>
                                       </div>
                                     </label>
@@ -321,9 +346,8 @@ export function HostTunnelTab({
                         </div>
 
                         <p className="text-sm text-muted-foreground mt-2">
-                          {form.watch(
-                            `tunnelConnections.${index}.tunnelType`,
-                          ) === "local"
+                          {form.watch(`tunnelConnections.${index}.mode`) ===
+                          "local"
                             ? t("hosts.tunnelForwardDescriptionLocal", {
                                 sourcePort:
                                   form.watch(
@@ -417,6 +441,8 @@ export function HostTunnelTab({
                         field.onChange([
                           ...field.value,
                           {
+                            scope: "s2s",
+                            mode: "remote",
                             tunnelType: "remote",
                             sourcePort: 22,
                             endpointPort: 224,

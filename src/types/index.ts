@@ -248,11 +248,18 @@ export interface CredentialData {
 // TUNNEL TYPES
 // ============================================================================
 
+export type TunnelScope = "s2s" | "c2s";
+export type TunnelMode = "local" | "remote" | "dynamic";
+
 export interface TunnelConnection {
+  scope?: TunnelScope;
+  mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  bindHost?: string;
   sourcePort: number;
   endpointPort: number;
   endpointHost: string;
+  targetHost?: string;
 
   endpointPassword?: string;
   endpointKey?: string;
@@ -267,7 +274,11 @@ export interface TunnelConnection {
 
 export interface TunnelConfig {
   name: string;
+  scope?: TunnelScope;
+  mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  bindHost?: string;
+  targetHost?: string;
 
   sourceHostId: number;
   tunnelIndex: number;
@@ -309,6 +320,17 @@ export interface TunnelConfig {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+}
+
+export interface C2STunnelPreset {
+  id: number;
+  userId: string;
+  name: string;
+  config: TunnelConnection[];
+  platform?: string | null;
+  computerName?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TunnelStatus {

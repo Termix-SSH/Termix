@@ -307,13 +307,20 @@ export function HostManagerEditor({
       tunnelConnections: z
         .array(
           z.object({
+            scope: z.enum(["s2s", "c2s"]).default("s2s").optional(),
+            mode: z
+              .enum(["local", "remote", "dynamic"])
+              .default("remote")
+              .optional(),
             tunnelType: z
               .enum(["local", "remote"])
               .default("remote")
               .optional(),
+            bindHost: z.string().optional(),
             sourcePort: z.coerce.number().min(1).max(65535),
             endpointPort: z.coerce.number().min(1).max(65535),
             endpointHost: z.string().min(1),
+            targetHost: z.string().optional(),
             endpointPassword: z.string().optional(),
             endpointKey: z.string().optional(),
             endpointKeyPassword: z.string().optional(),
@@ -781,6 +788,8 @@ export function HostManagerEditor({
         tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
           ? cleanedHost.tunnelConnections.map((conn: any) => ({
               ...conn,
+              scope: conn.scope || "s2s",
+              mode: conn.mode || conn.tunnelType || "remote",
               tunnelType: conn.tunnelType || "remote",
             }))
           : [],

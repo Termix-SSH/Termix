@@ -10,6 +10,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
+  getC2STunnelConfig: () => ipcRenderer.invoke("get-c2s-tunnel-config"),
+  saveC2STunnelConfig: (config) =>
+    ipcRenderer.invoke("save-c2s-tunnel-config", config),
+  getC2STunnelPresetDefaultName: () =>
+    ipcRenderer.invoke("get-c2s-tunnel-preset-default-name"),
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
 
