@@ -5,7 +5,8 @@
   "directories": {
     "output": "release"
   },
-  "asar": false,
+  "asar": true,
+  "asarUnpack": ["dist/backend/**/*", "node_modules/**/*.node"],
   "files": [
     "dist/**/*",
     "electron/**/*",
@@ -130,7 +131,6 @@
     "entitlementsInherit": "build/entitlements.mas.inherit.plist",
     "hardenedRuntime": false,
     "gatekeeperAssess": false,
-    "asar": false,
     "type": "distribution",
     "category": "public.app-category.developer-tools",
     "artifactName": "termix_macos_${arch}_mas.${ext}",
