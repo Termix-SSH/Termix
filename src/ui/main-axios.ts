@@ -382,6 +382,46 @@ function createApiInstance(
       }
     }
 
+    if (isElectron()) {
+      const localToken = localStorage.getItem("jwt");
+      if (localToken) {
+        if (config.headers.set) {
+          config.headers.set("Authorization", `Bearer ${localToken}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${localToken}`;
+        }
+        userWasAuthenticated = true;
+      }
+    } else {
+      const tokenCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("jwt="));
+
+      if (tokenCookie) {
+        const tokenValue = tokenCookie.split("=")[1];
+        if (tokenValue) {
+          const decodedToken = decodeURIComponent(tokenValue);
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${decodedToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${decodedToken}`;
+          }
+          userWasAuthenticated = true;
+        }
+      } else {
+        const localToken = localStorage.getItem("jwt");
+        if (localToken) {
+          if (config.headers.set) {
+            config.headers.set("Authorization", `Bearer ${localToken}`);
+          } else {
+            config.headers["Authorization"] = `Bearer ${localToken}`;
+          }
+          userWasAuthenticated = true;
+        }
+      }
+    }
+
+
     return config;
   });
 

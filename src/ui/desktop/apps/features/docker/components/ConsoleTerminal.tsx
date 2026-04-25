@@ -267,7 +267,13 @@ export function ConsoleTerminal({
             })()
           : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
 
-      const ws = new WebSocket(baseWsUrl);
+      let wsUrl = baseWsUrl;
+      if (isElectronApp && token) {
+        const separator = wsUrl.includes("?") ? "&" : "?";
+        wsUrl = `${wsUrl}${separator}token=${encodeURIComponent(token)}`;
+      }
+
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         const cols = terminal.cols || 80;
