@@ -40,27 +40,54 @@ export function useServiceWorker(): ServiceWorkerState {
 
     if (!isSupported) return;
 
+    const shouldReloadOnControllerChange = Boolean(
+      navigator.serviceWorker.controller,
+    );
+    let hasReloadedForUpdate = false;
+    const handleControllerChange = () => {
+      if (!shouldReloadOnControllerChange || hasReloadedForUpdate) {
+        return;
+      }
+
+      hasReloadedForUpdate = true;
+      window.location.reload();
+    };
+
     const registerSW = async () => {
       try {
         const registration = await navigator.serviceWorker.register(
           `${getBasePath()}/sw.js`,
+          { updateViaCache: "none" },
         );
         setState((prev) => ({ ...prev, isRegistered: true }));
 
         registration.addEventListener("updatefound", () =>
           handleUpdateFound(registration),
         );
+        await registration.update();
       } catch (error) {
         console.error("[SW] Registration failed:", error);
       }
     };
 
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      handleControllerChange,
+    );
+
     if (document.readyState === "complete") {
       registerSW();
     } else {
       window.addEventListener("load", registerSW);
-      return () => window.removeEventListener("load", registerSW);
     }
+
+    return () => {
+      window.removeEventListener("load", registerSW);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        handleControllerChange,
+      );
+    };
   }, [handleUpdateFound]);
 
   return state;

@@ -1,8 +1,5 @@
-const CACHE_NAME = "termix-v1";
+const CACHE_NAME = "termix-static-v2";
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
-  "/manifest.json",
   "/favicon.ico",
   "/icons/48x48.png",
   "/icons/128x128.png",
@@ -66,18 +63,11 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match("/index.html");
-      }),
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
-  const isStaticAsset = STATIC_ASSETS.some((asset) => {
-    if (asset === "/") return url.pathname === "/";
-    return url.pathname === asset || url.pathname.startsWith("/assets/");
-  });
+  const isStaticAsset = STATIC_ASSETS.some((asset) => url.pathname === asset);
 
   if (!isStaticAsset) {
     return;

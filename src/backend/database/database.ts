@@ -1771,10 +1771,38 @@ if (frontendDist) {
   databaseLogger.info(`Serving frontend from: ${frontendDist}`, {
     operation: "static_files",
   });
-  app.use(express.static(frontendDist));
+  app.use(
+    express.static(frontendDist, {
+      setHeaders: (res, filePath) => {
+        const relativePath = path
+          .relative(frontendDist, filePath)
+          .replaceAll(path.sep, "/");
+
+        if (relativePath.startsWith("assets/")) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return;
+        }
+
+        if (
+          relativePath === "index.html" ||
+          relativePath === "sw.js" ||
+          relativePath === "manifest.json"
+        ) {
+          res.setHeader(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          );
+        }
+      },
+    }),
+  );
 
   app.use((req, res, next) => {
     if (req.method === "GET" && req.accepts("html")) {
+      res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      );
       res.sendFile(path.join(frontendDist, "index.html"));
     } else {
       next();
