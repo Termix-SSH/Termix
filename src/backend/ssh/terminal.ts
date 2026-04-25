@@ -2102,6 +2102,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         if (resolvedCredentials.keyPassword) {
           connectConfig.passphrase = resolvedCredentials.keyPassword;
         }
+
+        if (resolvedCredentials.password) {
+          connectConfig.password = resolvedCredentials.password;
+        }
       } catch (keyError) {
         sshLogger.error("SSH key format error: " + keyError.message);
         ws.send(
