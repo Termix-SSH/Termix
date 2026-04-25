@@ -737,6 +737,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 );
               }
             }, 100);
+          } else if (msg.type === "session_ended") {
+            wasDisconnectedBySSH.current = true;
+            shouldNotReconnectRef.current = true;
+            isConnectingRef.current = false;
+            setIsConnected(false);
+            setIsConnecting(false);
+            updateConnectionError(t("terminal.sessionEnded"));
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
             isConnectingRef.current = false;
