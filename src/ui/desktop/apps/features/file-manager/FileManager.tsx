@@ -699,19 +699,14 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         reader.onerror = () => reject(reader.error);
 
         reader.onload = () => {
-          if (reader.result instanceof ArrayBuffer) {
-            const bytes = new Uint8Array(reader.result);
-            let binary = "";
-            for (let i = 0; i < bytes.byteLength; i++) {
-              binary += String.fromCharCode(bytes[i]);
-            }
-            const base64 = btoa(binary);
+          if (typeof reader.result === "string") {
+            const base64 = reader.result.split(",")[1] || "";
             resolve(base64);
           } else {
             reject(new Error("Failed to read file"));
           }
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsDataURL(file);
       });
 
       await uploadSSHFile(
