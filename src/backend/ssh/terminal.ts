@@ -1913,7 +1913,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }),
           );
         }
-      } else if (!sshStream) {
+      } else {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
