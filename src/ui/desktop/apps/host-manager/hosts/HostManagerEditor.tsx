@@ -52,7 +52,6 @@ import {
   getHostAccess,
   revokeHostAccess,
   getSSHHostById,
-  notifyHostCreatedOrUpdated,
   getGuacamoleSettings,
   type Role,
   type AccessRecord,
@@ -1092,10 +1091,6 @@ export function HostManagerEditor({
       }
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-
-      if (savedHost?.id) {
-        notifyHostCreatedOrUpdated(savedHost.id);
-      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);

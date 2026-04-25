@@ -53,11 +53,17 @@ const countdownIntervals = new Map<string, NodeJS.Timeout>();
 const retryExhaustedTunnels = new Set<string>();
 const cleanupInProgress = new Set<string>();
 const tunnelConnecting = new Set<string>();
+const lastTunnelErrors = new Map<string, string>();
+const lastTunnelErrorTypes = new Map<string, ErrorType>();
 
 const tunnelConfigs = new Map<string, TunnelConfig>();
 const activeTunnelProcesses = new Map<string, ChildProcess>();
 const pendingTunnelOperations = new Map<string, Promise<void>>();
 const tunnelStatusClients = new Set<Response>();
+let c2sRemoteStreamCounter = 0;
+const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
+const C2S_WS_LOW_WATERMARK = 256 * 1024;
+const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
 type ActiveTunnelRuntime = {
   sourceClient: Client;
@@ -71,7 +77,7 @@ type ActiveTunnelRuntime = {
 const activeTunnelRuntimes = new Map<string, ActiveTunnelRuntime>();
 
 type C2SOpenMessage = {
-  type: "open";
+  type: "open" | "test";
   tunnelConfig?: Partial<TunnelConfig>;
   targetHost?: string;
   targetPort?: number;
@@ -98,6 +104,35 @@ function sendC2SError(ws: WebSocket, message: string): void {
   }
 }
 
+function describeC2SRelayError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    lowerMessage.includes("administratively prohibited") ||
+    lowerMessage.includes("forwarding disabled") ||
+    lowerMessage.includes("open failed")
+  ) {
+    return `SSH forwarding was rejected by the endpoint server: ${message}`;
+  }
+  if (
+    lowerMessage.includes("address already in use") ||
+    lowerMessage.includes("unable to bind") ||
+    lowerMessage.includes("bind")
+  ) {
+    return `Remote port is not available on the endpoint server: ${message}`;
+  }
+  if (
+    lowerMessage.includes("name or service not known") ||
+    lowerMessage.includes("enotfound") ||
+    lowerMessage.includes("econnrefused")
+  ) {
+    return `Tunnel target is not reachable from the endpoint host: ${message}`;
+  }
+
+  return message || "Failed to open relay";
+}
+
 function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
   if (
     status.status === CONNECTION_STATES.CONNECTED &&
@@ -106,14 +141,41 @@ function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
     return;
   }
 
+  const nextStatus = { ...status };
+
   if (
     retryExhaustedTunnels.has(tunnelName) &&
-    status.status === CONNECTION_STATES.FAILED
+    nextStatus.status === CONNECTION_STATES.FAILED
   ) {
-    status.reason = "Max retries exhausted";
+    const previousReason = lastTunnelErrors.get(tunnelName);
+    nextStatus.reason = previousReason
+      ? `Max retries exhausted: ${previousReason}`
+      : "Max retries exhausted";
   }
 
-  connectionStatus.set(tunnelName, status);
+  if (nextStatus.status === CONNECTION_STATES.FAILED && nextStatus.reason) {
+    lastTunnelErrors.set(tunnelName, nextStatus.reason);
+    if (nextStatus.errorType) {
+      lastTunnelErrorTypes.set(tunnelName, nextStatus.errorType);
+    }
+  } else if (
+    (nextStatus.status === CONNECTION_STATES.CONNECTING ||
+      nextStatus.status === CONNECTION_STATES.RETRYING ||
+      nextStatus.status === CONNECTION_STATES.WAITING) &&
+    !nextStatus.reason
+  ) {
+    nextStatus.reason = lastTunnelErrors.get(tunnelName);
+    nextStatus.errorType = lastTunnelErrorTypes.get(tunnelName);
+  } else if (
+    nextStatus.status === CONNECTION_STATES.CONNECTED ||
+    (nextStatus.status === CONNECTION_STATES.DISCONNECTED &&
+      nextStatus.manualDisconnect)
+  ) {
+    lastTunnelErrors.delete(tunnelName);
+    lastTunnelErrorTypes.delete(tunnelName);
+  }
+
+  connectionStatus.set(tunnelName, nextStatus);
   broadcastTunnelStatusSnapshot();
 }
 
@@ -372,6 +434,8 @@ async function cleanupTunnelResources(
 function resetRetryState(tunnelName: string): void {
   retryCounters.delete(tunnelName);
   retryExhaustedTunnels.delete(tunnelName);
+  lastTunnelErrors.delete(tunnelName);
+  lastTunnelErrorTypes.delete(tunnelName);
   cleanupInProgress.delete(tunnelName);
   tunnelConnecting.delete(tunnelName);
 
@@ -672,10 +736,19 @@ function forwardOut(
   client: Client,
   targetHost: string,
   targetPort: number,
+  tunnelName?: string,
 ): Promise<ClientChannel> {
   return new Promise((resolve, reject) => {
     client.forwardOut("127.0.0.1", 0, targetHost, targetPort, (err, stream) => {
       if (err) {
+        if (tunnelName) {
+          tunnelLogger.error("Managed tunnel forwardOut failed", err, {
+            operation: "managed_tunnel_forward_out_failed",
+            tunnelName,
+            targetHost,
+            targetPort,
+          });
+        }
         reject(err);
         return;
       }
@@ -864,6 +937,7 @@ async function connectEndpointThroughSource(
     sourceClient,
     tunnelConfig.endpointIP,
     tunnelConfig.endpointSSHPort,
+    tunnelConfig.name,
   );
   const endpointOptions: Record<string, unknown> = {
     sock: endpointSock,
@@ -879,6 +953,20 @@ async function connectEndpointThroughSource(
 
   applyAuthOptions(endpointOptions, endpointCredentials);
   return connectClient(endpointOptions, tunnelConfig.name, "endpoint");
+}
+
+function resolveS2SLocalTargetHost(tunnelConfig: TunnelConfig): string {
+  const targetHost = tunnelConfig.targetHost?.trim();
+
+  if (
+    !targetHost ||
+    targetHost === tunnelConfig.endpointHost ||
+    targetHost === tunnelConfig.hostName
+  ) {
+    return "127.0.0.1";
+  }
+
+  return targetHost;
 }
 
 async function establishManagedS2STunnel(
@@ -906,9 +994,23 @@ async function establishManagedS2STunnel(
   const bindPort =
     mode === "remote" ? tunnelConfig.endpointPort : tunnelConfig.sourcePort;
   const staticTargetHost =
-    tunnelConfig.targetHost || (mode === "remote" ? "127.0.0.1" : "127.0.0.1");
+    mode === "remote"
+      ? tunnelConfig.targetHost || "127.0.0.1"
+      : resolveS2SLocalTargetHost(tunnelConfig);
   const staticTargetPort =
     mode === "remote" ? tunnelConfig.sourcePort : tunnelConfig.endpointPort;
+
+  tunnelLogger.info("Managed S2S tunnel route resolved", {
+    operation: "managed_tunnel_route_resolved",
+    tunnelName,
+    mode,
+    bindHost,
+    bindPort,
+    targetHost: staticTargetHost,
+    targetPort: staticTargetPort,
+    endpointHost: tunnelConfig.endpointHost,
+    endpointIP: tunnelConfig.endpointIP,
+  });
 
   const actualPort = await bindForwardIn(bindClient, bindHost, bindPort);
 
@@ -939,7 +1041,12 @@ async function establishManagedS2STunnel(
 
     pipeTunnelStreams(
       inbound,
-      forwardOut(outboundClient, staticTargetHost, staticTargetPort),
+      forwardOut(
+        outboundClient,
+        staticTargetHost,
+        staticTargetPort,
+        tunnelName,
+      ),
       tunnelName,
     );
   };
@@ -1097,6 +1204,199 @@ async function connectC2SSourceClient(
   return connectClient(connOptions, tunnelConfig.name, "source");
 }
 
+function pauseSourceForC2SWebSocket(ws: WebSocket, source?: Duplex): void {
+  if (!source) return;
+  if (ws.bufferedAmount <= C2S_WS_HIGH_WATERMARK) return;
+
+  source.pause();
+  const resumeTimer = setInterval(() => {
+    if (
+      ws.readyState !== 1 ||
+      source.destroyed ||
+      ws.bufferedAmount <= C2S_WS_LOW_WATERMARK
+    ) {
+      clearInterval(resumeTimer);
+      if (ws.readyState === 1 && !source.destroyed) {
+        source.resume();
+      }
+    }
+  }, 25);
+}
+
+function sendC2SMessage(
+  ws: WebSocket,
+  message: Record<string, unknown>,
+  source?: Duplex,
+): void {
+  if (ws.readyState === 1) {
+    ws.send(JSON.stringify(message), (error) => {
+      if (error && source && !source.destroyed) {
+        source.destroy(error);
+      }
+    });
+    pauseSourceForC2SWebSocket(ws, source);
+  }
+}
+
+function writeC2SRemoteChunk(
+  target: ClientChannel,
+  chunk: Buffer,
+  ws: WebSocket,
+  closeTarget: () => void,
+): void {
+  if (!target || target.destroyed) return;
+
+  if (target.writableLength > C2S_STREAM_WRITE_LIMIT) {
+    closeTarget();
+    return;
+  }
+
+  const canContinue = target.write(chunk);
+  if (!canContinue) {
+    ws.pause();
+    target.once("drain", () => {
+      if (ws.readyState === 1) {
+        ws.resume();
+      }
+    });
+  }
+}
+
+async function handleC2SRemoteRelayOpen(
+  ws: WebSocket,
+  tunnelConfig: TunnelConfig,
+): Promise<void> {
+  const tunnelName = tunnelConfig.name;
+  const sourceClient = await connectC2SSourceClient(tunnelConfig);
+  const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+  const bindPort = Number(tunnelConfig.sourcePort);
+  let closed = false;
+
+  if (!Number.isInteger(bindPort) || bindPort < 1 || bindPort > 65535) {
+    throw new Error("Invalid remote port");
+  }
+
+  const actualPort = await bindForwardIn(sourceClient, bindHost, bindPort);
+  const streams = new Map<string, ClientChannel>();
+
+  const closeStream = (streamId: string): void => {
+    const stream = streams.get(streamId);
+    if (!stream) return;
+    streams.delete(streamId);
+    try {
+      stream.destroy();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    for (const streamId of streams.keys()) {
+      closeStream(streamId);
+    }
+    unbindForwardIn(sourceClient, bindHost, actualPort);
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  sourceClient.on("tcp connection", (info, accept, reject) => {
+    if (info.destPort !== actualPort) {
+      reject();
+      return;
+    }
+
+    const inbound = accept();
+    const streamId = `${Date.now()}-${++c2sRemoteStreamCounter}`;
+    streams.set(streamId, inbound);
+
+    sendC2SMessage(ws, { type: "connection", streamId });
+
+    inbound.on("data", (chunk) => {
+      sendC2SMessage(
+        ws,
+        {
+          type: "data",
+          streamId,
+          data: chunk.toString("base64"),
+        },
+        inbound,
+      );
+    });
+    inbound.on("close", () => {
+      streams.delete(streamId);
+      sendC2SMessage(ws, { type: "close", streamId });
+    });
+    inbound.on("error", (error) => {
+      streams.delete(streamId);
+      sendC2SMessage(ws, {
+        type: "close",
+        streamId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  });
+
+  ws.on("message", (data, isBinary) => {
+    if (isBinary) return;
+
+    try {
+      const message = JSON.parse(data.toString()) as {
+        type?: string;
+        streamId?: string;
+        data?: string;
+      };
+      if (!message.streamId) return;
+
+      if (message.type === "data" && message.data) {
+        const stream = streams.get(message.streamId);
+        if (stream) {
+          writeC2SRemoteChunk(
+            stream,
+            Buffer.from(message.data, "base64"),
+            ws,
+            () => closeStream(message.streamId as string),
+          );
+        }
+      } else if (message.type === "close") {
+        closeStream(message.streamId);
+      }
+    } catch (error) {
+      tunnelLogger.warn("Invalid C2S remote relay message", {
+        operation: "c2s_remote_relay_invalid_message",
+        tunnelName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  ws.on("close", close);
+  ws.on("error", close);
+  sourceClient.on("close", () => {
+    if (ws.readyState === 1) ws.close();
+  });
+  sourceClient.on("error", (error) => {
+    sendC2SMessage(ws, {
+      type: "error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (ws.readyState === 1) ws.close();
+  });
+
+  tunnelLogger.info("C2S remote tunnel ready", {
+    operation: "c2s_remote_tunnel_ready",
+    tunnelName,
+    bindHost,
+    bindPort: actualPort,
+    endpointHost: tunnelConfig.endpointHost,
+  });
+  sendC2SMessage(ws, { type: "ready", bindHost, bindPort: actualPort });
+}
+
 async function handleC2SRelayOpen(
   ws: WebSocket,
   message: C2SOpenMessage,
@@ -1108,7 +1408,8 @@ async function handleC2SRelayOpen(
   );
   const mode = getTunnelMode(tunnelConfig);
   if (mode === "remote") {
-    throw new Error("Client remote forwarding is not available yet");
+    await handleC2SRemoteRelayOpen(ws, tunnelConfig);
+    return;
   }
 
   const targetHost =
@@ -1164,6 +1465,49 @@ async function handleC2SRelayOpen(
   });
 
   ws.send(JSON.stringify({ type: "ready" }));
+}
+
+async function handleC2SRelayTest(
+  ws: WebSocket,
+  message: C2SOpenMessage,
+  userId: string,
+): Promise<void> {
+  const tunnelConfig = await resolveC2STunnelSource(
+    message.tunnelConfig || {},
+    userId,
+  );
+  const mode = getTunnelMode(tunnelConfig);
+  const sourceClient = await connectC2SSourceClient(tunnelConfig);
+
+  try {
+    if (mode === "remote") {
+      const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+      const bindPort = Number(tunnelConfig.sourcePort);
+      if (!Number.isInteger(bindPort) || bindPort < 1 || bindPort > 65535) {
+        throw new Error("Invalid remote port");
+      }
+
+      const actualPort = await bindForwardIn(sourceClient, bindHost, bindPort);
+      unbindForwardIn(sourceClient, bindHost, actualPort);
+    } else if (mode === "local") {
+      const targetHost = tunnelConfig.targetHost || "127.0.0.1";
+      const targetPort = Number(tunnelConfig.endpointPort);
+      if (!Number.isInteger(targetPort) || targetPort < 1) {
+        throw new Error("Invalid remote target port");
+      }
+
+      const outbound = await forwardOut(sourceClient, targetHost, targetPort);
+      outbound.destroy();
+    }
+
+    sendC2SMessage(ws, { type: "ready" });
+  } finally {
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  }
 }
 
 async function connectSSHTunnel(
@@ -2711,15 +3055,18 @@ c2sRelayWss.on("connection", (ws, req) => {
       }
 
       const message = JSON.parse(raw.toString()) as C2SOpenMessage;
-      if (message.type !== "open") {
+      if (message.type !== "open" && message.type !== "test") {
         throw new Error("Invalid client tunnel relay request");
       }
 
       opened = true;
-      await handleC2SRelayOpen(ws, message, payload.userId);
+      if (message.type === "test") {
+        await handleC2SRelayTest(ws, message, payload.userId);
+      } else {
+        await handleC2SRelayOpen(ws, message, payload.userId);
+      }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to open relay";
+      const message = describeC2SRelayError(error);
       tunnelLogger.error("Failed to open C2S relay", error, {
         operation: "c2s_relay_open_failed",
       });

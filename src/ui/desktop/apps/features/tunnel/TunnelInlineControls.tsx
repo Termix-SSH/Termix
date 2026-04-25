@@ -36,6 +36,35 @@ function getStatusKind(status?: TunnelStatus) {
   return "disconnected";
 }
 
+function getStatusTitle(
+  status: TunnelStatus | undefined,
+  statusText: string,
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (!status) return statusText;
+
+  const details = [];
+  if (status.reason) details.push(status.reason);
+  if (status.retryCount && status.maxRetries) {
+    details.push(
+      t("tunnels.attempt", {
+        current: status.retryCount,
+        max: status.maxRetries,
+      }),
+    );
+  }
+  if (status.nextRetryIn) {
+    details.push(
+      t("tunnels.nextRetryIn", {
+        seconds: status.nextRetryIn,
+      }),
+    );
+  }
+  if (status.errorType && !status.reason) details.push(status.errorType);
+
+  return details.length > 0 ? details.join("\n") : statusText;
+}
+
 export function TunnelInlineControls({
   status,
   loading = false,
@@ -55,7 +84,7 @@ export function TunnelInlineControls({
         : kind === "error"
           ? t("tunnels.error")
           : t("tunnels.disconnected");
-  const title = kind === "error" && status?.reason ? status.reason : statusText;
+  const title = getStatusTitle(status, statusText, t);
 
   const statusClass =
     kind === "connected"

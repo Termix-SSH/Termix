@@ -45,10 +45,17 @@ export interface ElectronAPI {
     tunnel: unknown,
     index: number,
   ) => Promise<{ success: boolean; tunnelName?: string; error?: string }>;
+  testC2STunnel: (
+    tunnel: unknown,
+    index: number,
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
   stopC2STunnel: (
     tunnelName: string,
   ) => Promise<{ success: boolean; error?: string }>;
   getC2STunnelStatuses: () => Promise<Record<string, unknown>>;
+  onC2STunnelStatuses?: (
+    callback: (statuses: Record<string, unknown>) => void,
+  ) => () => void;
   startC2SAutoStartTunnels: () => Promise<{
     success: boolean;
     started: number;

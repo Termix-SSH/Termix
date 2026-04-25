@@ -334,6 +334,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
     const wasConnectedRef = useRef(false);
+    const closeAfterDisconnectRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -343,6 +344,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       reconnectAttempts.current = 0;
       wasConnectedRef.current = false;
       isAttachingSessionRef.current = false;
+      closeAfterDisconnectRef.current = false;
 
       return () => {};
     }, [hostConfig.id]);
@@ -1267,11 +1269,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }, 100);
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
+            shouldNotReconnectRef.current = true;
             setIsConnected(false);
             setIsConnecting(false);
             if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              setShowDisconnectedOverlay(true);
+              setShowDisconnectedOverlay(false);
+              if (onClose && !closeAfterDisconnectRef.current) {
+                closeAfterDisconnectRef.current = true;
+                isUnmountingRef.current = true;
+                window.setTimeout(onClose, 0);
+              }
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),

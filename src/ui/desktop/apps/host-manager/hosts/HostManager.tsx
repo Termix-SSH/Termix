@@ -144,9 +144,21 @@ export function HostManager({
     lastProcessedHostIdRef.current = undefined;
   };
 
-  const handleFormSubmit = () => {
+  const handleFormSubmit = (savedHost?: SSHHost) => {
     ignoreNextHostConfigChangeRef.current = true;
-    const savedHostId = editingHost?.id;
+    const isUpdatingHost = Boolean(editingHost?.id && savedHost?.id);
+
+    if (isUpdatingHost) {
+      setEditingHost((current) => ({ ...current, ...savedHost }) as SSHHost);
+      setIsAddingHost(false);
+      lastProcessedHostIdRef.current = savedHost.id;
+      if (updateTab && currentTabId !== undefined) {
+        updateTab(currentTabId, { hostConfig: savedHost });
+      }
+      return;
+    }
+
+    const savedHostId = savedHost?.id || editingHost?.id;
     setEditingHost(null);
     setIsAddingHost(false);
     setTimeout(() => {

@@ -52,6 +52,29 @@ function compareSemver(a, b) {
   return 0;
 }
 
+const INSECURE_MODE_VALUES = new Set(["true", "1", "yes"]);
+
+function isInsecureModeEnabled() {
+  return INSECURE_MODE_VALUES.has(
+    String(process.env.ENABLE_INSECURE_MODE || "")
+      .trim()
+      .toLowerCase(),
+  );
+}
+
+function getTlsVerificationOptions() {
+  return {
+    rejectUnauthorized: !isInsecureModeEnabled(),
+  };
+}
+
+function getWebSocketOptions(url, options = {}) {
+  return {
+    ...options,
+    ...(String(url).startsWith("wss:") ? getTlsVerificationOptions() : {}),
+  };
+}
+
 function httpFetch(url, options = {}) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
@@ -62,15 +85,8 @@ function httpFetch(url, options = {}) {
       method: options.method || "GET",
       headers: options.headers || {},
       timeout: options.timeout || 10000,
+      ...(isHttps ? getTlsVerificationOptions() : {}),
     };
-
-    if (isHttps) {
-      requestOptions.rejectUnauthorized = false;
-      requestOptions.agent = new https.Agent({
-        rejectUnauthorized: false,
-        checkServerIdentity: () => undefined,
-      });
-    }
 
     const req = client.request(url, requestOptions, (res) => {
       let data = "";
@@ -104,9 +120,14 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 }
 
-app.commandLine.appendSwitch("--ignore-certificate-errors");
-app.commandLine.appendSwitch("--ignore-ssl-errors");
-app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
+if (isInsecureModeEnabled()) {
+  logToFile(
+    "[security] ENABLE_INSECURE_MODE is enabled; TLS certificate validation is disabled.",
+  );
+  app.commandLine.appendSwitch("--ignore-certificate-errors");
+  app.commandLine.appendSwitch("--ignore-ssl-errors");
+  app.commandLine.appendSwitch("--ignore-certificate-errors-spki-list");
+}
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
@@ -675,14 +696,34 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
       return { success: false, error: "C2S tunnel config must be an array" };
     }
     const autoStartListeners = new Set();
+    const autoStartRemoteListeners = new Set();
     for (const tunnel of config) {
       if (!tunnel?.autoStart) continue;
       const mode = tunnel.mode || tunnel.tunnelType || "local";
       if (mode === "remote") {
-        return {
-          success: false,
-          error: "Client remote forwarding cannot use auto-start yet",
-        };
+        const sourceHostId = Number(tunnel.sourceHostId);
+        const sourcePort = Number(tunnel.sourcePort);
+        if (
+          !Number.isInteger(sourceHostId) ||
+          sourceHostId < 1 ||
+          !Number.isInteger(sourcePort) ||
+          sourcePort < 1 ||
+          sourcePort > 65535
+        ) {
+          return {
+            success: false,
+            error: "Invalid remote client tunnel endpoint or port",
+          };
+        }
+        const listenerKey = `${sourceHostId}:${sourcePort}`;
+        if (autoStartRemoteListeners.has(listenerKey)) {
+          return {
+            success: false,
+            error: `Another auto-start client tunnel already uses remote ${listenerKey}`,
+          };
+        }
+        autoStartRemoteListeners.add(listenerKey);
+        continue;
       }
 
       const bindHost = tunnel.bindHost || "127.0.0.1";
@@ -739,7 +780,31 @@ function checkLocalPortAvailable(host, port) {
   });
 }
 
+function checkTcpConnection(host, port) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve({ success: false, error: "Connection timed out" });
+    }, 5000);
+
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({ success: true });
+    });
+    socket.once("error", (error) => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({ success: false, error: error.message });
+    });
+  });
+}
+
 const c2sTunnelRuntimes = new Map();
+const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
+const C2S_WS_LOW_WATERMARK = 256 * 1024;
+const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
 function getServerConfigSync() {
   try {
@@ -806,11 +871,34 @@ function getC2STunnelStatus(tunnelName) {
   );
 }
 
+function getAllC2STunnelStatuses() {
+  const statuses = {};
+  for (const [tunnelName] of c2sTunnelRuntimes.entries()) {
+    statuses[tunnelName] = getC2STunnelStatus(tunnelName);
+  }
+  return statuses;
+}
+
+function emitC2STunnelStatuses() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("c2s-tunnel-statuses", getAllC2STunnelStatuses());
+}
+
 function setC2STunnelStatus(tunnelName, status) {
   const runtime = c2sTunnelRuntimes.get(tunnelName);
   if (runtime) {
     runtime.status = status;
+    emitC2STunnelStatuses();
   }
+}
+
+function setC2STunnelError(tunnelName, message) {
+  logToFile(`[c2s] ${tunnelName} failed:`, message);
+  setC2STunnelStatus(tunnelName, {
+    connected: false,
+    status: "ERROR",
+    reason: message,
+  });
 }
 
 function parseSocks5Target(buffer) {
@@ -855,12 +943,23 @@ async function openC2SRelay(
   socket,
   initialData,
 ) {
+  const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const relayUrl = getC2SRelayUrl();
   const headers = await getC2SRelayHeaders(relayUrl);
-  const ws = new WebSocket(relayUrl, {
-    headers,
-    rejectUnauthorized: false,
+  logToFile(`[c2s] opening relay for ${tunnelName}`, {
+    relayUrl,
+    targetHost,
+    targetPort,
   });
+  setC2STunnelStatus(tunnelName, {
+    connected: false,
+    status: "CONNECTING",
+    reason: `Opening relay to ${targetHost}:${targetPort}`,
+  });
+  const ws = new WebSocket(
+    relayUrl,
+    getWebSocketOptions(relayUrl, { headers }),
+  );
   const pendingChunks = [];
   let ready = false;
   let closed = false;
@@ -890,11 +989,18 @@ async function openC2SRelay(
 
   socket.on("data", sendChunk);
   socket.on("close", cleanup);
-  socket.on("error", cleanup);
+  socket.on("error", (error) => {
+    setC2STunnelError(tunnelName, error.message || "Local socket error");
+    cleanup();
+  });
   ws.on("close", cleanup);
-  ws.on("error", cleanup);
+  ws.on("error", (error) => {
+    setC2STunnelError(tunnelName, error.message || "Relay connection failed");
+    cleanup();
+  });
 
   ws.on("open", () => {
+    logToFile(`[c2s] relay connected for ${tunnelName}`);
     ws.send(
       JSON.stringify({
         type: "open",
@@ -915,6 +1021,11 @@ async function openC2SRelay(
       const message = JSON.parse(data.toString());
       if (message.type === "ready") {
         ready = true;
+        logToFile(`[c2s] relay ready for ${tunnelName}`);
+        setC2STunnelStatus(tunnelName, {
+          connected: true,
+          status: "CONNECTED",
+        });
         if (initialData?.length) {
           ws.send(initialData);
         }
@@ -923,20 +1034,150 @@ async function openC2SRelay(
         }
       } else if (message.type === "error") {
         logToFile("[c2s] relay error:", message.error);
+        setC2STunnelError(
+          tunnelName,
+          message.error || "Relay rejected the client tunnel",
+        );
         cleanup();
       }
     } catch (error) {
       logToFile("[c2s] invalid relay message:", error.message);
+      setC2STunnelError(tunnelName, error.message || "Invalid relay response");
       cleanup();
     }
   });
 }
 
+async function testC2SRelay(tunnel, targetHost, targetPort) {
+  const relayUrl = getC2SRelayUrl();
+  const headers = await getC2SRelayHeaders(relayUrl);
+  const ws = new WebSocket(
+    relayUrl,
+    getWebSocketOptions(relayUrl, { headers }),
+  );
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (result) => {
+      if (settled) return;
+      settled = true;
+      try {
+        ws.close();
+      } catch {
+        // expected during shutdown
+      }
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      settle({ success: false, error: "Tunnel test timed out" });
+    }, 15000);
+
+    ws.on("open", () => {
+      ws.send(
+        JSON.stringify({
+          type: "test",
+          tunnelConfig: tunnel,
+          targetHost,
+          targetPort,
+        }),
+      );
+    });
+    ws.on("message", (data, isBinary) => {
+      if (isBinary) return;
+
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === "ready") {
+          clearTimeout(timer);
+          settle({ success: true });
+        } else if (message.type === "error") {
+          clearTimeout(timer);
+          settle({
+            success: false,
+            error: message.error || "Tunnel test failed",
+          });
+        }
+      } catch (error) {
+        clearTimeout(timer);
+        settle({ success: false, error: error.message });
+      }
+    });
+    ws.on("error", (error) => {
+      clearTimeout(timer);
+      settle({ success: false, error: error.message });
+    });
+    ws.on("close", () => {
+      clearTimeout(timer);
+      settle({ success: false, error: "Tunnel test connection closed" });
+    });
+  });
+}
+
+async function testC2STunnel(tunnel, index = 0) {
+  const mode = tunnel.mode || tunnel.tunnelType || "local";
+  const testTunnel = {
+    ...tunnel,
+    name: `${getC2STunnelName(tunnel, index)}::test`,
+    mode,
+  };
+  const bindHost = tunnel.bindHost || "127.0.0.1";
+  const sourcePort = Number(tunnel.sourcePort);
+  const endpointPort = Number(tunnel.endpointPort);
+
+  if (!tunnel.sourceHostId) {
+    return { success: false, error: "Endpoint SSH host is required" };
+  }
+
+  if (mode === "remote") {
+    const localTarget = await checkTcpConnection(bindHost, endpointPort);
+    if (!localTarget.success) {
+      return {
+        success: false,
+        error: `Local target ${bindHost}:${endpointPort} is not reachable: ${localTarget.error}`,
+      };
+    }
+
+    return testC2SRelay(testTunnel, undefined, undefined);
+  }
+
+  if (!Number.isInteger(sourcePort) || sourcePort < 1 || sourcePort > 65535) {
+    return { success: false, error: "Invalid local port" };
+  }
+
+  const runtime = c2sTunnelRuntimes.get(getC2STunnelName(tunnel, index));
+  if (!runtime) {
+    const availability = await checkLocalPortAvailable(bindHost, sourcePort);
+    if (!availability.available) {
+      return {
+        success: false,
+        error: `Local listener ${bindHost}:${sourcePort} is not available: ${availability.error}`,
+      };
+    }
+  }
+
+  if (mode === "dynamic") {
+    return testC2SRelay(testTunnel, undefined, undefined);
+  }
+
+  if (!Number.isInteger(endpointPort) || endpointPort < 1) {
+    return { success: false, error: "Invalid remote port" };
+  }
+
+  return testC2SRelay(
+    testTunnel,
+    tunnel.targetHost || "127.0.0.1",
+    endpointPort,
+  );
+}
+
 function handleC2SDynamicConnection(tunnel, socket) {
+  const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   let buffer = Buffer.alloc(0);
   let stage = "greeting";
 
-  const fail = (code = 0x01) => {
+  const fail = (code = 0x01, message = "SOCKS5 request failed") => {
+    setC2STunnelError(tunnelName, message);
     if (!socket.destroyed) {
       socket.write(Buffer.from([0x05, code, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
       socket.destroy();
@@ -950,7 +1191,7 @@ function handleC2SDynamicConnection(tunnel, socket) {
       if (stage === "greeting") {
         if (buffer.length < 2) return;
         if (buffer[0] !== 0x05) {
-          fail();
+          fail(0x01, "Invalid SOCKS5 greeting");
           return;
         }
         const methodsLength = buffer[1];
@@ -971,13 +1212,13 @@ function handleC2SDynamicConnection(tunnel, socket) {
         openC2SRelay(tunnel, target.host, target.port, socket, remainder).catch(
           (error) => {
             logToFile("[c2s] dynamic relay failed:", error.message);
-            fail(0x05);
+            fail(0x05, error.message || "Dynamic relay failed");
           },
         );
       }
     } catch (error) {
       logToFile("[c2s] SOCKS5 parse failed:", error.message);
-      fail();
+      fail(0x01, error.message || "SOCKS5 parse failed");
     }
   };
 
@@ -986,11 +1227,281 @@ function handleC2SDynamicConnection(tunnel, socket) {
 }
 
 function handleC2SLocalConnection(tunnel, socket) {
+  const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const targetHost = tunnel.targetHost || "127.0.0.1";
   const targetPort = Number(tunnel.endpointPort);
   openC2SRelay(tunnel, targetHost, targetPort, socket).catch((error) => {
     logToFile("[c2s] local relay failed:", error.message);
+    setC2STunnelError(tunnelName, error.message || "Local relay failed");
     socket.destroy();
+  });
+}
+
+function pauseSourceForC2SWebSocket(ws, source) {
+  if (!source?.pause || !source?.resume) return;
+  if (ws.bufferedAmount <= C2S_WS_HIGH_WATERMARK) return;
+
+  source.pause();
+  const resumeTimer = setInterval(() => {
+    if (
+      ws.readyState !== WebSocket.OPEN ||
+      source.destroyed ||
+      ws.bufferedAmount <= C2S_WS_LOW_WATERMARK
+    ) {
+      clearInterval(resumeTimer);
+      if (ws.readyState === WebSocket.OPEN && !source.destroyed) {
+        source.resume();
+      }
+    }
+  }, 25);
+}
+
+function sendC2SRemoteMessage(ws, message, source) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message), (error) => {
+      if (error && source?.destroy) {
+        source.destroy(error);
+      }
+    });
+    pauseSourceForC2SWebSocket(ws, source);
+  }
+}
+
+function writeC2SRemoteChunk(target, chunk, ws, closeTarget) {
+  if (!target || target.destroyed) return;
+
+  if (target.writableLength > C2S_STREAM_WRITE_LIMIT) {
+    closeTarget();
+    return;
+  }
+
+  const canContinue = target.write(chunk);
+  if (!canContinue && typeof ws.pause === "function") {
+    ws.pause();
+    target.once("drain", () => {
+      if (ws.readyState === WebSocket.OPEN && typeof ws.resume === "function") {
+        ws.resume();
+      }
+    });
+  }
+}
+
+async function startC2SRemoteTunnel(tunnel, index = 0) {
+  const tunnelName = getC2STunnelName(tunnel, index);
+  const localHost = tunnel.bindHost || "127.0.0.1";
+  const localPort = Number(tunnel.endpointPort);
+  const remotePort = Number(tunnel.sourcePort);
+
+  if (!tunnel.sourceHostId) {
+    return { success: false, error: "Endpoint SSH host is required" };
+  }
+  if (!Number.isInteger(remotePort) || remotePort < 1 || remotePort > 65535) {
+    return { success: false, error: "Invalid remote port" };
+  }
+  if (!Number.isInteger(localPort) || localPort < 1 || localPort > 65535) {
+    return { success: false, error: "Invalid local port" };
+  }
+
+  const localTarget = await checkTcpConnection(localHost, localPort);
+  if (!localTarget.success) {
+    return {
+      success: false,
+      error: `Local target ${localHost}:${localPort} is not reachable: ${localTarget.error}`,
+    };
+  }
+
+  const existing = c2sTunnelRuntimes.get(tunnelName);
+  if (existing) {
+    return { success: true, tunnelName };
+  }
+
+  for (const runtime of c2sTunnelRuntimes.values()) {
+    if (
+      runtime.mode === "remote" &&
+      runtime.sourceHostId === Number(tunnel.sourceHostId) &&
+      runtime.sourcePort === remotePort
+    ) {
+      return {
+        success: false,
+        error: `Another client remote tunnel already uses ${remotePort} on this endpoint`,
+      };
+    }
+  }
+
+  const relayUrl = getC2SRelayUrl();
+  const headers = await getC2SRelayHeaders(relayUrl);
+  const ws = new WebSocket(
+    relayUrl,
+    getWebSocketOptions(relayUrl, { headers }),
+  );
+  const sockets = new Map();
+  let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    for (const socket of sockets.values()) {
+      socket.destroy();
+    }
+    sockets.clear();
+    try {
+      ws.close();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  c2sTunnelRuntimes.set(tunnelName, {
+    ws,
+    sockets,
+    mode: "remote",
+    sourceHostId: Number(tunnel.sourceHostId),
+    sourcePort: remotePort,
+    bindHost: localHost,
+    status: { connected: false, status: "CONNECTING" },
+    close: cleanup,
+  });
+  emitC2STunnelStatuses();
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    ws.on("open", () => {
+      logToFile(`[c2s] opening remote tunnel ${tunnelName}`, {
+        relayUrl,
+        remotePort,
+        localHost,
+        localPort,
+      });
+      ws.send(
+        JSON.stringify({
+          type: "open",
+          tunnelConfig: { ...tunnel, name: tunnelName, mode: "remote" },
+        }),
+      );
+    });
+
+    ws.on("message", (data, isBinary) => {
+      if (isBinary) return;
+
+      let message;
+      try {
+        message = JSON.parse(data.toString());
+      } catch (error) {
+        setC2STunnelError(tunnelName, error.message || "Invalid relay message");
+        cleanup();
+        settle({ success: false, error: error.message });
+        return;
+      }
+
+      if (message.type === "ready") {
+        setC2STunnelStatus(tunnelName, {
+          connected: true,
+          status: "CONNECTED",
+        });
+        settle({ success: true, tunnelName });
+        return;
+      }
+
+      if (message.type === "error") {
+        const error = message.error || "Relay rejected the client tunnel";
+        setC2STunnelError(tunnelName, error);
+        cleanup();
+        c2sTunnelRuntimes.delete(tunnelName);
+        emitC2STunnelStatuses();
+        settle({ success: false, error });
+        return;
+      }
+
+      if (message.type === "connection" && message.streamId) {
+        const socket = net.createConnection(
+          { host: localHost, port: localPort },
+          () => {
+            logToFile(`[c2s] remote stream ${message.streamId} connected`, {
+              tunnelName,
+              localHost,
+              localPort,
+            });
+          },
+        );
+        sockets.set(message.streamId, socket);
+        socket.on("data", (chunk) => {
+          sendC2SRemoteMessage(
+            ws,
+            {
+              type: "data",
+              streamId: message.streamId,
+              data: chunk.toString("base64"),
+            },
+            socket,
+          );
+        });
+        socket.on("close", () => {
+          sockets.delete(message.streamId);
+          sendC2SRemoteMessage(ws, {
+            type: "close",
+            streamId: message.streamId,
+          });
+        });
+        socket.on("error", (error) => {
+          logToFile(`[c2s] remote stream ${message.streamId} failed:`, {
+            tunnelName,
+            error: error.message,
+          });
+          sockets.delete(message.streamId);
+          sendC2SRemoteMessage(ws, {
+            type: "close",
+            streamId: message.streamId,
+            error: error.message,
+          });
+        });
+        return;
+      }
+
+      if (message.type === "data" && message.streamId && message.data) {
+        const socket = sockets.get(message.streamId);
+        writeC2SRemoteChunk(
+          socket,
+          Buffer.from(message.data, "base64"),
+          ws,
+          () => {
+            if (socket) {
+              sockets.delete(message.streamId);
+              socket.destroy();
+            }
+          },
+        );
+        return;
+      }
+
+      if (message.type === "close" && message.streamId) {
+        const socket = sockets.get(message.streamId);
+        if (socket) {
+          sockets.delete(message.streamId);
+          socket.destroy();
+        }
+      }
+    });
+
+    ws.on("close", () => {
+      cleanup();
+      c2sTunnelRuntimes.delete(tunnelName);
+      emitC2STunnelStatuses();
+      settle({ success: false, error: "Remote tunnel relay closed" });
+    });
+
+    ws.on("error", (error) => {
+      setC2STunnelError(tunnelName, error.message || "Relay connection failed");
+      cleanup();
+      c2sTunnelRuntimes.delete(tunnelName);
+      emitC2STunnelStatuses();
+      settle({ success: false, error: error.message });
+    });
   });
 }
 
@@ -999,12 +1510,16 @@ async function startC2STunnel(tunnel, index = 0) {
   const tunnelName = getC2STunnelName(tunnel, index);
   const bindHost = tunnel.bindHost || "127.0.0.1";
   const sourcePort = Number(tunnel.sourcePort);
+  logToFile(`[c2s] starting tunnel ${tunnelName}`, {
+    mode,
+    bindHost,
+    sourcePort,
+    sourceHostId: tunnel.sourceHostId,
+    endpointPort: tunnel.endpointPort,
+  });
 
   if (mode === "remote") {
-    return {
-      success: false,
-      error: "Client remote forwarding is not available yet",
-    };
+    return startC2SRemoteTunnel(tunnel, index);
   }
   if (!tunnel.sourceHostId) {
     return { success: false, error: "Endpoint SSH host is required" };
@@ -1019,7 +1534,11 @@ async function startC2STunnel(tunnel, index = 0) {
   }
 
   for (const runtime of c2sTunnelRuntimes.values()) {
-    if (runtime.bindHost === bindHost && runtime.sourcePort === sourcePort) {
+    if (
+      runtime.mode !== "remote" &&
+      runtime.bindHost === bindHost &&
+      runtime.sourcePort === sourcePort
+    ) {
       return {
         success: false,
         error: `Another client tunnel already uses ${bindHost}:${sourcePort}`,
@@ -1057,9 +1576,14 @@ async function startC2STunnel(tunnel, index = 0) {
   return new Promise((resolve) => {
     server.once("error", (error) => {
       c2sTunnelRuntimes.delete(tunnelName);
+      logToFile(`[c2s] failed to listen for ${tunnelName}:`, error.message);
+      emitC2STunnelStatuses();
       resolve({ success: false, error: error.message });
     });
     server.listen({ host: bindHost, port: sourcePort }, () => {
+      logToFile(
+        `[c2s] listening for ${tunnelName} on ${bindHost}:${sourcePort}`,
+      );
       setC2STunnelStatus(tunnelName, {
         connected: true,
         status: "CONNECTED",
@@ -1081,11 +1605,20 @@ async function stopC2STunnel(tunnelName) {
   });
 
   return new Promise((resolve) => {
+    if (typeof runtime.close === "function") {
+      runtime.close();
+      c2sTunnelRuntimes.delete(tunnelName);
+      emitC2STunnelStatuses();
+      resolve({ success: true });
+      return;
+    }
+
     for (const socket of runtime.sockets || []) {
       socket.destroy();
     }
-    runtime.server.close(() => {
+    runtime.server?.close(() => {
       c2sTunnelRuntimes.delete(tunnelName);
+      emitC2STunnelStatuses();
       resolve({ success: true });
     });
   });
@@ -1094,15 +1627,20 @@ async function stopC2STunnel(tunnelName) {
 function stopAllC2STunnels() {
   for (const [tunnelName, runtime] of c2sTunnelRuntimes.entries()) {
     try {
-      for (const socket of runtime.sockets || []) {
-        socket.destroy();
+      if (typeof runtime.close === "function") {
+        runtime.close();
+      } else {
+        for (const socket of runtime.sockets || []) {
+          socket.destroy();
+        }
+        runtime.server?.close();
       }
-      runtime.server.close();
     } catch (error) {
       logToFile(`[c2s] failed to stop tunnel ${tunnelName}:`, error.message);
     }
     c2sTunnelRuntimes.delete(tunnelName);
   }
+  emitC2STunnelStatuses();
 }
 
 async function startC2SAutoStartTunnels() {
@@ -1151,6 +1689,14 @@ ipcMain.handle("start-c2s-tunnel", async (_event, tunnel, index) => {
   }
 });
 
+ipcMain.handle("test-c2s-tunnel", async (_event, tunnel, index) => {
+  try {
+    return await testC2STunnel(tunnel, Number(index) || 0);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("stop-c2s-tunnel", async (_event, tunnelName) => {
   try {
     return await stopC2STunnel(tunnelName);
@@ -1160,11 +1706,7 @@ ipcMain.handle("stop-c2s-tunnel", async (_event, tunnelName) => {
 });
 
 ipcMain.handle("get-c2s-tunnel-statuses", () => {
-  const statuses = {};
-  for (const [tunnelName] of c2sTunnelRuntimes.entries()) {
-    statuses[tunnelName] = getC2STunnelStatus(tunnelName);
-  }
-  return statuses;
+  return getAllC2STunnelStatuses();
 });
 
 ipcMain.handle("start-c2s-autostart-tunnels", async () => {

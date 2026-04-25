@@ -30,7 +30,7 @@ import {
   subscribeTunnelStatuses,
 } from "@/ui/main-axios.ts";
 import type { SSHHost, TunnelConfig, TunnelStatus } from "@/types/index.js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { HostTunnelTabProps } from "./shared/tab-types";
 
@@ -47,6 +47,7 @@ export function HostTunnelTab({
   const [tunnelActions, setTunnelActions] = useState<Record<string, boolean>>(
     {},
   );
+  const previousTunnelStatusesRef = useRef<Record<string, TunnelStatus>>({});
   const supportsC2S =
     typeof window !== "undefined" && window.electronAPI?.isElectron === true;
 
@@ -55,6 +56,47 @@ export function HostTunnelTab({
       // The form should stay usable if the tunnel status stream reconnects.
     });
   }, []);
+
+  useEffect(() => {
+    const previousStatuses = previousTunnelStatusesRef.current;
+
+    for (const [tunnelName, status] of Object.entries(tunnelStatuses)) {
+      const previous = previousStatuses[tunnelName];
+      const statusChanged =
+        previous?.status !== status.status ||
+        previous?.reason !== status.reason ||
+        previous?.retryCount !== status.retryCount ||
+        previous?.nextRetryIn !== status.nextRetryIn;
+
+      if (!statusChanged) continue;
+
+      console.info("[tunnels] Server tunnel status changed", {
+        tunnelName,
+        status,
+      });
+
+      const statusValue = status.status?.toUpperCase();
+      const hasFailureDetail =
+        statusValue === "ERROR" ||
+        statusValue === "FAILED" ||
+        (Boolean(status.errorType) &&
+          Boolean(status.reason) &&
+          previous?.reason !== status.reason);
+
+      if (hasFailureDetail) {
+        const message = status.reason || t("tunnels.manualControlError");
+        console.error("[tunnels] Server tunnel failed", {
+          tunnelName,
+          status,
+        });
+        toast.error(message, {
+          id: `server-tunnel-error-${tunnelName}`,
+        });
+      }
+    }
+
+    previousTunnelStatusesRef.current = tunnelStatuses;
+  }, [t, tunnelStatuses]);
 
   const openC2SPresets = () => {
     const profileTab = tabs.find((tab) => tab.type === "user_profile");
@@ -98,6 +140,10 @@ export function HostTunnelTab({
     const tunnel = form.getValues(`serverTunnels.${index}`);
     const tunnelName = getTunnelName(host, index);
     setTunnelActions((current) => ({ ...current, [tunnelName]: true }));
+    console.info(`[tunnels] ${action} server tunnel`, {
+      tunnelName,
+      tunnel,
+    });
 
     try {
       if (action === "connect") {
@@ -169,6 +215,10 @@ export function HostTunnelTab({
         await disconnectTunnel(tunnelName);
       }
     } catch (error) {
+      console.error(`[tunnels] Failed to ${action} server tunnel`, {
+        tunnelName,
+        error,
+      });
       toast.error(
         error instanceof Error
           ? error.message
@@ -327,8 +377,8 @@ export function HostTunnelTab({
                     scope: "s2s",
                     mode: "remote",
                     tunnelType: "remote",
-                    bindHost: "127.0.0.1",
-                    targetHost: "127.0.0.1",
+                    bindHost: "",
+                    targetHost: "",
                     sourcePort: 22,
                     endpointPort: 224,
                     endpointHost: "",
@@ -497,6 +547,9 @@ export function HostTunnelTab({
                         )}
                       />
                     )}
+                    {mode === "dynamic" && (
+                      <div className="hidden md:block md:col-span-6" />
+                    )}
                     {!isC2S && (
                       <FormField
                         control={form.control}
@@ -510,13 +563,10 @@ export function HostTunnelTab({
                             <FormLabel>{t("tunnels.currentHostIp")}</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="127.0.0.1"
+                                placeholder={t("placeholders.bindLocalhost")}
                                 {...currentHostIpField}
                               />
                             </FormControl>
-                            <FormDescription>
-                              {t("tunnels.currentHostIpDescription")}
-                            </FormDescription>
                           </FormItem>
                         )}
                       />
