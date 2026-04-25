@@ -6,6 +6,7 @@ import { getSSHHosts, getUserInfo } from "@/ui/main-axios.ts";
 import type { SSHHost } from "@/types";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
 interface FullScreenAppWrapperProps {
   hostId?: string;
@@ -21,6 +22,17 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setHostConfig(null);
+    };
+
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {

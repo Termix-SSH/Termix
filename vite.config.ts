@@ -9,6 +9,9 @@ const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
 
 const hasSSL = fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath);
 const useHTTPS = process.env.VITE_HTTPS === "true" && hasSSL;
+const packageJson = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
+) as { version?: string };
 
 const manualChunkGroups: Record<string, string[]> = {
   "react-vendor": ["react", "react-dom"],
@@ -75,6 +78,11 @@ function getManualChunk(id: string): string | undefined {
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(
+      packageJson.version || "0.0.0",
+    ),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

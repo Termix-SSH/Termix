@@ -128,6 +128,8 @@ function AppContent({
 
     const handleSessionExpired = () => {
       setIsAuthenticated(false);
+      setIsAdmin(false);
+      setUsername(null);
     };
 
     dbHealthMonitor.on(

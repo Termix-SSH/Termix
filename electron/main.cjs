@@ -5,6 +5,7 @@ const {
   ipcMain,
   dialog,
   Menu,
+  session,
   Tray,
 } = require("electron");
 const path = require("path");
@@ -137,6 +138,77 @@ let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+const electronCacheVersionPath = path.join(
+  app.getPath("userData"),
+  "client-cache-version.json",
+);
+
+async function clearElectronClientCacheIfVersionChanged() {
+  const currentVersion = app.getVersion();
+  let previousVersion = null;
+
+  try {
+    if (fs.existsSync(electronCacheVersionPath)) {
+      const data = JSON.parse(fs.readFileSync(electronCacheVersionPath, "utf8"));
+      previousVersion = typeof data.version === "string" ? data.version : null;
+    }
+  } catch (error) {
+    logToFile("Failed to read Electron client cache version:", error.message);
+  }
+
+  if (previousVersion === currentVersion) {
+    return;
+  }
+
+  const clearStep = async (label, action) => {
+    try {
+      await action();
+    } catch (error) {
+      logToFile(`Failed to clear Electron ${label}:`, error.message);
+    }
+  };
+
+  try {
+    const defaultSession = session.defaultSession;
+    await clearStep("HTTP cache", () => defaultSession.clearCache());
+    await clearStep("code cache", () =>
+      defaultSession.clearCodeCaches({ urls: [] }),
+    );
+    await clearStep("auth cache", () => defaultSession.clearAuthCache());
+    await clearStep("storage data", () =>
+      defaultSession.clearStorageData({
+        storages: [
+          "appcache",
+          "cookies",
+          "filesystem",
+          "shadercache",
+          "websql",
+          "serviceworkers",
+          "cachestorage",
+        ],
+      }),
+    );
+
+    fs.writeFileSync(
+      electronCacheVersionPath,
+      JSON.stringify(
+        {
+          version: currentVersion,
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+    );
+
+    logToFile("Electron client cache cleared for version change", {
+      from: previousVersion || "none",
+      to: currentVersion,
+    });
+  } catch (error) {
+    logToFile("Failed to clear Electron client cache:", error.message);
+  }
+}
 
 function getBackendEntryPath() {
   if (isDev) {
@@ -1985,6 +2057,7 @@ app.whenReady().then(async () => {
     process.arch,
   );
   createMenu();
+  await clearElectronClientCacheIfVersionChanged();
 
   if (!isDev) {
     const result = await startBackendServer();

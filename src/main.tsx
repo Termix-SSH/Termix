@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { prepareClientCacheVersion } from "@/lib/client-cache-version";
 import { StrictMode, Suspense, lazy, useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
@@ -172,10 +173,12 @@ function RootApp() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <RootApp />
-    </ThemeProvider>
-  </StrictMode>,
-);
+prepareClientCacheVersion().finally(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <RootApp />
+      </ThemeProvider>
+    </StrictMode>,
+  );
+});

@@ -21,6 +21,7 @@ import {
 import { Auth } from "@/ui/mobile/authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
 function isReactNativeWebView(): boolean {
   return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
@@ -41,6 +42,17 @@ const AppContent: FC = () => {
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setUsername(null);
+    };
+
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {

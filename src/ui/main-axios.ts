@@ -295,20 +295,24 @@ export function isCurrentAuthInvalidationError(error: unknown): boolean {
   }
 
   const axiosError = error as AxiosError;
+  const apiError = error as ApiError;
   const responseData = axiosError.response?.data as
     | Record<string, unknown>
     | undefined;
-  const errorCode = responseData?.code;
-  const errorMessage = responseData?.error;
+  const errorCode = responseData?.code || apiError.code;
+  const errorMessage = responseData?.error || apiError.message;
+  const status = axiosError.response?.status || apiError.status;
+  const isMissingAuthenticationToken =
+    errorMessage === "Missing authentication token";
 
   return (
-    axiosError.response?.status === 401 &&
+    status === 401 &&
     (errorCode === "SESSION_EXPIRED" ||
       errorCode === "SESSION_NOT_FOUND" ||
-      errorCode === "AUTH_REQUIRED" ||
+      (errorCode === "AUTH_REQUIRED" && userWasAuthenticated) ||
       errorMessage === "Invalid token" ||
-      errorMessage === "Authentication required" ||
-      errorMessage === "Missing authentication token")
+      (errorMessage === "Authentication required" && userWasAuthenticated) ||
+      (isMissingAuthenticationToken && userWasAuthenticated))
   );
 }
 
@@ -481,11 +485,13 @@ function createApiInstance(
           ?.error;
         const isSessionExpired = errorCode === "SESSION_EXPIRED";
         const isSessionNotFound = errorCode === "SESSION_NOT_FOUND";
+        const isMissingAuthenticationToken =
+          errorMessage === "Missing authentication token";
         const isInvalidToken =
           errorCode === "AUTH_REQUIRED" ||
           errorMessage === "Invalid token" ||
           errorMessage === "Authentication required" ||
-          errorMessage === "Missing authentication token";
+          (isMissingAuthenticationToken && userWasAuthenticated);
 
         if (isSessionExpired || isSessionNotFound || isInvalidToken) {
           const requestStartedAt =
@@ -525,9 +531,7 @@ function createApiInstance(
             toast.warning("Session expired. Please log in again.");
           }
 
-          if (wasAuthenticated) {
-            dbHealthMonitor.reportSessionExpired();
-          }
+          dbHealthMonitor.reportSessionExpired();
 
           userWasAuthenticated = false;
         }
@@ -948,7 +952,7 @@ function handleApiError(error: unknown, operation: string): never {
         ? message
         : "Authentication required. Please log in again.";
 
-      throw new ApiError(errorMessage, 401, "AUTH_REQUIRED");
+      throw new ApiError(errorMessage, 401, code || "AUTH_REQUIRED");
     } else if (status === 403) {
       authLogger.warn(`Access denied: ${method} ${url}`, errorContext);
       const apiError = new ApiError(
@@ -2868,8 +2872,8 @@ export async function logoutUser(): Promise<{
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
       document.cookie = cookieString;
     }
 
@@ -2887,8 +2891,8 @@ export async function logoutUser(): Promise<{
     } else {
       const isSecure = window.location.protocol === "https:";
       const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Strict"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict";
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
       document.cookie = cookieString;
     }
     handleApiError(error, "logout user");

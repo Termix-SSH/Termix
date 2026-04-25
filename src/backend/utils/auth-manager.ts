@@ -718,7 +718,7 @@ class AuthManager {
     return {
       httpOnly: true,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-      sameSite: "strict" as const,
+      sameSite: "lax" as const,
       maxAge: maxAge,
       path: "/",
     };
@@ -728,7 +728,7 @@ class AuthManager {
     return {
       httpOnly: true,
       secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-      sameSite: "strict" as const,
+      sameSite: "lax" as const,
       path: "/",
     };
   }
