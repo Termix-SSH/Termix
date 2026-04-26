@@ -20,18 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu.tsx";
 import { Terminal as TerminalIcon } from "lucide-react";
 import { TERMINAL_THEMES } from "@/constants/terminal-themes.ts";
+import type { TabContextTab } from "@/types";
 
-interface TabData {
-  id: number;
-  type: string;
-  title: string;
-  terminalRef?: {
-    current?: {
-      sendInput?: (data: string) => void;
-    };
-  };
-  [key: string]: unknown;
-}
+type TabData = TabContextTab;
 
 interface TopNavbarProps {
   isTopbarOpen: boolean;
@@ -54,7 +45,7 @@ export function TopNavbar({
     reorderTabs,
     updateTab,
     setPreviewTerminalTheme,
-  } = useTabs() as any;
+  } = useTabs();
   const leftPosition =
     state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
@@ -531,7 +522,7 @@ export function TopNavbar({
 
           {/* Terminal Theme Switcher */}
           {(() => {
-            const activeTab = tabs.find((t: any) => t.id === currentTab);
+            const activeTab = tabs.find((t) => t.id === currentTab);
             if (activeTab?.type !== "terminal") return null;
 
             return (
@@ -558,9 +549,7 @@ export function TopNavbar({
                     <DropdownMenuItem
                       key={key}
                       onClick={() => {
-                        const activeTab = tabs.find(
-                          (t: any) => t.id === currentTab,
-                        );
+                        const activeTab = tabs.find((t) => t.id === currentTab);
                         if (activeTab?.hostConfig) {
                           const updatedConfig = {
                             ...activeTab.hostConfig.terminalConfig,
