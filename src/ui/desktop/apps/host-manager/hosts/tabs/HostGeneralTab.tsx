@@ -42,6 +42,9 @@ import type { HostGeneralTabProps } from "./shared/tab-types";
 import { JumpHostItem } from "./shared/JumpHostItem";
 import { testProxyConnection } from "@/ui/main-axios";
 import { toast } from "sonner";
+import type { ProxyNode } from "@/types";
+
+type JumpHostSelection = { hostId: number };
 
 export function HostGeneralTab({
   form,
@@ -130,12 +133,12 @@ export function HostGeneralTab({
       t("hosts.connectionPath") === "Connection Path" ? "You" : "You",
     ];
     const useSocks5 = form.watch("useSocks5");
-    const jumpHosts = form.watch("jumpHosts") || [];
+    const jumpHosts = (form.watch("jumpHosts") || []) as JumpHostSelection[];
 
     if (useSocks5) {
       if (proxyMode === "chain") {
-        const chain = form.watch("socks5ProxyChain") || [];
-        chain.forEach((node: any) => {
+        const chain = (form.watch("socks5ProxyChain") || []) as ProxyNode[];
+        chain.forEach((node) => {
           if (node.host) {
             const typeLabel =
               node.type === "http" ? "HTTP" : `SOCKS${node.type}`;
@@ -152,8 +155,8 @@ export function HostGeneralTab({
     }
 
     if (jumpHosts.length > 0 && hosts) {
-      jumpHosts.forEach((jh: any) => {
-        const found = hosts.find((h: any) => h.id === jh.hostId);
+      jumpHosts.forEach((jh) => {
+        const found = hosts.find((h) => h.id === jh.hostId);
         if (found) {
           parts.push(`Jump: ${found.name || found.ip}`);
         }
@@ -168,6 +171,9 @@ export function HostGeneralTab({
 
     return parts;
   };
+
+  const socks5ProxyChain = (form.watch("socks5ProxyChain") ||
+    []) as ProxyNode[];
 
   return (
     <div className="pt-2">
@@ -1200,200 +1206,180 @@ export function HostGeneralTab({
                           </Button>
                         </div>
 
-                        {(form.watch("socks5ProxyChain") || []).length ===
-                          0 && (
+                        {socks5ProxyChain.length === 0 && (
                           <div className="text-sm text-muted-foreground text-center p-4 border rounded-lg border-dashed">
                             {t("hosts.noProxyNodes")}
                           </div>
                         )}
 
-                        {(form.watch("socks5ProxyChain") || []).map(
-                          (node: any, index: number) => (
-                            <div
-                              key={index}
-                              className="p-4 border rounded-lg space-y-3 relative"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium">
-                                  {t("hosts.proxyNode")} {index + 1}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    const currentChain =
-                                      form.watch("socks5ProxyChain") || [];
-                                    form.setValue(
-                                      "socks5ProxyChain",
-                                      currentChain.filter(
-                                        (_: any, i: number) => i !== index,
-                                      ),
-                                    );
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        {socks5ProxyChain.map((node, index) => (
+                          <div
+                            key={index}
+                            className="p-4 border rounded-lg space-y-3 relative"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">
+                                {t("hosts.proxyNode")} {index + 1}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const currentChain =
+                                    form.watch("socks5ProxyChain") || [];
+                                  form.setValue(
+                                    "socks5ProxyChain",
+                                    currentChain.filter(
+                                      (_node: ProxyNode, i: number) =>
+                                        i !== index,
+                                    ),
+                                  );
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                  <FormLabel>{t("hosts.socks5Host")}</FormLabel>
-                                  <Input
-                                    placeholder={t("placeholders.socks5Host")}
-                                    value={node.host}
-                                    onChange={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        host: e.target.value,
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                    onBlur={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        host: e.target.value.trim(),
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <FormLabel>{t("hosts.socks5Port")}</FormLabel>
-                                  <Input
-                                    type="number"
-                                    placeholder={t("placeholders.socks5Port")}
-                                    value={node.port}
-                                    onChange={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        port: parseInt(e.target.value) || 1080,
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              </div>
-
+                            <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-2">
-                                <FormLabel>{t("hosts.proxyType")}</FormLabel>
-                                <Select
-                                  value={String(node.type)}
-                                  onValueChange={(value) => {
+                                <FormLabel>{t("hosts.socks5Host")}</FormLabel>
+                                <Input
+                                  placeholder={t("placeholders.socks5Host")}
+                                  value={node.host}
+                                  onChange={(e) => {
                                     const currentChain =
                                       form.watch("socks5ProxyChain") || [];
                                     const newChain = [...currentChain];
                                     newChain[index] = {
                                       ...newChain[index],
-                                      type:
-                                        value === "http"
-                                          ? ("http" as const)
-                                          : (parseInt(value) as 4 | 5),
+                                      host: e.target.value,
                                     };
                                     form.setValue("socks5ProxyChain", newChain);
                                   }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="4">
-                                      {t("hosts.socks4")}
-                                    </SelectItem>
-                                    <SelectItem value="5">
-                                      {t("hosts.socks5")}
-                                    </SelectItem>
-                                    <SelectItem value="http">
-                                      {t("hosts.httpConnect")}
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                  onBlur={(e) => {
+                                    const currentChain =
+                                      form.watch("socks5ProxyChain") || [];
+                                    const newChain = [...currentChain];
+                                    newChain[index] = {
+                                      ...newChain[index],
+                                      host: e.target.value.trim(),
+                                    };
+                                    form.setValue("socks5ProxyChain", newChain);
+                                  }}
+                                />
                               </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                  <FormLabel>
-                                    {t("hosts.socks5Username")}{" "}
-                                    {t("hosts.optional")}
-                                  </FormLabel>
-                                  <Input
-                                    placeholder={t("hosts.username")}
-                                    value={node.username || ""}
-                                    onChange={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        username: e.target.value,
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                    onBlur={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        username: e.target.value.trim(),
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <FormLabel>
-                                    {t("hosts.socks5Password")}{" "}
-                                    {t("hosts.optional")}
-                                  </FormLabel>
-                                  <PasswordInput
-                                    placeholder={t("hosts.password")}
-                                    value={node.password || ""}
-                                    onChange={(e) => {
-                                      const currentChain =
-                                        form.watch("socks5ProxyChain") || [];
-                                      const newChain = [...currentChain];
-                                      newChain[index] = {
-                                        ...newChain[index],
-                                        password: e.target.value,
-                                      };
-                                      form.setValue(
-                                        "socks5ProxyChain",
-                                        newChain,
-                                      );
-                                    }}
-                                  />
-                                </div>
+                              <div className="space-y-2">
+                                <FormLabel>{t("hosts.socks5Port")}</FormLabel>
+                                <Input
+                                  type="number"
+                                  placeholder={t("placeholders.socks5Port")}
+                                  value={node.port}
+                                  onChange={(e) => {
+                                    const currentChain =
+                                      form.watch("socks5ProxyChain") || [];
+                                    const newChain = [...currentChain];
+                                    newChain[index] = {
+                                      ...newChain[index],
+                                      port: parseInt(e.target.value) || 1080,
+                                    };
+                                    form.setValue("socks5ProxyChain", newChain);
+                                  }}
+                                />
                               </div>
                             </div>
-                          ),
-                        )}
+
+                            <div className="space-y-2">
+                              <FormLabel>{t("hosts.proxyType")}</FormLabel>
+                              <Select
+                                value={String(node.type)}
+                                onValueChange={(value) => {
+                                  const currentChain =
+                                    form.watch("socks5ProxyChain") || [];
+                                  const newChain = [...currentChain];
+                                  newChain[index] = {
+                                    ...newChain[index],
+                                    type:
+                                      value === "http"
+                                        ? ("http" as const)
+                                        : (parseInt(value) as 4 | 5),
+                                  };
+                                  form.setValue("socks5ProxyChain", newChain);
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="4">
+                                    {t("hosts.socks4")}
+                                  </SelectItem>
+                                  <SelectItem value="5">
+                                    {t("hosts.socks5")}
+                                  </SelectItem>
+                                  <SelectItem value="http">
+                                    {t("hosts.httpConnect")}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <FormLabel>
+                                  {t("hosts.socks5Username")}{" "}
+                                  {t("hosts.optional")}
+                                </FormLabel>
+                                <Input
+                                  placeholder={t("hosts.username")}
+                                  value={node.username || ""}
+                                  onChange={(e) => {
+                                    const currentChain =
+                                      form.watch("socks5ProxyChain") || [];
+                                    const newChain = [...currentChain];
+                                    newChain[index] = {
+                                      ...newChain[index],
+                                      username: e.target.value,
+                                    };
+                                    form.setValue("socks5ProxyChain", newChain);
+                                  }}
+                                  onBlur={(e) => {
+                                    const currentChain =
+                                      form.watch("socks5ProxyChain") || [];
+                                    const newChain = [...currentChain];
+                                    newChain[index] = {
+                                      ...newChain[index],
+                                      username: e.target.value.trim(),
+                                    };
+                                    form.setValue("socks5ProxyChain", newChain);
+                                  }}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <FormLabel>
+                                  {t("hosts.socks5Password")}{" "}
+                                  {t("hosts.optional")}
+                                </FormLabel>
+                                <PasswordInput
+                                  placeholder={t("hosts.password")}
+                                  value={node.password || ""}
+                                  onChange={(e) => {
+                                    const currentChain =
+                                      form.watch("socks5ProxyChain") || [];
+                                    const newChain = [...currentChain];
+                                    newChain[index] = {
+                                      ...newChain[index],
+                                      password: e.target.value,
+                                    };
+                                    form.setValue("socks5ProxyChain", newChain);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
 
