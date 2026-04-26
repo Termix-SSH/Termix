@@ -40,7 +40,6 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
         const userInfo = await getUserInfo();
         if (userInfo) {
           setIsAuthenticated(true);
-          setIsAdmin(userInfo.isAdmin || false);
         }
       } catch {
         setIsAuthenticated(false);
@@ -77,13 +76,8 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
     }
   }, [hostId, isAuthenticated, authLoading]);
 
-  const handleAuthSuccess = (authData: {
-    isAdmin: boolean;
-    username: string | null;
-    userId: string | null;
-  }) => {
+  const handleAuthSuccess = () => {
     setIsAuthenticated(true);
-    setIsAdmin(authData.isAdmin);
     window.location.reload();
   };
 

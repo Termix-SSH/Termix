@@ -93,7 +93,7 @@ export function Dashboard({
   );
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const { addTab, setCurrentTab, tabs: tabList, updateTab } = useTabs();
+  const { addTab, setCurrentTab, tabs: tabList } = useTabs();
   const {
     layout,
     loading: preferencesLoading,
@@ -102,12 +102,12 @@ export function Dashboard({
   } = useDashboardPreferences(loggedIn);
 
   let sidebarState: "expanded" | "collapsed" = "expanded";
-  let sidebarAvailable = false;
   try {
     const sidebar = useSidebar();
     sidebarState = sidebar.state;
-    sidebarAvailable = true;
-  } catch {}
+  } catch {
+    // Sidebar context is not available on every dashboard mount path.
+  }
 
   const topMarginPx = isTopbarOpen ? 74 : 26;
   const leftMarginPx = sidebarState === "collapsed" ? 26 : 8;

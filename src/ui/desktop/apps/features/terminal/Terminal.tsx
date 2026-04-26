@@ -1231,6 +1231,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 180000);
           } else if (msg.type === "totp_retry") {
+            // Existing prompt remains visible while the backend asks for another code.
           } else if (msg.type === "password_required") {
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("common.password"));

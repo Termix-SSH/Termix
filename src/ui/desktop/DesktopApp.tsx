@@ -3,7 +3,6 @@ import React, {
   Component,
   Suspense,
   lazy,
-  type ErrorInfo,
   type ReactNode,
   useEffect,
   useRef,

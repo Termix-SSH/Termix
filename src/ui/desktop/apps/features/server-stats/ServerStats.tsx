@@ -62,14 +62,6 @@ interface HostConfig {
   [key: string]: unknown;
 }
 
-interface TabData {
-  id: number;
-  type: string;
-  title?: string;
-  hostConfig?: HostConfig;
-  [key: string]: unknown;
-}
-
 interface ServerProps {
   hostConfig?: HostConfig;
   title?: string;
@@ -92,9 +84,7 @@ function ServerStatsInner({
     clearLogs,
     isExpanded: isConnectionLogExpanded,
   } = useConnectionLog();
-  const { addTab, tabs, currentTab, removeTab } = useTabs() as {
-    addTab: (tab: { type: string; [key: string]: unknown }) => number;
-    tabs: TabData[];
+  const { currentTab, removeTab } = useTabs() as {
     currentTab: number | null;
     removeTab: (tabId: number) => void;
   };
@@ -565,15 +555,6 @@ function ServerStatsInner({
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = sidebarState === "collapsed" ? 16 : 8;
   const bottomMarginPx = 8;
-
-  const isFileManagerAlreadyOpen = React.useMemo(() => {
-    if (!currentHostConfig) return false;
-    return tabs.some(
-      (tab: TabData) =>
-        tab.type === "file_manager" &&
-        tab.hostConfig?.id === currentHostConfig.id,
-    );
-  }, [tabs, currentHostConfig]);
 
   const wrapperStyle: React.CSSProperties = embedded
     ? { opacity: isVisible ? 1 : 0, height: "100%", width: "100%" }

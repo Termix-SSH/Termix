@@ -2,6 +2,7 @@ import React from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 
+
 import { useTranslation } from "react-i18next";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
 import {
@@ -27,6 +28,7 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import type { LogEntry } from "@/types/connection-log.ts";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -37,10 +39,11 @@ interface DockerManagerProps {
   onClose?: () => void;
 }
 
-interface TabData {
-  id: number;
-  type: string;
-  [key: string]: unknown;
+type ConnectionLogInput = Omit<LogEntry, "id" | "timestamp">;
+
+interface DockerConnectionError {
+  message?: string;
+  connectionLogs?: ConnectionLogInput[];
 }
 
 function DockerManagerInner({
@@ -70,7 +73,6 @@ function DockerManagerInner({
     string | null
   >(null);
   const [isConnecting, setIsConnecting] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState("containers");
   const [dockerValidation, setDockerValidation] =
     React.useState<DockerValidation | null>(null);
   const [isValidating, setIsValidating] = React.useState(false);
@@ -245,18 +247,19 @@ function DockerManagerInner({
           logDockerActivity();
           setTimeout(() => clearLogs(), 1000);
         }
-      } catch (error: any) {
+      } catch (error) {
+        const dockerError = error as DockerConnectionError;
         setIsConnecting(false);
         setIsValidating(false);
         setHasConnectionError(true);
 
-        if (error?.connectionLogs) {
-          setLogs(error.connectionLogs);
+        if (Array.isArray(dockerError.connectionLogs)) {
+          setLogs(dockerError.connectionLogs);
         } else {
           addLog({
             type: "error",
             stage: "connection",
-            message: error?.message || t("docker.connectionFailed"),
+            message: dockerError.message || t("docker.connectionFailed"),
           });
         }
       } finally {
@@ -296,7 +299,7 @@ function DockerManagerInner({
     try {
       const data = await listDockerContainers(sessionId, true);
       setContainers(data);
-    } catch (error) {
+    } catch {
       // Silently handle polling errors
     }
   }, [sessionId]);
@@ -313,7 +316,7 @@ function DockerManagerInner({
         if (!cancelled) {
           setContainers(data);
         }
-      } catch (error) {
+      } catch {
         // Silently handle polling errors
       } finally {
         if (!cancelled) {

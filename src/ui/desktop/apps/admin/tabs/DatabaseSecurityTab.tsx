@@ -6,15 +6,7 @@ import { toast } from "sonner";
 import { isElectron } from "@/ui/main-axios.ts";
 import { getBasePath } from "@/lib/base-path";
 
-interface DatabaseSecurityTabProps {
-  currentUser: {
-    is_oidc: boolean;
-  } | null;
-}
-
-export function DatabaseSecurityTab({
-  currentUser,
-}: DatabaseSecurityTabProps): React.ReactElement {
+export function DatabaseSecurityTab(): React.ReactElement {
   const { t } = useTranslation();
 
   const [exportLoading, setExportLoading] = React.useState(false);

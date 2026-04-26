@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
 import { TunnelViewer } from "@/ui/desktop/apps/features/tunnel/TunnelViewer.tsx";
 import {
   getSSHHosts,
@@ -17,7 +16,6 @@ import type {
 } from "../../../types/index.js";
 
 export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
-  const { t } = useTranslation();
   const [allHosts, setAllHosts] = useState<SSHHost[]>([]);
   const [visibleHosts, setVisibleHosts] = useState<SSHHost[]>([]);
   const [tunnelStatuses, setTunnelStatuses] = useState<

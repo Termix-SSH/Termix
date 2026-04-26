@@ -22,7 +22,7 @@ export function useCommandHistory({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const historyCache = useRef<Map<number, string[]>>(new Map());
-  s;
+
   useEffect(() => {
     if (!enabled || !hostId) {
       setCommandHistory([]);
