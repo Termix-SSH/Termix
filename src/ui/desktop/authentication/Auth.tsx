@@ -32,6 +32,17 @@ import {
 import { ElectronServerConfig as ServerConfigComponent } from "@/ui/desktop/authentication/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/ui/desktop/authentication/ElectronLoginForm.tsx";
 
+function isMissingServerConfigError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    (error as Error & { code?: string }).code === "NO_SERVER_CONFIGURED" ||
+    error.message.includes("no-server-configured")
+  );
+}
+
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
 }

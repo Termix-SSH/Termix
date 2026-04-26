@@ -10,6 +10,12 @@ interface VersionCheckModalProps {
   onContinue: () => void;
 }
 
+type ElectronWindow = Window & {
+  electronAPI?: {
+    getAppVersion?: () => Promise<string | undefined>;
+  };
+};
+
 export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -54,7 +60,9 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
 
-      const currentVersion = await (window as any).electronAPI?.getAppVersion();
+      const currentVersion = await (
+        window as ElectronWindow
+      ).electronAPI?.getAppVersion?.();
       const dismissedVersion = localStorage.getItem(
         "electron-version-check-dismissed",
       );
@@ -89,7 +97,9 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   };
 
   const handleContinue = async () => {
-    const currentVersion = await (window as any).electronAPI?.getAppVersion();
+    const currentVersion = await (
+      window as ElectronWindow
+    ).electronAPI?.getAppVersion?.();
     if (currentVersion) {
       localStorage.setItem("electron-version-check-dismissed", currentVersion);
     }
