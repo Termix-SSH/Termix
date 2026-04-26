@@ -3308,7 +3308,7 @@ router.patch(
               .update(hosts)
               .set({ statsConfig: JSON.stringify(merged) })
               .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
-          } catch (e) {
+          } catch {
             errors.push(`Failed to update statsConfig for host ${host.id}`);
           }
         }

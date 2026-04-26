@@ -1088,8 +1088,6 @@ class PollingManager {
     for (const { host, viewerUserId } of hostsToRefresh) {
       await this.startPollingForHost(host, { statusOnly: true, viewerUserId });
     }
-
-    const skipped = this.pollingConfigs.size - hostsToRefresh.length;
   }
 
   registerViewer(hostId: number, sessionId: string, userId: string): void {
@@ -1551,7 +1549,9 @@ async function buildSshConfig(
       statsLogger.error(
         `SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
       );
-      throw new Error(`Invalid SSH key format for host ${host.ip}`);
+      throw new Error(`Invalid SSH key format for host ${host.ip}`, {
+        cause: keyError,
+      });
     }
   } else if (host.authType === "none") {
     // no credentials needed
@@ -1653,6 +1653,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
             (proxyError instanceof Error
               ? proxyError.message
               : "Unknown error"),
+          { cause: proxyError },
         );
       }
     }
@@ -2580,7 +2581,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          let errorStage: ConnectionStage = "error";
+          let errorStage: ConnectionStage;
 
           if (
             errorMessage.includes("ENOTFOUND") ||
