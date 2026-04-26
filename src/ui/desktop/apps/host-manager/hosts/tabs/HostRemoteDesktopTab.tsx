@@ -23,6 +23,8 @@ import {
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import type { HostRemoteDesktopTabProps } from "./shared/tab-types";
 
+type RemoteDesktopForm = HostRemoteDesktopTabProps["form"];
+
 function GuacField({
   form,
   path,
@@ -30,13 +32,13 @@ function GuacField({
   description,
   type = "text",
 }: {
-  form: any;
+  form: RemoteDesktopForm;
   path: string;
   label: string;
   description?: string;
   type?: "text" | "number" | "password" | "switch";
 }) {
-  const fieldName = `guacamoleConfig.${path}` as any;
+  const fieldName = `guacamoleConfig.${path}` as never;
 
   if (type === "switch") {
     return (
@@ -118,13 +120,13 @@ function GuacSelect({
   options,
   placeholder,
 }: {
-  form: any;
+  form: RemoteDesktopForm;
   path: string;
   label: string;
   options: { value: string; label: string }[];
   placeholder?: string;
 }) {
-  const fieldName = `guacamoleConfig.${path}` as any;
+  const fieldName = `guacamoleConfig.${path}` as never;
 
   return (
     <FormField
