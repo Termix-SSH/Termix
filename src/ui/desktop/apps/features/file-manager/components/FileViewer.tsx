@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils.ts";
 import { useTranslation } from "react-i18next";
 import {
@@ -38,30 +38,33 @@ import {
   SiDocker,
 } from "react-icons/si";
 import { Button } from "@/components/ui/button.tsx";
-import CodeMirror from "@uiw/react-codemirror";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { loadLanguage } from "@uiw/codemirror-extensions-langs";
-import { EditorView, keymap } from "@codemirror/view";
-import { searchKeymap, search, openSearchPanel } from "@codemirror/search";
-import {
-  defaultKeymap,
-  history,
-  historyKeymap,
-  toggleComment,
-} from "@codemirror/commands";
-import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-import { PhotoProvider, PhotoView } from "react-photo-view";
-import "react-photo-view/dist/react-photo-view.css";
-import AudioPlayer from "react-h5-audio-player";
-import "react-h5-audio-player/lib/styles.css";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark as syntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Document, Page, pdfjs } from "react-pdf";
-import { Kbd, KbdKey } from "@/components/ui/kbd";
+import type { CodeEditorHandle } from "./CodeEditor.tsx";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+const CodeEditor = lazy(() =>
+  import("./CodeEditor.tsx").then((module) => ({
+    default: module.CodeEditor,
+  })),
+);
+const ImagePreview = lazy(() =>
+  import("./ImagePreview.tsx").then((module) => ({
+    default: module.ImagePreview,
+  })),
+);
+const MarkdownRenderer = lazy(() =>
+  import("./MarkdownRenderer.tsx").then((module) => ({
+    default: module.MarkdownRenderer,
+  })),
+);
+const PdfPreview = lazy(() =>
+  import("./PdfPreview.tsx").then((module) => ({
+    default: module.PdfPreview,
+  })),
+);
+const AudioPreview = lazy(() =>
+  import("./AudioPreview.tsx").then((module) => ({
+    default: module.AudioPreview,
+  })),
+);
 
 interface FileItem {
   name: string;
@@ -236,57 +239,22 @@ function getFileType(filename: string): {
   }
 }
 
-function getLanguageExtension(filename: string) {
-  const ext = filename.split(".").pop()?.toLowerCase() || "";
-  const baseName = filename.toLowerCase();
-
-  if (["dockerfile", "makefile", "rakefile", "gemfile"].includes(baseName)) {
-    return loadLanguage(baseName);
-  }
-
-  const langMap: Record<string, string> = {
-    js: "javascript",
-    jsx: "jsx",
-    ts: "typescript",
-    tsx: "tsx",
-    py: "python",
-    java: "java",
-    cpp: "cpp",
-    c: "c",
-    cs: "csharp",
-    php: "php",
-    rb: "ruby",
-    go: "go",
-    rs: "rust",
-    html: "html",
-    css: "css",
-    scss: "sass",
-    less: "less",
-    json: "json",
-    xml: "xml",
-    yaml: "yaml",
-    yml: "yaml",
-    toml: "toml",
-    sql: "sql",
-    sh: "shell",
-    bash: "shell",
-    zsh: "shell",
-    vue: "vue",
-    svelte: "svelte",
-    md: "markdown",
-    conf: "shell",
-    ini: "properties",
-  };
-
-  const language = langMap[ext];
-  return language ? loadLanguage(language) : null;
-}
-
 function formatFileSize(bytes?: number, t?: (key: string) => string): string {
   if (!bytes) return t ? t("fileManager.unknownSize") : "Unknown size";
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function PreviewFallback({ label }: { label: string }) {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
 }
 
 export function FileViewer({
@@ -309,38 +277,10 @@ export function FileViewer({
   const [forceShowAsText, setForceShowAsText] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [editorFocused, setEditorFocused] = useState(false);
-  const [imageLoadError, setImageLoadError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pdfScale, setPdfScale] = useState(1.2);
-  const [pdfError, setPdfError] = useState(false);
   const [markdownEditMode, setMarkdownEditMode] = useState(false);
-  const editorRef = useRef<{
-    view?: { dispatch: (transaction: unknown) => void };
-  } | null>(null);
+  const editorRef = useRef<CodeEditorHandle | null>(null);
 
   const fileTypeInfo = getFileType(file.name);
-
-  const getImageDataUrl = (content: string, fileName: string): string => {
-    const ext = fileName.split(".").pop()?.toLowerCase() || "";
-
-    const mimeTypes: Record<string, string> = {
-      svg: "image/svg+xml",
-      png: "image/png",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      gif: "image/gif",
-      webp: "image/webp",
-      bmp: "image/bmp",
-      ico: "image/x-icon",
-      tiff: "image/tiff",
-      tif: "image/tiff",
-    };
-
-    const mimeType = mimeTypes[ext] || "image/png";
-    return `data:${mimeType};base64,${content}`;
-  };
 
   const WARNING_SIZE = 50 * 1024 * 1024;
   const MAX_SIZE = Number.MAX_SAFE_INTEGER;
@@ -468,14 +408,7 @@ export function FileViewer({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  if (editorRef.current) {
-                    const view = editorRef.current.view;
-                    if (view) {
-                      openSearchPanel(view);
-                    }
-                  }
-                }}
+                onClick={() => editorRef.current?.openSearchPanel()}
                 className="flex items-center gap-2"
                 title={t("fileManager.searchInFile")}
               >
@@ -725,136 +658,32 @@ export function FileViewer({
         )}
 
         {fileTypeInfo.type === "image" && !showLargeFileWarning && (
-          <div className="p-6 flex items-center justify-center h-full relative">
-            {imageLoadError ? (
-              <div className="text-center text-muted-foreground">
-                <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-medium mb-2">
-                  {t("fileManager.imageLoadError")}
-                </h3>
-                <p className="text-sm mb-4">{file.name}</p>
-                {onDownload && (
-                  <Button
-                    variant="outline"
-                    onClick={onDownload}
-                    className="flex items-center gap-2 mx-auto"
-                  >
-                    <Download className="w-4 h-4" />
-                    {t("fileManager.download")}
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <PhotoProvider maskOpacity={0.7}>
-                <PhotoView src={getImageDataUrl(content, file.name)}>
-                  <img
-                    src={getImageDataUrl(content, file.name)}
-                    alt={file.name}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-sm cursor-pointer hover:shadow-lg transition-shadow"
-                    style={{ maxHeight: "calc(100vh - 200px)" }}
-                    onLoad={(e) => {
-                      setImageLoading(false);
-                      setImageLoadError(false);
-
-                      const img = e.currentTarget;
-                      if (
-                        onMediaDimensionsChange &&
-                        img.naturalWidth &&
-                        img.naturalHeight
-                      ) {
-                        onMediaDimensionsChange({
-                          width: img.naturalWidth,
-                          height: img.naturalHeight,
-                        });
-                      }
-                    }}
-                    onError={() => {
-                      setImageLoading(false);
-                      setImageLoadError(true);
-                    }}
-                  />
-                </PhotoView>
-              </PhotoProvider>
-            )}
-
-            {imageLoading && !imageLoadError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-sm text-muted-foreground">
-                    Loading image...
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <Suspense fallback={<PreviewFallback label="Loading image..." />}>
+            <ImagePreview
+              content={content}
+              fileName={file.name}
+              onDownload={onDownload}
+              onMediaDimensionsChange={onMediaDimensionsChange}
+            />
+          </Suspense>
         )}
 
         {shouldShowAsText && !showLargeFileWarning && (
           <div className="h-full flex flex-col">
             {isEditable ? (
-              <CodeMirror
-                ref={editorRef}
-                value={editedContent}
-                onChange={(value) => handleContentChange(value)}
-                onFocus={() => setEditorFocused(true)}
-                onBlur={() => setEditorFocused(false)}
-                extensions={[
-                  ...(getLanguageExtension(file.name)
-                    ? [getLanguageExtension(file.name)!]
-                    : []),
-                  history(),
-                  search(),
-                  autocompletion(),
-                  keymap.of([
-                    ...defaultKeymap,
-                    ...searchKeymap,
-                    ...historyKeymap,
-                    ...completionKeymap,
-                    {
-                      key: "Mod-/",
-                      run: toggleComment,
-                      preventDefault: true,
-                    },
-                    {
-                      key: "Mod-h",
-                      run: () => {
-                        return false;
-                      },
-                      preventDefault: true,
-                    },
-                  ]),
-                  EditorView.theme({
-                    "&": {
-                      height: "100%",
-                    },
-                    ".cm-scroller": {
-                      overflow: "auto",
-                      scrollbarWidth: "thin",
-                      scrollbarColor:
-                        "var(--scrollbar-thumb) var(--scrollbar-track)",
-                    },
-                    ".cm-editor": {
-                      height: "100%",
-                    },
-                  }),
-                ]}
-                theme={oneDark}
-                placeholder={t("fileManager.startTyping")}
-                className="h-full"
-                basicSetup={{
-                  lineNumbers: true,
-                  foldGutter: true,
-                  dropCursor: false,
-                  allowMultipleSelections: false,
-                  indentOnInput: true,
-                  bracketMatching: true,
-                  closeBrackets: true,
-                  autocompletion: true,
-                  highlightSelectionMatches: false,
-                  scrollPastEnd: false,
-                }}
-              />
+              <Suspense
+                fallback={<PreviewFallback label="Loading editor..." />}
+              >
+                <CodeEditor
+                  ref={editorRef}
+                  fileName={file.name}
+                  value={editedContent}
+                  onChange={handleContentChange}
+                  onFocus={() => setEditorFocused(true)}
+                  onBlur={() => setEditorFocused(false)}
+                  placeholder={t("fileManager.startTyping")}
+                />
+              </Suspense>
             ) : (
               <div className="h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto thin-scrollbar bg-background text-foreground">
                 {editedContent || content || t("fileManager.fileIsEmpty")}
@@ -992,226 +821,27 @@ export function FileViewer({
 
                   <div className="flex-1 overflow-auto thin-scrollbar bg-muted/10">
                     <div className="p-4">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ inline, className, children, ...props }) {
-                            const match = /language-(\w+)/.exec(
-                              className || "",
-                            );
-                            return !inline && match ? (
-                              <SyntaxHighlighter
-                                style={syntaxTheme}
-                                language={match[1]}
-                                PreTag="div"
-                                className="rounded-lg"
-                                {...props}
-                              >
-                                {String(children).replace(/\n$/, "")}
-                              </SyntaxHighlighter>
-                            ) : (
-                              <code
-                                className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            );
-                          },
-                          h1: ({ children }) => (
-                            <h1 className="text-2xl font-bold mb-4 mt-6 text-foreground border-b border-border pb-2">
-                              {children}
-                            </h1>
-                          ),
-                          h2: ({ children }) => (
-                            <h2 className="text-xl font-semibold mb-3 mt-5 text-foreground border-b border-border pb-1">
-                              {children}
-                            </h2>
-                          ),
-                          h3: ({ children }) => (
-                            <h3 className="text-lg font-semibold mb-2 mt-4 text-foreground">
-                              {children}
-                            </h3>
-                          ),
-                          h4: ({ children }) => (
-                            <h4 className="text-base font-semibold mb-2 mt-3 text-foreground">
-                              {children}
-                            </h4>
-                          ),
-                          p: ({ children }) => (
-                            <p className="mb-3 text-foreground leading-relaxed">
-                              {children}
-                            </p>
-                          ),
-                          ul: ({ children }) => (
-                            <ul className="mb-3 ml-4 list-disc text-foreground">
-                              {children}
-                            </ul>
-                          ),
-                          ol: ({ children }) => (
-                            <ol className="mb-3 ml-4 list-decimal text-foreground">
-                              {children}
-                            </ol>
-                          ),
-                          li: ({ children }) => (
-                            <li className="mb-1 text-foreground">{children}</li>
-                          ),
-                          blockquote: ({ children }) => (
-                            <blockquote className="border-l-4 border-blue-500 pl-3 mb-3 italic text-muted-foreground bg-muted/30 py-1">
-                              {children}
-                            </blockquote>
-                          ),
-                          table: ({ children }) => (
-                            <div className="mb-3 overflow-x-auto thin-scrollbar">
-                              <table className="min-w-full border border-border rounded-lg text-sm">
-                                {children}
-                              </table>
-                            </div>
-                          ),
-                          thead: ({ children }) => (
-                            <thead className="bg-muted">{children}</thead>
-                          ),
-                          tbody: ({ children }) => <tbody>{children}</tbody>,
-                          tr: ({ children }) => (
-                            <tr className="border-b border-border">
-                              {children}
-                            </tr>
-                          ),
-                          th: ({ children }) => (
-                            <th className="px-3 py-2 text-left font-semibold text-foreground">
-                              {children}
-                            </th>
-                          ),
-                          td: ({ children }) => (
-                            <td className="px-3 py-2 text-foreground">
-                              {children}
-                            </td>
-                          ),
-                          a: ({ href, children }) => (
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 underline"
-                            >
-                              {children}
-                            </a>
-                          ),
-                        }}
+                      <Suspense
+                        fallback={
+                          <PreviewFallback label="Loading preview..." />
+                        }
                       >
-                        {editedContent || "Nothing to preview yet..."}
-                      </ReactMarkdown>
+                        <MarkdownRenderer
+                          compact
+                          content={editedContent || "Nothing to preview yet..."}
+                        />
+                      </Suspense>
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="flex-1 overflow-auto thin-scrollbar p-6">
                   <div className="max-w-4xl mx-auto">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ inline, className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || "");
-                          return !inline && match ? (
-                            <SyntaxHighlighter
-                              style={syntaxTheme}
-                              language={match[1]}
-                              PreTag="div"
-                              className="rounded-lg"
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, "")}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code
-                              className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
-                              {...props}
-                            >
-                              {children}
-                            </code>
-                          );
-                        },
-                        h1: ({ children }) => (
-                          <h1 className="text-3xl font-bold mb-6 mt-8 text-foreground border-b border-border pb-2">
-                            {children}
-                          </h1>
-                        ),
-                        h2: ({ children }) => (
-                          <h2 className="text-2xl font-semibold mb-4 mt-6 text-foreground border-b border-border pb-1">
-                            {children}
-                          </h2>
-                        ),
-                        h3: ({ children }) => (
-                          <h3 className="text-xl font-semibold mb-3 mt-4 text-foreground">
-                            {children}
-                          </h3>
-                        ),
-                        h4: ({ children }) => (
-                          <h4 className="text-lg font-semibold mb-2 mt-3 text-foreground">
-                            {children}
-                          </h4>
-                        ),
-                        p: ({ children }) => (
-                          <p className="mb-4 text-foreground leading-relaxed">
-                            {children}
-                          </p>
-                        ),
-                        ul: ({ children }) => (
-                          <ul className="mb-4 ml-6 list-disc text-foreground">
-                            {children}
-                          </ul>
-                        ),
-                        ol: ({ children }) => (
-                          <ol className="mb-4 ml-6 list-decimal text-foreground">
-                            {children}
-                          </ol>
-                        ),
-                        li: ({ children }) => (
-                          <li className="mb-1 text-foreground">{children}</li>
-                        ),
-                        blockquote: ({ children }) => (
-                          <blockquote className="border-l-4 border-blue-500 pl-4 mb-4 italic text-muted-foreground bg-muted/30 py-2">
-                            {children}
-                          </blockquote>
-                        ),
-                        table: ({ children }) => (
-                          <div className="mb-4 overflow-x-auto thin-scrollbar">
-                            <table className="min-w-full border border-border rounded-lg">
-                              {children}
-                            </table>
-                          </div>
-                        ),
-                        thead: ({ children }) => (
-                          <thead className="bg-muted">{children}</thead>
-                        ),
-                        tbody: ({ children }) => <tbody>{children}</tbody>,
-                        tr: ({ children }) => (
-                          <tr className="border-b border-border">{children}</tr>
-                        ),
-                        th: ({ children }) => (
-                          <th className="px-4 py-2 text-left font-semibold text-foreground">
-                            {children}
-                          </th>
-                        ),
-                        td: ({ children }) => (
-                          <td className="px-4 py-2 text-foreground">
-                            {children}
-                          </td>
-                        ),
-                        a: ({ href, children }) => (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 underline"
-                          >
-                            {children}
-                          </a>
-                        ),
-                      }}
+                    <Suspense
+                      fallback={<PreviewFallback label="Loading preview..." />}
                     >
-                      {editedContent}
-                    </ReactMarkdown>
+                      <MarkdownRenderer content={editedContent} />
+                    </Suspense>
                   </div>
                 </div>
               )}
@@ -1220,202 +850,28 @@ export function FileViewer({
         )}
 
         {fileTypeInfo.type === "pdf" && !showLargeFileWarning && (
-          <div className="h-full flex flex-col bg-background">
-            <div className="flex-shrink-0 bg-muted/30 border-b border-border p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
-                      disabled={pageNumber <= 1}
-                    >
-                      {t("fileManager.previous")}
-                    </Button>
-                    <span className="text-sm text-foreground px-3 py-1 bg-background rounded border">
-                      {t("fileManager.pageXOfY", {
-                        current: pageNumber,
-                        total: numPages || 0,
-                      })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPageNumber(Math.min(numPages || 1, pageNumber + 1))
-                      }
-                      disabled={!numPages || pageNumber >= numPages}
-                    >
-                      {t("fileManager.next")}
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPdfScale(Math.max(0.5, pdfScale - 0.2))}
-                    >
-                      {t("fileManager.zoomOut")}
-                    </Button>
-                    <span className="text-sm text-foreground px-3 py-1 bg-background rounded border min-w-[80px] text-center">
-                      {Math.round(pdfScale * 100)}%
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPdfScale(Math.min(3.0, pdfScale + 0.2))}
-                    >
-                      {t("fileManager.zoomIn")}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto thin-scrollbar p-6 bg-surface">
-              <div className="flex justify-center">
-                {pdfError ? (
-                  <div className="text-center text-muted-foreground p-8">
-                    <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-medium mb-2">
-                      Cannot load PDF
-                    </h3>
-                    <p className="text-sm mb-4">
-                      There was an error loading this PDF file.
-                    </p>
-                    {onDownload && (
-                      <Button
-                        variant="outline"
-                        onClick={onDownload}
-                        className="flex items-center gap-2 mx-auto"
-                      >
-                        <Download className="w-4 h-4" />
-                        {t("fileManager.download")}
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <Document
-                    file={`data:application/pdf;base64,${content}`}
-                    onLoadSuccess={({ numPages }) => {
-                      setNumPages(numPages);
-                      setPdfError(false);
-
-                      if (onMediaDimensionsChange) {
-                        onMediaDimensionsChange({
-                          width: 800,
-                          height: 600,
-                        });
-                      }
-                    }}
-                    onLoadError={(error) => {
-                      console.error("PDF load error:", error);
-                      setPdfError(true);
-                    }}
-                    loading={
-                      <div className="text-center p-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                        <p className="text-sm text-muted-foreground">
-                          Loading PDF...
-                        </p>
-                      </div>
-                    }
-                  >
-                    <Page
-                      pageNumber={pageNumber}
-                      scale={pdfScale}
-                      className="shadow-lg"
-                      loading={
-                        <div className="text-center p-4">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                          <p className="text-xs text-muted-foreground">
-                            Loading page...
-                          </p>
-                        </div>
-                      }
-                    />
-                  </Document>
-                )}
-              </div>
-            </div>
-          </div>
+          <Suspense
+            fallback={<PreviewFallback label="Loading PDF viewer..." />}
+          >
+            <PdfPreview
+              content={content}
+              onDownload={onDownload}
+              onMediaDimensionsChange={onMediaDimensionsChange}
+            />
+          </Suspense>
         )}
 
         {fileTypeInfo.type === "audio" && !showLargeFileWarning && (
-          <div className="p-6 flex items-center justify-center h-full">
-            <div className="w-full max-w-2xl">
-              {(() => {
-                const ext = file.name.split(".").pop()?.toLowerCase() || "";
-                const mimeType = (() => {
-                  switch (ext) {
-                    case "mp3":
-                      return "audio/mpeg";
-                    case "wav":
-                      return "audio/wav";
-                    case "flac":
-                      return "audio/flac";
-                    case "ogg":
-                      return "audio/ogg";
-                    case "aac":
-                      return "audio/aac";
-                    case "m4a":
-                      return "audio/mp4";
-                    default:
-                      return "audio/mpeg";
-                  }
-                })();
-
-                const audioUrl = `data:${mimeType};base64,${content}`;
-
-                return (
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <div
-                        className={cn(
-                          "w-32 h-32 rounded-lg bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center shadow-lg",
-                          fileTypeInfo.color,
-                        )}
-                      >
-                        <Music className="w-16 h-16 text-pink-600" />
-                      </div>
-                    </div>
-
-                    <div className="text-center">
-                      <h3 className="font-semibold text-foreground text-lg mb-1">
-                        {file.name.replace(/\.[^/.]+$/, "")}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {ext.toUpperCase()} • {formatFileSize(file.size, t)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg overflow-hidden">
-                      <AudioPlayer
-                        src={audioUrl}
-                        onLoadedMetadata={() => {
-                          if (onMediaDimensionsChange) {
-                            onMediaDimensionsChange({
-                              width: 600,
-                              height: 400,
-                            });
-                          }
-                        }}
-                        onError={(e) => {
-                          console.error("Audio playback error:", e);
-                        }}
-                        showJumpControls={false}
-                        showSkipControls={false}
-                        showDownloadProgress={true}
-                        customAdditionalControls={[]}
-                        customVolumeControls={[]}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
+          <Suspense
+            fallback={<PreviewFallback label="Loading audio player..." />}
+          >
+            <AudioPreview
+              file={file}
+              content={content}
+              color={fileTypeInfo.color}
+              onMediaDimensionsChange={onMediaDimensionsChange}
+            />
+          </Suspense>
         )}
 
         {fileTypeInfo.type === "unknown" &&
