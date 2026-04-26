@@ -22,8 +22,17 @@ import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
+type ReactNativeWindow = Window & {
+  ReactNativeWebView?: {
+    postMessage: (message: string) => void;
+  };
+};
+
 function isReactNativeWebView(): boolean {
-  return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
+  return (
+    typeof window !== "undefined" &&
+    !!(window as ReactNativeWindow).ReactNativeWebView
+  );
 }
 
 const AppContent: FC = () => {

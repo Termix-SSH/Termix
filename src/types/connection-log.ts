@@ -32,7 +32,7 @@ export type LogEntry = {
   type: "info" | "success" | "warning" | "error";
   stage: ConnectionStage;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 };
 
 export interface ConnectionLogResponse {

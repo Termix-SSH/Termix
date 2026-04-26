@@ -25,8 +25,17 @@ import {
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
+type ReactNativeWindow = Window & {
+  ReactNativeWebView?: {
+    postMessage: (message: string) => void;
+  };
+};
+
 function isReactNativeWebView(): boolean {
-  return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
+  return (
+    typeof window !== "undefined" &&
+    !!(window as ReactNativeWindow).ReactNativeWebView
+  );
 }
 
 function postAuthSuccessToWebView() {
@@ -35,7 +44,7 @@ function postAuthSuccessToWebView() {
   }
 
   try {
-    (window as any).ReactNativeWebView.postMessage(
+    (window as ReactNativeWindow).ReactNativeWebView?.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
         source: "explicit",
