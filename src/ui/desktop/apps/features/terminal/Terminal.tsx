@@ -78,6 +78,11 @@ interface TerminalHandle {
   refresh: () => void;
 }
 
+type HostKeyVerificationData = Omit<
+  React.ComponentProps<typeof HostKeyVerificationDialog>,
+  "isOpen" | "scenario" | "onAccept" | "onReject" | "backgroundColor"
+>;
+
 interface SSHTerminalProps {
   hostConfig: HostConfig;
   isVisible: boolean;
@@ -195,12 +200,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
-    const currentHostConfigRef = useRef<any>(null);
+    const currentHostConfigRef = useRef<HostConfig | null>(null);
 
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;
       scenario: "new" | "changed";
-      data: any;
+      data: HostKeyVerificationData;
     } | null>(null);
 
     const sessionIdRef = useRef<string | null>(null);
@@ -1780,7 +1785,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...(hostConfig.terminalConfig as any),
+        ...hostConfig.terminalConfig,
       };
 
       let themeColors;
@@ -1864,7 +1869,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...(hostConfig.terminalConfig as any),
+        ...hostConfig.terminalConfig,
       };
 
       const fontConfig = TERMINAL_FONTS.find(
@@ -2018,7 +2023,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         const config = {
           ...DEFAULT_TERMINAL_CONFIG,
-          ...(hostConfig.terminalConfig as any),
+          ...hostConfig.terminalConfig,
         };
         if (config.backspaceMode !== "control-h") return;
 
