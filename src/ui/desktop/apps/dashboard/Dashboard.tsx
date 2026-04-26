@@ -64,7 +64,7 @@ export function Dashboard({
   const [isAdmin, setIsAdmin] = useState(false);
   const [, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [dbError, setDbError] = useState<string | null>(initialDbError);
+  const [, setDbError] = useState<string | null>(initialDbError);
 
   const [uptime, setUptime] = useState<string>("0d 0h 0m");
   const [versionStatus, setVersionStatus] = useState<
@@ -599,7 +599,6 @@ export function Dashboard({
             setUserId={setUserId}
             loggedIn={loggedIn}
             authLoading={authLoading}
-            dbError={dbError}
             setDbError={setDbError}
             onAuthSuccess={onAuthSuccess}
           />

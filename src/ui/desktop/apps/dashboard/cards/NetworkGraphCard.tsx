@@ -230,7 +230,7 @@ export function NetworkGraphCard({
           });
           edges = topologyData.edges || [];
         }
-      } catch (topologyError) {
+      } catch {
         console.warn("Starting with empty topology");
       }
 
@@ -631,7 +631,7 @@ export function NetworkGraphCard({
       setElements([...cyRef.current.elements().jsons()]);
       forceUpdate();
       setShowAddNodeDialog(false);
-    } catch (err) {
+    } catch {
       setError(t("networkGraph.failedToAddNode"));
     }
   };
@@ -889,7 +889,7 @@ export function NetworkGraphCard({
                     if (fileInputRef.current) {
                       fileInputRef.current.value = "";
                     }
-                  } catch (err) {
+                  } catch {
                     setError(t("networkGraph.invalidFile"));
                   }
                 };

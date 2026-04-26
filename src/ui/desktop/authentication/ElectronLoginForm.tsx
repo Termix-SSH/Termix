@@ -82,7 +82,7 @@ export function ElectronLoginForm({
         ) {
           await handleAuthSuccess();
         }
-      } catch (_err) {
+      } catch {
         // ignore
       }
     };
@@ -104,7 +104,7 @@ export function ElectronLoginForm({
         if (iframe.contentWindow) {
           setCurrentUrl(iframe.contentWindow.location.href);
         }
-      } catch (_e) {
+      } catch {
         setCurrentUrl(serverUrl);
       }
     };

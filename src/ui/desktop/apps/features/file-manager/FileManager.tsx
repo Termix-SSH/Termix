@@ -165,7 +165,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   >("no_keyboard");
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
-  const [isClosing, setIsClosing] = useState<boolean>(false);
   const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
 
   const [contextMenu, setContextMenu] = useState<{

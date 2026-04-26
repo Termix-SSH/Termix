@@ -475,7 +475,7 @@ export function HostManagerViewer({
     try {
       document.execCommand("copy");
       toast.success(t("hosts.fullScreenUrlCopied"));
-    } catch (err) {
+    } catch {
       toast.error(t("hosts.failedToCopyUrl"));
     }
     document.body.removeChild(textArea);
@@ -1562,7 +1562,7 @@ export function HostManagerViewer({
                                           }
                                           try {
                                             return JSON.parse(host.statsConfig);
-                                          } catch (e) {
+                                          } catch {
                                             return DEFAULT_STATS_CONFIG;
                                           }
                                         })();

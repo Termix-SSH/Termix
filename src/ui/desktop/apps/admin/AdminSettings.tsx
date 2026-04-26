@@ -483,7 +483,6 @@ export function AdminSettings({
         user={selectedUserForEdit}
         currentUser={currentUser}
         onSuccess={handleEditUserSuccess}
-        allowPasswordLogin={allowPasswordLogin}
       />
 
       <LinkAccountDialog

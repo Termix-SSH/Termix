@@ -63,15 +63,10 @@ interface User {
   is_admin: boolean;
 }
 
-interface HostSharingTabProps {
-  hostId: number | undefined;
-  isNewHost: boolean;
-}
-
 export function HostSharingTab({
   hostId,
   isNewHost,
-}: SharingTabContentProps): React.ReactElement {
+}: HostSharingTabProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
 
@@ -80,7 +75,7 @@ export function HostSharingTab({
   const [selectedRoleId, setSelectedRoleId] = React.useState<number | null>(
     null,
   );
-  const [permissionLevel, setPermissionLevel] = React.useState("view");
+  const permissionLevel = "view";
   const [expiresInHours, setExpiresInHours] = React.useState<string>("");
 
   const [roles, setRoles] = React.useState<Role[]>([]);
@@ -203,7 +198,7 @@ export function HostSharingTab({
       setSelectedRoleId(null);
       setExpiresInHours("");
       loadAccessList();
-    } catch (error) {
+    } catch {
       toast.error(t("rbac.failedToShare"));
     }
   };
@@ -224,7 +219,7 @@ export function HostSharingTab({
       await revokeHostAccess(hostId, accessId);
       toast.success(t("rbac.accessRevokedSuccessfully"));
       loadAccessList();
-    } catch (error) {
+    } catch {
       toast.error(t("rbac.failedToRevokeAccess"));
     }
   };

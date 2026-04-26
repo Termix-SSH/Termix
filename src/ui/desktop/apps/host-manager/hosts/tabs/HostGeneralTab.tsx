@@ -69,7 +69,6 @@ export function HostGeneralTab({
   editorTheme,
   hosts,
   editingHost,
-  folders,
   credentials,
   t,
 }: HostGeneralTabProps) {
@@ -136,7 +135,7 @@ export function HostGeneralTab({
     if (useSocks5) {
       if (proxyMode === "chain") {
         const chain = form.watch("socks5ProxyChain") || [];
-        chain.forEach((node: any, i: number) => {
+        chain.forEach((node: any) => {
           if (node.host) {
             const typeLabel =
               node.type === "http" ? "HTTP" : `SOCKS${node.type}`;
