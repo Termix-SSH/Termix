@@ -3,7 +3,6 @@ import React, {
   useEffect,
   Component,
   type FC,
-  type ErrorInfo,
   type ReactNode,
 } from "react";
 import { Terminal } from "@/ui/mobile/apps/terminal/Terminal.tsx";
@@ -271,7 +270,7 @@ class TabErrorBoundary extends Component<
     throw error;
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error) {
     if (error.message?.includes("useTabs must be used within a TabProvider")) {
       console.warn(
         "TabProvider mounting race condition detected, recovering...",

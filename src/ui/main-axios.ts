@@ -341,7 +341,6 @@ function createApiInstance(
 
     const logger = getLoggerForService(serviceName);
 
-    const requestBaseURL = config.baseURL || "";
     const isDevMode = process.env.NODE_ENV === "development";
 
     if (isDevMode) {
@@ -574,10 +573,6 @@ interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   requestId?: string;
 }
 
-interface AxiosResponseExtended extends AxiosResponse {
-  config: AxiosRequestConfigExtended;
-}
-
 interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
@@ -640,10 +635,6 @@ export function getConfiguredServerUrl(): string | null {
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
   requestId?: string;
-}
-
-interface AxiosResponseExtended extends AxiosResponse {
-  config: AxiosRequestConfigExtended;
 }
 
 interface AxiosErrorExtended extends AxiosError {

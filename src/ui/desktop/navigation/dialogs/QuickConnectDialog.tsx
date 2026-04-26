@@ -30,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch.tsx";
 import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
-import { quickConnect, getCredentials } from "@/ui/main-axios.ts";
+import { quickConnect } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
@@ -38,7 +38,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import { EditorView } from "@codemirror/view";
 import { useTheme } from "@/components/theme-provider.tsx";
-import type { SSHHost, Credential } from "@/types";
+import type { SSHHost } from "@/types";
 
 interface QuickConnectDialogProps {
   open: boolean;
@@ -70,7 +70,6 @@ export function QuickConnectDialog({
   const [keyInputMethod, setKeyInputMethod] = useState<"upload" | "paste">(
     "upload",
   );
-  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [keyTypeDropdownOpen, setKeyTypeDropdownOpen] = useState(false);
   const keyTypeButtonRef = useRef<HTMLButtonElement>(null);
   const keyTypeDropdownRef = useRef<HTMLDivElement>(null);
@@ -166,21 +165,6 @@ export function QuickConnectDialog({
       overrideCredentialUsername: false,
     },
   });
-
-  useEffect(() => {
-    const fetchCredentials = async () => {
-      try {
-        const data = await getCredentials();
-        setCredentials((data as Credential[]) || []);
-      } catch (error) {
-        console.error("Failed to fetch credentials:", error);
-      }
-    };
-
-    if (open) {
-      fetchCredentials();
-    }
-  }, [open]);
 
   useEffect(() => {
     form.setValue("authType", authTab, { shouldValidate: true });

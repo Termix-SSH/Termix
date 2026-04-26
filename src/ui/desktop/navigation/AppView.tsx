@@ -187,7 +187,6 @@ export function AppView({
   const [panelRects, setPanelRects] = useState<Record<string, DOMRect | null>>(
     {},
   );
-  const [ready, setReady] = useState<boolean>(true);
   const [resetKey, setResetKey] = useState<number>(0);
   const previousStylesRef = useRef<Record<number, React.CSSProperties>>({});
 
