@@ -52,12 +52,6 @@ import { HostSharingTab } from "./tabs/HostSharingTab";
 import { HostRemoteDesktopTab } from "./tabs/HostRemoteDesktopTab";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
-interface User {
-  id: string;
-  username: string;
-  is_admin: boolean;
-}
-
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
   onFormSubmit?: (updatedHost?: SSHHost) => void;

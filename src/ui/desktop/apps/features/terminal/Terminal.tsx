@@ -99,7 +99,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
-      onTitleChange,
       initialPath,
       executeCommand,
       onOpenFileManager,
@@ -246,7 +245,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const keyHandlerAttachedRef = useRef(false);
     const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
       useState<boolean>(
         () => localStorage.getItem("commandHistoryTracking") === "true",
@@ -311,9 +309,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
 
-    const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-    const [commandHistory, setCommandHistory] = useState<string[]>([]);
-    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [showHistoryDialog] = useState(false);
+    const [, setCommandHistory] = useState<string[]>([]);
+    const [, setIsLoadingHistory] = useState(false);
 
     const setIsLoadingRef = useRef(commandHistoryContext.setIsLoading);
     const setCommandHistoryContextRef = useRef(
