@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { isElectron } from "@/ui/main-axios";
+import { isElectron } from "@/lib/electron";
 import { getBasePath } from "@/lib/base-path";
 
 interface ServiceWorkerState {
