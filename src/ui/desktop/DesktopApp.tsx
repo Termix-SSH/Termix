@@ -560,7 +560,6 @@ function AppContent({
           <TopNavbar
             isTopbarOpen={isTopbarOpen}
             setIsTopbarOpen={setIsTopbarOpen}
-            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onRightSidebarStateChange={(isOpen, width) => {
               setRightSidebarOpen(isOpen);
               setRightSidebarWidth(width);

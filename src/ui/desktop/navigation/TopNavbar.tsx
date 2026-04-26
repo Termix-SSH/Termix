@@ -36,14 +36,12 @@ interface TabData {
 interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
-  onOpenCommandPalette: () => void;
   onRightSidebarStateChange?: (isOpen: boolean, width: number) => void;
 }
 
 export function TopNavbar({
   isTopbarOpen,
   setIsTopbarOpen,
-  onOpenCommandPalette,
   onRightSidebarStateChange,
 }: TopNavbarProps): React.ReactElement {
   const { state } = useSidebar();
@@ -51,12 +49,10 @@ export function TopNavbar({
     tabs,
     currentTab,
     setCurrentTab,
-    setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
     reorderTabs,
     updateTab,
-    previewTerminalTheme,
     setPreviewTerminalTheme,
   } = useTabs() as any;
   const leftPosition =
@@ -138,7 +134,7 @@ export function TopNavbar({
     setCurrentTab(tabId);
   };
 
-  const handleTabSplit = (tabId: number) => {
+  const handleTabSplit = () => {
     setToolsSidebarOpen(true);
     setCommandHistoryTabActive(false);
     setSplitScreenTabActive(true);
@@ -346,12 +342,6 @@ export function TopNavbar({
 
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
-  const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
-  const currentTabIsHome = currentTabObj?.type === "home";
-  const currentTabIsSshManager = currentTabObj?.type === "ssh_manager";
-  const currentTabIsAdmin = currentTabObj?.type === "admin";
-  const currentTabIsUserProfile = currentTabObj?.type === "user_profile";
-
   return (
     <div>
       <div
@@ -399,7 +389,6 @@ export function TopNavbar({
             const disableClose = isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
-            const isTheDraggedTab = tab.id === dragState.draggedId;
             const isDroppedAndSnapping = tab.id === justDroppedTabId;
             const dragOffset = isDraggingThisTab
               ? dragState.currentX - dragState.startX
@@ -509,9 +498,7 @@ export function TopNavbar({
                       ? () => handleTabClose(tab.id)
                       : undefined
                   }
-                  onSplit={
-                    isSplittable ? () => handleTabSplit(tab.id) : undefined
-                  }
+                  onSplit={isSplittable ? handleTabSplit : undefined}
                   canSplit={isSplittable}
                   canClose={
                     isTerminal ||

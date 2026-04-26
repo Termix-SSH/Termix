@@ -147,7 +147,11 @@ export function TabProvider({ children }: TabProviderProps) {
     if (shouldSave) {
       const serializable = tabs
         .filter((t) => t.type !== "home")
-        .map(({ terminalRef, ...rest }) => rest);
+        .map((tab) => {
+          const rest = { ...tab };
+          delete rest.terminalRef;
+          return rest;
+        });
       localStorage.setItem("termix_tabs", JSON.stringify(serializable));
       localStorage.setItem("termix_currentTab", String(currentTab));
     } else {

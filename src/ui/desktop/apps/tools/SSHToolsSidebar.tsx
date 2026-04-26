@@ -225,7 +225,6 @@ export function SSHToolsSidebar({
     [],
   );
   const [draggedSnippet, setDraggedSnippet] = useState<Snippet | null>(null);
-  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => {
     const shouldCollapse =
       localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
@@ -261,7 +260,7 @@ export function SSHToolsSidebar({
   const [splitAssignments, setSplitAssignments] = useState<Map<number, number>>(
     new Map(),
   );
-  const [previewKey, setPreviewKey] = useState(0);
+  const [, setPreviewKey] = useState(0);
   const [draggedTabId, setDraggedTabId] = useState<number | null>(null);
   const [dragOverCellIndex, setDragOverCellIndex] = useState<number | null>(
     null,
@@ -936,17 +935,9 @@ export function SSHToolsSidebar({
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent, targetSnippet: Snippet) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDragEnterFolder = (folderName: string) => {
-    setDragOverFolder(folderName);
-  };
-
-  const handleDragLeaveFolder = () => {
-    setDragOverFolder(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetSnippet: Snippet) => {
@@ -954,7 +945,6 @@ export function SSHToolsSidebar({
 
     if (!draggedSnippet || draggedSnippet.id === targetSnippet.id) {
       setDraggedSnippet(null);
-      setDragOverFolder(null);
       return;
     }
 
@@ -964,7 +954,6 @@ export function SSHToolsSidebar({
     if (sourceFolder !== targetFolder) {
       toast.error(t("snippets.reorderSameFolder"));
       setDraggedSnippet(null);
-      setDragOverFolder(null);
       return;
     }
 
@@ -981,7 +970,6 @@ export function SSHToolsSidebar({
 
     if (draggedIndex === -1 || targetIndex === -1) {
       setDraggedSnippet(null);
-      setDragOverFolder(null);
       return;
     }
 
@@ -1004,12 +992,10 @@ export function SSHToolsSidebar({
     }
 
     setDraggedSnippet(null);
-    setDragOverFolder(null);
   };
 
   const handleDragEnd = () => {
     setDraggedSnippet(null);
-    setDragOverFolder(null);
   };
 
   const handleCreateFolder = () => {
@@ -1706,9 +1692,7 @@ export function SSHToolsSidebar({
                                           onDragStart={(e) =>
                                             handleDragStart(e, snippet)
                                           }
-                                          onDragOver={(e) =>
-                                            handleDragOver(e, snippet)
-                                          }
+                                          onDragOver={handleDragOver}
                                           onDrop={(e) => handleDrop(e, snippet)}
                                           onDragEnd={handleDragEnd}
                                           className={`bg-field border border-input rounded-lg cursor-move hover:shadow-lg hover:border-edge-hover hover:bg-hover-alt transition-all duration-200 p-3 group ${
