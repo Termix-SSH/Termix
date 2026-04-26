@@ -126,12 +126,10 @@ function normalizeClientTunnel(
 }
 
 function stripClientTunnelDiagnostics(tunnel: ClientTunnel): TunnelConnection {
-  const {
-    lastStartedAt: _lastStartedAt,
-    lastTestedAt: _lastTestedAt,
-    lastError: _lastError,
-    ...presetTunnel
-  } = normalizeClientTunnel(tunnel);
+  const presetTunnel = normalizeClientTunnel(tunnel);
+  delete presetTunnel.lastStartedAt;
+  delete presetTunnel.lastTestedAt;
+  delete presetTunnel.lastError;
 
   return presetTunnel;
 }

@@ -8,13 +8,9 @@ import { useTheme } from "@/components/theme-provider";
 
 interface VersionCheckModalProps {
   onContinue: () => void;
-  isAuthenticated?: boolean;
 }
 
-export function ElectronVersionCheck({
-  onContinue,
-  isAuthenticated = false,
-}: VersionCheckModalProps) {
+export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [versionInfo, setVersionInfo] = useState<Record<
