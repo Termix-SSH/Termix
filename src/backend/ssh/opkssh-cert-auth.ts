@@ -16,6 +16,48 @@ type SignCallback = (
   callback: (signature: Buffer) => void,
 ) => void;
 
+interface ParsedPrivateKey {
+  type: string;
+  sign: (data: Buffer, algo?: string) => Buffer | Error;
+  getPublicSSH: () => Buffer;
+  [key: symbol]: unknown;
+}
+
+interface PublicKeyAuthInfo {
+  type: "publickey";
+  username: string;
+  key: ParsedPrivateKey;
+}
+
+interface OPKSSHProtocol {
+  authPK: (
+    user: string,
+    pubKey: ParsedPrivateKey,
+    keyAlgo: string | undefined,
+    cbSign?: SignCallback,
+  ) => unknown;
+  _kex: {
+    sessionID: Buffer;
+  };
+  _packetRW: {
+    write: {
+      alloc: (payloadLength: number) => Buffer;
+      allocStart: number;
+      finalize: (packet: Buffer) => Buffer;
+    };
+  };
+  _authsQueue: string[];
+  _debug?: (message: string) => void;
+  _cipher: {
+    encrypt: (packet: Buffer) => void;
+  };
+}
+
+type OPKSSHClient = Client & {
+  connect: (cfg: ConnectConfig) => Client;
+  _protocol?: OPKSSHProtocol;
+};
+
 export async function setupOPKSSHCertAuth(
   config: ConnectConfig,
   client: Client,
@@ -32,7 +74,9 @@ export async function setupOPKSSHCertAuth(
   if (parsed instanceof Error || !parsed) {
     throw new Error("Failed to parse OPKSSH private key");
   }
-  const privKey: any = Array.isArray(parsed) ? parsed[0] : parsed;
+  const privKey = (
+    Array.isArray(parsed) ? parsed[0] : parsed
+  ) as ParsedPrivateKey;
 
   // Extract cert type and blob from the stored certificate
   const certParts = token.sshCert.trim().split(/\s+/);
@@ -87,7 +131,7 @@ export async function setupOPKSSHCertAuth(
   config.authHandler = (
     methodsLeft: string[],
     _partialSuccess: boolean,
-    callback: (authInfo: any) => void,
+    callback: (authInfo: PublicKeyAuthInfo | false) => void,
   ) => {
     if (
       !certAuthAttempted &&
@@ -104,14 +148,15 @@ export async function setupOPKSSHCertAuth(
   // wrapper algorithm for cert types.
   const baseAlgo = certType.replace(/-cert-v\d+@openssh\.com$/, "");
   const origConnect = client.connect.bind(client);
-  (client as any).connect = (cfg: any) => {
+  const patchedClient = client as OPKSSHClient;
+  patchedClient.connect = (cfg: ConnectConfig) => {
     origConnect(cfg);
-    const proto = (client as any)._protocol;
+    const proto = patchedClient._protocol;
     if (!proto) return;
     const origAuthPK = proto.authPK.bind(proto);
     proto.authPK = (
       user: string,
-      pubKey: any,
+      pubKey: ParsedPrivateKey,
       keyAlgo: string | undefined,
       cbSign?: SignCallback,
     ) => {
