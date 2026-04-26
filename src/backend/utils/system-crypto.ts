@@ -62,7 +62,7 @@ class SystemCrypto {
       databaseLogger.error("Failed to initialize JWT secret", error, {
         operation: "jwt_init_failed",
       });
-      throw new Error("JWT secret initialization failed");
+      throw new Error("JWT secret initialization failed", { cause: error });
     }
   }
 
@@ -104,7 +104,7 @@ class SystemCrypto {
         operation: "db_key_init_failed",
         dataDir: process.env.DATA_DIR || "./db/data",
       });
-      throw new Error("Database key initialization failed");
+      throw new Error("Database key initialization failed", { cause: error });
     }
   }
 
@@ -144,7 +144,7 @@ class SystemCrypto {
         operation: "encryption_key_init_failed",
         dataDir: process.env.DATA_DIR || "./db/data",
       });
-      throw new Error("Encryption key initialization failed");
+      throw new Error("Encryption key initialization failed", { cause: error });
     }
   }
 
@@ -183,7 +183,9 @@ class SystemCrypto {
       databaseLogger.error("Failed to initialize internal auth token", error, {
         operation: "internal_auth_init_failed",
       });
-      throw new Error("Internal auth token initialization failed");
+      throw new Error("Internal auth token initialization failed", {
+        cause: error,
+      });
     }
   }
 
@@ -227,7 +229,9 @@ class SystemCrypto {
           dataDir: process.env.DATA_DIR || "./db/data",
         },
       );
-      throw new Error("Credential sharing key initialization failed");
+      throw new Error("Credential sharing key initialization failed", {
+        cause: error,
+      });
     }
   }
 

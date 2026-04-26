@@ -2292,6 +2292,7 @@ async function killRemoteTunnelByMarker(
             (socks5Error instanceof Error
               ? socks5Error.message
               : "Unknown error"),
+          { cause: socks5Error },
         );
       }
     }
@@ -2681,6 +2682,7 @@ app.post(
             );
             throw new Error(
               `Failed to resolve endpoint host: ${resolveError instanceof Error ? resolveError.message : "Unknown error"}`,
+              { cause: resolveError },
             );
           }
         }

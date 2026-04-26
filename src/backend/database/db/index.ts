@@ -118,6 +118,7 @@ async function initializeDatabaseAsync(): Promise<void> {
 
       throw new Error(
         `Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`,
+        { cause: error },
       );
     }
   } else {
