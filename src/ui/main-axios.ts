@@ -3862,9 +3862,30 @@ export async function executeSnippet(
 // MISCELLANEOUS API CALLS
 // ============================================================================
 
+export interface NetworkTopologyNode {
+  data: {
+    id: string;
+    label?: string;
+    ip?: string;
+    status?: string;
+    tags?: string[];
+    parent?: string;
+    color?: string;
+  };
+  position?: { x: number; y: number };
+}
+
+export interface NetworkTopologyEdge {
+  data: {
+    id?: string;
+    source: string;
+    target: string;
+  };
+}
+
 export interface NetworkTopologyData {
-  nodes: any[];
-  edges: any[];
+  nodes: NetworkTopologyNode[];
+  edges: NetworkTopologyEdge[];
 }
 
 export async function getNetworkTopology(): Promise<NetworkTopologyData | null> {
