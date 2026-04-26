@@ -89,6 +89,27 @@ export type SSHHostWithStatus = SSHHost & {
   status: "online" | "offline" | "unknown";
 };
 
+type ApiConnectionLog = {
+  type: "info" | "success" | "warning" | "error";
+  stage: string;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+type ConnectErrorResponse = {
+  error?: string;
+  message?: string;
+  connectionLogs?: ApiConnectionLog[];
+  requires_totp?: boolean;
+  requires_warpgate?: boolean;
+  sessionId?: string;
+  prompt?: string;
+  url?: string;
+  securityKey?: string;
+  status?: string;
+  reason?: string;
+};
+
 interface CpuMetrics {
   percent: number | null;
   cores: number | null;
@@ -146,6 +167,19 @@ interface OIDCAuthorize {
   auth_url: string;
 }
 
+type ElectronApi = {
+  isElectron?: boolean;
+  getSetting?: (key: string) => Promise<string | null | undefined>;
+  setSetting?: (key: string, value: string) => Promise<void>;
+};
+
+type ElectronWindow = Window &
+  typeof globalThis & {
+    IS_ELECTRON?: boolean;
+    electronAPI?: ElectronApi;
+    ReactNativeWebView?: unknown;
+  };
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -178,7 +212,7 @@ const electronSettingsCache = new Map<string, string>();
 if (isElectron()) {
   (async () => {
     try {
-      const electronAPI = (window as any).electronAPI;
+      const electronAPI = (window as ElectronWindow).electronAPI;
 
       if (electronAPI?.getSetting) {
         const settingsToLoad = ["rightClickCopyPaste"];
@@ -214,12 +248,7 @@ export function setCookie(
         return;
       }
 
-      const electronAPI = (
-        window as Window &
-          typeof globalThis & {
-            electronAPI?: any;
-          }
-      ).electronAPI;
+      const electronAPI = (window as ElectronWindow).electronAPI;
 
       if (electronAPI?.setSetting) {
         electronSettingsCache.set(name, value);
@@ -325,8 +354,9 @@ function createApiInstance(
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    (config as any).startTime = startTime;
-    (config as any).requestId = requestId;
+    const configWithMetadata = config as AxiosRequestConfigExtended;
+    configWithMetadata.startTime = startTime;
+    configWithMetadata.requestId = requestId;
 
     const method = config.method?.toUpperCase() || "UNKNOWN";
     const url = config.url || "UNKNOWN";
@@ -355,7 +385,10 @@ function createApiInstance(
       }
     }
 
-    if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
+    if (
+      typeof window !== "undefined" &&
+      (window as ElectronWindow).ReactNativeWebView
+    ) {
       let platform = "Unknown";
       if (typeof navigator !== "undefined" && navigator.userAgent) {
         if (navigator.userAgent.includes("Android")) {
@@ -381,8 +414,9 @@ function createApiInstance(
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
       const endTime = performance.now();
-      const startTime = (response.config as any).startTime;
-      const requestId = (response.config as any).requestId;
+      const responseConfig = response.config as AxiosRequestConfigExtended;
+      const startTime = responseConfig.startTime;
+      const requestId = responseConfig.requestId;
       const responseTime = Math.round(endTime - (startTime || endTime));
 
       const method = response.config.method?.toUpperCase() || "UNKNOWN";
@@ -452,7 +486,7 @@ function createApiInstance(
       const logger = getLoggerForService(serviceName);
       // A caller can mark a request as a silent retry (see progressive /status
       // retry) so we don't spam error logs / health events on each attempt.
-      const isSilentRetry = !!(error.config as any)?.__silentRetry;
+      const isSilentRetry = !!error.config?.__silentRetry;
 
       if (process.env.NODE_ENV === "development" && !isSilentRetry) {
         if (status === 401) {
@@ -571,6 +605,7 @@ export interface ServerConfig {
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
   requestId?: string;
+  __silentRetry?: boolean;
 }
 
 interface AxiosErrorExtended extends AxiosError {
@@ -635,6 +670,7 @@ export function getConfiguredServerUrl(): string | null {
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
   requestId?: string;
+  __silentRetry?: boolean;
 }
 
 interface AxiosErrorExtended extends AxiosError {
@@ -1669,7 +1705,7 @@ export async function connectSSH(
     socks5Username?: string;
     socks5Password?: string;
     socks5ProxyChain?: unknown;
-    jumpHosts?: any[];
+    jumpHosts?: Array<{ hostId: number }>;
   },
 ): Promise<Record<string, unknown>> {
   try {
@@ -1678,29 +1714,38 @@ export async function connectSSH(
       ...config,
     });
     return response.data;
-  } catch (error: any) {
-    if (error?.response?.data?.connectionLogs) {
+  } catch (error: unknown) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.connectionLogs
+    ) {
+      const data = error.response.data;
       const errorWithLogs = new Error(
-        error?.response?.data?.error ||
-          error?.response?.data?.message ||
-          error.message,
+        data.error || data.message || error.message,
       );
-      (errorWithLogs as any).connectionLogs =
-        error.response.data.connectionLogs;
-      if (error.response.data.requires_totp) {
-        (errorWithLogs as any).requires_totp = true;
-        (errorWithLogs as any).sessionId = error.response.data.sessionId;
-        (errorWithLogs as any).prompt = error.response.data.prompt;
+      Object.assign(errorWithLogs, {
+        connectionLogs: data.connectionLogs,
+      });
+      if (data.requires_totp) {
+        Object.assign(errorWithLogs, {
+          requires_totp: true,
+          sessionId: data.sessionId,
+          prompt: data.prompt,
+        });
       }
-      if (error.response.data.requires_warpgate) {
-        (errorWithLogs as any).requires_warpgate = true;
-        (errorWithLogs as any).sessionId = error.response.data.sessionId;
-        (errorWithLogs as any).url = error.response.data.url;
-        (errorWithLogs as any).securityKey = error.response.data.securityKey;
+      if (data.requires_warpgate) {
+        Object.assign(errorWithLogs, {
+          requires_warpgate: true,
+          sessionId: data.sessionId,
+          url: data.url,
+          securityKey: data.securityKey,
+        });
       }
-      if (error.response.data.status === "auth_required") {
-        (errorWithLogs as any).status = "auth_required";
-        (errorWithLogs as any).reason = error.response.data.reason;
+      if (data.status === "auth_required") {
+        Object.assign(errorWithLogs, {
+          status: "auth_required",
+          reason: data.reason,
+        });
       }
       throw errorWithLogs;
     }
@@ -2559,18 +2604,23 @@ export async function startMetricsPolling(hostId: number): Promise<{
   sessionId?: string;
   prompt?: string;
   viewerSessionId?: string;
-  connectionLogs?: any[];
+  connectionLogs?: ApiConnectionLog[];
 }> {
   try {
     const response = await statsApi.post(`/metrics/start/${hostId}`);
     return response.data;
-  } catch (error: any) {
-    if (error?.response?.data?.connectionLogs) {
+  } catch (error: unknown) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.connectionLogs
+    ) {
+      const data = error.response.data;
       const errorWithLogs = new Error(
-        error?.response?.data?.error || error.message,
+        data.error || data.message || error.message,
       );
-      (errorWithLogs as any).connectionLogs =
-        error.response.data.connectionLogs;
+      Object.assign(errorWithLogs, {
+        connectionLogs: data.connectionLogs,
+      });
       throw errorWithLogs;
     }
     handleApiError(error, "start metrics polling");
@@ -4611,7 +4661,7 @@ export async function connectDockerSession(
   isPassword?: boolean;
   status?: string;
   reason?: string;
-  connectionLogs?: any[];
+  connectionLogs?: ApiConnectionLog[];
   requires_warpgate?: boolean;
   url?: string;
   securityKey?: string;
@@ -4623,24 +4673,36 @@ export async function connectDockerSession(
       ...config,
     });
     return response.data;
-  } catch (error: any) {
-    if (error.response?.data?.status === "auth_required") {
+  } catch (error: unknown) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.status === "auth_required"
+    ) {
       return error.response.data;
     }
-    if (error.response?.data?.requires_totp) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.requires_totp
+    ) {
       return error.response.data;
     }
-    if (error.response?.data?.requires_warpgate) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.requires_warpgate
+    ) {
       return error.response.data;
     }
-    if (error?.response?.data?.connectionLogs) {
+    if (
+      axios.isAxiosError<ConnectErrorResponse>(error) &&
+      error.response?.data?.connectionLogs
+    ) {
+      const data = error.response.data;
       const errorWithLogs = new Error(
-        error?.response?.data?.error ||
-          error?.response?.data?.message ||
-          error.message,
+        data.error || data.message || error.message,
       );
-      (errorWithLogs as any).connectionLogs =
-        error.response.data.connectionLogs;
+      Object.assign(errorWithLogs, {
+        connectionLogs: data.connectionLogs,
+      });
       throw errorWithLogs;
     }
     throw handleApiError(error, "connect to Docker SSH session");
