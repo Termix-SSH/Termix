@@ -141,6 +141,7 @@ export class GuacamoleTokenService {
 
   createVncToken(
     hostname: string,
+    username?: string,
     password?: string,
     options: Partial<GuacamoleConnectionSettings["settings"]> = {},
   ): string {
@@ -149,6 +150,7 @@ export class GuacamoleTokenService {
         type: "vnc",
         settings: {
           hostname,
+          ...(username ? { username } : {}),
           password,
           port: 5900,
           ...options,
