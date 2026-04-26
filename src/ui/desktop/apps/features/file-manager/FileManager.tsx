@@ -54,6 +54,7 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import type { LogEntry } from "@/types/connection-log.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import {
   listSSHFiles,
@@ -90,6 +91,20 @@ interface FileManagerProps {
   initialHost?: SSHHost | null;
   onClose?: () => void;
 }
+
+type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
+
+type SSHConnectionError = Error & {
+  connectionLogs?: ConnectionLogPayload[];
+  requires_totp?: boolean;
+  requires_warpgate?: boolean;
+  sessionId?: string;
+  prompt?: string;
+  url?: string;
+  securityKey?: string;
+  status?: string;
+  reason?: "no_keyboard" | "auth_failed" | "timeout";
+};
 
 interface CreateIntent {
   id: string;
@@ -445,11 +460,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       } catch (dirError: unknown) {
         console.error("Failed to load initial directory:", dirError);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const sshError = error as SSHConnectionError;
       console.error("SSH connection failed:", error);
 
-      if (error?.connectionLogs) {
-        error.connectionLogs.forEach((log: any) => {
+      if (sshError.connectionLogs) {
+        sshError.connectionLogs.forEach((log) => {
           addLog({
             type: log.type,
             stage: log.stage,
@@ -457,25 +473,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             details: log.details,
           });
         });
-        if (error.requires_totp) {
+        if (sshError.requires_totp) {
           setTotpRequired(true);
-          setTotpSessionId(error.sessionId || currentHost.id.toString());
+          setTotpSessionId(sshError.sessionId || currentHost.id.toString());
           setTotpPrompt(
-            error.prompt || t("fileManager.verificationCodePrompt"),
+            sshError.prompt || t("fileManager.verificationCodePrompt"),
           );
           setIsLoading(false);
           return;
         }
-        if (error.requires_warpgate) {
+        if (sshError.requires_warpgate) {
           setWarpgateRequired(true);
-          setWarpgateSessionId(error.sessionId || currentHost.id.toString());
-          setWarpgateUrl(error.url || "");
-          setWarpgateSecurityKey(error.securityKey || "N/A");
+          setWarpgateSessionId(sshError.sessionId || currentHost.id.toString());
+          setWarpgateUrl(sshError.url || "");
+          setWarpgateSecurityKey(sshError.securityKey || "N/A");
           setIsLoading(false);
           return;
         }
-        if (error.status === "auth_required") {
-          setAuthDialogReason(error.reason || "no_keyboard");
+        if (sshError.status === "auth_required") {
+          setAuthDialogReason(sshError.reason || "no_keyboard");
           setShowAuthDialog(true);
           setIsLoading(false);
           return;
@@ -484,7 +500,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         addLog({
           type: "error",
           stage: "connection",
-          message: error?.message || t("fileManager.failedToConnect"),
+          message:
+            error instanceof Error
+              ? error.message
+              : t("fileManager.failedToConnect"),
         });
       }
 

@@ -43,11 +43,18 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import type { LogEntry } from "@/types/connection-log.ts";
 
 interface QuickAction {
   name: string;
   snippetId: number;
 }
+
+type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
+
+type ConnectionLogError = Error & {
+  connectionLogs?: ConnectionLogPayload[];
+};
 
 interface HostConfig {
   id: number;
@@ -409,7 +416,7 @@ function ServerStatsInner({
           if (cancelled) return;
 
           if (result?.connectionLogs) {
-            result.connectionLogs.forEach((log: any) => {
+            result.connectionLogs.forEach((log) => {
               addLog({
                 type: log.type,
                 stage: log.stage,
@@ -441,7 +448,7 @@ function ServerStatsInner({
           try {
             data = await getServerMetricsById(currentHostConfig.id);
             break;
-          } catch (error: any) {
+          } catch (error: unknown) {
             retryCount++;
             if (retryCount === 1) {
               const initialDelay = totpVerified ? 3000 : 5000;
@@ -482,14 +489,15 @@ function ServerStatsInner({
             }
           }
         }, statsConfig.metricsInterval * 1000);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
+          const logError = error as ConnectionLogError;
           console.error("Failed to start metrics polling:", error);
           setIsLoadingMetrics(false);
           setHasConnectionError(true);
 
-          if (error?.connectionLogs) {
-            error.connectionLogs.forEach((log: any) => {
+          if (logError.connectionLogs) {
+            logError.connectionLogs.forEach((log) => {
               addLog({
                 type: log.type,
                 stage: log.stage,
@@ -501,7 +509,10 @@ function ServerStatsInner({
             addLog({
               type: "error",
               stage: "connection",
-              message: error?.message || t("serverStats.connectionFailed"),
+              message:
+                error instanceof Error
+                  ? error.message
+                  : t("serverStats.connectionFailed"),
             });
           }
         }
@@ -756,7 +767,7 @@ function ServerStatsInner({
                                     },
                                   );
                                 }
-                              } catch (error: any) {
+                              } catch (error: unknown) {
                                 toast.error(
                                   t("serverStats.quickActionError", {
                                     name: action.name,
@@ -764,7 +775,9 @@ function ServerStatsInner({
                                   {
                                     id: `quick-action-${action.snippetId}`,
                                     description:
-                                      error?.message || "Unknown error",
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Unknown error",
                                     duration: 5000,
                                   },
                                 );
