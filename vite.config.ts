@@ -29,7 +29,7 @@ const manualChunkGroups: Record<string, string[]> = {
     "tailwind-merge",
     "class-variance-authority",
   ],
-  monaco: ["monaco-editor"],
+  monaco: ["@monaco-editor/react", "monaco-editor"],
   "terminal-vendor": [
     "@xterm/addon-clipboard",
     "@xterm/addon-fit",
@@ -46,6 +46,9 @@ const manualChunkGroups: Record<string, string[]> = {
     "@codemirror/commands",
     "@codemirror/search",
     "@codemirror/autocomplete",
+    "@codemirror/theme-one-dark",
+    "@uiw/codemirror-extensions-langs",
+    "@uiw/codemirror-theme-github",
   ],
   "remote-desktop-vendor": ["guacamole-common-js"],
   "graph-vendor": ["cytoscape", "react-cytoscapejs"],
@@ -54,7 +57,10 @@ const manualChunkGroups: Record<string, string[]> = {
     "react-pdf",
     "pdfjs-dist",
     "react-photo-view",
+    "react-h5-audio-player",
+    "react-markdown",
     "react-syntax-highlighter",
+    "remark-gfm",
   ],
 };
 
