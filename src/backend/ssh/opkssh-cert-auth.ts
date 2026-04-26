@@ -4,7 +4,14 @@
 // DER → SSH wire format, and patches Protocol.authPK to use the base
 // algorithm in the signature wrapper (required by OpenSSH's sshkey_check_sigtype).
 
-import type { Client, ConnectConfig } from "ssh2";
+import type {
+  AnyAuthMethod,
+  AuthHandlerMiddleware,
+  AuthenticationType,
+  Client,
+  ConnectConfig,
+  PublicKeyAuthMethod,
+} from "ssh2";
 
 interface OPKSSHToken {
   privateKey: string;
@@ -21,12 +28,6 @@ interface ParsedPrivateKey {
   sign: (data: Buffer, algo?: string) => Buffer | Error;
   getPublicSSH: () => Buffer;
   [key: symbol]: unknown;
-}
-
-interface PublicKeyAuthInfo {
-  type: "publickey";
-  username: string;
-  key: ParsedPrivateKey;
 }
 
 interface OPKSSHProtocol {
@@ -54,9 +55,12 @@ interface OPKSSHProtocol {
 }
 
 type OPKSSHClient = Client & {
-  connect: (cfg: ConnectConfig) => Client;
   _protocol?: OPKSSHProtocol;
 };
+
+type OPKSSHNextAuthHandler = (
+  authInfo: AuthenticationType | AnyAuthMethod | false,
+) => void;
 
 export async function setupOPKSSHCertAuth(
   config: ConnectConfig,
@@ -128,21 +132,27 @@ export async function setupOPKSSHCertAuth(
 
   // Set up authHandler to bypass ssh2's cert type rejection
   let certAuthAttempted = false;
-  config.authHandler = (
+  const authHandler: AuthHandlerMiddleware = (
     methodsLeft: string[],
     _partialSuccess: boolean,
-    callback: (authInfo: PublicKeyAuthInfo | false) => void,
+    callback,
   ) => {
+    const next = callback as OPKSSHNextAuthHandler;
     if (
       !certAuthAttempted &&
       (!methodsLeft || methodsLeft.includes("publickey"))
     ) {
       certAuthAttempted = true;
-      callback({ type: "publickey", username, key: privKey });
+      next({
+        type: "publickey",
+        username,
+        key: privKey as unknown as PublicKeyAuthMethod["key"],
+      });
     } else {
-      callback(false);
+      next(false);
     }
   };
+  config.authHandler = authHandler;
 
   // Monkey-patch Protocol.authPK after connect() to fix the signature
   // wrapper algorithm for cert types.
@@ -150,9 +160,9 @@ export async function setupOPKSSHCertAuth(
   const origConnect = client.connect.bind(client);
   const patchedClient = client as OPKSSHClient;
   patchedClient.connect = (cfg: ConnectConfig) => {
-    origConnect(cfg);
+    const connectedClient = origConnect(cfg);
     const proto = patchedClient._protocol;
-    if (!proto) return;
+    if (!proto) return connectedClient;
     const origAuthPK = proto.authPK.bind(proto);
     proto.authPK = (
       user: string,
@@ -283,5 +293,6 @@ export async function setupOPKSSHCertAuth(
         proto._cipher.encrypt(finalized);
       });
     };
+    return connectedClient;
   };
 }
