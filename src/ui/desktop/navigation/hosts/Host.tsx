@@ -24,7 +24,6 @@ import {
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
 import {
   getSSHHosts,
-  getGuacamoleToken,
   getGuacamoleDpi,
   getGuacamoleTokenFromHost,
   logActivity,

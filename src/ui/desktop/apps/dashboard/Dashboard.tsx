@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { Auth } from "@/ui/desktop/authentication/Auth.tsx";
 import { AlertManager } from "@/ui/desktop/apps/dashboard/apps/alerts/AlertManager.tsx";
 import { Button } from "@/components/ui/button.tsx";

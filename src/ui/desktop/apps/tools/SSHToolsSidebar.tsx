@@ -43,14 +43,12 @@ import {
   Loader2,
   Terminal,
   LayoutGrid,
-  MonitorCheck,
   Folder,
   ChevronDown,
   ChevronRight,
   GripVertical,
   FolderPlus,
   Settings,
-  MoreVertical,
   Server,
   Cloud,
   Database,
@@ -61,7 +59,6 @@ import {
   HardDrive,
   Globe,
   Share2,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";

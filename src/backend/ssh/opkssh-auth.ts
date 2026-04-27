@@ -1,7 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
 import { randomUUID } from "crypto";
 import { WebSocket } from "ws";
-import { IncomingMessage } from "http";
 import { OPKSSHBinaryManager } from "../utils/opkssh-binary-manager.js";
 import { sshLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
@@ -13,7 +12,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
 import yaml from "js-yaml";
-import { getRequestOrigin } from "../utils/request-origin.js";
 
 const AUTH_TIMEOUT = 60 * 1000;
 

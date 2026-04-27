@@ -1,29 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { cn } from "@/lib/utils.ts";
 
 import { Button } from "@/components/ui/button.tsx";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
 } from "@/components/ui/form.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { PasswordInput } from "@/components/ui/password-input.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
+
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import {
@@ -33,10 +19,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import React, { useEffect, useRef, useState } from "react";
-import { Switch } from "@/components/ui/switch.tsx";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { toast } from "sonner";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   createSSHHost,
   getCredentials,
@@ -45,85 +29,18 @@ import {
   enableAutoStart,
   disableAutoStart,
   getSnippets,
-  getRoles,
-  getUserList,
-  getUserInfo,
-  shareHost,
-  getHostAccess,
-  revokeHostAccess,
-  getSSHHostById,
   getGuacamoleSettings,
-  type Role,
-  type AccessRecord,
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
-import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { githubLight } from "@uiw/codemirror-theme-github";
-import { EditorView } from "@codemirror/view";
 import { useTheme } from "@/components/theme-provider.tsx";
 import type { StatsConfig } from "@/types/stats-widgets.ts";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command.tsx";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover.tsx";
-import { Slider } from "@/components/ui/slider.tsx";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.tsx";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.tsx";
-import {
-  TERMINAL_THEMES,
-  TERMINAL_FONTS,
-  CURSOR_STYLES,
-  BELL_STYLES,
-  FAST_SCROLL_MODIFIERS,
-  DEFAULT_TERMINAL_CONFIG,
-} from "@/constants/terminal-themes.ts";
-import { TerminalPreview } from "@/ui/desktop/apps/features/terminal/TerminalPreview.tsx";
-import type { TerminalConfig, SSHHost, Credential } from "@/types";
-import {
-  Plus,
-  X,
-  Check,
-  ChevronsUpDown,
-  Save,
-  AlertCircle,
-  Trash2,
-  Users,
-  Shield,
-  Clock,
-  UserCircle,
-  ArrowLeft,
-} from "lucide-react";
+
+import { DEFAULT_TERMINAL_CONFIG } from "@/constants/terminal-themes.ts";
+import type { SSHHost, Credential } from "@/types";
+import { ArrowLeft } from "lucide-react";
 import { HostGeneralTab } from "./tabs/HostGeneralTab";
 import { HostTerminalTab } from "./tabs/HostTerminalTab";
 import { HostDockerTab } from "./tabs/HostDockerTab";

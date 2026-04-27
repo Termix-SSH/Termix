@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { useTranslation } from "react-i18next";
-import { ShieldAlert } from "lucide-react";
 
 interface SudoPasswordDialogProps {
   open: boolean;

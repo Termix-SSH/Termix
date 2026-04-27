@@ -1,6 +1,8 @@
 * text=auto eol=lf
 
 *.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
 *.jsx text eol=lf
 *.ts text eol=lf
 *.tsx text eol=lf
@@ -29,3 +31,4 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+*.icns binary

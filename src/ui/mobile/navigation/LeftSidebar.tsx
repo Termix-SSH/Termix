@@ -11,7 +11,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChevronUp, Menu, User2, Moon, Sun } from "lucide-react";
+import { ChevronUp, Menu, User2 } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Separator } from "@/components/ui/separator.tsx";
 import { FolderCard } from "@/ui/mobile/navigation/hosts/FolderCard.tsx";

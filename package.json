@@ -11,7 +11,6 @@
     "npm": ">=11"
   },
   "scripts": {
-    "clean": "npx prettier . --write",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "node scripts/patch-app-builder-lib.cjs",
@@ -49,8 +48,8 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "guacamole-lite": "^1.2.0",
-    "js-yaml": "^4.1.1",
     "jose": "^6.2.2",
+    "js-yaml": "^4.1.1",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "multer": "^2.1.1",
@@ -70,6 +69,7 @@
     "@codemirror/view": "^6.41.1",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.4",
     "@eslint/js": "^10.0.1",
@@ -124,8 +124,9 @@
     "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
     "eslint": "^10.2.1",
-    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.5.0",
     "guacamole-common-js": "^1.5.0",
     "husky": "^9.1.7",
@@ -153,7 +154,6 @@
     "recharts": "^3.8.1",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
-    "@deadendjs/swagger-jsdoc": "^8.1.2",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.3",
@@ -162,7 +162,11 @@
     "zod": "^4.3.6"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
       "prettier --write"
     ],
     "*.{json,css,md}": [

@@ -1811,7 +1811,6 @@ if (frontendDist) {
 }
 
 app.use(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (
     err: unknown,
     req: express.Request,

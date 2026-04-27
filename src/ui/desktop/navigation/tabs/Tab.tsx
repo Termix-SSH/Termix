@@ -1,7 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { useTranslation } from "react-i18next";
-import { getHostPassword } from "@/ui/main-axios.ts";
 import { cn } from "@/lib/utils";
 import {
   Home,

@@ -32,19 +32,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion.tsx";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
-import {
-  Plus,
-  X,
-  Upload,
-  AlertCircle,
-  ArrowRight,
-  Loader2,
-} from "lucide-react";
+import { Plus, X, ArrowRight, Loader2 } from "lucide-react";
 import type { HostGeneralTabProps } from "./shared/tab-types";
 import { JumpHostItem } from "./shared/JumpHostItem";
 import { testProxyConnection } from "@/ui/main-axios";

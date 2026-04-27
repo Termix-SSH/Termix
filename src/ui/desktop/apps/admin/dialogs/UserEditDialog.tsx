@@ -5,7 +5,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -20,7 +19,6 @@ import {
   Plus,
   AlertCircle,
   Shield,
-  Key,
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";

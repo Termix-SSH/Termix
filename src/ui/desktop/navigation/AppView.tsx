@@ -22,7 +22,6 @@ import {
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
 import { useTheme } from "@/components/theme-provider";
-import { SSHAuthDialog } from "@/ui/desktop/navigation/dialogs/SSHAuthDialog.tsx";
 
 const Terminal = lazy(() =>
   import("@/ui/desktop/apps/features/terminal/Terminal.tsx").then((module) => ({

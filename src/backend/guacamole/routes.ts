@@ -6,7 +6,7 @@ import { PermissionManager } from "../utils/permission-manager.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { AuthenticatedRequest } from "../../types/index.js";
 
 const router = express.Router();

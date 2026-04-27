@@ -25,7 +25,6 @@ export class RobustClipboardProvider implements IClipboardProvider {
     this.pendingWrite = null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readText(selection: ClipboardSelectionType): string {
     return "";
   }

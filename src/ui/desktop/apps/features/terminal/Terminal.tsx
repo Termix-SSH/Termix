@@ -40,7 +40,6 @@ import type { TerminalConfig } from "@/types";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
-import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory.ts";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";

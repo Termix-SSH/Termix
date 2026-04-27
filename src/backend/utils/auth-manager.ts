@@ -5,11 +5,7 @@ import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
-import {
-  db,
-  getSqlite,
-  saveMemoryDatabaseToFile,
-} from "../database/db/index.js";
+import { db } from "../database/db/index.js";
 import { sessions, trustedDevices } from "../database/db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -529,12 +525,10 @@ class AuthManager {
     return { token, maxAge };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   invalidateJWTToken(_token: string): void {
     // expected - no-op, JWT tokens are stateless
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   invalidateUserTokens(_userId: string): void {
     // expected - no-op, handled by session management
   }

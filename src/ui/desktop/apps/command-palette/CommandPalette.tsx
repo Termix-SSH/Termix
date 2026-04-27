@@ -38,7 +38,6 @@ import {
   logActivity,
 } from "@/ui/main-axios.ts";
 import type { RecentActivityItem } from "@/ui/main-axios.ts";
-import { toast } from "sonner";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import {
   DropdownMenu,

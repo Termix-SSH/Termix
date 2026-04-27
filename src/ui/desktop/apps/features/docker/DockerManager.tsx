@@ -1,14 +1,8 @@
 import React from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs.tsx";
+
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
 import {
   connectDockerSession,

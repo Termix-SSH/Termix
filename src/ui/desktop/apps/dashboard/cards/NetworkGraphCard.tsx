@@ -34,7 +34,6 @@ import { Label } from "@/components/ui/label";
 import {
   Plus,
   Trash2,
-  Move3D,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -46,7 +45,6 @@ import {
   Edit,
   FolderInput,
   FolderMinus,
-  Settings2,
   Terminal,
   ArrowUp,
   NetworkIcon,

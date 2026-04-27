@@ -23,7 +23,6 @@ import { toast } from "sonner";
 import {
   getUserInfo,
   logoutUser,
-  isElectron,
   isCurrentAuthInvalidationError,
 } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";

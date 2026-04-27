@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
-import { Separator } from "@/components/ui/separator.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet.tsx";
+import { Sheet, SheetContent } from "@/components/ui/sheet.tsx";
 import { getReleasesRSS, getVersionInfo } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import { BookOpen, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface UpdateLogProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
