@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
 import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
-import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
+import { DockviewAppView } from "@/ui/desktop/navigation/DockviewAppView.tsx";
 import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
@@ -373,7 +373,7 @@ function AppContent({
             className="h-screen w-full visible pointer-events-auto static overflow-hidden"
             style={{ display: showTerminalView ? "block" : "none" }}
           >
-            <AppView
+            <DockviewAppView
               isTopbarOpen={isTopbarOpen}
               rightSidebarOpen={rightSidebarOpen}
               rightSidebarWidth={rightSidebarWidth}
