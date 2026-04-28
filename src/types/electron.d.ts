@@ -61,6 +61,14 @@ export interface ElectronAPI {
     started: number;
     errors: string[];
   }>;
+  clearSessionCookies: () => Promise<void>;
+  getSessionCookie: (name: string) => Promise<string | null>;
+  waitForSessionCookie: (
+    name: string,
+    targetUrl?: string,
+    previousValue?: string | null,
+    timeoutMs?: number,
+  ) => Promise<{ success: boolean; value?: string; error?: string }>;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;

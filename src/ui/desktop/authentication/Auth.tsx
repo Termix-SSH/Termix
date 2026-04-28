@@ -139,25 +139,18 @@ export function Auth({
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
-  const handleElectronAuthSuccess = useCallback(async () => {
+  const handleElectronAuthSuccess = useCallback(async (previousJwt: string | null) => {
     try {
-      let retries = 5;
-      let meRes = null;
-      while (retries-- > 0) {
-        try {
-          meRes = await getUserInfo();
-          break;
-        } catch (err: any) {
-          const isNoServer =
-            err?.code === "NO_SERVER_CONFIGURED" ||
-            err?.message?.includes("no-server-configured");
-          if (isNoServer && retries > 0) {
-            await new Promise((r) => setTimeout(r, 500));
-          } else {
-            throw err;
-          }
-        }
+      const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
+        "jwt",
+        currentServerUrl,
+        previousJwt,
+        5000,
+      );
+      if (cookieReady && !cookieReady.success) {
+        throw new Error(cookieReady.error || "Authentication cookie not ready");
       }
+      const meRes = await getUserInfo();
       if (!meRes) throw new Error("Failed to get user info");
       setInternalLoggedIn(true);
       setLoggedIn(true);
@@ -181,6 +174,7 @@ export function Auth({
     setUserId,
     t,
     setInternalLoggedIn,
+    currentServerUrl,
   ]);
 
   useEffect(() => {
@@ -655,27 +649,32 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
 
+      if (isInElectronWebView()) {
+        try {
+          window.parent.postMessage(
+            {
+              type: "AUTH_SUCCESS",
+              source: "oidc_callback",
+              platform: "desktop",
+              timestamp: Date.now(),
+            },
+            "*",
+          );
+          setWebviewAuthSuccess(true);
+          setOidcLoading(false);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+          return;
+        } catch (e) {
+          console.error("Error posting auth success message:", e);
+        }
+      }
+
       getUserInfo()
         .then((meRes) => {
-          if (isInElectronWebView()) {
-            try {
-              window.parent.postMessage(
-                {
-                  type: "AUTH_SUCCESS",
-                  source: "oidc_callback",
-                  platform: "desktop",
-                  timestamp: Date.now(),
-                },
-                "*",
-              );
-              setWebviewAuthSuccess(true);
-              setOidcLoading(false);
-              return;
-            } catch (e) {
-              console.error("Error posting auth success message:", e);
-            }
-          }
-
           setInternalLoggedIn(true);
           setLoggedIn(true);
           setIsAdmin(!!meRes.is_admin);

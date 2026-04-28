@@ -1857,6 +1857,67 @@ ipcMain.handle("get-session-cookie", async (_event, name) => {
   }
 });
 
+function cookieMatchesUrl(cookie, targetUrl) {
+  if (!targetUrl) return true;
+
+  try {
+    const targetHost = new URL(targetUrl).hostname;
+    const cookieDomain = (cookie.domain || "").replace(/^\./, "");
+
+    return (
+      cookieDomain === targetHost ||
+      targetHost.endsWith(`.${cookieDomain}`) ||
+      (!cookieDomain && targetHost === "localhost")
+    );
+  } catch {
+    return true;
+  }
+}
+
+ipcMain.handle(
+  "wait-session-cookie",
+  async (_event, name, targetUrl, previousValue, timeoutMs = 5000) => {
+    const ses = mainWindow?.webContents?.session;
+    if (!ses) return { success: false, error: "No Electron session" };
+
+    const existingCookies = await ses.cookies.get({
+      name,
+      ...(targetUrl ? { url: targetUrl } : {}),
+    });
+    const existingCookie = existingCookies.find((cookie) =>
+      cookieMatchesUrl(cookie, targetUrl),
+    );
+    if (existingCookie?.value && existingCookie.value !== previousValue) {
+      return { success: true, value: existingCookie.value };
+    }
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        ses.cookies.off("changed", onCookieChanged);
+        resolve({ success: false, error: "Timed out waiting for cookie" });
+      }, timeoutMs);
+
+      function onCookieChanged(_event, cookie, _cause, removed) {
+        if (
+          removed ||
+          cookie.name !== name ||
+          !cookie.value ||
+          cookie.value === previousValue ||
+          !cookieMatchesUrl(cookie, targetUrl)
+        ) {
+          return;
+        }
+
+        clearTimeout(timeout);
+        ses.cookies.off("changed", onCookieChanged);
+        resolve({ success: true, value: cookie.value });
+      }
+
+      ses.cookies.on("changed", onCookieChanged);
+    });
+  },
+);
+
 ipcMain.handle("clear-session-cookies", async () => {
   try {
     const ses = mainWindow?.webContents?.session;

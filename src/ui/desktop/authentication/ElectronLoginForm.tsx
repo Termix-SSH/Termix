@@ -5,7 +5,7 @@ import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
-  onAuthSuccess: () => void;
+  onAuthSuccess: (previousJwt: string | null) => void | Promise<void>;
   onChangeServer: () => void;
 }
 
@@ -27,12 +27,28 @@ export function ElectronLoginForm({
   const isAuthenticatingRef = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasAuthenticatedRef = useRef(false);
+  const [cookieSnapshotReady, setCookieSnapshotReady] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
   const hasLoadedOnce = useRef(false);
   const onAuthSuccessRef = useRef(onAuthSuccess);
+  const initialJwtRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     onAuthSuccessRef.current = onAuthSuccess;
   }, [onAuthSuccess]);
+
+  useEffect(() => {
+    window.electronAPI
+      ?.getSessionCookie?.("jwt")
+      .then((value) => {
+        initialJwtRef.current = value;
+      })
+      .catch(() => {
+        initialJwtRef.current = null;
+      })
+      .finally(() => {
+        setCookieSnapshotReady(true);
+      });
+  }, []);
 
   const handleAuthSuccess = useCallback(async () => {
     if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
@@ -41,7 +57,7 @@ export function ElectronLoginForm({
     setIsAuthenticating(true);
 
     try {
-      onAuthSuccessRef.current();
+      await onAuthSuccessRef.current(initialJwtRef.current ?? null);
     } catch (_err) {
       setError(t("errors.authTokenSaveFailed"));
       isAuthenticatingRef.current = false;
@@ -186,7 +202,7 @@ export function ElectronLoginForm({
       >
         <iframe
           ref={iframeRef}
-          src={serverUrl}
+          src={cookieSnapshotReady ? serverUrl : "about:blank"}
           className="w-full h-full border-0"
           title="Server Authentication"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
