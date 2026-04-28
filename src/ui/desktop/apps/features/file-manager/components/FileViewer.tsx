@@ -59,6 +59,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark as syntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Document, Page, pdfjs } from "react-pdf";
+import { Kbd, KbdKey } from "@/components/ui/kbd";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
@@ -552,27 +553,35 @@ export function FileViewer({
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span>{t("fileManager.search")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+F
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+F
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.replace")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+H
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+H
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.findNext")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    F3
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      F3
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.findPrevious")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Shift+F3
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Shift+F3
+                    </KbdKey>
+                  </Kbd>
                 </div>
               </div>
             </div>
@@ -583,51 +592,67 @@ export function FileViewer({
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span>{t("fileManager.save")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+S
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+S
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.selectAll")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+A
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+A
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.undo")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+Z
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+Z
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.redo")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+Y
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+Y
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.toggleComment")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+/
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+/
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.autoComplete")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Ctrl+Space
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Ctrl+Space
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineUp")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Alt+↑
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Alt+↑
+                    </KbdKey>
+                  </Kbd>
                 </div>
                 <div className="flex justify-between">
                   <span>{t("fileManager.moveLineDown")}</span>
-                  <kbd className="px-2 py-1 bg-background rounded text-xs">
-                    Alt+↓
-                  </kbd>
+                  <Kbd className="px-2 py-1 bg-background rounded text-xs">
+                    <KbdKey className="px-2 py-1 bg-background rounded text-xs">
+                      Alt+↓
+                    </KbdKey>
+                  </Kbd>
                 </div>
               </div>
             </div>

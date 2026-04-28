@@ -20,7 +20,7 @@ import {
   FileArchive,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Kbd, KbdGroup } from "@/components/ui/kbd.tsx";
+import { Kbd, KbdKey, KbdSeparator } from "@/components/ui/kbd.tsx";
 
 interface FileItem {
   name: string;
@@ -491,11 +491,14 @@ export function FileManagerContextMenu({
       return <Kbd>{keys[0]}</Kbd>;
     }
     return (
-      <KbdGroup>
+      <Kbd>
         {keys.map((key, index) => (
-          <Kbd key={index}>{key}</Kbd>
+          <>
+            <KbdKey key={`key-${index}`}>{key}</KbdKey>
+            {index < keys.length - 1 && <KbdSeparator key={`sep-${index}`} />}
+          </>
         ))}
-      </KbdGroup>
+      </Kbd>
     );
   };
 

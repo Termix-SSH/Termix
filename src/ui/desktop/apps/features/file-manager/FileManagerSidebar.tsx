@@ -1,15 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils.ts";
-import {
-  ChevronRight,
-  ChevronDown,
-  Folder,
-  File,
-  Star,
-  Clock,
-  Bookmark,
-  FolderOpen,
-} from "lucide-react";
+import { Star, Clock, Bookmark, File, Folder, FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SSHHost } from "@/types";
 import {
@@ -22,6 +13,9 @@ import {
   removeFolderShortcut,
 } from "@/ui/main-axios.ts";
 import { toast } from "sonner";
+import FolderTree from "@/components/ui/folder.tsx";
+
+// ─── Interfaces ────────────────────────────────────────────────────────────────
 
 interface RecentFileData {
   id: number;
@@ -71,6 +65,8 @@ interface FileManagerSidebarProps {
   refreshTrigger?: number;
 }
 
+// ─── Component ─────────────────────────────────────────────────────────────────
+
 export function FileManagerSidebar({
   currentHost,
   currentPath,
@@ -80,14 +76,22 @@ export function FileManagerSidebar({
   refreshTrigger,
 }: FileManagerSidebarProps) {
   const { t } = useTranslation();
+
+  // ── Quick access state (API-backed) ──────────────────────────────────────────
   const [recentItems, setRecentItems] = useState<SidebarItem[]>([]);
   const [pinnedItems, setPinnedItems] = useState<SidebarItem[]>([]);
   const [shortcuts, setShortcuts] = useState<SidebarItem[]>([]);
-  const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(["root"]),
-  );
 
+  // ── Directory tree state ──────────────────────────────────────────────────────
+  const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
+
+  /**
+   * Tracks which folder paths have already been lazy-loaded so we don't
+   * re-fetch on every re-selection / collapse-reopen.
+   */
+  const loadedFoldersRef = useRef<Set<string>>(new Set(["/"]));
+
+  // ── Context menu state ────────────────────────────────────────────────────────
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -100,15 +104,20 @@ export function FileManagerSidebar({
     item: null,
   });
 
+  // ─── Effects ──────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     loadQuickAccessData();
   }, [currentHost, refreshTrigger]);
 
   useEffect(() => {
     if (sshSessionId) {
+      loadedFoldersRef.current = new Set(["/"]);
       loadDirectoryTree();
     }
   }, [sshSessionId]);
+
+  // ─── API: Quick access ────────────────────────────────────────────────────────
 
   const loadQuickAccessData = async () => {
     if (!currentHost?.id) return;
@@ -155,114 +164,13 @@ export function FileManagerSidebar({
     }
   };
 
-  const handleRemoveRecentFile = async (item: SidebarItem) => {
-    if (!currentHost?.id) return;
-
-    try {
-      await removeRecentFile(currentHost.id, item.path);
-      loadQuickAccessData();
-      toast.success(
-        t("fileManager.removedFromRecentFiles", { name: item.name }),
-      );
-    } catch (error) {
-      console.error("Failed to remove recent file:", error);
-      toast.error(t("fileManager.removeFailed"));
-    }
-  };
-
-  const handleUnpinFile = async (item: SidebarItem) => {
-    if (!currentHost?.id) return;
-
-    try {
-      await removePinnedFile(currentHost.id, item.path);
-      loadQuickAccessData();
-      toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
-    } catch (error) {
-      console.error("Failed to unpin file:", error);
-      toast.error(t("fileManager.unpinFailed"));
-    }
-  };
-
-  const handleRemoveShortcut = async (item: SidebarItem) => {
-    if (!currentHost?.id) return;
-
-    try {
-      await removeFolderShortcut(currentHost.id, item.path);
-      loadQuickAccessData();
-      toast.success(t("fileManager.removedShortcut", { name: item.name }));
-    } catch (error) {
-      console.error("Failed to remove shortcut:", error);
-      toast.error(t("fileManager.removeShortcutFailed"));
-    }
-  };
-
-  const handleClearAllRecent = async () => {
-    if (!currentHost?.id || recentItems.length === 0) return;
-
-    try {
-      await Promise.all(
-        recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
-      );
-      loadQuickAccessData();
-      toast.success(t("fileManager.clearedAllRecentFiles"));
-    } catch (error) {
-      console.error("Failed to clear recent files:", error);
-      toast.error(t("fileManager.clearFailed"));
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      isVisible: true,
-      item,
-    });
-  };
-
-  const closeContextMenu = () => {
-    setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
-  };
-
-  useEffect(() => {
-    if (!contextMenu.isVisible) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      const menuElement = document.querySelector("[data-sidebar-context-menu]");
-
-      if (!menuElement?.contains(target)) {
-        closeContextMenu();
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeContextMenu();
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }, 50);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [contextMenu.isVisible]);
+  // ─── API: Directory tree ──────────────────────────────────────────────────────
 
   const loadDirectoryTree = async () => {
     if (!sshSessionId) return;
 
     try {
       const response = await listSSHFiles(sshSessionId, "/");
-
       const rootFiles = (response.files || []) as DirectoryItemData[];
       const rootFolders = rootFiles.filter(
         (item: DirectoryItemData) => item.type === "directory",
@@ -302,11 +210,108 @@ export function FileManagerSidebar({
     }
   };
 
-  const handleItemClick = (item: SidebarItem) => {
-    if (item.type === "folder") {
-      toggleFolder(item.id, item.path);
-      onPathChange(item.path);
-    } else if (item.type === "recent" || item.type === "pinned") {
+  /**
+   * Lazily fetches subdirectory contents and patches them into the tree state.
+   * Called the first time a folder is expanded via FolderTree's onSelect.
+   */
+  const loadSubdirectory = useCallback(
+    async (folderId: string, folderPath: string) => {
+      if (!sshSessionId) return;
+
+      try {
+        const subResponse = await listSSHFiles(sshSessionId, folderPath);
+        const subFiles = (subResponse.files || []) as DirectoryItemData[];
+        const subFolders = subFiles.filter(
+          (item: DirectoryItemData) => item.type === "directory",
+        );
+
+        const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
+          id: `folder-${folder.path.replace(/\//g, "-")}`,
+          name: folder.name,
+          path: folder.path,
+          type: "folder" as const,
+          isExpanded: false,
+          children: [],
+        }));
+
+        setDirectoryTree((prevTree) => {
+          const updateChildren = (items: SidebarItem[]): SidebarItem[] =>
+            items.map((item) => {
+              if (item.id === folderId) {
+                return { ...item, children: subTreeItems };
+              }
+              if (item.children) {
+                return { ...item, children: updateChildren(item.children) };
+              }
+              return item;
+            });
+          return updateChildren(prevTree);
+        });
+      } catch (error) {
+        console.error("Failed to load subdirectory:", error);
+      }
+    },
+    [sshSessionId],
+  );
+
+  // ─── Quick-access mutation handlers ──────────────────────────────────────────
+
+  const handleRemoveRecentFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removeRecentFile(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(
+        t("fileManager.removedFromRecentFiles", { name: item.name }),
+      );
+    } catch (error) {
+      console.error("Failed to remove recent file:", error);
+      toast.error(t("fileManager.removeFailed"));
+    }
+  };
+
+  const handleUnpinFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removePinnedFile(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
+    } catch (error) {
+      console.error("Failed to unpin file:", error);
+      toast.error(t("fileManager.unpinFailed"));
+    }
+  };
+
+  const handleRemoveShortcut = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removeFolderShortcut(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(t("fileManager.removedShortcut", { name: item.name }));
+    } catch (error) {
+      console.error("Failed to remove shortcut:", error);
+      toast.error(t("fileManager.removeShortcutFailed"));
+    }
+  };
+
+  const handleClearAllRecent = async () => {
+    if (!currentHost?.id || recentItems.length === 0) return;
+    try {
+      await Promise.all(
+        recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
+      );
+      loadQuickAccessData();
+      toast.success(t("fileManager.clearedAllRecentFiles"));
+    } catch (error) {
+      console.error("Failed to clear recent files:", error);
+      toast.error(t("fileManager.clearFailed"));
+    }
+  };
+
+  // ─── Quick-access item click ──────────────────────────────────────────────────
+
+  const handleQuickAccessClick = (item: SidebarItem) => {
+    if (item.type === "recent" || item.type === "pinned") {
       if (onFileOpen) {
         onFileOpen(item);
       } else {
@@ -319,132 +324,152 @@ export function FileManagerSidebar({
     }
   };
 
-  const toggleFolder = async (folderId: string, folderPath?: string) => {
-    const newExpanded = new Set(expandedFolders);
+  // ─── FolderTree directory selection (onSelect callback) ──────────────────────
 
-    if (newExpanded.has(folderId)) {
-      newExpanded.delete(folderId);
-    } else {
-      newExpanded.add(folderId);
-
-      if (sshSessionId && folderPath && folderPath !== "/") {
-        try {
-          const subResponse = await listSSHFiles(sshSessionId, folderPath);
-
-          const subFiles = (subResponse.files || []) as DirectoryItemData[];
-          const subFolders = subFiles.filter(
-            (item: DirectoryItemData) => item.type === "directory",
-          );
-
-          const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
-            id: `folder-${folder.path.replace(/\//g, "-")}`,
-            name: folder.name,
-            path: folder.path,
-            type: "folder" as const,
-            isExpanded: false,
-            children: [],
-          }));
-
-          setDirectoryTree((prevTree) => {
-            const updateChildren = (items: SidebarItem[]): SidebarItem[] => {
-              return items.map((item) => {
-                if (item.id === folderId) {
-                  return { ...item, children: subTreeItems };
-                } else if (item.children) {
-                  return { ...item, children: updateChildren(item.children) };
-                }
-                return item;
-              });
-            };
-            return updateChildren(prevTree);
-          });
-        } catch (error) {
-          console.error("Failed to load subdirectory:", error);
+  /**
+   * Called by FolderTree whenever the user selects (clicks) a tree item.
+   * We navigate to the folder and lazily load children on first visit.
+   */
+  const handleDirectorySelect = useCallback(
+    async (id: string) => {
+      // Walk the tree to find the item by id
+      const findItem = (items: SidebarItem[]): SidebarItem | null => {
+        for (const item of items) {
+          if (item.id === id) return item;
+          if (item.children) {
+            const found = findItem(item.children);
+            if (found) return found;
+          }
         }
-      }
-    }
+        return null;
+      };
 
-    setExpandedFolders(newExpanded);
+      const item = findItem(directoryTree);
+      if (!item) return;
+
+      // Navigate to path
+      onPathChange(item.path);
+
+      // Lazy-load children the first time this folder is expanded
+      if (
+        sshSessionId &&
+        item.path !== "/" &&
+        !loadedFoldersRef.current.has(item.path)
+      ) {
+        loadedFoldersRef.current.add(item.path);
+        await loadSubdirectory(id, item.path);
+      }
+    },
+    [directoryTree, onPathChange, sshSessionId, loadSubdirectory],
+  );
+
+  // ─── Context menu ─────────────────────────────────────────────────────────────
+
+  const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, isVisible: true, item });
   };
 
-  const renderSidebarItem = (item: SidebarItem, level: number = 0) => {
-    const isExpanded = expandedFolders.has(item.id);
-    const isActive = currentPath === item.path;
+  const closeContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
+  };
+
+  useEffect(() => {
+    if (!contextMenu.isVisible) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const menuElement = document.querySelector("[data-sidebar-context-menu]");
+      if (!menuElement?.contains(target)) closeContextMenu();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeContextMenu();
+    };
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextMenu.isVisible]);
+
+  // ─── Render helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Recursively renders directory tree items using FolderTree.Item + Content.
+   *
+   * FolderTree.Item detects "has children" via React.Children.count > 0.
+   * By always wrapping children in <FolderTree.Content> (even when the
+   * children array is empty), every directory shows the expand chevron.
+   * FolderTree.Content internally shows nothing when its own children are
+   * absent, so an unloaded folder simply expands to an empty state while
+   * the async fetch fills it in.
+   */
+  const renderFolderTreeItem = (item: SidebarItem): React.ReactNode => (
+    <FolderTree.Item key={item.id} id={item.id} label={item.name}>
+      <FolderTree.Content>
+        {item.children?.map((child) => renderFolderTreeItem(child))}
+      </FolderTree.Content>
+    </FolderTree.Item>
+  );
+
+  /**
+   * Styled quick-access row (recent / pinned / shortcut).
+   * Mirrors FolderTree.Item's visual language but adds onContextMenu support.
+   */
+  const renderQuickAccessItem = (item: SidebarItem, icon: React.ReactNode) => {
+    const dirPath =
+      item.type === "shortcut"
+        ? item.path
+        : item.path.substring(0, item.path.lastIndexOf("/")) || "/";
+    const isActive = currentPath === dirPath;
 
     return (
-      <div key={item.id}>
-        <div
-          className={cn(
-            "flex items-center gap-2 py-1.5 text-sm cursor-pointer hover:bg-hover rounded",
-            isActive && "bg-primary/20 text-primary",
-            "text-foreground",
-          )}
-          style={{ paddingLeft: `${12 + level * 16}px`, paddingRight: "12px" }}
-          onClick={() => handleItemClick(item)}
-          onContextMenu={(e) => {
-            if (
-              item.type === "recent" ||
-              item.type === "pinned" ||
-              item.type === "shortcut"
-            ) {
-              handleContextMenu(e, item);
-            }
-          }}
-        >
-          {item.type === "folder" && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFolder(item.id, item.path);
-              }}
-              className="p-0.5 hover:bg-hover rounded"
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-3 h-3" />
-              ) : (
-                <ChevronRight className="w-3 h-3" />
-              )}
-            </button>
-          )}
-
-          {item.type === "folder" ? (
-            isExpanded ? (
-              <FolderOpen className="w-4 h-4" />
-            ) : (
-              <Folder className="w-4 h-4" />
-            )
-          ) : (
-            <File className="w-4 h-4" />
-          )}
-
-          <span className="truncate">{item.name}</span>
-        </div>
-
-        {item.type === "folder" && isExpanded && item.children && (
-          <div>
-            {item.children.map((child) => renderSidebarItem(child, level + 1))}
-          </div>
+      <div
+        key={item.id}
+        className={cn(
+          "flex items-center gap-2 py-1.5 pl-8 pr-3 text-sm cursor-pointer select-none transition-colors",
+          isActive
+            ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-r-2 border-blue-600"
+            : "hover:bg-gray-100 dark:hover:bg-slate-700/50 text-foreground",
         )}
+        onClick={() => handleQuickAccessClick(item)}
+        onContextMenu={(e) => handleContextMenu(e, item)}
+        title={item.path}
+      >
+        {/* indent spacer matching FolderTree level-1 padding */}
+        <span className="w-3 shrink-0" aria-hidden="true" />
+        {icon}
+        <span className="flex-1 truncate">{item.name}</span>
       </div>
     );
   };
 
+  /**
+   * Section header + items list.
+   * Returns null when items is empty so empty sections are hidden.
+   */
   const renderSection = (
     title: string,
-    icon: React.ReactNode,
+    headerIcon: React.ReactNode,
     items: SidebarItem[],
+    renderItem: (item: SidebarItem) => React.ReactNode,
   ) => {
     if (items.length === 0) return null;
-
     return (
-      <div className="mb-5">
-        <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          {icon}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {headerIcon}
           {title}
         </div>
-        <div className="space-y-0.5">
-          {items.map((item) => renderSidebarItem(item))}
-        </div>
+        <div className="mt-0.5">{items.map((item) => renderItem(item))}</div>
       </div>
     );
   };
@@ -452,53 +477,124 @@ export function FileManagerSidebar({
   const hasQuickAccessItems =
     recentItems.length > 0 || pinnedItems.length > 0 || shortcuts.length > 0;
 
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
   return (
     <>
       <div className="h-full flex flex-col bg-canvas border-r border-edge">
         <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-4">
+          <div className="absolute inset-1.5 overflow-y-auto thin-scrollbar space-y-1">
+            {/* ── Recent files ──────────────────────────────────────── */}
             {renderSection(
               t("fileManager.recent"),
               <Clock className="w-3 h-3" />,
               recentItems,
+              (item) =>
+                renderQuickAccessItem(
+                  item,
+                  <File
+                    size={15}
+                    className={cn(
+                      "shrink-0",
+                      currentPath ===
+                        (item.path.substring(0, item.path.lastIndexOf("/")) ||
+                          "/")
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-500 dark:text-gray-400",
+                    )}
+                  />,
+                ),
             )}
+
+            {/* ── Pinned files ───────────────────────────────────────── */}
             {renderSection(
               t("fileManager.pinned"),
               <Star className="w-3 h-3" />,
               pinnedItems,
+              (item) =>
+                renderQuickAccessItem(
+                  item,
+                  <File
+                    size={15}
+                    className={cn(
+                      "shrink-0",
+                      currentPath ===
+                        (item.path.substring(0, item.path.lastIndexOf("/")) ||
+                          "/")
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-500 dark:text-gray-400",
+                    )}
+                  />,
+                ),
             )}
+
+            {/* ── Folder shortcuts ───────────────────────────────────── */}
             {renderSection(
               t("fileManager.folderShortcuts"),
               <Bookmark className="w-3 h-3" />,
               shortcuts,
+              (item) =>
+                renderQuickAccessItem(
+                  item,
+                  <Folder
+                    size={15}
+                    className={cn(
+                      "shrink-0",
+                      currentPath === item.path
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-blue-500 dark:text-blue-400",
+                    )}
+                  />,
+                ),
             )}
 
+            {/* ── Directory tree ─────────────────────────────────────── */}
             <div
-              className={cn(hasQuickAccessItems && "pt-4 border-t border-edge")}
+              className={cn(hasQuickAccessItems && "pt-3 border-t border-edge")}
             >
-              <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <Folder className="w-3 h-3" />
                 {t("fileManager.directories")}
               </div>
-              <div className="mt-2">
-                {directoryTree.map((item) => renderSidebarItem(item))}
+
+              <div className="mt-1">
+                {/*
+                 * FolderTree.Root manages its own expansion state internally.
+                 * We pass `onSelect` to be notified of clicks so we can:
+                 *   1. Navigate to the selected path (onPathChange)
+                 *   2. Lazy-load subdirectory children on first expand
+                 *
+                 * The root "/" folder is pre-expanded via defaultExpanded.
+                 *
+                 * className overrides strip the default card styling so the
+                 * tree blends seamlessly into the sidebar panel.
+                 */}
+                <FolderTree.Root
+                  id="sidebar-directory-tree"
+                  defaultExpanded={["root"]}
+                  onSelect={(id) => handleDirectorySelect(id)}
+                  className="bg-transparent border-0 rounded-none shadow-none"
+                >
+                  {directoryTree.map((item) => renderFolderTreeItem(item))}
+                </FolderTree.Root>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Context menu ─────────────────────────────────────────────── */}
       {contextMenu.isVisible && contextMenu.item && (
         <>
+          {/* Transparent backdrop to capture outside clicks */}
           <div className="fixed inset-0 z-40" />
+
           <div
             data-sidebar-context-menu
             className="fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[160px] z-50 overflow-hidden"
-            style={{
-              left: contextMenu.x,
-              top: contextMenu.y,
-            }}
+            style={{ left: contextMenu.x, top: contextMenu.y }}
           >
+            {/* Recent item actions */}
             {contextMenu.item.type === "recent" && (
               <>
                 <button
@@ -508,26 +604,23 @@ export function FileManagerSidebar({
                     closeContextMenu();
                   }}
                 >
-                  <div className="flex-shrink-0">
-                    <Clock className="w-4 h-4" />
-                  </div>
+                  <Clock className="w-4 h-4 shrink-0" />
                   <span className="flex-1">
                     {t("fileManager.removeFromRecentFiles")}
                   </span>
                 </button>
+
                 {recentItems.length > 1 && (
                   <>
                     <div className="border-t border-edge" />
                     <button
-                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-red-400 hover:bg-red-500/10 first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-red-500/10 text-red-400 first:rounded-t-lg last:rounded-b-lg"
                       onClick={() => {
                         handleClearAllRecent();
                         closeContextMenu();
                       }}
                     >
-                      <div className="flex-shrink-0">
-                        <Clock className="w-4 h-4" />
-                      </div>
+                      <Clock className="w-4 h-4 shrink-0" />
                       <span className="flex-1">
                         {t("fileManager.clearAllRecentFiles")}
                       </span>
@@ -537,6 +630,7 @@ export function FileManagerSidebar({
               </>
             )}
 
+            {/* Pinned item actions */}
             {contextMenu.item.type === "pinned" && (
               <button
                 className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-foreground first:rounded-t-lg last:rounded-b-lg"
@@ -545,13 +639,12 @@ export function FileManagerSidebar({
                   closeContextMenu();
                 }}
               >
-                <div className="flex-shrink-0">
-                  <Star className="w-4 h-4" />
-                </div>
+                <Star className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{t("fileManager.unpinFile")}</span>
               </button>
             )}
 
+            {/* Shortcut item actions */}
             {contextMenu.item.type === "shortcut" && (
               <button
                 className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-hover text-foreground first:rounded-t-lg last:rounded-b-lg"
@@ -560,9 +653,7 @@ export function FileManagerSidebar({
                   closeContextMenu();
                 }}
               >
-                <div className="flex-shrink-0">
-                  <Bookmark className="w-4 h-4" />
-                </div>
+                <Bookmark className="w-4 h-4 shrink-0" />
                 <span className="flex-1">
                   {t("fileManager.removeShortcut")}
                 </span>
