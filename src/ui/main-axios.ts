@@ -3106,6 +3106,59 @@ export async function revokeAllUserSessions(
   }
 }
 
+export interface ApiKey {
+  id: string;
+  name: string;
+  userId: string;
+  username: string | null;
+  tokenPrefix: string;
+  createdAt: string;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  isActive: boolean;
+}
+
+export interface CreatedApiKey extends ApiKey {
+  token: string;
+}
+
+export async function createApiKey(
+  name: string,
+  userId: string,
+  expiresAt?: string,
+): Promise<CreatedApiKey> {
+  try {
+    const response = await authApi.post("/users/api-keys", {
+      name,
+      userId,
+      expiresAt: expiresAt ?? null,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "create API key");
+  }
+}
+
+export async function getApiKeys(): Promise<{ apiKeys: ApiKey[] }> {
+  try {
+    const response = await authApi.get("/users/api-keys");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch API keys");
+  }
+}
+
+export async function deleteApiKey(
+  keyId: string,
+): Promise<{ success: boolean }> {
+  try {
+    const response = await authApi.delete(`/users/api-keys/${keyId}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "delete API key");
+  }
+}
+
 export async function makeUserAdmin(
   userId: string,
 ): Promise<Record<string, unknown>> {

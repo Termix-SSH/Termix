@@ -5,8 +5,9 @@ import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
 import { db } from "../database/db/index.js";
-import { sessions, trustedDevices } from "../database/db/schema.js";
+import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
@@ -727,6 +728,81 @@ class AuthManager {
     };
   }
 
+  private async handleApiKeyAuth(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+    token: string,
+    requireAdmin = false,
+  ): Promise<void> {
+    try {
+      const tokenPrefix = token.substring(0, 12);
+
+      const candidates = await db
+        .select()
+        .from(apiKeys)
+        .where(
+          and(eq(apiKeys.tokenPrefix, tokenPrefix), eq(apiKeys.isActive, true)),
+        );
+
+      if (candidates.length === 0) {
+        res.status(401).json({ error: "Invalid API key" });
+        return;
+      }
+
+      let matchedKey: (typeof candidates)[0] | null = null;
+      for (const candidate of candidates) {
+        if (await bcrypt.compare(token, candidate.tokenHash)) {
+          matchedKey = candidate;
+          break;
+        }
+      }
+
+      if (!matchedKey) {
+        res.status(401).json({ error: "Invalid API key" });
+        return;
+      }
+
+      if (matchedKey.expiresAt && new Date(matchedKey.expiresAt) < new Date()) {
+        res.status(401).json({ error: "API key has expired" });
+        return;
+      }
+
+      if (requireAdmin) {
+        const { users } = await import("../database/db/schema.js");
+        const userRows = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, matchedKey.userId))
+          .limit(1);
+        if (!userRows[0]?.isAdmin) {
+          res.status(403).json({ error: "Admin access required" });
+          return;
+        }
+      }
+
+      db.update(apiKeys)
+        .set({ lastUsedAt: new Date().toISOString() })
+        .where(eq(apiKeys.id, matchedKey.id))
+        .then(() => {})
+        .catch((err) => {
+          databaseLogger.warn("Failed to update API key lastUsedAt", {
+            operation: "api_key_update_last_used",
+            keyId: matchedKey!.id,
+            error: err instanceof Error ? err.message : "Unknown",
+          });
+        });
+
+      req.userId = matchedKey.userId;
+      next();
+    } catch (error) {
+      databaseLogger.error("API key authentication failed", error, {
+        operation: "api_key_auth_failed",
+      });
+      res.status(500).json({ error: "API key authentication failed" });
+    }
+  }
+
   createAuthMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
       const authReq = req as AuthenticatedRequest;
@@ -741,6 +817,10 @@ class AuthManager {
 
       if (!token) {
         return res.status(401).json({ error: "Missing authentication token" });
+      }
+
+      if (token.startsWith("tmx_")) {
+        return this.handleApiKeyAuth(authReq, res, next, token);
       }
 
       const payload = await this.verifyJWTToken(token);
@@ -899,6 +979,16 @@ class AuthManager {
 
       if (!token) {
         return res.status(401).json({ error: "Missing authentication token" });
+      }
+
+      if (token.startsWith("tmx_")) {
+        return this.handleApiKeyAuth(
+          req as AuthenticatedRequest,
+          res,
+          next,
+          token,
+          true,
+        );
       }
 
       const payload = await this.verifyJWTToken(token);

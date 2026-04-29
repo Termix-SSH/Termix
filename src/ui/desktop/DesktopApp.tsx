@@ -442,7 +442,17 @@ function AppContent({
 
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Suspense fallback={null}>
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  />
+                }
+              >
                 <Dashboard
                   isAuthenticated={isAuthenticated}
                   authLoading={authLoading}
@@ -457,7 +467,17 @@ function AppContent({
 
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Suspense fallback={null}>
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  />
+                }
+              >
                 <HostManager
                   isTopbarOpen={isTopbarOpen}
                   initialTab={currentTabData?.initialTab}
@@ -474,7 +494,17 @@ function AppContent({
 
           {showAdmin && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Suspense fallback={null}>
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  />
+                }
+              >
                 <AdminSettings
                   isTopbarOpen={isTopbarOpen}
                   rightSidebarOpen={rightSidebarOpen}
@@ -486,7 +516,17 @@ function AppContent({
 
           {showProfile && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
-              <Suspense fallback={null}>
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  />
+                }
+              >
                 <UserProfile
                   isTopbarOpen={isTopbarOpen}
                   rightSidebarOpen={rightSidebarOpen}

@@ -589,3 +589,17 @@ export const opksshTokens = sqliteTable("opkssh_tokens", {
   expiresAt: text("expires_at").notNull(),
   lastUsed: text("last_used"),
 });
+
+export const apiKeys = sqliteTable("api_keys", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  tokenPrefix: text("token_prefix").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at"),
+  lastUsedAt: text("last_used_at"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+});
