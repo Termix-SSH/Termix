@@ -91,108 +91,6 @@ interface SSHTerminalProps {
   previewTheme?: string | null;
 }
 
-function TerminalContextMenu({
-  x,
-  y,
-  hasSelection,
-  showCopyPaste,
-  showOpenFileManager,
-  onCopy,
-  onPaste,
-  onOpenFileManager,
-  onClose,
-}: {
-  x: number;
-  y: number;
-  hasSelection: boolean;
-  showCopyPaste: boolean;
-  showOpenFileManager: boolean;
-  onCopy: () => void;
-  onPaste: () => void;
-  onOpenFileManager: () => void;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const menuX = x + 180 > window.innerWidth ? window.innerWidth - 190 : x;
-  const menuY = y + 150 > window.innerHeight ? window.innerHeight - 160 : y;
-
-  useEffect(() => {
-    let cleanup: (() => void) | null = null;
-    const timeoutId = setTimeout(() => {
-      const handleClose = (e: MouseEvent) => {
-        if (!menuRef.current?.contains(e.target as Element)) onClose();
-      };
-      const handleRightClick = (e: MouseEvent) => {
-        e.preventDefault();
-        onClose();
-      };
-      const handleKey = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onClose();
-      };
-      document.addEventListener("mousedown", handleClose, true);
-      document.addEventListener("contextmenu", handleRightClick);
-      document.addEventListener("keydown", handleKey);
-      window.addEventListener("blur", onClose);
-
-      cleanup = () => {
-        document.removeEventListener("mousedown", handleClose, true);
-        document.removeEventListener("contextmenu", handleRightClick);
-        document.removeEventListener("keydown", handleKey);
-        window.removeEventListener("blur", onClose);
-      };
-    }, 50);
-    return () => {
-      clearTimeout(timeoutId);
-      cleanup?.();
-    };
-  }, [onClose]);
-
-  const items: { label: string; action: () => void; disabled?: boolean }[] = [];
-
-  if (showCopyPaste) {
-    items.push(
-      { label: t("terminal.copy"), action: onCopy, disabled: !hasSelection },
-      { label: t("terminal.paste"), action: onPaste },
-    );
-  }
-
-  if (showOpenFileManager) {
-    items.push({
-      label: t("terminal.openFileManagerHere"),
-      action: onOpenFileManager,
-    });
-  }
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[99990]" />
-      <div
-        ref={menuRef}
-        className="fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] z-[99995] overflow-hidden"
-        style={{ left: menuX, top: menuY }}
-      >
-        {items.map((item, i) => (
-          <button
-            key={i}
-            className={`w-full px-3 py-2 text-left text-sm flex items-center hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={item.disabled}
-            onClick={() => {
-              if (!item.disabled) {
-                item.action();
-                onClose();
-              }
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
@@ -294,11 +192,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const [contextMenu, setContextMenu] = useState<{
-      x: number;
-      y: number;
-      hasSelection: boolean;
-    } | null>(null);
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<any>(null);
@@ -795,7 +688,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     );
 
     function getUseRightClickCopyPaste() {
-      return getCookie("rightClickCopyPaste") === "true";
+      return getCookie("rightClickCopyPaste") !== "false";
     }
 
     function attemptReconnection() {
@@ -1718,6 +1611,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     async function writeTextToClipboard(text: string): Promise<boolean> {
       try {
+        if (window.electronClipboard) {
+          window.electronClipboard.writeText(text);
+          return true;
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(text);
           return true;
@@ -1744,6 +1641,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     async function readTextFromClipboard(): Promise<string> {
       try {
+        if (window.electronClipboard) {
+          return window.electronClipboard.readText();
+        }
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
@@ -2015,29 +1915,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
+        if (e.ctrlKey && onOpenFileManager) {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenFileManager();
+          return;
+        }
+
         if (getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
           if (terminal.hasSelection()) {
             const text = terminal.getSelection();
-            navigator.clipboard
-              .writeText(text)
-              .then(() => terminal.clearSelection());
+            writeTextToClipboard(text).then(() => terminal.clearSelection());
           } else {
-            navigator.clipboard.readText().then((text) => {
+            readTextFromClipboard().then((text) => {
               if (text) terminal.paste(text);
             });
           }
           return;
         }
-        if (!onOpenFileManager) return;
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          hasSelection: terminal.hasSelection(),
-        });
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
@@ -2730,29 +2627,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
-
-        {contextMenu && (
-          <TerminalContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            hasSelection={contextMenu.hasSelection}
-            showCopyPaste={getUseRightClickCopyPaste()}
-            showOpenFileManager={!!onOpenFileManager}
-            onCopy={async () => {
-              const selection = terminal?.getSelection();
-              if (selection) {
-                await writeTextToClipboard(selection);
-                terminal?.clearSelection();
-              }
-            }}
-            onPaste={async () => {
-              const text = await readTextFromClipboard();
-              if (text) terminal?.paste(text);
-            }}
-            onOpenFileManager={() => onOpenFileManager?.()}
-            onClose={() => setContextMenu(null)}
-          />
-        )}
       </div>
     );
   },

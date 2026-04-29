@@ -91,6 +91,7 @@ import {
   Eye,
   ChevronsDownUp,
   ChevronsUpDown,
+  RefreshCw,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -122,6 +123,7 @@ export function HostManagerViewer({
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
   const [operationLoading, setOperationLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(
     new Map(),
   );
@@ -137,7 +139,7 @@ export function HostManagerViewer({
     new Set(),
   );
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const { getStatus } = useServerStatus();
+  const { getStatus, refreshStatuses } = useServerStatus();
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -164,9 +166,10 @@ export function HostManagerViewer({
     };
   }, []);
 
-  const fetchHosts = async () => {
+  const fetchHosts = async (options: { showLoading?: boolean } = {}) => {
+    const { showLoading = true } = options;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await getSSHHosts();
 
       const cleanedHosts = data.map((host) => {
@@ -191,7 +194,7 @@ export function HostManagerViewer({
     } catch {
       setError(t("hosts.failedToLoadHosts"));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -205,6 +208,20 @@ export function HostManagerViewer({
       setFolderMetadata(metadataMap);
     } catch (error) {
       console.error("Failed to fetch folder metadata:", error);
+    }
+  };
+
+  const handleRefreshHosts = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchHosts({ showLoading: false }),
+        fetchFolderMetadata(),
+        refreshServerPolling(),
+        refreshStatuses(),
+      ]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -1111,7 +1128,15 @@ export function HostManagerViewer({
 
               <div className="w-px h-6 bg-border mx-2" />
 
-              <Button onClick={fetchHosts} variant="outline" size="sm">
+              <Button
+                onClick={handleRefreshHosts}
+                variant="outline"
+                size="sm"
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+                />
                 {t("hosts.refresh")}
               </Button>
             </div>
@@ -1220,7 +1245,15 @@ export function HostManagerViewer({
 
             <div className="w-px h-6 bg-border mx-2" />
 
-            <Button onClick={fetchHosts} variant="outline" size="sm">
+            <Button
+              onClick={handleRefreshHosts}
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
               {t("hosts.refresh")}
             </Button>
           </div>
