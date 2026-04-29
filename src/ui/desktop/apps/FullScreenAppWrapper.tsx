@@ -35,17 +35,6 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   }, []);
 
   useEffect(() => {
-    const handleSessionExpired = () => {
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      setHostConfig(null);
-    };
-
-    dbHealthMonitor.on("session-expired", handleSessionExpired);
-    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
-  }, []);
-
-  useEffect(() => {
     const checkAuth = async () => {
       try {
         const userInfo = await getUserInfo();
