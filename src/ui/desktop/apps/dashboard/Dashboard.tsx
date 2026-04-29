@@ -633,7 +633,7 @@ export function Dashboard({
               <div className="flex flex-row gap-3 flex-wrap min-w-0">
                 <div className="flex flex-col items-center gap-4 justify-center mr-5 min-w-0 shrink">
                   <p className="text-muted-foreground text-sm whitespace-nowrap">
-                    Press <Kbd>LShift</Kbd> twice to open the command palette
+                    Press <Kbd>L Shift</Kbd> twice to open the command palette
                   </p>
                 </div>
                 <Button

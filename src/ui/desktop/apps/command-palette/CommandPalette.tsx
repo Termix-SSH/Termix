@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/command.tsx";
 import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Kbd, KbdKey, KbdSeparator } from "@/components/ui/kbd";
 import {
   Key,
   Server,
@@ -685,10 +685,11 @@ export function CommandPalette({
         <div className="border-t border-edge px-4 py-2 bg-hover/50 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span>{t("commandPalette.press")}</span>
-            <KbdGroup>
-              <Kbd>Shift</Kbd>
-              <Kbd>Shift</Kbd>
-            </KbdGroup>
+            <Kbd>
+              <KbdKey>Shift</KbdKey>
+              <KbdSeparator />
+              <KbdKey>Shift</KbdKey>
+            </Kbd>
             <span>{t("commandPalette.toToggle")}</span>
           </div>
           <div className="flex items-center gap-2">
