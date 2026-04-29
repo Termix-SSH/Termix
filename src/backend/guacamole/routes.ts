@@ -62,7 +62,7 @@ router.post("/token", async (req, res) => {
         );
         break;
       case "vnc":
-        token = tokenService.createVncToken(hostname, password, {
+        token = tokenService.createVncToken(hostname, username || undefined, password, {
           port: port || 5900,
           ...options,
         });
@@ -205,7 +205,7 @@ router.post(
           });
           break;
         case "vnc":
-          token = tokenService.createVncToken(hostname, password, {
+          token = tokenService.createVncToken(hostname, username || undefined, password, {
             port: port || 5900,
             ...guacConfig,
           });

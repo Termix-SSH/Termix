@@ -217,52 +217,50 @@ export function HostGeneralTab({
           )}
         />
 
-        {connectionType !== "vnc" && (
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => {
-              const isCredentialAuth = authTab === "credential";
-              const credentialId = form.watch("credentialId");
-              const overrideEnabled = form.watch("overrideCredentialUsername");
-              const selectedCredential = credentials.find(
-                (c) => c.id === credentialId,
-              );
-              const shouldDisable =
-                isCredentialAuth &&
-                selectedCredential?.username &&
-                !overrideEnabled;
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => {
+            const isCredentialAuth = authTab === "credential";
+            const credentialId = form.watch("credentialId");
+            const overrideEnabled = form.watch("overrideCredentialUsername");
+            const selectedCredential = credentials.find(
+              (c) => c.id === credentialId,
+            );
+            const shouldDisable =
+              isCredentialAuth &&
+              selectedCredential?.username &&
+              !overrideEnabled;
 
-              return (
-                <FormItem className="col-span-6">
-                  <FormLabel>{t("hosts.username")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t("placeholders.username")}
-                      disabled={shouldDisable}
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e.target.value);
-                        if (
-                          isCredentialAuth &&
-                          selectedCredential &&
-                          !selectedCredential.username &&
-                          e.target.value.trim() !== ""
-                        ) {
-                          form.setValue("overrideCredentialUsername", true);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        field.onChange(e.target.value.trim());
-                        field.onBlur();
-                      }}
-                    />
-                  </FormControl>
-                </FormItem>
-              );
-            }}
-          />
-        )}
+            return (
+              <FormItem className="col-span-6">
+                <FormLabel>{t("hosts.username")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={t("placeholders.username")}
+                    disabled={shouldDisable}
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      if (
+                        isCredentialAuth &&
+                        selectedCredential &&
+                        !selectedCredential.username &&
+                        e.target.value.trim() !== ""
+                      ) {
+                        form.setValue("overrideCredentialUsername", true);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      field.onChange(e.target.value.trim());
+                      field.onBlur();
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            );
+          }}
+        />
       </div>
       <div className="grid grid-cols-12 gap-4 mt-3">
         <FormField
