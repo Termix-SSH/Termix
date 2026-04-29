@@ -1,16 +1,16 @@
 import React, {
-  useState,
-  useEffect,
   useCallback,
-  useRef,
   Component,
+  Suspense,
+  lazy,
   type ErrorInfo,
   type ReactNode,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import { LeftSidebar } from "@/ui/desktop/navigation/LeftSidebar.tsx";
-import { Dashboard } from "@/ui/desktop/apps/dashboard/Dashboard.tsx";
 import { AppView } from "@/ui/desktop/navigation/AppView.tsx";
-import { HostManager } from "@/ui/desktop/apps/host-manager/hosts/HostManager.tsx";
 import {
   TabProvider,
   useTabs,
@@ -18,16 +18,47 @@ import {
 import { TopNavbar } from "@/ui/desktop/navigation/TopNavbar.tsx";
 import { CommandHistoryProvider } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { ServerStatusProvider } from "@/ui/contexts/ServerStatusContext";
-import { AdminSettings } from "@/ui/desktop/apps/admin/AdminSettings.tsx";
-import { UserProfile } from "@/ui/desktop/user/UserProfile.tsx";
-import { NetworkGraphCard } from "@/ui/desktop/apps/dashboard/cards/NetworkGraphCard";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { toast } from "sonner";
-import { CommandPalette } from "@/ui/desktop/apps/command-palette/CommandPalette.tsx";
-import { getUserInfo, logoutUser, isElectron } from "@/ui/main-axios.ts";
+import {
+  getUserInfo,
+  logoutUser,
+  isCurrentAuthInvalidationError,
+} from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+
+const Dashboard = lazy(() =>
+  import("@/ui/desktop/apps/dashboard/Dashboard.tsx").then((module) => ({
+    default: module.Dashboard,
+  })),
+);
+const HostManager = lazy(() =>
+  import("@/ui/desktop/apps/host-manager/hosts/HostManager.tsx").then(
+    (module) => ({
+      default: module.HostManager,
+    }),
+  ),
+);
+const AdminSettings = lazy(() =>
+  import("@/ui/desktop/apps/admin/AdminSettings.tsx").then((module) => ({
+    default: module.AdminSettings,
+  })),
+);
+const UserProfile = lazy(() =>
+  import("@/ui/desktop/user/UserProfile.tsx").then((module) => ({
+    default: module.UserProfile,
+  })),
+);
+const CommandPalette = lazy(() =>
+  import("@/ui/desktop/apps/command-palette/CommandPalette.tsx").then(
+    (module) => ({
+      default: module.CommandPalette,
+    }),
+  ),
+);
 
 function AppContent({
   onAuthStateChange,
@@ -52,6 +83,7 @@ function AppContent({
   const { theme, setTheme } = useTheme();
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(400);
+  const isAuthenticatedRef = useRef(false);
 
   const isDarkMode =
     theme === "dark" ||
@@ -96,6 +128,8 @@ function AppContent({
 
     const handleSessionExpired = () => {
       setIsAuthenticated(false);
+      setIsAdmin(false);
+      setUsername(null);
     };
 
     dbHealthMonitor.on(
@@ -177,9 +211,8 @@ function AppContent({
     if (hostIdentifier) {
       const openTerminal = async () => {
         try {
-          const { getSSHHostById, getSSHHosts } = await import(
-            "@/ui/main-axios.ts"
-          );
+          const { getSSHHostById, getSSHHosts } =
+            await import("@/ui/main-axios.ts");
           let host = null;
 
           if (/^\d+$/.test(hostIdentifier)) {
@@ -211,6 +244,22 @@ function AppContent({
   }, [addTab]);
 
   const isCheckingAuth = useRef(false);
+  const clientTunnelAutoStartStarted = useRef(false);
+
+  const startClientTunnelAutoStart = useCallback(() => {
+    if (
+      clientTunnelAutoStartStarted.current ||
+      !window.electronAPI?.isElectron
+    ) {
+      return;
+    }
+
+    clientTunnelAutoStartStarted.current = true;
+    window.electronAPI.startC2SAutoStartTunnels?.().catch((error) => {
+      clientTunnelAutoStartStarted.current = false;
+      console.error("Failed to start client tunnel auto-start entries:", error);
+    });
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -227,16 +276,22 @@ function AppContent({
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
             setUsername(meRes.username || null);
+            startClientTunnelAutoStart();
           }
         })
         .catch((err) => {
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-          setUsername(null);
-
-          const errorCode = err?.response?.data?.code;
-          if (errorCode === "SESSION_EXPIRED") {
+          if (isCurrentAuthInvalidationError(err)) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
             console.warn("Session expired - please log in again");
+            return;
+          }
+
+          if (!isAuthenticatedRef.current) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
           }
         })
         .finally(() => {
@@ -251,7 +306,7 @@ function AppContent({
     window.addEventListener("storage", handleStorageChange);
 
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [startClientTunnelAutoStart]);
 
   useEffect(() => {
     localStorage.setItem("topNavbarOpen", JSON.stringify(isTopbarOpen));
@@ -259,6 +314,7 @@ function AppContent({
 
   useEffect(() => {
     onAuthStateChange?.(isAuthenticated);
+    isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, onAuthStateChange]);
 
   const handleAuthSuccess = useCallback(
@@ -274,6 +330,7 @@ function AppContent({
         setIsAuthenticated(true);
         setIsAdmin(authData.isAdmin);
         setUsername(authData.username);
+        startClientTunnelAutoStart();
         setTransitionPhase("fadeIn");
 
         setTimeout(() => {
@@ -282,7 +339,7 @@ function AppContent({
         }, 800);
       }, 1200);
     },
-    [],
+    [startClientTunnelAutoStart],
   );
 
   const handleLogout = useCallback(async () => {
@@ -347,18 +404,22 @@ function AppContent({
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background">
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        setIsOpen={setIsCommandPaletteOpen}
-      />
+      <Suspense fallback={null}>
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          setIsOpen={setIsCommandPaletteOpen}
+        />
+      </Suspense>
       {!isAuthenticated && (
         <div className="fixed inset-0 flex items-center justify-center z-[10000] bg-background">
-          <Dashboard
-            isAuthenticated={isAuthenticated}
-            authLoading={authLoading}
-            onAuthSuccess={handleAuthSuccess}
-            isTopbarOpen={isTopbarOpen}
-          />
+          <Suspense fallback={null}>
+            <Dashboard
+              isAuthenticated={isAuthenticated}
+              authLoading={authLoading}
+              onAuthSuccess={handleAuthSuccess}
+              isTopbarOpen={isTopbarOpen}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -382,49 +443,118 @@ function AppContent({
 
           {showHome && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <Dashboard
-                isAuthenticated={isAuthenticated}
-                authLoading={authLoading}
-                onAuthSuccess={handleAuthSuccess}
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
+                }
+              >
+                <Dashboard
+                  isAuthenticated={isAuthenticated}
+                  authLoading={authLoading}
+                  onAuthSuccess={handleAuthSuccess}
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                />
+              </Suspense>
             </div>
           )}
 
           {showSshManager && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <HostManager
-                isTopbarOpen={isTopbarOpen}
-                initialTab={currentTabData?.initialTab}
-                hostConfig={currentTabData?.hostConfig}
-                _updateTimestamp={currentTabData?._updateTimestamp}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-                currentTabId={currentTab}
-                updateTab={updateTab}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
+                }
+              >
+                <HostManager
+                  isTopbarOpen={isTopbarOpen}
+                  initialTab={currentTabData?.initialTab}
+                  hostConfig={currentTabData?.hostConfig}
+                  _updateTimestamp={currentTabData?._updateTimestamp}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                  currentTabId={currentTab}
+                  updateTab={updateTab}
+                />
+              </Suspense>
             </div>
           )}
 
           {showAdmin && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-hidden">
-              <AdminSettings
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
+                }
+              >
+                <AdminSettings
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                />
+              </Suspense>
             </div>
           )}
 
           {showProfile && (
             <div className="h-screen w-full visible pointer-events-auto static overflow-auto thin-scrollbar">
-              <UserProfile
-                isTopbarOpen={isTopbarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                rightSidebarWidth={rightSidebarWidth}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
+                    style={{
+                      margin: "74px 17px 8px 8px",
+                      height: "calc(100vh - 82px)",
+                    }}
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
+                }
+              >
+                <UserProfile
+                  isTopbarOpen={isTopbarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  rightSidebarWidth={rightSidebarWidth}
+                  initialTab={currentTabData?.initialTab}
+                />
+              </Suspense>
             </div>
           )}
 
@@ -643,7 +773,7 @@ class TabErrorBoundary extends Component<
     throw error;
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
     if (error.message?.includes("useTabs must be used within a TabProvider")) {
       console.warn(
         "TabProvider mounting race condition detected, recovering...",

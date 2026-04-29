@@ -11,8 +11,7 @@ dist
 dist-ssr
 *.local
 
-.vscode/*
-!.vscode/extensions.json
+.vscode/
 .idea
 .DS_Store
 *.suo
@@ -20,12 +19,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
 /db/
 /release/
 /.claude/
 /ssl/
-.env
-/.mcp.json
+/uploads/
 /nul
-/.vscode/
+.env
+electron/build-info.cjs
+/.mcp.json
 /CLAUDE.md

@@ -56,7 +56,6 @@ import {
   UserCircle,
 } from "lucide-react";
 import type { SSHHost } from "@/types";
-import type { HostSharingTabProps } from "./shared/tab-types";
 
 interface User {
   id: string;

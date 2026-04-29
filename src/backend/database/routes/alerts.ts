@@ -7,7 +7,6 @@ import express from "express";
 import { db } from "../db/index.js";
 import { dismissedAlerts } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
-import fetch from "node-fetch";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { getProxyAgent } from "../../utils/proxy-agent.js";
@@ -61,7 +60,7 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
         Accept: "application/json",
         "User-Agent": "TermixAlertChecker/1.0",
       },
-      agent: getProxyAgent(url),
+      dispatcher: getProxyAgent(url),
     });
 
     if (!response.ok) {

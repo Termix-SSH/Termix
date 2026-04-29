@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { TunnelViewer } from "@/ui/desktop/apps/features/tunnel/TunnelViewer.tsx";
 import {
   getSSHHosts,
-  getTunnelStatuses,
+  subscribeTunnelStatuses,
   connectTunnel,
   disconnectTunnel,
   cancelTunnel,
@@ -110,11 +110,6 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
     }
   };
 
-  const fetchTunnelStatuses = useCallback(async () => {
-    const statusData = await getTunnelStatuses();
-    setTunnelStatuses(statusData);
-  }, []);
-
   useEffect(() => {
     fetchHosts();
     const interval = setInterval(fetchHosts, 5000);
@@ -137,10 +132,10 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
   }, [fetchHosts]);
 
   useEffect(() => {
-    fetchTunnelStatuses();
-    const interval = setInterval(fetchTunnelStatuses, 1000);
-    return () => clearInterval(interval);
-  }, [fetchTunnelStatuses]);
+    return subscribeTunnelStatuses(setTunnelStatuses, () => {
+      // The view remains usable if the stream reconnects or is unavailable.
+    });
+  }, []);
 
   useEffect(() => {
     if (visibleHosts.length > 0 && visibleHosts[0]) {
@@ -168,6 +163,15 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
 
         const tunnelConfig = {
           name: tunnelName,
+          scope: tunnel.scope || "s2s",
+          mode: tunnel.mode || tunnel.tunnelType || "remote",
+          bindHost: tunnel.bindHost,
+          targetHost: tunnel.targetHost,
+          tunnelType:
+            tunnel.tunnelType ||
+            (tunnel.mode === "local" || tunnel.mode === "remote"
+              ? tunnel.mode
+              : "remote"),
           sourceHostId: host.id,
           tunnelIndex: tunnelIndex,
           hostName: host.name || `${host.username}@${host.ip}`,
@@ -221,8 +225,6 @@ export function Tunnel({ filterHostKey }: SSHTunnelProps): React.ReactElement {
       } else if (action === "cancel") {
         await cancelTunnel(tunnelName);
       }
-
-      await fetchTunnelStatuses();
     } catch (error) {
       console.error("Tunnel action failed:", {
         action,

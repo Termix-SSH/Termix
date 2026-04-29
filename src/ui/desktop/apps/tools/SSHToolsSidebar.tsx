@@ -38,19 +38,16 @@ import {
   Trash2,
   Copy,
   X,
-  RotateCcw,
   Search,
   Loader2,
   Terminal,
   LayoutGrid,
-  MonitorCheck,
   Folder,
   ChevronDown,
   ChevronRight,
   GripVertical,
   FolderPlus,
   Settings,
-  MoreVertical,
   Server,
   Cloud,
   Database,
@@ -61,7 +58,6 @@ import {
   HardDrive,
   Globe,
   Share2,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -184,7 +180,7 @@ export function SSHToolsSidebar({
   const [isRecording, setIsRecording] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [rightClickCopyPaste, setRightClickCopyPaste] = useState<boolean>(
-    () => getCookie("rightClickCopyPaste") === "true",
+    () => getCookie("rightClickCopyPaste") !== "false",
   );
 
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -1214,10 +1210,6 @@ export function SSHToolsSidebar({
     toast.success(t("splitScreen.cleared"));
   };
 
-  const handleResetToSingle = () => {
-    handleClearSplit();
-  };
-
   const handleCommandSelect = (command: string) => {
     if (activeTerminal?.terminalRef?.current?.sendInput) {
       activeTerminal.terminalRef.current.sendInput(command);
@@ -1256,14 +1248,6 @@ export function SSHToolsSidebar({
                 <SidebarGroupLabel className="text-lg font-bold text-foreground">
                   {t("nav.tools")}
                   <div className="absolute right-5 flex gap-1">
-                    <Button
-                      variant="outline"
-                      onClick={() => setSidebarWidth(400)}
-                      className="w-[28px] h-[28px]"
-                      title={t("common.resetSidebarWidth")}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
                     <Button
                       variant="outline"
                       onClick={onClose}

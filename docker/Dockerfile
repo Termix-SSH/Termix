@@ -1,12 +1,14 @@
 # Stage 1: Install dependencies
-FROM node:22-slim AS deps
+FROM node:24-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
+COPY .npmrc ./
+COPY vendor ./vendor
 
-RUN npm ci --ignore-scripts --force && \
+RUN npm ci --ignore-scripts && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -26,24 +28,26 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm rebuild better-sqlite3 --force
+RUN npm rebuild better-sqlite3
 
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:22-slim AS production-deps
+FROM node:24-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
+COPY .npmrc ./
+COPY vendor ./vendor
 
-RUN npm ci --only=production --ignore-scripts --force && \
-    npm rebuild better-sqlite3 bcryptjs --force && \
+RUN npm ci --omit=dev --ignore-scripts && \
+    npm rebuild better-sqlite3 bcryptjs && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \

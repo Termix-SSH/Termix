@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { HostStatisticsTabProps } from "./shared/tab-types";
 import { QuickActionItem } from "./shared/QuickActionItem";
 

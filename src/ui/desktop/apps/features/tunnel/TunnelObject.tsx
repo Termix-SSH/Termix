@@ -172,7 +172,7 @@ export function TunnelObject({
                                   className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                 >
                                   <Square className="h-3 w-3 mr-1" />
-                                  {t("tunnels.disconnect")}
+                                  {t("tunnels.stop")}
                                 </Button>
                               </>
                             ) : isRetrying || isWaiting ? (
@@ -198,7 +198,7 @@ export function TunnelObject({
                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"
                               >
                                 <Play className="h-3 w-3 mr-1" />
-                                {t("tunnels.connect")}
+                                {t("tunnels.start")}
                               </Button>
                             )}
                           </div>
@@ -406,7 +406,7 @@ export function TunnelObject({
                                   className="h-7 px-2 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50 text-xs"
                                 >
                                   <Square className="h-3 w-3 mr-1" />
-                                  {t("tunnels.disconnect")}
+                                  {t("tunnels.stop")}
                                 </Button>
                               </>
                             ) : isRetrying || isWaiting ? (
@@ -432,7 +432,7 @@ export function TunnelObject({
                                 className="h-7 px-2 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50 text-xs"
                               >
                                 <Play className="h-3 w-3 mr-1" />
-                                {t("tunnels.connect")}
+                                {t("tunnels.start")}
                               </Button>
                             )}
                           </div>

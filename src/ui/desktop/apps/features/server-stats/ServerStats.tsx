@@ -37,7 +37,7 @@ import {
   FirewallWidget,
 } from "./widgets";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
-import { RefreshCcw, RefreshCw, RefreshCwOff } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import {
   ConnectionLogProvider,
   useConnectionLog,

@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { useTranslation } from "react-i18next";
 import { Shield } from "lucide-react";
 

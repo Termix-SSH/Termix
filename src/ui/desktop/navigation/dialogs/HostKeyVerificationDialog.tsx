@@ -35,8 +35,6 @@ export function HostKeyVerificationDialog({
   hostname,
   fingerprint,
   oldFingerprint,
-  keyType,
-  oldKeyType,
   algorithm,
   onAccept,
   onReject,

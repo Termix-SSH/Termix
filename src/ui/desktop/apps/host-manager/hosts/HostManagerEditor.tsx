@@ -1,29 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { cn } from "@/lib/utils.ts";
 
 import { Button } from "@/components/ui/button.tsx";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
 } from "@/components/ui/form.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { PasswordInput } from "@/components/ui/password-input.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
+
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import {
@@ -33,10 +19,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import React, { useEffect, useRef, useState } from "react";
-import { Switch } from "@/components/ui/switch.tsx";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
+import { Alert, AlertDescription } from "@/components/ui/alert.tsx";
 import { toast } from "sonner";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   createSSHHost,
   getCredentials,
@@ -45,86 +29,18 @@ import {
   enableAutoStart,
   disableAutoStart,
   getSnippets,
-  getRoles,
-  getUserList,
-  getUserInfo,
-  shareHost,
-  getHostAccess,
-  revokeHostAccess,
-  getSSHHostById,
-  notifyHostCreatedOrUpdated,
   getGuacamoleSettings,
-  type Role,
-  type AccessRecord,
 } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import { CredentialSelector } from "@/ui/desktop/apps/host-manager/credentials/CredentialSelector.tsx";
-import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { githubLight } from "@uiw/codemirror-theme-github";
-import { EditorView } from "@codemirror/view";
 import { useTheme } from "@/components/theme-provider.tsx";
 import type { StatsConfig } from "@/types/stats-widgets.ts";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command.tsx";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover.tsx";
-import { Slider } from "@/components/ui/slider.tsx";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion.tsx";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.tsx";
-import {
-  TERMINAL_THEMES,
-  TERMINAL_FONTS,
-  CURSOR_STYLES,
-  BELL_STYLES,
-  FAST_SCROLL_MODIFIERS,
-  DEFAULT_TERMINAL_CONFIG,
-} from "@/constants/terminal-themes.ts";
-import { TerminalPreview } from "@/ui/desktop/apps/features/terminal/TerminalPreview.tsx";
-import type { TerminalConfig, SSHHost, Credential } from "@/types";
-import {
-  Plus,
-  X,
-  Check,
-  ChevronsUpDown,
-  Save,
-  AlertCircle,
-  Trash2,
-  Users,
-  Shield,
-  Clock,
-  UserCircle,
-  ArrowLeft,
-} from "lucide-react";
+
+import { DEFAULT_TERMINAL_CONFIG } from "@/constants/terminal-themes.ts";
+import type { SSHHost, Credential } from "@/types";
+import { ArrowLeft } from "lucide-react";
 import { HostGeneralTab } from "./tabs/HostGeneralTab";
 import { HostTerminalTab } from "./tabs/HostTerminalTab";
 import { HostDockerTab } from "./tabs/HostDockerTab";
@@ -148,6 +64,18 @@ interface SSHManagerHostEditorProps {
   onBack?: () => void;
 }
 
+function isValidIPv4(value: string) {
+  const parts = value.split(".");
+  return (
+    parts.length === 4 &&
+    parts.every((part) => {
+      if (!/^\d+$/.test(part)) return false;
+      const parsed = Number(part);
+      return parsed >= 0 && parsed <= 255;
+    })
+  );
+}
+
 export function HostManagerEditor({
   editingHost,
   onFormSubmit,
@@ -162,7 +90,6 @@ export function HostManagerEditor({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const editorTheme = isDarkMode ? oneDark : githubLight;
   const [folders, setFolders] = useState<string[]>([]);
-  const [sshConfigurations, setSshConfigurations] = useState<string[]>([]);
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [snippets, setSnippets] = useState<
@@ -220,16 +147,7 @@ export function HostManagerEditor({
           ),
         ].sort();
 
-        const uniqueConfigurations = [
-          ...new Set(
-            hostsData
-              .filter((host) => host.name && host.name.trim() !== "")
-              .map((host) => host.name),
-          ),
-        ].sort();
-
         setFolders(uniqueFolders);
-        setSshConfigurations(uniqueConfigurations);
       } catch (error) {
         console.error("Host manager operation failed:", error);
       }
@@ -273,6 +191,25 @@ export function HostManagerEditor({
     };
   }, []);
 
+  const tunnelConnectionSchema = z.object({
+    scope: z.enum(["s2s", "c2s"]).default("s2s").optional(),
+    mode: z.enum(["local", "remote", "dynamic"]).default("remote").optional(),
+    tunnelType: z.enum(["local", "remote"]).default("remote").optional(),
+    bindHost: z.string().optional(),
+    sourcePort: z.coerce.number().min(1).max(65535),
+    endpointPort: z.coerce.number().min(1).max(65535),
+    endpointHost: z.string().optional(),
+    targetHost: z.string().optional(),
+    endpointPassword: z.string().optional(),
+    endpointKey: z.string().optional(),
+    endpointKeyPassword: z.string().optional(),
+    endpointAuthType: z.string().optional(),
+    endpointKeyType: z.string().optional(),
+    maxRetries: z.coerce.number().min(0).max(100).default(3),
+    retryInterval: z.coerce.number().min(1).max(3600).default(10),
+    autoStart: z.boolean().default(false),
+  });
+
   const formSchema = z
     .object({
       connectionType: z.enum(["ssh", "rdp", "vnc", "telnet"]).default("ssh"),
@@ -304,27 +241,8 @@ export function HostManagerEditor({
         .optional(),
       enableTerminal: z.boolean().default(true),
       enableTunnel: z.boolean().default(true),
-      tunnelConnections: z
-        .array(
-          z.object({
-            tunnelType: z
-              .enum(["local", "remote"])
-              .default("remote")
-              .optional(),
-            sourcePort: z.coerce.number().min(1).max(65535),
-            endpointPort: z.coerce.number().min(1).max(65535),
-            endpointHost: z.string().min(1),
-            endpointPassword: z.string().optional(),
-            endpointKey: z.string().optional(),
-            endpointKeyPassword: z.string().optional(),
-            endpointAuthType: z.string().optional(),
-            endpointKeyType: z.string().optional(),
-            maxRetries: z.coerce.number().min(0).max(100).default(3),
-            retryInterval: z.coerce.number().min(1).max(3600).default(10),
-            autoStart: z.boolean().default(false),
-          }),
-        )
-        .default([]),
+      tunnelConnections: z.array(tunnelConnectionSchema).default([]),
+      serverTunnels: z.array(tunnelConnectionSchema).default([]),
       enableFileManager: z.boolean().default(true),
       defaultPath: z.string().optional(),
       statsConfig: z
@@ -485,6 +403,38 @@ export function HostManagerEditor({
         }
       }
 
+      const serverTunnels = data.serverTunnels;
+
+      serverTunnels.forEach((tunnel, index) => {
+        if (
+          (tunnel.scope || "s2s") === "s2s" &&
+          (!tunnel.endpointHost || tunnel.endpointHost.trim() === "")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t(
+              "tunnels.endpointSshConfigRequired",
+              "Endpoint SSH configuration is required",
+            ),
+            path: ["serverTunnels", index, "endpointHost"],
+          });
+        }
+
+        const currentHostIp =
+          tunnel.mode === "remote" ? tunnel.targetHost : tunnel.bindHost;
+        if (currentHostIp && !isValidIPv4(currentHostIp)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("tunnels.invalidCurrentHostIp"),
+            path: [
+              "serverTunnels",
+              index,
+              tunnel.mode === "remote" ? "targetHost" : "bindHost",
+            ],
+          });
+        }
+      });
+
       if (data.authType === "none") {
         return;
       }
@@ -562,6 +512,7 @@ export function HostManagerEditor({
       showServerStatsInSidebar: false,
       defaultPath: "/",
       tunnelConnections: [],
+      serverTunnels: [],
       jumpHosts: [],
       quickActions: [],
       statsConfig: DEFAULT_STATS_CONFIG,
@@ -781,6 +732,8 @@ export function HostManagerEditor({
         tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
           ? cleanedHost.tunnelConnections.map((conn: any) => ({
               ...conn,
+              scope: conn.scope || "s2s",
+              mode: conn.mode || conn.tunnelType || "remote",
               tunnelType: conn.tunnelType || "remote",
             }))
           : [],
@@ -877,6 +830,10 @@ export function HostManagerEditor({
         formData.credentialId = cleanedHost.credentialId;
       }
 
+      const serverTunnels = Array.isArray(formData.tunnelConnections)
+        ? formData.tunnelConnections.filter((tunnel) => tunnel.scope !== "c2s")
+        : [];
+      formData.serverTunnels = serverTunnels;
       form.reset(formData as FormData);
     } else {
       setAuthTab("password");
@@ -901,6 +858,7 @@ export function HostManagerEditor({
         enableFileManager: true,
         defaultPath: "/",
         tunnelConnections: [],
+        serverTunnels: [],
         jumpHosts: [],
         quickActions: [],
         statsConfig: DEFAULT_STATS_CONFIG,
@@ -945,6 +903,17 @@ export function HostManagerEditor({
       const submitData: Partial<SSHHost> = {
         ...data,
       };
+      delete (submitData as any).serverTunnels;
+
+      const serverTunnels = Array.isArray(data.serverTunnels)
+        ? data.serverTunnels
+        : [];
+      const serverTunnelConnections = serverTunnels.map((tunnel) => ({
+        ...tunnel,
+        scope: "s2s" as const,
+      }));
+
+      submitData.tunnelConnections = serverTunnelConnections;
 
       (submitData as any).connectionType = data.connectionType;
       (submitData as any).domain = data.domain;
@@ -1005,8 +974,8 @@ export function HostManagerEditor({
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
       }
 
-      if (savedHost && savedHost.id && data.tunnelConnections) {
-        const hasAutoStartTunnels = data.tunnelConnections.some(
+      if (savedHost && savedHost.id && serverTunnelConnections) {
+        const hasAutoStartTunnels = serverTunnelConnections.some(
           (tunnel) => tunnel.autoStart,
         );
 
@@ -1019,7 +988,7 @@ export function HostManagerEditor({
               error,
             );
             toast.warning(
-              t("hosts.autoStartEnableFailed", { name: data.name }),
+              t("tunnels.autoStartEnableFailed", { name: data.name }),
             );
           }
         } else {
@@ -1039,10 +1008,6 @@ export function HostManagerEditor({
       }
 
       window.dispatchEvent(new CustomEvent("ssh-hosts:changed"));
-
-      if (savedHost?.id) {
-        notifyHostCreatedOrUpdated(savedHost.id);
-      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -1098,6 +1063,7 @@ export function HostManagerEditor({
     connectionType: "general",
     enableTunnel: "tunnel",
     tunnelConnections: "tunnel",
+    serverTunnels: "tunnel",
     enableFileManager: "file_manager",
     defaultPath: "file_manager",
     statsConfig: "statistics",
@@ -1206,91 +1172,6 @@ export function HostManagerEditor({
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [keyTypeDropdownOpen]);
-
-  const [sshConfigDropdownOpen, setSshConfigDropdownOpen] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const sshConfigInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {},
-  );
-  const sshConfigDropdownRefs = useRef<{
-    [key: number]: HTMLDivElement | null;
-  }>({});
-
-  const getFilteredSshConfigs = (index: number) => {
-    const value = form.watch(`tunnelConnections.${index}.endpointHost`);
-
-    const currentHostId = editingHost?.id;
-
-    let filtered = sshConfigurations;
-
-    if (currentHostId) {
-      const currentHostName = hosts.find((h) => h.id === currentHostId)?.name;
-      if (currentHostName) {
-        filtered = sshConfigurations.filter(
-          (config) => config !== currentHostName,
-        );
-      }
-    } else {
-      const currentHostName =
-        form.watch("name") || `${form.watch("username")}@${form.watch("ip")}`;
-      filtered = sshConfigurations.filter(
-        (config) => config !== currentHostName,
-      );
-    }
-
-    if (value) {
-      filtered = filtered.filter((config) =>
-        config.toLowerCase().includes(value.toLowerCase()),
-      );
-    }
-
-    return filtered;
-  };
-
-  const handleSshConfigClick = (config: string, index: number) => {
-    form.setValue(`tunnelConnections.${index}.endpointHost`, config, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-    setSshConfigDropdownOpen((prev) => ({ ...prev, [index]: false }));
-  };
-
-  useEffect(() => {
-    function handleSshConfigClickOutside(event: MouseEvent) {
-      const openDropdowns = Object.keys(sshConfigDropdownOpen).filter(
-        (key) => sshConfigDropdownOpen[parseInt(key)],
-      );
-
-      openDropdowns.forEach((indexStr: string) => {
-        const index = parseInt(indexStr);
-        if (
-          sshConfigDropdownRefs.current[index] &&
-          !sshConfigDropdownRefs.current[index]?.contains(
-            event.target as Node,
-          ) &&
-          sshConfigInputRefs.current[index] &&
-          !sshConfigInputRefs.current[index]?.contains(event.target as Node)
-        ) {
-          setSshConfigDropdownOpen((prev) => ({ ...prev, [index]: false }));
-        }
-      });
-    }
-
-    const hasOpenDropdowns = Object.values(sshConfigDropdownOpen).some(
-      (open) => open,
-    );
-
-    if (hasOpenDropdowns) {
-      document.addEventListener("mousedown", handleSshConfigClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleSshConfigClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleSshConfigClickOutside);
-    };
-  }, [sshConfigDropdownOpen]);
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 w-full relative">
@@ -1490,12 +1371,8 @@ export function HostManagerEditor({
                     <TabsContent value="tunnel">
                       <HostTunnelTab
                         form={form}
-                        sshConfigDropdownOpen={sshConfigDropdownOpen}
-                        setSshConfigDropdownOpen={setSshConfigDropdownOpen}
-                        sshConfigInputRefs={sshConfigInputRefs}
-                        sshConfigDropdownRefs={sshConfigDropdownRefs}
-                        getFilteredSshConfigs={getFilteredSshConfigs}
-                        handleSshConfigClick={handleSshConfigClick}
+                        hosts={hosts}
+                        editingHost={editingHost}
                         t={t}
                       />
                     </TabsContent>
@@ -1549,18 +1426,20 @@ export function HostManagerEditor({
           <footer className="shrink-0 w-full pb-0">
             <Separator className="p-0.25" />
             {!editingHost?.isShared && !isSubmitting && (
-              <Button
-                className="translate-y-2"
-                type="submit"
-                variant="outline"
-                disabled={!isFormValid}
-              >
-                {editingHost
-                  ? editingHost.id
-                    ? t("hosts.updateHost")
-                    : t("hosts.cloneHost")
-                  : t("hosts.addHost")}
-              </Button>
+              <div className="flex items-center gap-3 translate-y-2">
+                <Button type="submit" variant="outline" disabled={!isFormValid}>
+                  {editingHost
+                    ? editingHost.id
+                      ? t("hosts.updateHost")
+                      : t("hosts.cloneHost")
+                    : t("hosts.addHost")}
+                </Button>
+                {form.formState.isDirty && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("common.unsavedChanges")}
+                  </span>
+                )}
+              </div>
             )}
           </footer>
         </form>

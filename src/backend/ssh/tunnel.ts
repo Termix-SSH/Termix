@@ -1,9 +1,12 @@
 import express, { type Response } from "express";
+import { createServer, type IncomingMessage } from "http";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
-import { Client } from "ssh2";
+import { Client, type ClientChannel } from "ssh2";
+import { WebSocketServer, type WebSocket } from "ws";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { ChildProcess } from "child_process";
+import type { Duplex } from "stream";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials } from "../database/db/schema.js";
@@ -50,10 +53,85 @@ const countdownIntervals = new Map<string, NodeJS.Timeout>();
 const retryExhaustedTunnels = new Set<string>();
 const cleanupInProgress = new Set<string>();
 const tunnelConnecting = new Set<string>();
+const lastTunnelErrors = new Map<string, string>();
+const lastTunnelErrorTypes = new Map<string, ErrorType>();
 
 const tunnelConfigs = new Map<string, TunnelConfig>();
 const activeTunnelProcesses = new Map<string, ChildProcess>();
 const pendingTunnelOperations = new Map<string, Promise<void>>();
+const tunnelStatusClients = new Set<Response>();
+let c2sRemoteStreamCounter = 0;
+const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
+const C2S_WS_LOW_WATERMARK = 256 * 1024;
+const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
+
+type ActiveTunnelRuntime = {
+  sourceClient: Client;
+  endpointClient?: Client;
+  bindClient?: Client;
+  bindHost?: string;
+  bindPort?: number;
+  close: () => void;
+};
+
+const activeTunnelRuntimes = new Map<string, ActiveTunnelRuntime>();
+
+type C2SOpenMessage = {
+  type: "open" | "test";
+  tunnelConfig?: Partial<TunnelConfig>;
+  targetHost?: string;
+  targetPort?: number;
+};
+
+function extractRequestToken(req: IncomingMessage): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+    if (match) return decodeURIComponent(match[1]);
+  }
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice("Bearer ".length);
+  }
+
+  return undefined;
+}
+
+function sendC2SError(ws: WebSocket, message: string): void {
+  if (ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: "error", error: message }));
+  }
+}
+
+function describeC2SRelayError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    lowerMessage.includes("administratively prohibited") ||
+    lowerMessage.includes("forwarding disabled") ||
+    lowerMessage.includes("open failed")
+  ) {
+    return `SSH forwarding was rejected by the endpoint server: ${message}`;
+  }
+  if (
+    lowerMessage.includes("address already in use") ||
+    lowerMessage.includes("unable to bind") ||
+    lowerMessage.includes("bind")
+  ) {
+    return `Remote port is not available on the endpoint server: ${message}`;
+  }
+  if (
+    lowerMessage.includes("name or service not known") ||
+    lowerMessage.includes("enotfound") ||
+    lowerMessage.includes("econnrefused")
+  ) {
+    return `Tunnel target is not reachable from the endpoint host: ${message}`;
+  }
+
+  return message || "Failed to open relay";
+}
 
 function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
   if (
@@ -63,14 +141,42 @@ function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
     return;
   }
 
+  const nextStatus = { ...status };
+
   if (
     retryExhaustedTunnels.has(tunnelName) &&
-    status.status === CONNECTION_STATES.FAILED
+    nextStatus.status === CONNECTION_STATES.FAILED
   ) {
-    status.reason = "Max retries exhausted";
+    const previousReason = lastTunnelErrors.get(tunnelName);
+    nextStatus.reason = previousReason
+      ? `Max retries exhausted: ${previousReason}`
+      : "Max retries exhausted";
   }
 
-  connectionStatus.set(tunnelName, status);
+  if (nextStatus.status === CONNECTION_STATES.FAILED && nextStatus.reason) {
+    lastTunnelErrors.set(tunnelName, nextStatus.reason);
+    if (nextStatus.errorType) {
+      lastTunnelErrorTypes.set(tunnelName, nextStatus.errorType);
+    }
+  } else if (
+    (nextStatus.status === CONNECTION_STATES.CONNECTING ||
+      nextStatus.status === CONNECTION_STATES.RETRYING ||
+      nextStatus.status === CONNECTION_STATES.WAITING) &&
+    !nextStatus.reason
+  ) {
+    nextStatus.reason = lastTunnelErrors.get(tunnelName);
+    nextStatus.errorType = lastTunnelErrorTypes.get(tunnelName);
+  } else if (
+    nextStatus.status === CONNECTION_STATES.CONNECTED ||
+    (nextStatus.status === CONNECTION_STATES.DISCONNECTED &&
+      nextStatus.manualDisconnect)
+  ) {
+    lastTunnelErrors.delete(tunnelName);
+    lastTunnelErrorTypes.delete(tunnelName);
+  }
+
+  connectionStatus.set(tunnelName, nextStatus);
+  broadcastTunnelStatusSnapshot();
 }
 
 function getAllTunnelStatus(): Record<string, TunnelStatus> {
@@ -79,6 +185,22 @@ function getAllTunnelStatus(): Record<string, TunnelStatus> {
     tunnelStatus[key] = status;
   });
   return tunnelStatus;
+}
+
+function sendTunnelStatusSnapshot(res: Response): void {
+  try {
+    res.write(
+      `event: statuses\ndata: ${JSON.stringify(getAllTunnelStatus())}\n\n`,
+    );
+  } catch {
+    tunnelStatusClients.delete(res);
+  }
+}
+
+function broadcastTunnelStatusSnapshot(): void {
+  for (const client of tunnelStatusClients) {
+    sendTunnelStatusSnapshot(client);
+  }
 }
 
 function classifyError(errorMessage: string): ErrorType {
@@ -211,7 +333,19 @@ async function cleanupTunnelResources(
   cleanupInProgress.add(tunnelName);
 
   const tunnelConfig = tunnelConfigs.get(tunnelName);
-  if (tunnelConfig) {
+  const runtime = activeTunnelRuntimes.get(tunnelName);
+  if (runtime) {
+    try {
+      runtime.close();
+    } catch (error) {
+      tunnelLogger.error("Error while closing managed tunnel runtime", error, {
+        operation: "managed_tunnel_cleanup",
+        tunnelName,
+      });
+    }
+    activeTunnelRuntimes.delete(tunnelName);
+    cleanupInProgress.delete(tunnelName);
+  } else if (tunnelConfig) {
     await new Promise<void>((resolve) => {
       killRemoteTunnelByMarker(tunnelConfig, tunnelName, (err) => {
         cleanupInProgress.delete(tunnelName);
@@ -300,6 +434,8 @@ async function cleanupTunnelResources(
 function resetRetryState(tunnelName: string): void {
   retryCounters.delete(tunnelName);
   retryExhaustedTunnels.delete(tunnelName);
+  lastTunnelErrors.delete(tunnelName);
+  lastTunnelErrorTypes.delete(tunnelName);
   cleanupInProgress.delete(tunnelName);
   tunnelConnecting.delete(tunnelName);
 
@@ -491,12 +627,894 @@ function setupPingInterval(tunnelName: string): void {
   verificationTimers.set(pingKey, pingInterval);
 }
 
+function getTunnelMode(
+  tunnelConfig: TunnelConfig,
+): "local" | "remote" | "dynamic" {
+  return tunnelConfig.mode || tunnelConfig.tunnelType || "remote";
+}
+
+function getTunnelScope(tunnelConfig: TunnelConfig): "s2s" | "c2s" {
+  return tunnelConfig.scope || "s2s";
+}
+
+function getTunnelBindHost(tunnelConfig: TunnelConfig): string {
+  return tunnelConfig.bindHost || "127.0.0.1";
+}
+
+function getManagedTunnelAlgorithms() {
+  return {
+    kex: [
+      "curve25519-sha256",
+      "curve25519-sha256@libssh.org",
+      "ecdh-sha2-nistp521",
+      "ecdh-sha2-nistp384",
+      "ecdh-sha2-nistp256",
+      "diffie-hellman-group-exchange-sha256",
+      "diffie-hellman-group14-sha256",
+      "diffie-hellman-group14-sha1",
+      "diffie-hellman-group-exchange-sha1",
+      "diffie-hellman-group1-sha1",
+    ],
+    serverHostKey: [
+      "ssh-ed25519",
+      "ecdsa-sha2-nistp521",
+      "ecdsa-sha2-nistp384",
+      "ecdsa-sha2-nistp256",
+      "rsa-sha2-512",
+      "rsa-sha2-256",
+      "ssh-rsa",
+      "ssh-dss",
+    ],
+    cipher: SSH_ALGORITHMS.cipher,
+    hmac: [
+      "hmac-sha2-512-etm@openssh.com",
+      "hmac-sha2-256-etm@openssh.com",
+      "hmac-sha2-512",
+      "hmac-sha2-256",
+      "hmac-sha1",
+      "hmac-md5",
+    ],
+    compress: ["none", "zlib@openssh.com", "zlib"],
+  };
+}
+
+function applyAuthOptions(
+  connOptions: Record<string, unknown>,
+  credentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+    keyType?: string;
+    authMethod?: string;
+  },
+): void {
+  if (credentials.authMethod === "key" && credentials.sshKey) {
+    const cleanKey = credentials.sshKey
+      .trim()
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+    connOptions.privateKey = Buffer.from(cleanKey, "utf8");
+    if (credentials.keyPassword) {
+      connOptions.passphrase = credentials.keyPassword;
+    }
+    if (credentials.keyType && credentials.keyType !== "auto") {
+      connOptions.privateKeyType = credentials.keyType;
+    }
+  } else {
+    connOptions.password = credentials.password;
+  }
+}
+
+function connectClient(
+  connOptions: Record<string, unknown>,
+  tunnelName: string,
+  role: "source" | "endpoint",
+): Promise<Client> {
+  return new Promise((resolve, reject) => {
+    const client = new Client();
+    let settled = false;
+    client.once("ready", () => {
+      settled = true;
+      resolve(client);
+    });
+    client.once("error", (error) => {
+      if (!settled) {
+        reject(error);
+        return;
+      }
+      tunnelLogger.error("Managed tunnel SSH client error", error, {
+        operation: "managed_tunnel_client_error",
+        tunnelName,
+        role,
+      });
+    });
+    client.connect(connOptions);
+  });
+}
+
+function forwardOut(
+  client: Client,
+  targetHost: string,
+  targetPort: number,
+  tunnelName?: string,
+): Promise<ClientChannel> {
+  return new Promise((resolve, reject) => {
+    client.forwardOut("127.0.0.1", 0, targetHost, targetPort, (err, stream) => {
+      if (err) {
+        if (tunnelName) {
+          tunnelLogger.error("Managed tunnel forwardOut failed", err, {
+            operation: "managed_tunnel_forward_out_failed",
+            tunnelName,
+            targetHost,
+            targetPort,
+          });
+        }
+        reject(err);
+        return;
+      }
+      resolve(stream);
+    });
+  });
+}
+
+function bindForwardIn(
+  client: Client,
+  bindHost: string,
+  bindPort: number,
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    client.forwardIn(bindHost, bindPort, (err, actualPort) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(actualPort || bindPort);
+    });
+  });
+}
+
+function unbindForwardIn(
+  client: Client,
+  bindHost: string,
+  bindPort: number,
+): void {
+  try {
+    client.unforwardIn(bindHost, bindPort, (err) => {
+      if (err) {
+        tunnelLogger.warn("Failed to unbind managed tunnel listener", {
+          operation: "managed_tunnel_unforward_failed",
+          bindHost,
+          bindPort,
+          error: err.message,
+        });
+      }
+    });
+  } catch {
+    // The connection may already be gone.
+  }
+}
+
+function pipeTunnelStreams(
+  inbound: Duplex,
+  outboundPromise: Promise<Duplex>,
+  tunnelName: string,
+): void {
+  outboundPromise
+    .then((outbound) => {
+      inbound.pipe(outbound).pipe(inbound);
+      inbound.on("error", () => outbound.destroy());
+      outbound.on("error", () => inbound.destroy());
+    })
+    .catch((error) => {
+      tunnelLogger.error(
+        "Failed to open managed tunnel outbound stream",
+        error,
+        {
+          operation: "managed_tunnel_outbound_failed",
+          tunnelName,
+        },
+      );
+      inbound.destroy();
+    });
+}
+
+function parseSocksAddress(buffer: Buffer): {
+  address: string;
+  port: number;
+  bytesRead: number;
+} | null {
+  if (buffer.length < 7 || buffer[0] !== 0x05 || buffer[1] !== 0x01) {
+    return null;
+  }
+
+  const addressType = buffer[3];
+  let offset = 4;
+  let address: string;
+
+  if (addressType === 0x01) {
+    if (buffer.length < offset + 4 + 2) return null;
+    address = Array.from(buffer.subarray(offset, offset + 4)).join(".");
+    offset += 4;
+  } else if (addressType === 0x03) {
+    const len = buffer[offset];
+    offset += 1;
+    if (buffer.length < offset + len + 2) return null;
+    address = buffer.subarray(offset, offset + len).toString("utf8");
+    offset += len;
+  } else if (addressType === 0x04) {
+    if (buffer.length < offset + 16 + 2) return null;
+    const parts: string[] = [];
+    for (let i = 0; i < 16; i += 2) {
+      parts.push(buffer.readUInt16BE(offset + i).toString(16));
+    }
+    address = parts.join(":");
+    offset += 16;
+  } else {
+    return null;
+  }
+
+  const port = buffer.readUInt16BE(offset);
+  return { address, port, bytesRead: offset + 2 };
+}
+
+function handleSocks5Connect(
+  inbound: Duplex,
+  openOutbound: (host: string, port: number) => Promise<Duplex>,
+  tunnelName: string,
+): void {
+  let buffer = Buffer.alloc(0);
+  let stage: "greeting" | "connect" | "piping" = "greeting";
+
+  const fail = (code = 0x01) => {
+    if (!inbound.destroyed) {
+      inbound.write(Buffer.from([0x05, code, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
+      inbound.destroy();
+    }
+  };
+
+  const onData = (chunk: Buffer) => {
+    buffer = Buffer.concat([buffer, chunk]);
+
+    if (stage === "greeting") {
+      if (buffer.length < 2) return;
+      if (buffer[0] !== 0x05) {
+        fail(0x01);
+        return;
+      }
+      const methodsLength = buffer[1];
+      if (buffer.length < 2 + methodsLength) return;
+      inbound.write(Buffer.from([0x05, 0x00]));
+      buffer = buffer.subarray(2 + methodsLength);
+      stage = "connect";
+    }
+
+    if (stage === "connect") {
+      const parsed = parseSocksAddress(buffer);
+      if (!parsed) return;
+      stage = "piping";
+      inbound.off("data", onData);
+      const remainder = buffer.subarray(parsed.bytesRead);
+      openOutbound(parsed.address, parsed.port)
+        .then((outbound) => {
+          inbound.write(
+            Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]),
+          );
+          if (remainder.length > 0) {
+            outbound.write(remainder);
+          }
+          inbound.pipe(outbound).pipe(inbound);
+          inbound.on("error", () => outbound.destroy());
+          outbound.on("error", () => inbound.destroy());
+        })
+        .catch((error) => {
+          tunnelLogger.error("SOCKS5 tunnel connect failed", error, {
+            operation: "managed_tunnel_socks_connect_failed",
+            tunnelName,
+            targetHost: parsed.address,
+            targetPort: parsed.port,
+          });
+          fail(0x05);
+        });
+    }
+  };
+
+  inbound.on("data", onData);
+  inbound.on("error", () => inbound.destroy());
+}
+
+async function connectEndpointThroughSource(
+  sourceClient: Client,
+  tunnelConfig: TunnelConfig,
+  endpointCredentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+    keyType?: string;
+    authMethod?: string;
+  },
+): Promise<Client> {
+  const endpointSock = await forwardOut(
+    sourceClient,
+    tunnelConfig.endpointIP,
+    tunnelConfig.endpointSSHPort,
+    tunnelConfig.name,
+  );
+  const endpointOptions: Record<string, unknown> = {
+    sock: endpointSock,
+    username: tunnelConfig.endpointUsername,
+    tryKeyboard: true,
+    keepaliveInterval: 30000,
+    keepaliveCountMax: 3,
+    readyTimeout: 60000,
+    tcpKeepAlive: true,
+    tcpKeepAliveInitialDelay: 30000,
+    algorithms: getManagedTunnelAlgorithms(),
+  };
+
+  applyAuthOptions(endpointOptions, endpointCredentials);
+  return connectClient(endpointOptions, tunnelConfig.name, "endpoint");
+}
+
+function resolveS2SLocalTargetHost(tunnelConfig: TunnelConfig): string {
+  const targetHost = tunnelConfig.targetHost?.trim();
+
+  if (
+    !targetHost ||
+    targetHost === tunnelConfig.endpointHost ||
+    targetHost === tunnelConfig.hostName
+  ) {
+    return "127.0.0.1";
+  }
+
+  return targetHost;
+}
+
+async function establishManagedS2STunnel(
+  sourceClient: Client,
+  tunnelConfig: TunnelConfig,
+  endpointCredentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+    keyType?: string;
+    authMethod?: string;
+  },
+): Promise<void> {
+  const tunnelName = tunnelConfig.name;
+  const mode = getTunnelMode(tunnelConfig);
+  const bindHost = getTunnelBindHost(tunnelConfig);
+  const endpointClient = await connectEndpointThroughSource(
+    sourceClient,
+    tunnelConfig,
+    endpointCredentials,
+  );
+
+  const bindClient = mode === "remote" ? endpointClient : sourceClient;
+  const outboundClient = mode === "remote" ? sourceClient : endpointClient;
+  const bindPort =
+    mode === "remote" ? tunnelConfig.endpointPort : tunnelConfig.sourcePort;
+  const staticTargetHost =
+    mode === "remote"
+      ? tunnelConfig.targetHost || "127.0.0.1"
+      : resolveS2SLocalTargetHost(tunnelConfig);
+  const staticTargetPort =
+    mode === "remote" ? tunnelConfig.sourcePort : tunnelConfig.endpointPort;
+
+  tunnelLogger.info("Managed S2S tunnel route resolved", {
+    operation: "managed_tunnel_route_resolved",
+    tunnelName,
+    mode,
+    bindHost,
+    bindPort,
+    targetHost: staticTargetHost,
+    targetPort: staticTargetPort,
+    endpointHost: tunnelConfig.endpointHost,
+    endpointIP: tunnelConfig.endpointIP,
+  });
+
+  const actualPort = await bindForwardIn(bindClient, bindHost, bindPort);
+
+  const tcpHandler = (
+    info: {
+      destIP: string;
+      destPort: number;
+      srcIP: string;
+      srcPort: number;
+    },
+    accept: () => ClientChannel,
+    reject: () => void,
+  ) => {
+    if (info.destPort !== actualPort) {
+      reject();
+      return;
+    }
+
+    const inbound = accept();
+    if (mode === "dynamic") {
+      handleSocks5Connect(
+        inbound,
+        (host, port) => forwardOut(outboundClient, host, port),
+        tunnelName,
+      );
+      return;
+    }
+
+    pipeTunnelStreams(
+      inbound,
+      forwardOut(
+        outboundClient,
+        staticTargetHost,
+        staticTargetPort,
+        tunnelName,
+      ),
+      tunnelName,
+    );
+  };
+
+  bindClient.on("tcp connection", tcpHandler);
+
+  const close = () => {
+    bindClient.off("tcp connection", tcpHandler);
+    unbindForwardIn(bindClient, bindHost, actualPort);
+    try {
+      endpointClient.end();
+    } catch {
+      // expected during shutdown
+    }
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  activeTunnelRuntimes.set(tunnelName, {
+    sourceClient,
+    endpointClient,
+    bindClient,
+    bindHost,
+    bindPort: actualPort,
+    close,
+  });
+
+  activeTunnels.set(tunnelName, sourceClient);
+}
+
+async function resolveC2STunnelSource(
+  tunnelConfig: Partial<TunnelConfig>,
+  userId: string,
+): Promise<TunnelConfig> {
+  if (!tunnelConfig.sourceHostId) {
+    throw new Error("Endpoint SSH host is required");
+  }
+
+  const accessInfo = await permissionManager.canAccessHost(
+    userId,
+    tunnelConfig.sourceHostId,
+    "read",
+  );
+  if (!accessInfo.hasAccess) {
+    throw new Error("Access denied to this host");
+  }
+
+  const { resolveHostById } = await import("./host-resolver.js");
+  const resolvedHost = await resolveHostById(tunnelConfig.sourceHostId, userId);
+  if (!resolvedHost) {
+    throw new Error("Endpoint SSH host not found");
+  }
+
+  return {
+    name: tunnelConfig.name || `c2s:${tunnelConfig.sourceHostId}`,
+    scope: "c2s",
+    mode: tunnelConfig.mode || "local",
+    tunnelType:
+      tunnelConfig.tunnelType ||
+      (tunnelConfig.mode === "remote" ? "remote" : "local"),
+    bindHost: tunnelConfig.bindHost,
+    targetHost: tunnelConfig.targetHost || "127.0.0.1",
+    sourceHostId: resolvedHost.id || tunnelConfig.sourceHostId,
+    tunnelIndex: tunnelConfig.tunnelIndex || 0,
+    requestingUserId: userId,
+    hostName:
+      resolvedHost.name || `${resolvedHost.username}@${resolvedHost.ip}`,
+    sourceIP: resolvedHost.ip,
+    sourceSSHPort: resolvedHost.port,
+    sourceUsername: resolvedHost.username,
+    sourcePassword: resolvedHost.password,
+    sourceAuthMethod: resolvedHost.authType,
+    sourceSSHKey: resolvedHost.key,
+    sourceKeyPassword: resolvedHost.keyPassword,
+    sourceKeyType: resolvedHost.keyType,
+    sourceCredentialId: resolvedHost.credentialId,
+    sourceUserId: resolvedHost.userId,
+    endpointIP: tunnelConfig.endpointIP || resolvedHost.ip,
+    endpointSSHPort: tunnelConfig.endpointSSHPort || resolvedHost.port,
+    endpointUsername: resolvedHost.username,
+    endpointHost:
+      tunnelConfig.endpointHost || resolvedHost.name || resolvedHost.ip,
+    endpointAuthMethod: resolvedHost.authType,
+    endpointSSHKey: resolvedHost.key,
+    endpointKeyPassword: resolvedHost.keyPassword,
+    endpointKeyType: resolvedHost.keyType,
+    endpointCredentialId: resolvedHost.credentialId,
+    endpointUserId: resolvedHost.userId,
+    sourcePort: Number(tunnelConfig.sourcePort) || 0,
+    endpointPort: Number(tunnelConfig.endpointPort) || 0,
+    maxRetries: Number(tunnelConfig.maxRetries) || 0,
+    retryInterval: Number(tunnelConfig.retryInterval) || 0,
+    autoStart: Boolean(tunnelConfig.autoStart),
+    isPinned: Boolean(resolvedHost.pin),
+    useSocks5: Boolean(resolvedHost.useSocks5),
+    socks5Host: resolvedHost.socks5Host,
+    socks5Port: resolvedHost.socks5Port,
+    socks5Username: resolvedHost.socks5Username,
+    socks5Password: resolvedHost.socks5Password,
+    socks5ProxyChain: resolvedHost.socks5ProxyChain,
+  };
+}
+
+async function connectC2SSourceClient(
+  tunnelConfig: TunnelConfig,
+): Promise<Client> {
+  const connOptions: Record<string, unknown> = {
+    host:
+      tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
+    port: tunnelConfig.sourceSSHPort,
+    username: tunnelConfig.sourceUsername,
+    tryKeyboard: true,
+    keepaliveInterval: 30000,
+    keepaliveCountMax: 3,
+    readyTimeout: 60000,
+    tcpKeepAlive: true,
+    tcpKeepAliveInitialDelay: 30000,
+    algorithms: getManagedTunnelAlgorithms(),
+  };
+
+  applyAuthOptions(connOptions, {
+    password: tunnelConfig.sourcePassword,
+    sshKey: tunnelConfig.sourceSSHKey,
+    keyPassword: tunnelConfig.sourceKeyPassword,
+    keyType: tunnelConfig.sourceKeyType,
+    authMethod: tunnelConfig.sourceAuthMethod,
+  });
+
+  if (
+    tunnelConfig.useSocks5 &&
+    (tunnelConfig.socks5Host ||
+      (tunnelConfig.socks5ProxyChain &&
+        tunnelConfig.socks5ProxyChain.length > 0))
+  ) {
+    const socks5Socket = await createSocks5Connection(
+      tunnelConfig.sourceIP,
+      tunnelConfig.sourceSSHPort,
+      {
+        useSocks5: tunnelConfig.useSocks5,
+        socks5Host: tunnelConfig.socks5Host,
+        socks5Port: tunnelConfig.socks5Port,
+        socks5Username: tunnelConfig.socks5Username,
+        socks5Password: tunnelConfig.socks5Password,
+        socks5ProxyChain: tunnelConfig.socks5ProxyChain,
+      },
+    );
+    if (socks5Socket) {
+      connOptions.sock = socks5Socket;
+    }
+  }
+
+  return connectClient(connOptions, tunnelConfig.name, "source");
+}
+
+function pauseSourceForC2SWebSocket(ws: WebSocket, source?: Duplex): void {
+  if (!source) return;
+  if (ws.bufferedAmount <= C2S_WS_HIGH_WATERMARK) return;
+
+  source.pause();
+  const resumeTimer = setInterval(() => {
+    if (
+      ws.readyState !== 1 ||
+      source.destroyed ||
+      ws.bufferedAmount <= C2S_WS_LOW_WATERMARK
+    ) {
+      clearInterval(resumeTimer);
+      if (ws.readyState === 1 && !source.destroyed) {
+        source.resume();
+      }
+    }
+  }, 25);
+}
+
+function sendC2SMessage(
+  ws: WebSocket,
+  message: Record<string, unknown>,
+  source?: Duplex,
+): void {
+  if (ws.readyState === 1) {
+    ws.send(JSON.stringify(message), (error) => {
+      if (error && source && !source.destroyed) {
+        source.destroy(error);
+      }
+    });
+    pauseSourceForC2SWebSocket(ws, source);
+  }
+}
+
+function writeC2SRemoteChunk(
+  target: ClientChannel,
+  chunk: Buffer,
+  ws: WebSocket,
+  closeTarget: () => void,
+): void {
+  if (!target || target.destroyed) return;
+
+  if (target.writableLength > C2S_STREAM_WRITE_LIMIT) {
+    closeTarget();
+    return;
+  }
+
+  const canContinue = target.write(chunk);
+  if (!canContinue) {
+    ws.pause();
+    target.once("drain", () => {
+      if (ws.readyState === 1) {
+        ws.resume();
+      }
+    });
+  }
+}
+
+async function handleC2SRemoteRelayOpen(
+  ws: WebSocket,
+  tunnelConfig: TunnelConfig,
+): Promise<void> {
+  const tunnelName = tunnelConfig.name;
+  const sourceClient = await connectC2SSourceClient(tunnelConfig);
+  const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+  const bindPort = Number(tunnelConfig.sourcePort);
+  let closed = false;
+
+  if (!Number.isInteger(bindPort) || bindPort < 1 || bindPort > 65535) {
+    throw new Error("Invalid remote port");
+  }
+
+  const actualPort = await bindForwardIn(sourceClient, bindHost, bindPort);
+  const streams = new Map<string, ClientChannel>();
+
+  const closeStream = (streamId: string): void => {
+    const stream = streams.get(streamId);
+    if (!stream) return;
+    streams.delete(streamId);
+    try {
+      stream.destroy();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    for (const streamId of streams.keys()) {
+      closeStream(streamId);
+    }
+    unbindForwardIn(sourceClient, bindHost, actualPort);
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  sourceClient.on("tcp connection", (info, accept, reject) => {
+    if (info.destPort !== actualPort) {
+      reject();
+      return;
+    }
+
+    const inbound = accept();
+    const streamId = `${Date.now()}-${++c2sRemoteStreamCounter}`;
+    streams.set(streamId, inbound);
+
+    sendC2SMessage(ws, { type: "connection", streamId });
+
+    inbound.on("data", (chunk) => {
+      sendC2SMessage(
+        ws,
+        {
+          type: "data",
+          streamId,
+          data: chunk.toString("base64"),
+        },
+        inbound,
+      );
+    });
+    inbound.on("close", () => {
+      streams.delete(streamId);
+      sendC2SMessage(ws, { type: "close", streamId });
+    });
+    inbound.on("error", (error) => {
+      streams.delete(streamId);
+      sendC2SMessage(ws, {
+        type: "close",
+        streamId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  });
+
+  ws.on("message", (data, isBinary) => {
+    if (isBinary) return;
+
+    try {
+      const message = JSON.parse(data.toString()) as {
+        type?: string;
+        streamId?: string;
+        data?: string;
+      };
+      if (!message.streamId) return;
+
+      if (message.type === "data" && message.data) {
+        const stream = streams.get(message.streamId);
+        if (stream) {
+          writeC2SRemoteChunk(
+            stream,
+            Buffer.from(message.data, "base64"),
+            ws,
+            () => closeStream(message.streamId as string),
+          );
+        }
+      } else if (message.type === "close") {
+        closeStream(message.streamId);
+      }
+    } catch (error) {
+      tunnelLogger.warn("Invalid C2S remote relay message", {
+        operation: "c2s_remote_relay_invalid_message",
+        tunnelName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  ws.on("close", close);
+  ws.on("error", close);
+  sourceClient.on("close", () => {
+    if (ws.readyState === 1) ws.close();
+  });
+  sourceClient.on("error", (error) => {
+    sendC2SMessage(ws, {
+      type: "error",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (ws.readyState === 1) ws.close();
+  });
+
+  tunnelLogger.info("C2S remote tunnel ready", {
+    operation: "c2s_remote_tunnel_ready",
+    tunnelName,
+    bindHost,
+    bindPort: actualPort,
+    endpointHost: tunnelConfig.endpointHost,
+  });
+  sendC2SMessage(ws, { type: "ready", bindHost, bindPort: actualPort });
+}
+
+async function handleC2SRelayOpen(
+  ws: WebSocket,
+  message: C2SOpenMessage,
+  userId: string,
+): Promise<void> {
+  const tunnelConfig = await resolveC2STunnelSource(
+    message.tunnelConfig || {},
+    userId,
+  );
+  const mode = getTunnelMode(tunnelConfig);
+  if (mode === "remote") {
+    await handleC2SRemoteRelayOpen(ws, tunnelConfig);
+    return;
+  }
+
+  const targetHost =
+    mode === "dynamic"
+      ? message.targetHost
+      : tunnelConfig.targetHost || "127.0.0.1";
+  const targetPort =
+    mode === "dynamic"
+      ? Number(message.targetPort)
+      : Number(tunnelConfig.endpointPort);
+
+  if (!targetHost || !Number.isInteger(targetPort) || targetPort < 1) {
+    throw new Error("Invalid client tunnel target");
+  }
+
+  const sourceClient = await connectC2SSourceClient(tunnelConfig);
+  const outbound = await forwardOut(sourceClient, targetHost, targetPort);
+
+  const close = () => {
+    try {
+      outbound.destroy();
+    } catch {
+      // expected during shutdown
+    }
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  };
+
+  outbound.on("data", (chunk) => {
+    if (ws.readyState === 1) {
+      ws.send(chunk);
+    }
+  });
+  outbound.on("close", () => {
+    if (ws.readyState === 1) ws.close();
+  });
+  outbound.on("error", () => {
+    if (ws.readyState === 1) ws.close();
+  });
+  ws.on("close", close);
+  ws.on("error", close);
+  ws.on("message", (data, isBinary) => {
+    if (!isBinary) return;
+    const chunk = Buffer.isBuffer(data)
+      ? data
+      : Array.isArray(data)
+        ? Buffer.concat(data)
+        : Buffer.from(data);
+    outbound.write(chunk);
+  });
+
+  ws.send(JSON.stringify({ type: "ready" }));
+}
+
+async function handleC2SRelayTest(
+  ws: WebSocket,
+  message: C2SOpenMessage,
+  userId: string,
+): Promise<void> {
+  const tunnelConfig = await resolveC2STunnelSource(
+    message.tunnelConfig || {},
+    userId,
+  );
+  const mode = getTunnelMode(tunnelConfig);
+  const sourceClient = await connectC2SSourceClient(tunnelConfig);
+
+  try {
+    if (mode === "remote") {
+      const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+      const bindPort = Number(tunnelConfig.sourcePort);
+      if (!Number.isInteger(bindPort) || bindPort < 1 || bindPort > 65535) {
+        throw new Error("Invalid remote port");
+      }
+
+      const actualPort = await bindForwardIn(sourceClient, bindHost, bindPort);
+      unbindForwardIn(sourceClient, bindHost, actualPort);
+    } else if (mode === "local") {
+      const targetHost = tunnelConfig.targetHost || "127.0.0.1";
+      const targetPort = Number(tunnelConfig.endpointPort);
+      if (!Number.isInteger(targetPort) || targetPort < 1) {
+        throw new Error("Invalid remote target port");
+      }
+
+      const outbound = await forwardOut(sourceClient, targetHost, targetPort);
+      outbound.destroy();
+    }
+
+    sendC2SMessage(ws, { type: "ready" });
+  } finally {
+    try {
+      sourceClient.end();
+    } catch {
+      // expected during shutdown
+    }
+  }
+}
+
 async function connectSSHTunnel(
   tunnelConfig: TunnelConfig,
   retryAttempt = 0,
 ): Promise<void> {
   const tunnelName = tunnelConfig.name;
-  const tunnelMarker = getTunnelMarker(tunnelName);
   tunnelLogger.info("Tunnel creation request received", {
     operation: "tunnel_create_request",
     userId: tunnelConfig.sourceUserId,
@@ -637,46 +1655,6 @@ async function connectSSHTunnel(
     authMethod: tunnelConfig.endpointAuthMethod,
   };
 
-  if (
-    resolvedEndpointCredentials.authMethod === "password" &&
-    !resolvedEndpointCredentials.password
-  ) {
-    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires password authentication but no plaintext password available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage, undefined, {
-      operation: "tunnel_endpoint_password_unavailable",
-      tunnelName,
-      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
-      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
-    });
-    broadcastTunnelStatus(tunnelName, {
-      connected: false,
-      status: CONNECTION_STATES.FAILED,
-      reason: errorMessage,
-    });
-    tunnelConnecting.delete(tunnelName);
-    return;
-  }
-
-  if (
-    resolvedEndpointCredentials.authMethod === "key" &&
-    !resolvedEndpointCredentials.sshKey
-  ) {
-    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires key authentication but no plaintext key available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage, undefined, {
-      operation: "tunnel_endpoint_key_unavailable",
-      tunnelName,
-      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
-      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
-    });
-    broadcastTunnelStatus(tunnelName, {
-      connected: false,
-      status: CONNECTION_STATES.FAILED,
-      reason: errorMessage,
-    });
-    tunnelConnecting.delete(tunnelName);
-    return;
-  }
-
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
       const userDataKey = DataCrypto.getUserDataKey(
@@ -721,6 +1699,46 @@ async function connectSSHTunnel(
       credentialId: tunnelConfig.endpointCredentialId,
       hasUserId: !!tunnelConfig.endpointUserId,
     });
+  }
+
+  if (
+    resolvedEndpointCredentials.authMethod === "password" &&
+    !resolvedEndpointCredentials.password
+  ) {
+    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires password authentication but no plaintext password available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
+    tunnelLogger.error(errorMessage, undefined, {
+      operation: "tunnel_endpoint_password_unavailable",
+      tunnelName,
+      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+    });
+    broadcastTunnelStatus(tunnelName, {
+      connected: false,
+      status: CONNECTION_STATES.FAILED,
+      reason: errorMessage,
+    });
+    tunnelConnecting.delete(tunnelName);
+    return;
+  }
+
+  if (
+    resolvedEndpointCredentials.authMethod === "key" &&
+    !resolvedEndpointCredentials.sshKey
+  ) {
+    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires key authentication but no plaintext key available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
+    tunnelLogger.error(errorMessage, undefined, {
+      operation: "tunnel_endpoint_key_unavailable",
+      tunnelName,
+      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+    });
+    broadcastTunnelStatus(tunnelName, {
+      connected: false,
+      status: CONNECTION_STATES.FAILED,
+      reason: errorMessage,
+    });
+    tunnelConnecting.delete(tunnelName);
+    return;
   }
 
   const conn = new Client();
@@ -834,13 +1852,15 @@ async function connectSSHTunnel(
     }
   });
 
-  conn.on("ready", () => {
+  conn.on("ready", async () => {
     clearTimeout(connectionTimeout);
-    tunnelLogger.info("Creating new SSH connection for tunnel", {
-      operation: "tunnel_connection_create",
+    tunnelLogger.info("Creating managed SSH tunnel", {
+      operation: "managed_tunnel_connection_create",
       userId: tunnelConfig.sourceUserId,
       hostId: tunnelConfig.sourceHostId,
       tunnelName,
+      scope: getTunnelScope(tunnelConfig),
+      mode: getTunnelMode(tunnelConfig),
     });
 
     const isAlreadyVerifying = tunnelVerifications.has(tunnelName);
@@ -848,213 +1868,64 @@ async function connectSSHTunnel(
       return;
     }
 
-    const tunnelType = tunnelConfig.tunnelType || "remote";
-    const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
-    const portMapping =
-      tunnelType === "local"
-        ? `${tunnelConfig.sourcePort}:${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`
-        : `${tunnelConfig.endpointPort}:localhost:${tunnelConfig.sourcePort}`;
-
-    let tunnelCmd: string;
-    if (
-      resolvedEndpointCredentials.authMethod === "key" &&
-      resolvedEndpointCredentials.sshKey
-    ) {
-      const keyFilePath = `/tmp/tunnel_key_${tunnelName.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      tunnelCmd = `echo '${resolvedEndpointCredentials.sshKey}' > ${keyFilePath} && chmod 600 ${keyFilePath} && exec -a "${tunnelMarker}" ssh -i ${keyFilePath} -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes ${tunnelFlag} ${portMapping} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP} && rm -f ${keyFilePath}`;
-    } else {
-      tunnelCmd = `exec -a "${tunnelMarker}" sshpass -p '${resolvedEndpointCredentials.password || ""}' ssh -N -o StrictHostKeyChecking=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o GatewayPorts=yes ${tunnelFlag} ${portMapping} ${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}`;
-    }
-
-    conn.exec(tunnelCmd, (err, stream) => {
-      if (err) {
-        const errorType = classifyError(err.message);
-
-        tunnelLogger.error(
-          `Failed to execute tunnel command for '${tunnelName}'`,
-          err,
-          {
-            operation: "tunnel_exec_error",
-            tunnelName,
-            errorType,
-            errorMessage: err.message,
-            sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
-            endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
-            tunnelType: tunnelConfig.tunnelType || "remote",
-            sourcePort: tunnelConfig.sourcePort,
-            endpointPort: tunnelConfig.endpointPort,
-            retryAttempt,
-          },
+    try {
+      if (getTunnelScope(tunnelConfig) !== "s2s") {
+        throw new Error(
+          "C2S tunnels must be started from the desktop client local configuration",
         );
-
-        conn.end();
-
-        activeTunnels.delete(tunnelName);
-
-        const shouldNotRetry =
-          errorType === "AUTHENTICATION_FAILED" ||
-          errorType === "CONNECTION_FAILED";
-
-        handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
-        return;
       }
 
-      activeTunnels.set(tunnelName, conn);
-      tunnelLogger.success("Tunnel port binding successful", {
-        operation: "tunnel_port_bound",
+      await establishManagedS2STunnel(
+        conn,
+        tunnelConfig,
+        resolvedEndpointCredentials,
+      );
+
+      tunnelConnecting.delete(tunnelName);
+      tunnelLogger.success("Managed tunnel creation complete", {
+        operation: "managed_tunnel_create_complete",
         userId: tunnelConfig.sourceUserId,
         hostId: tunnelConfig.sourceHostId,
         tunnelName,
+        mode: getTunnelMode(tunnelConfig),
         sourcePort: tunnelConfig.sourcePort,
         endpointPort: tunnelConfig.endpointPort,
       });
 
-      setTimeout(() => {
-        if (
-          !manualDisconnects.has(tunnelName) &&
-          activeTunnels.has(tunnelName)
-        ) {
-          tunnelConnecting.delete(tunnelName);
-          tunnelLogger.success("Tunnel creation complete", {
-            operation: "tunnel_create_complete",
-            userId: tunnelConfig.sourceUserId,
-            hostId: tunnelConfig.sourceHostId,
-            tunnelName,
-          });
-
-          broadcastTunnelStatus(tunnelName, {
-            connected: true,
-            status: CONNECTION_STATES.CONNECTED,
-          });
-          setupPingInterval(tunnelName);
-        }
-      }, 2000);
-
-      stream.on("close", (code: number) => {
-        if (activeRetryTimers.has(tunnelName)) {
-          return;
-        }
-
-        activeTunnels.delete(tunnelName);
-
-        if (tunnelVerifications.has(tunnelName)) {
-          try {
-            const verification = tunnelVerifications.get(tunnelName);
-            if (verification?.timeout) clearTimeout(verification.timeout);
-            verification?.conn.end();
-          } catch {
-            // expected
-          }
-          tunnelVerifications.delete(tunnelName);
-        }
-
-        const isLikelyRemoteClosure = code === 255;
-
-        if (isLikelyRemoteClosure && retryExhaustedTunnels.has(tunnelName)) {
-          retryExhaustedTunnels.delete(tunnelName);
-        }
-
-        if (
-          !manualDisconnects.has(tunnelName) &&
-          code !== 0 &&
-          code !== undefined
-        ) {
-          if (retryExhaustedTunnels.has(tunnelName)) {
-            broadcastTunnelStatus(tunnelName, {
-              connected: false,
-              status: CONNECTION_STATES.FAILED,
-              reason: "Max retries exhausted",
-            });
-          } else {
-            broadcastTunnelStatus(tunnelName, {
-              connected: false,
-              status: CONNECTION_STATES.FAILED,
-              reason: isLikelyRemoteClosure
-                ? "Connection closed by remote host"
-                : "Connection closed unexpectedly",
-            });
-          }
-        }
-
-        if (
-          !activeRetryTimers.has(tunnelName) &&
-          !retryExhaustedTunnels.has(tunnelName)
-        ) {
-          handleDisconnect(
-            tunnelName,
-            tunnelConfig,
-            !manualDisconnects.has(tunnelName),
-          );
-        } else if (
-          retryExhaustedTunnels.has(tunnelName) &&
-          isLikelyRemoteClosure
-        ) {
-          retryExhaustedTunnels.delete(tunnelName);
-          retryCounters.delete(tunnelName);
-          handleDisconnect(tunnelName, tunnelConfig, true);
-        }
+      broadcastTunnelStatus(tunnelName, {
+        connected: true,
+        status: CONNECTION_STATES.CONNECTED,
       });
-
-      stream.stdout?.on("data", () => {});
-
-      stream.on("error", () => {});
-
-      stream.stderr.on("data", (data) => {
-        const errorMsg = data.toString().trim();
-        if (errorMsg) {
-          const isDebugMessage =
-            errorMsg.startsWith("debug1:") ||
-            errorMsg.startsWith("debug2:") ||
-            errorMsg.startsWith("debug3:") ||
-            errorMsg.includes("Reading configuration data") ||
-            errorMsg.includes("include /etc/ssh/ssh_config.d") ||
-            errorMsg.includes("matched no files") ||
-            errorMsg.includes("Applying options for");
-
-          if (!isDebugMessage) {
-            tunnelLogger.error(`SSH stderr for '${tunnelName}': ${errorMsg}`);
-          }
-
-          if (
-            errorMsg.includes("sshpass: command not found") ||
-            errorMsg.includes("sshpass not found")
-          ) {
-            broadcastTunnelStatus(tunnelName, {
-              connected: false,
-              status: CONNECTION_STATES.FAILED,
-              reason:
-                "sshpass tool not found on source host. Please install sshpass or use SSH key authentication.",
-            });
-          }
-
-          if (
-            errorMsg.includes("remote port forwarding failed") ||
-            errorMsg.includes("Error: remote port forwarding failed")
-          ) {
-            const portMatch = errorMsg.match(/listen port (\d+)/);
-            const port = portMatch ? portMatch[1] : tunnelConfig.endpointPort;
-
-            tunnelLogger.error(
-              `Port forwarding failed for tunnel '${tunnelName}' on port ${port}. This prevents tunnel establishment.`,
-            );
-
-            if (activeTunnels.has(tunnelName)) {
-              const conn = activeTunnels.get(tunnelName);
-              if (conn) {
-                conn.end();
-              }
-              activeTunnels.delete(tunnelName);
-            }
-
-            broadcastTunnelStatus(tunnelName, {
-              connected: false,
-              status: CONNECTION_STATES.FAILED,
-              reason: `Remote port forwarding failed for port ${port}. Port may be in use, requires root privileges, or SSH server doesn't allow port forwarding. Try a different port.`,
-            });
-          }
-        }
+      setupPingInterval(tunnelName);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create tunnel";
+      const errorType = classifyError(message);
+      tunnelLogger.error("Failed to create managed tunnel", error, {
+        operation: "managed_tunnel_create_failed",
+        tunnelName,
+        errorType,
+        retryAttempt,
       });
-    });
+      tunnelConnecting.delete(tunnelName);
+      activeTunnels.delete(tunnelName);
+      activeTunnelRuntimes.delete(tunnelName);
+      try {
+        conn.end();
+      } catch {
+        // expected
+      }
+      broadcastTunnelStatus(tunnelName, {
+        connected: false,
+        status: CONNECTION_STATES.FAILED,
+        errorType,
+        reason: message,
+      });
+      const shouldNotRetry =
+        errorType === "AUTHENTICATION_FAILED" ||
+        errorType === "CONNECTION_FAILED";
+      handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
+    }
   });
 
   const connOptions: Record<string, unknown> = {
@@ -1534,9 +2405,53 @@ async function killRemoteTunnelByMarker(
  *       200:
  *         description: A list of all tunnel statuses.
  */
-app.get("/ssh/tunnel/status", (req, res) => {
-  res.json(getAllTunnelStatus());
-});
+app.get(
+  "/ssh/tunnel/status",
+  authenticateJWT,
+  (req: AuthenticatedRequest, res: Response) => {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    res.json(getAllTunnelStatus());
+  },
+);
+
+app.get(
+  "/ssh/tunnel/status/stream",
+  authenticateJWT,
+  (req: AuthenticatedRequest, res: Response) => {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-store, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.flushHeaders?.();
+
+    tunnelStatusClients.add(res);
+    sendTunnelStatusSnapshot(res);
+
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(": keepalive\n\n");
+      } catch {
+        closeStream();
+      }
+    }, 30000);
+
+    const closeStream = () => {
+      clearInterval(heartbeat);
+      tunnelStatusClients.delete(res);
+    };
+
+    req.on("close", closeStream);
+  },
+);
 
 /**
  * @openapi
@@ -1558,16 +2473,27 @@ app.get("/ssh/tunnel/status", (req, res) => {
  *       404:
  *         description: Tunnel not found.
  */
-app.get("/ssh/tunnel/status/:tunnelName", (req, res) => {
-  const { tunnelName } = req.params;
-  const status = connectionStatus.get(tunnelName);
+app.get(
+  "/ssh/tunnel/status/:tunnelName",
+  authenticateJWT,
+  (req: AuthenticatedRequest, res: Response) => {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
 
-  if (!status) {
-    return res.status(404).json({ error: "Tunnel not found" });
-  }
+    const tunnelNameParam = req.params.tunnelName;
+    const tunnelName = Array.isArray(tunnelNameParam)
+      ? tunnelNameParam[0]
+      : tunnelNameParam;
+    const status = connectionStatus.get(tunnelName);
 
-  res.json({ name: tunnelName, status });
-});
+    if (!status) {
+      return res.status(404).json({ error: "Tunnel not found" });
+    }
+
+    res.json({ name: tunnelName, status });
+  },
+);
 
 /**
  * @openapi
@@ -2037,6 +2963,13 @@ async function initializeAutoStartTunnels(): Promise<void> {
                   tunnelConnection.endpointHost,
                   tunnelConnection.endpointPort,
                 ),
+                scope: tunnelConnection.scope || "s2s",
+                mode:
+                  tunnelConnection.mode ||
+                  tunnelConnection.tunnelType ||
+                  "remote",
+                bindHost: tunnelConnection.bindHost,
+                targetHost: tunnelConnection.targetHost,
                 tunnelType: tunnelConnection.tunnelType || "remote",
                 sourceHostId: host.id,
                 tunnelIndex: tunnelIndex,
@@ -2102,7 +3035,56 @@ async function initializeAutoStartTunnels(): Promise<void> {
 }
 
 const PORT = 30003;
-app.listen(PORT, () => {
+const server = createServer(app);
+const c2sRelayWss = new WebSocketServer({
+  server,
+  path: "/ssh/tunnel/c2s/stream",
+});
+
+c2sRelayWss.on("connection", (ws, req) => {
+  let opened = false;
+
+  ws.once("message", async (raw) => {
+    try {
+      const token = extractRequestToken(req);
+      const payload = token ? await authManager.verifyJWTToken(token) : null;
+      if (!payload?.userId || payload.pendingTOTP) {
+        sendC2SError(ws, "Authentication required");
+        ws.close();
+        return;
+      }
+
+      const message = JSON.parse(raw.toString()) as C2SOpenMessage;
+      if (message.type !== "open" && message.type !== "test") {
+        throw new Error("Invalid client tunnel relay request");
+      }
+
+      opened = true;
+      if (message.type === "test") {
+        await handleC2SRelayTest(ws, message, payload.userId);
+      } else {
+        await handleC2SRelayOpen(ws, message, payload.userId);
+      }
+    } catch (error) {
+      const message = describeC2SRelayError(error);
+      tunnelLogger.error("Failed to open C2S relay", error, {
+        operation: "c2s_relay_open_failed",
+      });
+      sendC2SError(ws, message);
+      ws.close();
+    }
+  });
+
+  ws.on("close", () => {
+    if (!opened) {
+      tunnelLogger.info("C2S relay closed before opening", {
+        operation: "c2s_relay_closed_before_open",
+      });
+    }
+  });
+});
+
+server.listen(PORT, () => {
   setTimeout(() => {
     initializeAutoStartTunnels();
   }, 2000);

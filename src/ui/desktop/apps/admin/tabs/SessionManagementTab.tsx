@@ -12,11 +12,7 @@ import { Monitor, Smartphone, Globe, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import {
-  getCookie,
-  revokeSession,
-  revokeAllUserSessions,
-} from "@/ui/main-axios.ts";
+import { revokeSession, revokeAllUserSessions } from "@/ui/main-axios.ts";
 
 interface Session {
   id: string;
@@ -27,8 +23,8 @@ interface Session {
   createdAt: string;
   expiresAt: string;
   lastActiveAt: string;
-  jwtToken: string;
   isRevoked?: boolean;
+  isCurrentSession?: boolean;
 }
 
 interface SessionManagementTabProps {
@@ -46,9 +42,9 @@ export function SessionManagementTab({
   const { confirmWithToast } = useConfirmation();
 
   const handleRevokeSession = async (sessionId: string) => {
-    const currentJWT = getCookie("jwt");
-    const currentSession = sessions.find((s) => s.jwtToken === currentJWT);
-    const isCurrentSession = currentSession?.id === sessionId;
+    const isCurrentSession = sessions.some(
+      (session) => session.id === sessionId && session.isCurrentSession,
+    );
 
     confirmWithToast(
       t("admin.confirmRevokeSession"),

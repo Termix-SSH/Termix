@@ -10,7 +10,6 @@ import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { QuickConnectDialog } from "@/ui/desktop/navigation/dialogs/QuickConnectDialog.tsx";
-import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,13 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu.tsx";
-import {
-  Sun,
-  Moon,
-  Monitor,
-  Palette,
-  Terminal as TerminalIcon,
-} from "lucide-react";
+import { Terminal as TerminalIcon } from "lucide-react";
 import { TERMINAL_THEMES } from "@/constants/terminal-themes.ts";
 
 interface TabData {

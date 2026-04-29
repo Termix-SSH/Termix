@@ -40,7 +40,6 @@ import type { TerminalConfig } from "@/types";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useCommandTracker } from "@/ui/hooks/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
-import { useCommandHistory as useCommandHistoryHook } from "@/ui/hooks/useCommandHistory.ts";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
@@ -92,108 +91,6 @@ interface SSHTerminalProps {
   previewTheme?: string | null;
 }
 
-function TerminalContextMenu({
-  x,
-  y,
-  hasSelection,
-  showCopyPaste,
-  showOpenFileManager,
-  onCopy,
-  onPaste,
-  onOpenFileManager,
-  onClose,
-}: {
-  x: number;
-  y: number;
-  hasSelection: boolean;
-  showCopyPaste: boolean;
-  showOpenFileManager: boolean;
-  onCopy: () => void;
-  onPaste: () => void;
-  onOpenFileManager: () => void;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const menuX = x + 180 > window.innerWidth ? window.innerWidth - 190 : x;
-  const menuY = y + 150 > window.innerHeight ? window.innerHeight - 160 : y;
-
-  useEffect(() => {
-    let cleanup: (() => void) | null = null;
-    const timeoutId = setTimeout(() => {
-      const handleClose = (e: MouseEvent) => {
-        if (!menuRef.current?.contains(e.target as Element)) onClose();
-      };
-      const handleRightClick = (e: MouseEvent) => {
-        e.preventDefault();
-        onClose();
-      };
-      const handleKey = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onClose();
-      };
-      document.addEventListener("mousedown", handleClose, true);
-      document.addEventListener("contextmenu", handleRightClick);
-      document.addEventListener("keydown", handleKey);
-      window.addEventListener("blur", onClose);
-
-      cleanup = () => {
-        document.removeEventListener("mousedown", handleClose, true);
-        document.removeEventListener("contextmenu", handleRightClick);
-        document.removeEventListener("keydown", handleKey);
-        window.removeEventListener("blur", onClose);
-      };
-    }, 50);
-    return () => {
-      clearTimeout(timeoutId);
-      cleanup?.();
-    };
-  }, [onClose]);
-
-  const items: { label: string; action: () => void; disabled?: boolean }[] = [];
-
-  if (showCopyPaste) {
-    items.push(
-      { label: t("terminal.copy"), action: onCopy, disabled: !hasSelection },
-      { label: t("terminal.paste"), action: onPaste },
-    );
-  }
-
-  if (showOpenFileManager) {
-    items.push({
-      label: t("terminal.openFileManagerHere"),
-      action: onOpenFileManager,
-    });
-  }
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[99990]" />
-      <div
-        ref={menuRef}
-        className="fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] z-[99995] overflow-hidden"
-        style={{ left: menuX, top: menuY }}
-      >
-        {items.map((item, i) => (
-          <button
-            key={i}
-            className={`w-full px-3 py-2 text-left text-sm flex items-center hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={item.disabled}
-            onClick={() => {
-              if (!item.disabled) {
-                item.action();
-                onClose();
-              }
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
@@ -209,16 +106,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     },
     ref,
   ) {
-    if (
-      typeof window !== "undefined" &&
-      !(window as { testJWT?: () => string | null }).testJWT
-    ) {
-      (window as { testJWT?: () => string | null }).testJWT = () => {
-        const jwt = getCookie("jwt");
-        return jwt;
-      };
-    }
-
     const { t } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
     const commandHistoryContext = useCommandHistory();
@@ -305,11 +192,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const [contextMenu, setContextMenu] = useState<{
-      x: number;
-      y: number;
-      hasSelection: boolean;
-    } | null>(null);
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<any>(null);
@@ -344,6 +226,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
     const wasConnectedRef = useRef(false);
+    const closeAfterDisconnectRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -353,6 +236,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       reconnectAttempts.current = 0;
       wasConnectedRef.current = false;
       isAttachingSessionRef.current = false;
+      closeAfterDisconnectRef.current = false;
 
       return () => {};
     }, [hostConfig.id]);
@@ -535,12 +419,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       const checkAuth = () => {
-        const jwtToken = getCookie("jwt");
-        const isAuth = !!(jwtToken && jwtToken.trim() !== "");
-
         setIsAuthenticated((prev) => {
-          if (prev !== isAuth) {
-            return isAuth;
+          if (!prev) {
+            return true;
           }
           return prev;
         });
@@ -807,7 +688,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     );
 
     function getUseRightClickCopyPaste() {
-      return getCookie("rightClickCopyPaste") === "true";
+      return getCookie("rightClickCopyPaste") !== "false";
     }
 
     function attemptReconnection() {
@@ -873,21 +754,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        const jwtToken = getCookie("jwt");
-        if (!jwtToken || jwtToken.trim() === "") {
-          console.warn("Reconnection cancelled - no authentication token");
-          isReconnectingRef.current = false;
-          updateConnectionError(t("terminal.authenticationRequired"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
-          addLog({
-            type: "error",
-            stage: "auth",
-            message: t("terminal.authenticationRequired"),
-          });
-          return;
-        }
-
         if (terminal && hostConfig) {
           if (!isAttachingSessionRef.current) {
             terminal.clear();
@@ -921,17 +787,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
           window.location.port === "");
-
-      const jwtToken = getCookie("jwt");
-
-      if (!jwtToken || jwtToken.trim() === "") {
-        console.error("No JWT token available for WebSocket connection");
-        setIsConnected(false);
-        setIsConnecting(false);
-        updateConnectionError("Authentication required");
-        isConnectingRef.current = false;
-        return;
-      }
 
       let baseWsUrl: string;
 
@@ -1306,11 +1161,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }, 100);
           } else if (msg.type === "disconnected") {
             wasDisconnectedBySSH.current = true;
+            shouldNotReconnectRef.current = true;
             setIsConnected(false);
             setIsConnecting(false);
             if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              setShowDisconnectedOverlay(true);
+              setShowDisconnectedOverlay(false);
+              if (onClose && !closeAfterDisconnectRef.current) {
+                closeAfterDisconnectRef.current = true;
+                isUnmountingRef.current = true;
+                window.setTimeout(onClose, 0);
+              }
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),
@@ -1691,8 +1552,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnecting(false);
           shouldNotReconnectRef.current = true;
 
-          localStorage.removeItem("jwt");
-
           return;
         }
 
@@ -1752,6 +1611,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     async function writeTextToClipboard(text: string): Promise<boolean> {
       try {
+        if (window.electronClipboard) {
+          window.electronClipboard.writeText(text);
+          return true;
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(text);
           return true;
@@ -1778,6 +1641,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     async function readTextFromClipboard(): Promise<string> {
       try {
+        if (window.electronClipboard) {
+          return window.electronClipboard.readText();
+        }
         if (navigator.clipboard && navigator.clipboard.readText) {
           return await navigator.clipboard.readText();
         }
@@ -2049,29 +1915,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
+        if (e.ctrlKey && onOpenFileManager) {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenFileManager();
+          return;
+        }
+
         if (getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
           if (terminal.hasSelection()) {
             const text = terminal.getSelection();
-            navigator.clipboard
-              .writeText(text)
-              .then(() => terminal.clearSelection());
+            writeTextToClipboard(text).then(() => terminal.clearSelection());
           } else {
-            navigator.clipboard.readText().then((text) => {
+            readTextFromClipboard().then((text) => {
               if (text) terminal.paste(text);
             });
           }
           return;
         }
-        if (!onOpenFileManager) return;
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          hasSelection: terminal.hasSelection(),
-        });
       };
       element?.addEventListener("contextmenu", handleContextMenu);
 
@@ -2764,29 +2627,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
-
-        {contextMenu && (
-          <TerminalContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            hasSelection={contextMenu.hasSelection}
-            showCopyPaste={getUseRightClickCopyPaste()}
-            showOpenFileManager={!!onOpenFileManager}
-            onCopy={async () => {
-              const selection = terminal?.getSelection();
-              if (selection) {
-                await writeTextToClipboard(selection);
-                terminal?.clearSelection();
-              }
-            }}
-            onPaste={async () => {
-              const text = await readTextFromClipboard();
-              if (text) terminal?.paste(text);
-            }}
-            onOpenFileManager={() => onOpenFileManager?.()}
-            onClose={() => setContextMenu(null)}
-          />
-        )}
       </div>
     );
   },

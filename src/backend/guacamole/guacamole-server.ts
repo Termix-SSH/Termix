@@ -1,12 +1,8 @@
 import GuacamoleLite from "guacamole-lite";
-import { parse as parseUrl } from "url";
 import { guacLogger } from "../utils/logger.js";
-import { AuthManager } from "../utils/auth-manager.js";
 import { GuacamoleTokenService } from "./token-service.js";
 import { getDb } from "../database/db/index.js";
-import type { IncomingMessage } from "http";
 
-const authManager = AuthManager.getInstance();
 const tokenService = GuacamoleTokenService.getInstance();
 
 function parseGuacUrl(url: string): { host: string; port: number } {

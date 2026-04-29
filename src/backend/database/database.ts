@@ -8,12 +8,12 @@ import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
+import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import guacamoleRoutes from "../guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
-import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -118,6 +118,31 @@ class GitHubCache {
 
 const githubCache = new GitHubCache();
 
+function parseSemver(
+  version: string | undefined,
+): [number, number, number] | null {
+  const match = String(version || "").match(/(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!match) return null;
+
+  return [Number(match[1]), Number(match[2]), Number(match[3] || 0)];
+}
+
+function compareSemver(
+  a: string | undefined,
+  b: string | undefined,
+): number | null {
+  const parsedA = parseSemver(a);
+  const parsedB = parseSemver(b);
+  if (!parsedA || !parsedB) return null;
+
+  for (let i = 0; i < 3; i += 1) {
+    if (parsedA[i] > parsedB[i]) return 1;
+    if (parsedA[i] < parsedB[i]) return -1;
+  }
+
+  return 0;
+}
+
 const GITHUB_API_BASE = "https://api.github.com";
 const REPO_OWNER = "Termix-SSH";
 const REPO_NAME = "Termix";
@@ -143,7 +168,7 @@ async function fetchGitHubAPI<T>(
         "User-Agent": "TermixUpdateChecker/1.0",
         "X-GitHub-Api-Version": "2022-11-28",
       },
-      agent: getProxyAgent(url),
+      dispatcher: getProxyAgent(url),
     });
 
     if (!response.ok) {
@@ -299,12 +324,19 @@ app.get("/version", authenticateJWT, async (req, res) => {
       return res.status(401).send("Remote Version Not Found");
     }
 
-    const isUpToDate = localVersion === remoteVersion;
+    const versionComparison = compareSemver(localVersion, remoteVersion);
+    const status =
+      versionComparison === null || versionComparison === 0
+        ? "up_to_date"
+        : versionComparison > 0
+          ? "beta"
+          : "requires_update";
 
     const response = {
-      status: isUpToDate ? "up_to_date" : "requires_update",
+      status,
       localVersion: localVersion,
       version: remoteVersion,
+      remoteVersion: remoteVersion,
       latest_release: {
         tag_name: releaseData.data.tag_name,
         name: releaseData.data.name,
@@ -1161,7 +1193,7 @@ app.post(
         mimetype: req.file.mimetype,
       });
 
-      let userDataKey = DataCrypto.getUserDataKey(userId);
+      const userDataKey = DataCrypto.getUserDataKey(userId);
       if (!userDataKey) {
         throw new Error("User data not unlocked");
       }
@@ -1719,6 +1751,7 @@ app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
+app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/guacamole", guacamoleRoutes);
 app.use("/network-topology", networkTopologyRoutes);
@@ -1738,10 +1771,38 @@ if (frontendDist) {
   databaseLogger.info(`Serving frontend from: ${frontendDist}`, {
     operation: "static_files",
   });
-  app.use(express.static(frontendDist));
+  app.use(
+    express.static(frontendDist, {
+      setHeaders: (res, filePath) => {
+        const relativePath = path
+          .relative(frontendDist, filePath)
+          .replaceAll(path.sep, "/");
+
+        if (relativePath.startsWith("assets/")) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return;
+        }
+
+        if (
+          relativePath === "index.html" ||
+          relativePath === "sw.js" ||
+          relativePath === "manifest.json"
+        ) {
+          res.setHeader(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          );
+        }
+      },
+    }),
+  );
 
   app.use((req, res, next) => {
     if (req.method === "GET" && req.accepts("html")) {
+      res.setHeader(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      );
       res.sendFile(path.join(frontendDist, "index.html"));
     } else {
       next();
@@ -1750,7 +1811,6 @@ if (frontendDist) {
 }
 
 app.use(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (
     err: unknown,
     req: express.Request,

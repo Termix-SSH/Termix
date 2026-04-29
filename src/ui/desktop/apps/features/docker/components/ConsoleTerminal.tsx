@@ -17,7 +17,7 @@ import { getBasePath } from "@/lib/base-path";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
-import { getCookie, isElectron } from "@/ui/main-axios.ts";
+import { isElectron } from "@/ui/main-axios.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 
@@ -63,6 +63,21 @@ export function ConsoleTerminal({
     terminal.options.fontSize = 14;
     terminal.options.fontFamily = "monospace";
 
+    const readTextFromClipboard = async (): Promise<string> => {
+      if (window.electronClipboard) {
+        return window.electronClipboard.readText();
+      }
+      return navigator.clipboard.readText();
+    };
+
+    const writeTextToClipboard = async (text: string): Promise<void> => {
+      if (window.electronClipboard) {
+        window.electronClipboard.writeText(text);
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+    };
+
     terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {
       if (e.type !== "keydown") return true;
 
@@ -73,8 +88,7 @@ export function ConsoleTerminal({
       ) {
         e.preventDefault();
         e.stopPropagation();
-        navigator.clipboard
-          .readText()
+        readTextFromClipboard()
           .then((text) => {
             if (text) terminal.paste(text);
           })
@@ -96,7 +110,7 @@ export function ConsoleTerminal({
         e.stopPropagation();
         const selection = terminal.getSelection();
         if (selection) {
-          navigator.clipboard.writeText(selection).catch(() => {
+          writeTextToClipboard(selection).catch(() => {
             toast.error(t("terminal.clipboardWriteFailed"));
           });
           terminal.clearSelection();
@@ -121,7 +135,7 @@ export function ConsoleTerminal({
         e.stopPropagation();
         const selection = terminal.getSelection();
         if (selection) {
-          navigator.clipboard.writeText(selection).catch(() => {
+          writeTextToClipboard(selection).catch(() => {
             toast.error(t("terminal.clipboardWriteFailed"));
           });
         }
@@ -137,8 +151,7 @@ export function ConsoleTerminal({
       ) {
         e.preventDefault();
         e.stopPropagation();
-        navigator.clipboard
-          .readText()
+        readTextFromClipboard()
           .then((text) => {
             if (text) terminal.paste(text);
           })
@@ -199,7 +212,7 @@ export function ConsoleTerminal({
 
       terminal.dispose();
     };
-  }, [terminal]);
+  }, [terminal, t]);
 
   const disconnect = React.useCallback(() => {
     if (wsRef.current) {
@@ -215,7 +228,7 @@ export function ConsoleTerminal({
         terminal.clear();
       } catch (error) {}
     }
-  }, [terminal, t]);
+  }, [terminal]);
 
   const connect = React.useCallback(() => {
     if (!terminal || containerState !== "running") {
@@ -226,15 +239,6 @@ export function ConsoleTerminal({
     setIsConnecting(true);
 
     try {
-      const token = isElectron()
-        ? localStorage.getItem("jwt")
-        : getCookie("jwt");
-      if (!token) {
-        toast.error(t("docker.authenticationRequired"));
-        setIsConnecting(false);
-        return;
-      }
-
       if (fitAddonRef.current) {
         fitAddonRef.current.fit();
       }

@@ -1,14 +1,8 @@
 import React from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs.tsx";
+
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
 import {
   connectDockerSession,
@@ -661,7 +655,7 @@ function DockerManagerInner({
 
         <div className="flex-1 overflow-hidden min-h-0 relative">
           {viewMode === "list" ? (
-            <div className="h-full min-h-0 px-4 py-4">
+            <div className="h-full min-h-0 px-4 pt-4">
               {sessionId ? (
                 isLoadingContainers && containers.length === 0 ? (
                   <SimpleLoader

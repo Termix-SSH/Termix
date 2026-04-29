@@ -9,7 +9,6 @@
     }
   ],
   "compilerOptions": {
-    "baseUrl": ".",
     "module": "ESNext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

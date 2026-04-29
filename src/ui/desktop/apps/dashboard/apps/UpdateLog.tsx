@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
-import { Separator } from "@/components/ui/separator.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet.tsx";
+import { Sheet, SheetContent } from "@/components/ui/sheet.tsx";
 import { getReleasesRSS, getVersionInfo } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
-import { BookOpen, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface UpdateLogProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
@@ -48,8 +41,9 @@ interface RSSResponse {
 }
 
 interface VersionResponse {
-  status: "up_to_date" | "requires_update";
+  status: "up_to_date" | "requires_update" | "beta";
   version: string;
+  localVersion?: string;
   latest_release: {
     name: string;
     published_at: string;
@@ -132,6 +126,19 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
                 <AlertDescription className="text-foreground-secondary">
                   {t("common.newVersionAvailable", {
                     version: versionInfo.version,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+            {versionInfo && versionInfo.status === "beta" && (
+              <Alert className="bg-elevated border-edge text-foreground mb-3">
+                <AlertTitle className="text-foreground">
+                  {t("versionCheck.betaVersion")}
+                </AlertTitle>
+                <AlertDescription className="text-foreground-secondary">
+                  {t("versionCheck.betaVersionDesc", {
+                    current: versionInfo.localVersion,
+                    latest: versionInfo.version,
                   })}
                 </AlertDescription>
               </Alert>

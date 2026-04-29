@@ -1,13 +1,13 @@
 import React from "react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ExternalLink, Download, AlertTriangle } from "lucide-react";
+import { ExternalLink, Download, AlertTriangle, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface VersionAlertProps {
   updateInfo: {
     success: boolean;
-    status?: "up_to_date" | "requires_update";
+    status?: "up_to_date" | "requires_update" | "beta";
     localVersion?: string;
     remoteVersion?: string;
     latest_release?: {
@@ -47,6 +47,21 @@ export function VersionAlert({ updateInfo, onDownload }: VersionAlertProps) {
         <AlertDescription>
           {t("versionCheck.currentVersion", {
             version: updateInfo.localVersion,
+          })}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (updateInfo.status === "beta") {
+    return (
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>{t("versionCheck.betaVersion")}</AlertTitle>
+        <AlertDescription>
+          {t("versionCheck.betaVersionDesc", {
+            current: updateInfo.localVersion,
+            latest: updateInfo.remoteVersion,
           })}
         </AlertDescription>
       </Alert>

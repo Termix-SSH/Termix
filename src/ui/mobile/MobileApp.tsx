@@ -14,10 +14,14 @@ import {
   TabProvider,
   useTabs,
 } from "@/ui/mobile/navigation/tabs/TabContext.tsx";
-import { getUserInfo } from "@/ui/main-axios.ts";
+import {
+  getUserInfo,
+  isCurrentAuthInvalidationError,
+} from "@/ui/main-axios.ts";
 import { Auth } from "@/ui/mobile/authentication/Auth.tsx";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
+import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
 function isReactNativeWebView(): boolean {
   return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
@@ -33,6 +37,22 @@ const AppContent: FC = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const isAuthenticatedRef = React.useRef(false);
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setUsername(null);
+    };
+
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -43,7 +63,6 @@ const AppContent: FC = () => {
             setIsAuthenticated(false);
             setIsAdmin(false);
             setUsername(null);
-            localStorage.removeItem("jwt");
           } else {
             setIsAuthenticated(true);
             setIsAdmin(!!meRes.is_admin);
@@ -51,15 +70,18 @@ const AppContent: FC = () => {
           }
         })
         .catch((err) => {
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-          setUsername(null);
-
-          localStorage.removeItem("jwt");
-
-          const errorCode = err?.response?.data?.code;
-          if (errorCode === "SESSION_EXPIRED") {
+          if (isCurrentAuthInvalidationError(err)) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
             console.warn(t("errors.sessionExpired"));
+            return;
+          }
+
+          if (!isAuthenticatedRef.current) {
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            setUsername(null);
           }
         })
         .finally(() => setAuthLoading(false));

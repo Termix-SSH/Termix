@@ -48,6 +48,7 @@ import {
   Terminal,
   Copy,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -97,6 +98,7 @@ export function CredentialsManager({
   >([]);
   const [selectedHostId, setSelectedHostId] = useState<string>("");
   const [deployLoading, setDeployLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [hostComboboxOpen, setHostComboboxOpen] = useState(false);
   const [showCopyCommandDialog, setShowCopyCommandDialog] = useState(false);
   const [copyCommandCredential, setCopyCommandCredential] =
@@ -124,16 +126,29 @@ export function CredentialsManager({
     }
   };
 
-  const fetchCredentials = async () => {
+  const fetchCredentials = async (options: { showLoading?: boolean } = {}) => {
+    const { showLoading = true } = options;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await getCredentials();
       setCredentials(data);
       setError(null);
     } catch {
       setError(t("credentials.failedToFetchCredentials"));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleRefreshCredentials = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCredentials({ showLoading: false }),
+        fetchHosts(),
+      ]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -471,7 +486,15 @@ export function CredentialsManager({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={fetchCredentials} variant="outline" size="sm">
+            <Button
+              onClick={handleRefreshCredentials}
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
               {t("credentials.refresh")}
             </Button>
           </div>
@@ -523,7 +546,15 @@ export function CredentialsManager({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchCredentials} variant="outline" size="sm">
+          <Button
+            onClick={handleRefreshCredentials}
+            variant="outline"
+            size="sm"
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
             {t("credentials.refresh")}
           </Button>
         </div>

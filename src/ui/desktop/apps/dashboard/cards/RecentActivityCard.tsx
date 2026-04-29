@@ -11,7 +11,6 @@ import {
   Monitor,
   Eye,
   MessagesSquare,
-  Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type RecentActivityItem } from "@/ui/main-axios";

@@ -32,6 +32,46 @@ export interface ElectronAPI {
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
   testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  getC2STunnelConfig: () => Promise<unknown[]>;
+  saveC2STunnelConfig: (
+    config: unknown[],
+  ) => Promise<{ success: boolean; error?: string }>;
+  checkLocalPortAvailable: (
+    host: string,
+    port: number,
+  ) => Promise<{ available: boolean; error?: string }>;
+  getC2STunnelPresetDefaultName: () => Promise<string>;
+  startC2STunnel: (
+    tunnel: unknown,
+    index: number,
+  ) => Promise<{ success: boolean; tunnelName?: string; error?: string }>;
+  testC2STunnel: (
+    tunnel: unknown,
+    index: number,
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
+  stopC2STunnel: (
+    tunnelName: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  getC2STunnelStatuses: () => Promise<Record<string, unknown>>;
+  onC2STunnelStatuses?: (
+    callback: (statuses: Record<string, unknown>) => void,
+  ) => () => void;
+  startC2SAutoStartTunnels: () => Promise<{
+    success: boolean;
+    started: number;
+    errors: string[];
+  }>;
+  clearSessionCookies: () => Promise<void>;
+  getSessionCookie: (
+    name: string,
+    targetUrl?: string,
+  ) => Promise<string | null>;
+  waitForSessionCookie: (
+    name: string,
+    targetUrl?: string,
+    previousValue?: string | null,
+    timeoutMs?: number,
+  ) => Promise<{ success: boolean; value?: string; error?: string }>;
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;

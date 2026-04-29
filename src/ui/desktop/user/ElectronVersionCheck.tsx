@@ -32,6 +32,10 @@ export function ElectronVersionCheck({
     (theme === "system" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
+  const versionModalTitle =
+    versionInfo?.status === "beta"
+      ? t("versionCheck.betaVersion")
+      : t("versionCheck.updateRequired");
 
   useEffect(() => {
     const updateCheckDisabled =
@@ -183,9 +187,7 @@ export function ElectronVersionCheck({
     >
       <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            {t("versionCheck.updateRequired")}
-          </h2>
+          <h2 className="text-lg font-semibold">{versionModalTitle}</h2>
         </div>
 
         <div className="mb-4">

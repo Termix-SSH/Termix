@@ -10,6 +10,12 @@ interface OPKSSHToken {
   privateKey: string;
   sshCert: string;
 }
+
+type SignCallback = (
+  data: Buffer,
+  callback: (signature: Buffer) => void,
+) => void;
+
 export async function setupOPKSSHCertAuth(
   config: ConnectConfig,
   client: Client,
@@ -107,7 +113,7 @@ export async function setupOPKSSHCertAuth(
       user: string,
       pubKey: any,
       keyAlgo: string | undefined,
-      cbSign?: Function,
+      cbSign?: SignCallback,
     ) => {
       const isCertAuth = !!cbSign && pubKey?.type?.includes("-cert-");
       if (!isCertAuth) {

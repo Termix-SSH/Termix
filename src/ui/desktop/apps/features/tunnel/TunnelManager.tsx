@@ -1,9 +1,11 @@
 import React from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
+import { Button } from "@/components/ui/button.tsx";
 import { Tunnel } from "@/ui/desktop/apps/features/tunnel/Tunnel.tsx";
 import { useTranslation } from "react-i18next";
 import { getSSHHosts } from "@/ui/main-axios.ts";
+import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 interface HostConfig {
   id: number;
@@ -33,7 +35,29 @@ export function TunnelManager({
 }: TunnelManagerProps): React.ReactElement {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
+  const { tabs, addTab, setCurrentTab, updateTab } = useTabs();
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
+  const isElectron =
+    typeof window !== "undefined" && window.electronAPI?.isElectron === true;
+
+  const openC2SPresets = React.useCallback(() => {
+    const profileTab = tabs.find((tab) => tab.type === "user_profile");
+    if (profileTab) {
+      updateTab(profileTab.id, {
+        initialTab: "c2s-tunnels",
+        _updateTimestamp: Date.now(),
+      });
+      setCurrentTab(profileTab.id);
+      return;
+    }
+
+    const id = addTab({
+      type: "user_profile",
+      title: t("profile.title"),
+      initialTab: "c2s-tunnels",
+    });
+    setCurrentTab(id);
+  }, [addTab, setCurrentTab, t, tabs, updateTab]);
 
   React.useEffect(() => {
     if (hostConfig?.id !== currentHostConfig?.id) {
@@ -107,6 +131,11 @@ export function TunnelManager({
               </h1>
             </div>
           </div>
+          {isElectron && (
+            <Button size="sm" variant="outline" onClick={openC2SPresets}>
+              {t("tunnels.manageClientTunnels")}
+            </Button>
+          )}
         </div>
         <Separator className="p-0.25 w-full" />
 
@@ -127,10 +156,10 @@ export function TunnelManager({
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <p className="text-foreground-subtle text-lg">
-                  {t("tunnel.noTunnelsConfigured")}
+                  {t("tunnels.noTunnelsConfigured")}
                 </p>
                 <p className="text-foreground-subtle text-sm mt-2">
-                  {t("tunnel.configureTunnelsInHostSettings")}
+                  {t("tunnels.configureTunnelsInHostSettings")}
                 </p>
               </div>
             </div>

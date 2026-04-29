@@ -24,7 +24,6 @@ import {
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext";
 import {
   getSSHHosts,
-  getGuacamoleToken,
   getGuacamoleDpi,
   getGuacamoleTokenFromHost,
   logActivity,
@@ -96,7 +95,7 @@ export function Host({ host: initialHost }: HostProps): React.ReactElement {
     }
     try {
       return JSON.parse(host.statsConfig);
-    } catch (e) {
+    } catch {
       return DEFAULT_STATS_CONFIG;
     }
   }, [host.statsConfig]);

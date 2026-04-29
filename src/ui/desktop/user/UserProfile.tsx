@@ -26,6 +26,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Network,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { TOTPSetup } from "@/ui/desktop/user/TOTPSetup.tsx";
@@ -43,11 +44,14 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/ui/desktop/user/LanguageSwitcher.tsx";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { toast } from "sonner";
+import { C2STunnelPresetManager } from "@/ui/desktop/user/C2STunnelPresetManager.tsx";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface UserProfileProps {
   isTopbarOpen?: boolean;
   rightSidebarOpen?: boolean;
   rightSidebarWidth?: number;
+  initialTab?: string;
 }
 
 async function handleLogout() {
@@ -55,8 +59,6 @@ async function handleLogout() {
     await logoutUser();
 
     if (isElectron()) {
-      localStorage.removeItem("jwt");
-
       const configuredServerUrl = (
         window as Window &
           typeof globalThis & {
@@ -94,6 +96,7 @@ export function UserProfile({
   isTopbarOpen = true,
   rightSidebarOpen = false,
   rightSidebarWidth = 400,
+  initialTab = "profile",
 }: UserProfileProps) {
   const { t } = useTranslation();
   const { state: sidebarState } = useSidebar();
@@ -157,6 +160,16 @@ export function UserProfile({
     return saved === "true";
   });
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const supportsClientTunnels = isElectron();
+
+  useEffect(() => {
+    setActiveTab(
+      initialTab === "c2s-tunnels" && !supportsClientTunnels
+        ? "profile"
+        : initialTab,
+    );
+  }, [initialTab, supportsClientTunnels]);
 
   useEffect(() => {
     fetchUserInfo();
@@ -302,28 +315,7 @@ export function UserProfile({
       "margin-left 200ms linear, margin-right 200ms linear, margin-top 200ms linear",
   };
 
-  if (loading) {
-    return (
-      <div
-        style={wrapperStyle}
-        className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden"
-      >
-        <div className="h-full w-full flex flex-col">
-          <div className="flex items-center justify-between px-3 pt-2 pb-2">
-            <h1 className="font-bold text-lg">{t("nav.userProfile")}</h1>
-          </div>
-          <Separator className="p-0.25 w-full" />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-pulse text-foreground-secondary">
-              {t("common.loading")}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !userInfo) {
+  if (!loading && (error || !userInfo)) {
     return (
       <div
         style={wrapperStyle}
@@ -359,6 +351,7 @@ export function UserProfile({
         style={wrapperStyle}
         className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden"
       >
+        <SimpleLoader visible={loading} message={t("common.loading")} />
         <div className="h-full w-full flex flex-col">
           <div className="flex items-center justify-between px-3 pt-2 pb-2">
             <h1 className="font-bold text-lg">{t("nav.userProfile")}</h1>
@@ -366,452 +359,477 @@ export function UserProfile({
           <Separator className="p-0.25 w-full" />
 
           <div className="px-6 py-4 overflow-auto thin-scrollbar flex-1">
-            <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="mb-4 bg-elevated border-2 border-edge">
-                <TabsTrigger
-                  value="profile"
-                  className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
-                >
-                  <User className="w-4 h-4" />
-                  {t("profile.account")}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="appearance"
-                  className="flex items-center gap-2 data-[state=active]:bg-button"
-                >
-                  <Palette className="w-4 h-4" />
-                  {t("profile.appearance")}
-                </TabsTrigger>
-                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
+            {userInfo && (
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                <TabsList className="mb-4 bg-elevated border-2 border-edge">
                   <TabsTrigger
-                    value="security"
+                    value="profile"
                     className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
                   >
-                    <Shield className="w-4 h-4" />
-                    {t("profile.security")}
+                    <User className="w-4 h-4" />
+                    {t("profile.account")}
                   </TabsTrigger>
-                )}
-              </TabsList>
-
-              <TabsContent value="profile" className="space-y-4">
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.accountInfo")}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-foreground-secondary">
-                        {t("common.username")}
-                      </Label>
-                      <p className="text-lg font-medium mt-1 text-foreground">
-                        {userInfo.username}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-foreground-secondary">
-                        {t("profile.role")}
-                      </Label>
-                      <div className="mt-1">
-                        {userRoles.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {userRoles.map((role) => (
-                              <span
-                                key={role.roleId}
-                                className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-muted/50 text-foreground border border-border"
-                              >
-                                {t(role.roleDisplayName)}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-lg font-medium text-foreground">
-                            {userInfo.is_admin
-                              ? t("interface.administrator")
-                              : t("interface.user")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-foreground-secondary">
-                        {t("profile.authMethod")}
-                      </Label>
-                      <p className="text-lg font-medium mt-1 text-foreground">
-                        {userInfo.is_dual_auth
-                          ? t("profile.externalAndLocal")
-                          : userInfo.is_oidc
-                            ? t("profile.external")
-                            : t("profile.local")}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-foreground-secondary">
-                        {t("profile.twoFactorAuth")}
-                      </Label>
-                      <p className="text-lg font-medium mt-1">
-                        {userInfo.is_oidc && !userInfo.is_dual_auth ? (
-                          <span className="text-muted-foreground">
-                            {t("auth.lockedOidcAuth")}
-                          </span>
-                        ) : userInfo.totp_enabled ? (
-                          <span className="text-green-400 flex items-center gap-1">
-                            <Shield className="w-4 h-4" />
-                            {t("common.enabled")}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {t("common.disabled")}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-foreground-secondary">
-                        {t("common.version")}
-                      </Label>
-                      <p className="text-lg font-medium mt-1 text-foreground">
-                        {versionInfo?.version || t("common.loading")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-edge">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-red-400">
-                          {t("leftSidebar.deleteAccount")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("leftSidebar.deleteAccountWarningShort")}
-                        </p>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        onClick={() => setDeleteAccountOpen(true)}
-                      >
-                        {t("leftSidebar.deleteAccount")}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="appearance" className="space-y-4">
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.languageLocalization")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("common.language")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.selectPreferredLanguage")}
-                        </p>
-                      </div>
-                      <LanguageSwitcher />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
+                  <TabsTrigger
+                    value="appearance"
+                    className="flex items-center gap-2 data-[state=active]:bg-button"
+                  >
+                    <Palette className="w-4 h-4" />
                     {t("profile.appearance")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  </TabsTrigger>
+                  {supportsClientTunnels && (
+                    <TabsTrigger
+                      value="c2s-tunnels"
+                      className="flex items-center gap-2 data-[state=active]:bg-button"
+                    >
+                      <Network className="w-4 h-4" />
+                      {t("tunnels.clientTunnels")}
+                    </TabsTrigger>
+                  )}
+                  {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
+                    <TabsTrigger
+                      value="security"
+                      className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+                    >
+                      <Shield className="w-4 h-4" />
+                      {t("profile.security")}
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+
+                <TabsContent value="profile" className="space-y-4">
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.accountInfo")}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-foreground-secondary">
-                          {t("profile.theme")}
+                          {t("common.username")}
                         </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.appearanceDesc")}
+                        <p className="text-lg font-medium mt-1 text-foreground">
+                          {userInfo.username}
                         </p>
                       </div>
-                      <Select value={theme} onValueChange={setTheme}>
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent
-                          onMouseLeave={() => setThemePreview(null)}
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.role")}
+                        </Label>
+                        <div className="mt-1">
+                          {userRoles.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {userRoles.map((role) => (
+                                <span
+                                  key={role.roleId}
+                                  className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-muted/50 text-foreground border border-border"
+                                >
+                                  {t(role.roleDisplayName)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-lg font-medium text-foreground">
+                              {userInfo.is_admin
+                                ? t("interface.administrator")
+                                : t("interface.user")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.authMethod")}
+                        </Label>
+                        <p className="text-lg font-medium mt-1 text-foreground">
+                          {userInfo.is_dual_auth
+                            ? t("profile.externalAndLocal")
+                            : userInfo.is_oidc
+                              ? t("profile.external")
+                              : t("profile.local")}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("profile.twoFactorAuth")}
+                        </Label>
+                        <p className="text-lg font-medium mt-1">
+                          {userInfo.is_oidc && !userInfo.is_dual_auth ? (
+                            <span className="text-muted-foreground">
+                              {t("auth.lockedOidcAuth")}
+                            </span>
+                          ) : userInfo.totp_enabled ? (
+                            <span className="text-green-400 flex items-center gap-1">
+                              <Shield className="w-4 h-4" />
+                              {t("common.enabled")}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {t("common.disabled")}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-foreground-secondary">
+                          {t("common.version")}
+                        </Label>
+                        <p className="text-lg font-medium mt-1 text-foreground">
+                          {versionInfo?.version || t("common.loading")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-edge">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-red-400">
+                            {t("leftSidebar.deleteAccount")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("leftSidebar.deleteAccountWarningShort")}
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setDeleteAccountOpen(true)}
                         >
-                          <SelectItem
-                            value="light"
-                            onMouseEnter={() => setThemePreview("light")}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Sun className="w-4 h-4" />
-                              {t("profile.themeLight")}
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="dark"
-                            onMouseEnter={() => setThemePreview("dark")}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Moon className="w-4 h-4" />
-                              {t("profile.themeDark")}
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="dracula"
-                            onMouseEnter={() => setThemePreview("dracula")}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Palette className="w-4 h-4" />
-                              Dracula
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="gentlemansChoice"
-                            onMouseEnter={() =>
-                              setThemePreview("gentlemansChoice")
-                            }
-                          >
-                            <div className="flex items-center gap-2">
-                              <Palette className="w-4 h-4" />
-                              Gentleman's Choice
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="midnightEspresso"
-                            onMouseEnter={() =>
-                              setThemePreview("midnightEspresso")
-                            }
-                          >
-                            <div className="flex items-center gap-2">
-                              <Palette className="w-4 h-4" />
-                              Midnight Espresso
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="catppuccinMocha"
-                            onMouseEnter={() =>
-                              setThemePreview("catppuccinMocha")
-                            }
-                          >
-                            <div className="flex items-center gap-2">
-                              <Palette className="w-4 h-4" />
-                              Catppuccin Mocha
-                            </div>
-                          </SelectItem>
-                          <SelectItem
-                            value="system"
-                            onMouseEnter={() => setThemePreview("system")}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Monitor className="w-4 h-4" />
-                              {t("profile.themeSystem")}
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                          {t("leftSidebar.deleteAccount")}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </TabsContent>
 
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.fileManagerSettings")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.fileColorCoding")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.fileColorCodingDesc")}
-                        </p>
+                <TabsContent value="appearance" className="space-y-4">
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.languageLocalization")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("common.language")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.selectPreferredLanguage")}
+                          </p>
+                        </div>
+                        <LanguageSwitcher />
                       </div>
-                      <Switch
-                        checked={fileColorCoding}
-                        onCheckedChange={handleFileColorCodingToggle}
-                      />
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.terminalSettings")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.commandAutocomplete")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.commandAutocompleteDesc")}
-                        </p>
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.appearance")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.theme")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.appearanceDesc")}
+                          </p>
+                        </div>
+                        <Select value={theme} onValueChange={setTheme}>
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent
+                            onMouseLeave={() => setThemePreview(null)}
+                          >
+                            <SelectItem
+                              value="light"
+                              onMouseEnter={() => setThemePreview("light")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Sun className="w-4 h-4" />
+                                {t("profile.themeLight")}
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="dark"
+                              onMouseEnter={() => setThemePreview("dark")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Moon className="w-4 h-4" />
+                                {t("profile.themeDark")}
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="dracula"
+                              onMouseEnter={() => setThemePreview("dracula")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4" />
+                                Dracula
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="gentlemansChoice"
+                              onMouseEnter={() =>
+                                setThemePreview("gentlemansChoice")
+                              }
+                            >
+                              <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4" />
+                                Gentleman's Choice
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="midnightEspresso"
+                              onMouseEnter={() =>
+                                setThemePreview("midnightEspresso")
+                              }
+                            >
+                              <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4" />
+                                Midnight Espresso
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="catppuccinMocha"
+                              onMouseEnter={() =>
+                                setThemePreview("catppuccinMocha")
+                              }
+                            >
+                              <div className="flex items-center gap-2">
+                                <Palette className="w-4 h-4" />
+                                Catppuccin Mocha
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="system"
+                              onMouseEnter={() => setThemePreview("system")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Monitor className="w-4 h-4" />
+                                {t("profile.themeSystem")}
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Switch
-                        checked={commandAutocomplete}
-                        onCheckedChange={handleCommandAutocompleteToggle}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.commandHistoryTracking")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.commandHistoryTrackingDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={commandHistoryTracking}
-                        onCheckedChange={handleCommandHistoryTrackingToggle}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.terminalSyntaxHighlighting")}{" "}
-                          <span className="text-xs text-yellow-500 font-semibold">
-                            (BETA)
-                          </span>
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.terminalSyntaxHighlightingDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={terminalSyntaxHighlighting}
-                        onCheckedChange={handleTerminalSyntaxHighlightingToggle}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.enableCommandPaletteShortcut")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.enableCommandPaletteShortcutDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={commandPaletteShortcutEnabled}
-                        onCheckedChange={handleCommandPaletteShortcutToggle}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.enableTerminalSessionPersistence")}{" "}
-                          <span className="text-xs text-yellow-500 font-semibold">
-                            (BETA)
-                          </span>
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.enableTerminalSessionPersistenceDesc")}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={enableTerminalSessionPersistence}
-                        onCheckedChange={handleTerminalSessionPersistenceToggle}
-                      />
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.hostSidebarSettings")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.showHostTags")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.showHostTagsDesc")}
-                        </p>
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.fileManagerSettings")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.fileColorCoding")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.fileColorCodingDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={fileColorCoding}
+                          onCheckedChange={handleFileColorCodingToggle}
+                        />
                       </div>
-                      <Switch
-                        checked={showHostTags}
-                        onCheckedChange={handleShowHostTagsToggle}
-                      />
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.snippetsSettings")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.defaultSnippetFoldersCollapsed")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.defaultSnippetFoldersCollapsedDesc")}
-                        </p>
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.terminalSettings")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.commandAutocomplete")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.commandAutocompleteDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={commandAutocomplete}
+                          onCheckedChange={handleCommandAutocompleteToggle}
+                        />
                       </div>
-                      <Switch
-                        checked={defaultSnippetFoldersCollapsed}
-                        onCheckedChange={
-                          handleDefaultSnippetFoldersCollapsedToggle
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.confirmSnippetExecution")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.confirmSnippetExecutionDesc")}
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.commandHistoryTracking")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.commandHistoryTrackingDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={commandHistoryTracking}
+                          onCheckedChange={handleCommandHistoryTrackingToggle}
+                        />
                       </div>
-                      <Switch
-                        checked={confirmSnippetExecution}
-                        onCheckedChange={handleConfirmSnippetExecutionToggle}
-                      />
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.terminalSyntaxHighlighting")}{" "}
+                            <span className="text-xs text-yellow-500 font-semibold">
+                              (BETA)
+                            </span>
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.terminalSyntaxHighlightingDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={terminalSyntaxHighlighting}
+                          onCheckedChange={
+                            handleTerminalSyntaxHighlightingToggle
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.enableCommandPaletteShortcut")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.enableCommandPaletteShortcutDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={commandPaletteShortcutEnabled}
+                          onCheckedChange={handleCommandPaletteShortcutToggle}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.enableTerminalSessionPersistence")}{" "}
+                            <span className="text-xs text-yellow-500 font-semibold">
+                              (BETA)
+                            </span>
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.enableTerminalSessionPersistenceDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={enableTerminalSessionPersistence}
+                          onCheckedChange={
+                            handleTerminalSessionPersistenceToggle
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {t("profile.updateSettings")}
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-foreground-secondary">
-                          {t("profile.disableUpdateCheck")}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t("profile.disableUpdateCheckDesc")}
-                        </p>
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.hostSidebarSettings")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.showHostTags")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.showHostTagsDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={showHostTags}
+                          onCheckedChange={handleShowHostTagsToggle}
+                        />
                       </div>
-                      <Switch
-                        checked={disableUpdateCheck}
-                        onCheckedChange={handleDisableUpdateCheckToggle}
-                      />
                     </div>
                   </div>
-                </div>
-              </TabsContent>
 
-              <TabsContent value="security" className="space-y-4">
-                <TOTPSetup
-                  isEnabled={userInfo.totp_enabled}
-                  onStatusChange={handleTOTPStatusChange}
-                />
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.snippetsSettings")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.defaultSnippetFoldersCollapsed")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.defaultSnippetFoldersCollapsedDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={defaultSnippetFoldersCollapsed}
+                          onCheckedChange={
+                            handleDefaultSnippetFoldersCollapsedToggle
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.confirmSnippetExecution")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.confirmSnippetExecutionDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={confirmSnippetExecution}
+                          onCheckedChange={handleConfirmSnippetExecutionToggle}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
-                  <PasswordReset userInfo={userInfo} />
+                  <div className="rounded-lg border-2 border-edge bg-elevated p-4">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {t("profile.updateSettings")}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-foreground-secondary">
+                            {t("profile.disableUpdateCheck")}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t("profile.disableUpdateCheckDesc")}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={disableUpdateCheck}
+                          onCheckedChange={handleDisableUpdateCheckToggle}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {supportsClientTunnels && (
+                  <TabsContent value="c2s-tunnels" className="space-y-4">
+                    <C2STunnelPresetManager />
+                  </TabsContent>
                 )}
-              </TabsContent>
-            </Tabs>
+
+                <TabsContent value="security" className="space-y-4">
+                  <TOTPSetup
+                    isEnabled={userInfo.totp_enabled}
+                    onStatusChange={handleTOTPStatusChange}
+                  />
+
+                  {(!userInfo.is_oidc || userInfo.is_dual_auth) && (
+                    <PasswordReset userInfo={userInfo} />
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </div>
       </div>

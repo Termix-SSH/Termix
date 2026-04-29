@@ -80,7 +80,6 @@ import {
   Globe,
   FolderOpen,
   Share2,
-  Users,
   ArrowDownUp,
   Container,
   Link,
@@ -92,6 +91,7 @@ import {
   Eye,
   ChevronsDownUp,
   ChevronsUpDown,
+  RefreshCw,
 } from "lucide-react";
 import type {
   SSHHost,
@@ -102,6 +102,7 @@ import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { FolderEditDialog } from "@/ui/desktop/apps/host-manager/dialogs/FolderEditDialog.tsx";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 const INITIAL_HOSTS_PER_FOLDER = 12;
 
@@ -123,6 +124,7 @@ export function HostManagerViewer({
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
   const [operationLoading, setOperationLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [folderMetadata, setFolderMetadata] = useState<Map<string, SSHFolder>>(
     new Map(),
   );
@@ -138,7 +140,7 @@ export function HostManagerViewer({
     new Set(),
   );
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const { getStatus } = useServerStatus();
+  const { getStatus, refreshStatuses } = useServerStatus();
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -165,9 +167,10 @@ export function HostManagerViewer({
     };
   }, []);
 
-  const fetchHosts = async () => {
+  const fetchHosts = async (options: { showLoading?: boolean } = {}) => {
+    const { showLoading = true } = options;
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await getSSHHosts();
 
       const cleanedHosts = data.map((host) => {
@@ -192,7 +195,7 @@ export function HostManagerViewer({
     } catch {
       setError(t("hosts.failedToLoadHosts"));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -206,6 +209,20 @@ export function HostManagerViewer({
       setFolderMetadata(metadataMap);
     } catch (error) {
       console.error("Failed to fetch folder metadata:", error);
+    }
+  };
+
+  const handleRefreshHosts = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchHosts({ showLoading: false }),
+        fetchFolderMetadata(),
+        refreshServerPolling(),
+        refreshStatuses(),
+      ]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -1031,14 +1048,7 @@ export function HostManagerViewer({
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-          <p className="text-muted-foreground">{t("hosts.loadingHosts")}</p>
-        </div>
-      </div>
-    );
+    return <SimpleLoader visible={true} message={t("hosts.loadingHosts")} />;
   }
 
   if (error) {
@@ -1112,7 +1122,15 @@ export function HostManagerViewer({
 
               <div className="w-px h-6 bg-border mx-2" />
 
-              <Button onClick={fetchHosts} variant="outline" size="sm">
+              <Button
+                onClick={handleRefreshHosts}
+                variant="outline"
+                size="sm"
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+                />
                 {t("hosts.refresh")}
               </Button>
             </div>
@@ -1221,7 +1239,15 @@ export function HostManagerViewer({
 
             <div className="w-px h-6 bg-border mx-2" />
 
-            <Button onClick={fetchHosts} variant="outline" size="sm">
+            <Button
+              onClick={handleRefreshHosts}
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
               {t("hosts.refresh")}
             </Button>
           </div>

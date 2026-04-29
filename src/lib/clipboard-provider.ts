@@ -12,6 +12,10 @@ export class RobustClipboardProvider implements IClipboardProvider {
       if (this.pendingWrite !== null) {
         const text = this.pendingWrite;
         this.pendingWrite = null;
+        if (window.electronClipboard) {
+          window.electronClipboard.writeText(text);
+          return;
+        }
         navigator.clipboard.writeText(text).catch(() => {
           this.pendingWrite = text;
         });
@@ -25,13 +29,15 @@ export class RobustClipboardProvider implements IClipboardProvider {
     this.pendingWrite = null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  readText(selection: ClipboardSelectionType): string {
-    return "";
+  readText(_selection: ClipboardSelectionType): string | Promise<string> {
+    if (window.electronClipboard) {
+      return window.electronClipboard.readText();
+    }
+    return navigator.clipboard?.readText?.() ?? "";
   }
 
   async writeText(
-    selection: ClipboardSelectionType,
+    _selection: ClipboardSelectionType,
     text: string,
   ): Promise<void> {
     try {

@@ -14,12 +14,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  isElectron,
-  isEmbeddedMode,
-  getCookie,
-  getSnippets,
-} from "@/ui/main-axios.ts";
+import { isElectron, isEmbeddedMode, getSnippets } from "@/ui/main-axios.ts";
 import { getBasePath } from "@/lib/base-path";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -158,12 +153,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     useEffect(() => {
       const checkAuth = () => {
-        const jwtToken = getCookie("jwt");
-        const isAuth = !!(jwtToken && jwtToken.trim() !== "");
-
         setIsAuthenticated((prev) => {
-          if (prev !== isAuth) {
-            return isAuth;
+          if (!prev) {
+            return true;
           }
           return prev;
         });
@@ -452,21 +444,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        const jwtToken = getCookie("jwt");
-        if (!jwtToken || jwtToken.trim() === "") {
-          console.warn("Reconnection cancelled - no authentication token");
-          isReconnectingRef.current = false;
-          updateConnectionError(t("terminal.authenticationRequired"));
-          setIsConnecting(false);
-          shouldNotReconnectRef.current = true;
-          addLog({
-            type: "error",
-            stage: "auth",
-            message: t("terminal.authenticationRequired"),
-          });
-          return;
-        }
-
         if (terminal && hostConfig) {
           terminal.clear();
           const cols = terminal.cols;
@@ -496,17 +473,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (window.location.port === "3000" ||
           window.location.port === "5173" ||
           window.location.port === "");
-
-      const jwtToken = getCookie("jwt");
-
-      if (!jwtToken || jwtToken.trim() === "") {
-        console.error("No JWT token available for WebSocket connection");
-        setIsConnected(false);
-        setIsConnecting(false);
-        updateConnectionError("Authentication required");
-        isConnectingRef.current = false;
-        return;
-      }
 
       const baseWsUrl = isDev
         ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`
@@ -543,9 +509,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const wsUrl = `${baseWsUrl}?token=${encodeURIComponent(jwtToken)}`;
-
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(baseWsUrl);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);
@@ -913,8 +877,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           setIsConnecting(false);
           shouldNotReconnectRef.current = true;
 
-          localStorage.removeItem("jwt");
-
           return;
         }
 
@@ -1077,16 +1039,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             scheduleNotify(terminal.cols, terminal.rows);
           }
           hardRefresh();
-
-          const jwtToken = getCookie("jwt");
-          if (!jwtToken || jwtToken.trim() === "") {
-            setIsConnected(false);
-            setIsConnecting(false);
-            updateConnectionError("Authentication required");
-            setVisible(true);
-            setIsReady(true);
-            return;
-          }
 
           const cols = terminal.cols;
           const rows = terminal.rows;

@@ -2246,7 +2246,7 @@
     "failedCompleteReset": "Échec de la réinitialisation du mot de passe",
     "invalidTotpCode": "Invalid TOTP code",
     "failedOidcLogin": "Impossible de démarrer la connexion OIDC",
-    "failedUserInfo": "Impossible d'obtenir les informations de l'utilisateur après la connexion OIDC",
+    "failedUserInfo": "Impossible d'obtenir les informations de l'utilisateur après la connexion",
     "oidcAuthFailed": "Échec de l'authentification OIDC",
     "noTokenReceived": "Aucun jeton reçu de la connexion",
     "invalidAuthUrl": "URL d'autorisation invalide reçue du backend",

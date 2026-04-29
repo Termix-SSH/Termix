@@ -27,7 +27,6 @@
     "allowUnreachableCode": true,
     "noImplicitOverride": false,
     "noEmitOnError": false,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

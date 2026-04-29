@@ -27,6 +27,7 @@ import {
   inArray,
 } from "drizzle-orm";
 import type { Request, Response } from "express";
+import axios from "axios";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
@@ -41,6 +42,32 @@ import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
 const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+function notifyStatsHostUpdated(
+  hostId: number,
+  headers: Pick<Request["headers"], "authorization" | "cookie">,
+  operation: string,
+): void {
+  axios
+    .post(
+      "http://localhost:30005/host-updated",
+      { hostId },
+      {
+        headers: {
+          Authorization: headers.authorization || "",
+          Cookie: headers.cookie || "",
+        },
+        timeout: 5000,
+      },
+    )
+    .catch((err) => {
+      sshLogger.warn("Failed to notify stats server of host update", {
+        operation,
+        hostId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+}
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -581,29 +608,12 @@ router.post(
         name,
       });
 
-      try {
-        const axios = (await import("axios")).default;
-        const statsPort = 30005;
-        await axios.post(
-          `http://localhost:${statsPort}/host-updated`,
-          { hostId: createdHost.id },
-          {
-            headers: {
-              Authorization: req.headers.authorization || "",
-              Cookie: req.headers.cookie || "",
-            },
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        sshLogger.warn("Failed to notify stats server of new host", {
-          operation: "host_create",
-          hostId: createdHost.id as number,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
       res.json(resolvedHost);
+      notifyStatsHostUpdated(
+        createdHost.id as number,
+        req.headers,
+        "host_create",
+      );
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
         operation: "host_create",
@@ -1189,29 +1199,8 @@ router.put(
         hostId: parseInt(hostId),
       });
 
-      try {
-        const axios = (await import("axios")).default;
-        const statsPort = 30005;
-        await axios.post(
-          `http://localhost:${statsPort}/host-updated`,
-          { hostId: parseInt(hostId) },
-          {
-            headers: {
-              Authorization: req.headers.authorization || "",
-              Cookie: req.headers.cookie || "",
-            },
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        sshLogger.warn("Failed to notify stats server of host update", {
-          operation: "host_update",
-          hostId: parseInt(hostId),
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
       res.json(resolvedHost);
+      notifyStatsHostUpdated(parseInt(hostId), req.headers, "host_update");
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {
         operation: "host_update",
@@ -5346,7 +5335,7 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: Request, res: Response) => {
-    const hostId = parseInt(req.params.id);
+    const hostId = Number.parseInt(String(req.params.id), 10);
     const userId = (req as AuthenticatedRequest).userId;
 
     try {

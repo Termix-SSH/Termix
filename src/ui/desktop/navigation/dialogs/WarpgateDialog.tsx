@@ -36,7 +36,7 @@ export function WarpgateDialog({
       setCopied(true);
       toast.success(t("common.copied"));
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error(t("common.copyFailed"));
     }
   };

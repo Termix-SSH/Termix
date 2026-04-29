@@ -7,7 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
-import { Shield, Users, Database, Clock } from "lucide-react";
+import { Shield, Users, Database, Clock, Key } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -22,12 +22,14 @@ import {
   getSessions,
   unlinkOIDCFromPasswordAccount,
 } from "@/ui/main-axios.ts";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { RolesTab } from "@/ui/desktop/apps/admin/tabs/RolesTab.tsx";
 import { GeneralSettingsTab } from "@/ui/desktop/apps/admin/tabs/GeneralSettingsTab.tsx";
 import { OIDCSettingsTab } from "@/ui/desktop/apps/admin/tabs/OIDCSettingsTab.tsx";
 import { UserManagementTab } from "@/ui/desktop/apps/admin/tabs/UserManagementTab.tsx";
 import { SessionManagementTab } from "@/ui/desktop/apps/admin/tabs/SessionManagementTab.tsx";
 import { DatabaseSecurityTab } from "@/ui/desktop/apps/admin/tabs/DatabaseSecurityTab.tsx";
+import { ApiKeysTab } from "@/ui/desktop/apps/admin/tabs/ApiKeysTab.tsx";
 import { CreateUserDialog } from "./dialogs/CreateUserDialog.tsx";
 import { UserEditDialog } from "./dialogs/UserEditDialog.tsx";
 import { LinkAccountDialog } from "./dialogs/LinkAccountDialog.tsx";
@@ -47,6 +49,7 @@ export function AdminSettings({
   const { confirmWithToast } = useConfirmation();
   const { state: sidebarState } = useSidebar();
 
+  const [loading, setLoading] = React.useState(true);
   const [allowRegistration, setAllowRegistration] = React.useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(true);
   const [allowPasswordReset, setAllowPasswordReset] = React.useState(true);
@@ -102,8 +105,8 @@ export function AdminSettings({
       createdAt: string;
       expiresAt: string;
       lastActiveAt: string;
-      jwtToken: string;
       isRevoked?: boolean;
+      isCurrentSession?: boolean;
     }>
   >([]);
   const [sessionsLoading, setSessionsLoading] = React.useState(false);
@@ -119,36 +122,45 @@ export function AdminSettings({
       const serverUrl = (window as { configuredServerUrl?: string })
         .configuredServerUrl;
       if (!serverUrl) {
+        setLoading(false);
         return;
       }
     }
 
-    getAdminOIDCConfig()
-      .then((res) => {
-        if (res) setOidcConfig(res);
-      })
-      .catch((err) => {
-        if (!err.message?.includes("No server configured")) {
-          toast.error(t("admin.failedToFetchOidcConfig"));
-        }
-      });
-    getUserInfo()
-      .then((info) => {
-        if (info) {
-          setCurrentUser({
-            id: info.userId,
-            username: info.username,
-            is_admin: info.is_admin,
-            is_oidc: info.is_oidc,
-          });
-        }
-      })
-      .catch((err) => {
-        if (!err?.message?.includes("No server configured")) {
-          console.warn("Failed to fetch current user info", err);
-        }
-      });
-    fetchSessions();
+    Promise.allSettled([
+      getAdminOIDCConfig()
+        .then((res) => {
+          if (res) setOidcConfig(res);
+        })
+        .catch((err) => {
+          if (!err.message?.includes("No server configured")) {
+            toast.error(t("admin.failedToFetchOidcConfig"));
+          }
+        }),
+      getUserInfo()
+        .then((info) => {
+          if (info) {
+            setCurrentUser({
+              id: info.userId,
+              username: info.username,
+              is_admin: info.is_admin,
+              is_oidc: info.is_oidc,
+            });
+          }
+        })
+        .catch((err) => {
+          if (!err?.message?.includes("No server configured")) {
+            console.warn("Failed to fetch current user info", err);
+          }
+        }),
+      getSessions()
+        .then((data) => setSessions(data.sessions || []))
+        .catch((err) => {
+          if (!err?.message?.includes("No server configured")) {
+            toast.error(t("admin.failedToFetchSessions"));
+          }
+        }),
+    ]).finally(() => setLoading(false));
   }, []);
 
   React.useEffect(() => {
@@ -332,6 +344,7 @@ export function AdminSettings({
       style={wrapperStyle}
       className="bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden"
     >
+      <SimpleLoader visible={loading} message={t("common.loading")} />
       <div className="h-full w-full flex flex-col">
         <div className="flex items-center justify-between px-3 pt-2 pb-2">
           <h1 className="font-bold text-lg">{t("admin.title")}</h1>
@@ -391,6 +404,13 @@ export function AdminSettings({
                 <Database className="h-4 w-4" />
                 {t("admin.databaseSecurity")}
               </TabsTrigger>
+              <TabsTrigger
+                value="api-keys"
+                className="flex items-center gap-2 bg-elevated data-[state=active]:bg-button data-[state=active]:border data-[state=active]:border-edge"
+              >
+                <Key className="h-4 w-4" />
+                {t("admin.apiKeys.tabLabel")}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="registration" className="space-y-6">
@@ -442,6 +462,10 @@ export function AdminSettings({
 
             <TabsContent value="security" className="space-y-6">
               <DatabaseSecurityTab currentUser={currentUser} />
+            </TabsContent>
+
+            <TabsContent value="api-keys" className="space-y-6">
+              <ApiKeysTab />
             </TabsContent>
           </Tabs>
         </div>

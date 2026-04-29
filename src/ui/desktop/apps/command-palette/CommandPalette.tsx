@@ -14,7 +14,6 @@ import {
   Server,
   Settings,
   User,
-  Github,
   Terminal,
   Monitor,
   Eye,
@@ -28,6 +27,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { BiMoney, BiSupport } from "react-icons/bi";
 import { BsDiscord } from "react-icons/bs";
+import { FaGithub } from "react-icons/fa";
 import { GrUpdate } from "react-icons/gr";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
@@ -38,7 +38,6 @@ import {
   logActivity,
 } from "@/ui/main-axios.ts";
 import type { RecentActivityItem } from "@/ui/main-axios.ts";
-import { toast } from "sonner";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import {
   DropdownMenu,
@@ -666,7 +665,7 @@ export function CommandPalette({
           )}
           <CommandGroup heading={t("commandPalette.links")}>
             <CommandItem onSelect={handleGitHub}>
-              <Github />
+              <FaGithub />
               <span>{t("commandPalette.github")}</span>
             </CommandItem>
             <CommandItem onSelect={handleSupport}>

@@ -3,7 +3,6 @@ import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
 import net from "net";
 import dgram from "dgram";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { parse as parseUrl } from "url";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { sshCredentials, hosts } from "../database/db/schema.js";
@@ -367,14 +366,18 @@ const wss = new WebSocketServer({
   port: 30002,
   verifyClient: async (info) => {
     try {
-      const url = parseUrl(info.req.url!, true);
-      let token = url.query.token as string;
+      let token: string | undefined;
+
+      const cookieHeader = info.req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
 
       if (!token) {
-        const cookieHeader = info.req.headers.cookie;
-        if (cookieHeader) {
-          const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-          if (match) token = decodeURIComponent(match[1]);
+        const authHeader = info.req.headers.authorization;
+        if (authHeader?.startsWith("Bearer ")) {
+          token = authHeader.slice("Bearer ".length);
         }
       }
 
@@ -414,14 +417,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let sessionId: string | undefined;
 
   try {
-    const url = parseUrl(req.url!, true);
-    let token = url.query.token as string;
+    let token: string | undefined;
+
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
 
     if (!token) {
-      const cookieHeader = req.headers.cookie;
-      if (cookieHeader) {
-        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-        if (match) token = decodeURIComponent(match[1]);
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.slice("Bearer ".length);
       }
     }
 
@@ -2191,7 +2198,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           { operation: "port_knock", hostId: hostConfig.id },
         );
         await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
-      } catch (err) {
+      } catch {
         sshLogger.warn("Port knocking failed, attempting connection anyway", {
           operation: "port_knock",
           hostId: hostConfig.id,

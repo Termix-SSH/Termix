@@ -36,7 +36,7 @@ export interface HostGeneralTabProps {
 export interface HostTerminalTabProps {
   form: UseFormReturn<FormData>;
   snippets: Array<{ id: number; name: string; content: string }>;
-  t: (key: string) => string;
+  t: (key: string, options?: unknown) => string;
 }
 
 export interface HostDockerTabProps {
@@ -46,18 +46,8 @@ export interface HostDockerTabProps {
 
 export interface HostTunnelTabProps {
   form: UseFormReturn<FormData>;
-  sshConfigDropdownOpen: { [key: number]: boolean };
-  setSshConfigDropdownOpen: React.Dispatch<
-    React.SetStateAction<{ [key: number]: boolean }>
-  >;
-  sshConfigInputRefs: React.MutableRefObject<{
-    [key: number]: HTMLInputElement | null;
-  }>;
-  sshConfigDropdownRefs: React.MutableRefObject<{
-    [key: number]: HTMLDivElement | null;
-  }>;
-  getFilteredSshConfigs: (index: number) => string[];
-  handleSshConfigClick: (config: string, index: number) => void;
+  hosts: SSHHost[];
+  editingHost?: SSHHost | null;
   t: (key: string) => string;
 }
 

@@ -8,7 +8,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { isElectron, logoutUser } from "@/ui/main-axios.ts";
+import { logoutUser } from "@/ui/main-axios.ts";
 
 import {
   Sidebar,
@@ -49,10 +49,6 @@ interface SidebarProps {
 async function handleLogout() {
   try {
     await logoutUser();
-
-    if (isElectron()) {
-      localStorage.removeItem("jwt");
-    }
 
     window.location.reload();
   } catch (error) {
