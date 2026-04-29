@@ -22,6 +22,8 @@ import {
   DEFAULT_TERMINAL_CONFIG,
 } from "@/constants/terminal-themes";
 import { useTheme } from "@/components/theme-provider";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
+import { useTranslation } from "react-i18next";
 
 const Terminal = lazy(() =>
   import("@/ui/desktop/apps/features/terminal/Terminal.tsx").then((module) => ({
@@ -150,6 +152,7 @@ export function AppView({
   };
   const { state: sidebarState } = useSidebar();
   const { theme: appTheme } = useTheme();
+  const { t: translate } = useTranslation();
 
   const isDarkMode = useMemo(() => {
     if (appTheme === "dark") return true;
@@ -446,7 +449,17 @@ export function AppView({
                     : "var(--bg-base)",
                 }}
               >
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <SimpleLoader
+                      visible={true}
+                      message={translate("common.loading")}
+                      backgroundColor={
+                        isTerminal ? backgroundColor : "var(--bg-base)"
+                      }
+                    />
+                  }
+                >
                   {t.type === "terminal" ? (
                     <Terminal
                       key={`term-${t.id}-${t.instanceId || ""}`}

@@ -28,6 +28,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
+import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 const Dashboard = lazy(() =>
   import("@/ui/desktop/apps/dashboard/Dashboard.tsx").then((module) => ({
@@ -445,12 +446,17 @@ function AppContent({
               <Suspense
                 fallback={
                   <div
-                    className="bg-canvas rounded-lg border-2 border-edge"
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
                     style={{
                       margin: "74px 17px 8px 8px",
                       height: "calc(100vh - 82px)",
                     }}
-                  />
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
                 }
               >
                 <Dashboard
@@ -470,12 +476,17 @@ function AppContent({
               <Suspense
                 fallback={
                   <div
-                    className="bg-canvas rounded-lg border-2 border-edge"
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
                     style={{
                       margin: "74px 17px 8px 8px",
                       height: "calc(100vh - 82px)",
                     }}
-                  />
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
                 }
               >
                 <HostManager
@@ -497,12 +508,17 @@ function AppContent({
               <Suspense
                 fallback={
                   <div
-                    className="bg-canvas rounded-lg border-2 border-edge"
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
                     style={{
                       margin: "74px 17px 8px 8px",
                       height: "calc(100vh - 82px)",
                     }}
-                  />
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
                 }
               >
                 <AdminSettings
@@ -519,12 +535,17 @@ function AppContent({
               <Suspense
                 fallback={
                   <div
-                    className="bg-canvas rounded-lg border-2 border-edge"
+                    className="bg-canvas rounded-lg border-2 border-edge relative"
                     style={{
                       margin: "74px 17px 8px 8px",
                       height: "calc(100vh - 82px)",
                     }}
-                  />
+                  >
+                    <SimpleLoader
+                      visible={true}
+                      message={t("common.loading")}
+                    />
+                  </div>
                 }
               >
                 <UserProfile
