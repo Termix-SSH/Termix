@@ -25,12 +25,12 @@ export class RobustClipboardProvider implements IClipboardProvider {
     this.pendingWrite = null;
   }
 
-  readText(selection: ClipboardSelectionType): string {
+  readText(_selection: ClipboardSelectionType): string {
     return "";
   }
 
   async writeText(
-    selection: ClipboardSelectionType,
+    _selection: ClipboardSelectionType,
     text: string,
   ): Promise<void> {
     try {

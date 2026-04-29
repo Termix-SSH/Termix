@@ -19,7 +19,6 @@ interface OPKSSHDialogProps {
 export function OPKSSHDialog({
   isOpen,
   authUrl,
-  requestId,
   stage,
   error,
   providers,

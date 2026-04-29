@@ -6,6 +6,7 @@ const {
   dialog,
   Menu,
   session,
+  safeStorage,
   Tray,
 } = require("electron");
 const path = require("path");
@@ -19,6 +20,12 @@ const { fork } = require("child_process");
 const WebSocket = require("ws");
 
 const logFile = path.join(app.getPath("userData"), "termix-main.log");
+const electronAuthCookiesPath = path.join(
+  app.getPath("userData"),
+  "electron-auth-cookies.json",
+);
+const electronAuthCookies = new Map();
+
 function logToFile(...args) {
   const timestamp = new Date().toISOString();
   const msg = args
@@ -31,6 +38,282 @@ function logToFile(...args) {
     // ignore
   }
   console.log(...args);
+}
+
+function getCookieOrigin(url) {
+  try {
+    const parsedUrl = new URL(url);
+    const protocol =
+      parsedUrl.protocol === "ws:"
+        ? "http:"
+        : parsedUrl.protocol === "wss:"
+          ? "https:"
+          : parsedUrl.protocol;
+    return `${protocol}//${parsedUrl.host}`;
+  } catch {
+    return null;
+  }
+}
+
+function parseCookieTarget(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol === "ws:") {
+      parsedUrl.protocol = "http:";
+    } else if (parsedUrl.protocol === "wss:") {
+      parsedUrl.protocol = "https:";
+    }
+    return parsedUrl;
+  } catch {
+    return null;
+  }
+}
+
+function getElectronAuthCookieKey(name, origin) {
+  return origin ? `${origin}|${name}` : null;
+}
+
+function getSafeStorageAvailable() {
+  try {
+    return safeStorage.isEncryptionAvailable();
+  } catch {
+    return false;
+  }
+}
+
+function encodeElectronAuthCookieValue(value) {
+  return {
+    encrypted: true,
+    value: safeStorage.encryptString(value).toString("base64"),
+  };
+}
+
+function decodeElectronAuthCookieValue(record) {
+  if (!record.encrypted || !getSafeStorageAvailable()) {
+    return null;
+  }
+
+  try {
+    return safeStorage.decryptString(Buffer.from(record.value, "base64"));
+  } catch (error) {
+    logToFile("Failed to decrypt persisted Electron auth cookie:", error.message);
+    return null;
+  }
+}
+
+function isElectronAuthCookieExpired(cookie) {
+  return Number.isFinite(cookie.expiresAt) && cookie.expiresAt <= Date.now();
+}
+
+function saveElectronAuthCookiesToDisk() {
+  try {
+    if (!getSafeStorageAvailable()) {
+      if (fs.existsSync(electronAuthCookiesPath)) {
+        fs.rmSync(electronAuthCookiesPath, { force: true });
+      }
+      return;
+    }
+
+    const records = [];
+
+    for (const [key, cookie] of electronAuthCookies.entries()) {
+      if (isElectronAuthCookieExpired(cookie)) {
+        electronAuthCookies.delete(key);
+        continue;
+      }
+
+      records.push({
+        key,
+        name: cookie.name,
+        origin: cookie.origin,
+        path: cookie.path,
+        expiresAt: cookie.expiresAt,
+        ...encodeElectronAuthCookieValue(cookie.value),
+      });
+    }
+
+    fs.writeFileSync(
+      electronAuthCookiesPath,
+      JSON.stringify({ version: 1, records }, null, 2),
+    );
+  } catch (error) {
+    logToFile("Failed to persist Electron auth cookies:", error.message);
+  }
+}
+
+function loadElectronAuthCookiesFromDisk() {
+  electronAuthCookies.clear();
+
+  try {
+    if (!getSafeStorageAvailable()) {
+      if (fs.existsSync(electronAuthCookiesPath)) {
+        fs.rmSync(electronAuthCookiesPath, { force: true });
+      }
+      return;
+    }
+
+    if (!fs.existsSync(electronAuthCookiesPath)) {
+      return;
+    }
+
+    const data = JSON.parse(fs.readFileSync(electronAuthCookiesPath, "utf8"));
+    const records = Array.isArray(data.records) ? data.records : [];
+
+    for (const record of records) {
+      if (
+        !record ||
+        typeof record.key !== "string" ||
+        typeof record.name !== "string" ||
+        typeof record.origin !== "string"
+      ) {
+        continue;
+      }
+
+      const value = decodeElectronAuthCookieValue(record);
+      if (!value) {
+        continue;
+      }
+
+      const cookie = {
+        name: record.name,
+        value,
+        origin: record.origin,
+        path: typeof record.path === "string" ? record.path : "/",
+        expiresAt: Number.isFinite(record.expiresAt) ? record.expiresAt : null,
+      };
+
+      if (!isElectronAuthCookieExpired(cookie)) {
+        electronAuthCookies.set(record.key, cookie);
+      }
+    }
+
+    saveElectronAuthCookiesToDisk();
+  } catch (error) {
+    logToFile("Failed to load persisted Electron auth cookies:", error.message);
+  }
+}
+
+function clearPersistedElectronAuthCookies() {
+  electronAuthCookies.clear();
+  try {
+    if (fs.existsSync(electronAuthCookiesPath)) {
+      fs.rmSync(electronAuthCookiesPath, { force: true });
+    }
+  } catch (error) {
+    logToFile("Failed to clear persisted Electron auth cookies:", error.message);
+  }
+}
+
+function parseSetCookieHeader(header) {
+  const [cookiePair, ...attributes] = String(header || "").split(";");
+  const separatorIndex = cookiePair.indexOf("=");
+  if (separatorIndex <= 0) return null;
+
+  const parsed = {
+    name: cookiePair.slice(0, separatorIndex).trim(),
+    value: cookiePair.slice(separatorIndex + 1).trim(),
+    path: "/",
+    maxAge: null,
+    expires: null,
+  };
+
+  for (const attribute of attributes) {
+    const [rawName, ...rawValueParts] = attribute.trim().split("=");
+    const attrName = rawName.toLowerCase();
+    const attrValue = rawValueParts.join("=");
+
+    if (attrName === "path" && attrValue) {
+      parsed.path = attrValue;
+    } else if (attrName === "max-age" && attrValue) {
+      const maxAge = Number(attrValue);
+      parsed.maxAge = Number.isFinite(maxAge) ? maxAge : null;
+    } else if (attrName === "expires" && attrValue) {
+      const expires = Date.parse(attrValue);
+      parsed.expires = Number.isFinite(expires) ? expires : null;
+    }
+  }
+
+  return parsed;
+}
+
+function rememberElectronAuthCookieFromHeader(url, header) {
+  const origin = getCookieOrigin(url);
+  if (!origin) return;
+
+  const cookie = parseSetCookieHeader(header);
+  if (!cookie || cookie.name !== "jwt") return;
+
+  const key = getElectronAuthCookieKey(cookie.name, origin);
+  if (!key) return;
+
+  const expired =
+    cookie.maxAge === 0 ||
+    (cookie.expires !== null && cookie.expires <= Date.now());
+
+  if (expired || !cookie.value) {
+    electronAuthCookies.delete(key);
+    saveElectronAuthCookiesToDisk();
+    return;
+  }
+
+  const expiresAt =
+    cookie.maxAge !== null
+      ? Date.now() + cookie.maxAge * 1000
+      : cookie.expires;
+
+  electronAuthCookies.set(key, {
+    name: cookie.name,
+    value: cookie.value,
+    origin,
+    path: cookie.path,
+    expiresAt,
+  });
+  saveElectronAuthCookiesToDisk();
+}
+
+function getRememberedElectronAuthCookie(name, targetUrl) {
+  const target = parseCookieTarget(targetUrl);
+  if (!target) return null;
+
+  const exactKey = getElectronAuthCookieKey(name, target.origin);
+  const exactCookie = exactKey ? electronAuthCookies.get(exactKey) : null;
+  if (exactCookie && !isElectronAuthCookieExpired(exactCookie)) {
+    return exactCookie;
+  }
+
+  if (target.protocol !== "https:") {
+    return null;
+  }
+
+  const httpOrigin = `http://${target.host}`;
+  const httpKey = getElectronAuthCookieKey(name, httpOrigin);
+  const httpCookie = httpKey ? electronAuthCookies.get(httpKey) : null;
+  return httpCookie && !isElectronAuthCookieExpired(httpCookie)
+    ? httpCookie
+    : null;
+}
+
+function getHeaderName(headers, name) {
+  const lowerName = name.toLowerCase();
+  return Object.keys(headers || {}).find(
+    (key) => key.toLowerCase() === lowerName,
+  );
+}
+
+function setCookieHeaderValue(requestHeaders, name, value) {
+  const headerName = getHeaderName(requestHeaders, "Cookie") || "Cookie";
+  const existing = requestHeaders[headerName];
+  const existingValue = Array.isArray(existing) ? existing.join("; ") : existing;
+  const nextCookie = `${name}=${value}`;
+  const otherCookies = String(existingValue || "")
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .filter((cookie) => cookie && !cookie.startsWith(`${name}=`));
+
+  requestHeaders[headerName] =
+    otherCookies.length > 0
+      ? `${otherCookies.join("; ")}; ${nextCookie}`
+      : nextCookie;
 }
 
 function parseSemver(version) {
@@ -138,25 +421,41 @@ let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
-const electronCacheVersionPath = path.join(
+const electronCacheBuildPath = path.join(
   app.getPath("userData"),
-  "client-cache-version.json",
+  "client-cache-build.json",
 );
+const termixSessionPartition = "persist:termix";
 
-async function clearElectronClientCacheIfVersionChanged() {
-  const currentVersion = app.getVersion();
-  let previousVersion = null;
-
+function getElectronBuildTimestamp() {
   try {
-    if (fs.existsSync(electronCacheVersionPath)) {
-      const data = JSON.parse(fs.readFileSync(electronCacheVersionPath, "utf8"));
-      previousVersion = typeof data.version === "string" ? data.version : null;
+    const buildInfo = require("./build-info.cjs");
+    if (Number.isInteger(buildInfo.buildTimestamp)) {
+      return buildInfo.buildTimestamp;
     }
-  } catch (error) {
-    logToFile("Failed to read Electron client cache version:", error.message);
+  } catch {
+    // Development runs may not have generated build metadata yet.
   }
 
-  if (previousVersion === currentVersion) {
+  return 0;
+}
+
+async function clearElectronClientCacheIfBuildChanged() {
+  const buildTimestamp = getElectronBuildTimestamp();
+  let cacheTimestamp = 0;
+
+  try {
+    if (fs.existsSync(electronCacheBuildPath)) {
+      const data = JSON.parse(fs.readFileSync(electronCacheBuildPath, "utf8"));
+      cacheTimestamp = Number.isInteger(data.buildTimestamp)
+        ? data.buildTimestamp
+        : 0;
+    }
+  } catch (error) {
+    logToFile("Failed to read Electron client cache build info:", error.message);
+  }
+
+  if (cacheTimestamp === buildTimestamp) {
     return;
   }
 
@@ -190,10 +489,11 @@ async function clearElectronClientCacheIfVersionChanged() {
     );
 
     fs.writeFileSync(
-      electronCacheVersionPath,
+      electronCacheBuildPath,
       JSON.stringify(
         {
-          version: currentVersion,
+          buildTimestamp,
+          appVersion: app.getVersion(),
           updatedAt: new Date().toISOString(),
         },
         null,
@@ -201,12 +501,49 @@ async function clearElectronClientCacheIfVersionChanged() {
       ),
     );
 
-    logToFile("Electron client cache cleared for version change", {
-      from: previousVersion || "none",
-      to: currentVersion,
+    logToFile("Electron client cache cleared for build change", {
+      from: cacheTimestamp,
+      to: buildTimestamp,
+      appVersion: app.getVersion(),
     });
   } catch (error) {
     logToFile("Failed to clear Electron client cache:", error.message);
+  }
+}
+
+function getCookieRemovalUrl(cookie) {
+  const scheme = cookie.secure ? "https" : "http";
+  const domain = cookie.domain?.startsWith(".")
+    ? cookie.domain.slice(1)
+    : cookie.domain || "localhost";
+  return `${scheme}://${domain}${cookie.path || "/"}`;
+}
+
+async function clearElectronJwtCookiesAtStartup() {
+  loadElectronAuthCookiesFromDisk();
+
+  const targetSessions = new Set([
+    session.defaultSession,
+    session.fromPartition(termixSessionPartition),
+  ]);
+
+  for (const targetSession of targetSessions) {
+    try {
+      const cookies = await targetSession.cookies.get({ name: "jwt" });
+      await Promise.all(
+        cookies.map((cookie) =>
+          targetSession.cookies.remove(getCookieRemovalUrl(cookie), cookie.name),
+        ),
+      );
+
+      if (cookies.length > 0) {
+        logToFile("Cleared Electron JWT cookies from cookie store", {
+          count: cookies.length,
+        });
+      }
+    } catch (error) {
+      logToFile("Failed to clear Electron JWT cookies:", error.message);
+    }
   }
 }
 
@@ -438,7 +775,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
-      partition: "persist:termix",
+      partition: termixSessionPartition,
       allowRunningInsecureContent: true,
       webviewTag: true,
       offscreen: false,
@@ -472,6 +809,15 @@ function createWindow() {
       details.requestHeaders["X-Electron-App"] = "true";
 
       details.requestHeaders["User-Agent"] = customUserAgent;
+
+      const rememberedJwt = getRememberedElectronAuthCookie("jwt", details.url);
+      if (rememberedJwt) {
+        setCookieHeaderValue(
+          details.requestHeaders,
+          rememberedJwt.name,
+          rememberedJwt.value,
+        );
+      }
 
       callback({ requestHeaders: details.requestHeaders });
     },
@@ -518,8 +864,17 @@ function createWindow() {
           }
         }
 
-        if (headers["set-cookie"]) {
-          headers["set-cookie"] = headers["set-cookie"].map((cookie) => {
+        const setCookieHeaderName = getHeaderName(headers, "Set-Cookie");
+        if (setCookieHeaderName) {
+          const setCookieHeaders = Array.isArray(headers[setCookieHeaderName])
+            ? headers[setCookieHeaderName]
+            : [headers[setCookieHeaderName]];
+
+          setCookieHeaders.forEach((cookie) => {
+            rememberElectronAuthCookieFromHeader(details.url, cookie);
+          });
+
+          headers[setCookieHeaderName] = setCookieHeaders.map((cookie) => {
             let modified = cookie.replace(
               /;\s*SameSite=Strict/gi,
               "; SameSite=None",
@@ -1845,15 +2200,25 @@ ipcMain.handle("set-setting", (event, key, value) => {
   }
 });
 
-ipcMain.handle("get-session-cookie", async (_event, name) => {
+ipcMain.handle("get-session-cookie", async (_event, name, targetUrl) => {
   try {
     const ses = mainWindow?.webContents?.session;
     if (!ses) return null;
-    const cookies = await ses.cookies.get({ name });
-    return cookies.length > 0 ? cookies[0].value : null;
+    const cookies = await ses.cookies.get({
+      name,
+      ...(targetUrl ? { url: targetUrl } : {}),
+    });
+    const cookie = cookies.find((candidate) =>
+      cookieMatchesUrl(candidate, targetUrl),
+    );
+    return (
+      cookie?.value ||
+      getRememberedElectronAuthCookie(name, targetUrl)?.value ||
+      null
+    );
   } catch (error) {
     console.error("Failed to get session cookie:", error);
-    return null;
+    return getRememberedElectronAuthCookie(name, targetUrl)?.value || null;
   }
 });
 
@@ -1891,6 +2256,14 @@ ipcMain.handle(
       return { success: true, value: existingCookie.value };
     }
 
+    const rememberedCookie = getRememberedElectronAuthCookie(name, targetUrl);
+    if (
+      rememberedCookie?.value &&
+      rememberedCookie.value !== previousValue
+    ) {
+      return { success: true, value: rememberedCookie.value };
+    }
+
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         ses.cookies.off("changed", onCookieChanged);
@@ -1920,16 +2293,12 @@ ipcMain.handle(
 
 ipcMain.handle("clear-session-cookies", async () => {
   try {
+    clearPersistedElectronAuthCookies();
     const ses = mainWindow?.webContents?.session;
     if (ses) {
       const cookies = await ses.cookies.get({});
       for (const cookie of cookies) {
-        const scheme = cookie.secure ? "https" : "http";
-        const domain = cookie.domain?.startsWith(".")
-          ? cookie.domain.slice(1)
-          : cookie.domain || "localhost";
-        const url = `${scheme}://${domain}${cookie.path || "/"}`;
-        await ses.cookies.remove(url, cookie.name);
+        await ses.cookies.remove(getCookieRemovalUrl(cookie), cookie.name);
       }
     }
   } catch (error) {
@@ -2118,7 +2487,8 @@ app.whenReady().then(async () => {
     process.arch,
   );
   createMenu();
-  await clearElectronClientCacheIfVersionChanged();
+  await clearElectronClientCacheIfBuildChanged();
+  await clearElectronJwtCookiesAtStartup();
 
   if (!isDev) {
     const result = await startBackendServer();

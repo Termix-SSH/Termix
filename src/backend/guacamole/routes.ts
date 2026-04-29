@@ -31,7 +31,6 @@ router.use(authManager.createAuthMiddleware());
  */
 router.post("/token", async (req, res) => {
   try {
-    const userId = (req as AuthenticatedRequest).userId;
     const { type, hostname, port, username, password, domain, ...options } =
       req.body;
 

@@ -68,7 +68,7 @@ export function ConnectionLog({
     try {
       await navigator.clipboard.writeText(logsText);
       toast.success(t("terminal.connectionLogCopied"));
-    } catch (error) {
+    } catch {
       toast.error(t("terminal.connectionLogCopyFailed"));
     }
   };

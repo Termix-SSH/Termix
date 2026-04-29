@@ -108,7 +108,7 @@ export function RolesTab(): React.ReactElement {
 
       setRoleDialogOpen(false);
       loadRoles();
-    } catch (error) {
+    } catch {
       toast.error(t("rbac.failedToSaveRole"));
     }
   };
@@ -129,7 +129,7 @@ export function RolesTab(): React.ReactElement {
       await deleteRole(role.id);
       toast.success(t("rbac.roleDeletedSuccessfully"));
       loadRoles();
-    } catch (error) {
+    } catch {
       toast.error(t("rbac.failedToDeleteRole"));
     }
   };

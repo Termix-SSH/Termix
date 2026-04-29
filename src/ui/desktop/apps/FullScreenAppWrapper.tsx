@@ -21,7 +21,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -42,7 +42,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
           setIsAuthenticated(true);
           setIsAdmin(userInfo.isAdmin || false);
         }
-      } catch (error) {
+      } catch {
         setIsAuthenticated(false);
       } finally {
         setAuthLoading(false);

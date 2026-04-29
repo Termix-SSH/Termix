@@ -27,5 +27,6 @@ dist-ssr
 /uploads/
 /nul
 .env
+electron/build-info.cjs
 /.mcp.json
 /CLAUDE.md

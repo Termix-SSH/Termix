@@ -33,7 +33,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("start-c2s-autostart-tunnels"),
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
-  getSessionCookie: (name) => ipcRenderer.invoke("get-session-cookie", name),
+  getSessionCookie: (name, targetUrl) =>
+    ipcRenderer.invoke("get-session-cookie", name, targetUrl),
   waitForSessionCookie: (name, targetUrl, previousValue, timeoutMs) =>
     ipcRenderer.invoke(
       "wait-session-cookie",

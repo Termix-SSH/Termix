@@ -62,7 +62,10 @@ export interface ElectronAPI {
     errors: string[];
   }>;
   clearSessionCookies: () => Promise<void>;
-  getSessionCookie: (name: string) => Promise<string | null>;
+  getSessionCookie: (
+    name: string,
+    targetUrl?: string,
+  ) => Promise<string | null>;
   waitForSessionCookie: (
     name: string,
     targetUrl?: string,

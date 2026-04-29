@@ -15,7 +15,6 @@ interface TOTPDialogProps {
 
 export function TOTPDialog({
   isOpen,
-  prompt,
   onSubmit,
   onCancel,
   backgroundColor,

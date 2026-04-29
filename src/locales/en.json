@@ -2352,7 +2352,7 @@
     "failedCompleteReset": "Failed to complete password reset",
     "invalidTotpCode": "Invalid TOTP code",
     "failedOidcLogin": "Failed to start OIDC login",
-    "failedUserInfo": "Failed to get user info after OIDC login",
+    "failedUserInfo": "Failed to get user info after login",
     "oidcAuthFailed": "OIDC authentication failed",
     "noTokenReceived": "No token received from login",
     "invalidAuthUrl": "Invalid authorization URL received from backend",

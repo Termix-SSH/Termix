@@ -38,7 +38,7 @@ export function ElectronLoginForm({
 
   useEffect(() => {
     window.electronAPI
-      ?.getSessionCookie?.("jwt")
+      ?.getSessionCookie?.("jwt", serverUrl)
       .then((value) => {
         initialJwtRef.current = value;
       })
@@ -48,7 +48,7 @@ export function ElectronLoginForm({
       .finally(() => {
         setCookieSnapshotReady(true);
       });
-  }, []);
+  }, [serverUrl]);
 
   const handleAuthSuccess = useCallback(async () => {
     if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;

@@ -2198,7 +2198,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           { operation: "port_knock", hostId: hostConfig.id },
         );
         await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
-      } catch (err) {
+      } catch {
         sshLogger.warn("Port knocking failed, attempting connection anyway", {
           operation: "port_knock",
           hostId: hostConfig.id,
