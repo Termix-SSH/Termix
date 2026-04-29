@@ -125,6 +125,8 @@ interface CustomBadge {
 interface RootProps {
   defaultExpanded?: string[];
   defaultSelected?: string;
+  selectedId?: string | null;
+  expandedIds?: Set<string>;
   onSelect?: (id: string, label: string) => void;
   className?: string;
   children: React.ReactNode;
@@ -154,6 +156,8 @@ interface ContentProps {
 const Root: React.FC<RootProps> = ({
   defaultExpanded = [],
   defaultSelected,
+  selectedId: controlledSelectedId,
+  expandedIds: additionalExpandedIds,
   onSelect,
   className = "",
   children,
@@ -162,12 +166,31 @@ const Root: React.FC<RootProps> = ({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     new Set(defaultExpanded),
   );
-  const [selectedId, setSelectedId] = useState<string | null>(
+  const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
     defaultSelected || null,
   );
+  const selectedId =
+    controlledSelectedId !== undefined
+      ? controlledSelectedId
+      : internalSelectedId;
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [keyboardMode, setKeyboardMode] = useState(false);
   const treeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!additionalExpandedIds || additionalExpandedIds.size === 0) return;
+    setExpandedIds((prev) => {
+      const merged = new Set(prev);
+      let changed = false;
+      for (const id of additionalExpandedIds) {
+        if (!merged.has(id)) {
+          merged.add(id);
+          changed = true;
+        }
+      }
+      return changed ? merged : prev;
+    });
+  }, [additionalExpandedIds]);
 
   const toggleExpanded = useCallback((id: string) => {
     setExpandedIds((prev) => {
@@ -182,7 +205,7 @@ const Root: React.FC<RootProps> = ({
   }, []);
 
   const setSelected = useCallback((id: string) => {
-    setSelectedId(id);
+    setInternalSelectedId(id);
   }, []);
 
   const getVisibleItemIds = useCallback(() => {
@@ -388,7 +411,7 @@ const Root: React.FC<RootProps> = ({
               animate="rootAnimate"
               transition={transitions.root}
               className={cn(
-                "bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden",
+                "bg-canvas border border-edge rounded-lg overflow-hidden",
                 className,
               )}
               role="tree"
@@ -398,7 +421,7 @@ const Root: React.FC<RootProps> = ({
               onFocus={handleTreeFocus}
               onBlur={handleTreeBlur}
             >
-              <div className="w-full overflow-y-auto bg-background text-sm">
+              <div className="w-full overflow-y-auto bg-canvas text-sm">
                 {children}
               </div>
             </motion.div>
@@ -521,11 +544,11 @@ const Item: React.FC<ItemProps> = ({
               getPaddingClass(level),
               className,
               isSelected
-                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-r-2 border-blue-600"
+                ? "bg-accent text-accent-foreground border-r-2 border-ring"
                 : "",
-              !isSelected && "hover:bg-gray-100 dark:hover:bg-slate-700/50",
+              !isSelected && "hover:bg-hover",
               keyboardMode && isFocused
-                ? "focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                ? "focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-inset"
                 : "focus:outline-hidden",
             )}
             onClick={(e: React.MouseEvent) => {
@@ -549,10 +572,7 @@ const Item: React.FC<ItemProps> = ({
                 transition={transitions.chevron}
                 aria-hidden="true"
               >
-                <ChevronRight
-                  size={14}
-                  className="text-gray-500 dark:text-gray-400"
-                />
+                <ChevronRight size={14} className="text-muted-foreground" />
               </motion.span>
             )}
             {!hasChildren && <span className="w-3 mr-2" aria-hidden="true" />}
@@ -562,7 +582,7 @@ const Item: React.FC<ItemProps> = ({
                 data-selected={isSelected ? "true" : "false"}
                 data-child={hasChildren ? "true" : "false"}
                 className={cn(
-                  "mr-1 shrink-0 text-gray-500 data-[child=true]:text-blue-500 data-[selected=true]:text-blue-600 dark:data-[selected=true]:text-blue-400",
+                  "mr-1 shrink-0 text-muted-foreground data-[child=true]:text-primary data-[selected=true]:text-accent-foreground",
                 )}
                 aria-hidden="true"
               />
@@ -570,7 +590,7 @@ const Item: React.FC<ItemProps> = ({
             <span className="flex-1">{label}</span>
             {badge && (
               <span
-                className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full"
+                className="ml-auto text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full"
                 aria-label={`Badge: ${badge}`}
               >
                 {badge}
@@ -614,7 +634,7 @@ const Trigger: React.FC<TriggerProps> = ({ className = "" }) => {
       aria-label={itemContext.isExpanded ? "Collapse" : "Expand"}
       tabIndex={-1}
     >
-      <ChevronRight size={14} className="text-gray-500 dark:text-gray-400" />
+      <ChevronRight size={14} className="text-muted-foreground" />
     </motion.span>
   );
 };

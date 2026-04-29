@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { cn } from "@/lib/utils.ts";
 import { Star, Clock, Bookmark, File, Folder, FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -116,6 +122,32 @@ export function FileManagerSidebar({
       loadDirectoryTree();
     }
   }, [sshSessionId]);
+
+  // When currentPath changes externally (grid navigation), ensure the parent
+  // directory is loaded in the tree so the selection highlight can appear.
+  useEffect(() => {
+    if (!sshSessionId || currentPath === "/") return;
+
+    const parentPath =
+      currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+
+    const findByPath = (items: SidebarItem[]): SidebarItem | null => {
+      for (const item of items) {
+        if (item.path === parentPath) return item;
+        if (item.children) {
+          const found = findByPath(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parent = findByPath(directoryTree);
+    if (parent && !loadedFoldersRef.current.has(parent.path)) {
+      loadedFoldersRef.current.add(parent.path);
+      loadSubdirectory(parent.id, parent.path);
+    }
+  }, [currentPath, sshSessionId]);
 
   // ─── API: Quick access ────────────────────────────────────────────────────────
 
@@ -400,6 +432,34 @@ export function FileManagerSidebar({
     };
   }, [contextMenu.isVisible]);
 
+  // ─── Derive selected tree node + ancestors from currentPath ──────────────────
+
+  const { selectedTreeId, ancestorIds } = useMemo(() => {
+    if (currentPath === "/")
+      return { selectedTreeId: "root", ancestorIds: new Set<string>() };
+
+    const ancestors: string[] = [];
+    const findByPath = (
+      items: SidebarItem[],
+      path: string[],
+    ): string | null => {
+      for (const item of items) {
+        if (item.path === currentPath) {
+          ancestors.push(...path, "root");
+          return item.id;
+        }
+        if (item.children) {
+          const found = findByPath(item.children, [...path, item.id]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const id = findByPath(directoryTree, []);
+    return { selectedTreeId: id, ancestorIds: new Set(ancestors) };
+  }, [currentPath, directoryTree]);
+
   // ─── Render helpers ───────────────────────────────────────────────────────────
 
   /**
@@ -572,6 +632,8 @@ export function FileManagerSidebar({
                 <FolderTree.Root
                   id="sidebar-directory-tree"
                   defaultExpanded={["root"]}
+                  selectedId={selectedTreeId}
+                  expandedIds={ancestorIds}
                   onSelect={(id) => handleDirectorySelect(id)}
                   className="bg-transparent border-0 rounded-none shadow-none"
                 >
