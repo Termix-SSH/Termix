@@ -936,7 +936,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const savedSessionId = persistenceEnabled
           ? localStorage.getItem(`termix_session_${tabId}`)
           : null;
-        if (savedSessionId && !isReconnectingRef.current) {
+        if (savedSessionId) {
           sessionIdRef.current = savedSessionId;
           isAttachingSessionRef.current = true;
 
