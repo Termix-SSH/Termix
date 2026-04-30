@@ -2314,6 +2314,8 @@
     "sshProvideCredentialsDescription": "Please provide your SSH credentials to connect to this server.",
     "sshPasswordDescription": "Enter the password for this SSH connection.",
     "sshKeyPasswordDescription": "If your SSH key is encrypted, enter the passphrase here.",
+    "passphraseRequired": "Passphrase Required",
+    "passphraseRequiredDescription": "The SSH key is encrypted. Please enter the passphrase to unlock it.",
     "step1ScanQR": "Step 1: Scan the QR code with your authenticator app",
     "manualEntryCode": "Manual Entry Code",
     "cannotScanQRText": "If you can't scan the QR code, enter this code manually in your authenticator app",

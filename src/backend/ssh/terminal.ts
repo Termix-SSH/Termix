@@ -905,6 +905,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           credentialsData.hostConfig.key = credentialsData.sshKey;
           credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
           credentialsData.hostConfig.authType = "key";
+        } else if (credentialsData.keyPassword) {
+          credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
         }
 
         isAwaitingAuthCredentials = false;
@@ -1742,6 +1744,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
             hostId: id,
             message:
               "OPKSSH authentication failed or expired. Please authenticate again.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        err.message.includes("Cannot parse privateKey") &&
+        err.message.includes("no passphrase")
+      ) {
+        sendLog(
+          "auth",
+          "error",
+          "SSH key is encrypted but no passphrase was provided",
+        );
+        isAwaitingAuthCredentials = true;
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        ws.send(
+          JSON.stringify({
+            type: "passphrase_required",
+            message:
+              "The SSH key is encrypted. Please enter the passphrase to unlock it.",
           }),
         );
         return;
