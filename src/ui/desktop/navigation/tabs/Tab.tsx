@@ -74,15 +74,13 @@ export function Tab({
 
     if (!hasSshPw && !hasSudoPw) return;
 
-    let passwordToCopy = "";
+    const field = hasSshPw ? "password" : "sudoPassword";
+    const passwordToCopy = await getHostPassword(hostConfig.id, field);
 
-    if (hasSshPw) {
-      passwordToCopy = hostConfig.password || "";
-    } else if (hasSudoPw) {
-      passwordToCopy = hostConfig.sudoPassword;
+    if (!passwordToCopy) {
+      toast.error(t("nav.failedToCopyPassword"));
+      return;
     }
-
-    if (!passwordToCopy) return;
 
     try {
       await navigator.clipboard.writeText(passwordToCopy);
