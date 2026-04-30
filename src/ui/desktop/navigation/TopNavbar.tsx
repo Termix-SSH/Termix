@@ -502,6 +502,11 @@ export function TopNavbar({
                   isDragging={isDraggingThisTab}
                   isDragOver={false}
                   hostConfig={tab.hostConfig}
+                  onOpenFileManager={
+                    isTerminal && (tab.hostConfig as any)?.enableFileManager
+                      ? () => tab.terminalRef?.current?.openFileManager?.()
+                      : undefined
+                  }
                 />
               </div>
             );

@@ -564,7 +564,8 @@
     "passwordCopied": "Password copied to clipboard",
     "sudoPasswordCopied": "Sudo password copied to clipboard",
     "noPasswordAvailable": "No password available",
-    "failedToCopyPassword": "Failed to copy password"
+    "failedToCopyPassword": "Failed to copy password",
+    "openFileManager": "Open File Manager"
   },
   "admin": {
     "title": "Admin Settings",

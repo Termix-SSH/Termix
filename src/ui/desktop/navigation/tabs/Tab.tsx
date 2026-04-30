@@ -9,6 +9,7 @@ import {
   Terminal as TerminalIcon,
   Server as ServerIcon,
   Folder as FolderIcon,
+  FolderOpen,
   User as UserIcon,
   Monitor as MonitorIcon,
   Eye as EyeIcon,
@@ -39,6 +40,7 @@ interface TabProps {
   isValidDropTarget?: boolean;
   isHoveredDropTarget?: boolean;
   hostConfig?: SSHHost;
+  onOpenFileManager?: () => void;
 }
 
 export function Tab({
@@ -59,6 +61,7 @@ export function Tab({
   isValidDropTarget = false,
   isHoveredDropTarget = false,
   hostConfig,
+  onOpenFileManager,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -266,6 +269,21 @@ export function Tab({
             title={getPasswordButtonTitle()}
           >
             <Key className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+
+        {tabType === "terminal" && onOpenFileManager && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenFileManager();
+            }}
+            title={t("nav.openFileManager")}
+          >
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </Button>
         )}
 

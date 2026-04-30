@@ -506,6 +506,7 @@ export interface TerminalRefHandle {
   sendInput?: (data: string) => void;
   notifyResize?: () => void;
   refresh?: () => void;
+  openFileManager?: () => void;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";

@@ -494,6 +494,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnecting = false;
   let isConnected = false;
   let isCleaningUp = false;
+  let cwdPending = false;
+  let cwdBuffer = "";
   let isShellInitializing = false;
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
@@ -597,6 +599,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
           connectData.hostConfig.userId = userId;
         }
         handleConnectToHost(connectData).catch((error) => {
+          const errMsg =
+            error instanceof Error ? error.message : "Unknown error";
+          if (
+            errMsg.includes("Cannot parse privateKey") &&
+            errMsg.includes("no passphrase")
+          ) {
+            isAwaitingAuthCredentials = true;
+            ws.send(
+              JSON.stringify({
+                type: "passphrase_required",
+                message:
+                  "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+              }),
+            );
+            return;
+          }
           sshLogger.error("Failed to connect to host", error, {
             operation: "ssh_connect",
             userId,
@@ -606,9 +624,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({
               type: "error",
-              message:
-                "Failed to connect to host: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+              message: "Failed to connect to host: " + errMsg,
             }),
           );
         });
@@ -737,24 +753,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
 
       case "get_cwd": {
-        if (!sshConn) {
+        const activeStream =
+          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+        if (!activeStream) {
           ws.send(JSON.stringify({ type: "cwd", path: "/" }));
           break;
         }
-        sshConn.exec("pwd", (err, stream) => {
-          if (err) {
-            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
-            return;
-          }
-          let output = "";
-          stream.on("data", (chunk: Buffer) => {
-            output += chunk.toString();
-          });
-          stream.on("close", () => {
-            const cwd = output.trim() || "/";
-            ws.send(JSON.stringify({ type: "cwd", path: cwd }));
-          });
-        });
+        cwdPending = true;
+        cwdBuffer = "";
+        // Split the sentinel across shell variables so the echoed command
+        // itself never contains "TERMIX_CWD:" — only the output line does.
+        activeStream.write('a=TERMIX_CWD; echo "$a:$(pwd)"\r');
         break;
       }
 
@@ -947,6 +956,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
         };
 
         handleConnectToHost(reconnectData).catch((error) => {
+          const errMsg =
+            error instanceof Error ? error.message : "Unknown error";
+          if (
+            errMsg.includes("Cannot parse privateKey") &&
+            errMsg.includes("no passphrase")
+          ) {
+            isAwaitingAuthCredentials = true;
+            ws.send(
+              JSON.stringify({
+                type: "passphrase_required",
+                message:
+                  "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+              }),
+            );
+            return;
+          }
           sshLogger.error("Failed to reconnect with credentials", error, {
             operation: "ssh_reconnect_with_credentials",
             userId,
@@ -956,9 +981,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({
               type: "error",
-              message:
-                "Failed to connect with provided credentials: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+              message: "Failed to connect with provided credentials: " + errMsg,
             }),
           );
         });
@@ -1227,7 +1250,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             username: resolvedHost.username || username,
             password: resolvedHost.password,
             key: resolvedHost.key,
-            keyPassword: resolvedHost.keyPassword,
+            keyPassword: keyPassword || resolvedHost.keyPassword,
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
@@ -1253,7 +1276,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             username: resolvedHost.username || username,
             password: resolvedHost.password,
             key: resolvedHost.key,
-            keyPassword: resolvedHost.keyPassword,
+            // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
+            keyPassword: keyPassword || resolvedHost.keyPassword,
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
           };
@@ -1470,9 +1494,47 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           const boundSessionId = currentSessionId;
 
+          const CWD_SENTINEL = "TERMIX_CWD:";
+
           stream.on("data", (data: Buffer) => {
             try {
-              const utf8String = data.toString("utf-8");
+              let utf8String = data.toString("utf-8");
+
+              if (cwdPending) {
+                cwdBuffer += utf8String;
+                const sentinelIdx = cwdBuffer.indexOf(CWD_SENTINEL);
+                if (sentinelIdx !== -1) {
+                  const afterSentinel = cwdBuffer.slice(
+                    sentinelIdx + CWD_SENTINEL.length,
+                  );
+                  const newlineIdx = afterSentinel.search(/[\r\n]/);
+                  if (newlineIdx !== -1) {
+                    const cwd =
+                      afterSentinel.slice(0, newlineIdx).trim() || "/";
+                    cwdPending = false;
+                    // Strip the sentinel line from output sent to terminal
+                    const beforeSentinel = cwdBuffer.slice(0, sentinelIdx);
+                    const afterNewline = afterSentinel.slice(newlineIdx);
+                    utf8String = beforeSentinel + afterNewline;
+                    cwdBuffer = "";
+                    const attachedWs =
+                      sessionManager.getSession(boundSessionId)?.attachedWs ??
+                      ws;
+                    if (attachedWs.readyState === WebSocket.OPEN) {
+                      attachedWs.send(
+                        JSON.stringify({ type: "cwd", path: cwd }),
+                      );
+                    }
+                  } else {
+                    return;
+                  }
+                } else {
+                  return;
+                }
+              }
+
+              if (!utf8String) return;
+
               const session = sessionManager.getSession(boundSessionId);
               if (session) {
                 sessionManager.bufferOutput(boundSessionId!, utf8String);

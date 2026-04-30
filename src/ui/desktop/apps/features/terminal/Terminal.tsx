@@ -714,6 +714,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
         refresh: () => hardRefresh(),
+        openFileManager: () => {
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
+          } else {
+            onOpenFileManager?.("/");
+          }
+        },
       }),
       [terminal],
     );
@@ -1964,13 +1971,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
-        if (e.ctrlKey && onOpenFileManager) {
-          e.preventDefault();
-          e.stopPropagation();
-          onOpenFileManager();
-          return;
-        }
-
         if (getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
