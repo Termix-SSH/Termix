@@ -446,7 +446,9 @@ export function HostManagerEditor({
       if (data.authType === "password") {
         if (
           !data.password ||
-          (typeof data.password === "string" && data.password.trim() === "")
+          (typeof data.password === "string" &&
+            data.password.trim() === "" &&
+            data.password !== "existing_password")
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -586,7 +588,11 @@ export function HostManagerEditor({
       return false;
 
     if (authTab === "password") {
-      if (!watchedFields.password || watchedFields.password.trim() === "")
+      if (
+        !watchedFields.password ||
+        (watchedFields.password !== "existing_password" &&
+          watchedFields.password.trim() === "")
+      )
         return false;
     } else if (authTab === "key") {
       if (!watchedFields.key || !watchedFields.keyType) return false;
@@ -811,7 +817,8 @@ export function HostManagerEditor({
           formData.password = cleanedHost.password;
         }
       } else if (defaultAuthType === "password") {
-        formData.password = cleanedHost.password || "";
+        formData.password =
+          cleanedHost.password || (editingHost.id ? "existing_password" : "");
       } else if (defaultAuthType === "key") {
         formData.key = editingHost.id ? "existing_key" : editingHost.key;
         formData.keyPassword = cleanedHost.keyPassword || "";
@@ -963,6 +970,13 @@ export function HostManagerEditor({
         } else if (data.key === "existing_key") {
           delete submitData.key;
         }
+      }
+
+      if (
+        data.authType === "password" &&
+        data.password === "existing_password"
+      ) {
+        delete submitData.password;
       }
 
       let savedHost;
