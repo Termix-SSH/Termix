@@ -636,7 +636,7 @@ export function HostTunnelTab({
                         render={({ field }) => (
                           <FormItem className="col-span-12">
                             <FormControl>
-                              <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
+                              <div className="flex items-center justify-between gap-3 rounded-md border bg-card p-3">
                                 <FormLabel>
                                   {t("tunnels.autoStartContainer")}
                                 </FormLabel>

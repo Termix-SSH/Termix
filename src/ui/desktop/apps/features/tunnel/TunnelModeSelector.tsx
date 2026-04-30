@@ -50,7 +50,7 @@ export function TunnelModeSelector({
       {options.map((option) => (
         <label
           key={option.value}
-          className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer"
+          className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer"
         >
           <input
             type="radio"
