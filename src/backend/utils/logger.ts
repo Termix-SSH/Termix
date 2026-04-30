@@ -79,7 +79,17 @@ export class Logger {
   }
 
   private getTimeStamp(): string {
-    return chalk.gray(`[${new Date().toLocaleTimeString()}]`);
+    const now = new Date();
+    const format = process.env.LOG_TIMESTAMP_FORMAT?.toLowerCase();
+    let time: string;
+    if (format === "iso") {
+      time = now.toISOString();
+    } else if (format === "24h") {
+      time = now.toLocaleTimeString("en-GB", { hour12: false });
+    } else {
+      time = now.toLocaleTimeString();
+    }
+    return chalk.gray(`[${time}]`);
   }
 
   private sanitizeContext(context: LogContext): LogContext {
