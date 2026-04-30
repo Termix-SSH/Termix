@@ -7,7 +7,7 @@
   "main": "electron/main.cjs",
   "type": "module",
   "engines": {
-    "node": ">=24 <25",
+    "node": ">=22.12.0",
     "npm": ">=11"
   },
   "scripts": {
@@ -62,7 +62,7 @@
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
     "ssh2": "^1.17.0",
-    "undici": "^8.1.0",
+    "undici": "^7.0.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
@@ -76,7 +76,7 @@
     "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.4",
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.0.0",
     "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -127,7 +127,7 @@
     "cytoscape": "^3.33.2",
     "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
-    "eslint": "^10.2.1",
+    "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "eslint-plugin-unused-imports": "^4.4.1",
@@ -181,6 +181,7 @@
     "@electron/asar": "^4.2.0",
     "@electron/get": "^5.0.0",
     "dompurify": "^3.4.1",
+    "eslint-visitor-keys": "^4.2.1",
     "prebuild-install": "npm:@mmomtchev/prebuild-install@1.0.2",
     "rimraf": "file:vendor/rimraf-compat"
   }
