@@ -15,6 +15,7 @@ const buildInfo = {
   generatedAt: new Date().toISOString(),
 };
 
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(
   outputPath,
   `module.exports = ${JSON.stringify(buildInfo, null, 2)};\n`,

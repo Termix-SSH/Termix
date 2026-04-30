@@ -3170,83 +3170,90 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           }
 
           sftp.stat(filePath, (statErr, stats) => {
-            if (statErr) {
-              fileLogger.warn(
-                "Failed to read existing file permissions before save",
-                {
-                  operation: "file_write_stat",
+            try {
+              if (statErr) {
+                fileLogger.warn(
+                  "Failed to read existing file permissions before save",
+                  {
+                    operation: "file_write_stat",
+                    sessionId,
+                    userId,
+                    path: filePath,
+                    error: statErr.message,
+                  },
+                );
+              } else if (stats.isFile()) {
+                preservedMode = stats.mode & 0o7777;
+              }
+
+              const writeStream = sftp.createWriteStream(filePath);
+
+              let hasError = false;
+              let hasFinished = false;
+              let isFinalizing = false;
+
+              const finalizeSuccess = () => {
+                if (hasError || hasFinished) return;
+                hasFinished = true;
+                isFinalizing = false;
+                fileLogger.success("File written successfully", {
+                  operation: "file_write_success",
                   sessionId,
                   userId,
                   path: filePath,
-                  error: statErr.message,
-                },
-              );
-            } else if (stats.isFile()) {
-              preservedMode = stats.mode & 0o7777;
-            }
-
-            const writeStream = sftp.createWriteStream(filePath);
-
-            let hasError = false;
-            let hasFinished = false;
-            let isFinalizing = false;
-
-            const finalizeSuccess = () => {
-              if (hasError || hasFinished) return;
-              hasFinished = true;
-              isFinalizing = false;
-              fileLogger.success("File written successfully", {
-                operation: "file_write_success",
-                sessionId,
-                userId,
-                path: filePath,
-                bytes: fileBuffer.length,
-              });
-              if (!res.headersSent) {
-                res.json({
-                  message: "File written successfully",
-                  path: filePath,
-                  toast: {
-                    type: "success",
-                    message: `File written: ${filePath}`,
-                  },
+                  bytes: fileBuffer.length,
                 });
+                if (!res.headersSent) {
+                  res.json({
+                    message: "File written successfully",
+                    path: filePath,
+                    toast: {
+                      type: "success",
+                      message: `File written: ${filePath}`,
+                    },
+                  });
+                }
+              };
+
+              writeStream.on("error", (streamErr) => {
+                if (hasError || hasFinished || isFinalizing) return;
+                hasError = true;
+                isFinalizing = false;
+                fileLogger.warn(
+                  `SFTP write failed, trying fallback method: ${streamErr.message}`,
+                );
+                tryFallbackMethod();
+              });
+
+              const finishWrite = () => {
+                if (hasError || hasFinished || isFinalizing) return;
+                isFinalizing = true;
+                restoreOriginalMode(sftp, finalizeSuccess);
+              };
+
+              writeStream.on("finish", () => {
+                finishWrite();
+              });
+
+              writeStream.on("close", () => {
+                finishWrite();
+              });
+
+              try {
+                writeStream.write(fileBuffer);
+                writeStream.end();
+              } catch (writeErr) {
+                if (hasError || hasFinished) return;
+                hasError = true;
+                isFinalizing = false;
+                fileLogger.warn(
+                  `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
+                );
+                tryFallbackMethod();
               }
-            };
-
-            writeStream.on("error", (streamErr) => {
-              if (hasError || hasFinished || isFinalizing) return;
-              hasError = true;
-              isFinalizing = false;
+            } catch (callbackErr) {
               fileLogger.warn(
-                `SFTP write failed, trying fallback method: ${streamErr.message}`,
-              );
-              tryFallbackMethod();
-            });
-
-            const finishWrite = () => {
-              if (hasError || hasFinished || isFinalizing) return;
-              isFinalizing = true;
-              restoreOriginalMode(sftp, finalizeSuccess);
-            };
-
-            writeStream.on("finish", () => {
-              finishWrite();
-            });
-
-            writeStream.on("close", () => {
-              finishWrite();
-            });
-
-            try {
-              writeStream.write(fileBuffer);
-              writeStream.end();
-            } catch (writeErr) {
-              if (hasError || hasFinished) return;
-              hasError = true;
-              isFinalizing = false;
-              fileLogger.warn(
-                `SFTP write operation failed, trying fallback method: ${writeErr.message}`,
+                `SFTP stat callback error, trying fallback method: ${(callbackErr as Error).message}`,
               );
               tryFallbackMethod();
             }
@@ -3268,8 +3275,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     if (!sshConn?.isConnected) {
-      sshConn.activeOperations--;
-      return res.status(500).json({ error: "SSH session disconnected" });
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "SSH session disconnected" });
+      }
+      return;
     }
     try {
       let contentBuffer: Buffer;
@@ -3318,6 +3327,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           errorData += chunk.toString();
         });
 
+        stream.stderr.on("error", (stderrErr) => {
+          fileLogger.error("Fallback write stderr error:", stderrErr);
+        });
+
         stream.on("close", (code) => {
           if (outputData.includes("SUCCESS")) {
             restoreOriginalMode(null, () => {
@@ -3359,7 +3372,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
       if (!res.headersSent) {
         res
           .status(500)
-          .json({ error: `All write methods failed: ${fallbackErr.message}` });
+          .json({ error: `All write methods failed: ${(fallbackErr as Error).message}` });
       }
     }
   };
@@ -3560,8 +3573,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
   const tryFallbackMethod = () => {
     if (!sshConn?.isConnected) {
-      sshConn.activeOperations--;
-      return res.status(500).json({ error: "SSH session disconnected" });
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "SSH session disconnected" });
+      }
+      return;
     }
     try {
       let contentBuffer: Buffer;
