@@ -148,43 +148,48 @@ export function Auth({
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
-  const handleElectronAuthSuccess = useCallback(async (previousJwt: string | null) => {
-    try {
-      const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-        "jwt",
-        currentServerUrl,
-        previousJwt,
-        5000,
-      );
-      if (cookieReady && !cookieReady.success) {
-        throw new Error(cookieReady.error || "Authentication cookie not ready");
+  const handleElectronAuthSuccess = useCallback(
+    async (previousJwt: string | null) => {
+      try {
+        const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
+          "jwt",
+          currentServerUrl,
+          previousJwt,
+          5000,
+        );
+        if (cookieReady && !cookieReady.success) {
+          throw new Error(
+            cookieReady.error || "Authentication cookie not ready",
+          );
+        }
+        const meRes = await getUserInfo();
+        if (!meRes) throw new Error("Failed to get user info");
+        setInternalLoggedIn(true);
+        setLoggedIn(true);
+        setIsAdmin(!!meRes.is_admin);
+        setUsername(meRes.username || null);
+        setUserId(meRes.userId || null);
+        onAuthSuccess({
+          isAdmin: !!meRes.is_admin,
+          username: meRes.username || null,
+          userId: meRes.userId || null,
+        });
+        toast.success(t("messages.loginSuccess"));
+      } catch {
+        toast.error(t("errors.failedUserInfo"));
       }
-      const meRes = await getUserInfo();
-      if (!meRes) throw new Error("Failed to get user info");
-      setInternalLoggedIn(true);
-      setLoggedIn(true);
-      setIsAdmin(!!meRes.is_admin);
-      setUsername(meRes.username || null);
-      setUserId(meRes.userId || null);
-      onAuthSuccess({
-        isAdmin: !!meRes.is_admin,
-        username: meRes.username || null,
-        userId: meRes.userId || null,
-      });
-      toast.success(t("messages.loginSuccess"));
-    } catch {
-      toast.error(t("errors.failedUserInfo"));
-    }
-  }, [
-    onAuthSuccess,
-    setLoggedIn,
-    setIsAdmin,
-    setUsername,
-    setUserId,
-    t,
-    setInternalLoggedIn,
-    currentServerUrl,
-  ]);
+    },
+    [
+      onAuthSuccess,
+      setLoggedIn,
+      setIsAdmin,
+      setUsername,
+      setUserId,
+      t,
+      setInternalLoggedIn,
+      currentServerUrl,
+    ],
+  );
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);

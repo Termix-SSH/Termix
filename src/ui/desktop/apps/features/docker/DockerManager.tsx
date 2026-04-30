@@ -2,7 +2,6 @@ import React from "react";
 import { useSidebar } from "@/components/ui/sidebar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 
-
 import { useTranslation } from "react-i18next";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
 import {

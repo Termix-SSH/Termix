@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { cn } from "@/lib/utils.ts";
-import { Star, Clock, Bookmark, File, Folder, FolderOpen } from "lucide-react";
+import { Star, Clock, Bookmark, File, Folder } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SSHHost } from "@/types";
 import {
@@ -198,7 +198,7 @@ export function FileManagerSidebar({
 
   // ─── API: Directory tree ──────────────────────────────────────────────────────
 
-  const loadDirectoryTree = async () => {
+  const loadDirectoryTree = async (attempt = 0) => {
     if (!sshSessionId) return;
 
     try {
@@ -227,7 +227,15 @@ export function FileManagerSidebar({
           children: rootTreeItems,
         },
       ]);
-    } catch (error) {
+    } catch (error: unknown) {
+      const status =
+        (error as { status?: number })?.status ||
+        (error as { response?: { status?: number } })?.response?.status;
+      if (status === 409 && attempt < 3) {
+        // Another request was already listing "/" — retry after a short delay
+        setTimeout(() => loadDirectoryTree(attempt + 1), 600);
+        return;
+      }
       console.error("Failed to load directory tree:", error);
       setDirectoryTree([
         {
@@ -279,7 +287,15 @@ export function FileManagerSidebar({
             });
           return updateChildren(prevTree);
         });
-      } catch (error) {
+      } catch (error: unknown) {
+        const status =
+          (error as { status?: number })?.status ||
+          (error as { response?: { status?: number } })?.response?.status;
+        if (status === 409) {
+          // Another request was listing this path — retry after the lock clears
+          setTimeout(() => loadSubdirectory(folderId, folderPath), 600);
+          return;
+        }
         console.error("Failed to load subdirectory:", error);
       }
     },

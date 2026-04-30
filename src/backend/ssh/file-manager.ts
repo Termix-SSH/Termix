@@ -361,6 +361,31 @@ async function createJumpHostChain(
   }
 }
 
+// Serializes SSH channel open requests so only one channel negotiation is
+// in-flight at a time per session. Once the channel is established the slot
+// is released immediately so the next open can proceed; the channels
+// themselves remain open concurrently (one exec per command is short-lived,
+// the SFTP channel is long-lived but only opened once).
+class ChannelOpenSerializer {
+  private tail: Promise<void> = Promise.resolve();
+
+  // Enqueue an action that opens a channel. The action runs after the previous
+  // one completes (success or failure). Returns a promise that resolves with
+  // the action's result.
+  run<T>(action: () => Promise<T>): Promise<T> {
+    const next = this.tail.then(
+      () => action(),
+      () => action(), // run even if the previous open failed
+    );
+    // Advance tail past this slot (swallow result so the chain keeps going)
+    this.tail = next.then(
+      () => {},
+      () => {},
+    );
+    return next;
+  }
+}
+
 interface SSHSession {
   client: SSHClient;
   isConnected: boolean;
@@ -369,6 +394,8 @@ interface SSHSession {
   activeOperations: number;
   sudoPassword?: string;
   sftp?: import("ssh2").SFTPWrapper;
+  sftpPending?: Promise<import("ssh2").SFTPWrapper>;
+  channelOpener: ChannelOpenSerializer;
   poolKey?: string;
   userId?: string;
 }
@@ -393,9 +420,11 @@ interface PendingTOTPSession {
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
+// Keyed by "sessionId:path" to prevent concurrent requests for the same path
+const activeListRequests: Record<string, boolean> = {};
 
 function execWithSudo(
-  client: SSHClient,
+  session: SSHSession,
   command: string,
   sudoPassword: string,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
@@ -403,7 +432,7 @@ function execWithSudo(
     const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
     const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
 
-    client.exec(sudoCommand, (err, stream) => {
+    execChannel(session, sudoCommand, (err, stream) => {
       if (err) {
         resolve({ stdout: "", stderr: err.message, code: 1 });
         return;
@@ -438,21 +467,76 @@ function getSessionSftp(
   if (session.sftp) {
     return Promise.resolve(session.sftp);
   }
-  return new Promise((resolve, reject) => {
-    session.client.sftp((err, sftp) => {
-      if (err) {
-        return reject(err);
+
+  // Serialization: if a channel open is already in flight, join it
+  if (session.sftpPending) {
+    return session.sftpPending;
+  }
+
+  const openOnce = (): Promise<import("ssh2").SFTPWrapper> =>
+    session.channelOpener.run(
+      () =>
+        new Promise<import("ssh2").SFTPWrapper>((resolve, reject) => {
+          session.client.sftp((err, sftp) => {
+            if (err) return reject(err);
+            session.sftp = sftp;
+            sftp.on("error", () => {
+              session.sftp = undefined;
+            });
+            sftp.on("close", () => {
+              session.sftp = undefined;
+            });
+            resolve(sftp);
+          });
+        }),
+    );
+
+  session.sftpPending = openOnce()
+    .catch((err: Error) => {
+      const isChannelFailure =
+        err.message.toLowerCase().includes("channel open failure") ||
+        err.message.toLowerCase().includes("open failed");
+      if (isChannelFailure) {
+        // Single retry after 500ms for transient server-side rate limiting
+        return new Promise<import("ssh2").SFTPWrapper>((resolve, reject) =>
+          setTimeout(() => openOnce().then(resolve, reject), 500),
+        );
       }
-      session.sftp = sftp;
-      sftp.on("error", () => {
-        session.sftp = undefined;
-      });
-      sftp.on("close", () => {
-        session.sftp = undefined;
-      });
-      resolve(sftp);
+      return Promise.reject(err);
+    })
+    .finally(() => {
+      session.sftpPending = undefined;
     });
-  });
+
+  return session.sftpPending;
+}
+
+// Wraps client.exec through the channel serializer so only one SSH channel
+// negotiation is in-flight at a time. The serializer slot is released as soon
+// as the channel is established (not when it closes), so channels run
+// concurrently once open — we only serialize the *open handshake*.
+function execChannel(
+  session: SSHSession,
+  command: string,
+  callback: (
+    err: Error | undefined,
+    stream: import("ssh2").ClientChannel,
+  ) => void,
+): void {
+  session.channelOpener
+    .run(
+      () =>
+        new Promise<import("ssh2").ClientChannel>((resolve, reject) => {
+          session.client.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            resolve(stream);
+          });
+        }),
+    )
+    .then(
+      (stream) => callback(undefined, stream),
+      (err: Error) => callback(err, undefined as never),
+    );
 }
 
 function cleanupSession(sessionId: string) {
@@ -840,11 +924,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     port,
     username,
     tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
+    keepaliveInterval: 10000,
+    keepaliveCountMax: 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 30000,
+    tcpKeepAliveInitialDelay: 5000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
       hostId,
       ip,
@@ -1108,6 +1192,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       isConnected: true,
       lastActive: Date.now(),
       activeOperations: 0,
+      channelOpener: new ChannelOpenSerializer(),
       userId,
     };
     scheduleSessionCleanup(sessionId);
@@ -1752,6 +1837,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        channelOpener: new ChannelOpenSerializer(),
         userId,
       };
       scheduleSessionCleanup(sessionId);
@@ -1954,6 +2040,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
         isConnected: true,
         lastActive: Date.now(),
         activeOperations: 0,
+        channelOpener: new ChannelOpenSerializer(),
         userId,
       };
       scheduleSessionCleanup(sessionId);
@@ -2149,7 +2236,7 @@ app.get("/ssh/file_manager/ssh/status", (req, res) => {
  *       400:
  *         description: Session ID is required or session not found.
  */
-app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
+app.post("/ssh/file_manager/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
 
@@ -2172,6 +2259,18 @@ app.post("/ssh/file_manager/ssh/keepalive", (req, res) => {
 
   session.lastActive = Date.now();
   scheduleSessionCleanup(sessionId);
+
+  // Probe the cached SFTP channel. If stale, clear it so the next operation
+  // opens a fresh one via the serialized getSessionSftp.
+  if (session.sftp && !session.sftpPending) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        session.sftp!.stat("/", (err) => (err ? reject(err) : resolve()));
+      });
+    } catch {
+      session.sftp = undefined;
+    }
+  }
 
   res.json({
     status: "success",
@@ -2225,6 +2324,17 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   if (!verifySessionOwnership(sshConn, userId)) {
     return res.status(403).json({ error: "Session access denied" });
   }
+
+  // Drop concurrent requests for the same session+path — each would open
+  // a new SSH channel and can exceed the server's per-connection channel limit.
+  const listKey = `${sessionId}:${sshPath}`;
+  if (activeListRequests[listKey]) {
+    return res.status(409).json({ error: "List request already in progress" });
+  }
+  activeListRequests[listKey] = true;
+  res.on("finish", () => {
+    delete activeListRequests[listKey];
+  });
 
   sshConn.lastActive = Date.now();
   sshConn.activeOperations++;
@@ -2327,6 +2437,13 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
           fileLogger.warn(
             `SFTP failed for listFiles, trying fallback: ${err.message}`,
           );
+          const isChannelFailure =
+            err.message.toLowerCase().includes("channel open failure") ||
+            err.message.toLowerCase().includes("open failed");
+          if (isChannelFailure) {
+            sshConn.isConnected = false;
+            sshConn.sftp = undefined;
+          }
           tryFallbackMethod();
         });
     } catch (sftpErr: unknown) {
@@ -2340,11 +2457,14 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
   const tryFallbackMethod = () => {
     if (!sshConn?.isConnected) {
       sshConn.activeOperations--;
-      return res.status(500).json({ error: "SSH session disconnected" });
+      return res
+        .status(503)
+        .json({ error: "SSH session disconnected", disconnected: true });
     }
     try {
       const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-      sshConn.client.exec(
+      execChannel(
+        sshConn,
         `command ls -la --color=never '${escapedPath}'`,
         (err, stream) => {
           if (err) {
@@ -2472,7 +2592,7 @@ app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
       const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
       const sudoCommand = `echo '${escapedPassword}' | sudo -S /bin/ls -la --color=never '${escapedPath}' 2>&1`;
 
-      sshConn.client.exec(sudoCommand, (err, stream) => {
+      execChannel(sshConn, sudoCommand, (err, stream) => {
         if (err) {
           sshConn.activeOperations--;
           fileLogger.error("SSH sudo listFiles error:", err);
@@ -2646,7 +2766,7 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   const escapedPath = linkPath.replace(/'/g, "'\"'\"'");
   const command = `stat -L -c "%F" '${escapedPath}' && readlink -f '${escapedPath}'`;
 
-  sshConn.client.exec(command, (err, stream) => {
+  execChannel(sshConn, command, (err, stream) => {
     if (err) {
       fileLogger.error("SSH identifySymlink error:", err);
       return res.status(500).json({ error: err.message });
@@ -2745,7 +2865,7 @@ app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
   const escapedPath = expandPath.replace(/"/g, '\\"');
   const command = `echo "${escapedPath}"`;
 
-  sshConn.client.exec(command, (err, stream) => {
+  execChannel(sshConn, command, (err, stream) => {
     if (err) {
       fileLogger.error("SSH resolvePath error:", err);
       return res.status(500).json({ error: err.message });
@@ -2841,7 +2961,8 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
   const MAX_READ_SIZE = 500 * 1024 * 1024;
   const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
-  sshConn.client.exec(
+  execChannel(
+    sshConn,
     `stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`,
     (sizeErr, sizeStream) => {
       if (sizeErr) {
@@ -2899,7 +3020,7 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
           });
         }
 
-        sshConn.client.exec(`cat '${escapedPath}'`, (err, stream) => {
+        execChannel(sshConn, `cat '${escapedPath}'`, (err, stream) => {
           if (err) {
             fileLogger.error("SSH readFile error:", err);
             return res.status(500).json({ error: err.message });
@@ -3067,7 +3188,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
     const escapedPath = filePath.replace(/'/g, "'\"'\"'");
     const chmodCommand = `chmod ${permissions} '${escapedPath}' && echo "SUCCESS"`;
 
-    sshConn.client.exec(chmodCommand, (err, stream) => {
+    execChannel(sshConn, chmodCommand, (err, stream) => {
       if (err) {
         fileLogger.warn("Failed to restore file permissions after save", {
           operation: "file_write_restore_permissions",
@@ -3301,7 +3422,7 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
       const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
 
-      sshConn.client.exec(writeCommand, (err, stream) => {
+      execChannel(sshConn, writeCommand, (err, stream) => {
         if (err) {
           fileLogger.error("Fallback write command failed:", err);
           if (!res.headersSent) {
@@ -3370,9 +3491,9 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
     } catch (fallbackErr) {
       fileLogger.error("Fallback method failed:", fallbackErr);
       if (!res.headersSent) {
-        res
-          .status(500)
-          .json({ error: `All write methods failed: ${(fallbackErr as Error).message}` });
+        res.status(500).json({
+          error: `All write methods failed: ${(fallbackErr as Error).message}`,
+        });
       }
     }
   };
@@ -3621,7 +3742,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
         const writeCommand = `echo '${chunks[0]}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
 
-        sshConn.client.exec(writeCommand, (err, stream) => {
+        execChannel(sshConn, writeCommand, (err, stream) => {
           if (err) {
             fileLogger.error("Fallback upload command failed:", err);
             if (!res.headersSent) {
@@ -3695,7 +3816,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 
         writeCommand += ` && echo "SUCCESS"`;
 
-        sshConn.client.exec(writeCommand, (err, stream) => {
+        execChannel(sshConn, writeCommand, (err, stream) => {
           if (err) {
             fileLogger.error("Chunked fallback upload failed:", err);
             if (!res.headersSent) {
@@ -3834,7 +3955,7 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 
   const createCommand = `touch '${escapedPath}' && echo "SUCCESS" && exit 0`;
 
-  sshConn.client.exec(createCommand, (err, stream) => {
+  execChannel(sshConn, createCommand, (err, stream) => {
     if (err) {
       fileLogger.error("SSH createFile error:", err);
       if (!res.headersSent) {
@@ -3973,7 +4094,7 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 
   const createCommand = `mkdir -p '${escapedPath}' && echo "SUCCESS" && exit 0`;
 
-  sshConn.client.exec(createCommand, (err, stream) => {
+  execChannel(sshConn, createCommand, (err, stream) => {
     if (err) {
       fileLogger.error("SSH createFolder error:", err);
       if (!res.headersSent) {
@@ -4126,7 +4247,7 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
   const executeDelete = (useSudo: boolean): Promise<void> => {
     return new Promise((resolve) => {
       if (useSudo && sshConn.sudoPassword) {
-        execWithSudo(sshConn.client, deleteCommand, sshConn.sudoPassword).then(
+        execWithSudo(sshConn, deleteCommand, sshConn.sudoPassword).then(
           (result) => {
             if (
               result.code === 0 ||
@@ -4152,7 +4273,8 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
         return;
       }
 
-      sshConn.client.exec(
+      execChannel(
+        sshConn,
         `${deleteCommand} && echo "SUCCESS"`,
         (err, stream) => {
           if (err) {
@@ -4296,7 +4418,7 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 
   const renameCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
 
-  sshConn.client.exec(renameCommand, (err, stream) => {
+  execChannel(sshConn, renameCommand, (err, stream) => {
     if (err) {
       fileLogger.error("SSH renameItem error:", err);
       if (!res.headersSent) {
@@ -4461,7 +4583,7 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
     }
   }, 60000);
 
-  sshConn.client.exec(moveCommand, (err, stream) => {
+  execChannel(sshConn, moveCommand, (err, stream) => {
     if (err) {
       clearTimeout(commandTimeout);
       fileLogger.error("SSH moveItem error:", err);
@@ -4772,7 +4894,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
     }
   }, 60000);
 
-  sshConn.client.exec(copyCommand, (err, stream) => {
+  execChannel(sshConn, copyCommand, (err, stream) => {
     if (err) {
       clearTimeout(commandTimeout);
       fileLogger.error("SSH copyItem error:", err);
@@ -4942,7 +5064,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 
   const checkCommand = `test -x '${escapedPath}' && echo "EXECUTABLE" || echo "NOT_EXECUTABLE"`;
 
-  sshConn.client.exec(checkCommand, (checkErr, checkStream) => {
+  execChannel(sshConn, checkCommand, (checkErr, checkStream) => {
     if (checkErr) {
       fileLogger.error("SSH executeFile check error:", checkErr);
       return res
@@ -4962,7 +5084,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 
       const executeCommand = `cd "$(dirname '${escapedPath}')" && '${escapedPath}' 2>&1; echo "EXIT_CODE:$?"`;
 
-      sshConn.client.exec(executeCommand, (err, stream) => {
+      execChannel(sshConn, executeCommand, (err, stream) => {
         if (err) {
           fileLogger.error("SSH executeFile error:", err);
           return res.status(500).json({ error: "Failed to execute file" });
@@ -5101,7 +5223,7 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
     }
   }, 10000);
 
-  sshConn.client.exec(command, (err, stream) => {
+  execChannel(sshConn, command, (err, stream) => {
     if (err) {
       clearTimeout(commandTimeout);
       fileLogger.error("SSH changePermissions exec error:", err, {
@@ -5305,7 +5427,7 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
     command: extractCommand,
   });
 
-  session.client.exec(extractCommand, (err, stream) => {
+  execChannel(session, extractCommand, (err, stream) => {
     if (err) {
       fileLogger.error("SSH exec error during extract:", err, {
         operation: "extract_archive",
@@ -5524,7 +5646,7 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
     command: compressCommand,
   });
 
-  session.client.exec(compressCommand, (err, stream) => {
+  execChannel(session, compressCommand, (err, stream) => {
     if (err) {
       fileLogger.error("SSH exec error during compress:", err, {
         operation: "compress_files",

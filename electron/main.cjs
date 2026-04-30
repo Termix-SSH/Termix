@@ -96,7 +96,10 @@ function decodeElectronAuthCookieValue(record) {
   try {
     return safeStorage.decryptString(Buffer.from(record.value, "base64"));
   } catch (error) {
-    logToFile("Failed to decrypt persisted Electron auth cookie:", error.message);
+    logToFile(
+      "Failed to decrypt persisted Electron auth cookie:",
+      error.message,
+    );
     return null;
   }
 }
@@ -200,7 +203,10 @@ function clearPersistedElectronAuthCookies() {
       fs.rmSync(electronAuthCookiesPath, { force: true });
     }
   } catch (error) {
-    logToFile("Failed to clear persisted Electron auth cookies:", error.message);
+    logToFile(
+      "Failed to clear persisted Electron auth cookies:",
+      error.message,
+    );
   }
 }
 
@@ -257,9 +263,7 @@ function rememberElectronAuthCookieFromHeader(url, header) {
   }
 
   const expiresAt =
-    cookie.maxAge !== null
-      ? Date.now() + cookie.maxAge * 1000
-      : cookie.expires;
+    cookie.maxAge !== null ? Date.now() + cookie.maxAge * 1000 : cookie.expires;
 
   electronAuthCookies.set(key, {
     name: cookie.name,
@@ -303,7 +307,9 @@ function getHeaderName(headers, name) {
 function setCookieHeaderValue(requestHeaders, name, value) {
   const headerName = getHeaderName(requestHeaders, "Cookie") || "Cookie";
   const existing = requestHeaders[headerName];
-  const existingValue = Array.isArray(existing) ? existing.join("; ") : existing;
+  const existingValue = Array.isArray(existing)
+    ? existing.join("; ")
+    : existing;
   const nextCookie = `${name}=${value}`;
   const otherCookies = String(existingValue || "")
     .split(";")
@@ -452,7 +458,10 @@ async function clearElectronClientCacheIfBuildChanged() {
         : 0;
     }
   } catch (error) {
-    logToFile("Failed to read Electron client cache build info:", error.message);
+    logToFile(
+      "Failed to read Electron client cache build info:",
+      error.message,
+    );
   }
 
   if (cacheTimestamp === buildTimestamp) {
@@ -532,7 +541,10 @@ async function clearElectronJwtCookiesAtStartup() {
       const cookies = await targetSession.cookies.get({ name: "jwt" });
       await Promise.all(
         cookies.map((cookie) =>
-          targetSession.cookies.remove(getCookieRemovalUrl(cookie), cookie.name),
+          targetSession.cookies.remove(
+            getCookieRemovalUrl(cookie),
+            cookie.name,
+          ),
         ),
       );
 
@@ -2257,10 +2269,7 @@ ipcMain.handle(
     }
 
     const rememberedCookie = getRememberedElectronAuthCookie(name, targetUrl);
-    if (
-      rememberedCookie?.value &&
-      rememberedCookie.value !== previousValue
-    ) {
+    if (rememberedCookie?.value && rememberedCookie.value !== previousValue) {
       return { success: true, value: rememberedCookie.value };
     }
 

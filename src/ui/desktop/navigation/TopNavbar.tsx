@@ -10,16 +10,7 @@ import { TabDropdown } from "@/ui/desktop/navigation/tabs/TabDropdown.tsx";
 import { SSHToolsSidebar } from "@/ui/desktop/apps/tools/SSHToolsSidebar.tsx";
 import { useCommandHistory } from "@/ui/desktop/apps/features/terminal/command-history/CommandHistoryContext.tsx";
 import { QuickConnectDialog } from "@/ui/desktop/navigation/dialogs/QuickConnectDialog.tsx";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu.tsx";
-import { Terminal as TerminalIcon } from "lucide-react";
-import { TERMINAL_THEMES } from "@/constants/terminal-themes.ts";
+
 import type { TabContextTab } from "@/types";
 
 type TabData = TabContextTab;
@@ -519,71 +510,6 @@ export function TopNavbar({
 
         <div className="flex items-center justify-center gap-2 flex-1 px-2">
           <TabDropdown />
-
-          {/* Terminal Theme Switcher */}
-          {(() => {
-            const activeTab = tabs.find((t) => t.id === currentTab);
-            if (activeTab?.type !== "terminal") return null;
-
-            return (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-[30px] h-[30px] border-edge"
-                    title={t("hosts.selectTheme")}
-                  >
-                    <TerminalIcon className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="bg-canvas border-edge text-foreground max-h-[400px] overflow-y-auto thin-scrollbar"
-                  onMouseLeave={() => setPreviewTerminalTheme(null)}
-                >
-                  <DropdownMenuLabel className="text-xs opacity-70">
-                    Terminal Themes
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {Object.entries(TERMINAL_THEMES).map(([key, theme]) => (
-                    <DropdownMenuItem
-                      key={key}
-                      onClick={() => {
-                        const activeTab = tabs.find((t) => t.id === currentTab);
-                        if (activeTab?.hostConfig) {
-                          const updatedConfig = {
-                            ...activeTab.hostConfig.terminalConfig,
-                            theme: key,
-                          };
-
-                          // Persist terminal theme selection to localStorage
-                          localStorage.setItem(
-                            `terminal_theme_host_${activeTab.hostConfig.id}`,
-                            key,
-                          );
-
-                          updateTab(currentTab, {
-                            hostConfig: {
-                              ...activeTab.hostConfig,
-                              terminalConfig: updatedConfig,
-                            },
-                          });
-                        }
-                      }}
-                      onMouseEnter={() => setPreviewTerminalTheme(key)}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full border border-edge"
-                        style={{ backgroundColor: theme.colors.background }}
-                      />
-                      <span>{theme.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            );
-          })()}
 
           <Button
             variant="outline"

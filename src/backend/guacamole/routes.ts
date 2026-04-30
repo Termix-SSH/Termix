@@ -62,10 +62,15 @@ router.post("/token", async (req, res) => {
         );
         break;
       case "vnc":
-        token = tokenService.createVncToken(hostname, username || undefined, password, {
-          port: port || 5900,
-          ...options,
-        });
+        token = tokenService.createVncToken(
+          hostname,
+          username || undefined,
+          password,
+          {
+            port: port || 5900,
+            ...options,
+          },
+        );
         break;
       case "telnet":
         token = tokenService.createTelnetToken(hostname, username, password, {
@@ -205,10 +210,15 @@ router.post(
           });
           break;
         case "vnc":
-          token = tokenService.createVncToken(hostname, username || undefined, password, {
-            port: port || 5900,
-            ...guacConfig,
-          });
+          token = tokenService.createVncToken(
+            hostname,
+            username || undefined,
+            password,
+            {
+              port: port || 5900,
+              ...guacConfig,
+            },
+          );
           break;
         case "telnet":
           token = tokenService.createTelnetToken(hostname, username, password, {
