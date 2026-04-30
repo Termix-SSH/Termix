@@ -736,6 +736,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshStream = null;
         break;
 
+      case "get_cwd": {
+        if (!sshConn) {
+          ws.send(JSON.stringify({ type: "cwd", path: "/" }));
+          break;
+        }
+        sshConn.exec("pwd", (err, stream) => {
+          if (err) {
+            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
+            return;
+          }
+          let output = "";
+          stream.on("data", (chunk: Buffer) => {
+            output += chunk.toString();
+          });
+          stream.on("close", () => {
+            const cwd = output.trim() || "/";
+            ws.send(JSON.stringify({ type: "cwd", path: cwd }));
+          });
+        });
+        break;
+      }
+
       case "input": {
         const inputData = data as string;
         const inputStream =

@@ -473,11 +473,16 @@ export function AppView({
                       onTitleChange={(title) => updateTab(t.id, { title })}
                       onOpenFileManager={
                         (t.hostConfig as any)?.enableFileManager
-                          ? () =>
+                          ? (path?: string) =>
                               addTab({
                                 type: "file_manager",
                                 title: t.title,
-                                hostConfig: t.hostConfig,
+                                hostConfig: path
+                                  ? {
+                                      ...t.hostConfig!,
+                                      defaultPath: path,
+                                    }
+                                  : t.hostConfig,
                               })
                           : undefined
                       }

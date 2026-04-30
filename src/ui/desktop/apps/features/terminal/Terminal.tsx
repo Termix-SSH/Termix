@@ -88,7 +88,7 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
-  onOpenFileManager?: () => void;
+  onOpenFileManager?: (path?: string) => void;
   previewTheme?: string | null;
 }
 
@@ -1391,6 +1391,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
+          } else if (msg.type === "cwd") {
+            onOpenFileManager?.(msg.path as string);
           } else if (msg.type === "passphrase_required") {
             setShowPassphraseDialog(true);
             setIsConnecting(false);
