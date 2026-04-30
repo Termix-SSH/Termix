@@ -1,20 +1,7 @@
 # Statistiche Repo
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
-  <a href="README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
-  <a href="README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <a href="README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <a href="README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · 🇮🇹 Italiano
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-Se lo desideri, puoi supportare il progetto qui!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # Panoramica
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix è una piattaforma di gestione server tutto-in-uno, open-source, per semp
 
 - **Accesso Terminale SSH** - Terminale completo con supporto schermo diviso (fino a 4 pannelli) con un sistema di schede in stile browser. Include il supporto per la personalizzazione del terminale, inclusi temi, font e altri componenti comuni.
 - **Accesso Desktop Remoto** - Supporto RDP, VNC e Telnet tramite browser con personalizzazione completa e schermo diviso.
-- **Gestione Tunnel SSH** - Crea e gestisci tunnel SSH con riconnessione automatica e monitoraggio dello stato, con supporto per connessioni -l o -r.
+- **Gestione Tunnel SSH** - Crea e gestisci tunnel SSH da server a server con riconnessione automatica, monitoraggio dello stato e inoltro locale, remoto o SOCKS dinamico. Le impostazioni del tunnel da client desktop a server sono archiviate localmente per ogni installazione desktop; gli snapshot di preset C2S opzionali possono essere salvati sul server, rinominati, caricati o eliminati per spostare una configurazione di tunnel locale tra i client.
 - **Gestore File Remoto** - Gestisci i file direttamente sui server remoti con supporto per la visualizzazione e la modifica di codice, immagini, audio e video. Carica, scarica, rinomina, elimina e sposta file senza problemi con supporto sudo.
 - **Gestione Docker** - Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Non è stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
 - **Gestore Host SSH** - Salva, organizza e gestisci le tue connessioni SSH con tag e cartelle, salva facilmente le informazioni di accesso riutilizzabili e automatizza il deployment delle chiavi SSH.
@@ -59,6 +43,7 @@ Termix è una piattaforma di gestione server tutto-in-uno, open-source, per semp
 - **RBAC** - Crea ruoli e condividi host tra utenti/ruoli.
 - **Autenticazione Utente** - Gestione utenti sicura con controlli amministrativi e supporto OIDC (con controllo degli accessi) e 2FA (TOTP). Visualizza le sessioni utente attive su tutte le piattaforme e revoca i permessi. Collega i tuoi account OIDC/Locali tra loro.
 - **Crittografia Database** - Il backend è archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site/security) per maggiori informazioni.
+- **Chiavi API** - Crea chiavi API con ambito utente e date di scadenza da utilizzare per automazione/CI.
 - **Esportazione/Importazione Dati** - Esporta e importa host SSH, credenziali e dati del gestore file.
 - **Configurazione SSL Automatica** - Generazione e gestione integrata dei certificati SSL con reindirizzamenti HTTPS.
 - **Interfaccia Moderna** - Interfaccia pulita e responsive per desktop/mobile costruita con React, Tailwind CSS e Shadcn. Scegli tra molti temi UI diversi, inclusi chiaro, scuro, Dracula, ecc. Usa i percorsi URL per aprire qualsiasi connessione a schermo intero.
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:

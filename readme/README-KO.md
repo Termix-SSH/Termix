@@ -1,20 +1,7 @@
 # 리포지토리 통계
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어 ·
-  <a href="README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
-  <a href="README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <a href="README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <a href="README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <a href="README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · 🇰🇷 한국어 · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-프로젝트를 후원하고 싶으시다면 여기에서 지원해 주세요!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # 개요
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 
 - **SSH 터미널 접속** - 브라우저 스타일 탭 시스템과 분할 화면 지원(최대 4개 패널)을 갖춘 완전한 기능의 터미널. 일반 터미널 테마, 글꼴 및 기타 구성 요소를 포함한 터미널 사용자 정의 지원.
 - **원격 데스크톱 접속** - 완전한 사용자 정의와 분할 화면을 지원하는 브라우저 기반 RDP, VNC, Telnet 지원.
-- **SSH 터널 관리** - 자동 재연결 및 상태 모니터링 기능을 갖춘 SSH 터널 생성 및 관리, -l 또는 -r 연결 지원.
+- **SSH 터널 관리** - 자동 재연결, 상태 모니터링, 로컬·원격·동적 SOCKS 포워딩을 지원하는 서버 간 SSH 터널 생성 및 관리. 데스크톱 클라이언트-서버 터널 설정은 데스크톱 설치별로 로컬에 저장되며, 선택적 C2S 사전 설정 스냅샷을 서버에 저장·이름 변경·불러오기·삭제하여 클라이언트 간 로컬 터널 구성을 이동할 수 있습니다.
 - **원격 파일 관리자** - 코드, 이미지, 오디오, 비디오의 보기 및 편집을 지원하여 원격 서버에서 파일을 직접 관리. sudo 지원으로 파일 업로드, 다운로드, 이름 변경, 삭제, 이동을 원활하게 수행.
 - **Docker 관리** - 컨테이너 시작, 중지, 일시 정지, 제거. 컨테이너 통계 보기. docker exec 터미널로 컨테이너 제어. Portainer나 Dockge를 대체하기 위한 것이 아니라 컨테이너 생성보다는 간편한 관리를 목적으로 합니다.
 - **SSH 호스트 관리자** - 태그와 폴더로 SSH 연결을 저장, 정리, 관리하고, 재사용 가능한 로그인 정보를 쉽게 저장하면서 SSH 키 배포를 자동화.
@@ -59,6 +43,7 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 - **RBAC** - 역할을 생성하고 사용자/역할 간에 호스트 공유.
 - **사용자 인증** - 관리자 제어와 OIDC(액세스 제어 포함) 및 2FA(TOTP) 지원을 통한 안전한 사용자 관리. 모든 플랫폼에서 활성 사용자 세션을 보고 권한을 취소 가능. OIDC/로컬 계정 연동.
 - **데이터베이스 암호화** - 백엔드가 암호화된 SQLite 데이터베이스 파일로 저장됨. 자세한 내용은 [문서](https://docs.termix.site/security)를 참조하세요.
+- **API 키** - 자동화/CI에 사용할 만료일이 있는 사용자 범위 API 키 생성.
 - **데이터 내보내기/가져오기** - SSH 호스트, 자격 증명, 파일 관리자 데이터의 내보내기 및 가져오기.
 - **자동 SSL 설정** - HTTPS 리디렉션을 포함한 내장 SSL 인증서 생성 및 관리.
 - **모던 UI** - React, Tailwind CSS, Shadcn으로 구축된 깔끔한 데스크톱/모바일 친화적 인터페이스. 라이트, 다크, 드라큘라 등 다양한 UI 테마 선택 가능. URL 라우트를 사용하여 모든 연결을 전체 화면으로 열기 가능.
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:

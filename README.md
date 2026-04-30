@@ -37,7 +37,7 @@ free and self-hosted alternative to Termius available for all platforms.
 
 - **SSH Terminal Access** - Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
 - **Remote Desktop Access** - RDP, VNC, and Telnet support over the browser with complete customization and split screening
-- **SSH Tunnel Management** - Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding powered by `ssh2` port-forwarding primitives. Desktop client-to-server tunnel settings are stored locally per desktop install; optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
+- **SSH Tunnel Management** - Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
 - **Remote File Manager** - Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
 - **Docker Management** - Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 - **SSH Host Manager** - Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys
@@ -46,6 +46,7 @@ free and self-hosted alternative to Termius available for all platforms.
 - **RBAC** - Create roles and share hosts across users/roles
 - **User Authentication** - Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 - **Database Encryption** - Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
+- **API Keys** - Create user-scoped API keys with expiration dates to be used for automation/CI
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
 - **Automatic SSL Setup** - Built-in SSL certificate generation and management with HTTPS redirects
 - **Modern UI** - Clean desktop/mobile-friendly interface built with React, Tailwind CSS, and Shadcn. Choose between many different UI themes including light, dark, Dracula, etc. Use URL routes to open any connection in full-screen.

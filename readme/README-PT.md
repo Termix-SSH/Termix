@@ -1,20 +1,7 @@
 # Estatísticas do Repositório
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
-  <a href="README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
-  <a href="README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <a href="README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <a href="README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · 🇧🇷 Português · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-Se desejar, você pode apoiar o projeto aqui!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # Visão Geral
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código a
 
 - **Acesso ao Terminal SSH** - Terminal completo com suporte a tela dividida (até 4 painéis) com um sistema de abas similar ao navegador. Inclui suporte para personalização do terminal incluindo temas comuns de terminal, fontes e outros componentes.
 - **Acesso à Área de Trabalho Remota** - Suporte a RDP, VNC e Telnet pelo navegador com personalização completa e tela dividida
-- **Gerenciamento de Túneis SSH** - Crie e gerencie túneis SSH com reconexão automática e monitoramento de saúde, com suporte para conexões -l ou -r
+- **Gerenciamento de Túneis SSH** - Crie e gerencie túneis SSH de servidor para servidor com reconexão automática, monitoramento de saúde e encaminhamento local, remoto ou SOCKS dinâmico. As configurações de túnel de cliente desktop para servidor são armazenadas localmente por instalação de desktop; snapshots de predefinições C2S opcionais podem ser salvos no servidor, renomeados, carregados ou excluídos para mover uma configuração de túnel local entre clientes.
 - **Gerenciador Remoto de Arquivos** - Gerencie arquivos diretamente em servidores remotos com suporte para visualizar e editar código, imagens, áudio e vídeo. Faça upload, download, renomeie, exclua e mova arquivos facilmente com suporte sudo.
 - **Gerenciamento de Docker** - Inicie, pare, pause, remova contêineres. Visualize estatísticas de contêineres. Controle contêineres usando o terminal Docker Exec. Não foi feito para substituir Portainer ou Dockge, mas sim para simplesmente gerenciar seus contêineres em vez de criá-los.
 - **Gerenciador de Hosts SSH** - Salve, organize e gerencie suas conexões SSH com tags e pastas, e salve facilmente informações de login reutilizáveis com a capacidade de automatizar a implantação de chaves SSH
@@ -59,6 +43,7 @@ Termix é uma plataforma de gerenciamento de servidores tudo-em-um, de código a
 - **RBAC** - Crie funções e compartilhe hosts entre usuários/funções
 - **Autenticação de Usuários** - Gerenciamento seguro de usuários com controles de administrador e suporte para OIDC (com controle de acesso) e 2FA (TOTP). Visualize sessões ativas de usuários em todas as plataformas e revogue permissões. Vincule suas contas OIDC/Locais entre si.
 - **Criptografia de Banco de Dados** - Backend armazenado como arquivos de banco de dados SQLite criptografados. Consulte a [documentação](https://docs.termix.site/security) para mais informações.
+- **Chaves de API** - Crie chaves de API com escopo de usuário e datas de expiração para uso em automação/CI.
 - **Exportação/Importação de Dados** - Exporte e importe hosts SSH, credenciais e dados do gerenciador de arquivos
 - **Configuração Automática de SSL** - Geração e gerenciamento integrado de certificados SSL com redirecionamentos HTTPS
 - **Interface Moderna** - Interface limpa compatível com desktop/mobile construída com React, Tailwind CSS e Shadcn. Escolha entre muitos temas de interface diferentes, incluindo claro, escuro, Drácula, etc. Use rotas de URL para abrir qualquer conexão em tela cheia.
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:
@@ -181,7 +166,7 @@ Por favor, seja o mais detalhado possível no seu relato, preferencialmente escr
 [![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
 <p align="center">
-  <img src="../repo-images/Image 1.png" width="400" alt="Termix Demo 1"/>
+  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
   <img src="../repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
 </p>
 
@@ -202,12 +187,12 @@ Por favor, seja o mais detalhado possível no seu relato, preferencialmente escr
 
 <p align="center">
   <img src="../repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="../repo-images/Image 10.png" width="400" alt="Termix Demo 10"/>
+  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
 </p>
 
 <p align="center">
-  <img src="../repo-images/Image 11.png" width="400" alt="Termix Demo 11"/>
-  <img src="../repo-images/Image 12.png" width="400" alt="Termix Demo 12"/>
+  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
+  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
 </p>
 
 Alguns vídeos e imagens podem estar desatualizados ou podem não mostrar perfeitamente as funcionalidades.

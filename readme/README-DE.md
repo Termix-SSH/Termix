@@ -1,20 +1,7 @@
 # Repo-Statistiken
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
-  <a href="README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
-  <img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <a href="README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <a href="README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <a href="README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · 🇩🇪 Deutsch · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-Wenn Sie möchten, können Sie das Projekt hier unterstützen!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # Überblick
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-S
 
 - **SSH-Terminalzugriff** - Voll ausgestattetes Terminal mit Split-Screen-Unterstützung (bis zu 4 Panels) mit einem browserähnlichen Tab-System. Enthält Unterstützung für die Anpassung des Terminals einschließlich gängiger Terminal-Themes, Schriftarten und anderer Komponenten.
 - **Remote-Desktop-Zugriff** - RDP-, VNC- und Telnet-Unterstützung über den Browser mit vollständiger Anpassung und Split-Screen.
-- **SSH-Tunnelverwaltung** - Erstellen und verwalten Sie SSH-Tunnel mit automatischer Wiederverbindung und Gesundheitsüberwachung sowie Unterstützung für -l oder -r Verbindungen.
+- **SSH-Tunnelverwaltung** - Erstellen und verwalten Sie Server-zu-Server-SSH-Tunnel mit automatischer Wiederverbindung und Gesundheitsüberwachung sowie lokaler, entfernter oder dynamischer SOCKS-Weiterleitung. Desktop-Client-zu-Server-Tunneleinstellungen werden lokal pro Desktop-Installation gespeichert, optionale C2S-Preset-Snapshots können auf dem Server gespeichert, umbenannt, geladen oder gelöscht werden, um eine lokale Tunnelkonfiguration zwischen Clients zu übertragen.
 - **Remote-Dateimanager** - Verwalten Sie Dateien direkt auf Remote-Servern mit Unterstützung für das Anzeigen und Bearbeiten von Code, Bildern, Audio und Video. Laden Sie Dateien hoch, herunter, benennen Sie sie um, löschen oder verschieben Sie sie nahtlos mit Sudo-Unterstützung.
 - **Docker-Verwaltung** - Container starten, stoppen, pausieren, entfernen. Container-Statistiken anzeigen. Container über Docker-Exec-Terminal steuern. Es wurde nicht entwickelt, um Portainer oder Dockge zu ersetzen, sondern um Ihre Container einfach zu verwalten, anstatt sie zu erstellen.
 - **SSH-Host-Manager** - Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Möglichkeit, die Bereitstellung von SSH-Schlüsseln zu automatisieren.
@@ -59,6 +43,7 @@ Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-S
 - **RBAC** - Rollen erstellen und Hosts über Benutzer/Rollen teilen.
 - **Benutzerauthentifizierung** - Sichere Benutzerverwaltung mit Admin-Kontrollen und OIDC- (mit Zugriffskontrolle) sowie 2FA (TOTP)-Unterstützung. Aktive Benutzersitzungen über alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknüpfen.
 - **Datenbankverschlüsselung** - Backend gespeichert als verschlüsselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site/security).
+- **API-Schlüssel** - Erstellen Sie benutzerbezogene API-Schlüssel mit Ablaufdaten zur Verwendung für Automatisierung/CI.
 - **Datenexport/-import** - SSH-Hosts, Anmeldeinformationen und Dateimanager-Daten exportieren und importieren.
 - **Automatische SSL-Einrichtung** - Integrierte SSL-Zertifikatsgenerierung und -verwaltung mit HTTPS-Weiterleitungen.
 - **Moderne Benutzeroberfläche** - Saubere desktop-/mobilfreundliche Oberfläche, erstellt mit React, Tailwind CSS und Shadcn. Wählen Sie zwischen vielen verschiedenen UI-Themes einschließlich Hell, Dunkel, Dracula usw. Verwenden Sie URL-Routen, um jede Verbindung im Vollbildmodus zu öffnen.
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:

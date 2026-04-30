@@ -1,20 +1,7 @@
 # रिपॉजिटरी आँकड़े
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
-  <a href="README-FR.md"><img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français</a> ·
-  <a href="README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <a href="README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <a href="README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · 🇮🇳 हिन्दी · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-यदि आप चाहें, तो आप यहाँ प्रोजेक्ट को सपोर्ट कर सकते हैं!\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # अवलोकन
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix एक ओपन-सोर्स, हमेशा के लिए मु
 
 - **SSH टर्मिनल एक्सेस** - ब्राउज़र जैसी टैब प्रणाली के साथ स्प्लिट-स्क्रीन सपोर्ट (4 पैनल तक) वाला पूर्ण-विशेषता वाला टर्मिनल। इसमें लोकप्रिय टर्मिनल थीम, फ़ॉन्ट और अन्य कंपोनेंट सहित टर्मिनल को कस्टमाइज़ करने का सपोर्ट शामिल है।
 - **रिमोट डेस्कटॉप एक्सेस** - ब्राउज़र पर RDP, VNC और Telnet सपोर्ट, पूर्ण कस्टमाइज़ेशन और स्प्लिट स्क्रीन के साथ।
-- **SSH टनल प्रबंधन** - ऑटोमैटिक रीकनेक्शन और हेल्थ मॉनिटरिंग के साथ SSH टनल बनाएँ और प्रबंधित करें, -l या -r कनेक्शन के सपोर्ट के साथ।
+- **SSH टनल प्रबंधन** - ऑटोमैटिक रीकनेक्शन, हेल्थ मॉनिटरिंग और लोकल, रिमोट या डायनेमिक SOCKS फॉरवर्डिंग के साथ सर्वर-टु-सर्वर SSH टनल बनाएँ और प्रबंधित करें। डेस्कटॉप क्लाइंट-टु-सर्वर टनल सेटिंग्स प्रत्येक डेस्कटॉप इंस्टॉल में स्थानीय रूप से संग्रहीत होती हैं; वैकल्पिक C2S प्रीसेट स्नैपशॉट सर्वर पर सेव, रीनेम, लोड या डिलीट किए जा सकते हैं।
 - **रिमोट फ़ाइल मैनेजर** - कोड, इमेज, ऑडियो और वीडियो देखने और संपादित करने के सपोर्ट के साथ रिमोट सर्वर पर सीधे फ़ाइलें प्रबंधित करें। sudo सपोर्ट के साथ फ़ाइलें अपलोड, डाउनलोड, रीनेम, डिलीट और मूव करें।
 - **Docker प्रबंधन** - कंटेनर शुरू, बंद, पॉज़, हटाएँ। कंटेनर स्टैट्स देखें। docker exec टर्मिनल का उपयोग करके कंटेनर को नियंत्रित करें। इसे Portainer या Dockge की जगह लेने के लिए नहीं बनाया गया बल्कि कंटेनर बनाने की तुलना में उन्हें सरलता से प्रबंधित करने के लिए बनाया गया है।
 - **SSH होस्ट मैनेजर** - टैग और फ़ोल्डर के साथ अपने SSH कनेक्शन सहेजें, व्यवस्थित करें और प्रबंधित करें, और SSH कुंजियों की तैनाती को स्वचालित करने की क्षमता के साथ पुन: उपयोग योग्य लॉगिन जानकारी आसानी से सहेजें।
@@ -59,6 +43,7 @@ Termix एक ओपन-सोर्स, हमेशा के लिए मु
 - **RBAC** - भूमिकाएँ बनाएँ और उपयोगकर्ताओं/भूमिकाओं में होस्ट साझा करें।
 - **उपयोगकर्ता प्रमाणीकरण** - व्यवस्थापक नियंत्रण और OIDC (एक्सेस कंट्रोल के साथ) और 2FA (TOTP) सपोर्ट के साथ सुरक्षित उपयोगकर्ता प्रबंधन। सभी प्लेटफ़ॉर्म पर सक्रिय उपयोगकर्ता सत्र देखें और अनुमतियाँ रद्द करें। अपने OIDC/स्थानीय खातों को एक साथ जोड़ें।
 - **डेटाबेस एन्क्रिप्शन** - बैकएंड एन्क्रिप्टेड SQLite डेटाबेस फ़ाइलों के रूप में संग्रहीत। अधिक जानकारी के लिए [डॉक्स](https://docs.termix.site/security) देखें।
+- **API कुंजियाँ** - ऑटोमेशन/CI के लिए उपयोग हेतु समाप्ति तिथियों के साथ उपयोगकर्ता-स्कोप्ड API कुंजियाँ बनाएँ।
 - **डेटा एक्सपोर्ट/इम्पोर्ट** - SSH होस्ट, क्रेडेंशियल और फ़ाइल मैनेजर डेटा एक्सपोर्ट और इम्पोर्ट करें।
 - **स्वचालित SSL सेटअप** - HTTPS रीडायरेक्ट के साथ बिल्ट-इन SSL सर्टिफ़िकेट जनरेशन और प्रबंधन।
 - **आधुनिक UI** - React, Tailwind CSS, और Shadcn से बना साफ़ डेस्कटॉप/मोबाइल-फ़्रेंडली इंटरफ़ेस। लाइट, डार्क, ड्रैकुला आदि सहित कई अलग-अलग UI थीम के बीच चुनें। किसी भी कनेक्शन को फ़ुल-स्क्रीन में खोलने के लिए URL रूट का उपयोग करें।
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:

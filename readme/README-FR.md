@@ -1,20 +1,7 @@
 # Statistiques du dépôt
 
 <p align="center">
-  <a href="../README.md"><img src="https://flagcdn.com/us.svg" alt="English" width="24" height="16"> English</a> ·
-  <a href="README-CN.md"><img src="https://flagcdn.com/cn.svg" alt="中文" width="24" height="16"> 中文</a> ·
-  <a href="README-JA.md"><img src="https://flagcdn.com/jp.svg" alt="日本語" width="24" height="16"> 日本語</a> ·
-  <a href="README-KO.md"><img src="https://flagcdn.com/kr.svg" alt="한국어" width="24" height="16"> 한국어</a> ·
-  <img src="https://flagcdn.com/fr.svg" alt="Français" width="24" height="16"> Français ·
-  <a href="README-DE.md"><img src="https://flagcdn.com/de.svg" alt="Deutsch" width="24" height="16"> Deutsch</a> ·
-  <a href="README-ES.md"><img src="https://flagcdn.com/es.svg" alt="Español" width="24" height="16"> Español</a> ·
-  <a href="README-PT.md"><img src="https://flagcdn.com/br.svg" alt="Português" width="24" height="16"> Português</a> ·
-  <a href="README-RU.md"><img src="https://flagcdn.com/ru.svg" alt="Русский" width="24" height="16"> Русский</a> ·
-  <a href="README-AR.md"><img src="https://flagcdn.com/sa.svg" alt="العربية" width="24" height="16"> العربية</a> ·
-  <a href="README-HI.md"><img src="https://flagcdn.com/in.svg" alt="हिन्दी" width="24" height="16"> हिन्दी</a> ·
-  <a href="README-TR.md"><img src="https://flagcdn.com/tr.svg" alt="Türkçe" width="24" height="16"> Türkçe</a> ·
-  <a href="README-VI.md"><img src="https://flagcdn.com/vn.svg" alt="Tiếng Việt" width="24" height="16"> Tiếng Việt</a> ·
-  <a href="README-IT.md"><img src="https://flagcdn.com/it.svg" alt="Italiano" width="24" height="16"> Italiano</a>
+<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · 🇫🇷 Français · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
 </p>
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
@@ -34,9 +21,6 @@
     <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
 </p>
 
-Si vous le souhaitez, vous pouvez soutenir le projet ici !\
-[![GitHub Sponsor](https://img.shields.io/badge/Sponsor-LukeGus-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/LukeGus)
-
 # Présentation
 
 <p align="center">
@@ -50,7 +34,7 @@ Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jam
 
 - **Accès terminal SSH** - Terminal complet avec support d'écran partagé (jusqu'à 4 panneaux) et un système d'onglets inspiré des navigateurs. Inclut la personnalisation du terminal avec des thèmes courants, des polices et d'autres composants.
 - **Accès Bureau à Distance** - Support RDP, VNC et Telnet via navigateur avec personnalisation complète et écran partagé.
-- **Gestion des tunnels SSH** - Créez et gérez des tunnels SSH avec reconnexion automatique et surveillance de l'état, avec support des connexions -l ou -r.
+- **Gestion des tunnels SSH** - Créez et gérez des tunnels SSH de serveur à serveur avec reconnexion automatique, surveillance de l'état et transfert local, distant ou SOCKS dynamique. Les paramètres de tunnel client-bureau-vers-serveur sont stockés localement par installation bureau ; des instantanés de préréglages C2S optionnels peuvent être sauvegardés sur le serveur, renommés, chargés ou supprimés pour déplacer une configuration de tunnel locale entre clients.
 - **Gestionnaire de fichiers distant** - Gérez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'édition de code, images, audio et vidéo. Téléversez, téléchargez, renommez, supprimez et déplacez des fichiers de manière fluide avec support sudo.
 - **Gestion Docker** - Démarrez, arrêtez, mettez en pause, supprimez des conteneurs. Consultez les statistiques des conteneurs. Contrôlez les conteneurs via le terminal docker exec. Non conçu pour remplacer Portainer ou Dockge, mais plutôt pour gérer simplement vos conteneurs plutôt que de les créer.
 - **Gestionnaire d'hôtes SSH** - Enregistrez, organisez et gérez vos connexions SSH avec des tags et des dossiers, et sauvegardez facilement les informations de connexion réutilisables tout en automatisant le déploiement des clés SSH.
@@ -59,6 +43,7 @@ Termix est une plateforme de gestion de serveurs tout-en-un, open source, à jam
 - **RBAC** - Créez des rôles et partagez des hôtes entre utilisateurs/rôles.
 - **Authentification des utilisateurs** - Gestion sécurisée des utilisateurs avec contrôles administrateur et support OIDC (avec contrôle d'accès) et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et révoquez les permissions. Liez vos comptes OIDC/locaux ensemble.
 - **Chiffrement de la base de données** - Le backend est stocké sous forme de fichiers de base de données SQLite chiffrés. Consultez la [documentation](https://docs.termix.site/security) pour plus de détails.
+- **Clés API** - Créez des clés API à portée utilisateur avec des dates d'expiration pour une utilisation en automatisation/CI.
 - **Export/Import de données** - Exportez et importez les hôtes SSH, les identifiants et les données du gestionnaire de fichiers.
 - **Configuration SSL automatique** - Génération et gestion intégrées de certificats SSL avec redirections HTTPS.
 - **Interface moderne** - Interface épurée compatible desktop/mobile construite avec React, Tailwind CSS et Shadcn. Choisissez parmi de nombreux thèmes d'interface utilisateur, notamment clair, sombre, Dracula, etc. Utilisez les routes URL pour ouvrir n'importe quelle connexion en plein écran.
@@ -122,7 +107,7 @@ services:
       - termix-net
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
     ports:
