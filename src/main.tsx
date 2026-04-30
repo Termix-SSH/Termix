@@ -4,9 +4,8 @@ import { StrictMode, Suspense, lazy, useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ElectronVersionCheck } from "@/ui/desktop/user/ElectronVersionCheck.tsx";
 import "./i18n/i18n";
-import { isElectron } from "./ui/main-axios.ts";
+import { isElectron } from "@/lib/electron";
 
 const DesktopApp = lazy(() => import("@/ui/desktop/DesktopApp.tsx"));
 const MobileApp = lazy(() =>
@@ -34,6 +33,11 @@ const DockerApp = lazy(
 );
 const GuacamoleApp = lazy(
   () => import("@/ui/desktop/apps/features/guacamole/GuacamoleApp.tsx"),
+);
+const ElectronVersionCheck = lazy(() =>
+  import("@/ui/desktop/user/ElectronVersionCheck.tsx").then((module) => ({
+    default: module.ElectronVersionCheck,
+  })),
 );
 
 const FullscreenApp: React.FC = () => {
@@ -161,10 +165,12 @@ function RootApp() {
       )}
       <div className="relative min-h-screen" style={{ zIndex: 1 }}>
         {isElectron() && showVersionCheck && !isFullscreen ? (
-          <ElectronVersionCheck
-            onContinue={() => setShowVersionCheck(false)}
-            isAuthenticated={false}
-          />
+          <Suspense fallback={null}>
+            <ElectronVersionCheck
+              onContinue={() => setShowVersionCheck(false)}
+              isAuthenticated={false}
+            />
+          </Suspense>
         ) : (
           <Suspense fallback={null}>{renderApp()}</Suspense>
         )}

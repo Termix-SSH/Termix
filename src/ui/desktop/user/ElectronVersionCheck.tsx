@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { VersionAlert } from "@/components/ui/version-alert.tsx";
 import { useTranslation } from "react-i18next";
-import { checkElectronUpdate, isElectron } from "@/ui/main-axios.ts";
+import { isElectron } from "@/lib/electron";
+import { checkElectronUpdate } from "@/ui/main-axios.ts";
 import { useTheme } from "@/components/theme-provider";
 
 interface VersionCheckModalProps {

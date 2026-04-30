@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
+import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/ui/desktop/navigation/tabs/TabContext";
 import type {
   SSHHost,
@@ -149,14 +150,7 @@ interface OIDCAuthorize {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-export function isElectron(): boolean {
-  const win = window as any;
-  const hasISElectron = win.IS_ELECTRON === true;
-  const hasElectronAPI = !!win.electronAPI;
-  const isElectronProp = win.electronAPI?.isElectron === true;
-
-  return hasISElectron || hasElectronAPI || isElectronProp;
-}
+export { isElectron };
 
 function getLoggerForService(serviceName: string) {
   if (serviceName.includes("SSH") || serviceName.includes("ssh")) {
