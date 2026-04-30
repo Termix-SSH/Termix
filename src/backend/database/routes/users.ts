@@ -1143,7 +1143,11 @@ router.get("/oidc/callback", async (req, res) => {
         }
       }
 
-      if (!isFirstUser) {
+      const oidcAllowRegistration =
+        (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
+        "true";
+
+      if (!isFirstUser && !oidcAllowRegistration) {
         try {
           const regRow = db.$client
             .prepare(
