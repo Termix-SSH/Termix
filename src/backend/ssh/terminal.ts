@@ -1503,15 +1503,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
           });
 
-          stream.on("close", () => {
+          stream.on("close", (code: number | null) => {
             const session = sessionManager.getSession(boundSessionId);
             if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-              session.attachedWs.send(
-                JSON.stringify({
-                  type: "disconnected",
-                  message: "Connection lost",
-                }),
-              );
+              if (code != null) {
+                session.attachedWs.send(
+                  JSON.stringify({
+                    type: "session_ended",
+                    code,
+                  }),
+                );
+              } else {
+                session.attachedWs.send(
+                  JSON.stringify({
+                    type: "disconnected",
+                    message: "Connection lost",
+                  }),
+                );
+              }
             }
             if (boundSessionId) {
               sessionManager.destroySession(boundSessionId);

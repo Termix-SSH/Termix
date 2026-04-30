@@ -1676,6 +1676,7 @@
     "automaticFallback": "Automatically trying {{method}} authentication...",
     "totpTimeout": "TOTP verification timeout. Please reconnect.",
     "passwordTimeout": "Password verification timeout. Please reconnect.",
+    "sessionEnded": "Session ended.",
     "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
     "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
     "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
