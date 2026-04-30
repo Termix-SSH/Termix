@@ -798,7 +798,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 mb-4">
+                  <div className="grid gap-4 mb-4 mt-4">
                     <div>
                       <Label>{t("tunnels.type")}</Label>
                       <div className="mt-2">
@@ -895,7 +895,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     {modeDescription}
                   </p>
                   <div
-                    className="mt-2 rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground"
+                    className="mt-2 rounded-md border bg-canvasX px-3 py-2 text-xs text-muted-foreground"
                     title={tunnelSummary}
                   >
                     <span className="font-medium text-foreground">
@@ -965,7 +965,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     </div>
 
                     <div className="col-span-12 space-y-2">
-                      <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
+                      <div className="flex items-center justify-between gap-3 rounded-md border bg-canvas p-3">
                         <Label>{t("tunnels.autoStart")}</Label>
                         <Switch
                           checked={tunnel.autoStart}
