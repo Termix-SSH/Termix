@@ -2629,37 +2629,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
-
-        {contextMenu && (
-          <TerminalContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            hasSelection={contextMenu.hasSelection}
-            showCopyPaste={getUseRightClickCopyPaste()}
-            showOpenFileManager={!!onOpenFileManager}
-            onCopy={async () => {
-              const selection = terminal?.getSelection();
-              if (selection) {
-                await writeTextToClipboard(selection);
-                terminal?.clearSelection();
-              }
-            }}
-            onPaste={async () => {
-              const text = await readTextFromClipboard();
-              if (text) terminal?.paste(text);
-            }}
-            onOpenFileManager={() => {
-              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
-                webSocketRef.current.send(
-                  JSON.stringify({ type: "get_cwd" }),
-                );
-              } else {
-                onOpenFileManager?.();
-              }
-            }}
-            onClose={() => setContextMenu(null)}
-          />
-        )}
       </div>
     );
   },
