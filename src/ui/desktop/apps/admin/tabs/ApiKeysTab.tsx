@@ -396,6 +396,16 @@ export function ApiKeysTab(): React.ReactElement {
         <h3 className="text-lg font-semibold">{t("admin.apiKeys.title")}</h3>
         <div className="flex gap-2">
           <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs"
+            onClick={() =>
+              window.open("https://docs.termix.site/api-keys", "_blank")
+            }
+          >
+            {t("common.documentation")}
+          </Button>
+          <Button
             onClick={fetchKeys}
             disabled={loading}
             variant="outline"
