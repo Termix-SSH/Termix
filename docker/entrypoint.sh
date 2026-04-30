@@ -7,14 +7,14 @@ PGID=${PGID:-1000}
 if [ "$(id -u)" = "0" ]; then
     if [ "$PUID" = "0" ]; then
         echo "Running as root (PUID=0, PGID=$PGID)"
-        chown -R root:root /app/data /app/uploads /app/nginx 2>/dev/null || true
+        chown -R root:root /app/data /app/uploads /tmp/nginx 2>/dev/null || true
     else
         echo "Setting up user permissions (PUID: $PUID, PGID: $PGID)..."
 
         groupmod -o -g "$PGID" node 2>/dev/null || true
         usermod -o -u "$PUID" node 2>/dev/null || true
 
-        chown -R node:node /app/data /app/uploads /app/nginx 2>/dev/null || true
+        chown -R node:node /app/data /app/uploads /tmp/nginx 2>/dev/null || true
 
         echo "User node is now UID: $PUID, GID: $PGID"
 
@@ -38,7 +38,8 @@ else
     NGINX_CONF_SOURCE="/app/nginx/nginx.conf.template"
 fi
 
-envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /app/nginx/nginx.conf
+mkdir -p /tmp/nginx
+envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
 
 mkdir -p /app/data /app/uploads /app/data/.opk
 chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
@@ -132,7 +133,7 @@ EOF
 fi
 
 echo "Starting nginx..."
-nginx -c /app/nginx/nginx.conf
+nginx -c /tmp/nginx/nginx.conf
 
 echo "Starting backend services..."
 cd /app
