@@ -7,6 +7,7 @@ import React, {
   useMemo,
 } from "react";
 import type { GuacamoleConnectionConfig } from "@/ui/desktop/apps/features/guacamole/GuacamoleDisplay.tsx";
+import type { SSHHost } from "@/types";
 import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 import {
   ResizablePanelGroup,
@@ -84,7 +85,7 @@ interface TabData {
       refresh?: () => void;
     };
   };
-  hostConfig?: any;
+  hostConfig?: SSHHost;
   connectionConfig?: GuacamoleConnectionConfig;
   [key: string]: unknown;
 }
@@ -187,7 +188,6 @@ export function AppView({
   const [panelRects, setPanelRects] = useState<Record<string, DOMRect | null>>(
     {},
   );
-  const [ready, setReady] = useState<boolean>(true);
   const [resetKey, setResetKey] = useState<number>(0);
   const previousStylesRef = useRef<Record<number, React.CSSProperties>>({});
 
@@ -419,7 +419,7 @@ export function AppView({
           const isTerminal = t.type === "terminal";
           const terminalConfig = {
             ...DEFAULT_TERMINAL_CONFIG,
-            ...(t.hostConfig as any)?.terminalConfig,
+            ...t.hostConfig?.terminalConfig,
           };
 
           let themeColors;
@@ -701,7 +701,7 @@ export function AppView({
 
   const terminalConfig = {
     ...DEFAULT_TERMINAL_CONFIG,
-    ...(currentTabData?.hostConfig as any)?.terminalConfig,
+    ...currentTabData?.hostConfig?.terminalConfig,
   };
   let containerThemeColors;
   if (terminalConfig.theme === "termix") {

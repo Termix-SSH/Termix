@@ -110,7 +110,6 @@ export function ContainerDetail({
             className="flex-1 overflow-hidden px-3 pb-3 mt-3"
           >
             <ConsoleTerminal
-              sessionId={sessionId}
               containerId={containerId}
               containerName={container.name}
               containerState={container.state}

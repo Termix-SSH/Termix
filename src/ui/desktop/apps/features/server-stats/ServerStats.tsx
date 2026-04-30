@@ -43,11 +43,18 @@ import {
   useConnectionLog,
 } from "@/ui/desktop/navigation/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ui/desktop/navigation/connection-log/ConnectionLog.tsx";
+import type { LogEntry } from "@/types/connection-log.ts";
 
 interface QuickAction {
   name: string;
   snippetId: number;
 }
+
+type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
+
+type ConnectionLogError = Error & {
+  connectionLogs?: ConnectionLogPayload[];
+};
 
 interface HostConfig {
   id: number;
@@ -59,14 +66,6 @@ interface HostConfig {
   tunnelConnections?: unknown[];
   quickActions?: QuickAction[];
   statsConfig?: string | StatsConfig;
-  [key: string]: unknown;
-}
-
-interface TabData {
-  id: number;
-  type: string;
-  title?: string;
-  hostConfig?: HostConfig;
   [key: string]: unknown;
 }
 
@@ -92,9 +91,7 @@ function ServerStatsInner({
     clearLogs,
     isExpanded: isConnectionLogExpanded,
   } = useConnectionLog();
-  const { addTab, tabs, currentTab, removeTab } = useTabs() as {
-    addTab: (tab: { type: string; [key: string]: unknown }) => number;
-    tabs: TabData[];
+  const { currentTab, removeTab } = useTabs() as {
     currentTab: number | null;
     removeTab: (tabId: number) => void;
   };
@@ -419,7 +416,7 @@ function ServerStatsInner({
           if (cancelled) return;
 
           if (result?.connectionLogs) {
-            result.connectionLogs.forEach((log: any) => {
+            result.connectionLogs.forEach((log) => {
               addLog({
                 type: log.type,
                 stage: log.stage,
@@ -451,7 +448,7 @@ function ServerStatsInner({
           try {
             data = await getServerMetricsById(currentHostConfig.id);
             break;
-          } catch (error: any) {
+          } catch (error: unknown) {
             retryCount++;
             if (retryCount === 1) {
               const initialDelay = totpVerified ? 3000 : 5000;
@@ -492,14 +489,15 @@ function ServerStatsInner({
             }
           }
         }, statsConfig.metricsInterval * 1000);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
+          const logError = error as ConnectionLogError;
           console.error("Failed to start metrics polling:", error);
           setIsLoadingMetrics(false);
           setHasConnectionError(true);
 
-          if (error?.connectionLogs) {
-            error.connectionLogs.forEach((log: any) => {
+          if (logError.connectionLogs) {
+            logError.connectionLogs.forEach((log) => {
               addLog({
                 type: log.type,
                 stage: log.stage,
@@ -511,7 +509,10 @@ function ServerStatsInner({
             addLog({
               type: "error",
               stage: "connection",
-              message: error?.message || t("serverStats.connectionFailed"),
+              message:
+                error instanceof Error
+                  ? error.message
+                  : t("serverStats.connectionFailed"),
             });
           }
         }
@@ -565,15 +566,6 @@ function ServerStatsInner({
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = sidebarState === "collapsed" ? 16 : 8;
   const bottomMarginPx = 8;
-
-  const isFileManagerAlreadyOpen = React.useMemo(() => {
-    if (!currentHostConfig) return false;
-    return tabs.some(
-      (tab: TabData) =>
-        tab.type === "file_manager" &&
-        tab.hostConfig?.id === currentHostConfig.id,
-    );
-  }, [tabs, currentHostConfig]);
 
   const wrapperStyle: React.CSSProperties = embedded
     ? { opacity: isVisible ? 1 : 0, height: "100%", width: "100%" }
@@ -775,7 +767,7 @@ function ServerStatsInner({
                                     },
                                   );
                                 }
-                              } catch (error: any) {
+                              } catch (error: unknown) {
                                 toast.error(
                                   t("serverStats.quickActionError", {
                                     name: action.name,
@@ -783,7 +775,9 @@ function ServerStatsInner({
                                   {
                                     id: `quick-action-${action.snippetId}`,
                                     description:
-                                      error?.message || "Unknown error",
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Unknown error",
                                     duration: 5000,
                                   },
                                 );

@@ -3,7 +3,6 @@ import React, {
   useEffect,
   Component,
   type FC,
-  type ErrorInfo,
   type ReactNode,
 } from "react";
 import { Terminal } from "@/ui/mobile/apps/terminal/Terminal.tsx";
@@ -23,8 +22,17 @@ import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 
+type ReactNativeWindow = Window & {
+  ReactNativeWebView?: {
+    postMessage: (message: string) => void;
+  };
+};
+
 function isReactNativeWebView(): boolean {
-  return typeof window !== "undefined" && !!(window as any).ReactNativeWebView;
+  return (
+    typeof window !== "undefined" &&
+    !!(window as ReactNativeWindow).ReactNativeWebView
+  );
 }
 
 const AppContent: FC = () => {
@@ -271,7 +279,7 @@ class TabErrorBoundary extends Component<
     throw error;
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error) {
     if (error.message?.includes("useTabs must be used within a TabProvider")) {
       console.warn(
         "TabProvider mounting race condition detected, recovering...",

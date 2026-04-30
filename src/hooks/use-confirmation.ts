@@ -144,7 +144,7 @@ export function useConfirmation() {
           setPendingConfirmCallback(null);
           setPendingResolve(null);
         },
-      } as any);
+      } as NonNullable<Parameters<typeof toast>[1]>);
 
       if (confirmOnEnter) {
         setActiveToastId(toastId);

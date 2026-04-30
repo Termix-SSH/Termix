@@ -48,7 +48,7 @@ import { useTabs } from "@/ui/desktop/navigation/tabs/TabContext.tsx";
 
 export function HostTerminalTab({ form, snippets, t }: HostTerminalTabProps) {
   const [snippetPopoverOpen, setSnippetPopoverOpen] = React.useState(false);
-  const { setPreviewTerminalTheme } = useTabs() as any;
+  const { setPreviewTerminalTheme } = useTabs();
   return (
     <div className="space-y-1">
       <FormField

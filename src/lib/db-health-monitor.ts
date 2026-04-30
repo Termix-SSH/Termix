@@ -14,7 +14,18 @@
  * to reflect the current UX contract: users can keep working regardless
  * of backend hiccups and are simply informed via a toast.
  */
-type EventListener = (...args: any[]) => void;
+type EventListener = (...args: unknown[]) => void;
+
+interface HttpLikeError {
+  message?: string;
+  code?: string;
+  response?: {
+    data?: {
+      error?: string;
+      code?: string;
+    };
+  };
+}
 
 class DatabaseHealthMonitor {
   private static instance: DatabaseHealthMonitor;
@@ -47,7 +58,7 @@ class DatabaseHealthMonitor {
     }
   }
 
-  private emit(event: string, ...args: any[]): void {
+  private emit(event: string, ...args: unknown[]): void {
     const eventListeners = this.listeners.get(event);
     if (eventListeners) {
       eventListeners.forEach((listener) => listener(...args));
@@ -58,9 +69,11 @@ class DatabaseHealthMonitor {
     this.emit("session-expired", { timestamp: Date.now() });
   }
 
-  reportDatabaseError(error: any, _wasAuthenticated: boolean = false) {
-    const errorMessage = error?.response?.data?.error || error?.message || "";
-    const errorCode = error?.response?.data?.code || error?.code;
+  reportDatabaseError(error: unknown) {
+    const errorLike = error as HttpLikeError;
+    const errorMessage =
+      errorLike.response?.data?.error || errorLike.message || "";
+    const errorCode = errorLike.response?.data?.code || errorLike.code;
     const lowerMessage = errorMessage.toLowerCase();
 
     const isDatabaseError =
@@ -78,7 +91,7 @@ class DatabaseHealthMonitor {
       errorCode === "ETIMEDOUT" ||
       errorCode === "ERR_CANCELED" ||
       (lowerMessage.includes("network error") &&
-        error?.response === undefined) ||
+        errorLike.response === undefined) ||
       lowerMessage.includes("request aborted") ||
       lowerMessage.includes("timeout");
 

@@ -1173,7 +1173,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       error: err.message,
     });
 
-    let errorStage: ConnectionStage = "error";
+    let errorStage: ConnectionStage;
     if (
       err.message.includes("ENOTFOUND") ||
       err.message.includes("getaddrinfo")
@@ -5263,7 +5263,7 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const fileName = archivePath.split("/").pop() || "";
   const fileExt = fileName.toLowerCase();
 
-  let extractCommand = "";
+  let extractCommand: string;
   const targetPath =
     extractPath || archivePath.substring(0, archivePath.lastIndexOf("/"));
 
@@ -5473,7 +5473,7 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   scheduleSessionCleanup(sessionId);
 
   const compressionFormat = format || "zip";
-  let compressCommand = "";
+  let compressCommand: string;
 
   const firstPath = paths[0];
   const workingDir = firstPath.substring(0, firstPath.lastIndexOf("/")) || "/";

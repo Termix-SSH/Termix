@@ -23,22 +23,22 @@ import {
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import type { HostRemoteDesktopTabProps } from "./shared/tab-types";
 
+type RemoteDesktopForm = HostRemoteDesktopTabProps["form"];
+
 function GuacField({
   form,
   path,
   label,
   description,
   type = "text",
-  t,
 }: {
-  form: any;
+  form: RemoteDesktopForm;
   path: string;
   label: string;
   description?: string;
   type?: "text" | "number" | "password" | "switch";
-  t: (key: string) => string;
 }) {
-  const fieldName = `guacamoleConfig.${path}` as any;
+  const fieldName = `guacamoleConfig.${path}` as never;
 
   if (type === "switch") {
     return (
@@ -120,13 +120,13 @@ function GuacSelect({
   options,
   placeholder,
 }: {
-  form: any;
+  form: RemoteDesktopForm;
   path: string;
   label: string;
   options: { value: string; label: string }[];
   placeholder?: string;
 }) {
-  const fieldName = `guacamoleConfig.${path}` as any;
+  const fieldName = `guacamoleConfig.${path}` as never;
 
   return (
     <FormField
@@ -254,14 +254,12 @@ export function HostRemoteDesktopTab({
                 path="width"
                 label={t("hosts.width")}
                 type="number"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="height"
                 label={t("hosts.height")}
                 type="number"
-                t={t}
               />
             </div>
             {!isTelnet && (
@@ -271,7 +269,6 @@ export function HostRemoteDesktopTab({
                   path="dpi"
                   label={t("hosts.dpi")}
                   type="number"
-                  t={t}
                 />
                 <GuacSelect
                   form={form}
@@ -288,7 +285,6 @@ export function HostRemoteDesktopTab({
                   path="force-lossless"
                   label={t("hosts.forceLossless")}
                   type="switch"
-                  t={t}
                 />
               </>
             )}
@@ -318,14 +314,12 @@ export function HostRemoteDesktopTab({
                 form={form}
                 path="font-name"
                 label={t("hosts.guacFontName")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="font-size"
                 label={t("hosts.guacFontSize")}
                 type="number"
-                t={t}
               />
               <GuacSelect
                 form={form}
@@ -363,7 +357,6 @@ export function HostRemoteDesktopTab({
                 path="disable-audio"
                 label={t("hosts.disableAudio")}
                 type="switch"
-                t={t}
               />
               {isRDP && (
                 <GuacField
@@ -371,7 +364,6 @@ export function HostRemoteDesktopTab({
                   path="enable-audio-input"
                   label={t("hosts.enableAudioInput")}
                   type="switch"
-                  t={t}
                 />
               )}
             </AccordionContent>
@@ -388,70 +380,60 @@ export function HostRemoteDesktopTab({
                 path="enable-wallpaper"
                 label={t("hosts.enableWallpaper")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-theming"
                 label={t("hosts.enableTheming")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-font-smoothing"
                 label={t("hosts.enableFontSmoothing")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-full-window-drag"
                 label={t("hosts.enableFullWindowDrag")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-desktop-composition"
                 label={t("hosts.enableDesktopComposition")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-menu-animations"
                 label={t("hosts.enableMenuAnimations")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="disable-bitmap-caching"
                 label={t("hosts.disableBitmapCaching")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="disable-offscreen-caching"
                 label={t("hosts.disableOffscreenCaching")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="disable-glyph-caching"
                 label={t("hosts.disableGlyphCaching")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-gfx"
                 label={t("hosts.enableGfx")}
                 type="switch"
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -467,54 +449,46 @@ export function HostRemoteDesktopTab({
                 path="enable-printing"
                 label={t("hosts.enablePrinting")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-drive"
                 label={t("hosts.enableDrive")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="drive-name"
                 label={t("hosts.driveName")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="drive-path"
                 label={t("hosts.drivePath")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="create-drive-path"
                 label={t("hosts.createDrivePath")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="disable-download"
                 label={t("hosts.disableDownload")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="disable-upload"
                 label={t("hosts.disableUpload")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="enable-touch"
                 label={t("hosts.enableTouch")}
                 type="switch"
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -529,20 +503,17 @@ export function HostRemoteDesktopTab({
                 form={form}
                 path="client-name"
                 label={t("hosts.clientName")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="console"
                 label={t("hosts.consoleSession")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="initial-program"
                 label={t("hosts.initialProgram")}
-                t={t}
               />
               <GuacSelect
                 form={form}
@@ -566,7 +537,6 @@ export function HostRemoteDesktopTab({
                 form={form}
                 path="timezone"
                 label={t("hosts.timezone")}
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -581,33 +551,28 @@ export function HostRemoteDesktopTab({
                 form={form}
                 path="gateway-hostname"
                 label={t("hosts.gatewayHostname")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="gateway-port"
                 label={t("hosts.gatewayPort")}
                 type="number"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="gateway-username"
                 label={t("hosts.gatewayUsername")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="gateway-password"
                 label={t("hosts.gatewayPassword")}
                 type="password"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="gateway-domain"
                 label={t("hosts.gatewayDomain")}
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -622,19 +587,16 @@ export function HostRemoteDesktopTab({
                 form={form}
                 path="remote-app"
                 label={t("hosts.remoteAppProgram")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="remote-app-dir"
                 label={t("hosts.remoteAppDir")}
-                t={t}
               />
               <GuacField
                 form={form}
                 path="remote-app-args"
                 label={t("hosts.remoteAppArgs")}
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -660,14 +622,12 @@ export function HostRemoteDesktopTab({
               path="disable-copy"
               label={t("hosts.disableCopy")}
               type="switch"
-              t={t}
             />
             <GuacField
               form={form}
               path="disable-paste"
               label={t("hosts.disablePaste")}
               type="switch"
-              t={t}
             />
           </AccordionContent>
         </AccordionItem>
@@ -692,14 +652,12 @@ export function HostRemoteDesktopTab({
                 path="swap-red-blue"
                 label={t("hosts.swapRedBlue")}
                 type="switch"
-                t={t}
               />
               <GuacField
                 form={form}
                 path="read-only"
                 label={t("hosts.readOnly")}
                 type="switch"
-                t={t}
               />
             </AccordionContent>
           </AccordionItem>
@@ -713,41 +671,35 @@ export function HostRemoteDesktopTab({
               form={form}
               path="recording-path"
               label={t("hosts.recordingPath")}
-              t={t}
             />
             <GuacField
               form={form}
               path="recording-name"
               label={t("hosts.recordingName")}
-              t={t}
             />
             <GuacField
               form={form}
               path="create-recording-path"
               label={t("hosts.createRecordingPath")}
               type="switch"
-              t={t}
             />
             <GuacField
               form={form}
               path="recording-exclude-output"
               label={t("hosts.excludeOutput")}
               type="switch"
-              t={t}
             />
             <GuacField
               form={form}
               path="recording-exclude-mouse"
               label={t("hosts.excludeMouse")}
               type="switch"
-              t={t}
             />
             <GuacField
               form={form}
               path="recording-include-keys"
               label={t("hosts.includeKeys")}
               type="switch"
-              t={t}
             />
           </AccordionContent>
         </AccordionItem>
@@ -761,33 +713,28 @@ export function HostRemoteDesktopTab({
               path="wol-send-packet"
               label={t("hosts.sendWolPacket")}
               type="switch"
-              t={t}
             />
             <GuacField
               form={form}
               path="wol-mac-addr"
               label={t("hosts.wolMacAddr")}
-              t={t}
             />
             <GuacField
               form={form}
               path="wol-broadcast-addr"
               label={t("hosts.wolBroadcastAddr")}
-              t={t}
             />
             <GuacField
               form={form}
               path="wol-udp-port"
               label={t("hosts.wolUdpPort")}
               type="number"
-              t={t}
             />
             <GuacField
               form={form}
               path="wol-wait-time"
               label={t("hosts.wolWaitTime")}
               type="number"
-              t={t}
             />
           </AccordionContent>
         </AccordionItem>

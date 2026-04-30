@@ -22,7 +22,6 @@ import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.ts
 import { useTranslation } from "react-i18next";
 
 interface ConsoleTerminalProps {
-  sessionId: string;
   containerId: string;
   containerName: string;
   containerState: string;
@@ -30,7 +29,6 @@ interface ConsoleTerminalProps {
 }
 
 export function ConsoleTerminal({
-  sessionId,
   containerId,
   containerName,
   containerState,
@@ -205,7 +203,9 @@ export function ConsoleTerminal({
       if (wsRef.current) {
         try {
           wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-        } catch (error) {}
+        } catch {
+          // Best-effort disconnect during cleanup.
+        }
         wsRef.current.close();
         wsRef.current = null;
       }
@@ -218,7 +218,9 @@ export function ConsoleTerminal({
     if (wsRef.current) {
       try {
         wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-      } catch (error) {}
+      } catch {
+        // Best-effort disconnect.
+      }
       wsRef.current.close();
       wsRef.current = null;
     }
@@ -226,7 +228,9 @@ export function ConsoleTerminal({
     if (terminal) {
       try {
         terminal.clear();
-      } catch (error) {}
+      } catch {
+        // Terminal clear can fail after disposal.
+      }
     }
   }, [terminal]);
 
@@ -414,7 +418,9 @@ export function ConsoleTerminal({
       if (wsRef.current) {
         try {
           wsRef.current.send(JSON.stringify({ type: "disconnect" }));
-        } catch (error) {}
+        } catch {
+          // Best-effort disconnect during cleanup.
+        }
         wsRef.current.close();
         wsRef.current = null;
       }

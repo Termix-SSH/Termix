@@ -92,15 +92,6 @@ export function CredentialSelector({
     setSearchQuery("");
   };
 
-  const handleClear = () => {
-    onValueChange(null);
-    if (onCredentialSelect) {
-      onCredentialSelect(null);
-    }
-    setDropdownOpen(false);
-    setSearchQuery("");
-  };
-
   return (
     <FormItem>
       <FormLabel>{t("hosts.selectCredential")}</FormLabel>

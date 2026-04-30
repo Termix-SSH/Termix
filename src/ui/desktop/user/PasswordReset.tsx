@@ -15,16 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-interface PasswordResetProps {
-  userInfo: {
-    username: string;
-    is_admin: boolean;
-    is_oidc: boolean;
-    totp_enabled: boolean;
-  };
-}
-
-export function PasswordReset({ userInfo }: PasswordResetProps) {
+export function PasswordReset() {
   const [error, setError] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

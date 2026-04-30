@@ -78,6 +78,11 @@ interface TerminalHandle {
   refresh: () => void;
 }
 
+type HostKeyVerificationData = Omit<
+  React.ComponentProps<typeof HostKeyVerificationDialog>,
+  "isOpen" | "scenario" | "onAccept" | "onReject" | "backgroundColor"
+>;
+
 interface SSHTerminalProps {
   hostConfig: HostConfig;
   isVisible: boolean;
@@ -99,7 +104,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
-      onTitleChange,
       initialPath,
       executeCommand,
       onOpenFileManager,
@@ -196,12 +200,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
-    const currentHostConfigRef = useRef<any>(null);
+    const currentHostConfigRef = useRef<HostConfig | null>(null);
 
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;
       scenario: "new" | "changed";
-      data: any;
+      data: HostKeyVerificationData;
     } | null>(null);
 
     const sessionIdRef = useRef<string | null>(null);
@@ -246,7 +250,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const keyHandlerAttachedRef = useRef(false);
     const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
       useState<boolean>(
         () => localStorage.getItem("commandHistoryTracking") === "true",
@@ -311,9 +314,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
 
-    const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-    const [commandHistory, setCommandHistory] = useState<string[]>([]);
-    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [showHistoryDialog] = useState(false);
+    const [, setCommandHistory] = useState<string[]>([]);
+    const [, setIsLoadingHistory] = useState(false);
 
     const setIsLoadingRef = useRef(commandHistoryContext.setIsLoading);
     const setCommandHistoryContextRef = useRef(
@@ -1231,6 +1234,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }, 180000);
           } else if (msg.type === "totp_retry") {
+            // Existing prompt remains visible while the backend asks for another code.
           } else if (msg.type === "password_required") {
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("common.password"));
@@ -1781,7 +1785,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...(hostConfig.terminalConfig as any),
+        ...hostConfig.terminalConfig,
       };
 
       let themeColors;
@@ -1865,7 +1869,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
-        ...(hostConfig.terminalConfig as any),
+        ...hostConfig.terminalConfig,
       };
 
       const fontConfig = TERMINAL_FONTS.find(
@@ -2019,7 +2023,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         const config = {
           ...DEFAULT_TERMINAL_CONFIG,
-          ...(hostConfig.terminalConfig as any),
+          ...hostConfig.terminalConfig,
         };
         if (config.backspaceMode !== "control-h") return;
 

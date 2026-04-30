@@ -80,7 +80,7 @@ export function ServerStatusProvider({
         return prev;
       });
       return enabled;
-    } catch (error) {
+    } catch {
       return new Set<number>();
     }
   }, [isAuthenticated]);
@@ -111,7 +111,7 @@ export function ServerStatusProvider({
       }
 
       setStatuses(newStatuses);
-    } catch (error) {
+    } catch {
       if (mountedRef.current) {
         setStatuses((prev) => {
           const updated = new Map(prev);

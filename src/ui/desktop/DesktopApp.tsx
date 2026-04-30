@@ -3,7 +3,6 @@ import React, {
   Component,
   Suspense,
   lazy,
-  type ErrorInfo,
   type ReactNode,
   useEffect,
   useRef,
@@ -561,7 +560,6 @@ function AppContent({
           <TopNavbar
             isTopbarOpen={isTopbarOpen}
             setIsTopbarOpen={setIsTopbarOpen}
-            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onRightSidebarStateChange={(isOpen, width) => {
               setRightSidebarOpen(isOpen);
               setRightSidebarWidth(width);

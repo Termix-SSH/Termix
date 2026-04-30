@@ -120,7 +120,10 @@ function RootApp() {
   useServiceWorker();
 
   const userAgent =
-    navigator.userAgent || navigator.vendor || (window as any).opera || "";
+    navigator.userAgent ||
+    navigator.vendor ||
+    (window as Window & { opera?: string }).opera ||
+    "";
   const isTermixMobile = /Termix-Mobile/.test(userAgent);
 
   const searchParams = new URLSearchParams(window.location.search);

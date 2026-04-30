@@ -20,30 +20,19 @@ import {
 } from "@/components/ui/dropdown-menu.tsx";
 import { Terminal as TerminalIcon } from "lucide-react";
 import { TERMINAL_THEMES } from "@/constants/terminal-themes.ts";
+import type { TabContextTab } from "@/types";
 
-interface TabData {
-  id: number;
-  type: string;
-  title: string;
-  terminalRef?: {
-    current?: {
-      sendInput?: (data: string) => void;
-    };
-  };
-  [key: string]: unknown;
-}
+type TabData = TabContextTab;
 
 interface TopNavbarProps {
   isTopbarOpen: boolean;
   setIsTopbarOpen: (open: boolean) => void;
-  onOpenCommandPalette: () => void;
   onRightSidebarStateChange?: (isOpen: boolean, width: number) => void;
 }
 
 export function TopNavbar({
   isTopbarOpen,
   setIsTopbarOpen,
-  onOpenCommandPalette,
   onRightSidebarStateChange,
 }: TopNavbarProps): React.ReactElement {
   const { state } = useSidebar();
@@ -51,14 +40,12 @@ export function TopNavbar({
     tabs,
     currentTab,
     setCurrentTab,
-    setSplitScreenTab,
     removeTab,
     allSplitScreenTab,
     reorderTabs,
     updateTab,
-    previewTerminalTheme,
     setPreviewTerminalTheme,
-  } = useTabs() as any;
+  } = useTabs();
   const leftPosition =
     state === "collapsed" ? "26px" : "calc(var(--sidebar-width) + 8px)";
   const { t } = useTranslation();
@@ -138,7 +125,7 @@ export function TopNavbar({
     setCurrentTab(tabId);
   };
 
-  const handleTabSplit = (tabId: number) => {
+  const handleTabSplit = () => {
     setToolsSidebarOpen(true);
     setCommandHistoryTabActive(false);
     setSplitScreenTabActive(true);
@@ -346,12 +333,6 @@ export function TopNavbar({
 
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;
-  const currentTabObj = tabs.find((t: TabData) => t.id === currentTab);
-  const currentTabIsHome = currentTabObj?.type === "home";
-  const currentTabIsSshManager = currentTabObj?.type === "ssh_manager";
-  const currentTabIsAdmin = currentTabObj?.type === "admin";
-  const currentTabIsUserProfile = currentTabObj?.type === "user_profile";
-
   return (
     <div>
       <div
@@ -399,7 +380,6 @@ export function TopNavbar({
             const disableClose = isHome;
 
             const isDraggingThisTab = dragState.draggedIndex === index;
-            const isTheDraggedTab = tab.id === dragState.draggedId;
             const isDroppedAndSnapping = tab.id === justDroppedTabId;
             const dragOffset = isDraggingThisTab
               ? dragState.currentX - dragState.startX
@@ -509,9 +489,7 @@ export function TopNavbar({
                       ? () => handleTabClose(tab.id)
                       : undefined
                   }
-                  onSplit={
-                    isSplittable ? () => handleTabSplit(tab.id) : undefined
-                  }
+                  onSplit={isSplittable ? handleTabSplit : undefined}
                   canSplit={isSplittable}
                   canClose={
                     isTerminal ||
@@ -544,7 +522,7 @@ export function TopNavbar({
 
           {/* Terminal Theme Switcher */}
           {(() => {
-            const activeTab = tabs.find((t: any) => t.id === currentTab);
+            const activeTab = tabs.find((t) => t.id === currentTab);
             if (activeTab?.type !== "terminal") return null;
 
             return (
@@ -571,9 +549,7 @@ export function TopNavbar({
                     <DropdownMenuItem
                       key={key}
                       onClick={() => {
-                        const activeTab = tabs.find(
-                          (t: any) => t.id === currentTab,
-                        );
+                        const activeTab = tabs.find((t) => t.id === currentTab);
                         if (activeTab?.hostConfig) {
                           const updatedConfig = {
                             ...activeTab.hostConfig.terminalConfig,

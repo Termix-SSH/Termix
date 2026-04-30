@@ -3,6 +3,7 @@ import { GuacamoleDisplay } from "@/ui/desktop/apps/features/guacamole/Guacamole
 import { FullScreenAppWrapper } from "@/ui/desktop/apps/FullScreenAppWrapper.tsx";
 import { getGuacamoleTokenFromHost } from "@/ui/main-axios.ts";
 import { useTranslation } from "react-i18next";
+import type { SSHHost } from "@/types";
 
 interface GuacamoleAppProps {
   hostId?: string;
@@ -46,7 +47,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId }) => {
 
 interface GuacamoleAppInnerProps {
   hostId: number;
-  hostConfig: any;
+  hostConfig: Pick<SSHHost, "connectionType">;
 }
 
 const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({

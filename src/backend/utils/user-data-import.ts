@@ -482,7 +482,7 @@ class UserDataImport {
       return await this.importUserData(targetUserId, exportData, options);
     } catch (error) {
       if (error instanceof SyntaxError) {
-        throw new Error("Invalid JSON format in import data");
+        throw new Error("Invalid JSON format in import data", { cause: error });
       }
       throw error;
     }

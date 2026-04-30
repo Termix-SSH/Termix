@@ -50,8 +50,8 @@ export class DatabaseMigration {
       }
     }
 
-    let needsMigration = false;
-    let reason = "";
+    let needsMigration: boolean;
+    let reason: string;
 
     if (hasEncryptedDb && hasUnencryptedDb) {
       const unencryptedSize = fs.statSync(this.unencryptedDbPath).size;
@@ -119,6 +119,7 @@ export class DatabaseMigration {
       });
       throw new Error(
         `Backup creation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error },
       );
     }
   }

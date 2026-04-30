@@ -461,7 +461,7 @@ export function AdminSettings({
             </TabsContent>
 
             <TabsContent value="security" className="space-y-6">
-              <DatabaseSecurityTab currentUser={currentUser} />
+              <DatabaseSecurityTab />
             </TabsContent>
 
             <TabsContent value="api-keys" className="space-y-6">
@@ -483,7 +483,6 @@ export function AdminSettings({
         user={selectedUserForEdit}
         currentUser={currentUser}
         onSuccess={handleEditUserSuccess}
-        allowPasswordLogin={allowPasswordLogin}
       />
 
       <LinkAccountDialog

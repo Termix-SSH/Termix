@@ -656,7 +656,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         operation: "export_temp_dir_error",
         tempDir,
       });
-      throw new Error(`Failed to create temp directory: ${dirError.message}`);
+      throw new Error(`Failed to create temp directory: ${dirError.message}`, {
+        cause: dirError,
+      });
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -1817,6 +1819,7 @@ app.use(
     res: express.Response,
     _next: express.NextFunction,
   ) => {
+    void _next;
     apiLogger.error("Unhandled error in request", err, {
       operation: "error_handler",
       method: req.method,

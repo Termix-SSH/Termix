@@ -73,7 +73,7 @@ export function GeneralSettingsTab({
   const [logLevel, setLogLevel] = React.useState("info");
   const [logLevelLoading, setLogLevelLoading] = React.useState(false);
 
-  const [sessionTimeoutHours, setSessionTimeoutHours] = React.useState(24);
+  const [, setSessionTimeoutHours] = React.useState(24);
   const [sessionTimeoutInput, setSessionTimeoutInput] = React.useState("24");
   const [sessionTimeoutLoading, setSessionTimeoutLoading] =
     React.useState(false);

@@ -35,7 +35,7 @@ export function useDashboardPreferences(enabled: boolean = true) {
         } else {
           setLayout(DEFAULT_LAYOUT);
         }
-      } catch (error) {
+      } catch {
         setLayout(DEFAULT_LAYOUT);
       } finally {
         setLoading(false);

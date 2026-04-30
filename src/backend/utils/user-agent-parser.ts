@@ -255,16 +255,12 @@ function parseMacVersion(userAgent: string): string {
  * Ignores minor version numbers to handle browser auto-updates.
  */
 export function generateDeviceFingerprint(deviceInfo: DeviceInfo): string {
-  let fingerprintString = "";
-
-  if (deviceInfo.type === "desktop") {
-    fingerprintString = `${deviceInfo.type}|${deviceInfo.browser}|${deviceInfo.os}`;
-  } else if (deviceInfo.type === "mobile") {
-    fingerprintString = `${deviceInfo.type}|${deviceInfo.browser}|${deviceInfo.os}`;
-  } else {
-    const browserMajor = deviceInfo.version.split(".")[0];
-    fingerprintString = `${deviceInfo.type}|${deviceInfo.browser} ${browserMajor}|${deviceInfo.os}`;
-  }
+  const fingerprintString =
+    deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
+      ? `${deviceInfo.type}|${deviceInfo.browser}|${deviceInfo.os}`
+      : `${deviceInfo.type}|${deviceInfo.browser} ${
+          deviceInfo.version.split(".")[0]
+        }|${deviceInfo.os}`;
 
   return crypto.createHash("sha256").update(fingerprintString).digest("hex");
 }

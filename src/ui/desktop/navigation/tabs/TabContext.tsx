@@ -9,7 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import type { TabContextTab } from "../../../types/index.js";
+import type { TabContextTab, TerminalRefHandle } from "../../../types/index.js";
 
 export type Tab = TabContextTab;
 
@@ -39,6 +39,10 @@ interface TabContextType {
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
+
+type ElectronWindow = Window & {
+  electronAPI?: unknown;
+};
 
 export function useTabs() {
   const context = useContext(TabContext);
@@ -70,7 +74,7 @@ export function TabProvider({ children }: TabProviderProps) {
   const [tabs, setTabs] = useState<Tab[]>(() => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
-      typeof window !== "undefined" && !!(window as any).electronAPI;
+      typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
     const persistenceEnabled =
       localStorage.getItem("enableTerminalSessionPersistence") === "true";
     const shouldRestore = isMobile || isElectron || persistenceEnabled;
@@ -92,7 +96,7 @@ export function TabProvider({ children }: TabProviderProps) {
             instanceId: tab.instanceId,
             terminalRef:
               tab.type === "terminal"
-                ? React.createRef<{ disconnect?: () => void }>()
+                ? React.createRef<TerminalRefHandle>()
                 : undefined,
             hostConfig: tab.hostConfig
               ? {
@@ -139,7 +143,7 @@ export function TabProvider({ children }: TabProviderProps) {
   useEffect(() => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
     const isElectron =
-      typeof window !== "undefined" && !!(window as any).electronAPI;
+      typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
     const persistenceEnabled =
       localStorage.getItem("enableTerminalSessionPersistence") === "true";
     const shouldSave = isMobile || isElectron || persistenceEnabled;
@@ -147,7 +151,11 @@ export function TabProvider({ children }: TabProviderProps) {
     if (shouldSave) {
       const serializable = tabs
         .filter((t) => t.type !== "home")
-        .map(({ terminalRef, ...rest }) => rest);
+        .map((tab) => {
+          const rest = { ...tab };
+          delete rest.terminalRef;
+          return rest;
+        });
       localStorage.setItem("termix_tabs", JSON.stringify(serializable));
       localStorage.setItem("termix_currentTab", String(currentTab));
     } else {
@@ -261,7 +269,7 @@ export function TabProvider({ children }: TabProviderProps) {
       title: effectiveTitle,
       terminalRef:
         tabData.type === "terminal"
-          ? React.createRef<{ disconnect?: () => void }>()
+          ? React.createRef<TerminalRefHandle>()
           : undefined,
       hostConfig: tabData.hostConfig
         ? {

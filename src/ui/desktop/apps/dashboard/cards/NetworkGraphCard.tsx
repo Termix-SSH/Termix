@@ -13,6 +13,8 @@ import {
   getNetworkTopology,
   saveNetworkTopology,
   type SSHHostWithStatus,
+  type NetworkTopologyEdge,
+  type NetworkTopologyNode,
 } from "@/ui/main-axios";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,13 +104,15 @@ interface NetworkGraphCardProps {
   embedded?: boolean;
 }
 
+type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
+
 export function NetworkGraphCard({
   embedded = true,
 }: NetworkGraphCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { addTab } = useTabs();
 
-  const [elements, setElements] = useState<any[]>([]);
+  const [elements, setElements] = useState<NetworkElement[]>([]);
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
   const [hostMap, setHostMap] = useState<HostMap>({});
   const hostMapRef = useRef<HostMap>({});
@@ -203,8 +207,8 @@ export function NetworkGraphCard({
       });
       setHostMap(newHostMap);
 
-      let nodes: any[] = [];
-      let edges: any[] = [];
+      let nodes: NetworkTopologyNode[] = [];
+      let edges: NetworkTopologyEdge[] = [];
 
       try {
         const topologyData = await getNetworkTopology();
@@ -213,7 +217,7 @@ export function NetworkGraphCard({
           topologyData.nodes &&
           Array.isArray(topologyData.nodes)
         ) {
-          nodes = topologyData.nodes.map((node: any) => {
+          nodes = topologyData.nodes.map((node) => {
             const host = newHostMap[node.data.id];
             return {
               data: {
@@ -230,12 +234,12 @@ export function NetworkGraphCard({
           });
           edges = topologyData.edges || [];
         }
-      } catch (topologyError) {
+      } catch {
         console.warn("Starting with empty topology");
       }
 
-      const nodeIds = new Set(nodes.map((n: any) => n.data.id));
-      const validEdges = edges.filter((edge: any) => {
+      const nodeIds = new Set(nodes.map((n) => n.data.id));
+      const validEdges = edges.filter((edge) => {
         const sourceExists = nodeIds.has(edge.data.source);
         const targetExists = nodeIds.has(edge.data.target);
         return sourceExists && targetExists;
@@ -313,7 +317,10 @@ export function NetworkGraphCard({
   useEffect(() => {
     if (!cyRef.current || loading || elements.length === 0) return;
     const hasPositions = elements.some(
-      (el: any) => el.position && (el.position.x !== 0 || el.position.y !== 0),
+      (el) =>
+        "position" in el &&
+        el.position &&
+        (el.position.x !== 0 || el.position.y !== 0),
     );
 
     if (!hasPositions) {
@@ -631,7 +638,7 @@ export function NetworkGraphCard({
       setElements([...cyRef.current.elements().jsons()]);
       forceUpdate();
       setShowAddNodeDialog(false);
-    } catch (err) {
+    } catch {
       setError(t("networkGraph.failedToAddNode"));
     }
   };
@@ -889,7 +896,7 @@ export function NetworkGraphCard({
                     if (fileInputRef.current) {
                       fileInputRef.current.value = "";
                     }
-                  } catch (err) {
+                  } catch {
                     setError(t("networkGraph.invalidFile"));
                   }
                 };

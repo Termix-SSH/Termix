@@ -75,12 +75,34 @@ interface SSHHost {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  guacamoleConfig?: any;
+  guacamoleConfig?: unknown;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;
   showTunnelInSidebar?: boolean;
   showDockerInSidebar?: boolean;
   showServerStatsInSidebar?: boolean;
+}
+
+function shouldShowMetrics(host: SSHHost): boolean {
+  try {
+    const statsConfig = host.statsConfig
+      ? JSON.parse(host.statsConfig)
+      : DEFAULT_STATS_CONFIG;
+    return statsConfig.metricsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
+function hasTunnelConnections(host: SSHHost): boolean {
+  try {
+    const tunnelConnections = Array.isArray(host.tunnelConnections)
+      ? host.tunnelConnections
+      : JSON.parse(host.tunnelConnections as string);
+    return Array.isArray(tunnelConnections) && tunnelConnections.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function CommandPalette({
@@ -305,9 +327,6 @@ export function CommandPalette({
   };
 
   const handleHostEditClick = (host: SSHHost) => {
-    const title = host.name?.trim()
-      ? host.name
-      : `${host.username}@${host.ip}:${host.port}`;
     addTab({
       type: "ssh_manager",
       title: t("commandPalette.hostManager"),
@@ -390,32 +409,10 @@ export function CommandPalette({
                     ? host.name
                     : `${host.username}@${host.ip}:${host.port}`;
 
-                  let shouldShowMetrics = true;
-                  try {
-                    const statsConfig = host.statsConfig
-                      ? JSON.parse(host.statsConfig)
-                      : DEFAULT_STATS_CONFIG;
-                    shouldShowMetrics = statsConfig.metricsEnabled !== false;
-                  } catch {
-                    shouldShowMetrics = true;
-                  }
-
                   const isSSH =
                     !host.connectionType || host.connectionType === "ssh";
-
-                  let hasTunnelConnections = false;
-                  try {
-                    const tunnelConnections = Array.isArray(
-                      host.tunnelConnections,
-                    )
-                      ? host.tunnelConnections
-                      : JSON.parse(host.tunnelConnections as string);
-                    hasTunnelConnections =
-                      Array.isArray(tunnelConnections) &&
-                      tunnelConnections.length > 0;
-                  } catch {
-                    hasTunnelConnections = false;
-                  }
+                  const showMetrics = shouldShowMetrics(host);
+                  const hasTunnels = hasTunnelConnections(host);
 
                   const visibleButtons = [
                     host.enableTerminal && (host.showTerminalInSidebar ?? true),
@@ -424,13 +421,13 @@ export function CommandPalette({
                       (host.showFileManagerInSidebar ?? false),
                     isSSH &&
                       host.enableTunnel &&
-                      hasTunnelConnections &&
+                      hasTunnels &&
                       (host.showTunnelInSidebar ?? false),
                     isSSH &&
                       host.enableDocker &&
                       (host.showDockerInSidebar ?? false),
                     isSSH &&
-                      shouldShowMetrics &&
+                      showMetrics &&
                       (host.showServerStatsInSidebar ?? false),
                   ].filter(Boolean).length;
 
@@ -492,7 +489,7 @@ export function CommandPalette({
 
                         {isSSH &&
                           host.enableTunnel &&
-                          hasTunnelConnections &&
+                          hasTunnels &&
                           (host.showTunnelInSidebar ?? false) && (
                             <Button
                               variant="outline"
@@ -522,7 +519,7 @@ export function CommandPalette({
                           )}
 
                         {isSSH &&
-                          shouldShowMetrics &&
+                          showMetrics &&
                           (host.showServerStatsInSidebar ?? false) && (
                             <Button
                               variant="outline"
@@ -579,7 +576,7 @@ export function CommandPalette({
                                 </DropdownMenuItem>
                               )}
                             {isSSH &&
-                              shouldShowMetrics &&
+                              showMetrics &&
                               !(host.showServerStatsInSidebar ?? false) && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -612,7 +609,7 @@ export function CommandPalette({
                               )}
                             {isSSH &&
                               host.enableTunnel &&
-                              hasTunnelConnections &&
+                              hasTunnels &&
                               !(host.showTunnelInSidebar ?? false) && (
                                 <DropdownMenuItem
                                   onClick={(e) => {

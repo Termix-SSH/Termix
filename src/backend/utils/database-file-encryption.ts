@@ -102,6 +102,7 @@ class DatabaseFileEncryption {
       });
       throw new Error(
         `Database buffer encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error },
       );
     }
   }
@@ -197,6 +198,7 @@ class DatabaseFileEncryption {
       });
       throw new Error(
         `Database file encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error },
       );
     }
   }
@@ -237,6 +239,7 @@ class DatabaseFileEncryption {
       if (!fs.existsSync(metadataPath)) {
         throw new Error(
           `Could not read database: Not a valid single-file format and metadata file is missing: ${metadataPath}. Error: ${singleFileError.message}`,
+          { cause: singleFileError },
         );
       }
 
@@ -247,6 +250,7 @@ class DatabaseFileEncryption {
       } catch (twoFileError) {
         throw new Error(
           `Failed to read database using both single-file and two-file formats. Error: ${twoFileError.message}`,
+          { cause: twoFileError },
         );
       }
     }
@@ -358,6 +362,7 @@ class DatabaseFileEncryption {
             `- .env file readable: ${envFileReadable}\n` +
             `- DATABASE_KEY in environment: ${!!process.env.DATABASE_KEY}\n` +
             `Original error: ${errorMessage}`,
+          { cause: error },
         );
       }
 
@@ -366,7 +371,9 @@ class DatabaseFileEncryption {
         encryptedPath,
         errorMessage,
       });
-      throw new Error(`Database buffer decryption failed: ${errorMessage}`);
+      throw new Error(`Database buffer decryption failed: ${errorMessage}`, {
+        cause: error,
+      });
     }
   }
 
@@ -398,6 +405,7 @@ class DatabaseFileEncryption {
       });
       throw new Error(
         `Database file decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error },
       );
     }
   }

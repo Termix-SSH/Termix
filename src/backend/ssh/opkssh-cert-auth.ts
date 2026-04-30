@@ -4,7 +4,14 @@
 // DER → SSH wire format, and patches Protocol.authPK to use the base
 // algorithm in the signature wrapper (required by OpenSSH's sshkey_check_sigtype).
 
-import type { Client, ConnectConfig } from "ssh2";
+import type {
+  AnyAuthMethod,
+  AuthHandlerMiddleware,
+  AuthenticationType,
+  Client,
+  ConnectConfig,
+  PublicKeyAuthMethod,
+} from "ssh2";
 
 interface OPKSSHToken {
   privateKey: string;
@@ -14,6 +21,45 @@ interface OPKSSHToken {
 type SignCallback = (
   data: Buffer,
   callback: (signature: Buffer) => void,
+) => void;
+
+interface ParsedPrivateKey {
+  type: string;
+  sign: (data: Buffer, algo?: string) => Buffer | Error;
+  getPublicSSH: () => Buffer;
+  [key: symbol]: unknown;
+}
+
+interface OPKSSHProtocol {
+  authPK: (
+    user: string,
+    pubKey: ParsedPrivateKey,
+    keyAlgo: string | undefined,
+    cbSign?: SignCallback,
+  ) => unknown;
+  _kex: {
+    sessionID: Buffer;
+  };
+  _packetRW: {
+    write: {
+      alloc: (payloadLength: number) => Buffer;
+      allocStart: number;
+      finalize: (packet: Buffer) => Buffer;
+    };
+  };
+  _authsQueue: string[];
+  _debug?: (message: string) => void;
+  _cipher: {
+    encrypt: (packet: Buffer) => void;
+  };
+}
+
+type OPKSSHClient = Client & {
+  _protocol?: OPKSSHProtocol;
+};
+
+type OPKSSHNextAuthHandler = (
+  authInfo: AuthenticationType | AnyAuthMethod | false,
 ) => void;
 
 export async function setupOPKSSHCertAuth(
@@ -32,7 +78,9 @@ export async function setupOPKSSHCertAuth(
   if (parsed instanceof Error || !parsed) {
     throw new Error("Failed to parse OPKSSH private key");
   }
-  const privKey: any = Array.isArray(parsed) ? parsed[0] : parsed;
+  const privKey = (
+    Array.isArray(parsed) ? parsed[0] : parsed
+  ) as ParsedPrivateKey;
 
   // Extract cert type and blob from the stored certificate
   const certParts = token.sshCert.trim().split(/\s+/);
@@ -84,34 +132,41 @@ export async function setupOPKSSHCertAuth(
 
   // Set up authHandler to bypass ssh2's cert type rejection
   let certAuthAttempted = false;
-  config.authHandler = (
+  const authHandler: AuthHandlerMiddleware = (
     methodsLeft: string[],
     _partialSuccess: boolean,
-    callback: (authInfo: any) => void,
+    callback,
   ) => {
+    const next = callback as OPKSSHNextAuthHandler;
     if (
       !certAuthAttempted &&
       (!methodsLeft || methodsLeft.includes("publickey"))
     ) {
       certAuthAttempted = true;
-      callback({ type: "publickey", username, key: privKey });
+      next({
+        type: "publickey",
+        username,
+        key: privKey as unknown as PublicKeyAuthMethod["key"],
+      });
     } else {
-      callback(false);
+      next(false);
     }
   };
+  config.authHandler = authHandler;
 
   // Monkey-patch Protocol.authPK after connect() to fix the signature
   // wrapper algorithm for cert types.
   const baseAlgo = certType.replace(/-cert-v\d+@openssh\.com$/, "");
   const origConnect = client.connect.bind(client);
-  (client as any).connect = (cfg: any) => {
-    origConnect(cfg);
-    const proto = (client as any)._protocol;
-    if (!proto) return;
+  const patchedClient = client as OPKSSHClient;
+  patchedClient.connect = (cfg: ConnectConfig) => {
+    const connectedClient = origConnect(cfg);
+    const proto = patchedClient._protocol;
+    if (!proto) return connectedClient;
     const origAuthPK = proto.authPK.bind(proto);
     proto.authPK = (
       user: string,
-      pubKey: any,
+      pubKey: ParsedPrivateKey,
       keyAlgo: string | undefined,
       cbSign?: SignCallback,
     ) => {
@@ -238,5 +293,6 @@ export async function setupOPKSSHCertAuth(
         proto._cipher.encrypt(finalized);
       });
     };
+    return connectedClient;
   };
 }

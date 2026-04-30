@@ -8,13 +8,15 @@ import { useTheme } from "@/components/theme-provider";
 
 interface VersionCheckModalProps {
   onContinue: () => void;
-  isAuthenticated?: boolean;
 }
 
-export function ElectronVersionCheck({
-  onContinue,
-  isAuthenticated = false,
-}: VersionCheckModalProps) {
+type ElectronWindow = Window & {
+  electronAPI?: {
+    getAppVersion?: () => Promise<string | undefined>;
+  };
+};
+
+export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [versionInfo, setVersionInfo] = useState<Record<
@@ -58,7 +60,9 @@ export function ElectronVersionCheck({
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
 
-      const currentVersion = await (window as any).electronAPI?.getAppVersion();
+      const currentVersion = await (
+        window as ElectronWindow
+      ).electronAPI?.getAppVersion?.();
       const dismissedVersion = localStorage.getItem(
         "electron-version-check-dismissed",
       );
@@ -93,7 +97,9 @@ export function ElectronVersionCheck({
   };
 
   const handleContinue = async () => {
-    const currentVersion = await (window as any).electronAPI?.getAppVersion();
+    const currentVersion = await (
+      window as ElectronWindow
+    ).electronAPI?.getAppVersion?.();
     if (currentVersion) {
       localStorage.setItem("electron-version-check-dismissed", currentVersion);
     }

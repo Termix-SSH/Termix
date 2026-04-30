@@ -971,7 +971,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         userId,
       });
 
-      let errorStage: ConnectionStage = "error";
+      let errorStage: ConnectionStage;
       if (
         err.message.includes("ENOTFOUND") ||
         err.message.includes("getaddrinfo")

@@ -425,9 +425,7 @@ export function HostManagerViewer({
   };
 
   const selectAllHosts = () => {
-    const selectableIds = hosts
-      .filter((h) => !(h as any).isShared)
-      .map((h) => h.id);
+    const selectableIds = hosts.filter((h) => !h.isShared).map((h) => h.id);
     setSelectedHostIds(new Set(selectableIds));
   };
 
@@ -475,7 +473,7 @@ export function HostManagerViewer({
     try {
       document.execCommand("copy");
       toast.success(t("hosts.fullScreenUrlCopied"));
-    } catch (err) {
+    } catch {
       toast.error(t("hosts.failedToCopyUrl"));
     }
     document.body.removeChild(textArea);
@@ -1429,7 +1427,7 @@ export function HostManagerViewer({
                         {selectionMode &&
                           (() => {
                             const selectableIds = folderHosts
-                              .filter((h) => !(h as any).isShared)
+                              .filter((h) => !h.isShared)
                               .map((h) => h.id);
                             const allSelected =
                               selectableIds.length > 0 &&
@@ -1519,15 +1517,12 @@ export function HostManagerViewer({
                                     ? "ring-2 ring-blue-500 border-blue-500"
                                     : "border-input hover:border-blue-400/50"
                                 } ${
-                                  selectionMode && (host as any).isShared
+                                  selectionMode && host.isShared
                                     ? "opacity-50 pointer-events-none"
                                     : ""
                                 }`}
                                 onClick={() => {
-                                  if (
-                                    selectionMode &&
-                                    !(host as any).isShared
-                                  ) {
+                                  if (selectionMode && !host.isShared) {
                                     toggleHostSelection(host.id);
                                   } else {
                                     handleEdit(host);
@@ -1537,19 +1532,16 @@ export function HostManagerViewer({
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1">
-                                      {selectionMode &&
-                                        !(host as any).isShared && (
-                                          <Checkbox
-                                            checked={selectedHostIds.has(
-                                              host.id,
-                                            )}
-                                            onCheckedChange={() =>
-                                              toggleHostSelection(host.id)
-                                            }
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="bg-background border-2 mr-1 flex-shrink-0"
-                                          />
-                                        )}
+                                      {selectionMode && !host.isShared && (
+                                        <Checkbox
+                                          checked={selectedHostIds.has(host.id)}
+                                          onCheckedChange={() =>
+                                            toggleHostSelection(host.id)
+                                          }
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="bg-background border-2 mr-1 flex-shrink-0"
+                                        />
+                                      )}
                                       {(() => {
                                         const statsConfig = (() => {
                                           if (!host.statsConfig) {
@@ -1562,7 +1554,7 @@ export function HostManagerViewer({
                                           }
                                           try {
                                             return JSON.parse(host.statsConfig);
-                                          } catch (e) {
+                                          } catch {
                                             return DEFAULT_STATS_CONFIG;
                                           }
                                         })();
@@ -1594,7 +1586,7 @@ export function HostManagerViewer({
                                             ? `${host.username}@${host.ip}`
                                             : host.ip)}
                                       </h3>
-                                      {(host as any).isShared && (
+                                      {host.isShared && (
                                         <Badge
                                           variant="outline"
                                           className="text-xs px-1 py-0 text-violet-500 border-violet-500/50"
@@ -1616,7 +1608,7 @@ export function HostManagerViewer({
                                     </p>
                                   </div>
                                   <div className="flex gap-1 flex-shrink-0 ml-1">
-                                    {!(host as any).isShared &&
+                                    {!host.isShared &&
                                       host.folder &&
                                       host.folder !== "" && (
                                         <Tooltip>
@@ -1661,7 +1653,7 @@ export function HostManagerViewer({
                                         <p>{t("hosts.editHostTooltip")}</p>
                                       </TooltipContent>
                                     </Tooltip>
-                                    {!(host as any).isShared && (
+                                    {!host.isShared && (
                                       <>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
@@ -1749,8 +1741,8 @@ export function HostManagerViewer({
                                           </Tooltip>
                                           <DropdownMenuContent align="end">
                                             {(() => {
-                                              const connType = (host as any)
-                                                .connectionType;
+                                              const connType =
+                                                host.connectionType;
                                               const isRemoteDesktop =
                                                 connType === "rdp" ||
                                                 connType === "vnc" ||
@@ -1895,8 +1887,7 @@ export function HostManagerViewer({
 
                                   <div className="flex flex-wrap gap-1">
                                     {(() => {
-                                      const connType = (host as any)
-                                        .connectionType;
+                                      const connType = host.connectionType;
                                       if (connType === "rdp") {
                                         return (
                                           <Badge
@@ -1988,8 +1979,7 @@ export function HostManagerViewer({
 
                                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-1">
                                   {(() => {
-                                    const connType = (host as any)
-                                      .connectionType;
+                                    const connType = host.connectionType;
                                     const isRemoteDesktop =
                                       connType === "rdp" ||
                                       connType === "vnc" ||
@@ -2293,14 +2283,12 @@ export function HostManagerViewer({
               variant="outline"
               size="sm"
               onClick={
-                selectedHostIds.size ===
-                hosts.filter((h) => !(h as any).isShared).length
+                selectedHostIds.size === hosts.filter((h) => !h.isShared).length
                   ? deselectAllHosts
                   : selectAllHosts
               }
             >
-              {selectedHostIds.size ===
-              hosts.filter((h) => !(h as any).isShared).length
+              {selectedHostIds.size === hosts.filter((h) => !h.isShared).length
                 ? t("hosts.deselectAll")
                 : t("hosts.selectAll")}
             </Button>

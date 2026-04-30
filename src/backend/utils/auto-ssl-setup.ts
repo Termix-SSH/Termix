@@ -171,6 +171,7 @@ IP.3 = 0.0.0.0
     } catch (error) {
       throw new Error(
         `SSL certificate generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error },
       );
     }
   }

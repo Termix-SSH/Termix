@@ -12,7 +12,6 @@ import type { CredentialGeneralTabProps } from "./shared/tab-types";
 
 export function CredentialGeneralTab({
   form,
-  folders,
   tagInput,
   setTagInput,
   folderDropdownOpen,

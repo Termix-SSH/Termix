@@ -1,5 +1,6 @@
 import type { Client } from "ssh2";
 import type { Request } from "express";
+import type { RefObject } from "react";
 
 // ============================================================================
 // HOST TYPES (SSH, RDP, VNC, Telnet)
@@ -349,7 +350,7 @@ export interface TunnelStatus {
     type: "info" | "success" | "warning" | "error";
     stage: string;
     message: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   }>;
 }
 
@@ -492,10 +493,19 @@ export interface TabContextTab {
     | "telnet";
   title: string;
   hostConfig?: SSHHost;
-  terminalRef?: any;
+  terminalRef?: RefObject<TerminalRefHandle | null>;
   initialTab?: string;
   _updateTimestamp?: number;
   connectionConfig?: Record<string, unknown>;
+}
+
+export interface TerminalRefHandle {
+  disconnect?: () => void;
+  reconnect?: () => void;
+  fit?: () => void;
+  sendInput?: (data: string) => void;
+  notifyResize?: () => void;
+  refresh?: () => void;
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";

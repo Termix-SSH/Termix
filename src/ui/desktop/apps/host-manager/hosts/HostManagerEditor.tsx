@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button.tsx";
@@ -39,7 +39,7 @@ import type { StatsConfig } from "@/types/stats-widgets.ts";
 import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets.ts";
 
 import { DEFAULT_TERMINAL_CONFIG } from "@/constants/terminal-themes.ts";
-import type { SSHHost, Credential } from "@/types";
+import type { SSHHost, SSHHostData, Credential } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { HostGeneralTab } from "./tabs/HostGeneralTab";
 import { HostTerminalTab } from "./tabs/HostTerminalTab";
@@ -51,12 +51,6 @@ import { HostStatusTab } from "./tabs/HostStatusTab";
 import { HostSharingTab } from "./tabs/HostSharingTab";
 import { HostRemoteDesktopTab } from "./tabs/HostRemoteDesktopTab";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
-
-interface User {
-  id: string;
-  username: string;
-  is_admin: boolean;
-}
 
 interface SSHManagerHostEditorProps {
   editingHost?: SSHHost | null;
@@ -486,7 +480,7 @@ export function HostManagerEditor({
   type FormData = z.infer<typeof formSchema>;
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema) as unknown as Resolver<FormData>,
     mode: "all",
     defaultValues: {
       connectionType: "ssh" as const,
@@ -666,7 +660,7 @@ export function HostManagerEditor({
   useEffect(() => {
     if (editingHost) {
       const cleanedHost = { ...editingHost };
-      if ((cleanedHost as any).connectionType === "ssh") {
+      if (cleanedHost.connectionType === "ssh") {
         if (cleanedHost.credentialId && cleanedHost.key) {
           cleanedHost.key = undefined;
           cleanedHost.keyPassword = undefined;
@@ -709,7 +703,7 @@ export function HostManagerEditor({
       parsedStatsConfig = { ...DEFAULT_STATS_CONFIG, ...parsedStatsConfig };
 
       const formData: Partial<FormData> = {
-        connectionType: (cleanedHost as any).connectionType || "ssh",
+        connectionType: cleanedHost.connectionType || "ssh",
         name: cleanedHost.name || "",
         ip: cleanedHost.ip || "",
         port: cleanedHost.port || 22,
@@ -736,7 +730,7 @@ export function HostManagerEditor({
         enableFileManager: Boolean(cleanedHost.enableFileManager),
         defaultPath: cleanedHost.defaultPath || "/",
         tunnelConnections: Array.isArray(cleanedHost.tunnelConnections)
-          ? cleanedHost.tunnelConnections.map((conn: any) => ({
+          ? cleanedHost.tunnelConnections.map((conn) => ({
               ...conn,
               scope: conn.scope || "s2s",
               mode: conn.mode || conn.tunnelType || "remote",
@@ -781,11 +775,11 @@ export function HostManagerEditor({
           ? cleanedHost.portKnockSequence
           : [],
         enableDocker: Boolean(cleanedHost.enableDocker),
-        domain: (cleanedHost as any).domain || "",
-        security: (cleanedHost as any).security || "any",
-        ignoreCert: (cleanedHost as any).ignoreCert ?? true,
+        domain: cleanedHost.domain || "",
+        security: cleanedHost.security || "any",
+        ignoreCert: cleanedHost.ignoreCert ?? true,
         guacamoleConfig: (() => {
-          const cfg = (cleanedHost as any).guacamoleConfig;
+          const cfg = cleanedHost.guacamoleConfig;
           if (!cfg) return {};
           if (typeof cfg === "string") {
             try {
@@ -907,10 +901,11 @@ export function HostManagerEditor({
         data.name = `${data.username}@${data.ip}`;
       }
 
-      const submitData: Partial<SSHHost> = {
+      type SubmitHostData = SSHHostData & { serverTunnels?: unknown };
+      const submitData: SubmitHostData = {
         ...data,
       };
-      delete (submitData as any).serverTunnels;
+      delete submitData.serverTunnels;
 
       const serverTunnels = Array.isArray(data.serverTunnels)
         ? data.serverTunnels
@@ -922,11 +917,11 @@ export function HostManagerEditor({
 
       submitData.tunnelConnections = serverTunnelConnections;
 
-      (submitData as any).connectionType = data.connectionType;
-      (submitData as any).domain = data.domain;
-      (submitData as any).security = data.security;
-      (submitData as any).ignoreCert = data.ignoreCert;
-      (submitData as any).guacamoleConfig = data.guacamoleConfig;
+      submitData.connectionType = data.connectionType;
+      submitData.domain = data.domain;
+      submitData.security = data.security;
+      submitData.ignoreCert = data.ignoreCert;
+      submitData.guacamoleConfig = data.guacamoleConfig;
 
       if (data.connectionType !== "ssh") {
         submitData.authType = "none";
@@ -936,8 +931,8 @@ export function HostManagerEditor({
         submitData.credentialId = undefined;
         submitData.tunnelConnections = [];
         submitData.jumpHosts = [];
-        (submitData as any).useSocks5 = false;
-        (submitData as any).socks5ProxyChain = [];
+        submitData.useSocks5 = false;
+        submitData.socks5ProxyChain = [];
         submitData.forceKeyboardInteractive = false;
         submitData.enableTunnel = false;
         submitData.enableFileManager = false;
@@ -981,10 +976,10 @@ export function HostManagerEditor({
 
       let savedHost;
       if (editingHost && editingHost.id) {
-        savedHost = await updateSSHHost(editingHost.id, submitData as any);
+        savedHost = await updateSSHHost(editingHost.id, submitData);
         toast.success(t("hosts.hostUpdatedSuccessfully", { name: data.name }));
       } else {
-        savedHost = await createSSHHost(submitData as any);
+        savedHost = await createSSHHost(submitData);
         toast.success(t("hosts.hostAddedSuccessfully", { name: data.name }));
       }
 

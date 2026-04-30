@@ -76,13 +76,11 @@ export function LeftSidebar({
     addTab,
     setCurrentTab,
     allSplitScreenTab,
-    updateHostConfig,
   } = useTabs() as {
     tabs: Array<{ id: number; type: string; [key: string]: unknown }>;
     addTab: (tab: { type: string; [key: string]: unknown }) => number;
     setCurrentTab: (id: number) => void;
     allSplitScreenTab: number[];
-    updateHostConfig: (id: number, config: unknown) => void;
   };
   const isSplitScreenActive =
     Array.isArray(allSplitScreenTab) && allSplitScreenTab.length > 0;

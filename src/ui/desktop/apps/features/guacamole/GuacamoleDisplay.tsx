@@ -68,7 +68,6 @@ export const GuacamoleDisplay = forwardRef<
   const windowFocusedRef = useRef(
     typeof document === "undefined" ? true : document.hasFocus(),
   );
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -275,7 +274,6 @@ export const GuacamoleDisplay = forwardRef<
   const connect = useCallback(async () => {
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
-    setIsConnecting(true);
     setIsReady(false);
 
     let containerWidth = containerRef.current?.clientWidth || 0;
@@ -289,7 +287,6 @@ export const GuacamoleDisplay = forwardRef<
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
     if (!wsUrl) {
       isConnectingRef.current = false;
-      setIsConnecting(false);
       return;
     }
 
@@ -358,19 +355,16 @@ export const GuacamoleDisplay = forwardRef<
         case 0:
           break;
         case 1:
-          setIsConnecting(true);
           break;
         case 2:
           break;
         case 3:
-          setIsConnecting(false);
           setIsReady(true);
           onConnect?.();
           break;
         case 4:
           break;
         case 5:
-          setIsConnecting(false);
           setIsReady(false);
           hasKeyboardFocusRef.current = false;
           refreshKeyboardHandlers();
@@ -381,7 +375,6 @@ export const GuacamoleDisplay = forwardRef<
 
     client.onerror = (error: Guacamole.Status) => {
       const errorMessage = error.message || "Connection error";
-      setIsConnecting(false);
       setIsReady(false);
       onError?.(errorMessage);
     };

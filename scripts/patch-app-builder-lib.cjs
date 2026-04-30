@@ -71,8 +71,10 @@ patchFile(collectorPath, [
   },
   {
     name: "node module collector output flush",
-    alreadyPatched: [`                    outStream.end();
-                }`],
+    alreadyPatched: [
+      `                    outStream.end();
+                }`,
+    ],
     original: `                outStream.close();
                 // https://github.com/npm/npm/issues/17624
                 const shouldIgnore = code === 1 && "npm" === execName.toLowerCase() && args.includes("list");

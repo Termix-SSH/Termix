@@ -95,6 +95,7 @@ export function CredentialEditor({
 
         setFolders(uniqueFolders);
       } catch {
+        // Keep the editor usable even if credentials cannot be loaded.
       } finally {
         setLoading(false);
       }
