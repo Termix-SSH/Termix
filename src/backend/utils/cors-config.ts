@@ -53,7 +53,6 @@ export function createCorsMiddleware(
           return callback(null, true);
 
         const configured = getAllowedOrigins();
-        if (configured.length === 0) return callback(null, true);
         if (configured.includes("*") || configured.includes(origin))
           return callback(null, true);
 

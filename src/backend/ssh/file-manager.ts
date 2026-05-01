@@ -2135,6 +2135,10 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
 app.post("/ssh/file_manager/ssh/disconnect", (req, res) => {
   const { sessionId } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
+  const session = sshSessions[sessionId];
+  if (session && !verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
   fileLogger.info("File manager disconnection requested", {
     operation: "file_disconnect_request",
     sessionId,
@@ -2748,6 +2752,7 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const linkPath = decodeURIComponent(req.query.path as string);
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2755,6 +2760,10 @@ app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!linkPath) {
@@ -2842,6 +2851,7 @@ app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
   const sessionId = req.query.sessionId as string;
   const sshConn = sshSessions[sessionId];
   const rawPath = decodeURIComponent(req.query.path as string);
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2851,19 +2861,24 @@ app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
     return res.status(400).json({ error: "SSH connection not established" });
   }
 
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
   if (!rawPath) {
     return res.status(400).json({ error: "Path is required" });
   }
 
   sshConn.lastActive = Date.now();
 
-  let expandPath = rawPath;
-  if (expandPath.startsWith("~")) {
-    expandPath = "$HOME" + expandPath.substring(1);
+  let command: string;
+  if (rawPath.startsWith("~")) {
+    const rest = rawPath.substring(1).replace(/'/g, "'\"'\"'");
+    command = `echo ~'${rest}'`;
+  } else {
+    const escapedPath = rawPath.replace(/'/g, "'\"'\"'");
+    command = `echo '${escapedPath}'`;
   }
-
-  const escapedPath = expandPath.replace(/"/g, '\\"');
-  const command = `echo "${escapedPath}"`;
 
   execChannel(sshConn, command, (err, stream) => {
     if (err) {
@@ -2944,6 +2959,10 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!filePath) {
@@ -3125,6 +3144,10 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!filePath) {
@@ -3545,6 +3568,10 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
     return res.status(400).json({ error: "SSH connection not established" });
   }
 
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
   if (!filePath || !fileName || content === undefined) {
     return res
       .status(400)
@@ -3933,6 +3960,7 @@ app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
   const { sessionId, path: filePath, fileName } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -3940,6 +3968,10 @@ app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!filePath || !fileName) {
@@ -4073,6 +4105,10 @@ app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!folderPath || !folderName) {
@@ -4224,6 +4260,10 @@ app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!itemPath) {
@@ -4396,6 +4436,10 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
     return res.status(400).json({ error: "SSH connection not established" });
   }
 
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
   if (!oldPath || !newName) {
     return res
       .status(400)
@@ -4549,6 +4593,7 @@ app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
 app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
   const { sessionId, oldPath, newPath } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -4556,6 +4601,10 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
 
   if (!sshConn?.isConnected) {
     return res.status(400).json({ error: "SSH connection not established" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!oldPath || !newPath) {
@@ -4703,7 +4752,8 @@ app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
  *         description: Failed to download file.
  */
 app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
-  const { sessionId, path: filePath, hostId, userId } = req.body;
+  const { sessionId, path: filePath, hostId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
   const downloadStartTime = Date.now();
 
   if (!sessionId || !filePath) {
@@ -4732,6 +4782,10 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
     return res
       .status(400)
       .json({ error: "SSH session not found or not connected" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   sshConn.lastActive = Date.now();
@@ -4850,7 +4904,8 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
  *         description: Failed to copy item.
  */
 app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
-  const { sessionId, sourcePath, targetDir, hostId, userId } = req.body;
+  const { sessionId, sourcePath, targetDir, hostId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId || !sourcePath || !targetDir) {
     return res.status(400).json({ error: "Missing required parameters" });
@@ -4861,6 +4916,10 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
     return res
       .status(400)
       .json({ error: "SSH session not found or not connected" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   sshConn.lastActive = Date.now();
@@ -5042,6 +5101,7 @@ app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
 app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
   const { sessionId, filePath } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sshConn || !sshConn.isConnected) {
     fileLogger.error(
@@ -5054,6 +5114,10 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
       },
     );
     return res.status(400).json({ error: "SSH connection not available" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!filePath) {
@@ -5171,6 +5235,7 @@ app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
 app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
   const { sessionId, path, permissions } = req.body;
   const sshConn = sshSessions[sessionId];
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sshConn || !sshConn.isConnected) {
     fileLogger.error(
@@ -5183,6 +5248,10 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
       },
     );
     return res.status(400).json({ error: "SSH connection not available" });
+  }
+
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   if (!path) {
@@ -5369,6 +5438,7 @@ app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const { sessionId, archivePath, extractPath } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (!sessionId || !archivePath) {
     return res.status(400).json({ error: "Missing required parameters" });
@@ -5377,6 +5447,10 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
   const session = sshSessions[sessionId];
   if (!session || !session.isConnected) {
     return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
@@ -5575,6 +5649,7 @@ app.post("/ssh/file_manager/ssh/extractArchive", async (req, res) => {
  */
 app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const { sessionId, paths, archiveName, format } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
 
   if (
     !sessionId ||
@@ -5589,6 +5664,10 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const session = sshSessions[sessionId];
   if (!session || !session.isConnected) {
     return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
