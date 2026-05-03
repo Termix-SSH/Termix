@@ -3421,6 +3421,7 @@ export async function getUserAlerts(): Promise<{
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user alerts");
+    throw error;
   }
 }
 
@@ -3432,6 +3433,7 @@ export async function dismissAlert(
     return response.data;
   } catch (error) {
     handleApiError(error, "dismiss alert");
+    throw error;
   }
 }
 

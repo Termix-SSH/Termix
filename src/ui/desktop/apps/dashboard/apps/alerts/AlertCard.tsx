@@ -71,7 +71,7 @@ export function AlertCard({
   alert,
   onDismiss,
   onClose,
-}: AlertCardProps): React.ReactElement {
+}: AlertCardProps): React.ReactElement | null {
   const { t } = useTranslation();
 
   if (!alert) {
@@ -136,7 +136,7 @@ export function AlertCard({
       <CardFooter className="flex items-center justify-between pt-0">
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleDismiss}>
-            Dismiss
+            {t("common.dismiss")}
           </Button>
           {alert.actionUrl && alert.actionText && (
             <Button

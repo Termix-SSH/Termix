@@ -144,10 +144,10 @@ export function AlertManager({
               disabled={currentAlertIndex === 0}
               className="h-8 px-3"
             >
-              Previous
+              {t("common.previous")}
             </Button>
             <span className="text-sm text-muted-foreground">
-              {currentAlertIndex + 1} of {alerts.length}
+              {currentAlertIndex + 1} {t("common.of")} {alerts.length}
             </span>
             <Button
               variant="outline"
@@ -156,7 +156,7 @@ export function AlertManager({
               disabled={currentAlertIndex === alerts.length - 1}
               className="h-8 px-3"
             >
-              Next
+              {t("common.next")}
             </Button>
           </div>
         )}
