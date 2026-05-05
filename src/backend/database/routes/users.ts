@@ -2797,7 +2797,6 @@ router.get("/list", authenticateJWT, async (req, res) => {
         username: users.username,
         isAdmin: users.isAdmin,
         isOidc: users.isOidc,
-        passwordHash: users.passwordHash,
       })
       .from(users);
 
