@@ -3209,8 +3209,10 @@ router.post("/totp/disable", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { password, totp_code } = req.body;
 
-  if (!password && !totp_code) {
-    return res.status(400).json({ error: "Password or TOTP code is required" });
+  if (!password || !totp_code) {
+    return res
+      .status(400)
+      .json({ error: "Both password and TOTP code are required" });
   }
 
   try {
@@ -3225,24 +3227,22 @@ router.post("/totp/disable", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "TOTP is not enabled" });
     }
 
-    if (password && !userRecord.isOidc) {
+    if (!userRecord.isOidc) {
       const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
       if (!isMatch) {
         return res.status(401).json({ error: "Incorrect password" });
       }
-    } else if (totp_code) {
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totpSecret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
+    }
 
-      if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
-      }
-    } else {
-      return res.status(400).json({ error: "Authentication required" });
+    const verified = speakeasy.totp.verify({
+      secret: userRecord.totpSecret!,
+      encoding: "base32",
+      token: totp_code,
+      window: 2,
+    });
+
+    if (!verified) {
+      return res.status(401).json({ error: "Invalid TOTP code" });
     }
 
     await db
@@ -3300,8 +3300,10 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { password, totp_code } = req.body;
 
-  if (!password && !totp_code) {
-    return res.status(400).json({ error: "Password or TOTP code is required" });
+  if (!password || !totp_code) {
+    return res
+      .status(400)
+      .json({ error: "Both password and TOTP code are required" });
   }
 
   try {
@@ -3316,24 +3318,22 @@ router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "TOTP is not enabled" });
     }
 
-    if (password && !userRecord.isOidc) {
+    if (!userRecord.isOidc) {
       const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
       if (!isMatch) {
         return res.status(401).json({ error: "Incorrect password" });
       }
-    } else if (totp_code) {
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totpSecret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
+    }
 
-      if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
-      }
-    } else {
-      return res.status(400).json({ error: "Authentication required" });
+    const verified = speakeasy.totp.verify({
+      secret: userRecord.totpSecret!,
+      encoding: "base32",
+      token: totp_code,
+      window: 2,
+    });
+
+    if (!verified) {
+      return res.status(401).json({ error: "Invalid TOTP code" });
     }
 
     const backupCodes = Array.from({ length: 8 }, () =>
