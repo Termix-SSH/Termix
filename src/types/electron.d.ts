@@ -129,8 +129,8 @@ declare global {
     electronAPI: ElectronAPI;
     IS_ELECTRON: boolean;
     electronClipboard?: {
-      writeText(text: string): void;
-      readText(): string;
+      writeText(text: string): Promise<boolean>;
+      readText(): Promise<string>;
     };
   }
 }

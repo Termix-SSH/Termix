@@ -70,7 +70,7 @@ export function ConsoleTerminal({
 
     const writeTextToClipboard = async (text: string): Promise<void> => {
       if (window.electronClipboard) {
-        window.electronClipboard.writeText(text);
+        await window.electronClipboard.writeText(text);
         return;
       }
       await navigator.clipboard.writeText(text);
@@ -80,8 +80,8 @@ export function ConsoleTerminal({
       if (e.type !== "keydown") return true;
 
       if (
-        ((e.ctrlKey && !e.altKey && !e.metaKey) ||
-          (e.metaKey && !e.ctrlKey && !e.altKey)) &&
+        ((e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) ||
+          (e.metaKey && !e.shiftKey && !e.ctrlKey && !e.altKey)) &&
         e.key.toLowerCase() === "v"
       ) {
         e.preventDefault();
@@ -117,16 +117,11 @@ export function ConsoleTerminal({
       }
 
       if (
-        ((e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          e.key.toLowerCase() === "c") ||
-          (e.ctrlKey &&
-            !e.shiftKey &&
-            !e.altKey &&
-            !e.metaKey &&
-            e.key === "Insert")) &&
+        e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key === "Insert" &&
         terminal.hasSelection()
       ) {
         e.preventDefault();

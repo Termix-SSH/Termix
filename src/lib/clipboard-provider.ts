@@ -13,7 +13,9 @@ export class RobustClipboardProvider implements IClipboardProvider {
         const text = this.pendingWrite;
         this.pendingWrite = null;
         if (window.electronClipboard) {
-          window.electronClipboard.writeText(text);
+          window.electronClipboard.writeText(text).catch(() => {
+            this.pendingWrite = text;
+          });
           return;
         }
         navigator.clipboard.writeText(text).catch(() => {
@@ -42,7 +44,7 @@ export class RobustClipboardProvider implements IClipboardProvider {
   ): Promise<void> {
     try {
       if (window.electronClipboard) {
-        window.electronClipboard.writeText(text);
+        await window.electronClipboard.writeText(text);
         return;
       }
       await navigator.clipboard.writeText(text);

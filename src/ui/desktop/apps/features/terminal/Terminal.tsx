@@ -1668,7 +1668,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     async function writeTextToClipboard(text: string): Promise<boolean> {
       try {
         if (window.electronClipboard) {
-          window.electronClipboard.writeText(text);
+          await window.electronClipboard.writeText(text);
           return true;
         }
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1971,7 +1971,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
-        if (getUseRightClickCopyPaste()) {
+        if (e.ctrlKey && onOpenFileManager) {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenFileManager();
+          return;
+        }
+
+        if (isElectron() && getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
           if (terminal.hasSelection()) {
@@ -2148,8 +2155,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          ((e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) ||
-            (e.metaKey && !e.ctrlKey && !e.altKey) ||
+          ((e.metaKey && !e.shiftKey && !e.ctrlKey && !e.altKey) ||
             (e.ctrlKey &&
               !e.shiftKey &&
               !e.altKey &&

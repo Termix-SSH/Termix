@@ -1,5 +1,4 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const { clipboard } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
@@ -48,8 +47,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 });
 
 contextBridge.exposeInMainWorld("electronClipboard", {
-  writeText: (text) => clipboard.writeText(text),
-  readText: () => clipboard.readText(),
+  writeText: (text) => ipcRenderer.invoke("clipboard-write-text", text),
+  readText: () => ipcRenderer.invoke("clipboard-read-text"),
 });
 
 window.IS_ELECTRON = true;

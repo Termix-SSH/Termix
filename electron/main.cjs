@@ -8,6 +8,7 @@ const {
   session,
   safeStorage,
   Tray,
+  clipboard,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -2314,6 +2315,13 @@ ipcMain.handle("clear-session-cookies", async () => {
     console.error("Failed to clear session cookies:", error);
   }
 });
+
+ipcMain.handle("clipboard-write-text", (_event, text) => {
+  clipboard.writeText(typeof text === "string" ? text : String(text ?? ""));
+  return true;
+});
+
+ipcMain.handle("clipboard-read-text", () => clipboard.readText());
 
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
