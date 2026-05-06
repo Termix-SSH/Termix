@@ -429,6 +429,7 @@
     "info": "Info",
     "success": "Success",
     "unsavedChanges": "Unsaved changes",
+    "dismiss": "Dismiss",
     "loading": "Loading...",
     "required": "Required",
     "optional": "Optional",

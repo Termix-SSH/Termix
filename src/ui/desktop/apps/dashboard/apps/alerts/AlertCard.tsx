@@ -83,18 +83,6 @@ export function AlertCard({
     onClose();
   };
 
-  const formatExpiryDate = (expiryString: string) => {
-    const expiryDate = new Date(expiryString);
-    const now = new Date();
-    const diffTime = expiryDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return t("common.expired");
-    if (diffDays === 0) return t("common.expiresToday");
-    if (diffDays === 1) return t("common.expiresTomorrow");
-    return t("common.expiresInDays", { days: diffDays });
-  };
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="pb-3">
@@ -123,9 +111,6 @@ export function AlertCard({
               {alert.type}
             </Badge>
           )}
-          <span className="text-sm text-muted-foreground">
-            {formatExpiryDate(alert.expiresAt)}
-          </span>
         </div>
       </CardHeader>
       <CardContent className="pb-4">
