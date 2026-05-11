@@ -92,6 +92,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },
   },

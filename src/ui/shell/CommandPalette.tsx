@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/kbd";
 import {
   Command,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandGroup,
@@ -28,6 +27,8 @@ import {
   User,
   KeyRound,
   LayoutDashboard,
+  Monitor,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/button";
 import {
@@ -36,21 +37,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-
-type Host = {
-  name: string;
-  user: string;
-  address: string;
-  online: boolean;
-  cpu: number;
-  ram: number;
-  lastAccess: string;
-  tags?: string[];
-  enableTerminal?: boolean;
-  enableFileManager?: boolean;
-  enableDocker?: boolean;
-  enableTunnel?: boolean;
-};
+import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
+import type { Host } from "@/types/ui-types";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -59,20 +47,26 @@ interface CommandPaletteProps {
   onOpenTab: (type: any, label?: string, pendingEvent?: string) => void;
 }
 
-const ACTION_ICONS: Record<string, React.ReactNode> = {
-  Terminal: <Terminal className="size-3" />,
-  Files: <FolderOpen className="size-3" />,
-  Docker: <Box className="size-3" />,
-  Stats: <Activity className="size-3" />,
-  Tunnels: <Network className="size-3" />,
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+  terminal: <Terminal className="size-3.5" />,
+  file_manager: <FolderOpen className="size-3.5" />,
+  server_stats: <Activity className="size-3.5" />,
+  tunnel: <Network className="size-3.5" />,
+  docker: <Box className="size-3.5" />,
+  telnet: <Terminal className="size-3.5" />,
+  vnc: <Monitor className="size-3.5" />,
+  rdp: <Monitor className="size-3.5" />,
 };
 
-const ACTION_TAB_TYPE: Record<string, string> = {
-  Terminal: "terminal",
-  Files: "files",
-  Docker: "docker",
-  Stats: "stats",
-  Tunnels: "tunnel",
+const ACTIVITY_TAB_TYPE: Record<string, string> = {
+  terminal: "terminal",
+  file_manager: "files",
+  server_stats: "stats",
+  tunnel: "tunnel",
+  docker: "docker",
+  telnet: "telnet",
+  vnc: "vnc",
+  rdp: "rdp",
 };
 
 export function CommandPalette({
@@ -83,11 +77,17 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
+    [],
+  );
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
       setSearch("");
+      getRecentActivity(5)
+        .then(setRecentActivity)
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -104,7 +104,8 @@ export function CommandPalette({
   const filteredHosts = hosts.filter(
     (h) =>
       h.name.toLowerCase().includes(search.toLowerCase()) ||
-      h.ip.toLowerCase().includes(search.toLowerCase()),
+      h.ip.toLowerCase().includes(search.toLowerCase()) ||
+      h.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleAction = (action: () => void) => {
@@ -238,18 +239,101 @@ export function CommandPalette({
               </CommandItem>
             </CommandGroup>
 
+            {recentActivity.length > 0 && (
+              <>
+                <CommandSeparator className="my-2" />
+                <CommandGroup heading="Recent Activity" className="px-2">
+                  {recentActivity.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      onSelect={() =>
+                        handleAction(() =>
+                          onOpenTab(
+                            ACTIVITY_TAB_TYPE[item.type] as any,
+                            item.hostName,
+                          ),
+                        )
+                      }
+                      className="group flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                    >
+                      <div className="size-7 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors text-muted-foreground group-hover:text-accent-brand">
+                        {ACTIVITY_ICONS[item.type]}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm font-semibold truncate">
+                          {item.hostName}
+                        </span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {item.type.replace("_", " ")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground/50">
+                        <Clock className="size-3" />
+                        <span className="text-[10px]">
+                          {new Date(item.timestamp).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
             <CommandSeparator className="my-2" />
 
             <CommandGroup heading="Servers & Hosts" className="px-2">
               {filteredHosts.length > 0 ? (
                 filteredHosts.map((host, i) => {
                   const actions = [
-                    host.enableTerminal !== false && "Terminal",
-                    host.enableFileManager !== false && "Files",
-                    host.enableDocker && "Docker",
-                    host.enableTunnel && "Tunnels",
-                    "Stats",
-                  ].filter(Boolean) as string[];
+                    host.enableSsh &&
+                      host.enableTerminal !== false && {
+                        type: "terminal",
+                        icon: <Terminal className="size-3" />,
+                        label: "Terminal",
+                      },
+                    host.enableSsh &&
+                      host.enableFileManager && {
+                        type: "files",
+                        icon: <FolderOpen className="size-3" />,
+                        label: "Files",
+                      },
+                    host.enableSsh &&
+                      host.enableDocker && {
+                        type: "docker",
+                        icon: <Box className="size-3" />,
+                        label: "Docker",
+                      },
+                    host.enableSsh &&
+                      host.enableTunnel && {
+                        type: "tunnel",
+                        icon: <Network className="size-3" />,
+                        label: "Tunnels",
+                      },
+                    host.enableSsh && {
+                      type: "stats",
+                      icon: <Activity className="size-3" />,
+                      label: "Stats",
+                    },
+                    host.enableRdp && {
+                      type: "rdp",
+                      icon: <Monitor className="size-3" />,
+                      label: "RDP",
+                    },
+                    host.enableVnc && {
+                      type: "vnc",
+                      icon: <Monitor className="size-3" />,
+                      label: "VNC",
+                    },
+                    host.enableTelnet && {
+                      type: "telnet",
+                      icon: <Terminal className="size-3" />,
+                      label: "Telnet",
+                    },
+                  ].filter(Boolean) as {
+                    type: string;
+                    icon: React.ReactNode;
+                    label: string;
+                  }[];
 
                   return (
                     <CommandItem
@@ -279,28 +363,25 @@ export function CommandPalette({
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground font-mono">
-                          {host.ip}
+                          {host.username}@{host.ip}
                         </span>
                       </div>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         {actions.map((action) => (
                           <Button
-                            key={action}
+                            key={action.type}
                             variant="ghost"
                             size="icon"
-                            title={action}
+                            title={action.label}
                             className="size-7 rounded-none hover:bg-accent-brand/20 hover:text-accent-brand"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAction(() =>
-                                onOpenTab(
-                                  ACTION_TAB_TYPE[action] as any,
-                                  host.name,
-                                ),
+                                onOpenTab(action.type as any, host.name),
                               );
                             }}
                           >
-                            {ACTION_ICONS[action]}
+                            {action.icon}
                           </Button>
                         ))}
                         <DropdownMenu>
@@ -322,7 +403,15 @@ export function CommandPalette({
                               className="rounded-none text-xs font-semibold hover:bg-accent-brand/10 hover:text-accent-brand cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAction(() => onOpenTab("host-manager"));
+                                setIsOpen(false);
+                                onOpenTab("host-manager");
+                                setTimeout(() => {
+                                  window.dispatchEvent(
+                                    new CustomEvent("host-manager:edit-host", {
+                                      detail: host.id,
+                                    }),
+                                  );
+                                }, 100);
                               }}
                             >
                               <Edit3 className="size-3.5 mr-2" /> Edit Host
@@ -335,7 +424,7 @@ export function CommandPalette({
                 })
               ) : (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  No hosts found matching "{search}"
+                  No hosts found matching &ldquo;{search}&rdquo;
                 </div>
               )}
             </CommandGroup>

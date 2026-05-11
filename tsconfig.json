@@ -13,6 +13,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
+      "@/types/*": ["./src/types/*"],
       "@/*": ["./src/ui/*"]
     }
   }

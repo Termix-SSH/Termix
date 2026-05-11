@@ -2970,7 +2970,7 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   session.activeOperations++;
 
   try {
-    let command = `docker logs ${containerId}`;
+    let command = `docker logs ${containerId} 2>&1`;
 
     if (tail && tail > 0) {
       command += ` --tail ${Math.floor(tail)}`;
