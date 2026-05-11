@@ -58,7 +58,6 @@ function useSplitSizes(splitMode: SplitMode) {
     const d = defaultSizes(splitMode);
     setRowSizes(d.rowSizes);
     setRowColSizes(d.rowColSizes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitMode]);
 
   function reset() {

@@ -13,15 +13,11 @@ import {
   Settings,
   Download,
   Upload,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
   ArrowUp,
   ArrowDown,
   FileSymlink,
   Move,
   GitCompare,
-  Edit,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "@/types/index";

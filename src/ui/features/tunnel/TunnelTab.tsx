@@ -1,26 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
-import { Input } from "@/components/input";
 import { Separator } from "@/components/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
+
 import {
   AlertCircle,
   Clock,
   Network,
   Play,
-  Plus,
   RefreshCw,
   Settings,
   Square,
-  Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react";
