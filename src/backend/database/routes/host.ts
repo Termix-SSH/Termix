@@ -252,6 +252,9 @@ const SENSITIVE_FIELDS = [
   "autostartKey",
   "autostartKeyPassword",
   "socks5Password",
+  "rdpPassword",
+  "vncPassword",
+  "telnetPassword",
 ];
 
 function stripSensitiveFields(
@@ -288,6 +291,23 @@ function transformHostResponse(
     showTunnelInSidebar: !!host.showTunnelInSidebar,
     showDockerInSidebar: !!host.showDockerInSidebar,
     showServerStatsInSidebar: !!host.showServerStatsInSidebar,
+    enableSsh: host.enableSsh !== undefined ? !!host.enableSsh : true,
+    enableRdp: !!host.enableRdp,
+    enableVnc: !!host.enableVnc,
+    enableTelnet: !!host.enableTelnet,
+    sshPort: host.sshPort ?? host.port ?? 22,
+    rdpPort: host.rdpPort ?? 3389,
+    vncPort: host.vncPort ?? 5900,
+    telnetPort: host.telnetPort ?? 23,
+    rdpUser: host.rdpUser || undefined,
+    rdpDomain: host.rdpDomain || undefined,
+    rdpSecurity: host.rdpSecurity || undefined,
+    rdpIgnoreCert: !!host.rdpIgnoreCert,
+    vncUser: host.vncUser || undefined,
+    telnetUser: host.telnetUser || undefined,
+    hasRdpPassword: !!host.rdpPassword,
+    hasVncPassword: !!host.vncPassword,
+    hasTelnetPassword: !!host.telnetPassword,
     tunnelConnections: host.tunnelConnections
       ? JSON.parse(host.tunnelConnections as string)
       : [],
@@ -593,6 +613,23 @@ router.post(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      enableSsh,
+      enableRdp,
+      enableVnc,
+      enableTelnet,
+      sshPort,
+      rdpPort,
+      vncPort,
+      telnetPort,
+      rdpUser,
+      rdpPassword,
+      rdpDomain,
+      rdpSecurity,
+      rdpIgnoreCert,
+      vncPassword,
+      vncUser,
+      telnetUser,
+      telnetPassword,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
@@ -685,6 +722,20 @@ router.post(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
+      enableSsh: enableSsh !== false ? 1 : 0,
+      enableRdp: enableRdp ? 1 : 0,
+      enableVnc: enableVnc ? 1 : 0,
+      enableTelnet: enableTelnet ? 1 : 0,
+      sshPort: sshPort || port || 22,
+      rdpPort: rdpPort || 3389,
+      vncPort: vncPort || 5900,
+      telnetPort: telnetPort || 23,
+      rdpUser: rdpUser || null,
+      rdpDomain: rdpDomain || null,
+      rdpSecurity: rdpSecurity || null,
+      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncUser: vncUser || null,
+      telnetUser: telnetUser || null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -742,6 +793,10 @@ router.post(
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
+
+    sshDataObj.rdpPassword = rdpPassword || null;
+    sshDataObj.vncPassword = vncPassword || null;
+    sshDataObj.telnetPassword = telnetPassword || null;
 
     try {
       const result = await SimpleDBOps.insert(
@@ -1092,6 +1147,23 @@ router.put(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      enableSsh,
+      enableRdp,
+      enableVnc,
+      enableTelnet,
+      sshPort,
+      rdpPort,
+      vncPort,
+      telnetPort,
+      rdpUser,
+      rdpPassword,
+      rdpDomain,
+      rdpSecurity,
+      rdpIgnoreCert,
+      vncPassword,
+      vncUser,
+      telnetUser,
+      telnetPassword,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
@@ -1181,6 +1253,20 @@ router.put(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
+      enableSsh: enableSsh !== false ? 1 : 0,
+      enableRdp: enableRdp ? 1 : 0,
+      enableVnc: enableVnc ? 1 : 0,
+      enableTelnet: enableTelnet ? 1 : 0,
+      sshPort: sshPort || port || 22,
+      rdpPort: rdpPort || 3389,
+      vncPort: vncPort || 5900,
+      telnetPort: telnetPort || 23,
+      rdpUser: rdpUser || null,
+      rdpDomain: rdpDomain || null,
+      rdpSecurity: rdpSecurity || null,
+      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncUser: vncUser || null,
+      telnetUser: telnetUser || null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -1248,6 +1334,11 @@ router.put(
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
+
+    if (rdpPassword !== undefined) sshDataObj.rdpPassword = rdpPassword || null;
+    if (vncPassword !== undefined) sshDataObj.vncPassword = vncPassword || null;
+    if (telnetPassword !== undefined)
+      sshDataObj.telnetPassword = telnetPassword || null;
 
     try {
       const accessInfo = await permissionManager.canAccessHost(
