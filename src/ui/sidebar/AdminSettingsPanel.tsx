@@ -4,12 +4,36 @@ import {
   getSessions,
   getRoles,
   getApiKeys,
+  createApiKey,
   deleteUser,
   revokeSession,
+  revokeAllUserSessions,
   deleteRole,
   deleteApiKey,
+  createRole,
+  registerUser,
+  makeUserAdmin,
+  removeAdminStatus,
+  getRegistrationAllowed,
+  updateRegistrationAllowed,
+  getPasswordLoginAllowed,
+  updatePasswordLoginAllowed,
+  getPasswordResetAllowed,
+  updatePasswordResetAllowed,
+  getSessionTimeout,
+  updateSessionTimeout,
+  getGlobalMonitoringSettings,
+  updateGlobalMonitoringSettings,
+  getLogLevel,
+  updateLogLevel,
+  getGuacamoleSettings,
+  updateGuacamoleSettings,
+  getAdminOIDCConfig,
+  updateOIDCConfig,
+  disableOIDCConfig,
+  isElectron,
 } from "@/main-axios";
-import type { ApiKey } from "@/main-axios";
+import type { ApiKey, CreatedApiKey } from "@/main-axios";
 import type React from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -24,8 +48,10 @@ import {
   Activity,
   AlertCircle,
   ChevronDown,
+  Copy,
   Database,
   Eye,
+  EyeOff,
   KeyRound,
   Network,
   Pencil,
@@ -36,11 +62,12 @@ import {
   Shield,
   Trash2,
   User,
-  X,
 } from "lucide-react";
 import { SettingRow } from "@/components/section-card";
 import type { AdminSection } from "@/types/ui-types";
 import type { Role } from "@/main-axios";
+import { toast } from "sonner";
+import { getBasePath } from "@/lib/base-path";
 
 function AdminToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -102,17 +129,58 @@ export function AdminSettingsPanel() {
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
-  const [importFile, setImportFile] = useState<string | null>(null);
-  const [showCreateRole, setShowCreateRole] = useState(false);
-  const [showCreateKey, setShowCreateKey] = useState(false);
+
+  // OIDC state
+  const [oidcClientId, setOidcClientId] = useState("");
+  const [oidcClientSecret, setOidcClientSecret] = useState("");
+  const [oidcAuthUrl, setOidcAuthUrl] = useState("");
+  const [oidcIssuerUrl, setOidcIssuerUrl] = useState("");
+  const [oidcTokenUrl, setOidcTokenUrl] = useState("");
+  const [oidcUserIdentifier, setOidcUserIdentifier] = useState("sub");
+  const [oidcDisplayName, setOidcDisplayName] = useState("name");
+  const [oidcScopes, setOidcScopes] = useState("openid email profile");
+  const [oidcUserinfoUrl, setOidcUserinfoUrl] = useState("");
+  const [oidcAllowedUsers, setOidcAllowedUsers] = useState("");
+  const [oidcSaving, setOidcSaving] = useState(false);
+
+  // Create user dialog
   const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [createUserLoading, setCreateUserLoading] = useState(false);
+
+  // Edit user dialog
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [editUserTarget, setEditUserTarget] = useState<any | null>(null);
+  const [editUserLoading, setEditUserLoading] = useState(false);
+
+  // Link account dialog
   const [linkAccountOpen, setLinkAccountOpen] = useState(false);
   const [linkAccountTarget, setLinkAccountTarget] = useState<{
     id: string;
     username: string;
   } | null>(null);
+
+  // Create role form
+  const [showCreateRole, setShowCreateRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDisplayName, setNewRoleDisplayName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [createRoleLoading, setCreateRoleLoading] = useState(false);
+
+  // Create API key form
+  const [showCreateKey, setShowCreateKey] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyUserId, setNewKeyUserId] = useState("");
+  const [newKeyExpiry, setNewKeyExpiry] = useState("");
+  const [newKeyLoading, setNewKeyLoading] = useState(false);
+  const [createdKeyToken, setCreatedKeyToken] = useState<string | null>(null);
+
+  // Import state
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
 
   const [users, setUsers] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -120,22 +188,468 @@ export function AdminSettingsPanel() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
   useEffect(() => {
+    loadUsers();
+    loadSessions();
+    loadRoles();
+    loadApiKeys();
+    loadGeneralSettings();
+    loadOidcConfig();
+  }, []);
+
+  function loadUsers() {
     getUserList()
       .then(({ users: u }) => setUsers(u))
       .catch(() => {});
+  }
+
+  function loadSessions() {
     getSessions()
       .then(({ sessions: s }) => setSessions(s))
       .catch(() => {});
+  }
+
+  function loadRoles() {
     getRoles()
       .then(({ roles: r }) => setRoles(r))
       .catch(() => {});
+  }
+
+  function loadApiKeys() {
     getApiKeys()
       .then(({ apiKeys: k }) => setApiKeys(k))
       .catch(() => {});
-  }, []);
+  }
+
+  async function loadGeneralSettings() {
+    try {
+      const [reg, pwLogin, pwReset, timeout, monitoring, level, guac] =
+        await Promise.allSettled([
+          getRegistrationAllowed(),
+          getPasswordLoginAllowed(),
+          getPasswordResetAllowed(),
+          getSessionTimeout(),
+          getGlobalMonitoringSettings(),
+          getLogLevel(),
+          getGuacamoleSettings(),
+        ]);
+
+      if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
+      if (pwLogin.status === "fulfilled")
+        setAllowPasswordLogin(pwLogin.value.allowed);
+      if (pwReset.status === "fulfilled") setAllowPasswordReset(pwReset.value);
+      if (timeout.status === "fulfilled")
+        setSessionTimeout(String(timeout.value.timeoutHours));
+      if (monitoring.status === "fulfilled") {
+        setStatusInterval(String(monitoring.value.statusCheckInterval));
+        setMetricsInterval(String(monitoring.value.metricsInterval));
+      }
+      if (level.status === "fulfilled") setLogLevel(level.value.level);
+      if (guac.status === "fulfilled") {
+        setGuacEnabled(guac.value.enabled);
+        setGuacUrl(guac.value.url || "guacd:4822");
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  async function loadOidcConfig() {
+    try {
+      const config = await getAdminOIDCConfig();
+      if (!config) return;
+      setOidcClientId((config.clientId as string) ?? "");
+      setOidcClientSecret((config.clientSecret as string) ?? "");
+      setOidcAuthUrl((config.authorizationUrl as string) ?? "");
+      setOidcIssuerUrl((config.issuerUrl as string) ?? "");
+      setOidcTokenUrl((config.tokenUrl as string) ?? "");
+      setOidcUserIdentifier((config.userIdentifierPath as string) ?? "sub");
+      setOidcDisplayName((config.displayNamePath as string) ?? "name");
+      setOidcScopes((config.scopes as string) ?? "openid email profile");
+      setOidcUserinfoUrl((config.overrideUserinfoUrl as string) ?? "");
+      setOidcAllowedUsers(
+        Array.isArray(config.allowedUsers)
+          ? (config.allowedUsers as string[]).join("\n")
+          : "",
+      );
+    } catch {
+      // no OIDC configured yet
+    }
+  }
 
   function toggle(id: AdminSection) {
     setOpenSection((prev) => (prev === id ? null : id));
+  }
+
+  async function handleToggleRegistration() {
+    const newVal = !allowRegistration;
+    setAllowRegistration(newVal);
+    try {
+      await updateRegistrationAllowed(newVal);
+    } catch {
+      setAllowRegistration(!newVal);
+      toast.error("Failed to update registration setting");
+    }
+  }
+
+  async function handleTogglePasswordLogin() {
+    const newVal = !allowPasswordLogin;
+    setAllowPasswordLogin(newVal);
+    try {
+      await updatePasswordLoginAllowed(newVal);
+    } catch {
+      setAllowPasswordLogin(!newVal);
+      toast.error("Failed to update password login setting");
+    }
+  }
+
+  async function handleTogglePasswordReset() {
+    const newVal = !allowPasswordReset;
+    setAllowPasswordReset(newVal);
+    try {
+      await updatePasswordResetAllowed(newVal);
+    } catch {
+      setAllowPasswordReset(!newVal);
+      toast.error("Failed to update password reset setting");
+    }
+  }
+
+  async function handleSaveSessionTimeout() {
+    const hours = parseInt(sessionTimeout, 10);
+    if (isNaN(hours) || hours < 1 || hours > 720) {
+      toast.error("Session timeout must be between 1 and 720 hours");
+      return;
+    }
+    try {
+      await updateSessionTimeout(hours);
+      toast.success("Session timeout saved");
+    } catch {
+      toast.error("Failed to save session timeout");
+    }
+  }
+
+  async function handleSaveMonitoring() {
+    const status = parseInt(statusInterval, 10);
+    const metrics = parseInt(metricsInterval, 10);
+    if (isNaN(status) || isNaN(metrics)) {
+      toast.error("Invalid interval values");
+      return;
+    }
+    try {
+      await updateGlobalMonitoringSettings({
+        statusCheckInterval: status,
+        metricsInterval: metrics,
+      });
+      toast.success("Monitoring settings saved");
+    } catch {
+      toast.error("Failed to save monitoring settings");
+    }
+  }
+
+  async function handleSaveGuacamole() {
+    try {
+      await updateGuacamoleSettings({ enabled: guacEnabled, url: guacUrl });
+      toast.success("Guacamole settings saved");
+    } catch {
+      toast.error("Failed to save Guacamole settings");
+    }
+  }
+
+  async function handleToggleGuacamole() {
+    const newVal = !guacEnabled;
+    setGuacEnabled(newVal);
+    try {
+      await updateGuacamoleSettings({ enabled: newVal, url: guacUrl });
+    } catch {
+      setGuacEnabled(!newVal);
+      toast.error("Failed to update Guacamole setting");
+    }
+  }
+
+  async function handleSaveLogLevel(level: string) {
+    setLogLevel(level);
+    try {
+      await updateLogLevel(level);
+    } catch {
+      toast.error("Failed to update log level");
+    }
+  }
+
+  async function handleSaveOidc() {
+    setOidcSaving(true);
+    try {
+      await updateOIDCConfig({
+        clientId: oidcClientId,
+        clientSecret: oidcClientSecret,
+        authorizationUrl: oidcAuthUrl,
+        issuerUrl: oidcIssuerUrl,
+        tokenUrl: oidcTokenUrl,
+        userIdentifierPath: oidcUserIdentifier,
+        displayNamePath: oidcDisplayName,
+        scopes: oidcScopes,
+        overrideUserinfoUrl: oidcUserinfoUrl || null,
+        allowedUsers: oidcAllowedUsers
+          ? oidcAllowedUsers.split("\n").filter(Boolean)
+          : [],
+      });
+      toast.success("OIDC configuration saved");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to save OIDC config");
+    } finally {
+      setOidcSaving(false);
+    }
+  }
+
+  async function handleRemoveOidc() {
+    try {
+      await disableOIDCConfig();
+      setOidcClientId("");
+      setOidcClientSecret("");
+      setOidcAuthUrl("");
+      setOidcIssuerUrl("");
+      setOidcTokenUrl("");
+      setOidcUserIdentifier("sub");
+      setOidcDisplayName("name");
+      setOidcScopes("openid email profile");
+      setOidcUserinfoUrl("");
+      setOidcAllowedUsers("");
+      toast.success("OIDC configuration removed");
+    } catch {
+      toast.error("Failed to remove OIDC config");
+    }
+  }
+
+  async function handleCreateUser() {
+    if (!newUsername.trim() || !newPassword.trim()) {
+      toast.error("Username and password are required");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setCreateUserLoading(true);
+    try {
+      await registerUser(newUsername.trim(), newPassword);
+      toast.success(`User "${newUsername}" created`);
+      setCreateUserOpen(false);
+      setNewUsername("");
+      setNewPassword("");
+      loadUsers();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to create user");
+    } finally {
+      setCreateUserLoading(false);
+    }
+  }
+
+  async function handleToggleAdmin(user: any) {
+    setEditUserLoading(true);
+    try {
+      if (user.isAdmin) {
+        await removeAdminStatus(user.id);
+        setEditUserTarget((prev: any) => ({ ...prev, isAdmin: false }));
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, isAdmin: false } : u)),
+        );
+      } else {
+        await makeUserAdmin(user.id);
+        setEditUserTarget((prev: any) => ({ ...prev, isAdmin: true }));
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, isAdmin: true } : u)),
+        );
+      }
+    } catch {
+      toast.error("Failed to update admin status");
+    } finally {
+      setEditUserLoading(false);
+    }
+  }
+
+  async function handleRevokeUserSessions(userId: string) {
+    try {
+      await revokeAllUserSessions(userId);
+      toast.success("All sessions revoked");
+      loadSessions();
+    } catch {
+      toast.error("Failed to revoke sessions");
+    }
+  }
+
+  async function handleDeleteEditUser() {
+    if (!editUserTarget) return;
+    setEditUserLoading(true);
+    try {
+      await deleteUser(editUserTarget.username);
+      setUsers((prev) => prev.filter((u) => u.id !== editUserTarget.id));
+      setEditUserOpen(false);
+      setEditUserTarget(null);
+      toast.success(`User "${editUserTarget.username}" deleted`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to delete user");
+    } finally {
+      setEditUserLoading(false);
+    }
+  }
+
+  async function handleCreateRole() {
+    if (!newRoleName.trim() || !newRoleDisplayName.trim()) {
+      toast.error("Name and display name are required");
+      return;
+    }
+    setCreateRoleLoading(true);
+    try {
+      const { role } = await createRole({
+        name: newRoleName.trim(),
+        displayName: newRoleDisplayName.trim(),
+        description: newRoleDescription.trim() || null,
+      });
+      setRoles((prev) => [...prev, role]);
+      setShowCreateRole(false);
+      setNewRoleName("");
+      setNewRoleDisplayName("");
+      setNewRoleDescription("");
+      toast.success(`Role "${role.displayName}" created`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to create role");
+    } finally {
+      setCreateRoleLoading(false);
+    }
+  }
+
+  async function handleCreateApiKey() {
+    if (!newKeyName.trim()) {
+      toast.error("Key name is required");
+      return;
+    }
+    if (!newKeyUserId.trim()) {
+      toast.error("User ID is required");
+      return;
+    }
+    setNewKeyLoading(true);
+    try {
+      const created: CreatedApiKey = await createApiKey(
+        newKeyName.trim(),
+        newKeyUserId.trim(),
+        newKeyExpiry ? new Date(newKeyExpiry).toISOString() : undefined,
+      );
+      setApiKeys((prev) => [created, ...prev]);
+      setCreatedKeyToken(created.token);
+      setNewKeyName("");
+      setNewKeyUserId("");
+      setNewKeyExpiry("");
+      toast.success(`API key "${created.name}" created`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to create API key");
+    } finally {
+      setNewKeyLoading(false);
+    }
+  }
+
+  async function handleExportDatabase() {
+    setExportLoading(true);
+    try {
+      const isDev =
+        !isElectron() &&
+        (window.location.port === "5173" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+
+      const apiUrl = isElectron()
+        ? `${(window as any).configuredServerUrl}/database/export`
+        : isDev
+          ? `http://localhost:30001/database/export`
+          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/export`;
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get("content-disposition");
+        const filename =
+          contentDisposition?.match(/filename="([^"]+)"/)?.[1] ||
+          "termix-export.sqlite";
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success("Database exported successfully");
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast.error(err.error || "Database export failed");
+      }
+    } catch {
+      toast.error("Database export failed");
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
+  async function handleImportDatabase() {
+    if (!importFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const isDev =
+        !isElectron() &&
+        (window.location.port === "5173" ||
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+
+      const apiUrl = isElectron()
+        ? `${(window as any).configuredServerUrl}/database/import`
+        : isDev
+          ? `http://localhost:30001/database/import`
+          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/import`;
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const s = result.summary;
+          const total =
+            (s.sshHostsImported || 0) +
+            (s.sshCredentialsImported || 0) +
+            (s.fileManagerItemsImported || 0) +
+            (s.dismissedAlertsImported || 0) +
+            (s.settingsImported || 0);
+          toast.success(
+            `Import completed: ${total} items imported, ${s.skippedItems || 0} skipped`,
+          );
+          setImportFile(null);
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          toast.error(
+            `Import failed: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
+          );
+        }
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast.error(err.error || "Database import failed");
+      }
+    } catch {
+      toast.error("Database import failed");
+    } finally {
+      setImportLoading(false);
+    }
   }
 
   return (
@@ -154,7 +668,7 @@ export function AdminSettingsPanel() {
           >
             <AdminToggle
               on={allowRegistration}
-              onToggle={() => setAllowRegistration((o) => !o)}
+              onToggle={handleToggleRegistration}
             />
           </SettingRow>
           <SettingRow
@@ -163,7 +677,7 @@ export function AdminSettingsPanel() {
           >
             <AdminToggle
               on={allowPasswordLogin}
-              onToggle={() => setAllowPasswordLogin((o) => !o)}
+              onToggle={handleTogglePasswordLogin}
             />
           </SettingRow>
           <SettingRow
@@ -172,7 +686,7 @@ export function AdminSettingsPanel() {
           >
             <AdminToggle
               on={allowPasswordReset}
-              onToggle={() => setAllowPasswordReset((o) => !o)}
+              onToggle={handleTogglePasswordReset}
             />
           </SettingRow>
 
@@ -190,6 +704,14 @@ export function AdminSettingsPanel() {
                 className="w-20 text-sm"
               />
               <span className="text-xs text-muted-foreground">hours</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+                onClick={handleSaveSessionTimeout}
+              >
+                Save
+              </Button>
             </div>
             <span className="text-[10px] text-muted-foreground">
               Min 1h · Max 720h
@@ -226,6 +748,14 @@ export function AdminSettingsPanel() {
                   className="w-20 text-sm"
                 />
                 <span className="text-xs text-muted-foreground">sec</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+                  onClick={handleSaveMonitoring}
+                >
+                  Save
+                </Button>
               </div>
             </div>
           </div>
@@ -235,22 +765,29 @@ export function AdminSettingsPanel() {
               label="Enable Guacamole"
               description="RDP/VNC remote desktop"
             >
-              <AdminToggle
-                on={guacEnabled}
-                onToggle={() => setGuacEnabled((o) => !o)}
-              />
+              <AdminToggle on={guacEnabled} onToggle={handleToggleGuacamole} />
             </SettingRow>
             {guacEnabled && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                   guacd URL
                 </label>
-                <Input
-                  value={guacUrl}
-                  onChange={(e) => setGuacUrl(e.target.value)}
-                  placeholder="guacd:4822"
-                  className="text-sm"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={guacUrl}
+                    onChange={(e) => setGuacUrl(e.target.value)}
+                    placeholder="guacd:4822"
+                    className="text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7 shrink-0"
+                    onClick={handleSaveGuacamole}
+                  >
+                    Save
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -263,7 +800,7 @@ export function AdminSettingsPanel() {
               {["debug", "info", "warn", "error"].map((l) => (
                 <button
                   key={l}
-                  onClick={() => setLogLevel(l)}
+                  onClick={() => handleSaveLogLevel(l)}
                   className={`px-2 py-1 text-[10px] font-semibold border capitalize transition-colors ${logLevel === l ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                 >
                   {l}
@@ -286,74 +823,106 @@ export function AdminSettingsPanel() {
             Configure OpenID Connect for SSO. Fields marked{" "}
             <span className="text-accent-brand">*</span> are required.
           </span>
-          {(
-            [
-              {
-                label: "Client ID",
-                placeholder: "your-client-id",
-                required: true,
-              },
-              {
-                label: "Client Secret",
-                placeholder: "your-client-secret",
-                type: "password",
-                required: true,
-              },
-              {
-                label: "Authorization URL",
-                placeholder: "https://provider/oauth2/auth",
-                required: true,
-              },
-              {
-                label: "Issuer URL",
-                placeholder: "https://provider",
-                required: true,
-              },
-              {
-                label: "Token URL",
-                placeholder: "https://provider/oauth2/token",
-                required: true,
-              },
-              {
-                label: "User Identifier Path",
-                placeholder: "sub",
-                required: true,
-              },
-              {
-                label: "Display Name Path",
-                placeholder: "name",
-                required: true,
-              },
-              {
-                label: "Scopes",
-                placeholder: "openid email profile",
-                required: true,
-              },
-              {
-                label: "Override Userinfo URL",
-                placeholder: "https://provider/oauth2/userinfo",
-              },
-            ] as {
-              label: string;
-              placeholder: string;
-              type?: string;
-              required?: boolean;
-            }[]
-          ).map((f) => (
-            <div key={f.label} className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {f.label}
-                {f.required && (
-                  <span className="text-accent-brand ml-0.5">*</span>
-                )}
-              </label>
-              <Input
-                type={f.type ?? "text"}
-                placeholder={f.placeholder}
-                className="text-xs"
-              />
-            </div>
-          ))}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Client ID <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcClientId}
+              onChange={(e) => setOidcClientId(e.target.value)}
+              placeholder="your-client-id"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Client Secret <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              type="password"
+              value={oidcClientSecret}
+              onChange={(e) => setOidcClientSecret(e.target.value)}
+              placeholder="your-client-secret"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Authorization URL <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcAuthUrl}
+              onChange={(e) => setOidcAuthUrl(e.target.value)}
+              placeholder="https://provider/oauth2/auth"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Issuer URL <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcIssuerUrl}
+              onChange={(e) => setOidcIssuerUrl(e.target.value)}
+              placeholder="https://provider"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Token URL <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcTokenUrl}
+              onChange={(e) => setOidcTokenUrl(e.target.value)}
+              placeholder="https://provider/oauth2/token"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              User Identifier Path <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcUserIdentifier}
+              onChange={(e) => setOidcUserIdentifier(e.target.value)}
+              placeholder="sub"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Display Name Path <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcDisplayName}
+              onChange={(e) => setOidcDisplayName(e.target.value)}
+              placeholder="name"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Scopes <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              value={oidcScopes}
+              onChange={(e) => setOidcScopes(e.target.value)}
+              placeholder="openid email profile"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              Override Userinfo URL
+            </label>
+            <Input
+              value={oidcUserinfoUrl}
+              onChange={(e) => setOidcUserinfoUrl(e.target.value)}
+              placeholder="https://provider/oauth2/userinfo"
+              className="text-xs"
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
               Allowed Users
@@ -362,6 +931,8 @@ export function AdminSettingsPanel() {
               One email per line. Leave empty to allow all.
             </span>
             <textarea
+              value={oidcAllowedUsers}
+              onChange={(e) => setOidcAllowedUsers(e.target.value)}
               placeholder={"user@example.com\nanother@example.com"}
               rows={3}
               className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
@@ -372,6 +943,7 @@ export function AdminSettingsPanel() {
               variant="outline"
               size="sm"
               className="text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleRemoveOidc}
             >
               <Trash2 className="size-3" />
               Remove
@@ -380,9 +952,11 @@ export function AdminSettingsPanel() {
               variant="outline"
               size="sm"
               className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+              onClick={handleSaveOidc}
+              disabled={oidcSaving}
             >
               <RefreshCw className="size-3" />
-              Save
+              {oidcSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -405,6 +979,7 @@ export function AdminSettingsPanel() {
                 variant="ghost"
                 size="icon"
                 className="size-6 text-muted-foreground hover:text-foreground"
+                onClick={loadUsers}
               >
                 <RefreshCw className="size-3" />
               </Button>
@@ -479,28 +1054,22 @@ export function AdminSettingsPanel() {
                       <Share2 className="size-3" />
                     </Button>
                   )}
-                  {user.isOidc && user.passwordHash && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-accent-brand"
-                    >
-                      <X className="size-3" />
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="icon"
                     className="size-6 text-muted-foreground hover:text-destructive"
-                    disabled={user.is_admin}
+                    disabled={user.isAdmin}
                     onClick={async () => {
                       try {
-                        await deleteUser(user.userId);
+                        await deleteUser(user.username);
                         setUsers((prev) =>
-                          prev.filter((u) => u.userId !== user.userId),
+                          prev.filter((u) => u.id !== user.id),
                         );
-                      } catch {
-                        /* ignore */
+                        toast.success(`User "${user.username}" deleted`);
+                      } catch (e: any) {
+                        toast.error(
+                          e?.response?.data?.error || "Failed to delete user",
+                        );
                       }
                     }}
                   >
@@ -529,6 +1098,7 @@ export function AdminSettingsPanel() {
               variant="ghost"
               size="icon"
               className="size-6 text-muted-foreground hover:text-foreground"
+              onClick={loadSessions}
             >
               <RefreshCw className="size-3" />
             </Button>
@@ -564,6 +1134,17 @@ export function AdminSettingsPanel() {
                   variant="ghost"
                   size="sm"
                   className="text-[10px] text-muted-foreground hover:text-destructive h-6 px-1.5"
+                  onClick={async () => {
+                    try {
+                      await revokeAllUserSessions(session.userId);
+                      setSessions((prev) =>
+                        prev.filter((s) => s.userId !== session.userId),
+                      );
+                      toast.success("All sessions for user revoked");
+                    } catch {
+                      toast.error("Failed to revoke sessions");
+                    }
+                  }}
                 >
                   All
                 </Button>
@@ -578,7 +1159,7 @@ export function AdminSettingsPanel() {
                         prev.filter((s) => s.id !== session.id),
                       );
                     } catch {
-                      /* ignore */
+                      toast.error("Failed to revoke session");
                     }
                   }}
                 >
@@ -621,13 +1202,23 @@ export function AdminSettingsPanel() {
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                   Name <span className="text-accent-brand">*</span>
                 </label>
-                <Input placeholder="e.g., developer" className="text-xs" />
+                <Input
+                  placeholder="e.g., developer"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  className="text-xs"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                   Display Name <span className="text-accent-brand">*</span>
                 </label>
-                <Input placeholder="e.g., Developer" className="text-xs" />
+                <Input
+                  placeholder="e.g., Developer"
+                  value={newRoleDisplayName}
+                  onChange={(e) => setNewRoleDisplayName(e.target.value)}
+                  className="text-xs"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
@@ -636,6 +1227,8 @@ export function AdminSettingsPanel() {
                 <textarea
                   rows={2}
                   placeholder="Optional"
+                  value={newRoleDescription}
+                  onChange={(e) => setNewRoleDescription(e.target.value)}
                   className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -644,7 +1237,12 @@ export function AdminSettingsPanel() {
                   variant="ghost"
                   size="sm"
                   className="text-xs"
-                  onClick={() => setShowCreateRole(false)}
+                  onClick={() => {
+                    setShowCreateRole(false);
+                    setNewRoleName("");
+                    setNewRoleDisplayName("");
+                    setNewRoleDescription("");
+                  }}
                 >
                   Cancel
                 </Button>
@@ -652,8 +1250,10 @@ export function AdminSettingsPanel() {
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={handleCreateRole}
+                  disabled={createRoleLoading}
                 >
-                  Create
+                  {createRoleLoading ? "Creating..." : "Create"}
                 </Button>
               </div>
             </div>
@@ -687,17 +1287,11 @@ export function AdminSettingsPanel() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-6 text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="size-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
                     className="size-6 text-muted-foreground hover:text-destructive"
                     onClick={async () => {
                       await deleteRole(role.id);
                       setRoles((prev) => prev.filter((r) => r.id !== role.id));
+                      toast.success(`Role "${role.displayName}" deleted`);
                     }}
                   >
                     <Trash2 className="size-3" />
@@ -726,15 +1320,17 @@ export function AdminSettingsPanel() {
               variant="outline"
               size="sm"
               className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand mt-1"
+              onClick={handleExportDatabase}
+              disabled={exportLoading}
             >
-              Export
+              {exportLoading ? "Exporting..." : "Export"}
             </Button>
           </div>
           <div className="flex flex-col gap-1.5 border-t border-border pt-3">
             <span className="text-xs font-medium">Import Database</span>
             <span className="text-[10px] text-muted-foreground">
               {importFile
-                ? `Selected: ${importFile}`
+                ? `Selected: ${importFile.name}`
                 : "Restore from a .sqlite backup file"}
             </span>
             <div className="flex items-center gap-2 mt-1">
@@ -742,9 +1338,7 @@ export function AdminSettingsPanel() {
                 <input
                   type="file"
                   accept=".sqlite,.db"
-                  onChange={(e) =>
-                    setImportFile(e.target.files?.[0]?.name ?? null)
-                  }
+                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <Button
@@ -760,8 +1354,10 @@ export function AdminSettingsPanel() {
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={handleImportDatabase}
+                  disabled={importLoading}
                 >
-                  Import
+                  {importLoading ? "Importing..." : "Import"}
                 </Button>
               )}
             </div>
@@ -786,6 +1382,7 @@ export function AdminSettingsPanel() {
                 variant="ghost"
                 size="icon"
                 className="size-6 text-muted-foreground hover:text-foreground"
+                onClick={loadApiKeys}
               >
                 <RefreshCw className="size-3" />
               </Button>
@@ -793,7 +1390,10 @@ export function AdminSettingsPanel() {
                 variant="outline"
                 size="sm"
                 className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                onClick={() => setShowCreateKey((o) => !o)}
+                onClick={() => {
+                  setShowCreateKey((o) => !o);
+                  setCreatedKeyToken(null);
+                }}
               >
                 <Plus className="size-3" />
                 Create
@@ -805,41 +1405,108 @@ export function AdminSettingsPanel() {
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 New API Key
               </span>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Name <span className="text-accent-brand">*</span>
-                </label>
-                <Input placeholder="e.g., CI Pipeline" className="text-xs" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Scoped User <span className="text-accent-brand">*</span>
-                </label>
-                <Input placeholder="Select a user" className="text-xs" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Expires At
-                </label>
-                <Input type="date" className="text-xs" />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setShowCreateKey(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                >
-                  Create Key
-                </Button>
-              </div>
+              {createdKeyToken ? (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] text-accent-brand font-semibold">
+                    Key created — copy it now, it won't be shown again.
+                  </span>
+                  <div className="flex items-center gap-2 bg-muted/30 border border-border px-2 py-1.5">
+                    <span className="text-[10px] font-mono flex-1 truncate">
+                      {createdKeyToken}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdKeyToken);
+                        toast.info("Copied to clipboard");
+                      }}
+                      className="text-muted-foreground hover:text-accent-brand shrink-0"
+                    >
+                      <Copy className="size-3.5" />
+                    </button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs self-end"
+                    onClick={() => {
+                      setShowCreateKey(false);
+                      setCreatedKeyToken(null);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                      Name <span className="text-accent-brand">*</span>
+                    </label>
+                    <Input
+                      placeholder="e.g., CI Pipeline"
+                      value={newKeyName}
+                      onChange={(e) => setNewKeyName(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                      Scoped User ID{" "}
+                      <span className="text-accent-brand">*</span>
+                    </label>
+                    <Input
+                      placeholder="User ID"
+                      value={newKeyUserId}
+                      onChange={(e) => setNewKeyUserId(e.target.value)}
+                      className="text-xs font-mono"
+                    />
+                    {users.length > 0 && (
+                      <select
+                        className="mt-1 px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
+                        value={newKeyUserId}
+                        onChange={(e) => setNewKeyUserId(e.target.value)}
+                      >
+                        <option value="">Select a user...</option>
+                        {users.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.username}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                      Expires At
+                    </label>
+                    <Input
+                      type="date"
+                      value={newKeyExpiry}
+                      onChange={(e) => setNewKeyExpiry(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setShowCreateKey(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                      onClick={handleCreateApiKey}
+                      disabled={newKeyLoading}
+                    >
+                      {newKeyLoading ? "Creating..." : "Create Key"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
           {apiKeys.map((key) => (
@@ -874,8 +1541,13 @@ export function AdminSettingsPanel() {
                 size="icon"
                 className="size-6 text-muted-foreground hover:text-destructive shrink-0"
                 onClick={async () => {
-                  await deleteApiKey(key.id);
-                  setApiKeys((prev) => prev.filter((k) => k.id !== key.id));
+                  try {
+                    await deleteApiKey(key.id);
+                    setApiKeys((prev) => prev.filter((k) => k.id !== key.id));
+                    toast.success(`Key "${key.name}" revoked`);
+                  } catch {
+                    toast.error("Failed to revoke key");
+                  }
                 }}
               >
                 <Trash2 className="size-3" />
@@ -885,7 +1557,7 @@ export function AdminSettingsPanel() {
         </div>
       </AccordionSection>
 
-      {/* Dialogs */}
+      {/* Create User Dialog */}
       <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
@@ -899,7 +1571,12 @@ export function AdminSettingsPanel() {
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Username <span className="text-accent-brand">*</span>
               </label>
-              <Input placeholder="Enter username" />
+              <Input
+                placeholder="Enter username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateUser()}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -907,12 +1584,22 @@ export function AdminSettingsPanel() {
               </label>
               <div className="relative">
                 <Input
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   placeholder="Enter password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateUser()}
                   className="pr-9"
                 />
-                <button className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <Eye className="size-4" />
+                <button
+                  onClick={() => setShowNewPassword((o) => !o)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
                 </button>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -921,19 +1608,29 @@ export function AdminSettingsPanel() {
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="ghost" onClick={() => setCreateUserOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCreateUserOpen(false);
+                setNewUsername("");
+                setNewPassword("");
+              }}
+            >
               Cancel
             </Button>
             <Button
               variant="outline"
               className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+              onClick={handleCreateUser}
+              disabled={createUserLoading}
             >
-              Create User
+              {createUserLoading ? "Creating..." : "Create User"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Edit User Dialog */}
       <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
@@ -991,35 +1688,10 @@ export function AdminSettingsPanel() {
                     Full access to all admin settings
                   </span>
                 </div>
-                <AdminToggle on={editUserTarget.isAdmin} onToggle={() => {}} />
-              </div>
-              <div className="flex flex-col gap-2 py-3">
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Roles
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {roles
-                    .filter((r) => !r.isSystem)
-                    .map((role) => (
-                      <div
-                        key={role.id}
-                        className="flex items-center gap-1 px-2 py-1 border border-border text-xs"
-                      >
-                        <span>{role.displayName}</span>
-                        <button className="text-muted-foreground hover:text-destructive ml-1">
-                          <X className="size-3" />
-                        </button>
-                      </div>
-                    ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  >
-                    <Plus className="size-3" />
-                    Add Role
-                  </Button>
-                </div>
+                <AdminToggle
+                  on={editUserTarget.isAdmin}
+                  onToggle={() => handleToggleAdmin(editUserTarget)}
+                />
               </div>
               <div className="flex items-center justify-between py-3">
                 <div className="flex flex-col gap-0.5">
@@ -1034,6 +1706,8 @@ export function AdminSettingsPanel() {
                   variant="outline"
                   size="sm"
                   className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-8"
+                  onClick={() => handleRevokeUserSessions(editUserTarget.id)}
+                  disabled={editUserLoading}
                 >
                   Revoke
                 </Button>
@@ -1048,10 +1722,13 @@ export function AdminSettingsPanel() {
                 <Button
                   variant="outline"
                   className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  disabled={editUserTarget.isAdmin}
+                  disabled={editUserTarget.isAdmin || editUserLoading}
+                  onClick={handleDeleteEditUser}
                 >
                   <Trash2 className="size-3.5" />
-                  Delete {editUserTarget.username}
+                  {editUserLoading
+                    ? "Deleting..."
+                    : `Delete ${editUserTarget.username}`}
                 </Button>
               </div>
             </div>
@@ -1059,6 +1736,7 @@ export function AdminSettingsPanel() {
         </DialogContent>
       </Dialog>
 
+      {/* Link Account Dialog */}
       <Dialog open={linkAccountOpen} onOpenChange={setLinkAccountOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>

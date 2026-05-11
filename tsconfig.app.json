@@ -28,6 +28,7 @@
     "noImplicitOverride": false,
     "noEmitOnError": false,
     "paths": {
+      "@/types/*": ["./src/types/*"],
       "@/*": ["./src/ui/*"]
     }
   },

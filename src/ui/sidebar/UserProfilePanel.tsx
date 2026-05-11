@@ -6,6 +6,12 @@ import {
   createApiKey,
   deleteApiKey,
   changePassword,
+  deleteAccount,
+  logoutUser,
+  setupTOTP,
+  enableTOTP,
+  disableTOTP,
+  getVersionInfo,
 } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
@@ -50,6 +56,7 @@ import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
+import i18n from "@/i18n/i18n";
 
 type UserProfileSection =
   | "account"
@@ -57,21 +64,6 @@ type UserProfileSection =
   | "security"
   | "api-keys"
   | "c2s-tunnels";
-
-const SECTIONS: {
-  id: UserProfileSection;
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  { id: "account", label: "Account", icon: <User className="size-3.5" /> },
-  {
-    id: "appearance",
-    label: "Appearance",
-    icon: <Palette className="size-3.5" />,
-  },
-  { id: "security", label: "Security", icon: <Shield className="size-3.5" /> },
-  { id: "api-keys", label: "API Keys", icon: <Network className="size-3.5" /> },
-];
 
 const THEMES: { id: ThemeId; label: string; preview: string }[] = [
   { id: "system", label: "System", preview: "auto" },
@@ -84,6 +76,44 @@ const THEMES: { id: ThemeId; label: string; preview: string }[] = [
   { id: "tokyo-night", label: "Tokyo Night", preview: "#1a1b26" },
   { id: "one-dark", label: "One Dark", preview: "#282c34" },
   { id: "gruvbox", label: "Gruvbox", preview: "#282828" },
+];
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "af", label: "Afrikaans" },
+  { code: "ar", label: "العربية" },
+  { code: "bn", label: "বাংলা" },
+  { code: "bg", label: "Български" },
+  { code: "ca", label: "Català" },
+  { code: "zh-CN", label: "中文 (简体)" },
+  { code: "zh-TW", label: "中文 (繁體)" },
+  { code: "cs", label: "Čeština" },
+  { code: "da", label: "Dansk" },
+  { code: "nl", label: "Nederlands" },
+  { code: "fi", label: "Suomi" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "el", label: "Ελληνικά" },
+  { code: "he", label: "עברית" },
+  { code: "hi", label: "हिन्दी" },
+  { code: "hu", label: "Magyar" },
+  { code: "id", label: "Indonesia" },
+  { code: "it", label: "Italiano" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
+  { code: "no", label: "Norsk" },
+  { code: "pl", label: "Polski" },
+  { code: "pt-PT", label: "Português (PT)" },
+  { code: "pt-BR", label: "Português (BR)" },
+  { code: "ro", label: "Română" },
+  { code: "ru", label: "Русский" },
+  { code: "sr", label: "Српски" },
+  { code: "es-ES", label: "Español" },
+  { code: "sv-SE", label: "Svenska" },
+  { code: "th", label: "ไทย" },
+  { code: "tr", label: "Türkçe" },
+  { code: "uk", label: "Українська" },
+  { code: "vi", label: "Tiếng Việt" },
 ];
 
 function AccordionSection({
@@ -139,7 +169,7 @@ function NewApiKeyDialog({
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      toast.error("API key name is required");
+      toast.error(t("newUi.sidebar.userProfile.apiKeyNameRequired"));
       return;
     }
     try {
@@ -152,9 +182,9 @@ function NewApiKeyDialog({
       onOpenChange(false);
       setName("");
       setExpiry("");
-      toast.success(`API key "${name}" created`);
+      toast.success(t("newUi.sidebar.userProfile.apiKeyCreated", { name }));
     } catch {
-      toast.error("Failed to create API key");
+      toast.error(t("newUi.sidebar.userProfile.apiKeyCreateFailed"));
     }
   };
 
@@ -187,6 +217,7 @@ function NewApiKeyDialog({
               placeholder={t("newUi.sidebar.userProfile.apiKeyNamePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               className="rounded-none bg-muted/50 border-border text-sm h-9"
             />
           </div>
@@ -245,22 +276,29 @@ function PasswordChangeSection({
 
   async function handleUpdate() {
     if (!currentPw || !newPw) {
-      toast.error("All password fields are required");
+      toast.error(t("newUi.sidebar.userProfile.passwordFieldsRequired"));
       return;
     }
     if (newPw !== confirmPw) {
-      toast.error("Passwords don't match");
+      toast.error(t("newUi.sidebar.userProfile.passwordMismatch"));
+      return;
+    }
+    if (newPw.length < 6) {
+      toast.error(t("newUi.sidebar.userProfile.passwordTooShort"));
       return;
     }
     try {
       await changePassword(currentPw, newPw);
-      toast.success("Password updated. Please log in again.");
+      toast.success(t("newUi.sidebar.userProfile.passwordUpdated"));
       setCurrentPw("");
       setNewPw("");
       setConfirmPw("");
       onLogout?.();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to update password");
+      toast.error(
+        e?.response?.data?.error ||
+          t("newUi.sidebar.userProfile.passwordUpdateFailed"),
+      );
     }
   }
 
@@ -345,37 +383,118 @@ export function UserProfilePanel({
   const [openSection, setOpenSection] = useState<UserProfileSection | null>(
     "account",
   );
-  const [showTotpSetup, setShowTotpSetup] = useState(false);
+
+  // User info
+  const [userId, setUserId] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [authMethod, setAuthMethod] = useState("");
+  const [version, setVersion] = useState("");
+  const [isOidc, setIsOidc] = useState(false);
+  const [isDualAuth, setIsDualAuth] = useState(false);
+
+  // TOTP
   const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpStep, setTotpStep] = useState<
+    "idle" | "setup" | "verify" | "backup"
+  >("idle");
+  const [totpQrCode, setTotpQrCode] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpBackupCodes, setTotpBackupCodes] = useState<string[]>([]);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [showDisableTotp, setShowDisableTotp] = useState(false);
+  const [disableTotpInput, setDisableTotpInput] = useState("");
+
+  // Delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // UI state
   const [showPassword, setShowPassword] = useState(false);
-  const [accentColor, setAccentColor] = useState<string>(
+  const [newKeyOpen, setNewKeyOpen] = useState(false);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme } = useTheme();
+
+  // Appearance state — initialized from localStorage
+  const [accentColor, setAccentColor] = useState(
     () => localStorage.getItem("termix-accent") ?? "#f59145",
   );
-  const [customColorInput, setCustomColorInput] = useState<string>(
+  const [customColorInput, setCustomColorInput] = useState(
     () => localStorage.getItem("termix-accent") ?? "#f59145",
   );
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
   );
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem("i18nextLng") ?? "en",
+  );
+
+  // Settings toggles — all backed by localStorage
+  const [fileColorCoding, setFileColorCoding] = useState(
+    () => localStorage.getItem("fileColorCoding") !== "false",
+  );
+  const [commandAutocomplete, setCommandAutocomplete] = useState(
+    () => localStorage.getItem("commandAutocomplete") === "true",
+  );
+  const [commandHistoryTracking, setCommandHistoryTracking] = useState(
+    () => localStorage.getItem("commandHistoryTracking") === "true",
+  );
+  const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] = useState(
+    () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
+  );
+  const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
+    const v = localStorage.getItem("commandPaletteShortcutEnabled");
+    return v !== null ? v === "true" : true;
+  });
+  const [sessionPersistence, setSessionPersistence] = useState(
+    () => localStorage.getItem("enableTerminalSessionPersistence") === "true",
+  );
+  const [showHostTags, setShowHostTags] = useState(() => {
+    const v = localStorage.getItem("showHostTags");
+    return v !== null ? v === "true" : true;
+  });
+  const [foldersCollapsed, setFoldersCollapsed] = useState(
+    () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
+  );
+  const [confirmSnippetExecution, setConfirmSnippetExecution] = useState(
+    () => localStorage.getItem("confirmSnippetExecution") === "true",
+  );
+  const [disableUpdateCheck, setDisableUpdateCheck] = useState(
+    () => localStorage.getItem("disableUpdateCheck") === "true",
+  );
+
+  // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     getUserInfo()
       .then((info) => {
         setUserId(info.userId);
-        setTotpEnabled(info.totp_enabled);
+        setTotpEnabled(info.totp_enabled ?? false);
+        setIsOidc(info.is_oidc ?? false);
+        setIsDualAuth(info.is_dual_auth ?? false);
+        setUserRole(
+          info.is_admin
+            ? t("newUi.sidebar.userProfile.roleAdministrator")
+            : t("newUi.sidebar.userProfile.roleUser"),
+        );
+        if (info.is_dual_auth) {
+          setAuthMethod(t("newUi.sidebar.userProfile.authMethodDual"));
+        } else if (info.is_oidc) {
+          setAuthMethod(t("newUi.sidebar.userProfile.authMethodOidc"));
+        } else {
+          setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
+        }
       })
       .catch(() => {});
     getApiKeys()
       .then(({ apiKeys: keys }) => setApiKeys(keys))
       .catch(() => {});
+    getVersionInfo(false)
+      .then((info) => setVersion(info.localVersion))
+      .catch(() => {});
   }, []);
-
-  const [newKeyOpen, setNewKeyOpen] = useState(false);
-  const colorInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
 
   function handleAccentChange(value: string) {
     setAccentColor(value);
@@ -389,9 +508,104 @@ export function UserProfilePanel({
     applyFontSize(id);
   }
 
+  function handleLanguageChange(code: string) {
+    setLanguage(code);
+    localStorage.setItem("i18nextLng", code);
+    i18n.changeLanguage(code);
+  }
+
   function toggle(id: UserProfileSection) {
     setOpenSection((prev) => (prev === id ? null : id));
   }
+
+  async function handleStartTotpSetup() {
+    setTotpLoading(true);
+    try {
+      const result = await setupTOTP();
+      setTotpQrCode(result.qr_code);
+      setTotpSecret(result.secret);
+      setTotpCode("");
+      setTotpStep("setup");
+    } catch {
+      toast.error(t("newUi.sidebar.userProfile.totpSetupFailed"));
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleVerifyTotp() {
+    if (!totpCode || totpCode.length !== 6) {
+      toast.error(t("newUi.sidebar.userProfile.totpEnter6Digits"));
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const result = await enableTOTP(totpCode);
+      setTotpBackupCodes(result.backup_codes ?? []);
+      setTotpEnabled(true);
+      setTotpStep("backup");
+      toast.success(t("newUi.sidebar.userProfile.totpEnabledSuccess"));
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.error ||
+          t("newUi.sidebar.userProfile.totpInvalidCode"),
+      );
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleDisableTotp() {
+    if (!disableTotpInput) {
+      toast.error(t("newUi.sidebar.userProfile.totpDisableInputRequired"));
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      await disableTOTP(disableTotpInput);
+      setTotpEnabled(false);
+      setShowDisableTotp(false);
+      setDisableTotpInput("");
+      toast.success(t("newUi.sidebar.userProfile.totpDisabledSuccess"));
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.error ||
+          t("newUi.sidebar.userProfile.totpDisableFailed"),
+      );
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  function downloadBackupCodes() {
+    const blob = new Blob([totpBackupCodes.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "termix-backup-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDeleteAccount() {
+    if (!deletePassword.trim()) {
+      toast.error(t("newUi.sidebar.userProfile.deletePasswordRequired"));
+      return;
+    }
+    setDeleteLoading(true);
+    try {
+      await deleteAccount(deletePassword);
+      await logoutUser().catch(() => {});
+      window.location.reload();
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.error || t("newUi.sidebar.userProfile.deleteFailed"),
+      );
+      setDeleteLoading(false);
+    }
+  }
+
+  const canChangePasword = !isOidc || isDualAuth;
 
   return (
     <div className="flex flex-col gap-2 p-3">
@@ -417,7 +631,7 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.usernameLabel")}
               </span>
               <span className="text-sm font-semibold mt-0.5">
-                {username ?? "user"}
+                {username ?? "—"}
               </span>
             </div>
             <div className="flex flex-col py-2">
@@ -425,7 +639,7 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.roleLabel")}
               </span>
               <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand mt-0.5 w-fit">
-                {t("newUi.sidebar.userProfile.roleAdministrator")}
+                {userRole || "—"}
               </span>
             </div>
             <div className="flex flex-col py-2">
@@ -433,7 +647,7 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.authMethodLabel")}
               </span>
               <span className="text-sm font-semibold mt-0.5">
-                {t("newUi.sidebar.userProfile.authMethodLocal")}
+                {authMethod || "—"}
               </span>
             </div>
             <div className="flex flex-col py-2">
@@ -463,14 +677,7 @@ export function UserProfilePanel({
             </span>
             <div className="flex items-center justify-between mt-1.5">
               <span className="text-sm font-bold text-accent-brand">
-                v1.0.0{" "}
-                <span className="text-muted-foreground font-normal text-xs">
-                  {t("newUi.sidebar.userProfile.versionStable")}
-                </span>
-              </span>
-              <span className="flex items-center gap-1 text-xs font-semibold text-accent-brand">
-                <CheckCircle2 className="size-3.5" />
-                {t("newUi.sidebar.userProfile.upToDate")}
+                {version ? `v${version}` : "—"}
               </span>
             </div>
           </div>
@@ -511,17 +718,19 @@ export function UserProfilePanel({
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.userProfile.languageLabel")}
             </span>
-            <select className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full">
-              <option>English</option>
-              <option>French</option>
-              <option>German</option>
-              <option>Spanish</option>
-              <option>Japanese</option>
-              <option>Chinese (Simplified)</option>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Theme — dropdown */}
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.userProfile.themeLabel")}
@@ -532,29 +741,27 @@ export function UserProfilePanel({
                 onChange={(e) => setTheme(e.target.value as ThemeId)}
                 className="w-full px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring appearance-none pr-7"
               >
-                {THEMES.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
+                {THEMES.map((th) => (
+                  <option key={th.id} value={th.id}>
+                    {th.label}
                   </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
             </div>
-            {/* Live preview strip */}
             <div className="flex gap-1 mt-0.5">
-              {THEMES.filter((t) => t.id !== "system").map((t) => (
+              {THEMES.filter((th) => th.id !== "system").map((th) => (
                 <button
-                  key={t.id}
-                  title={t.label}
-                  onClick={() => setTheme(t.id)}
-                  className={`h-4 flex-1 border transition-all ${theme === t.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
-                  style={{ background: t.preview }}
+                  key={th.id}
+                  title={th.label}
+                  onClick={() => setTheme(th.id)}
+                  className={`h-4 flex-1 border transition-all ${theme === th.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
+                  style={{ background: th.preview }}
                 />
               ))}
             </div>
           </div>
 
-          {/* Font Size */}
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Type className="size-3" />
@@ -577,13 +784,10 @@ export function UserProfilePanel({
             </div>
           </div>
 
-          {/* Accent Color */}
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.userProfile.accentColorLabel")}
             </span>
-
-            {/* Preset swatches */}
             <div className="grid grid-cols-6 gap-1">
               {ACCENT_PRESET_COLORS.map((ac) => (
                 <button
@@ -599,8 +803,6 @@ export function UserProfilePanel({
                 />
               ))}
             </div>
-
-            {/* Custom color input */}
             <div className="flex items-center gap-2 border border-border bg-muted/30 px-2 py-1.5">
               <button
                 onClick={() => colorInputRef.current?.click()}
@@ -657,7 +859,14 @@ export function UserProfilePanel({
               label={t("newUi.sidebar.userProfile.fileColorCoding")}
               description={t("newUi.sidebar.userProfile.fileColorCodingDesc")}
             >
-              <FakeSwitch defaultChecked={true} />
+              <FakeSwitch
+                checked={fileColorCoding}
+                onChange={(v) => {
+                  setFileColorCoding(v);
+                  localStorage.setItem("fileColorCoding", v.toString());
+                  window.dispatchEvent(new Event("fileColorCodingChanged"));
+                }}
+              />
             </SettingRow>
           </div>
 
@@ -671,13 +880,28 @@ export function UserProfilePanel({
                 "newUi.sidebar.userProfile.commandAutocompleteDesc",
               )}
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={commandAutocomplete}
+                onChange={(v) => {
+                  setCommandAutocomplete(v);
+                  localStorage.setItem("commandAutocomplete", v.toString());
+                }}
+              />
             </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.historyTracking")}
               description={t("newUi.sidebar.userProfile.historyTrackingDesc")}
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={commandHistoryTracking}
+                onChange={(v) => {
+                  setCommandHistoryTracking(v);
+                  localStorage.setItem("commandHistoryTracking", v.toString());
+                  window.dispatchEvent(
+                    new Event("commandHistoryTrackingChanged"),
+                  );
+                }}
+              />
             </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.syntaxHighlighting")}
@@ -686,13 +910,34 @@ export function UserProfilePanel({
               )}
               badge="BETA"
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={terminalSyntaxHighlighting}
+                onChange={(v) => {
+                  setTerminalSyntaxHighlighting(v);
+                  localStorage.setItem(
+                    "terminalSyntaxHighlighting",
+                    v.toString(),
+                  );
+                  window.dispatchEvent(
+                    new Event("terminalSyntaxHighlightingChanged"),
+                  );
+                }}
+              />
             </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
               description={t("newUi.sidebar.userProfile.commandPaletteDesc")}
             >
-              <FakeSwitch defaultChecked={true} />
+              <FakeSwitch
+                checked={commandPaletteEnabled}
+                onChange={(v) => {
+                  setCommandPaletteEnabled(v);
+                  localStorage.setItem(
+                    "commandPaletteShortcutEnabled",
+                    v.toString(),
+                  );
+                }}
+              />
             </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.sessionPersistence")}
@@ -701,7 +946,16 @@ export function UserProfilePanel({
               )}
               badge="BETA"
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={sessionPersistence}
+                onChange={(v) => {
+                  setSessionPersistence(v);
+                  localStorage.setItem(
+                    "enableTerminalSessionPersistence",
+                    v.toString(),
+                  );
+                }}
+              />
             </SettingRow>
           </div>
 
@@ -713,7 +967,14 @@ export function UserProfilePanel({
               label={t("newUi.sidebar.userProfile.showHostTags")}
               description={t("newUi.sidebar.userProfile.showHostTagsDesc")}
             >
-              <FakeSwitch defaultChecked={true} />
+              <FakeSwitch
+                checked={showHostTags}
+                onChange={(v) => {
+                  setShowHostTags(v);
+                  localStorage.setItem("showHostTags", v.toString());
+                  window.dispatchEvent(new Event("showHostTagsChanged"));
+                }}
+              />
             </SettingRow>
           </div>
 
@@ -725,13 +986,31 @@ export function UserProfilePanel({
               label={t("newUi.sidebar.userProfile.foldersCollapsed")}
               description={t("newUi.sidebar.userProfile.foldersCollapsedDesc")}
             >
-              <FakeSwitch defaultChecked={true} />
+              <FakeSwitch
+                checked={foldersCollapsed}
+                onChange={(v) => {
+                  setFoldersCollapsed(v);
+                  localStorage.setItem(
+                    "defaultSnippetFoldersCollapsed",
+                    v.toString(),
+                  );
+                  window.dispatchEvent(
+                    new Event("defaultSnippetFoldersCollapsedChanged"),
+                  );
+                }}
+              />
             </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.confirmExecution")}
               description={t("newUi.sidebar.userProfile.confirmExecutionDesc")}
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={confirmSnippetExecution}
+                onChange={(v) => {
+                  setConfirmSnippetExecution(v);
+                  localStorage.setItem("confirmSnippetExecution", v.toString());
+                }}
+              />
             </SettingRow>
           </div>
 
@@ -745,7 +1024,13 @@ export function UserProfilePanel({
                 "newUi.sidebar.userProfile.disableUpdateChecksDesc",
               )}
             >
-              <FakeSwitch />
+              <FakeSwitch
+                checked={disableUpdateCheck}
+                onChange={(v) => {
+                  setDisableUpdateCheck(v);
+                  localStorage.setItem("disableUpdateCheck", v.toString());
+                }}
+              />
             </SettingRow>
           </div>
         </div>
@@ -772,47 +1057,104 @@ export function UserProfilePanel({
                     : t("newUi.sidebar.userProfile.totpDisabled")}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`shrink-0 ml-3 text-[10px] h-7 ${totpEnabled ? "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive" : "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"}`}
-                onClick={() => {
-                  if (totpEnabled) setTotpEnabled(false);
-                  else setShowTotpSetup(true);
-                }}
-              >
-                {totpEnabled
-                  ? t("newUi.sidebar.userProfile.disable")
-                  : t("newUi.sidebar.userProfile.enable")}
-              </Button>
+              {totpEnabled ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 ml-3 text-[10px] h-7 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setShowDisableTotp((o) => !o)}
+                >
+                  {t("newUi.sidebar.userProfile.disable")}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 ml-3 text-[10px] h-7 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={handleStartTotpSetup}
+                  disabled={totpLoading || totpStep !== "idle"}
+                >
+                  {t("newUi.sidebar.userProfile.enable")}
+                </Button>
+              )}
             </div>
 
-            {showTotpSetup && !totpEnabled && (
+            {/* Disable TOTP form */}
+            {totpEnabled && showDisableTotp && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpDisableTitle")}
+                </span>
+                <Input
+                  placeholder={t(
+                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
+                  )}
+                  value={disableTotpInput}
+                  onChange={(e) => setDisableTotpInput(e.target.value)}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setShowDisableTotp(false);
+                      setDisableTotpInput("");
+                    }}
+                  >
+                    {t("newUi.sidebar.userProfile.cancel")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={handleDisableTotp}
+                    disabled={totpLoading}
+                  >
+                    {t("newUi.sidebar.userProfile.totpDisableConfirm")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* TOTP setup: scan QR */}
+            {!totpEnabled && totpStep === "setup" && (
               <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     {t("newUi.sidebar.userProfile.setupTotp")}
                   </span>
                   <button
-                    onClick={() => setShowTotpSetup(false)}
+                    onClick={() => setTotpStep("idle")}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3.5" />
                   </button>
                 </div>
-                <div className="flex items-center justify-center p-3 bg-background border border-border">
-                  <div className="size-24 bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.qrCode")}
+                {totpQrCode ? (
+                  <div className="flex items-center justify-center p-3 bg-background border border-border">
+                    <img
+                      src={totpQrCode}
+                      alt="TOTP QR Code"
+                      className="size-32"
+                    />
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-center p-3 bg-background border border-border">
+                    <div className="size-24 bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
+                      {t("newUi.sidebar.userProfile.qrCode")}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 bg-muted/30 border border-border px-2 py-1.5">
                   <span className="text-[10px] font-mono flex-1 tracking-widest select-all truncate">
-                    JBSWY3DPEHPK3PXP
+                    {totpSecret}
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText("JBSWY3DPEHPK3PXP");
-                      toast.info("Secret copied");
+                      navigator.clipboard.writeText(totpSecret);
+                      toast.info(t("newUi.sidebar.userProfile.secretCopied"));
                     }}
                     className="text-muted-foreground hover:text-accent-brand shrink-0"
                   >
@@ -822,18 +1164,49 @@ export function UserProfilePanel({
                 <span className="text-[10px] text-muted-foreground text-center">
                   {t("newUi.sidebar.userProfile.totpInstructions")}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={() => setTotpStep("verify")}
+                >
+                  {t("newUi.sidebar.userProfile.totpContinueVerify")}
+                </Button>
+              </div>
+            )}
+
+            {/* TOTP setup: verify code */}
+            {!totpEnabled && totpStep === "verify" && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.totpVerifyTitle")}
+                  </span>
+                  <button
+                    onClick={() => setTotpStep("setup")}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
                 <Input
                   placeholder={t(
                     "newUi.sidebar.userProfile.totpCodePlaceholder",
                   )}
+                  value={totpCode}
+                  onChange={(e) =>
+                    setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  onKeyDown={(e) => e.key === "Enter" && handleVerifyTotp()}
                   className="text-center font-mono tracking-widest text-lg h-10"
+                  maxLength={6}
                 />
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="flex-1 text-xs"
-                    onClick={() => setShowTotpSetup(false)}
+                    onClick={() => setTotpStep("setup")}
                   >
                     {t("newUi.sidebar.userProfile.cancel")}
                   </Button>
@@ -841,11 +1214,8 @@ export function UserProfilePanel({
                     variant="outline"
                     size="sm"
                     className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={() => {
-                      setTotpEnabled(true);
-                      setShowTotpSetup(false);
-                      toast.success("TOTP enabled successfully");
-                    }}
+                    onClick={handleVerifyTotp}
+                    disabled={totpLoading || totpCode.length !== 6}
                   >
                     <CheckCircle2 className="size-3.5" />
                     {t("newUi.sidebar.userProfile.verify")}
@@ -853,13 +1223,50 @@ export function UserProfilePanel({
                 </div>
               </div>
             )}
+
+            {/* TOTP setup: backup codes */}
+            {totpStep === "backup" && totpBackupCodes.length > 0 && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpBackupTitle")}
+                </span>
+                <div className="grid grid-cols-2 gap-1">
+                  {totpBackupCodes.map((code) => (
+                    <span
+                      key={code}
+                      className="text-[10px] font-mono bg-muted border border-border px-2 py-1 text-center"
+                    >
+                      {code}
+                    </span>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={downloadBackupCodes}
+                >
+                  {t("newUi.sidebar.userProfile.totpDownloadBackup")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setTotpStep("idle")}
+                >
+                  {t("newUi.sidebar.userProfile.done")}
+                </Button>
+              </div>
+            )}
           </div>
 
-          <PasswordChangeSection
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            onLogout={onLogout}
-          />
+          {canChangePasword && (
+            <PasswordChangeSection
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              onLogout={onLogout}
+            />
+          )}
         </div>
       </AccordionSection>
 
@@ -915,28 +1322,17 @@ export function UserProfilePanel({
                       {key.tokenPrefix}…
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      User: {key.username}
+                      {t("newUi.sidebar.userProfile.apiKeyUser")}:{" "}
+                      {key.username}
                     </span>
                     {key.expiresAt && (
                       <span className="text-[10px] text-muted-foreground">
-                        Exp: {new Date(key.expiresAt).toLocaleDateString()}
+                        {t("newUi.sidebar.userProfile.apiKeyExpires")}:{" "}
+                        {new Date(key.expiresAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-accent-brand"
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          key.tokenPrefix + "_demo_token",
-                        );
-                        toast.info("Token prefix copied");
-                      }}
-                    >
-                      <Copy className="size-3" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -947,9 +1343,15 @@ export function UserProfilePanel({
                           setApiKeys((prev) =>
                             prev.filter((k) => k.id !== key.id),
                           );
-                          toast.success(`Revoked "${key.name}"`);
+                          toast.success(
+                            t("newUi.sidebar.userProfile.apiKeyRevoked", {
+                              name: key.name,
+                            }),
+                          );
                         } catch {
-                          toast.error("Failed to revoke key");
+                          toast.error(
+                            t("newUi.sidebar.userProfile.apiKeyRevokeFailed"),
+                          );
                         }
                       }}
                     >
@@ -986,8 +1388,14 @@ export function UserProfilePanel({
         </AccordionSection>
       )}
 
-      {/* Delete confirm dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      {/* Delete account dialog */}
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open);
+          if (!open) setDeletePassword("");
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-destructive">
@@ -1013,19 +1421,32 @@ export function UserProfilePanel({
                 placeholder={t(
                   "newUi.sidebar.userProfile.confirmPasswordDeletePlaceholder",
                 )}
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
               />
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 mt-2">
-            <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeletePassword("");
+              }}
+            >
               {t("newUi.sidebar.userProfile.cancel")}
             </Button>
             <Button
               variant="outline"
               className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading || !deletePassword.trim()}
             >
               <Trash2 className="size-3.5" />
-              {t("newUi.sidebar.userProfile.deleteAccount")}
+              {deleteLoading
+                ? t("newUi.sidebar.userProfile.deleting")
+                : t("newUi.sidebar.userProfile.deleteAccount")}
             </Button>
           </div>
         </DialogContent>

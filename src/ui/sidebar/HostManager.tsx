@@ -5,8 +5,6 @@ import React, {
   type MutableRefObject,
 } from "react";
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
-import { Separator } from "@/components/separator";
 import { Input } from "@/components/input";
 import {
   Activity,
@@ -16,10 +14,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Copy,
   Download,
-  Filter,
   Folder,
   FolderOpen,
   FolderSearch,
@@ -59,15 +55,23 @@ import {
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import { getSSHHosts, getCredentials } from "@/main-axios";
+import {
+  getSSHHosts,
+  getCredentials,
+  createSSHHost,
+  updateSSHHost,
+  deleteSSHHost,
+  createCredential,
+  updateCredential,
+} from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
     id: String(h.id),
     name: h.name,
-    user: h.username,
-    address: h.ip,
+    username: h.username,
+    ip: h.ip,
     port: h.port,
     folder: h.folder ?? "",
     online: h.status === "online",
@@ -84,11 +88,11 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
+    enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
-    enableSsh: h.connectionType === "ssh" || !h.connectionType,
     enableRdp: h.connectionType === "rdp",
     enableVnc: h.connectionType === "vnc",
     enableTelnet: h.connectionType === "telnet",
@@ -229,12 +233,20 @@ function HostRow({
   const hasSsh = host.enableSsh;
 
   const sshActions: { type: string; icon: typeof Terminal; label: string }[] = [
-    { type: "terminal", icon: Terminal, label: "Terminal" },
-    { type: "files", icon: FolderSearch, label: "Files" },
-    { type: "docker", icon: Box, label: "Docker" },
-    { type: "tunnel", icon: Network, label: "Tunnels" },
+    host.enableTerminal && {
+      type: "terminal",
+      icon: Terminal,
+      label: "Terminal",
+    },
+    host.enableFileManager && {
+      type: "files",
+      icon: FolderSearch,
+      label: "Files",
+    },
+    host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
+    host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
     { type: "stats", icon: Server, label: "Stats" },
-  ];
+  ].filter(Boolean) as { type: string; icon: typeof Terminal; label: string }[];
 
   const fireOpen = (type: string) => {
     window.dispatchEvent(
@@ -356,7 +368,7 @@ function HostRow({
         }}
       >
         <span className="text-[11px] text-muted-foreground/50 font-mono truncate shrink-0 max-w-[160px]">
-          {host.username}@{host.ip}
+          {host.username}@{host.ip}:{host.sshPort || host.port}
         </span>
         {host.tags && host.tags.length > 0 && (
           <div className="flex items-center gap-1 min-w-0 overflow-hidden">
@@ -482,6 +494,50 @@ function HostRow({
                   <Copy className="size-3.5 mr-2" />
                   Copy Address
                 </DropdownMenuItem>
+                {host.enableTerminal && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}?view=terminal&hostId=${host.id}`,
+                      );
+                      toast.success("Terminal URL copied");
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-2" />
+                    Copy Terminal URL
+                  </DropdownMenuItem>
+                )}
+                {host.enableFileManager && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}?view=file_manager&hostId=${host.id}`,
+                      );
+                      toast.success("File Manager URL copied");
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-2" />
+                    Copy File Manager URL
+                  </DropdownMenuItem>
+                )}
+                {(host.enableRdp || host.enableVnc || host.enableTelnet) && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const proto = host.enableRdp
+                        ? "rdp"
+                        : host.enableVnc
+                          ? "vnc"
+                          : "telnet";
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}?view=${proto}&hostId=${host.id}`,
+                      );
+                      toast.success("Remote Desktop URL copied");
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-2" />
+                    Copy Remote Desktop URL
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={onDelete}
@@ -502,13 +558,17 @@ function HostEditor({
   host,
   activeTab,
   onBack,
+  onSave,
   protocols,
   onProtocolChange,
   onTabChange,
+  hosts,
+  credentials,
 }: {
   host: Host | null;
   activeTab: string;
   onBack: () => void;
+  onSave: (saved: any) => void;
   protocols: {
     enableSsh: boolean;
     enableRdp: boolean;
@@ -517,8 +577,199 @@ function HostEditor({
   };
   onProtocolChange: (p: Partial<typeof protocols>) => void;
   onTabChange: (tab: string) => void;
+  hosts: Host[];
+  credentials: { id: string; name: string; username: string }[];
 }) {
-  const [authMethod, setAuthMethod] = useState(host?.authType || "password");
+  const [form, setForm] = useState(() => ({
+    name: host?.name ?? "",
+    ip: host?.ip ?? "",
+    username: host?.username ?? "",
+    sshPort: host?.sshPort ?? 22,
+    rdpPort: host?.rdpPort ?? 3389,
+    vncPort: host?.vncPort ?? 5900,
+    telnetPort: host?.telnetPort ?? 23,
+    authType: host?.authType ?? "password",
+    password: host?.password ?? "",
+    key: host?.key ?? "",
+    keyPassword: host?.keyPassword ?? "",
+    credentialId: host?.credentialId ?? "",
+    folder: host?.folder ?? "",
+    tags: host?.tags?.join(" ") ?? "",
+    notes: host?.notes ?? "",
+    pin: host?.pin ?? false,
+    macAddress: host?.macAddress ?? "",
+    useSocks5: host?.useSocks5 ?? false,
+    socks5Host: host?.socks5Host ?? "",
+    socks5Port: host?.socks5Port ?? 1080,
+    socks5Username: host?.socks5Username ?? "",
+    socks5Password: host?.socks5Password ?? "",
+    enableTerminal: host?.enableTerminal ?? true,
+    enableFileManager: host?.enableFileManager ?? false,
+    enableDocker: host?.enableDocker ?? false,
+    enableTunnel: host?.enableTunnel ?? false,
+    defaultPath: host?.defaultPath ?? "~",
+    fontSize: host?.terminalConfig?.fontSize ?? 14,
+    fontFamily: host?.terminalConfig?.fontFamily ?? "JetBrains Mono",
+    theme: host?.terminalConfig?.theme ?? "Termix Dark",
+    cursorStyle: (host?.terminalConfig?.cursorStyle ?? "block") as
+      | "block"
+      | "underline"
+      | "bar",
+    cursorBlink: host?.terminalConfig?.cursorBlink ?? true,
+    scrollback: host?.terminalConfig?.scrollback ?? 10000,
+    agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
+    autoMosh: host?.terminalConfig?.autoMosh ?? false,
+    autoTmux: host?.terminalConfig?.autoTmux ?? false,
+    sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
+    sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
+    keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 30,
+    keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 3,
+    environmentVariables:
+      host?.terminalConfig?.environmentVariables ??
+      ([] as { key: string; value: string }[]),
+    serverTunnels: host?.serverTunnels ?? ([] as Host["serverTunnels"]),
+    jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
+    portKnockSequence:
+      host?.portKnockSequence ??
+      ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
+    quickActions:
+      host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
+    rdpUser: host?.rdpUser ?? "",
+    rdpPassword: host?.rdpPassword ?? "",
+    domain: host?.domain ?? "",
+    security: host?.security ?? "",
+    ignoreCert: host?.ignoreCert ?? false,
+    vncPassword: host?.vncPassword ?? "",
+    vncUser: host?.vncUser ?? "",
+    telnetUser: host?.telnetUser ?? "",
+    telnetPassword: host?.telnetPassword ?? "",
+    statsConfig: host?.statsConfig ?? {
+      statusCheckEnabled: true,
+      statusCheckInterval: 60,
+      useGlobalStatusInterval: true,
+      metricsEnabled: true,
+      metricsInterval: 30,
+      useGlobalMetricsInterval: true,
+      enabledWidgets: [
+        "cpu",
+        "memory",
+        "disk",
+        "disk_io",
+        "network",
+        "processes",
+        "logins",
+        "ports",
+        "security",
+      ],
+    },
+  }));
+
+  const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
+
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const tags = form.tags
+        .split(/\s+/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const data = {
+        connectionType: protocols.enableSsh
+          ? "ssh"
+          : protocols.enableRdp
+            ? "rdp"
+            : protocols.enableVnc
+              ? "vnc"
+              : "telnet",
+        name: form.name,
+        ip: form.ip,
+        port: protocols.enableSsh
+          ? Number(form.sshPort)
+          : protocols.enableRdp
+            ? Number(form.rdpPort)
+            : protocols.enableVnc
+              ? Number(form.vncPort)
+              : Number(form.telnetPort),
+        username: form.username,
+        folder: form.folder,
+        tags,
+        pin: form.pin,
+        authType: form.authType,
+        password: form.password || null,
+        key: form.key || null,
+        keyPassword: form.keyPassword || null,
+        credentialId: form.credentialId ? Number(form.credentialId) : null,
+        notes: form.notes,
+        macAddress: form.macAddress || null,
+        enableTerminal: form.enableTerminal,
+        enableTunnel: form.enableTunnel,
+        enableFileManager: form.enableFileManager,
+        enableDocker: form.enableDocker,
+        defaultPath: form.defaultPath || "~",
+        useSocks5: form.useSocks5,
+        socks5Host: form.socks5Host || null,
+        socks5Port: form.socks5Port || null,
+        socks5Username: form.socks5Username || null,
+        socks5Password: form.socks5Password || null,
+        enableSsh: protocols.enableSsh,
+        enableRdp: protocols.enableRdp,
+        enableVnc: protocols.enableVnc,
+        enableTelnet: protocols.enableTelnet,
+        sshPort: Number(form.sshPort),
+        rdpPort: Number(form.rdpPort),
+        vncPort: Number(form.vncPort),
+        telnetPort: Number(form.telnetPort),
+        rdpUser: form.rdpUser || null,
+        rdpPassword: form.rdpPassword || null,
+        domain: form.domain || null,
+        security: form.security || null,
+        ignoreCert: form.ignoreCert,
+        vncPassword: form.vncPassword || null,
+        vncUser: form.vncUser || null,
+        telnetUser: form.telnetUser || null,
+        telnetPassword: form.telnetPassword || null,
+        jumpHosts: form.jumpHosts,
+        portKnockSequence: form.portKnockSequence,
+        tunnelConnections: form.serverTunnels,
+        quickActions: form.quickActions.map((a) => ({
+          name: a.name,
+          snippetId: Number(a.snippetId),
+        })),
+        statsConfig: form.statsConfig,
+        terminalConfig: protocols.enableSsh
+          ? {
+              cursorBlink: form.cursorBlink,
+              cursorStyle: form.cursorStyle,
+              fontSize: Number(form.fontSize),
+              fontFamily: form.fontFamily,
+              scrollback: Number(form.scrollback),
+              agentForwarding: form.agentForwarding,
+              autoMosh: form.autoMosh,
+              autoTmux: form.autoTmux,
+              sudoPasswordAutoFill: form.sudoPasswordAutoFill,
+              sudoPassword: form.sudoPassword || null,
+              keepaliveInterval: Number(form.keepaliveInterval),
+              keepaliveCountMax: Number(form.keepaliveCountMax),
+              environmentVariables: form.environmentVariables,
+            }
+          : null,
+      };
+      const saved = host
+        ? await updateSSHHost(Number(host.id), data as any)
+        : await createSSHHost(data as any);
+      toast.success(host ? "Host updated" : "Host created");
+      onSave(saved);
+    } catch {
+      toast.error("Failed to save host");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const authMethod = form.authType;
 
   const handleProtocolToggle = (
     proto: keyof typeof protocols,
@@ -552,36 +803,30 @@ function HostEditor({
                     label: "SSH",
                     desc: "Secure Shell",
                     icon: <Terminal className="size-4" />,
-                    port: protocols.enableSsh ? (host?.sshPort ?? 22) : 22,
-                    defaultPort: 22,
+                    portField: "sshPort" as const,
                   },
                   {
                     proto: "enableRdp" as const,
                     label: "RDP",
                     desc: "Remote Desktop",
                     icon: <Monitor className="size-4" />,
-                    port: protocols.enableRdp ? (host?.rdpPort ?? 3389) : 3389,
-                    defaultPort: 3389,
+                    portField: "rdpPort" as const,
                   },
                   {
                     proto: "enableVnc" as const,
                     label: "VNC",
                     desc: "Virtual Network",
                     icon: <Monitor className="size-4" />,
-                    port: protocols.enableVnc ? (host?.vncPort ?? 5900) : 5900,
-                    defaultPort: 5900,
+                    portField: "vncPort" as const,
                   },
                   {
                     proto: "enableTelnet" as const,
                     label: "Telnet",
                     desc: "Unencrypted shell",
                     icon: <Terminal className="size-4" />,
-                    port: protocols.enableTelnet
-                      ? (host?.telnetPort ?? 23)
-                      : 23,
-                    defaultPort: 23,
+                    portField: "telnetPort" as const,
                   },
-                ].map(({ proto, label, desc, icon, port, defaultPort }) => {
+                ].map(({ proto, label, desc, icon, portField }) => {
                   const enabled = protocols[proto];
                   return (
                     <div
@@ -609,14 +854,20 @@ function HostEditor({
                             </span>
                             <Input
                               type="number"
-                              defaultValue={port}
+                              value={form[portField]}
+                              onChange={(e) =>
+                                setField(
+                                  portField,
+                                  Number(e.target.value) as any,
+                                )
+                              }
                               className="h-6 w-16 text-[10px] px-2"
                             />
                           </div>
                         )}
                       </div>
                       <FakeSwitch
-                        defaultChecked={enabled}
+                        checked={enabled}
                         onChange={(v: boolean) =>
                           handleProtocolToggle(proto, v)
                         }
@@ -638,7 +889,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="10.0.0.1 or example.com"
-                    defaultValue={host?.address || ""}
+                    value={form.ip}
+                    onChange={(e) => setField("ip", e.target.value)}
                   />
                 </div>
 
@@ -649,7 +901,8 @@ function HostEditor({
                     </label>
                     <Input
                       placeholder="e.g. Web Server Production"
-                      defaultValue={host?.name || ""}
+                      value={form.name}
+                      onChange={(e) => setField("name", e.target.value)}
                     />
                   </div>
                   {protocols.enableSsh && (
@@ -659,7 +912,8 @@ function HostEditor({
                       </label>
                       <Input
                         placeholder="AA:BB:CC:DD:EE:FF"
-                        defaultValue={host?.macAddress || ""}
+                        value={form.macAddress}
+                        onChange={(e) => setField("macAddress", e.target.value)}
                       />
                     </div>
                   )}
@@ -689,46 +943,67 @@ function HostEditor({
                   label="Use SOCKS5 Proxy"
                   description="Route connection through a proxy server"
                 >
-                  <FakeSwitch defaultChecked={host?.useSocks5} />
+                  <FakeSwitch
+                    checked={form.useSocks5}
+                    onChange={(v) => setField("useSocks5", v)}
+                  />
                 </SettingRow>
-                <div className="flex flex-col gap-3 p-3 bg-muted/20 border border-border">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Proxy Chain
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                    >
-                      <Plus className="size-3 mr-1" /> Add Node
-                    </Button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 p-2 bg-background border border-border">
-                      <span className="text-[10px] font-bold text-muted-foreground">
-                        1.
-                      </span>
+                {form.useSocks5 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Host
+                      </label>
                       <Input
-                        className="h-7 text-xs flex-1"
-                        placeholder="Host"
-                        defaultValue="proxy.internal"
+                        className="h-7 text-xs"
+                        placeholder="proxy.example.com"
+                        value={form.socks5Host}
+                        onChange={(e) => setField("socks5Host", e.target.value)}
                       />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Port
+                      </label>
                       <Input
-                        className="h-7 text-xs w-20"
-                        placeholder="Port"
-                        defaultValue="1080"
+                        className="h-7 text-xs"
+                        type="number"
+                        placeholder="1080"
+                        value={form.socks5Port}
+                        onChange={(e) =>
+                          setField("socks5Port", Number(e.target.value) as any)
+                        }
                       />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Username
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        placeholder="Optional"
+                        value={form.socks5Username}
+                        onChange={(e) =>
+                          setField("socks5Username", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Password
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        type="password"
+                        placeholder="Optional"
+                        value={form.socks5Password}
+                        onChange={(e) =>
+                          setField("socks5Password", e.target.value)
+                        }
+                      />
                     </div>
                   </div>
-                </div>
+                )}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -738,29 +1013,63 @@ function HostEditor({
                       variant="outline"
                       size="sm"
                       className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                      onClick={() =>
+                        setField("jumpHosts", [
+                          ...form.jumpHosts,
+                          { hostId: "" },
+                        ])
+                      }
                     >
                       <Plus className="size-3 mr-1" /> Add Jump
                     </Button>
                   </div>
+                  {form.jumpHosts.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/50">
+                      No jump hosts configured.
+                    </p>
+                  )}
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 p-2 bg-background border border-border">
-                      <span className="text-[10px] font-bold text-muted-foreground">
-                        1.
-                      </span>
-                      <select className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring">
-                        <option>Select a server...</option>
-                        {hosts.map((h) => (
-                          <option key={h.id}>{h.name}</option>
-                        ))}
-                      </select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-destructive"
+                    {form.jumpHosts.map((jh, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 p-2 bg-background border border-border"
                       >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
+                        <span className="text-[10px] font-bold text-muted-foreground shrink-0">
+                          {i + 1}.
+                        </span>
+                        <select
+                          className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
+                          value={jh.hostId}
+                          onChange={(e) => {
+                            const updated = [...form.jumpHosts];
+                            updated[i] = { hostId: e.target.value };
+                            setField("jumpHosts", updated);
+                          }}
+                        >
+                          <option value="">Select a server...</option>
+                          {hosts
+                            .filter((h) => (host ? h.id !== host.id : true))
+                            .map((h) => (
+                              <option key={h.id} value={h.id}>
+                                {h.name || h.ip}
+                              </option>
+                            ))}
+                        </select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive"
+                          onClick={() =>
+                            setField(
+                              "jumpHosts",
+                              form.jumpHosts.filter((_, idx) => idx !== i),
+                            )
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -777,7 +1086,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="e.g. Production"
-                    defaultValue={host?.folder || ""}
+                    value={form.folder}
+                    onChange={(e) => setField("folder", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -786,7 +1096,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="space separated"
-                    defaultValue={host?.tags?.join(" ") || ""}
+                    value={form.tags}
+                    onChange={(e) => setField("tags", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5 col-span-2">
@@ -797,14 +1108,18 @@ function HostEditor({
                     rows={3}
                     placeholder="Details about this server..."
                     className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
-                    defaultValue={host?.notes || ""}
+                    value={form.notes}
+                    onChange={(e) => setField("notes", e.target.value)}
                   />
                 </div>
                 <SettingRow
                   label="Pin to Top"
                   description="Always show this host at the top of the list"
                 >
-                  <FakeSwitch defaultChecked={host?.pin} />
+                  <FakeSwitch
+                    checked={form.pin}
+                    onChange={(v) => setField("pin", v)}
+                  />
                 </SettingRow>
               </div>
               <div className="flex flex-col gap-3 border-t border-border pt-4 pb-2">
@@ -816,22 +1131,85 @@ function HostEditor({
                     variant="outline"
                     size="sm"
                     className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                    onClick={() =>
+                      setField("portKnockSequence", [
+                        ...form.portKnockSequence,
+                        { port: 0, protocol: "tcp" as const, delay: 0 },
+                      ])
+                    }
                   >
                     <Plus className="size-3 mr-1" /> Add Knock
                   </Button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="flex items-center gap-1.5 p-1.5 bg-muted/30 border border-border">
-                    <Input className="h-7 text-xs w-16" placeholder="Port" />
-                    <select className="h-7 text-[10px] bg-background border border-border">
-                      <option>TCP</option>
-                      <option>UDP</option>
-                    </select>
-                    <Input className="h-7 text-xs w-14" placeholder="Delay" />
-                    <button className="text-destructive p-1">
-                      <X className="size-3" />
-                    </button>
-                  </div>
+                {form.portKnockSequence.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground/50">
+                    No port knocking configured.
+                  </p>
+                )}
+                <div className="flex flex-col gap-2">
+                  {form.portKnockSequence.map((knock, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-1.5 p-1.5 bg-muted/30 border border-border"
+                    >
+                      <Input
+                        className="h-7 text-xs w-16"
+                        placeholder="Port"
+                        type="number"
+                        value={knock.port}
+                        onChange={(e) => {
+                          const updated = [...form.portKnockSequence];
+                          updated[i] = {
+                            ...updated[i],
+                            port: Number(e.target.value),
+                          };
+                          setField("portKnockSequence", updated);
+                        }}
+                      />
+                      <select
+                        className="h-7 text-[10px] bg-background border border-border px-1"
+                        value={knock.protocol}
+                        onChange={(e) => {
+                          const updated = [...form.portKnockSequence];
+                          updated[i] = {
+                            ...updated[i],
+                            protocol: e.target.value as "tcp" | "udp",
+                          };
+                          setField("portKnockSequence", updated);
+                        }}
+                      >
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                      </select>
+                      <Input
+                        className="h-7 text-xs w-20"
+                        placeholder="Delay (ms)"
+                        type="number"
+                        value={knock.delay}
+                        onChange={(e) => {
+                          const updated = [...form.portKnockSequence];
+                          updated[i] = {
+                            ...updated[i],
+                            delay: Number(e.target.value),
+                          };
+                          setField("portKnockSequence", updated);
+                        }}
+                      />
+                      <button
+                        className="text-destructive p-1"
+                        onClick={() =>
+                          setField(
+                            "portKnockSequence",
+                            form.portKnockSequence.filter(
+                              (_, idx) => idx !== i,
+                            ),
+                          )
+                        }
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </SectionCard>
@@ -854,7 +1232,7 @@ function HostEditor({
                       (m) => (
                         <button
                           key={m}
-                          onClick={() => setAuthMethod(m as any)}
+                          onClick={() => setField("authType", m as any)}
                           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                         >
                           {m}
@@ -868,7 +1246,11 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Username
                     </label>
-                    <Input placeholder="root" defaultValue={host?.user || ""} />
+                    <Input
+                      placeholder="root"
+                      value={form.username}
+                      onChange={(e) => setField("username", e.target.value)}
+                    />
                   </div>
                   {authMethod === "password" && (
                     <div className="flex flex-col gap-1.5">
@@ -878,7 +1260,8 @@ function HostEditor({
                       <Input
                         type="password"
                         placeholder="••••••••"
-                        defaultValue={host?.password || ""}
+                        value={form.password}
+                        onChange={(e) => setField("password", e.target.value)}
                       />
                     </div>
                   )}
@@ -891,7 +1274,8 @@ function HostEditor({
                         <textarea
                           placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                           rows={5}
-                          defaultValue={host?.key || ""}
+                          value={form.key}
+                          onChange={(e) => setField("key", e.target.value)}
                           className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                         />
                       </div>
@@ -902,7 +1286,10 @@ function HostEditor({
                         <Input
                           type="password"
                           placeholder="Optional"
-                          defaultValue={host?.keyPassword || ""}
+                          value={form.keyPassword}
+                          onChange={(e) =>
+                            setField("keyPassword", e.target.value)
+                          }
                         />
                       </div>
                     </>
@@ -913,7 +1300,10 @@ function HostEditor({
                         Stored Credential
                       </label>
                       <select
-                        defaultValue={host?.credentialId || ""}
+                        value={form.credentialId}
+                        onChange={(e) =>
+                          setField("credentialId", e.target.value)
+                        }
                         className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                       >
                         <option value="">Select a credential...</option>
@@ -1002,7 +1392,11 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Color Theme
                     </label>
-                    <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                    <select
+                      value={form.theme}
+                      onChange={(e) => setField("theme", e.target.value)}
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
                       <option>Termix Dark</option>
                       <option>One Dark</option>
                       <option>Monokai</option>
@@ -1013,7 +1407,11 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Font Family
                     </label>
-                    <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono">
+                    <select
+                      value={form.fontFamily}
+                      onChange={(e) => setField("fontFamily", e.target.value)}
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
+                    >
                       <option>JetBrains Mono</option>
                       <option>Fira Code</option>
                       <option>Source Code Pro</option>
@@ -1023,16 +1421,28 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Font Size
                     </label>
-                    <Input type="number" defaultValue={14} />
+                    <Input
+                      type="number"
+                      value={form.fontSize}
+                      onChange={(e) =>
+                        setField("fontSize", Number(e.target.value) as any)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Cursor Style
                     </label>
-                    <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
-                      <option>Block</option>
-                      <option>Underline</option>
-                      <option>Bar</option>
+                    <select
+                      value={form.cursorStyle}
+                      onChange={(e) =>
+                        setField("cursorStyle", e.target.value as any)
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="block">Block</option>
+                      <option value="underline">Underline</option>
+                      <option value="bar">Bar</option>
                     </select>
                   </div>
                 </div>
@@ -1040,22 +1450,11 @@ function HostEditor({
                   label="Cursor Blinking"
                   description="Enable blinking animation for the terminal cursor"
                 >
-                  <FakeSwitch defaultChecked={true} />
+                  <FakeSwitch
+                    checked={form.cursorBlink}
+                    onChange={(v) => setField("cursorBlink", v)}
+                  />
                 </SettingRow>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Letter Spacing
-                    </label>
-                    <Input type="number" step="0.1" defaultValue={0} />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Line Height
-                    </label>
-                    <Input type="number" step="0.1" defaultValue={1.2} />
-                  </div>
-                </div>
               </div>
             </SectionCard>
 
@@ -1068,7 +1467,13 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Scrollback Buffer
                   </label>
-                  <Input type="number" defaultValue={10000} />
+                  <Input
+                    type="number"
+                    value={form.scrollback}
+                    onChange={(e) =>
+                      setField("scrollback", Number(e.target.value) as any)
+                    }
+                  />
                   <span className="text-[10px] text-muted-foreground">
                     Maximum number of lines kept in history
                   </span>
@@ -1077,26 +1482,51 @@ function HostEditor({
                   label="SSH Agent Forwarding"
                   description="Pass your local SSH keys to this host"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={form.agentForwarding}
+                    onChange={(v) => setField("agentForwarding", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable Auto-Mosh"
                   description="Prefer Mosh over SSH if available"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={form.autoMosh}
+                    onChange={(v) => setField("autoMosh", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable Auto-Tmux"
                   description="Automatically launch or attach to tmux session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={form.autoTmux}
+                    onChange={(v) => setField("autoTmux", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Sudo Password Auto-fill"
                   description="Automatically provide sudo password when prompted"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={form.sudoPasswordAutoFill}
+                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
+                  />
                 </SettingRow>
+                {form.sudoPasswordAutoFill && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Sudo Password
+                    </label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.sudoPassword}
+                      onChange={(e) => setField("sudoPassword", e.target.value)}
+                    />
+                  </div>
+                )}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1106,26 +1536,62 @@ function HostEditor({
                       variant="outline"
                       size="sm"
                       className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                      onClick={() =>
+                        setField("environmentVariables", [
+                          ...form.environmentVariables,
+                          { key: "", value: "" },
+                        ])
+                      }
                     >
                       <Plus className="size-3 mr-1" /> Add Variable
                     </Button>
                   </div>
+                  {form.environmentVariables.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/50">
+                      No environment variables configured.
+                    </p>
+                  )}
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        className="h-7 text-xs flex-1"
-                        placeholder="KEY"
-                        defaultValue="NODE_ENV"
-                      />
-                      <Input
-                        className="h-7 text-xs flex-1"
-                        placeholder="VALUE"
-                        defaultValue="production"
-                      />
-                      <button className="text-destructive">
-                        <X className="size-4" />
-                      </button>
-                    </div>
+                    {form.environmentVariables.map((ev, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          className="h-7 text-xs flex-1"
+                          placeholder="KEY"
+                          value={ev.key}
+                          onChange={(e) => {
+                            const updated = [...form.environmentVariables];
+                            updated[i] = { ...updated[i], key: e.target.value };
+                            setField("environmentVariables", updated);
+                          }}
+                        />
+                        <Input
+                          className="h-7 text-xs flex-1"
+                          placeholder="VALUE"
+                          value={ev.value}
+                          onChange={(e) => {
+                            const updated = [...form.environmentVariables];
+                            updated[i] = {
+                              ...updated[i],
+                              value: e.target.value,
+                            };
+                            setField("environmentVariables", updated);
+                          }}
+                        />
+                        <button
+                          className="text-destructive"
+                          onClick={() =>
+                            setField(
+                              "environmentVariables",
+                              form.environmentVariables.filter(
+                                (_, idx) => idx !== i,
+                              ),
+                            )
+                          }
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
@@ -1133,13 +1599,31 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Keepalive Interval
                     </label>
-                    <Input type="number" defaultValue={30} />
+                    <Input
+                      type="number"
+                      value={form.keepaliveInterval}
+                      onChange={(e) =>
+                        setField(
+                          "keepaliveInterval",
+                          Number(e.target.value) as any,
+                        )
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Max Keepalive Misses
                     </label>
-                    <Input type="number" defaultValue={3} />
+                    <Input
+                      type="number"
+                      value={form.keepaliveCountMax}
+                      onChange={(e) =>
+                        setField(
+                          "keepaliveCountMax",
+                          Number(e.target.value) as any,
+                        )
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -1158,7 +1642,10 @@ function HostEditor({
                   label="Enable Tunneling"
                   description="Enable SSH tunnel functionality for this host"
                 >
-                  <FakeSwitch defaultChecked={host?.enableTunnel ?? true} />
+                  <FakeSwitch
+                    checked={form.enableTunnel}
+                    onChange={(v) => setField("enableTunnel", v)}
+                  />
                 </SettingRow>
                 <div className="text-xs text-muted-foreground p-3 bg-muted/30 border border-border space-y-1">
                   <p>
@@ -1183,151 +1670,133 @@ function HostEditor({
                   variant="outline"
                   size="sm"
                   className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                  onClick={() =>
+                    setField("serverTunnels", [
+                      ...form.serverTunnels,
+                      {
+                        mode: "local" as const,
+                        sourcePort: 8080,
+                        endpointHost: "",
+                        endpointPort: 80,
+                        bindHost: "127.0.0.1",
+                        maxRetries: 3,
+                        retryInterval: 10,
+                        autoStart: false,
+                      },
+                    ])
+                  }
                 >
                   <Plus className="size-3 mr-1" /> Add Tunnel
                 </Button>
               }
             >
               <div className="flex flex-col gap-3 py-3">
-                {[
-                  {
-                    mode: "remote",
-                    endpointHost: "prod-db",
-                    endpointPort: 5432,
-                    currentHostIp: "0.0.0.0",
-                    src: 5432,
-                    maxRetries: 3,
-                    retryInterval: 10,
-                    autoStart: true,
-                  },
-                  {
-                    mode: "local",
-                    endpointHost: "web-server",
-                    endpointPort: 80,
-                    currentHostIp: "127.0.0.1",
-                    src: 8080,
-                    maxRetries: 3,
-                    retryInterval: 10,
-                    autoStart: false,
-                  },
-                  {
-                    mode: "dynamic",
-                    endpointHost: "",
-                    endpointPort: 0,
-                    currentHostIp: "127.0.0.1",
-                    src: 1080,
-                    maxRetries: 3,
-                    retryInterval: 10,
-                    autoStart: true,
-                  },
-                ].map((tun, i) => (
+                {form.serverTunnels.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground/50 px-1">
+                    No tunnels configured.
+                  </p>
+                )}
+                {form.serverTunnels.map((tun, i) => (
                   <div
                     key={i}
                     className="flex flex-col gap-3 p-3 border border-border bg-muted/20 relative group"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-muted-foreground">
-                        Server Tunnel {i + 1}
+                        Tunnel {i + 1}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <div
-                            className={`size-1.5 rounded-full ${tun.autoStart ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
-                          />
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-widest ${tun.autoStart ? "text-accent-brand" : "text-muted-foreground"}`}
-                          >
-                            {tun.autoStart ? "Connected" : "Idle"}
-                          </span>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 text-[10px] px-2"
-                        >
-                          Connect
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-[10px] px-2 text-destructive"
-                          onClick={() => toast.success("Tunnel removed")}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px] px-2 text-destructive"
+                        onClick={() =>
+                          setField(
+                            "serverTunnels",
+                            form.serverTunnels.filter((_, idx) => idx !== i),
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground">
                         Tunnel Type
                       </label>
                       <div className="flex gap-2">
-                        {["remote", "local", "dynamic"].map((m) => (
+                        {(["remote", "local", "dynamic"] as const).map((m) => (
                           <button
                             key={m}
+                            onClick={() => {
+                              const updated = [...form.serverTunnels];
+                              updated[i] = { ...updated[i], mode: m };
+                              setField("serverTunnels", updated);
+                            }}
                             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${tun.mode === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                           >
                             {m}
                           </button>
                         ))}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {tun.mode === "remote"
-                          ? "Remote (R→L): Opens a port on the remote server and forwards traffic to a local service."
-                          : tun.mode === "local"
-                            ? "Local (L→R): Opens a port locally and forwards traffic through the SSH server to a remote service."
-                            : "Dynamic (SOCKS): Creates a local SOCKS proxy that routes traffic through the SSH server."}
-                      </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {tun.mode !== "dynamic" && (
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-muted-foreground">
-                            Endpoint SSH Config
-                          </label>
-                          <select
-                            defaultValue={tun.endpointHost || ""}
-                            className="h-7 text-xs bg-background border border-border px-2 outline-none focus:ring-1 focus:ring-ring"
-                          >
-                            <option value="">Select a host...</option>
-                            {hosts.map((h) => (
-                              <option key={h.id} value={h.name}>
-                                {h.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {tun.mode !== "dynamic" && (
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-bold text-muted-foreground">
-                            {tun.mode === "remote"
-                              ? "Remote Port"
-                              : "Endpoint Port"}
+                            Endpoint Host
                           </label>
                           <Input
                             className="h-7 text-xs"
-                            defaultValue={tun.endpointPort}
+                            placeholder="e.g. 127.0.0.1"
+                            value={tun.endpointHost}
+                            onChange={(e) => {
+                              const updated = [...form.serverTunnels];
+                              updated[i] = {
+                                ...updated[i],
+                                endpointHost: e.target.value,
+                              };
+                              setField("serverTunnels", updated);
+                            }}
                           />
                         </div>
                       )}
                       {tun.mode !== "dynamic" && (
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-muted-foreground">
-                            Current Host IP
+                            Endpoint Port
                           </label>
                           <Input
                             className="h-7 text-xs"
-                            placeholder="0.0.0.0 or 127.0.0.1"
-                            defaultValue={tun.currentHostIp}
+                            type="number"
+                            value={tun.endpointPort}
+                            onChange={(e) => {
+                              const updated = [...form.serverTunnels];
+                              updated[i] = {
+                                ...updated[i],
+                                endpointPort: Number(e.target.value),
+                              };
+                              setField("serverTunnels", updated);
+                            }}
                           />
                         </div>
                       )}
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold text-muted-foreground">
-                          {tun.mode === "remote" ? "Local Port" : "Source Port"}
+                          Source Port
                         </label>
-                        <Input className="h-7 text-xs" defaultValue={tun.src} />
+                        <Input
+                          className="h-7 text-xs"
+                          type="number"
+                          value={tun.sourcePort}
+                          onChange={(e) => {
+                            const updated = [...form.serverTunnels];
+                            updated[i] = {
+                              ...updated[i],
+                              sourcePort: Number(e.target.value),
+                            };
+                            setField("serverTunnels", updated);
+                          }}
+                        />
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold text-muted-foreground">
@@ -1336,7 +1805,15 @@ function HostEditor({
                         <Input
                           className="h-7 text-xs"
                           type="number"
-                          defaultValue={tun.maxRetries}
+                          value={tun.maxRetries}
+                          onChange={(e) => {
+                            const updated = [...form.serverTunnels];
+                            updated[i] = {
+                              ...updated[i],
+                              maxRetries: Number(e.target.value),
+                            };
+                            setField("serverTunnels", updated);
+                          }}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -1346,7 +1823,15 @@ function HostEditor({
                         <Input
                           className="h-7 text-xs"
                           type="number"
-                          defaultValue={tun.retryInterval}
+                          value={tun.retryInterval}
+                          onChange={(e) => {
+                            const updated = [...form.serverTunnels];
+                            updated[i] = {
+                              ...updated[i],
+                              retryInterval: Number(e.target.value),
+                            };
+                            setField("serverTunnels", updated);
+                          }}
                         />
                       </div>
                     </div>
@@ -1354,7 +1839,14 @@ function HostEditor({
                       label="Auto-start"
                       description="Automatically connect this tunnel when the host is loaded"
                     >
-                      <FakeSwitch defaultChecked={tun.autoStart} />
+                      <FakeSwitch
+                        checked={tun.autoStart}
+                        onChange={(v) => {
+                          const updated = [...form.serverTunnels];
+                          updated[i] = { ...updated[i], autoStart: v };
+                          setField("serverTunnels", updated);
+                        }}
+                      />
                     </SettingRow>
                   </div>
                 ))}
@@ -1373,7 +1865,10 @@ function HostEditor({
                 label="Enable Docker"
                 description="Monitor and manage containers on this host via Docker"
               >
-                <FakeSwitch defaultChecked={host?.enableDocker} />
+                <FakeSwitch
+                  checked={form.enableDocker}
+                  onChange={(v) => setField("enableDocker", v)}
+                />
               </SettingRow>
             </div>
           </SectionCard>
@@ -1389,7 +1884,10 @@ function HostEditor({
                 label="Enable File Manager"
                 description="Browse and manage files on this host over SFTP"
               >
-                <FakeSwitch defaultChecked={host?.enableFileManager ?? true} />
+                <FakeSwitch
+                  checked={form.enableFileManager}
+                  onChange={(v) => setField("enableFileManager", v)}
+                />
               </SettingRow>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1397,7 +1895,8 @@ function HostEditor({
                 </label>
                 <Input
                   placeholder="~"
-                  defaultValue={host?.defaultPath || "~"}
+                  value={form.defaultPath}
+                  onChange={(e) => setField("defaultPath", e.target.value)}
                 />
                 <span className="text-[10px] text-muted-foreground">
                   The directory to open when the file manager launches for this
@@ -1420,8 +1919,12 @@ function HostEditor({
                   description="Periodically ping this host to verify availability"
                 >
                   <FakeSwitch
-                    defaultChecked={
-                      host?.statsConfig?.statusCheckEnabled ?? true
+                    checked={form.statsConfig.statusCheckEnabled}
+                    onChange={(v) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        statusCheckEnabled: v,
+                      })
                     }
                   />
                 </SettingRow>
@@ -1430,8 +1933,12 @@ function HostEditor({
                   description="Override with the server-wide status check interval"
                 >
                   <FakeSwitch
-                    defaultChecked={
-                      host?.statsConfig?.useGlobalStatusInterval ?? true
+                    checked={form.statsConfig.useGlobalStatusInterval}
+                    onChange={(v) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        useGlobalStatusInterval: v,
+                      })
                     }
                   />
                 </SettingRow>
@@ -1441,7 +1948,13 @@ function HostEditor({
                 >
                   <Input
                     type="number"
-                    defaultValue={host?.statsConfig?.statusCheckInterval ?? 60}
+                    value={form.statsConfig.statusCheckInterval}
+                    onChange={(e) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        statusCheckInterval: Number(e.target.value),
+                      })
+                    }
                     className="w-20 h-7 text-xs text-right"
                   />
                 </SettingRow>
@@ -1457,7 +1970,13 @@ function HostEditor({
                   description="Collect CPU, RAM, disk, and network usage from this host"
                 >
                   <FakeSwitch
-                    defaultChecked={host?.statsConfig?.metricsEnabled ?? true}
+                    checked={form.statsConfig.metricsEnabled}
+                    onChange={(v) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        metricsEnabled: v,
+                      })
+                    }
                   />
                 </SettingRow>
                 <SettingRow
@@ -1465,8 +1984,12 @@ function HostEditor({
                   description="Override with the server-wide metrics interval"
                 >
                   <FakeSwitch
-                    defaultChecked={
-                      host?.statsConfig?.useGlobalMetricsInterval ?? true
+                    checked={form.statsConfig.useGlobalMetricsInterval}
+                    onChange={(v) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        useGlobalMetricsInterval: v,
+                      })
                     }
                   />
                 </SettingRow>
@@ -1476,7 +1999,13 @@ function HostEditor({
                 >
                   <Input
                     type="number"
-                    defaultValue={host?.statsConfig?.metricsInterval ?? 30}
+                    value={form.statsConfig.metricsInterval}
+                    onChange={(e) =>
+                      setField("statsConfig", {
+                        ...form.statsConfig,
+                        metricsInterval: Number(e.target.value),
+                      })
+                    }
                     className="w-20 h-7 text-xs text-right"
                   />
                 </SettingRow>
@@ -1536,11 +2065,18 @@ function HostEditor({
                 ].map((w) => (
                   <SettingRow key={w.id} label={w.label} description={w.desc}>
                     <FakeSwitch
-                      defaultChecked={
-                        (host?.statsConfig?.enabledWidgets ?? []).includes(
-                          w.id,
-                        ) || !host?.statsConfig
-                      }
+                      checked={form.statsConfig.enabledWidgets.includes(w.id)}
+                      onChange={(v) => {
+                        const widgets = v
+                          ? [...form.statsConfig.enabledWidgets, w.id]
+                          : form.statsConfig.enabledWidgets.filter(
+                              (x) => x !== w.id,
+                            );
+                        setField("statsConfig", {
+                          ...form.statsConfig,
+                          enabledWidgets: widgets,
+                        });
+                      }}
                     />
                   </SettingRow>
                 ))}
@@ -1554,6 +2090,12 @@ function HostEditor({
                   variant="outline"
                   size="sm"
                   className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                  onClick={() =>
+                    setField("quickActions", [
+                      ...form.quickActions,
+                      { name: "", snippetId: "" },
+                    ])
+                  }
                 >
                   <Plus className="size-3 mr-1" /> Add Action
                 </Button>
@@ -1564,10 +2106,13 @@ function HostEditor({
                   Quick actions appear as buttons in the Server Stats toolbar
                   for one-click command execution.
                 </p>
-                {[
-                  { name: "Restart Nginx", snippet: "System Update" },
-                  { name: "Clear Logs", snippet: "Clear Logs" },
-                ].map((a, i) => (
+                {form.quickActions.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
+                    <Zap className="size-6" />
+                    <span className="text-xs">No quick actions yet.</span>
+                  </div>
+                )}
+                {form.quickActions.map((a, i) => (
                   <div
                     key={i}
                     className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
@@ -1575,25 +2120,39 @@ function HostEditor({
                     <Input
                       className="h-7 text-xs flex-1"
                       placeholder="Button label"
-                      defaultValue={a.name}
+                      value={a.name}
+                      onChange={(e) => {
+                        const updated = [...form.quickActions];
+                        updated[i] = { ...updated[i], name: e.target.value };
+                        setField("quickActions", updated);
+                      }}
                     />
-                    <select className="flex h-7 flex-1 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring">
-                      <option>System Update</option>
-                      <option>Clear Logs</option>
-                      <option>Check SSL</option>
-                      <option>Disk Usage Report</option>
-                    </select>
-                    <button className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Input
+                      className="h-7 text-xs flex-1"
+                      placeholder="Snippet ID"
+                      value={a.snippetId}
+                      onChange={(e) => {
+                        const updated = [...form.quickActions];
+                        updated[i] = {
+                          ...updated[i],
+                          snippetId: e.target.value,
+                        };
+                        setField("quickActions", updated);
+                      }}
+                    />
+                    <button
+                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() =>
+                        setField(
+                          "quickActions",
+                          form.quickActions.filter((_, idx) => idx !== i),
+                        )
+                      }
+                    >
                       <Trash2 className="size-3.5" />
                     </button>
                   </div>
                 ))}
-                {host?.quickActions?.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
-                    <Zap className="size-6" />
-                    <span className="text-xs">No quick actions yet.</span>
-                  </div>
-                )}
               </div>
             </SectionCard>
           </>
@@ -1612,7 +2171,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="Administrator"
-                    defaultValue={host?.rdpUser || ""}
+                    value={form.rdpUser}
+                    onChange={(e) => setField("rdpUser", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -1622,7 +2182,8 @@ function HostEditor({
                   <Input
                     type="password"
                     placeholder="••••••••"
-                    defaultValue={host?.rdpPassword || ""}
+                    value={form.rdpPassword}
+                    onChange={(e) => setField("rdpPassword", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -1631,7 +2192,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="WORKGROUP"
-                    defaultValue={host?.domain || ""}
+                    value={form.domain}
+                    onChange={(e) => setField("domain", e.target.value)}
                   />
                 </div>
               </div>
@@ -1659,7 +2221,10 @@ function HostEditor({
                   label="Ignore Certificate"
                   description="Allow connections to hosts with self-signed certificates"
                 >
-                  <FakeSwitch defaultChecked={host?.ignoreCert} />
+                  <FakeSwitch
+                    checked={form.ignoreCert}
+                    onChange={(v) => setField("ignoreCert", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2110,7 +2675,8 @@ function HostEditor({
                   <Input
                     type="password"
                     placeholder="••••••••"
-                    defaultValue={host?.vncPassword || ""}
+                    value={form.vncPassword}
+                    onChange={(e) => setField("vncPassword", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -2119,7 +2685,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="Leave blank if not required"
-                    defaultValue={host?.vncUser || ""}
+                    value={form.vncUser}
+                    onChange={(e) => setField("vncUser", e.target.value)}
                   />
                 </div>
               </div>
@@ -2349,7 +2916,8 @@ function HostEditor({
                   </label>
                   <Input
                     placeholder="admin"
-                    defaultValue={host?.telnetUser || ""}
+                    value={form.telnetUser}
+                    onChange={(e) => setField("telnetUser", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -2359,7 +2927,8 @@ function HostEditor({
                   <Input
                     type="password"
                     placeholder="••••••••"
-                    defaultValue={host?.telnetPassword || ""}
+                    value={form.telnetPassword}
+                    onChange={(e) => setField("telnetPassword", e.target.value)}
                   />
                 </div>
               </div>
@@ -2646,18 +3215,16 @@ function HostEditor({
       </div>
 
       <div className="flex justify-end gap-3 mt-3 mb-6">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} disabled={saving}>
           Cancel
         </Button>
         <Button
           variant="outline"
           className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand px-8"
-          onClick={() => {
-            toast.success("Host configuration saved");
-            onBack();
-          }}
+          onClick={handleSave}
+          disabled={saving}
         >
-          Save Host
+          {saving ? "Saving..." : host ? "Update Host" : "Add Host"}
         </Button>
       </div>
     </div>
@@ -2668,12 +3235,61 @@ function CredentialEditorView({
   credential,
   activeTab,
   onBack,
+  onSave,
 }: {
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
+  onSave: (saved: any) => void;
 }) {
-  const [type, setType] = useState(credential?.type || "password");
+  const [credForm, setCredForm] = useState(() => ({
+    name: credential?.name ?? "",
+    username: credential?.username ?? "",
+    folder: credential?.folder ?? "",
+    description: credential?.description ?? "",
+    tags: credential?.tags?.join(" ") ?? "",
+    type: credential?.type ?? "password",
+    value: credential?.value ?? "",
+    publicKey: credential?.publicKey ?? "",
+    passphrase: credential?.passphrase ?? "",
+  }));
+  const setCredField = <K extends keyof typeof credForm>(
+    k: K,
+    v: (typeof credForm)[K],
+  ) => setCredForm((p) => ({ ...p, [k]: v }));
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const data = {
+        name: credForm.name,
+        username: credForm.username,
+        folder: credForm.folder || null,
+        description: credForm.description || null,
+        tags: credForm.tags
+          .split(/\s+/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+        authType: credForm.type,
+        password: credForm.type === "password" ? credForm.value : null,
+        key: credForm.type === "key" ? credForm.value : null,
+        publicKey: credForm.type === "key" ? credForm.publicKey : null,
+        keyPassword: credForm.type === "key" ? credForm.passphrase : null,
+      };
+      const saved = credential
+        ? await updateCredential(Number(credential.id), data)
+        : await createCredential(data);
+      toast.success(credential ? "Credential updated" : "Credential created");
+      onSave(saved);
+    } catch {
+      toast.error("Failed to save credential");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const type = credForm.type;
 
   return (
     <div className="flex flex-col gap-3">
@@ -2689,7 +3305,8 @@ function CredentialEditorView({
               </label>
               <Input
                 placeholder="e.g. Production SSH Key"
-                defaultValue={credential?.name || ""}
+                value={credForm.name}
+                onChange={(e) => setCredField("name", e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -2698,7 +3315,8 @@ function CredentialEditorView({
               </label>
               <Input
                 placeholder="e.g. Server Keys"
-                defaultValue={credential?.folder || ""}
+                value={credForm.folder}
+                onChange={(e) => setCredField("folder", e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
@@ -2707,7 +3325,8 @@ function CredentialEditorView({
               </label>
               <Input
                 placeholder="Optional details..."
-                defaultValue={credential?.description || ""}
+                value={credForm.description}
+                onChange={(e) => setCredField("description", e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
@@ -2716,7 +3335,8 @@ function CredentialEditorView({
               </label>
               <Input
                 placeholder="space separated"
-                defaultValue={credential?.tags?.join(" ") || ""}
+                value={credForm.tags}
+                onChange={(e) => setCredField("tags", e.target.value)}
               />
             </div>
           </div>
@@ -2737,7 +3357,7 @@ function CredentialEditorView({
                 {["password", "key"].map((m) => (
                   <button
                     key={m}
-                    onClick={() => setType(m as any)}
+                    onClick={() => setCredField("type", m as any)}
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                   >
                     {m === "key" ? "SSH Private Key" : "Password"}
@@ -2751,7 +3371,8 @@ function CredentialEditorView({
               </label>
               <Input
                 placeholder="e.g. root or deploy"
-                defaultValue={credential?.username || ""}
+                value={credForm.username}
+                onChange={(e) => setCredField("username", e.target.value)}
               />
             </div>
             {type === "password" && (
@@ -2762,7 +3383,8 @@ function CredentialEditorView({
                 <Input
                   type="password"
                   placeholder="••••••••"
-                  defaultValue={credential?.value || ""}
+                  value={credForm.value}
+                  onChange={(e) => setCredField("value", e.target.value)}
                 />
               </div>
             )}
@@ -2775,7 +3397,8 @@ function CredentialEditorView({
                   <textarea
                     placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                     rows={8}
-                    defaultValue={credential?.value || ""}
+                    value={credForm.value}
+                    onChange={(e) => setCredField("value", e.target.value)}
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
@@ -2786,7 +3409,8 @@ function CredentialEditorView({
                   <textarea
                     placeholder="ssh-rsa AAAAB3Nza..."
                     rows={3}
-                    defaultValue={credential?.publicKey || ""}
+                    value={credForm.publicKey}
+                    onChange={(e) => setCredField("publicKey", e.target.value)}
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
@@ -2797,7 +3421,8 @@ function CredentialEditorView({
                   <Input
                     type="password"
                     placeholder="••••••••"
-                    defaultValue={credential?.passphrase || ""}
+                    value={credForm.passphrase}
+                    onChange={(e) => setCredField("passphrase", e.target.value)}
                   />
                 </div>
               </div>
@@ -2807,18 +3432,20 @@ function CredentialEditorView({
       )}
 
       <div className="flex justify-end gap-3 mt-3">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} disabled={saving}>
           Cancel
         </Button>
         <Button
           variant="outline"
           className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand px-8"
-          onClick={() => {
-            toast.success("Credential saved");
-            onBack();
-          }}
+          onClick={handleSave}
+          disabled={saving}
         >
-          Save Credential
+          {saving
+            ? "Saving..."
+            : credential
+              ? "Update Credential"
+              : "Add Credential"}
         </Button>
       </div>
     </div>
@@ -2863,6 +3490,10 @@ export function HostManager({
     enableVnc: false,
     enableTelnet: false,
   });
+  const hostsRef = useRef<Host[]>([]);
+  useEffect(() => {
+    hostsRef.current = hosts;
+  }, [hosts]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -2898,7 +3529,7 @@ export function HostManager({
     if (pendingEditId?.current) {
       const id = pendingEditId.current;
       pendingEditId.current = null;
-      const host = hosts.find((h) => h.id === id);
+      const host = hostsRef.current.find((h) => h.id === id);
       if (host) {
         setSection("hosts");
         setEditingHost(host);
@@ -2954,7 +3585,7 @@ export function HostManager({
     };
     const handleEditHost = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      const host = hosts.find((h) => h.id === id);
+      const host = hostsRef.current.find((h) => h.id === id);
       if (host) {
         setSection("hosts");
         setEditingHost(host);
@@ -3258,7 +3889,15 @@ export function HostManager({
                       enableTelnet: host.enableTelnet,
                     });
                   }}
-                  onDelete={() => toast.success(`Deleted ${host.name}`)}
+                  onDelete={async () => {
+                    try {
+                      await deleteSSHHost(Number(host.id));
+                      setHosts((prev) => prev.filter((h) => h.id !== host.id));
+                      toast.success(`Deleted ${host.name}`);
+                    } catch {
+                      toast.error(`Failed to delete ${host.name}`);
+                    }
+                  }}
                   onDragStart={() => setDraggedHost(host)}
                   onDragEnd={() => setDraggedHost(null)}
                 />
@@ -3329,11 +3968,27 @@ export function HostManager({
                 setEditingHost(null);
                 setActiveHostTab("general");
               }}
+              onSave={(saved) => {
+                const updated = sshHostToHost(saved);
+                setHosts((prev) => {
+                  const idx = prev.findIndex((h) => h.id === updated.id);
+                  if (idx >= 0) {
+                    const next = [...prev];
+                    next[idx] = updated;
+                    return next;
+                  }
+                  return [...prev, updated];
+                });
+                setEditingHost(null);
+                setActiveHostTab("general");
+              }}
               protocols={editingProtocols}
               onProtocolChange={(p) =>
                 setEditingProtocols((prev) => ({ ...prev, ...p }))
               }
               onTabChange={setActiveHostTab}
+              hosts={hosts}
+              credentials={credentials}
             />
           ) : (
             <CredentialEditorView
@@ -3349,6 +4004,31 @@ export function HostManager({
               }
               activeTab={activeCredentialTab}
               onBack={() => {
+                setEditingCredential(null);
+                setActiveCredentialTab("general");
+              }}
+              onSave={(saved) => {
+                setCredentials((prev) => {
+                  const idx = prev.findIndex((c) => c.id === String(saved.id));
+                  const updated: Credential = {
+                    id: String(saved.id),
+                    name: saved.name,
+                    username: saved.username ?? "",
+                    type: saved.type ?? "password",
+                    value: saved.value,
+                    publicKey: saved.publicKey,
+                    passphrase: saved.passphrase,
+                    description: saved.description,
+                    folder: saved.folder ?? "",
+                    tags: saved.tags ?? [],
+                  };
+                  if (idx >= 0) {
+                    const next = [...prev];
+                    next[idx] = updated;
+                    return next;
+                  }
+                  return [...prev, updated];
+                });
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
               }}
@@ -3595,7 +4275,17 @@ export function HostManager({
                             enableTelnet: host.enableTelnet,
                           });
                         }}
-                        onDelete={() => toast.success(`Deleted ${host.name}`)}
+                        onDelete={async () => {
+                          try {
+                            await deleteSSHHost(Number(host.id));
+                            setHosts((prev) =>
+                              prev.filter((h) => h.id !== host.id),
+                            );
+                            toast.success(`Deleted ${host.name}`);
+                          } catch {
+                            toast.error(`Failed to delete ${host.name}`);
+                          }
+                        }}
                       />
                     ))}
                   </div>
@@ -3621,7 +4311,17 @@ export function HostManager({
                         enableTelnet: host.enableTelnet,
                       });
                     }}
-                    onDelete={() => toast.success(`Deleted ${host.name}`)}
+                    onDelete={async () => {
+                      try {
+                        await deleteSSHHost(Number(host.id));
+                        setHosts((prev) =>
+                          prev.filter((h) => h.id !== host.id),
+                        );
+                        toast.success(`Deleted ${host.name}`);
+                      } catch {
+                        toast.error(`Failed to delete ${host.name}`);
+                      }
+                    }}
                     onDragStart={() => setDraggedHost(host)}
                     onDragEnd={() => setDraggedHost(null)}
                   />

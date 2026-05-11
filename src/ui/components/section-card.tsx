@@ -59,17 +59,20 @@ export function SettingRow({
 
 export function FakeSwitch({
   defaultChecked = false,
+  checked,
   onChange,
 }: {
   defaultChecked?: boolean;
+  checked?: boolean;
   onChange?: (v: boolean) => void;
 }) {
-  const [on, setOn] = useState(defaultChecked);
+  const [internalOn, setInternalOn] = useState(defaultChecked);
+  const on = checked !== undefined ? checked : internalOn;
   return (
     <button
       onClick={() => {
         const next = !on;
-        setOn(next);
+        if (checked === undefined) setInternalOn(next);
         onChange?.(next);
       }}
       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${on ? "bg-accent-brand border-accent-brand" : "bg-muted border-border"}`}

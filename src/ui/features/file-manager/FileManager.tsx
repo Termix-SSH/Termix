@@ -38,7 +38,6 @@ import {
   Search,
   Grid3X3,
   List,
-  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ArrowUp,
@@ -48,8 +47,6 @@ import {
   Copy,
   Layout,
 } from "lucide-react";
-import { Card } from "@/components/card.tsx";
-import { Separator } from "@/components/separator.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2370,7 +2367,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           visibility: isConnectionLogExpanded ? "hidden" : "visible",
         }}
       >
-        <Card className="flex flex-col shrink-0 mx-3 mt-3 rounded-none shadow-none border-border">
+        <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
           <div className="flex flex-row items-center justify-between px-3 py-2 gap-2">
             <div className="flex items-center gap-1">
               <Button
@@ -2640,7 +2637,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         <div
           className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
@@ -2664,7 +2661,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 : "hidden md:flex",
             )}
           >
-            <Card className="flex-1 flex flex-col rounded-none shadow-none p-0 gap-0 overflow-hidden border-border">
+            <div className="flex-1 flex flex-col overflow-hidden border border-border bg-card">
               <FileManagerSidebar
                 currentHost={currentHost}
                 currentPath={currentPath}
@@ -2675,10 +2672,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 refreshTrigger={sidebarRefreshTrigger}
                 diskInfo={diskInfo ?? undefined}
               />
-            </Card>
+            </div>
           </div>
 
-          <Card className="flex-1 relative overflow-hidden rounded-none shadow-none p-0 gap-0 min-h-0 flex flex-col border-border">
+          <div className="flex-1 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
             <div className="flex-1 relative min-h-0 h-full">
               <FileManagerGrid
                 files={filteredFiles}
@@ -2767,7 +2764,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onCopyPath={handleCopyPath}
               />
             </div>
-          </Card>
+          </div>
         </div>
       </div>
 
