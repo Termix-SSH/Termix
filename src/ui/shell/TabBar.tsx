@@ -4,7 +4,6 @@ import { Separator } from "@/components/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
