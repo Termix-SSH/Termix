@@ -28,7 +28,7 @@
     "noImplicitOverride": false,
     "noEmitOnError": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/ui/*"]
     }
   },
   "include": ["src"]

@@ -129,6 +129,28 @@ export const hosts = sqliteTable("ssh_data", {
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
+  enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
+  enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
+  enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
+  enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
+
+  sshPort: integer("ssh_port").default(22),
+  rdpPort: integer("rdp_port").default(3389),
+  vncPort: integer("vnc_port").default(5900),
+  telnetPort: integer("telnet_port").default(23),
+
+  rdpUser: text("rdp_user"),
+  rdpPassword: text("rdp_password"),
+  rdpDomain: text("rdp_domain"),
+  rdpSecurity: text("rdp_security"),
+  rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
+
+  vncPassword: text("vnc_password"),
+  vncUser: text("vnc_user"),
+
+  telnetUser: text("telnet_user"),
+  telnetPassword: text("telnet_password"),
+
   domain: text("domain"),
   security: text("security"),
   ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
