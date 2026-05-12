@@ -1969,7 +1969,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        if (isElectron() && getUseRightClickCopyPaste()) {
+        if (getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
           if (terminal.hasSelection()) {
