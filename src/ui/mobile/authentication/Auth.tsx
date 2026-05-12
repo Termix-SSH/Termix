@@ -38,15 +38,20 @@ function isReactNativeWebView(): boolean {
   );
 }
 
-function postAuthSuccessToWebView() {
+function postAuthSuccessToWebView(token?: string) {
   if (!isReactNativeWebView()) {
     return;
   }
 
   try {
+    if (token) {
+      localStorage.setItem("jwt", token);
+    }
+
     (window as ReactNativeWindow).ReactNativeWebView?.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
+        ...(token ? { token } : {}),
         source: "explicit",
         platform: "mobile",
         timestamp: Date.now(),
@@ -262,7 +267,7 @@ export function Auth({
       setUsername(meRes.username || null);
       setUserId(meRes.userId || null);
       setDbError(null);
-      postAuthSuccessToWebView();
+      postAuthSuccessToWebView(res.token);
 
       if (isReactNativeWebView()) {
         setMobileAuthSuccess(true);
@@ -462,7 +467,7 @@ export function Auth({
       setUserId(res.userId || null);
       setDbError(null);
 
-      postAuthSuccessToWebView();
+      postAuthSuccessToWebView(res.token);
 
       if (isReactNativeWebView()) {
         setMobileAuthSuccess(true);
@@ -583,11 +588,12 @@ export function Auth({
     if (success) {
       setOidcLoading(true);
       setError(null);
+      const urlToken = urlParams.get("token") || undefined;
 
       window.history.replaceState({}, document.title, window.location.pathname);
 
       if (isReactNativeWebView()) {
-        postAuthSuccessToWebView();
+        postAuthSuccessToWebView(urlToken);
         setMobileAuthSuccess(true);
         setOidcLoading(false);
         return;
