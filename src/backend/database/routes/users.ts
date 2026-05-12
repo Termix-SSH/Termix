@@ -51,6 +51,13 @@ import { getRequestOriginWithForceHTTPS } from "../../utils/request-origin.js";
 
 const authManager = AuthManager.getInstance();
 
+function isTermixMobileAppRequest(req: Request): boolean {
+  return (
+    req.get("X-Termix-Mobile-App") === "true" ||
+    (req.get("User-Agent") || "").includes("Termix-Mobile")
+  );
+}
+
 function getOIDCConfigFromEnv(): {
   client_id: string;
   client_secret: string;
@@ -830,6 +837,7 @@ router.get("/oidc/authorize", async (req, res) => {
     }
     const state = nanoid();
     const nonce = nanoid();
+    const isNativeMobileApp = isTermixMobileAppRequest(req);
 
     const referer = req.get("Referer");
     let frontendOrigin;
@@ -858,6 +866,9 @@ router.get("/oidc/authorize", async (req, res) => {
         `oidc_remember_me_${state}`,
         rememberMe === "true" ? "true" : "false",
       );
+    db.$client
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+      .run(`oidc_native_mobile_${state}`, isNativeMobileApp ? "true" : "false");
 
     const authUrl = new URL(config.authorization_url);
     authUrl.searchParams.set("client_id", config.client_id);
@@ -904,6 +915,9 @@ router.get("/oidc/callback", async (req, res) => {
   const storedRememberMeRow = db.$client
     .prepare("SELECT value FROM settings WHERE key = ?")
     .get(`oidc_remember_me_${state}`);
+  const storedNativeMobileRow = db.$client
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(`oidc_native_mobile_${state}`);
 
   if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
     return res
@@ -918,6 +932,8 @@ router.get("/oidc/callback", async (req, res) => {
     .value as string;
   const storedRememberMe =
     (storedRememberMeRow as Record<string, unknown> | null)?.value === "true";
+  const isNativeMobileApp =
+    (storedNativeMobileRow as Record<string, unknown> | null)?.value === "true";
 
   try {
     const storedNonce = db.$client
@@ -988,6 +1004,9 @@ router.get("/oidc/callback", async (req, res) => {
     db.$client
       .prepare("DELETE FROM settings WHERE key = ?")
       .run(`oidc_remember_me_${state}`);
+    db.$client
+      .prepare("DELETE FROM settings WHERE key = ?")
+      .run(`oidc_native_mobile_${state}`);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1325,6 +1344,9 @@ router.get("/oidc/callback", async (req, res) => {
 
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
+    if (isNativeMobileApp) {
+      redirectUrl.searchParams.set("token", token);
+    }
 
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
@@ -1571,11 +1593,20 @@ router.post("/login", async (req, res) => {
       sessionId: payload?.sessionId,
     });
 
+    const isMobileClient = (req.headers["user-agent"] || "").startsWith(
+      "Termix-Mobile/",
+    );
+    const isElectronClient = req.headers["x-electron-app"] === "true";
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
+      ...(isMobileClient || isElectronClient ? { token } : {}),
     };
+    if (isTermixMobileAppRequest(req)) {
+      response.token = token;
+    }
 
     const timeoutRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
@@ -3386,6 +3417,11 @@ router.post("/totp/verify-login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
+    const isMobileClient = (req.headers["user-agent"] || "").startsWith(
+      "Termix-Mobile/",
+    );
+    const isElectronClient = req.headers["x-electron-app"] === "true";
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.isAdmin,
@@ -3393,7 +3429,11 @@ router.post("/totp/verify-login", async (req, res) => {
       userId: userRecord.id,
       is_oidc: !!userRecord.isOidc,
       totp_enabled: !!userRecord.totpEnabled,
+      ...(isMobileClient || isElectronClient ? { token } : {}),
     };
+    if (isTermixMobileAppRequest(req)) {
+      response.token = token;
+    }
 
     const timeoutRow = db.$client
       .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
