@@ -76,6 +76,29 @@ interface MenuItem {
   danger?: boolean;
 }
 
+const VIEWPORT_PADDING = 10;
+
+function getClampedMenuPosition(
+  x: number,
+  y: number,
+  menuWidth: number,
+  menuHeight: number,
+) {
+  const maxX = Math.max(
+    VIEWPORT_PADDING,
+    window.innerWidth - menuWidth - VIEWPORT_PADDING,
+  );
+  const maxY = Math.max(
+    VIEWPORT_PADDING,
+    window.innerHeight - menuHeight - VIEWPORT_PADDING,
+  );
+
+  return {
+    x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
+    y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
+  };
+}
+
 export function FileManagerContextMenu({
   x,
   y,
@@ -123,21 +146,7 @@ export function FileManagerContextMenu({
     const adjustPosition = () => {
       const menuWidth = menuRef.current?.offsetWidth ?? 260;
       const menuHeight = menuRef.current?.offsetHeight ?? 400;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      let adjustedX = x;
-      let adjustedY = y;
-
-      if (x + menuWidth > viewportWidth) {
-        adjustedX = viewportWidth - menuWidth - 10;
-      }
-
-      if (y + menuHeight > viewportHeight) {
-        adjustedY = Math.max(10, viewportHeight - menuHeight - 10);
-      }
-
-      setMenuPosition({ x: adjustedX, y: adjustedY });
+      setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
     };
 
     adjustPosition();
@@ -201,15 +210,7 @@ export function FileManagerContextMenu({
     if (!isVisible || !menuRef.current) return;
     const menuWidth = menuRef.current.offsetWidth;
     const menuHeight = menuRef.current.offsetHeight;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    let adjustedX = x;
-    let adjustedY = y;
-    if (x + menuWidth > viewportWidth)
-      adjustedX = viewportWidth - menuWidth - 10;
-    if (y + menuHeight > viewportHeight)
-      adjustedY = Math.max(10, viewportHeight - menuHeight - 10);
-    setMenuPosition({ x: adjustedX, y: adjustedY });
+    setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
   }, [isVisible, x, y, files.length]);
 
   const isFileContext = files.length > 0;
@@ -534,10 +535,11 @@ export function FileManagerContextMenu({
       <div
         ref={menuRef}
         data-context-menu
-        className="fixed bg-card border border-border rounded-none shadow-xl min-w-[200px] max-w-[260px] z-[99995] overflow-hidden"
+        className="fixed bg-card border border-border rounded-none shadow-xl min-w-[200px] max-w-[260px] z-[99995] overflow-x-hidden overflow-y-auto"
         style={{
           left: menuPosition.x,
           top: menuPosition.y,
+          maxHeight: `calc(100vh - ${VIEWPORT_PADDING * 2}px)`,
         }}
       >
         {finalMenuItems.map((item, index) => {
