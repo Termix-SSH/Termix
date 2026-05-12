@@ -146,6 +146,7 @@ interface AuthResponse {
   data_unlocked?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
+  token?: string;
   rememberMe?: boolean;
 }
 
@@ -402,8 +403,10 @@ function createApiInstance(
         }
       }
       if (config.headers.set) {
+        config.headers.set("X-Termix-Mobile-App", "true");
         config.headers.set("User-Agent", `Termix-Mobile/${platform}`);
       } else {
+        config.headers["X-Termix-Mobile-App"] = "true";
         config.headers["User-Agent"] = `Termix-Mobile/${platform}`;
       }
     }
