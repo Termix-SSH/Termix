@@ -117,8 +117,8 @@
     "type": "distribution",
     "minimumSystemVersion": "10.15",
     "mergeASARs": false,
-    "singleArchFiles": "**/*.node,**/*.bare",
-    "x64ArchFiles": "**/*.node,**/*.bare"
+    "singleArchFiles": "**/*.{node,bare}",
+    "x64ArchFiles": "**/*.{node,bare}"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
