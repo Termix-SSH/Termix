@@ -104,7 +104,7 @@ export const GuacamoleDisplay = forwardRef<
     async (
       containerWidth: number,
       containerHeight: number,
-    ): Promise<string | null> => {
+    ): Promise<{ url: string; connectData: string } | null> => {
       try {
         let token: string;
         const protocol = connectionConfig.protocol ?? connectionConfig.type;
@@ -170,7 +170,7 @@ export const GuacamoleDisplay = forwardRef<
         if (dpi !== null && dpi !== undefined) {
           params.set("dpi", String(dpi));
         }
-        return `${wsBase}?${params.toString()}`;
+        return { url: wsBase, connectData: params.toString() };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -280,13 +280,13 @@ export const GuacamoleDisplay = forwardRef<
       containerHeight = 720;
     }
 
-    const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
-    if (!wsUrl) {
+    const wsConnection = await getWebSocketUrl(containerWidth, containerHeight);
+    if (!wsConnection) {
       isConnectingRef.current = false;
       return;
     }
 
-    const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
+    const tunnel = new Guacamole.WebSocketTunnel(wsConnection.url);
     const client = new Guacamole.Client(tunnel);
     clientRef.current = client;
 
@@ -392,7 +392,7 @@ export const GuacamoleDisplay = forwardRef<
       Guacamole.AudioPlayer.getInstance(stream, mimetype);
     };
 
-    client.connect();
+    client.connect(wsConnection.connectData);
   }, [
     getWebSocketUrl,
     onConnect,
