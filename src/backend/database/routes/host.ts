@@ -1443,18 +1443,25 @@ router.get(
       const sharedHosts = rawData.filter((row) => row.userId !== userId);
 
       let decryptedOwnHosts: Record<string, unknown>[] = [];
-      try {
-        decryptedOwnHosts = await SimpleDBOps.select(
-          Promise.resolve(ownHosts),
-          "ssh_data",
-          userId,
-        );
-      } catch (decryptError) {
-        sshLogger.error("Failed to decrypt own hosts", decryptError, {
-          operation: "host_fetch_own_decrypt_failed",
-          userId,
-        });
-        decryptedOwnHosts = [];
+      const userDataKey = DataCrypto.getUserDataKey(userId);
+      if (userDataKey) {
+        for (const host of ownHosts) {
+          try {
+            decryptedOwnHosts.push(
+              DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey),
+            );
+          } catch (decryptError) {
+            sshLogger.warn("Skipping host with invalid encrypted fields", {
+              operation: "host_fetch_own_decrypt_failed",
+              userId,
+              hostId: host.id,
+              error:
+                decryptError instanceof Error
+                  ? decryptError.message
+                  : "Unknown error",
+            });
+          }
+        }
       }
 
       const sanitizedSharedHosts = sharedHosts;
