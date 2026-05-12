@@ -676,7 +676,18 @@ interface StatsConfig {
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
-  enabledWidgets: ["cpu", "memory", "disk", "network", "uptime", "system"],
+  enabledWidgets: [
+    "cpu",
+    "memory",
+    "disk",
+    "network",
+    "uptime",
+    "system",
+    "login_stats",
+    "processes",
+    "ports",
+    "firewall",
+  ],
   statusCheckEnabled: true,
   statusCheckInterval: 60,
   metricsEnabled: true,

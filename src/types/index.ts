@@ -88,6 +88,27 @@ export interface Host {
   ignoreCert?: boolean;
   guacamoleConfig?: string | Record<string, unknown>;
 
+  enableSsh?: boolean;
+  enableRdp?: boolean;
+  enableVnc?: boolean;
+  enableTelnet?: boolean;
+  sshPort?: number;
+  rdpPort?: number;
+  vncPort?: number;
+  telnetPort?: number;
+  rdpUser?: string;
+  rdpPassword?: string;
+  rdpDomain?: string;
+  rdpSecurity?: string;
+  rdpIgnoreCert?: boolean;
+  vncPassword?: string;
+  vncUser?: string;
+  telnetUser?: string;
+  telnetPassword?: string;
+  hasRdpPassword?: boolean;
+  hasVncPassword?: boolean;
+  hasTelnetPassword?: boolean;
+
   createdAt: string;
   updatedAt: string;
 
@@ -171,6 +192,24 @@ export interface HostData {
   ignoreCert?: boolean;
   guacamoleConfig?: Record<string, unknown> | null;
   dockerConfig?: Record<string, unknown> | null;
+
+  enableSsh?: boolean;
+  enableRdp?: boolean;
+  enableVnc?: boolean;
+  enableTelnet?: boolean;
+  sshPort?: number;
+  rdpPort?: number;
+  vncPort?: number;
+  telnetPort?: number;
+  rdpUser?: string;
+  rdpPassword?: string;
+  rdpDomain?: string;
+  rdpSecurity?: string;
+  rdpIgnoreCert?: boolean;
+  vncPassword?: string;
+  vncUser?: string;
+  telnetUser?: string;
+  telnetPassword?: string;
 }
 
 export type SSHHost = Host;

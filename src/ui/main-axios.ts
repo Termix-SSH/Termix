@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
-import { clearTermixSessionStorage } from "@/ui/desktop/navigation/tabs/TabContext";
+import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type {
   SSHHost,
   SSHHostData,
@@ -18,7 +18,7 @@ import type {
   DockerLogOptions,
   DockerValidation,
   ProxyNode,
-} from "../types/index.js";
+} from "@/types/index";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -69,8 +69,8 @@ import {
   systemLogger,
   dashboardLogger,
   type LogContext,
-} from "../lib/frontend-logger.js";
-import { dbHealthMonitor } from "../lib/db-health-monitor.js";
+} from "@/lib/frontend-logger";
+import { dbHealthMonitor } from "@/lib/db-health-monitor";
 
 interface FileManagerOperation {
   name: string;
@@ -1155,6 +1155,23 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       socks5ProxyChain: hostData.socks5ProxyChain || null,
       macAddress: hostData.macAddress || null,
       portKnockSequence: hostData.portKnockSequence || null,
+      enableSsh: hostData.enableSsh !== false,
+      enableRdp: Boolean(hostData.enableRdp),
+      enableVnc: Boolean(hostData.enableVnc),
+      enableTelnet: Boolean(hostData.enableTelnet),
+      sshPort: hostData.sshPort || hostData.port || 22,
+      rdpPort: hostData.rdpPort || 3389,
+      vncPort: hostData.vncPort || 5900,
+      telnetPort: hostData.telnetPort || 23,
+      rdpUser: hostData.rdpUser || null,
+      rdpPassword: hostData.rdpPassword || null,
+      rdpDomain: hostData.rdpDomain || null,
+      rdpSecurity: hostData.rdpSecurity || null,
+      rdpIgnoreCert: Boolean(hostData.rdpIgnoreCert),
+      vncPassword: hostData.vncPassword || null,
+      vncUser: hostData.vncUser || null,
+      telnetUser: hostData.telnetUser || null,
+      telnetPassword: hostData.telnetPassword || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -1244,6 +1261,23 @@ export async function updateSSHHost(
       socks5ProxyChain: hostData.socks5ProxyChain || null,
       macAddress: hostData.macAddress || null,
       portKnockSequence: hostData.portKnockSequence || null,
+      enableSsh: hostData.enableSsh !== false,
+      enableRdp: Boolean(hostData.enableRdp),
+      enableVnc: Boolean(hostData.enableVnc),
+      enableTelnet: Boolean(hostData.enableTelnet),
+      sshPort: hostData.sshPort || hostData.port || 22,
+      rdpPort: hostData.rdpPort || 3389,
+      vncPort: hostData.vncPort || 5900,
+      telnetPort: hostData.telnetPort || 23,
+      rdpUser: hostData.rdpUser || null,
+      rdpPassword: hostData.rdpPassword || null,
+      rdpDomain: hostData.rdpDomain || null,
+      rdpSecurity: hostData.rdpSecurity || null,
+      rdpIgnoreCert: Boolean(hostData.rdpIgnoreCert),
+      vncPassword: hostData.vncPassword || null,
+      vncUser: hostData.vncUser || null,
+      telnetUser: hostData.telnetUser || null,
+      telnetPassword: hostData.telnetPassword || null,
     };
 
     if (!submitData.enableTunnel) {
@@ -4960,7 +4994,14 @@ export async function getContainerStats(
 }
 
 export interface DashboardLayout {
-  cards: Array<{ id: string; enabled: boolean; order: number }>;
+  cards: Array<{
+    id: string;
+    enabled: boolean;
+    order: number;
+    panel?: "main" | "side";
+    height?: number | null;
+  }>;
+  mainWidthPct?: number;
 }
 
 export async function getDashboardPreferences(): Promise<DashboardLayout> {

@@ -3,6 +3,7 @@ import fs from "fs";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
@@ -83,7 +84,7 @@ function getManualChunk(id: string): string | undefined {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), svgr()],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(
       packageJson.version || "0.0.0",
@@ -91,7 +92,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@/types": path.resolve(__dirname, "./src/types"),
+      "@": path.resolve(__dirname, "./src/ui"),
     },
   },
   base: process.env.VITE_BASE_PATH || "./",
