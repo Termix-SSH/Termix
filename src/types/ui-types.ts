@@ -6,8 +6,8 @@ export type Host = {
   port: number;
   folder: string;
   online: boolean;
-  cpu: number;
-  ram: number;
+  cpu: number | null;
+  ram: number | null;
   lastAccess: string;
   tags?: string[];
   authType: "password" | "key" | "credential" | "none" | "opkssh";

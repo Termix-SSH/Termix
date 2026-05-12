@@ -56,22 +56,28 @@ export function ServerOverviewCard({
               <p className="leading-none text-muted-foreground">
                 {versionText}
               </p>
-              {!updateCheckDisabled && (
+              {versionStatus === "beta" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 text-sm border-1 border-edge text-blue-400"
+                >
+                  {t("dashboard.beta")}
+                </Button>
+              ) : !updateCheckDisabled ? (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : versionStatus === "beta" ? "text-blue-400" : "text-yellow-400"}`}
+                    className={`ml-2 text-sm border-1 border-edge ${versionStatus === "up_to_date" ? "text-green-400" : "text-yellow-400"}`}
                   >
                     {versionStatus === "up_to_date"
                       ? t("dashboard.upToDate")
-                      : versionStatus === "beta"
-                        ? t("dashboard.beta")
-                        : t("dashboard.updateAvailable")}
+                      : t("dashboard.updateAvailable")}
                   </Button>
                   <UpdateLog loggedIn={loggedIn} />
                 </>
-              )}
+              ) : null}
             </div>
           </div>
 

@@ -23,6 +23,10 @@ export function ServerStatsCard({
 }: ServerStatsCardProps): React.ReactElement {
   const { t } = useTranslation();
 
+  const visibleStats = serverStats.filter(
+    (s) => s.cpu !== null || s.ram !== null,
+  );
+
   return (
     <div className="border-2 border-edge rounded-md flex flex-col overflow-hidden transition-all duration-150 hover:border-primary/20 !bg-elevated">
       <div className="flex flex-col mx-3 my-2 flex-1 overflow-hidden">
@@ -38,12 +42,12 @@ export function ServerStatsCard({
               <Loader2 className="animate-spin mr-2" size={16} />
               <span>{t("dashboard.loadingServerStats")}</span>
             </div>
-          ) : serverStats.length === 0 ? (
+          ) : visibleStats.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               {t("dashboard.noServerData")}
             </p>
           ) : (
-            serverStats.map((server) => (
+            visibleStats.map((server) => (
               <Button
                 key={server.id}
                 variant="outline"
@@ -56,18 +60,16 @@ export function ServerStatsCard({
                     <p className="truncate ml-2 font-semibold">{server.name}</p>
                   </div>
                   <div className="flex flex-row justify-start gap-4 text-xs text-muted-foreground">
-                    <span>
-                      {t("dashboard.cpu")}:{" "}
-                      {server.cpu !== null
-                        ? `${server.cpu}%`
-                        : t("dashboard.notAvailable")}
-                    </span>
-                    <span>
-                      {t("dashboard.ram")}:{" "}
-                      {server.ram !== null
-                        ? `${server.ram}%`
-                        : t("dashboard.notAvailable")}
-                    </span>
+                    {server.cpu !== null && (
+                      <span>
+                        {t("dashboard.cpu")}: {server.cpu.toFixed(1)}%
+                      </span>
+                    )}
+                    {server.ram !== null && (
+                      <span>
+                        {t("dashboard.ram")}: {server.ram.toFixed(1)}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </Button>

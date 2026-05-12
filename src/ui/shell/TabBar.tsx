@@ -69,7 +69,7 @@ export function TabBar({
       const barRect = tabBarRef.current.getBoundingClientRect();
       const x = Math.max(
         barRect.left,
-        Math.min(barRect.right - d.width, e.clientX - d.offsetX),
+        Math.min(barRect.right - d.width - 4, e.clientX - d.offsetX),
       );
       const y = d.barTop;
       setDragPos({ x, y });

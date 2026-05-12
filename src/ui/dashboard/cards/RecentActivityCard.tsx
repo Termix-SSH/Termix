@@ -22,6 +22,21 @@ interface RecentActivityCardProps {
   onActivityClick: (item: RecentActivityItem) => void;
 }
 
+function formatRelativeTime(
+  timestamp: string,
+  t: (key: string) => string,
+): string {
+  const diffMs = Date.now() - new Date(timestamp).getTime();
+  if (diffMs < 0) return t("dashboard.justNow");
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return t("dashboard.justNow");
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h`;
+  return `${Math.floor(diffHour / 24)}d`;
+}
+
 export function RecentActivityCard({
   activities,
   loading,
@@ -95,7 +110,14 @@ export function RecentActivityCard({
                   ) : (
                     <Terminal size={20} className="shrink-0" />
                   )}
-                  <p className="truncate ml-2 font-semibold">{item.hostName}</p>
+                  <div className="flex flex-col items-start min-w-0 ml-2">
+                    <p className="truncate font-semibold leading-none">
+                      {item.hostName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-none">
+                      {formatRelativeTime(item.timestamp, t)}
+                    </p>
+                  </div>
                 </Button>
               ))
           )}

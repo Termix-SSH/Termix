@@ -5,6 +5,8 @@ import {
   type DashboardLayout,
 } from "@/main-axios";
 
+const LS_KEY = "dashboardLayout";
+
 const DEFAULT_LAYOUT: DashboardLayout = {
   cards: [
     { id: "server_overview", enabled: true, order: 1, panel: "main" },
@@ -15,6 +17,42 @@ const DEFAULT_LAYOUT: DashboardLayout = {
   ],
   mainWidthPct: 68,
 };
+
+function migrateLayout(preferences: DashboardLayout): DashboardLayout {
+  const needsMigration = preferences.cards.some((c) => !c.panel);
+  if (!needsMigration) return preferences;
+  const defaultCardMap = new Map(DEFAULT_LAYOUT.cards.map((c) => [c.id, c]));
+  return {
+    ...preferences,
+    mainWidthPct: preferences.mainWidthPct ?? DEFAULT_LAYOUT.mainWidthPct,
+    cards: preferences.cards.map((c) => ({
+      ...c,
+      panel: c.panel ?? defaultCardMap.get(c.id)?.panel ?? "main",
+    })),
+  };
+}
+
+function readFromLocalStorage(): DashboardLayout | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.cards && Array.isArray(parsed.cards)) {
+      return migrateLayout(parsed);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function writeToLocalStorage(layout: DashboardLayout) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(layout));
+  } catch {
+    // ignore
+  }
+}
 
 export function useDashboardPreferences(enabled: boolean = true) {
   const [layout, setLayout] = useState<DashboardLayout | null>(null);
@@ -28,34 +66,29 @@ export function useDashboardPreferences(enabled: boolean = true) {
       return;
     }
 
+    // Show cached layout immediately so the UI doesn't wait for the network
+    const cached = readFromLocalStorage();
+    if (cached) {
+      setLayout(cached);
+      setLoading(false);
+    }
+
     const fetchPreferences = async () => {
       try {
         const preferences = await getDashboardPreferences();
         if (preferences?.cards && Array.isArray(preferences.cards)) {
-          // Migrate old layouts that don't have panel assignments
-          const needsMigration = preferences.cards.some((c) => !c.panel);
-          if (needsMigration) {
-            const defaultCardMap = new Map(
-              DEFAULT_LAYOUT.cards.map((c) => [c.id, c]),
-            );
-            const migrated: DashboardLayout = {
-              ...preferences,
-              mainWidthPct:
-                preferences.mainWidthPct ?? DEFAULT_LAYOUT.mainWidthPct,
-              cards: preferences.cards.map((c) => ({
-                ...c,
-                panel: c.panel ?? defaultCardMap.get(c.id)?.panel ?? "main",
-              })),
-            };
-            setLayout(migrated);
-          } else {
-            setLayout(preferences);
-          }
+          const migrated = migrateLayout(preferences);
+          setLayout(migrated);
+          writeToLocalStorage(migrated);
         } else {
-          setLayout(DEFAULT_LAYOUT);
+          if (!cached) {
+            setLayout(DEFAULT_LAYOUT);
+          }
         }
       } catch {
-        setLayout(DEFAULT_LAYOUT);
+        if (!cached) {
+          setLayout(DEFAULT_LAYOUT);
+        }
       } finally {
         setLoading(false);
       }
@@ -67,6 +100,7 @@ export function useDashboardPreferences(enabled: boolean = true) {
   const updateLayout = useCallback(
     (newLayout: DashboardLayout) => {
       setLayout(newLayout);
+      writeToLocalStorage(newLayout);
 
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -87,6 +121,7 @@ export function useDashboardPreferences(enabled: boolean = true) {
 
   const resetLayout = useCallback(async () => {
     setLayout(DEFAULT_LAYOUT);
+    writeToLocalStorage(DEFAULT_LAYOUT);
     try {
       await saveDashboardPreferences(DEFAULT_LAYOUT);
     } catch (error) {

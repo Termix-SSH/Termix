@@ -27,12 +27,15 @@ import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
   getUptime,
+  getVersionInfo,
+  getDatabaseHealth,
   getRecentActivity,
   getTunnelStatuses,
   getCredentials,
   resetRecentActivity,
 } from "@/main-axios";
 import type { RecentActivityItem, SSHHostWithStatus } from "@/main-axios";
+import { useTranslation } from "react-i18next";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
@@ -110,15 +113,6 @@ const DEFAULT_SLOTS: CardSlot[] = [
   { id: "recent_activity", panel: "side", order: 0, height: null },
 ];
 
-const CARD_META: Record<DashboardCardId, { label: string }> = {
-  stats_bar: { label: "Status Bar" },
-  counters_bar: { label: "Counters" },
-  quick_actions: { label: "Quick Actions" },
-  host_status: { label: "Host Status" },
-  recent_activity: { label: "Recent Activity" },
-  network_graph: { label: "Network Graph" },
-};
-
 // ─── useColumnResize ──────────────────────────────────────────────────────────
 
 function useColumnResize(
@@ -166,27 +160,48 @@ function useColumnResize(
 function StatsBarCard({
   hosts,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
 }: {
   hosts: Host[];
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
 }) {
+  const { t } = useTranslation();
   const online = hosts.filter((h) => h.online).length;
+  const statusLabel =
+    versionStatus === "beta"
+      ? t("dashboard.beta").toUpperCase()
+      : versionStatus === "requires_update"
+        ? t("dashboard.updateAvailable").toUpperCase()
+        : t("dashboardTab.stable");
+  const statusColor =
+    versionStatus === "beta"
+      ? "bg-blue-500/20 text-blue-400"
+      : versionStatus === "requires_update"
+        ? "bg-yellow-500/20 text-yellow-400"
+        : "bg-accent-brand/20 text-accent-brand";
   return (
     <Card className="grid grid-cols-4 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Version
+          {t("dashboard.version")}
         </span>
         <span className="text-xl font-bold text-accent-brand leading-none">
-          v2.2.0
+          {versionText || "—"}
         </span>
-        <span className="text-[10px] bg-accent-brand/20 text-accent-brand px-1.5 py-0.5 w-fit font-semibold leading-none">
-          STABLE
+        <span
+          className={`text-[10px] px-1.5 py-0.5 w-fit font-semibold leading-none ${statusColor}`}
+        >
+          {statusLabel}
         </span>
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Uptime
+          {t("dashboard.uptime")}
         </span>
         <span className="text-xl font-bold leading-none">
           {uptimeFormatted || "—"}
@@ -194,15 +209,19 @@ function StatsBarCard({
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Database
+          {t("dashboard.database")}
         </span>
-        <span className="text-xl font-bold text-accent-brand leading-none">
-          Healthy
+        <span
+          className={`text-xl font-bold leading-none ${dbHealth === "healthy" ? "text-accent-brand" : "text-red-400"}`}
+        >
+          {dbHealth === "healthy"
+            ? t("dashboard.healthy")
+            : t("dashboard.error")}
         </span>
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Hosts Online
+          {t("dashboardTab.hostsOnline")}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-xl font-bold leading-none">{online}</span>
@@ -224,27 +243,28 @@ function CountersBarCard({
   credentialCount: number;
   activeTunnelCount: number;
 }) {
+  const { t } = useTranslation();
   return (
     <Card className="grid grid-cols-3 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <Server className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{hosts.length}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Total Hosts
+          {t("dashboard.totalHosts")}
         </span>
       </div>
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <KeyRound className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{credentialCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Credentials
+          {t("dashboard.totalCredentials")}
         </span>
       </div>
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <Network className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{activeTunnelCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Active Tunnels
+          {t("dashboardTab.activeTunnels")}
         </span>
       </div>
     </Card>
@@ -256,12 +276,13 @@ function QuickActionsCard({
 }: {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
         <Zap className="size-3.5 text-muted-foreground" />
         <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-          Quick Actions
+          {t("dashboard.quickActions")}
         </span>
       </div>
       <div className="flex flex-1 min-h-0">
@@ -276,9 +297,11 @@ function QuickActionsCard({
               <Plus className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Add Host</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.addHost")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Register a new server
+                {t("dashboardTab.registerNewServer")}
               </span>
             </div>
           </button>
@@ -292,9 +315,11 @@ function QuickActionsCard({
               <KeyRound className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Add Credential</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.addCredential")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Store SSH keys or passwords
+                {t("dashboardTab.storeSshKeysOrPasswords")}
               </span>
             </div>
           </button>
@@ -308,9 +333,11 @@ function QuickActionsCard({
               <Settings className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Admin Settings</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.adminSettings")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Manage users and roles
+                {t("dashboardTab.manageUsersAndRoles")}
               </span>
             </div>
           </button>
@@ -322,9 +349,11 @@ function QuickActionsCard({
               <User className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">User Profile</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.userProfile")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Manage your account
+                {t("dashboardTab.manageYourAccount")}
               </span>
             </div>
           </button>
@@ -341,6 +370,7 @@ function HostStatusCard({
   hosts: Host[];
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
+  const { t } = useTranslation();
   const online = hosts.filter((h) => h.online).length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -348,17 +378,17 @@ function HostStatusCard({
         <div className="flex items-center gap-2">
           <Database className="size-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Host Status
+            {t("dashboardTab.hostStatus")}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length} online
+          {online}/{hosts.length} {t("dashboardTab.onlineLower")}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
         {hosts.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            No hosts configured
+            {t("dashboardTab.noHostsConfigured")}
           </div>
         )}
         {hosts.map((host, i) => (
@@ -384,7 +414,7 @@ function HostStatusCard({
                   <div className="flex flex-col gap-0.5 w-16">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-muted-foreground">
-                        CPU
+                        {t("dashboard.cpu")}
                       </span>
                       <span className="text-[10px] font-bold text-accent-brand">
                         {host.cpu ?? 0}%
@@ -400,7 +430,7 @@ function HostStatusCard({
                   <div className="flex flex-col gap-0.5 w-16">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-muted-foreground">
-                        RAM
+                        {t("dashboard.ram")}
                       </span>
                       <span className="text-[10px] font-bold text-accent-brand">
                         {host.ram ?? 0}%
@@ -427,7 +457,9 @@ function HostStatusCard({
               <span
                 className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
               >
-                {host.online ? "ONLINE" : "OFFLINE"}
+                {host.online
+                  ? t("dashboardTab.online")
+                  : t("dashboardTab.offline")}
               </span>
             </div>
           </div>
@@ -448,6 +480,7 @@ function RecentActivityCard({
   onOpenTab: (host: Host, type: TabType) => void;
   onClear: () => void;
 }) {
+  const { t } = useTranslation();
   const typeIcon: Record<RecentActivityItem["type"], React.ReactNode> = {
     terminal: <Terminal className="size-2.5" />,
     file_manager: <Server className="size-2.5" />,
@@ -468,12 +501,24 @@ function RecentActivityCard({
     vnc: "vnc",
     telnet: "telnet",
   };
+  const typeLabel: Record<RecentActivityItem["type"], string> = {
+    terminal: t("networkGraph.terminal"),
+    file_manager: t("networkGraph.fileManager"),
+    server_stats: t("networkGraph.serverStats"),
+    tunnel: t("networkGraph.tunnel"),
+    docker: t("networkGraph.docker"),
+    rdp: "RDP",
+    vnc: "VNC",
+    telnet: "Telnet",
+  };
   function formatTime(ts: string) {
-    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    const diffMs = Date.now() - new Date(ts).getTime();
+    if (diffMs < 0) return t("dashboard.justNow");
+    const diff = Math.floor(diffMs / 1000);
+    if (diff < 60) return t("dashboard.justNow");
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
   }
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -481,7 +526,7 @@ function RecentActivityCard({
         <div className="flex items-center gap-2">
           <Activity className="size-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Recent Activity
+            {t("dashboard.recentActivity")}
           </span>
         </div>
         <Button
@@ -490,13 +535,13 @@ function RecentActivityCard({
           className="text-xs text-accent-brand h-auto py-0.5 px-2"
           onClick={onClear}
         >
-          Clear
+          {t("dashboardTab.clear")}
         </Button>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
         {activity.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            No recent activity
+            {t("dashboard.noRecentActivity")}
           </div>
         )}
         {activity.map((item) => {
@@ -519,9 +564,7 @@ function RecentActivityCard({
                   </span>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     {typeIcon[item.type]}
-                    <span className="text-[10px] capitalize">
-                      {item.type.replace("_", " ")}
-                    </span>
+                    <span className="text-[10px]">{typeLabel[item.type]}</span>
                   </div>
                 </div>
               </div>
@@ -537,6 +580,7 @@ function RecentActivityCard({
 }
 
 function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
+  const { t } = useTranslation();
   const cyRef = useRef<any>(null);
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -639,12 +683,12 @@ function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
         <div className="flex items-center gap-2">
           <Network className="size-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Network Graph
+            {t("dashboard.networkGraph")}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {hosts.length} nodes
+            {t("dashboardTab.nodes", { count: hosts.length })}
           </span>
           <Button
             variant="ghost"
@@ -673,11 +717,11 @@ function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
             </div>
             <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
               <Terminal className="size-3" />
-              Terminal
+              {t("networkGraph.terminal")}
             </button>
             <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
               <Server className="size-3" />
-              Server Stats
+              {t("networkGraph.serverStats")}
             </button>
           </div>
         )}
@@ -695,20 +739,20 @@ function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 h-full">
-            No hosts to display
+            {t("dashboardTab.noHostsToDisplay")}
           </div>
         )}
         <div className="absolute bottom-2 left-3 flex items-center gap-3 pointer-events-none">
           <div className="flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-accent-brand inline-block" />
             <span className="text-[10px] text-muted-foreground font-mono">
-              Online
+              {t("dashboardTab.onlineLower")}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-muted-foreground/50 inline-block" />
             <span className="text-[10px] text-muted-foreground font-mono">
-              Offline
+              {t("dashboardTab.offlineLower")}
             </span>
           </div>
         </div>
@@ -732,6 +776,9 @@ function CardItem({
   onOpenTab,
   hosts,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
   credentialCount,
   activeTunnelCount,
   activity,
@@ -749,6 +796,9 @@ function CardItem({
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
   activity: RecentActivityItem[];
@@ -776,15 +826,6 @@ function CardItem({
   );
 
   const isFlex = slot.height === null;
-  const cardProps = {
-    hosts,
-    uptimeFormatted,
-    credentialCount,
-    activeTunnelCount,
-    activity,
-    onOpenTab,
-    onOpenSingletonTab,
-  };
 
   return (
     <div
@@ -815,37 +856,35 @@ function CardItem({
       <div className="flex-1 min-h-0 overflow-hidden">
         {slot.id === "stats_bar" && (
           <StatsBarCard
-            hosts={cardProps.hosts}
-            uptimeFormatted={cardProps.uptimeFormatted}
+            hosts={hosts}
+            uptimeFormatted={uptimeFormatted}
+            versionText={versionText}
+            versionStatus={versionStatus}
+            dbHealth={dbHealth}
           />
         )}
         {slot.id === "counters_bar" && (
           <CountersBarCard
-            hosts={cardProps.hosts}
-            credentialCount={cardProps.credentialCount}
-            activeTunnelCount={cardProps.activeTunnelCount}
+            hosts={hosts}
+            credentialCount={credentialCount}
+            activeTunnelCount={activeTunnelCount}
           />
         )}
         {slot.id === "quick_actions" && (
-          <QuickActionsCard onOpenSingletonTab={cardProps.onOpenSingletonTab} />
+          <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
         )}
         {slot.id === "host_status" && (
-          <HostStatusCard
-            hosts={cardProps.hosts}
-            onOpenTab={cardProps.onOpenTab}
-          />
+          <HostStatusCard hosts={hosts} onOpenTab={onOpenTab} />
         )}
         {slot.id === "recent_activity" && (
           <RecentActivityCard
             activity={activity}
-            hosts={cardProps.hosts}
-            onOpenTab={cardProps.onOpenTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
             onClear={onClearActivity}
           />
         )}
-        {slot.id === "network_graph" && (
-          <NetworkGraphCard hosts={cardProps.hosts} />
-        )}
+        {slot.id === "network_graph" && <NetworkGraphCard hosts={hosts} />}
       </div>
       {editMode && !isFlex && (
         <div
@@ -898,16 +937,19 @@ function DropZone({
 function AddCardTray({
   activeIds,
   onAdd,
+  cardLabels,
 }: {
   activeIds: DashboardCardId[];
   onAdd: (id: DashboardCardId) => void;
+  cardLabels: Record<DashboardCardId, string>;
 }) {
+  const { t } = useTranslation();
   const available = DASHBOARD_CARDS.filter((c) => !activeIds.includes(c.id));
   if (available.length === 0) return null;
   return (
     <div className="flex items-center gap-2 px-1 py-2 flex-wrap shrink-0">
       <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold shrink-0">
-        Add:
+        {t("dashboardTab.add")}
       </span>
       {available.map((card) => (
         <button
@@ -916,7 +958,7 @@ function AddCardTray({
           className="flex items-center gap-1.5 px-2.5 py-1 border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent-brand/60 hover:bg-accent-brand/5 transition-colors"
         >
           <Plus className="size-3 text-accent-brand" />
-          {CARD_META[card.id].label}
+          {cardLabels[card.id]}
         </button>
       ))}
     </div>
@@ -940,10 +982,14 @@ type PanelColumnProps = {
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
+  cardLabels: Record<DashboardCardId, string>;
 };
 
 function PanelColumn({
@@ -961,11 +1007,16 @@ function PanelColumn({
   onOpenTab,
   hosts,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
   credentialCount,
   activeTunnelCount,
   activity,
   onClearActivity,
+  cardLabels,
 }: PanelColumnProps) {
+  const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
   const allIds = slots.map((s) => s.id);
 
@@ -1007,6 +1058,9 @@ function PanelColumn({
             onOpenTab={onOpenTab}
             hosts={hosts}
             uptimeFormatted={uptimeFormatted}
+            versionText={versionText}
+            versionStatus={versionStatus}
+            dbHealth={dbHealth}
             credentialCount={credentialCount}
             activeTunnelCount={activeTunnelCount}
             activity={activity}
@@ -1022,11 +1076,15 @@ function PanelColumn({
         active={!!dragState}
       />
       {editMode && (
-        <AddCardTray activeIds={allIds} onAdd={(id) => onAdd(id, panel)} />
+        <AddCardTray
+          activeIds={allIds}
+          onAdd={(id) => onAdd(id, panel)}
+          cardLabels={cardLabels}
+        />
       )}
       {sorted.length === 0 && !editMode && (
         <div className="flex-1 flex items-center justify-center text-muted-foreground/20 text-xs border border-dashed border-border/30">
-          Empty
+          {t("dashboardTab.empty")}
         </div>
       )}
     </div>
@@ -1061,6 +1119,7 @@ export function DashboardTab({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const [slots, setSlots] = useState<CardSlot[]>(DEFAULT_SLOTS);
   const [editMode, setEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
@@ -1068,6 +1127,11 @@ export function DashboardTab({
 
   const [hosts, setHosts] = useState<Host[]>([]);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
+  const [versionText, setVersionText] = useState("");
+  const [versionStatus, setVersionStatus] = useState<
+    "up_to_date" | "requires_update" | "beta"
+  >("up_to_date");
+  const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
@@ -1079,6 +1143,23 @@ export function DashboardTab({
     getUptime()
       .then((u) => setUptimeFormatted(u.formatted))
       .catch(() => {});
+    getVersionInfo()
+      .then((info) => {
+        setVersionText(info.localVersion ?? "");
+        setVersionStatus(info.status ?? "up_to_date");
+      })
+      .catch(() => {});
+    getDatabaseHealth()
+      .then((health) => {
+        setDbHealth(
+          health.status === "ok" || health.status === "healthy"
+            ? "healthy"
+            : "error",
+        );
+      })
+      .catch(() => {
+        setDbHealth("error");
+      });
     getRecentActivity(50)
       .then(setActivity)
       .catch(() => {});
@@ -1108,7 +1189,7 @@ export function DashboardTab({
     }
   };
 
-  const todayLabel = new Date().toLocaleDateString("en-US", {
+  const todayLabel = new Date().toLocaleDateString(i18n.language, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -1123,6 +1204,15 @@ export function DashboardTab({
     .filter((s) => s.panel === "side")
     .sort((a, b) => a.order - b.order);
   const hasSide = sideSlots.length > 0;
+
+  const cardLabels: Record<DashboardCardId, string> = {
+    stats_bar: t("dashboard.serverOverview"),
+    counters_bar: t("dashboard.serverStats"),
+    quick_actions: t("dashboard.quickActions"),
+    host_status: t("dashboardTab.hostStatus"),
+    recent_activity: t("dashboard.recentActivity"),
+    network_graph: t("dashboard.networkGraph"),
+  };
 
   const onColumnDividerMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -1211,12 +1301,16 @@ export function DashboardTab({
   const columnProps = {
     hosts,
     uptimeFormatted,
+    versionText,
+    versionStatus,
+    dbHealth,
     credentialCount,
     activeTunnelCount,
     activity,
     onClearActivity: handleClearActivity,
     onOpenSingletonTab,
     onOpenTab,
+    cardLabels,
   };
 
   const isMobile = useIsMobile();
@@ -1228,7 +1322,9 @@ export function DashboardTab({
         <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-3 flex flex-col gap-3">
           <Card className="flex-row items-center justify-between px-4 py-3 shrink-0 gap-0">
             <div>
-              <h1 className="text-base font-bold leading-tight">Dashboard</h1>
+              <h1 className="text-base font-bold leading-tight">
+                {t("dashboard.title")}
+              </h1>
               <p className="text-xs text-muted-foreground">{todayLabel}</p>
             </div>
             <div className="flex items-center gap-1">
@@ -1243,7 +1339,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  GitHub
+                  {t("dashboard.github")}
                 </a>
               </Button>
               <Button
@@ -1257,7 +1353,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Support
+                  {t("dashboard.support")}
                 </a>
               </Button>
               <Button
@@ -1271,7 +1367,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Discord
+                  {t("dashboard.discord")}
                 </a>
               </Button>
             </div>
@@ -1282,7 +1378,13 @@ export function DashboardTab({
               className={`shrink-0 ${slot.id === "host_status" || slot.id === "recent_activity" ? "max-h-72 flex flex-col overflow-hidden" : ""}`}
             >
               {slot.id === "stats_bar" && (
-                <StatsBarCard hosts={hosts} uptimeFormatted={uptimeFormatted} />
+                <StatsBarCard
+                  hosts={hosts}
+                  uptimeFormatted={uptimeFormatted}
+                  versionText={versionText}
+                  versionStatus={versionStatus}
+                  dbHealth={dbHealth}
+                />
               )}
               {slot.id === "counters_bar" && (
                 <CountersBarCard
@@ -1319,13 +1421,15 @@ export function DashboardTab({
     <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
       <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
         <div>
-          <h1 className="text-lg font-bold leading-tight">Dashboard</h1>
+          <h1 className="text-lg font-bold leading-tight">
+            {t("dashboard.title")}
+          </h1>
           <p className="text-xs text-muted-foreground">{todayLabel}</p>
         </div>
         <div className="flex items-center gap-1">
           <div className="hidden sm:flex items-center gap-2 mr-2 bg-muted/50 px-2.5 py-1 rounded-sm border border-border">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              Command Palette
+              {t("dashboardTab.commandPalette")}
             </span>
             <div className="flex items-center gap-1">
               <Kbd className="h-5 px-1.5 bg-background text-[10px]">Shift</Kbd>
@@ -1344,7 +1448,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              GitHub
+              {t("dashboard.github")}
             </a>
           </Button>
           <Button
@@ -1358,7 +1462,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              Support
+              {t("dashboard.support")}
             </a>
           </Button>
           <Button
@@ -1372,7 +1476,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              Discord
+              {t("dashboard.discord")}
             </a>
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5" />
@@ -1384,14 +1488,14 @@ export function DashboardTab({
                 className="text-xs text-muted-foreground"
                 onClick={handleReset}
               >
-                Reset
+                {t("dashboard.reset")}
               </Button>
               <Button
                 size="sm"
                 className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white"
                 onClick={() => setEditMode(false)}
               >
-                Done
+                {t("dashboardTab.done")}
               </Button>
             </>
           ) : (
@@ -1399,7 +1503,7 @@ export function DashboardTab({
               variant="ghost"
               size="icon"
               onClick={() => setEditMode(true)}
-              title="Customize Dashboard"
+              title={t("dashboard.customizeLayout")}
             >
               <LayoutDashboard className="size-4 text-accent-brand" />
             </Button>
@@ -1411,9 +1515,7 @@ export function DashboardTab({
         <div className="mx-5 mt-4 px-4 py-2 border border-dashed border-accent-brand/40 bg-accent-brand/5 shrink-0 flex items-center gap-2">
           <LayoutDashboard className="size-3.5 text-accent-brand shrink-0" />
           <span className="text-xs text-accent-brand font-semibold">
-            Drag cards to reorder · Drag the column divider to resize columns ·
-            Drag the bottom edge of a card to resize its height · Trash to
-            remove
+            {t("dashboardTab.editModeInstructions")}
           </span>
         </div>
       )}

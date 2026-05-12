@@ -63,6 +63,23 @@ import {
   deleteSSHHost,
   createCredential,
   updateCredential,
+  deleteCredential,
+  getAllServerStatuses,
+  getServerMetricsById,
+  bulkImportSSHHosts,
+  bulkUpdateSSHHosts,
+  generateKeyPair,
+  generatePublicKeyFromPrivate,
+  deployCredentialToHost,
+  getSnippets,
+  getUserList,
+  getRoles,
+  shareHost,
+  getHostAccess,
+  revokeHostAccess,
+  renameFolder,
+  refreshServerPolling,
+  deleteAllHostsInFolder,
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 
@@ -75,8 +92,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     port: h.port,
     folder: h.folder ?? "",
     online: h.status === "online",
-    cpu: 0,
-    ram: 0,
+    cpu: null,
+    ram: null,
     lastAccess: "",
     tags: h.tags ?? [],
     authType: h.authType,
@@ -93,9 +110,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
-    enableRdp: h.connectionType === "rdp",
-    enableVnc: h.connectionType === "vnc",
-    enableTelnet: h.connectionType === "telnet",
+    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
+    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
+    enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
     sshPort: h.port,
     rdpPort: 3389,
     vncPort: 5900,
@@ -232,6 +249,8 @@ function HostRow({
 
   const hasSsh = host.enableSsh;
 
+  const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
+
   const sshActions: { type: string; icon: typeof Terminal; label: string }[] = [
     host.enableTerminal && {
       type: "terminal",
@@ -245,7 +264,7 @@ function HostRow({
     },
     host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
-    { type: "stats", icon: Server, label: "Stats" },
+    metricsEnabled && { type: "stats", icon: Server, label: "Stats" },
   ].filter(Boolean) as { type: string; icon: typeof Terminal; label: string }[];
 
   const fireOpen = (type: string) => {
@@ -280,7 +299,7 @@ function HostRow({
 
         {/* Status dot */}
         <div
-          className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand shadow-[0_0_4px_rgba(251,146,60,0.5)]" : "bg-muted-foreground/25"}`}
+          className={`size-1.5 rounded-full shrink-0 ${host.online ? `bg-accent-brand${selectionMode ? "" : " shadow-[0_0_4px_rgba(251,146,60,0.5)]"}` : "bg-muted-foreground/25"}`}
         />
 
         {/* Name + badges */}
@@ -325,34 +344,42 @@ function HostRow({
 
         {/* Right: last access always visible, CPU/RAM on hover */}
         <div className="flex items-center gap-2 shrink-0">
-          {host.online && hovered && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <span className="text-[9px] text-muted-foreground/50">CPU</span>
-                <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${host.cpu! > 80 ? "bg-red-400" : host.cpu! > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
-                    style={{ width: `${host.cpu}%` }}
-                  />
+          {host.online &&
+            hovered &&
+            metricsEnabled &&
+            host.cpu != null &&
+            host.ram != null && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-muted-foreground/50">
+                    CPU
+                  </span>
+                  <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                      style={{ width: `${host.cpu}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] tabular-nums text-accent-brand font-bold">
+                    {host.cpu}%
+                  </span>
                 </div>
-                <span className="text-[9px] tabular-nums text-accent-brand font-bold">
-                  {host.cpu}%
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[9px] text-muted-foreground/50">RAM</span>
-                <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${host.ram! > 80 ? "bg-red-400" : host.ram! > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
-                    style={{ width: `${host.ram}%` }}
-                  />
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-muted-foreground/50">
+                    RAM
+                  </span>
+                  <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                      style={{ width: `${host.ram}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] tabular-nums text-accent-brand font-bold">
+                    {host.ram}%
+                  </span>
                 </div>
-                <span className="text-[9px] tabular-nums text-accent-brand font-bold">
-                  {host.ram}%
-                </span>
               </div>
-            </div>
-          )}
+            )}
           <span className="text-[10px] text-muted-foreground/40 tabular-nums shrink-0">
             {host.lastAccess}
           </span>
@@ -390,7 +417,7 @@ function HostRow({
       </div>
 
       {/* Hover action tray */}
-      {hovered && !selectionMode && (
+      {(hovered || selectionMode) && (
         <div
           className="border-t border-border/40"
           style={{ marginLeft: depth > 0 ? `-${depth * 12 + 8}px` : undefined }}
@@ -594,7 +621,8 @@ function HostEditor({
     keyPassword: host?.keyPassword ?? "",
     credentialId: host?.credentialId ?? "",
     folder: host?.folder ?? "",
-    tags: host?.tags?.join(" ") ?? "",
+    tags: host?.tags ?? ([] as string[]),
+    tagInput: "",
     notes: host?.notes ?? "",
     pin: host?.pin ?? false,
     macAddress: host?.macAddress ?? "",
@@ -607,7 +635,7 @@ function HostEditor({
     enableFileManager: host?.enableFileManager ?? false,
     enableDocker: host?.enableDocker ?? false,
     enableTunnel: host?.enableTunnel ?? false,
-    defaultPath: host?.defaultPath ?? "~",
+    defaultPath: host?.defaultPath ?? "/",
     fontSize: host?.terminalConfig?.fontSize ?? 14,
     fontFamily: host?.terminalConfig?.fontFamily ?? "JetBrains Mono",
     theme: host?.terminalConfig?.theme ?? "Termix Dark",
@@ -668,14 +696,63 @@ function HostEditor({
     setForm((p) => ({ ...p, [k]: v }));
 
   const [saving, setSaving] = useState(false);
+  const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
+  const [shareType, setShareType] = useState<"user" | "role">("user");
+  const [shareGranteeId, setShareGranteeId] = useState("");
+  const [sharePermission, setSharePermission] = useState("view");
+  const [shareExpiryHours, setShareExpiryHours] = useState("");
+  const [accessList, setAccessList] = useState<any[]>([]);
+  const [shareUsers, setShareUsers] = useState<
+    { id: string; username: string }[]
+  >([]);
+  const [shareRoles, setShareRoles] = useState<{ id: string; name: string }[]>(
+    [],
+  );
+  const [sharingLoaded, setSharingLoaded] = useState(false);
+
+  useEffect(() => {
+    getSnippets()
+      .then((res: any) => {
+        const arr = Array.isArray(res) ? res : (res?.snippets ?? []);
+        setSnippets(
+          arr.map((s: any) => ({
+            id: s.id,
+            name: s.name ?? s.title ?? `Snippet ${s.id}`,
+          })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "sharing" || !host) return;
+    if (sharingLoaded) return;
+    setSharingLoaded(true);
+    Promise.all([
+      getHostAccess(Number(host.id)).catch(() => ({ access: [] })),
+      getUserList().catch(() => ({ users: [] })),
+      getRoles().catch(() => ({ roles: [] })),
+    ]).then(([accessRes, usersRes, rolesRes]) => {
+      setAccessList((accessRes as any)?.access ?? []);
+      setShareUsers(
+        ((usersRes as any)?.users ?? []).map((u: any) => ({
+          id: String(u.id ?? u.userId),
+          username: u.username,
+        })),
+      );
+      setShareRoles(
+        ((rolesRes as any)?.roles ?? []).map((r: any) => ({
+          id: String(r.id),
+          name: r.name,
+        })),
+      );
+    });
+  }, [activeTab, host, sharingLoaded]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const tags = form.tags
-        .split(/\s+/)
-        .map((t) => t.trim())
-        .filter(Boolean);
+      const tags = form.tags;
       const data = {
         connectionType: protocols.enableSsh
           ? "ssh"
@@ -708,7 +785,7 @@ function HostEditor({
         enableTunnel: form.enableTunnel,
         enableFileManager: form.enableFileManager,
         enableDocker: form.enableDocker,
-        defaultPath: form.defaultPath || "~",
+        defaultPath: form.defaultPath || "/",
         useSocks5: form.useSocks5,
         socks5Host: form.socks5Host || null,
         socks5Port: form.socks5Port || null,
@@ -847,24 +924,6 @@ function HostEditor({
                         <span className="text-[10px] text-muted-foreground/50">
                           {desc}
                         </span>
-                        {enabled && (
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/60">
-                              Port
-                            </span>
-                            <Input
-                              type="number"
-                              value={form[portField]}
-                              onChange={(e) =>
-                                setField(
-                                  portField,
-                                  Number(e.target.value) as any,
-                                )
-                              }
-                              className="h-6 w-16 text-[10px] px-2"
-                            />
-                          </div>
-                        )}
                       </div>
                       <FakeSwitch
                         checked={enabled}
@@ -1094,11 +1153,52 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Tags
                   </label>
-                  <Input
-                    placeholder="space separated"
-                    value={form.tags}
-                    onChange={(e) => setField("tags", e.target.value)}
-                  />
+                  <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
+                    {form.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-muted border border-border/60 text-foreground"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setField(
+                              "tags",
+                              form.tags.filter((t) => t !== tag),
+                            )
+                          }
+                          className="text-muted-foreground hover:text-destructive ml-0.5"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
+                      placeholder={form.tags.length === 0 ? "Add tags..." : ""}
+                      value={form.tagInput}
+                      onChange={(e) => setField("tagInput", e.target.value)}
+                      onKeyDown={(e) => {
+                        if (
+                          (e.key === " " || e.key === "Enter") &&
+                          form.tagInput.trim()
+                        ) {
+                          e.preventDefault();
+                          const tag = form.tagInput.trim();
+                          if (!form.tags.includes(tag))
+                            setField("tags", [...form.tags, tag]);
+                          setField("tagInput", "");
+                        } else if (
+                          e.key === "Backspace" &&
+                          !form.tagInput &&
+                          form.tags.length > 0
+                        ) {
+                          setField("tags", form.tags.slice(0, -1));
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1150,53 +1250,68 @@ function HostEditor({
                   {form.portKnockSequence.map((knock, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-1.5 p-1.5 bg-muted/30 border border-border"
+                      className="flex items-end gap-1.5 p-1.5 bg-muted/30 border border-border"
                     >
-                      <Input
-                        className="h-7 text-xs w-16"
-                        placeholder="Port"
-                        type="number"
-                        value={knock.port}
-                        onChange={(e) => {
-                          const updated = [...form.portKnockSequence];
-                          updated[i] = {
-                            ...updated[i],
-                            port: Number(e.target.value),
-                          };
-                          setField("portKnockSequence", updated);
-                        }}
-                      />
-                      <select
-                        className="h-7 text-[10px] bg-background border border-border px-1"
-                        value={knock.protocol}
-                        onChange={(e) => {
-                          const updated = [...form.portKnockSequence];
-                          updated[i] = {
-                            ...updated[i],
-                            protocol: e.target.value as "tcp" | "udp",
-                          };
-                          setField("portKnockSequence", updated);
-                        }}
-                      >
-                        <option value="tcp">TCP</option>
-                        <option value="udp">UDP</option>
-                      </select>
-                      <Input
-                        className="h-7 text-xs w-20"
-                        placeholder="Delay (ms)"
-                        type="number"
-                        value={knock.delay}
-                        onChange={(e) => {
-                          const updated = [...form.portKnockSequence];
-                          updated[i] = {
-                            ...updated[i],
-                            delay: Number(e.target.value),
-                          };
-                          setField("portKnockSequence", updated);
-                        }}
-                      />
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
+                          Port
+                        </span>
+                        <Input
+                          className="h-7 text-xs w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="8080"
+                          type="number"
+                          value={knock.port}
+                          onChange={(e) => {
+                            const updated = [...form.portKnockSequence];
+                            updated[i] = {
+                              ...updated[i],
+                              port: Number(e.target.value),
+                            };
+                            setField("portKnockSequence", updated);
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
+                          Protocol
+                        </span>
+                        <select
+                          className="h-7 text-[10px] bg-background border border-border px-1"
+                          value={knock.protocol}
+                          onChange={(e) => {
+                            const updated = [...form.portKnockSequence];
+                            updated[i] = {
+                              ...updated[i],
+                              protocol: e.target.value as "tcp" | "udp",
+                            };
+                            setField("portKnockSequence", updated);
+                          }}
+                        >
+                          <option value="tcp">TCP</option>
+                          <option value="udp">UDP</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
+                          Delay (ms)
+                        </span>
+                        <Input
+                          className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="100"
+                          type="number"
+                          value={knock.delay}
+                          onChange={(e) => {
+                            const updated = [...form.portKnockSequence];
+                            updated[i] = {
+                              ...updated[i],
+                              delay: Number(e.target.value),
+                            };
+                            setField("portKnockSequence", updated);
+                          }}
+                        />
+                      </div>
                       <button
-                        className="text-destructive p-1"
+                        className="text-destructive p-1 mb-0.5"
                         onClick={() =>
                           setField(
                             "portKnockSequence",
@@ -1218,6 +1333,27 @@ function HostEditor({
 
         {activeTab === "ssh" && (
           <>
+            <SectionCard
+              title="Connection"
+              icon={<Globe className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    SSH Port
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="22"
+                    value={form.sshPort}
+                    onChange={(e) =>
+                      setField("sshPort", Number(e.target.value) as any)
+                    }
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </SectionCard>
             <SectionCard
               title="Authentication"
               icon={<Shield className="size-3.5" />}
@@ -1427,6 +1563,7 @@ function HostEditor({
                       onChange={(e) =>
                         setField("fontSize", Number(e.target.value) as any)
                       }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1473,6 +1610,7 @@ function HostEditor({
                     onChange={(e) =>
                       setField("scrollback", Number(e.target.value) as any)
                     }
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-[10px] text-muted-foreground">
                     Maximum number of lines kept in history
@@ -1894,7 +2032,7 @@ function HostEditor({
                   Default Path
                 </label>
                 <Input
-                  placeholder="~"
+                  placeholder="/"
                   value={form.defaultPath}
                   onChange={(e) => setField("defaultPath", e.target.value)}
                 />
@@ -1942,22 +2080,24 @@ function HostEditor({
                     }
                   />
                 </SettingRow>
-                <SettingRow
-                  label="Check Interval (s)"
-                  description="Seconds between each connectivity ping"
-                >
-                  <Input
-                    type="number"
-                    value={form.statsConfig.statusCheckInterval}
-                    onChange={(e) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        statusCheckInterval: Number(e.target.value),
-                      })
-                    }
-                    className="w-20 h-7 text-xs text-right"
-                  />
-                </SettingRow>
+                {!form.statsConfig.useGlobalStatusInterval && (
+                  <SettingRow
+                    label="Check Interval (s)"
+                    description="Seconds between each connectivity ping"
+                  >
+                    <Input
+                      type="number"
+                      value={form.statsConfig.statusCheckInterval}
+                      onChange={(e) =>
+                        setField("statsConfig", {
+                          ...form.statsConfig,
+                          statusCheckInterval: Number(e.target.value),
+                        })
+                      }
+                      className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </SettingRow>
+                )}
               </div>
             </SectionCard>
             <SectionCard
@@ -1993,22 +2133,24 @@ function HostEditor({
                     }
                   />
                 </SettingRow>
-                <SettingRow
-                  label="Metrics Interval (s)"
-                  description="Seconds between metric snapshots"
-                >
-                  <Input
-                    type="number"
-                    value={form.statsConfig.metricsInterval}
-                    onChange={(e) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        metricsInterval: Number(e.target.value),
-                      })
-                    }
-                    className="w-20 h-7 text-xs text-right"
-                  />
-                </SettingRow>
+                {!form.statsConfig.useGlobalMetricsInterval && (
+                  <SettingRow
+                    label="Metrics Interval (s)"
+                    description="Seconds between metric snapshots"
+                  >
+                    <Input
+                      type="number"
+                      value={form.statsConfig.metricsInterval}
+                      onChange={(e) =>
+                        setField("statsConfig", {
+                          ...form.statsConfig,
+                          metricsInterval: Number(e.target.value),
+                        })
+                      }
+                      className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </SettingRow>
+                )}
               </div>
             </SectionCard>
             <SectionCard
@@ -2127,9 +2269,8 @@ function HostEditor({
                         setField("quickActions", updated);
                       }}
                     />
-                    <Input
-                      className="h-7 text-xs flex-1"
-                      placeholder="Snippet ID"
+                    <select
+                      className="h-7 text-xs flex-1 border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
                       value={a.snippetId}
                       onChange={(e) => {
                         const updated = [...form.quickActions];
@@ -2139,7 +2280,14 @@ function HostEditor({
                         };
                         setField("quickActions", updated);
                       }}
-                    />
+                    >
+                      <option value="">Select snippet...</option>
+                      {snippets.map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() =>
@@ -2160,6 +2308,27 @@ function HostEditor({
 
         {activeTab === "rdp" && (
           <>
+            <SectionCard
+              title="Connection"
+              icon={<Globe className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    RDP Port
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="3389"
+                    value={form.rdpPort}
+                    onChange={(e) =>
+                      setField("rdpPort", Number(e.target.value) as any)
+                    }
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </SectionCard>
             <SectionCard
               title="Authentication"
               icon={<Shield className="size-3.5" />}
@@ -2664,6 +2833,27 @@ function HostEditor({
         {activeTab === "vnc" && (
           <>
             <SectionCard
+              title="Connection"
+              icon={<Globe className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    VNC Port
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="5900"
+                    value={form.vncPort}
+                    onChange={(e) =>
+                      setField("vncPort", Number(e.target.value) as any)
+                    }
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </SectionCard>
+            <SectionCard
               title="Authentication"
               icon={<Shield className="size-3.5" />}
             >
@@ -2906,6 +3096,27 @@ function HostEditor({
         {activeTab === "telnet" && (
           <>
             <SectionCard
+              title="Connection"
+              icon={<Globe className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Telnet Port
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="23"
+                    value={form.telnetPort}
+                    onChange={(e) =>
+                      setField("telnetPort", Number(e.target.value) as any)
+                    }
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </SectionCard>
+            <SectionCard
               title="Authentication"
               icon={<Shield className="size-3.5" />}
             >
@@ -3062,154 +3273,209 @@ function HostEditor({
               </div>
             )}
 
-            <SectionCard
-              title="Share Host"
-              icon={<Users className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-4 py-3">
-                <div className="flex gap-2">
-                  {["user", "role"].map((t) => (
-                    <button
-                      key={t}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${t === "user" ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                    >
-                      {t === "user" ? (
-                        <>
-                          <User className="size-3 inline mr-1" />
-                          Share with User
-                        </>
-                      ) : (
-                        <>
-                          <Shield className="size-3 inline mr-1" />
-                          Share with Role
-                        </>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Select User
-                  </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
-                    <option value="">Select a user...</option>
-                    <option>alice</option>
-                    <option>bob</option>
-                    <option>charlie</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Permission Level
-                  </label>
-                  <div className="px-3 py-2 border border-border bg-muted/30 text-xs text-muted-foreground">
-                    View only
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Expires in (hours)
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="Leave empty for no expiry"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={() => toast.success("Host shared successfully")}
-                  >
-                    <Plus className="size-3.5 mr-1.5" />
-                    Share
-                  </Button>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Current Access"
-              icon={<ListChecks className="size-3.5" />}
-            >
-              <div className="py-2">
-                <div className="grid grid-cols-6 gap-2 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
-                  <span>Type</span>
-                  <span>Target</span>
-                  <span>Permission</span>
-                  <span>Granted By</span>
-                  <span>Expires</span>
-                  <span></span>
-                </div>
-                {[
-                  {
-                    type: "User",
-                    target: "alice",
-                    permission: "View",
-                    grantedBy: "admin",
-                    expires: "Never",
-                    expired: false,
-                  },
-                  {
-                    type: "Role",
-                    target: "Developers",
-                    permission: "View",
-                    grantedBy: "admin",
-                    expires: "2026-06-01",
-                    expired: false,
-                  },
-                  {
-                    type: "User",
-                    target: "bob",
-                    permission: "View",
-                    grantedBy: "alice",
-                    expires: "2026-04-01",
-                    expired: true,
-                  },
-                ].map((r, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-6 gap-2 px-2 py-2.5 border-b border-border last:border-0 items-center text-xs"
-                  >
-                    <div className="flex items-center gap-1">
-                      {r.type === "User" ? (
-                        <User className="size-3 text-muted-foreground" />
-                      ) : (
-                        <Shield className="size-3 text-muted-foreground" />
-                      )}
-                      <span className="text-muted-foreground">{r.type}</span>
-                    </div>
-                    <span className="font-semibold">{r.target}</span>
-                    <span>{r.permission}</span>
-                    <span className="text-muted-foreground">{r.grantedBy}</span>
-                    <span
-                      className={
-                        r.expired ? "text-destructive" : "text-muted-foreground"
-                      }
-                    >
-                      {r.expired ? (
-                        <span className="flex items-center gap-1">
-                          <X className="size-3" />
-                          Expired
-                        </span>
-                      ) : (
-                        r.expires
-                      )}
-                    </span>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
-                        onClick={() => toast.success("Access revoked")}
+            {host !== null && (
+              <SectionCard
+                title="Share Host"
+                icon={<Users className="size-3.5" />}
+              >
+                <div className="flex flex-col gap-4 py-3">
+                  <div className="flex gap-2">
+                    {(["user", "role"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          setShareType(t);
+                          setShareGranteeId("");
+                        }}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${shareType === t ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                       >
-                        Revoke
-                      </Button>
-                    </div>
+                        {t === "user" ? (
+                          <>
+                            <User className="size-3 inline mr-1" />
+                            Share with User
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="size-3 inline mr-1" />
+                            Share with Role
+                          </>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </SectionCard>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {shareType === "user" ? "Select User" : "Select Role"}
+                    </label>
+                    <select
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      value={shareGranteeId}
+                      onChange={(e) => setShareGranteeId(e.target.value)}
+                    >
+                      <option value="">
+                        Select {shareType === "user" ? "a user" : "a role"}...
+                      </option>
+                      {shareType === "user"
+                        ? shareUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.username}
+                            </option>
+                          ))
+                        : shareRoles.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Permission Level
+                    </label>
+                    <select
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      value={sharePermission}
+                      onChange={(e) => setSharePermission(e.target.value)}
+                    >
+                      <option value="view">View</option>
+                      <option value="connect">Connect</option>
+                      <option value="manage">Manage</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Expires in (hours)
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Leave empty for no expiry"
+                      value={shareExpiryHours}
+                      onChange={(e) => setShareExpiryHours(e.target.value)}
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                      disabled={!shareGranteeId}
+                      onClick={async () => {
+                        try {
+                          await shareHost(
+                            Number(host.id),
+                            shareType,
+                            shareGranteeId,
+                            sharePermission,
+                            shareExpiryHours
+                              ? Number(shareExpiryHours)
+                              : undefined,
+                          );
+                          const res = await getHostAccess(Number(host.id));
+                          setAccessList((res as any)?.access ?? []);
+                          setShareGranteeId("");
+                          setShareExpiryHours("");
+                          toast.success("Host shared successfully");
+                        } catch {
+                          toast.error("Failed to share host");
+                        }
+                      }}
+                    >
+                      <Plus className="size-3.5 mr-1.5" />
+                      Share
+                    </Button>
+                  </div>
+                </div>
+              </SectionCard>
+            )}
+
+            {host !== null && (
+              <SectionCard
+                title="Current Access"
+                icon={<ListChecks className="size-3.5" />}
+              >
+                <div className="py-2">
+                  <div className="grid grid-cols-6 gap-2 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
+                    <span>Type</span>
+                    <span>Target</span>
+                    <span>Permission</span>
+                    <span>Granted By</span>
+                    <span>Expires</span>
+                    <span></span>
+                  </div>
+                  {accessList.length === 0 && (
+                    <div className="px-2 py-4 text-xs text-muted-foreground/50 text-center">
+                      No access entries yet.
+                    </div>
+                  )}
+                  {accessList.map((r: any, i: number) => {
+                    const expired =
+                      r.expiresAt && new Date(r.expiresAt) < new Date();
+                    return (
+                      <div
+                        key={i}
+                        className="grid grid-cols-6 gap-2 px-2 py-2.5 border-b border-border last:border-0 items-center text-xs"
+                      >
+                        <div className="flex items-center gap-1">
+                          {r.granteeType === "user" ? (
+                            <User className="size-3 text-muted-foreground" />
+                          ) : (
+                            <Shield className="size-3 text-muted-foreground" />
+                          )}
+                          <span className="text-muted-foreground capitalize">
+                            {r.granteeType}
+                          </span>
+                        </div>
+                        <span className="font-semibold truncate">
+                          {r.granteeName ?? r.granteeId}
+                        </span>
+                        <span className="capitalize">{r.permission}</span>
+                        <span className="text-muted-foreground truncate">
+                          {r.grantedBy ?? "—"}
+                        </span>
+                        <span
+                          className={
+                            expired
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {expired ? (
+                            <span className="flex items-center gap-1">
+                              <X className="size-3" />
+                              Expired
+                            </span>
+                          ) : r.expiresAt ? (
+                            new Date(r.expiresAt).toLocaleDateString()
+                          ) : (
+                            "Never"
+                          )}
+                        </span>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              try {
+                                await revokeHostAccess(Number(host!.id), r.id);
+                                setAccessList((prev) =>
+                                  prev.filter((_, idx) => idx !== i),
+                                );
+                                toast.success("Access revoked");
+                              } catch {
+                                toast.error("Failed to revoke access");
+                              }
+                            }}
+                          >
+                            Revoke
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+            )}
           </>
         )}
       </div>
@@ -3247,12 +3513,16 @@ function CredentialEditorView({
     username: credential?.username ?? "",
     folder: credential?.folder ?? "",
     description: credential?.description ?? "",
-    tags: credential?.tags?.join(" ") ?? "",
+    tags: credential?.tags ?? ([] as string[]),
+    tagInput: "",
     type: credential?.type ?? "password",
     value: credential?.value ?? "",
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
   }));
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [generatingPublicKey, setGeneratingPublicKey] = useState(false);
+  const credFileInputRef = useRef<HTMLInputElement>(null);
   const setCredField = <K extends keyof typeof credForm>(
     k: K,
     v: (typeof credForm)[K],
@@ -3267,10 +3537,7 @@ function CredentialEditorView({
         username: credForm.username,
         folder: credForm.folder || null,
         description: credForm.description || null,
-        tags: credForm.tags
-          .split(/\s+/)
-          .map((t) => t.trim())
-          .filter(Boolean),
+        tags: credForm.tags,
         authType: credForm.type,
         password: credForm.type === "password" ? credForm.value : null,
         key: credForm.type === "key" ? credForm.value : null,
@@ -3333,11 +3600,52 @@ function CredentialEditorView({
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Tags
               </label>
-              <Input
-                placeholder="space separated"
-                value={credForm.tags}
-                onChange={(e) => setCredField("tags", e.target.value)}
-              />
+              <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
+                {credForm.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-muted border border-border/60 text-foreground"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCredField(
+                          "tags",
+                          credForm.tags.filter((t) => t !== tag),
+                        )
+                      }
+                      className="text-muted-foreground hover:text-destructive ml-0.5"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
+                  placeholder={credForm.tags.length === 0 ? "Add tags..." : ""}
+                  value={credForm.tagInput}
+                  onChange={(e) => setCredField("tagInput", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      (e.key === " " || e.key === "Enter") &&
+                      credForm.tagInput.trim()
+                    ) {
+                      e.preventDefault();
+                      const tag = credForm.tagInput.trim();
+                      if (!credForm.tags.includes(tag))
+                        setCredField("tags", [...credForm.tags, tag]);
+                      setCredField("tagInput", "");
+                    } else if (
+                      e.key === "Backspace" &&
+                      !credForm.tagInput &&
+                      credForm.tags.length > 0
+                    ) {
+                      setCredField("tags", credForm.tags.slice(0, -1));
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         </SectionCard>
@@ -3390,27 +3698,87 @@ function CredentialEditorView({
             )}
             {type === "key" && (
               <div className="flex flex-col gap-4">
+                <div className="p-3 border border-border bg-muted/20">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Generate Key Pair
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mb-2">
+                    Generate a new key pair — both private and public keys will
+                    be filled automatically.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Ed25519", type: "ssh-ed25519" },
+                      { label: "ECDSA (nistp256)", type: "ecdsa" },
+                      { label: "RSA (2048)", type: "rsa", bits: 2048 },
+                    ].map(({ label, type: keyType, bits }) => (
+                      <Button
+                        key={label}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] px-2"
+                        disabled={generatingKey}
+                        onClick={async () => {
+                          setGeneratingKey(true);
+                          try {
+                            const result = await generateKeyPair(
+                              keyType,
+                              bits,
+                              credForm.passphrase || undefined,
+                            );
+                            if (result.success) {
+                              setCredField("value", result.privateKey);
+                              setCredField("publicKey", result.publicKey);
+                              toast.success(`${label} key pair generated`);
+                            } else {
+                              toast.error(
+                                result.error ?? "Failed to generate key pair",
+                              );
+                            }
+                          } catch {
+                            toast.error("Failed to generate key pair");
+                          } finally {
+                            setGeneratingKey(false);
+                          }
+                        }}
+                      >
+                        {generatingKey ? "Generating..." : `Generate ${label}`}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    SSH Private Key
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      SSH Private Key
+                    </label>
+                    <button
+                      type="button"
+                      className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1"
+                      onClick={() => credFileInputRef.current?.click()}
+                    >
+                      <Upload className="size-3" /> Upload file
+                    </button>
+                  </div>
+                  <input
+                    ref={credFileInputRef}
+                    type="file"
+                    accept=".pem,.key,.txt,.ppk"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const text = await file.text();
+                      setCredField("value", text.trim());
+                      e.target.value = "";
+                    }}
+                  />
                   <textarea
                     placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                     rows={8}
                     value={credForm.value}
                     onChange={(e) => setCredField("value", e.target.value)}
-                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    SSH Public Key (Optional)
-                  </label>
-                  <textarea
-                    placeholder="ssh-rsa AAAAB3Nza..."
-                    rows={3}
-                    value={credForm.publicKey}
-                    onChange={(e) => setCredField("publicKey", e.target.value)}
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
@@ -3423,6 +3791,50 @@ function CredentialEditorView({
                     placeholder="••••••••"
                     value={credForm.passphrase}
                     onChange={(e) => setCredField("passphrase", e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      SSH Public Key (Optional)
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                      disabled={!credForm.value || generatingPublicKey}
+                      onClick={async () => {
+                        setGeneratingPublicKey(true);
+                        try {
+                          const result = await generatePublicKeyFromPrivate(
+                            credForm.value,
+                            credForm.passphrase || undefined,
+                          );
+                          if (result?.publicKey) {
+                            setCredField("publicKey", result.publicKey);
+                            toast.success("Public key generated");
+                          } else {
+                            toast.error("Failed to derive public key");
+                          }
+                        } catch {
+                          toast.error("Failed to derive public key");
+                        } finally {
+                          setGeneratingPublicKey(false);
+                        }
+                      }}
+                    >
+                      {generatingPublicKey
+                        ? "Generating..."
+                        : "Generate from Private Key"}
+                    </Button>
+                  </div>
+                  <textarea
+                    placeholder="ssh-rsa AAAAB3Nza..."
+                    rows={3}
+                    value={credForm.publicKey}
+                    onChange={(e) => setCredField("publicKey", e.target.value)}
+                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
               </div>
@@ -3482,6 +3894,11 @@ export function HostManager({
     null,
   );
   const [editingFolderValue, setEditingFolderValue] = useState("");
+  const [deployDialog, setDeployDialog] = useState<{
+    cred: Credential;
+    hostId: string;
+  } | null>(null);
+  const [deploying, setDeploying] = useState(false);
   const [draggedHost, setDraggedHost] = useState<Host | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingProtocols, setEditingProtocols] = useState({
@@ -3500,12 +3917,51 @@ export function HostManager({
 
   useEffect(() => {
     getSSHHosts()
-      .then((raw) => {
+      .then(async (raw) => {
         const converted = raw.map(sshHostToHost);
         setHosts(converted);
         setExpandedFolders(
           new Set(converted.map((h) => h.folder.split(" / ")[0])),
         );
+
+        let statuses: Record<number, { status?: string }> = {};
+        try {
+          statuses = (await getAllServerStatuses()) as Record<
+            number,
+            { status?: string }
+          >;
+        } catch {
+          // best-effort
+        }
+
+        const onlineHosts = converted.filter(
+          (h) => statuses[Number(h.id)]?.status === "online",
+        );
+
+        const metricsResults = await Promise.allSettled(
+          onlineHosts.map((h) => getServerMetricsById(Number(h.id))),
+        );
+
+        const metricsMap = new Map<string, { cpu: number; ram: number }>();
+        onlineHosts.forEach((h, i) => {
+          const result = metricsResults[i];
+          if (result.status === "fulfilled" && result.value) {
+            const cpu = result.value.cpu?.percent;
+            const ram = result.value.memory?.percent;
+            if (cpu != null && ram != null) {
+              metricsMap.set(h.id, { cpu, ram });
+            }
+          }
+        });
+
+        if (metricsMap.size > 0) {
+          setHosts((prev) =>
+            prev.map((h) => {
+              const m = metricsMap.get(h.id);
+              return m ? { ...h, cpu: m.cpu, ram: m.ram } : h;
+            }),
+          );
+        }
       })
       .catch(() => {});
     getCredentials()
@@ -3704,12 +4160,54 @@ export function HostManager({
     toast.success("Sample file downloaded");
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
+    try {
+      const [raw] = await Promise.all([
+        getSSHHosts(),
+        refreshServerPolling().catch(() => {}),
+      ]);
+      const converted = raw.map(sshHostToHost);
+      setHosts(converted);
+
+      let statuses: Record<number, { status?: string }> = {};
+      try {
+        statuses = (await getAllServerStatuses()) as Record<
+          number,
+          { status?: string }
+        >;
+      } catch {
+        // best-effort
+      }
+      const onlineHosts = converted.filter(
+        (h) => statuses[Number(h.id)]?.status === "online",
+      );
+      const metricsResults = await Promise.allSettled(
+        onlineHosts.map((h) => getServerMetricsById(Number(h.id))),
+      );
+      const metricsMap = new Map<string, { cpu: number; ram: number }>();
+      onlineHosts.forEach((h, i) => {
+        const result = metricsResults[i];
+        if (result.status === "fulfilled" && result.value) {
+          const cpu = result.value.cpu?.percent;
+          const ram = result.value.memory?.percent;
+          if (cpu != null && ram != null) metricsMap.set(h.id, { cpu, ram });
+        }
+      });
+      if (metricsMap.size > 0) {
+        setHosts((prev) =>
+          prev.map((h) => {
+            const m = metricsMap.get(h.id);
+            return m ? { ...h, cpu: m.cpu, ram: m.ram } : h;
+          }),
+        );
+      }
       toast.success("Host statuses refreshed");
-    }, 1200);
+    } catch {
+      toast.error("Failed to refresh hosts");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Build a nested folder tree from flat hosts using "/" as path separator
@@ -3790,12 +4288,29 @@ export function HostManager({
             setDragOverFolder(node.fullPath);
           }}
           onDragLeave={() => setDragOverFolder(null)}
-          onDrop={(e) => {
+          onDrop={async (e) => {
             e.preventDefault();
             setDragOverFolder(null);
             if (draggedHost) {
-              toast.success(`Moved ${draggedHost.name} to ${node.fullPath}`);
+              const h = draggedHost;
               setDraggedHost(null);
+              if (h.folder === node.fullPath) return;
+              try {
+                await updateSSHHost(Number(h.id), {
+                  ...h,
+                  folder: node.fullPath,
+                } as any);
+                setHosts((prev) =>
+                  prev.map((x) =>
+                    x.id === h.id ? { ...x, folder: node.fullPath } : x,
+                  ),
+                );
+                toast.success(
+                  `Moved ${h.name} to "${node.fullPath || "root"}"`,
+                );
+              } catch {
+                toast.error("Failed to move host");
+              }
             }
           }}
         >
@@ -3816,14 +4331,34 @@ export function HostManager({
                 autoFocus
                 value={editingFolderValue}
                 onChange={(e) => setEditingFolderValue(e.target.value)}
-                onBlur={() => {
+                onBlur={async () => {
+                  const newName = editingFolderValue.trim();
                   setEditingFolderName(null);
-                  toast.success(`Folder renamed`);
+                  if (newName && newName !== node.name) {
+                    try {
+                      await renameFolder(node.fullPath, newName);
+                      const raw = await getSSHHosts();
+                      setHosts(raw.map(sshHostToHost));
+                      toast.success(`Folder renamed to "${newName}"`);
+                    } catch {
+                      toast.error("Failed to rename folder");
+                    }
+                  }
                 }}
-                onKeyDown={(e) => {
+                onKeyDown={async (e) => {
                   if (e.key === "Enter") {
+                    const newName = editingFolderValue.trim();
                     setEditingFolderName(null);
-                    toast.success(`Folder renamed`);
+                    if (newName && newName !== node.name) {
+                      try {
+                        await renameFolder(node.fullPath, newName);
+                        const raw = await getSSHHosts();
+                        setHosts(raw.map(sshHostToHost));
+                        toast.success(`Folder renamed to "${newName}"`);
+                      } catch {
+                        toast.error("Failed to rename folder");
+                      }
+                    }
                   }
                   if (e.key === "Escape") setEditingFolderName(null);
                 }}
@@ -3836,9 +4371,9 @@ export function HostManager({
               </span>
             )}
             <span className="text-[10px] text-muted-foreground/40 shrink-0 ml-0.5 tabular-nums">
-              {onlineHosts > 0 && (
-                <span className="text-accent-brand">{onlineHosts}</span>
-              )}
+              <span className={onlineHosts > 0 ? "text-accent-brand" : ""}>
+                {onlineHosts}
+              </span>
               <span>/{totalHosts}</span>
             </span>
           </button>
@@ -3855,9 +4390,22 @@ export function HostManager({
             </button>
             <button
               className="size-5 flex items-center justify-center text-muted-foreground/40 hover:text-destructive rounded transition-colors"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                toast.success(`Deleted folder`);
+                if (
+                  !confirm(
+                    `Delete all hosts in "${node.name}"? This cannot be undone.`,
+                  )
+                )
+                  return;
+                try {
+                  await deleteAllHostsInFolder(node.fullPath);
+                  const raw = await getSSHHosts();
+                  setHosts(raw.map(sshHostToHost));
+                  toast.success(`Deleted folder "${node.name}"`);
+                } catch {
+                  toast.error("Failed to delete folder");
+                }
               }}
             >
               <Trash2 className="size-2.5" />
@@ -4098,13 +4646,41 @@ export function HostManager({
                 type="file"
                 accept=".json"
                 className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0])
-                    toast.success(
-                      importOverwriteRef.current
-                        ? "Hosts imported (overwrite)"
-                        : "Hosts imported",
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  e.target.value = "";
+                  try {
+                    const text = await file.text();
+                    const parsed = JSON.parse(text);
+                    const hostsArray = Array.isArray(parsed)
+                      ? parsed
+                      : (parsed.hosts ?? []);
+                    if (!Array.isArray(hostsArray) || hostsArray.length === 0) {
+                      toast.error("No hosts found in file");
+                      return;
+                    }
+                    if (hostsArray.length > 100) {
+                      toast.error("Cannot import more than 100 hosts at once");
+                      return;
+                    }
+                    const result = await bulkImportSSHHosts(
+                      hostsArray,
+                      importOverwriteRef.current,
                     );
+                    const raw = await getSSHHosts();
+                    setHosts(raw.map(sshHostToHost));
+                    const msg = [
+                      result.success ? `${result.success} imported` : null,
+                      result.updated ? `${result.updated} updated` : null,
+                      result.failed ? `${result.failed} failed` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ");
+                    toast.success(`Import complete: ${msg}`);
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Failed to import hosts");
+                  }
                 }}
               />
               <Button
@@ -4422,17 +4998,28 @@ export function HostManager({
                             </div>
                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                               {cred.type === "key" && (
-                                <button
-                                  className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(
-                                      `ssh-copy-id -i ~/.ssh/id_rsa.pub ${cred.username}@<host>`,
-                                    );
-                                    toast.success("Copied");
-                                  }}
-                                >
-                                  <Copy className="size-3" />
-                                </button>
+                                <>
+                                  <button
+                                    title="Deploy key to host"
+                                    className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+                                    onClick={() =>
+                                      setDeployDialog({ cred, hostId: "" })
+                                    }
+                                  >
+                                    <Upload className="size-3" />
+                                  </button>
+                                  <button
+                                    title="Copy deploy command"
+                                    className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+                                    onClick={() => {
+                                      const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${cred.username ? `# ${cred.username}@Termix` : "# Termix"}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+                                      navigator.clipboard.writeText(cmd);
+                                      toast.success("Deploy command copied");
+                                    }}
+                                  >
+                                    <Copy className="size-3" />
+                                  </button>
+                                </>
                               )}
                               <button
                                 className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded transition-colors"
@@ -4445,9 +5032,23 @@ export function HostManager({
                               </button>
                               <button
                                 className="size-6 flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
-                                onClick={() =>
-                                  toast.success(`Deleted ${cred.name}`)
-                                }
+                                onClick={async () => {
+                                  if (
+                                    !confirm(
+                                      `Delete credential "${cred.name}"?`,
+                                    )
+                                  )
+                                    return;
+                                  try {
+                                    await deleteCredential(Number(cred.id));
+                                    setCredentials((prev) =>
+                                      prev.filter((c) => c.id !== cred.id),
+                                    );
+                                    toast.success(`Deleted ${cred.name}`);
+                                  } catch {
+                                    toast.error("Failed to delete credential");
+                                  }
+                                }}
                               >
                                 <Trash2 className="size-3" />
                               </button>
@@ -4484,6 +5085,85 @@ export function HostManager({
         </div>
       )}
 
+      {/* Deploy credential dialog */}
+      {deployDialog && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-sm flex flex-col gap-4 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold">Deploy SSH Key</span>
+              <button
+                onClick={() => setDeployDialog(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Deploy{" "}
+              <span className="font-semibold text-foreground">
+                {deployDialog.cred.name}
+              </span>{" "}
+              to a host's <code className="bg-muted px-1">authorized_keys</code>
+              .
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Target Host
+              </label>
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={deployDialog.hostId}
+                onChange={(e) =>
+                  setDeployDialog({ ...deployDialog, hostId: e.target.value })
+                }
+              >
+                <option value="">Select a host...</option>
+                {allHosts
+                  .filter((h) => h.enableSsh)
+                  .map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name || h.ip}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeployDialog(null)}
+                disabled={deploying}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+                disabled={!deployDialog.hostId || deploying}
+                onClick={async () => {
+                  setDeploying(true);
+                  try {
+                    await deployCredentialToHost(
+                      Number(deployDialog.cred.id),
+                      Number(deployDialog.hostId),
+                    );
+                    toast.success("Key deployed successfully");
+                    setDeployDialog(null);
+                  } catch {
+                    toast.error("Failed to deploy key");
+                  } finally {
+                    setDeploying(false);
+                  }
+                }}
+              >
+                {deploying ? "Deploying..." : "Deploy"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating selection bar */}
       {selectionMode && !isEditing && (
         <div className="absolute bottom-4 inset-x-3 z-50">
@@ -4502,50 +5182,130 @@ export function HostManager({
             >
               {selectedHostIds.size === allHosts.length
                 ? "Deselect All"
-                : "All"}
+                : "Select All"}
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1"
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
                   disabled={selectedHostIds.size === 0}
                 >
                   Features <ChevronDown className="size-2.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="text-xs">
-                <DropdownMenuItem onClick={() => toast.success("Done")}>
-                  <Terminal className="size-3.5 mr-2" />
-                  Enable Terminal
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("Done")}>
-                  <FolderSearch className="size-3.5 mr-2" />
-                  Enable Files
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("Done")}>
-                  <Network className="size-3.5 mr-2" />
-                  Enable Tunnels
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("Done")}>
-                  <Box className="size-3.5 mr-2" />
-                  Enable Docker
-                </DropdownMenuItem>
+                {[
+                  {
+                    label: "Enable Terminal",
+                    field: "enableTerminal",
+                    value: true,
+                    icon: Terminal,
+                  },
+                  {
+                    label: "Disable Terminal",
+                    field: "enableTerminal",
+                    value: false,
+                    icon: Terminal,
+                  },
+                  {
+                    label: "Enable Files",
+                    field: "enableFileManager",
+                    value: true,
+                    icon: FolderSearch,
+                  },
+                  {
+                    label: "Disable Files",
+                    field: "enableFileManager",
+                    value: false,
+                    icon: FolderSearch,
+                  },
+                  {
+                    label: "Enable Tunnels",
+                    field: "enableTunnel",
+                    value: true,
+                    icon: Network,
+                  },
+                  {
+                    label: "Disable Tunnels",
+                    field: "enableTunnel",
+                    value: false,
+                    icon: Network,
+                  },
+                  {
+                    label: "Enable Docker",
+                    field: "enableDocker",
+                    value: true,
+                    icon: Box,
+                  },
+                  {
+                    label: "Disable Docker",
+                    field: "enableDocker",
+                    value: false,
+                    icon: Box,
+                  },
+                ].map(({ label, field, value, icon: Icon }) => (
+                  <DropdownMenuItem
+                    key={label}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        const result = await bulkUpdateSSHHosts(ids, {
+                          [field]: value,
+                        });
+                        const raw = await getSSHHosts();
+                        setHosts(raw.map(sshHostToHost));
+                        toast.success(`Updated ${result.updated} hosts`);
+                      } catch {
+                        toast.error("Bulk update failed");
+                      }
+                    }}
+                  >
+                    <Icon className="size-3.5 mr-2" />
+                    {label}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1"
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
                   disabled={selectedHostIds.size === 0}
                 >
                   Move <ChevronDown className="size-2.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="text-xs">
-                {folders.map((f) => (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const ids = Array.from(selectedHostIds).map(Number);
+                    try {
+                      await bulkUpdateSSHHosts(ids, { folder: "" });
+                      const raw = await getSSHHosts();
+                      setHosts(raw.map(sshHostToHost));
+                      toast.success("Moved to root");
+                    } catch {
+                      toast.error("Failed to move hosts");
+                    }
+                  }}
+                >
+                  <FolderOpen className="size-3.5 mr-2" />
+                  (No folder)
+                </DropdownMenuItem>
+                {folders.filter(Boolean).map((f) => (
                   <DropdownMenuItem
                     key={f}
-                    onClick={() => toast.success(`Moved to ${f}`)}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        await bulkUpdateSSHHosts(ids, { folder: f });
+                        const raw = await getSSHHosts();
+                        setHosts(raw.map(sshHostToHost));
+                        toast.success(`Moved to "${f}"`);
+                      } catch {
+                        toast.error("Failed to move hosts");
+                      }
+                    }}
                   >
                     <FolderOpen className="size-3.5 mr-2" />
                     {f}
@@ -4554,11 +5314,31 @@ export function HostManager({
               </DropdownMenuContent>
             </DropdownMenu>
             <button
-              className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors"
+              className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
               disabled={selectedHostIds.size === 0}
-              onClick={() => {
-                toast.success(`Deleted ${selectedHostIds.size} hosts`);
+              onClick={async () => {
+                if (
+                  !confirm(
+                    `Delete ${selectedHostIds.size} hosts? This cannot be undone.`,
+                  )
+                )
+                  return;
+                const ids = Array.from(selectedHostIds);
+                const results = await Promise.allSettled(
+                  ids.map((id) => deleteSSHHost(Number(id))),
+                );
+                const succeeded = results.filter(
+                  (r) => r.status === "fulfilled",
+                ).length;
+                const failed = results.filter(
+                  (r) => r.status === "rejected",
+                ).length;
+                setHosts((prev) =>
+                  prev.filter((h) => !selectedHostIds.has(h.id)),
+                );
                 setSelectedHostIds(new Set());
+                if (succeeded > 0) toast.success(`Deleted ${succeeded} hosts`);
+                if (failed > 0) toast.error(`Failed to delete ${failed} hosts`);
               }}
             >
               Delete
