@@ -1571,10 +1571,16 @@ router.post("/login", async (req, res) => {
       sessionId: payload?.sessionId,
     });
 
+    const isMobileClient = (req.headers["user-agent"] || "").startsWith(
+      "Termix-Mobile/",
+    );
+    const isElectronClient = req.headers["x-electron-app"] === "true";
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
+      ...(isMobileClient || isElectronClient ? { token } : {}),
     };
 
     const timeoutRow = db.$client
@@ -3386,6 +3392,11 @@ router.post("/totp/verify-login", async (req, res) => {
       deviceInfo: deviceInfo.deviceInfo,
     });
 
+    const isMobileClient = (req.headers["user-agent"] || "").startsWith(
+      "Termix-Mobile/",
+    );
+    const isElectronClient = req.headers["x-electron-app"] === "true";
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.isAdmin,
@@ -3393,6 +3404,7 @@ router.post("/totp/verify-login", async (req, res) => {
       userId: userRecord.id,
       is_oidc: !!userRecord.isOidc,
       totp_enabled: !!userRecord.totpEnabled,
+      ...(isMobileClient || isElectronClient ? { token } : {}),
     };
 
     const timeoutRow = db.$client
