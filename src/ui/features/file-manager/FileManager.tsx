@@ -529,7 +529,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       handleCloseWithError(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -837,10 +839,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       handleRefreshDirectory();
     } catch (error: unknown) {
       toast.dismiss(progressToast);
-
+      const uploadErr = error instanceof Error ? error : null;
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        uploadErr?.message?.includes("connection") ||
+        uploadErr?.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -864,21 +866,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       const response = await downloadSSHFile(sshSessionId, file.path);
 
-      if (response?.content) {
-        const byteCharacters = atob(response.content);
+      const content = response?.content as string | undefined;
+      const mimeType = response?.mimeType as string | undefined;
+      const fileName = response?.fileName as string | undefined;
+
+      if (content) {
+        const byteCharacters = atob(content);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], {
-          type: response.mimeType || "application/octet-stream",
+          type: mimeType || "application/octet-stream",
         });
 
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = response.fileName || file.name;
+        link.download = fileName || file.name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -891,9 +897,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         toast.error(t("fileManager.failedToDownloadFile"));
       }
     } catch (error: unknown) {
+      const err = error instanceof Error ? error : null;
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        err?.message?.includes("connection") ||
+        err?.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -977,7 +984,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           clearSelection();
         } catch (error: unknown) {
           const axiosError = error as {
-            response?: { data?: { needsSudo?: boolean; error?: string } };
+            response?: {
+              data?: { needsSudo?: boolean; error?: string };
+              status?: number;
+            };
             message?: string;
           };
           if (axiosError.response?.data?.needsSudo) {
@@ -986,11 +996,22 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             return;
           }
           if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else if (
             axiosError.message?.includes("connection") ||
             axiosError.message?.includes("established")
           ) {
             toast.error(
-              `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+              t("fileManager.sshConnectionFailed", {
+                name: currentHost?.name,
+                ip: currentHost?.ip,
+                port: currentHost?.port,
+              }),
             );
           } else {
             toast.error(t("fileManager.failedToDeleteItems"));
@@ -1305,16 +1326,28 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }
         } catch (error: unknown) {
           console.error(`Failed to ${operation} file ${file.name}:`, error);
-          toast.error(
-            t("fileManager.operationFailed", {
-              operation:
-                operation === "copy"
-                  ? t("fileManager.copy")
-                  : t("fileManager.move"),
-              name: file.name,
-              error: error.message,
-            }),
-          );
+          const axiosError = error as {
+            response?: { status?: number; data?: { error?: string } };
+          };
+          if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else {
+            toast.error(
+              t("fileManager.operationFailed", {
+                operation:
+                  operation === "copy"
+                    ? t("fileManager.copy")
+                    : t("fileManager.move"),
+                name: file.name,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          }
         }
       }
 
@@ -1405,9 +1438,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setClipboard(null);
       }
     } catch (error: unknown) {
-      toast.error(
-        `${t("fileManager.pasteFailed")}: ${error.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1433,10 +1466,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(
-        `${t("fileManager.extractFailed")}: ${err.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1478,10 +1510,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(
-        `${t("fileManager.compressFailed")}: ${err.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1521,7 +1552,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 toast.error(
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
-                    error: error.message,
+                    error:
+                      error instanceof Error ? error.message : String(error),
                   }),
                 );
               }
@@ -1563,7 +1595,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 toast.error(
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
-                    error: error.message,
+                    error:
+                      error instanceof Error ? error.message : String(error),
                   }),
                 );
               }
@@ -1596,9 +1629,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      toast.error(
-        `${t("fileManager.undoOperationFailed")}: ${error.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
       console.error("Undo failed:", error);
     }
   }
@@ -1693,8 +1726,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setCreateIntent(null);
       handleRefreshDirectory();
     } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToCreateItem"));
+      }
       console.error("Create failed:", error);
-      toast.error(t("fileManager.failedToCreateItem"));
     }
   }
 
@@ -1722,8 +1767,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setEditingFile(null);
       handleRefreshDirectory();
     } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToRenameItem"));
+      }
       console.error("Rename failed:", error);
-      toast.error(t("fileManager.failedToRenameItem"));
     }
   }
 
@@ -1907,7 +1964,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setAuthDialogReason("auth_failed");
       setShowAuthDialog(true);
       toast.error(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -1976,7 +2035,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              error.message,
+              (error instanceof Error ? error.message : String(error)),
           );
         }
       }
@@ -2019,7 +2078,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
     } catch (error: unknown) {
       console.error("Drag move operation failed:", error);
-      toast.error(t("fileManager.moveOperationFailed") + ": " + error.message);
+      toast.error(
+        t("fileManager.moveOperationFailed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
   }
 
@@ -2093,7 +2156,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (error.message || t("fileManager.unknownError")),
+          (error instanceof Error ? error.message : String(error)),
       );
     }
   }
@@ -2355,6 +2418,25 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             {t("fileManager.selectHostToStart")}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if ((isLoading || isReconnecting) && !sshSessionId) {
+    return (
+      <div className="h-full w-full flex flex-col bg-background relative">
+        <div className="flex-1 overflow-hidden min-h-0 relative">
+          <SimpleLoader
+            visible={!isConnectionLogExpanded}
+            message={t("fileManager.connecting")}
+          />
+        </div>
+        <ConnectionLog
+          isConnecting={isLoading || isReconnecting}
+          isConnected={false}
+          hasConnectionError={hasConnectionError}
+          position={hasConnectionError ? "top" : "bottom"}
+        />
       </div>
     );
   }
@@ -2822,10 +2904,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           if (!open) setPendingSudoOperation(null);
         }}
         onSubmit={handleSudoPasswordSubmit}
-      />
-      <SimpleLoader
-        visible={(isReconnecting || isLoading) && !isConnectionLogExpanded}
-        message={t("fileManager.connecting")}
       />
       <ConnectionLog
         isConnecting={isReconnecting || isLoading}

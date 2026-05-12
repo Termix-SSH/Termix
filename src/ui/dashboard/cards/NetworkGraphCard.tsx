@@ -1594,15 +1594,44 @@ export function NetworkGraphCard({
             <NetworkIcon className="mr-3" />
             {t("dashboard.networkGraph")}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleOpenInNewTab}
-            className="flex items-center gap-2 h-8"
-            title={t("common.openInNewTab")}
-          >
-            <ArrowUp className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)}
+              title={t("networkGraph.zoomIn")}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.2)}
+              title={t("networkGraph.zoomOut")}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => cyRef.current?.fit()}
+              title={t("networkGraph.resetView")}
+              className="h-8 w-8 p-0"
+            >
+              <RotateCw className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenInNewTab}
+              className="h-8 w-8 p-0"
+              title={t("common.openInNewTab")}
+            >
+              <ArrowUp className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <AlertDialog open={!!error} onOpenChange={() => setError(null)}>

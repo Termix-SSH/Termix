@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import {
   Download,
@@ -143,14 +143,6 @@ export function FileManagerContextMenu({
 
     setIsMounted(true);
 
-    const adjustPosition = () => {
-      const menuWidth = menuRef.current?.offsetWidth ?? 260;
-      const menuHeight = menuRef.current?.offsetHeight ?? 400;
-      setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
-    };
-
-    adjustPosition();
-
     let cleanupFn: (() => void) | null = null;
 
     const timeoutId = setTimeout(() => {
@@ -205,6 +197,21 @@ export function FileManagerContextMenu({
       }
     };
   }, [isVisible, x, y, onClose]);
+
+  useLayoutEffect(() => {
+    if (!isVisible || !menuRef.current) return;
+    const menuWidth = menuRef.current.offsetWidth;
+    const menuHeight = menuRef.current.offsetHeight;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    let adjustedX = x;
+    let adjustedY = y;
+    if (x + menuWidth > viewportWidth)
+      adjustedX = viewportWidth - menuWidth - 10;
+    if (y + menuHeight > viewportHeight)
+      adjustedY = Math.max(10, viewportHeight - menuHeight - 10);
+    setMenuPosition({ x: adjustedX, y: adjustedY });
+  }, [isVisible, x, y, files.length]);
 
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
@@ -569,7 +576,9 @@ export function FileManagerContextMenu({
             >
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <div className="flex-shrink-0">{item.icon}</div>
-                <span className="flex-1 truncate">{item.label}</span>
+                <span className="flex-1 whitespace-normal break-words">
+                  {item.label}
+                </span>
               </div>
               {item.shortcut && (
                 <div className="ml-2 flex-shrink-0">

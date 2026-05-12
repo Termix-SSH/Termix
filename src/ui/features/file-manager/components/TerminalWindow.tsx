@@ -3,6 +3,7 @@ import { DraggableWindow } from "./DraggableWindow.tsx";
 import { Terminal } from "@/features/terminal/Terminal.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
+import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 
 interface SSHHost {
   id: number;
@@ -96,29 +97,31 @@ export function TerminalWindow({
       : t("terminal.terminalTitle", { host: hostConfig.name });
 
   return (
-    <DraggableWindow
-      title={terminalTitle}
-      initialX={initialX}
-      initialY={initialY}
-      initialWidth={800}
-      initialHeight={500}
-      minWidth={600}
-      minHeight={400}
-      onClose={handleClose}
-      onMaximize={handleMaximize}
-      onFocus={handleFocus}
-      onResize={handleResize}
-      isMaximized={currentWindow.isMaximized}
-      zIndex={currentWindow.zIndex}
-    >
-      <Terminal
-        ref={terminalRef}
-        hostConfig={hostConfig}
-        isVisible={!currentWindow.isMinimized}
-        initialPath={initialPath}
-        executeCommand={executeCommand}
+    <CommandHistoryProvider>
+      <DraggableWindow
+        title={terminalTitle}
+        initialX={initialX}
+        initialY={initialY}
+        initialWidth={800}
+        initialHeight={500}
+        minWidth={600}
+        minHeight={400}
         onClose={handleClose}
-      />
-    </DraggableWindow>
+        onMaximize={handleMaximize}
+        onFocus={handleFocus}
+        onResize={handleResize}
+        isMaximized={currentWindow.isMaximized}
+        zIndex={currentWindow.zIndex}
+      >
+        <Terminal
+          ref={terminalRef}
+          hostConfig={hostConfig}
+          isVisible={!currentWindow.isMinimized}
+          initialPath={initialPath}
+          executeCommand={executeCommand}
+          onClose={handleClose}
+        />
+      </DraggableWindow>
+    </CommandHistoryProvider>
   );
 }

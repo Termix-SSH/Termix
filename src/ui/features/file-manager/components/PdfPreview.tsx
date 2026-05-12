@@ -4,7 +4,8 @@ import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@/components/button.tsx";
 import { useTranslation } from "react-i18next";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 interface PdfPreviewProps {
   content: string;

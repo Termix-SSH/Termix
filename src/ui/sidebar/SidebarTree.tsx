@@ -18,13 +18,42 @@ export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
 }
 
-const SSH_ACTIONS: { type: TabType; icon: typeof Terminal; label: string }[] = [
-  { type: "terminal", icon: Terminal, label: "Terminal" },
-  { type: "stats", icon: Server, label: "Stats" },
-  { type: "files", icon: FolderSearch, label: "Files" },
-  { type: "docker", icon: Box, label: "Docker" },
-  { type: "tunnel", icon: Network, label: "Tunnel" },
-];
+function getSshActions(
+  host: Host,
+): { type: TabType; icon: typeof Terminal; label: string }[] {
+  const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
+  return [
+    host.enableTerminal && {
+      type: "terminal" as TabType,
+      icon: Terminal,
+      label: "Terminal",
+    },
+    host.enableFileManager && {
+      type: "files" as TabType,
+      icon: FolderSearch,
+      label: "Files",
+    },
+    host.enableDocker && {
+      type: "docker" as TabType,
+      icon: Box,
+      label: "Docker",
+    },
+    host.enableTunnel && {
+      type: "tunnel" as TabType,
+      icon: Network,
+      label: "Tunnel",
+    },
+    metricsEnabled && {
+      type: "stats" as TabType,
+      icon: Server,
+      label: "Stats",
+    },
+  ].filter(Boolean) as {
+    type: TabType;
+    icon: typeof Terminal;
+    label: string;
+  }[];
+}
 
 function hostMatchesQuery(host: Host, query: string) {
   return (
@@ -142,43 +171,42 @@ export function HostItem({
             opacity: hovered ? 1 : 0,
           }}
         >
-          {host.online &&
-            (host.cpu !== undefined || host.ram !== undefined) && (
-              <div className="flex items-center gap-3 pl-3">
-                {host.cpu !== undefined && (
-                  <div className="flex items-center gap-1">
-                    <Cpu className="size-2.5 shrink-0 text-muted-foreground/30" />
-                    <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
-                        style={{ width: `${host.cpu}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] tabular-nums text-muted-foreground/40">
-                      {host.cpu}%
-                    </span>
+          {host.online && (host.cpu != null || host.ram != null) && (
+            <div className="flex items-center gap-3 pl-3">
+              {host.cpu != null && (
+                <div className="flex items-center gap-1">
+                  <Cpu className="size-2.5 shrink-0 text-muted-foreground/30" />
+                  <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                      style={{ width: `${host.cpu}%` }}
+                    />
                   </div>
-                )}
-                {host.ram !== undefined && (
-                  <div className="flex items-center gap-1">
-                    <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/30" />
-                    <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
-                        style={{ width: `${host.ram}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] tabular-nums text-muted-foreground/40">
-                      {host.ram}%
-                    </span>
+                  <span className="text-[9px] tabular-nums text-muted-foreground/40">
+                    {host.cpu}%
+                  </span>
+                </div>
+              )}
+              {host.ram != null && (
+                <div className="flex items-center gap-1">
+                  <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/30" />
+                  <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                      style={{ width: `${host.ram}%` }}
+                    />
                   </div>
-                )}
-              </div>
-            )}
+                  <span className="text-[9px] tabular-nums text-muted-foreground/40">
+                    {host.ram}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center flex-wrap gap-1 pt-1.5 pl-2 pb-1">
             {host.enableSsh &&
-              SSH_ACTIONS.map(({ type, icon: Icon, label }) => (
+              getSshActions(host).map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   title={label}

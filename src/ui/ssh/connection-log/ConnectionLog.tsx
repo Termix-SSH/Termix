@@ -158,7 +158,7 @@ export function ConnectionLog({
               {logs.length === 0 ? (
                 <div className="py-4 text-center text-sm text-muted-foreground">
                   {isConnecting
-                    ? t("terminal.connectionLogConnecting")
+                    ? t("terminal.connectionLogWaiting")
                     : t("terminal.connectionLogEmpty")}
                 </div>
               ) : (
