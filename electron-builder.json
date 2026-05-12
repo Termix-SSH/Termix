@@ -6,7 +6,7 @@
     "output": "release"
   },
   "asar": true,
-  "asarUnpack": ["dist/backend/**/*", "node_modules/**/*.node"],
+  "asarUnpack": ["dist/backend/**/*", "node_modules/**/*"],
   "files": [
     "dist/**/*",
     "electron/**/*",
@@ -117,8 +117,8 @@
     "type": "distribution",
     "minimumSystemVersion": "10.15",
     "mergeASARs": false,
-    "singleArchFiles": "**/*.node",
-    "x64ArchFiles": "**/*.node"
+    "singleArchFiles": "**/*.{node,bare}",
+    "x64ArchFiles": "**/*.{node,bare}"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
