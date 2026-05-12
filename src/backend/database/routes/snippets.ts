@@ -1,8 +1,14 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { snippets, snippetFolders } from "../db/schema.js";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import {
+  snippets,
+  snippetFolders,
+  snippetAccess,
+  users,
+  userRoles,
+} from "../db/schema.js";
+import { eq, and, desc, asc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -13,6 +19,92 @@ const router = express.Router();
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
+}
+
+async function getUserRoleIds(userId: string): Promise<number[]> {
+  const rows = await db
+    .select({ roleId: userRoles.roleId })
+    .from(userRoles)
+    .where(eq(userRoles.userId, userId));
+
+  return rows.map((row) => row.roleId);
+}
+
+function roleIdFilter(roleIds: number[]) {
+  if (roleIds.length === 0) {
+    return undefined;
+  }
+
+  return sql`${snippetAccess.roleId} IN (${sql.join(
+    roleIds.map((id) => sql`${id}`),
+    sql`, `,
+  )})`;
+}
+
+function activeSnippetAccessFilter(userId: string, roleIds: number[]) {
+  const roleFilter = roleIdFilter(roleIds);
+  const targetFilter = roleFilter
+    ? or(eq(snippetAccess.userId, userId), roleFilter)
+    : eq(snippetAccess.userId, userId);
+
+  return and(
+    targetFilter,
+    or(
+      isNull(snippetAccess.expiresAt),
+      gte(snippetAccess.expiresAt, new Date().toISOString()),
+    ),
+  );
+}
+
+function sortSnippets<
+  T extends { folder: string | null; order: number; updatedAt: string },
+>(a: T, b: T) {
+  const aFolder = a.folder || "";
+  const bFolder = b.folder || "";
+
+  if (!aFolder && bFolder) return -1;
+  if (aFolder && !bFolder) return 1;
+  if (aFolder !== bFolder) return aFolder.localeCompare(bFolder);
+  if (a.order !== b.order) return a.order - b.order;
+
+  return b.updatedAt.localeCompare(a.updatedAt);
+}
+
+async function getAccessibleSnippet(snippetId: number, userId: string) {
+  const owned = await db
+    .select()
+    .from(snippets)
+    .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
+    .limit(1);
+
+  if (owned.length > 0) {
+    return owned[0];
+  }
+
+  const roleIds = await getUserRoleIds(userId);
+  const shared = await db
+    .select({
+      id: snippets.id,
+      userId: snippets.userId,
+      name: snippets.name,
+      content: snippets.content,
+      description: snippets.description,
+      folder: snippets.folder,
+      order: snippets.order,
+      createdAt: snippets.createdAt,
+      updatedAt: snippets.updatedAt,
+    })
+    .from(snippetAccess)
+    .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
+    .where(
+      and(
+        eq(snippetAccess.snippetId, snippetId),
+        activeSnippetAccessFilter(userId, roleIds),
+      ),
+    )
+    .limit(1);
+
+  return shared[0] ?? null;
 }
 
 const authManager = AuthManager.getInstance();
@@ -618,21 +710,11 @@ router.post(
     }
 
     try {
-      const snippetResult = await db
-        .select()
-        .from(snippets)
-        .where(
-          and(
-            eq(snippets.id, parseInt(snippetId)),
-            eq(snippets.userId, userId),
-          ),
-        );
+      const snippet = await getAccessibleSnippet(parseInt(snippetId), userId);
 
-      if (snippetResult.length === 0) {
+      if (!snippet) {
         return res.status(404).json({ error: "Snippet not found" });
       }
-
-      const snippet = snippetResult[0];
 
       const { Client } = await import("ssh2");
       const { hosts, sshCredentials } = await import("../db/schema.js");
@@ -869,7 +951,7 @@ router.get(
     }
 
     try {
-      const result = await db
+      const ownedSnippets = await db
         .select()
         .from(snippets)
         .where(eq(snippets.userId, userId))
@@ -879,6 +961,43 @@ router.get(
           asc(snippets.order),
           desc(snippets.updatedAt),
         );
+
+      const roleIds = await getUserRoleIds(userId);
+      const sharedSnippets = await db
+        .select({
+          id: snippets.id,
+          userId: snippets.userId,
+          name: snippets.name,
+          content: snippets.content,
+          description: snippets.description,
+          folder: snippets.folder,
+          order: snippets.order,
+          createdAt: snippets.createdAt,
+          updatedAt: snippets.updatedAt,
+          ownerUsername: users.username,
+          permissionLevel: snippetAccess.permissionLevel,
+          expiresAt: snippetAccess.expiresAt,
+        })
+        .from(snippetAccess)
+        .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
+        .innerJoin(users, eq(snippets.userId, users.id))
+        .where(activeSnippetAccessFilter(userId, roleIds));
+
+      const visibleSnippets = new Map<number, Record<string, unknown>>();
+      for (const snippet of ownedSnippets) {
+        visibleSnippets.set(snippet.id, { ...snippet, isShared: false });
+      }
+      for (const snippet of sharedSnippets) {
+        if (visibleSnippets.has(snippet.id)) continue;
+        visibleSnippets.set(snippet.id, { ...snippet, isShared: true });
+      }
+
+      const result = Array.from(visibleSnippets.values()).sort((a, b) =>
+        sortSnippets(
+          a as { folder: string | null; order: number; updatedAt: string },
+          b as { folder: string | null; order: number; updatedAt: string },
+        ),
+      );
 
       res.json(result);
     } catch (err) {
@@ -930,16 +1049,13 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+      const result = await getAccessibleSnippet(snippetId, userId);
 
-      if (result.length === 0) {
+      if (!result) {
         return res.status(404).json({ error: "Snippet not found" });
       }
 
-      res.json(result[0]);
+      res.json(result);
     } catch (err) {
       authLogger.error("Failed to fetch snippet", err);
       res.status(500).json({
