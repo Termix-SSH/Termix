@@ -130,7 +130,6 @@ export class GuacamoleTokenService {
           username,
           password,
           port: 3389,
-          security: "nla",
           "ignore-cert": true,
           ...options,
         },
