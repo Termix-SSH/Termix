@@ -569,6 +569,13 @@ function getBackendEntryPath() {
   return path.join(unpackedRoot, "dist", "backend", "backend", "starter.js");
 }
 
+function getBackendCwd() {
+  if (isDev) {
+    return appRoot;
+  }
+  return appRoot.replace("app.asar", "app.asar.unpacked");
+}
+
 function getBackendDataDir() {
   const userDataPath = app.getPath("userData");
   const dataDir = path.join(userDataPath, "server-data");
@@ -581,6 +588,7 @@ function getBackendDataDir() {
 function startBackendServer() {
   return new Promise((resolve) => {
     const entryPath = getBackendEntryPath();
+    const backendCwd = getBackendCwd();
 
     logToFile("isDev:", isDev, "appRoot:", appRoot);
     logToFile("app.isPackaged:", app.isPackaged);
@@ -596,14 +604,15 @@ function startBackendServer() {
     logToFile("Starting embedded backend server...");
     logToFile("Backend entry:", entryPath);
     logToFile("Data directory:", dataDir);
-    logToFile("Backend cwd:", appRoot);
+    logToFile("Backend cwd:", backendCwd);
 
     logToFile("Checking paths...");
     logToFile("  entryPath exists:", fs.existsSync(entryPath));
     logToFile("  dataDir exists:", fs.existsSync(dataDir));
     logToFile("  appRoot exists:", fs.existsSync(appRoot));
+    logToFile("  backendCwd exists:", fs.existsSync(backendCwd));
 
-    const distPath = path.join(appRoot, "dist");
+    const distPath = path.join(backendCwd, "dist");
     if (fs.existsSync(distPath)) {
       logToFile("  dist directory contents:", fs.readdirSync(distPath));
       const backendPath = path.join(distPath, "backend");
@@ -613,10 +622,11 @@ function startBackendServer() {
     }
 
     backendProcess = fork(entryPath, [], {
-      cwd: appRoot,
+      cwd: backendCwd,
       env: {
         ...process.env,
         DATA_DIR: dataDir,
+        VERSION: app.getVersion(),
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
         PORT: "30001",
