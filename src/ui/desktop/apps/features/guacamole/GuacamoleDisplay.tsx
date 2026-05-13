@@ -383,7 +383,7 @@ export const GuacamoleDisplay = forwardRef<
           data += text;
         };
         reader.onend = () => {
-          navigator.clipboard.writeText(data).catch(() => {});
+          navigator.clipboard?.writeText?.(data).catch(() => {});
         };
       }
     };
@@ -502,7 +502,7 @@ export const GuacamoleDisplay = forwardRef<
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
-    if (!client) return;
+    if (!client || !navigator.clipboard?.readText) return;
     navigator.clipboard
       .readText()
       .then((text) => {
