@@ -535,7 +535,6 @@ export function FileManagerContextMenu({
       <div
         ref={menuRef}
         data-context-menu
-<<<<<<< HEAD:src/ui/desktop/apps/features/file-manager/FileManagerContextMenu.tsx
         className={cn(
           "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-x-hidden overflow-y-auto",
         )}
