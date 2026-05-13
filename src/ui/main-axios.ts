@@ -383,6 +383,14 @@ function createApiInstance(
       } else {
         config.headers["X-Electron-App"] = "true";
       }
+      const jwt = localStorage.getItem("jwt");
+      if (jwt) {
+        if (config.headers.set) {
+          config.headers.set("Authorization", `Bearer ${jwt}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${jwt}`;
+        }
+      }
     }
 
     if (
