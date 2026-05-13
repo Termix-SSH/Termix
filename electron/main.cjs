@@ -596,7 +596,7 @@ function startBackendServer() {
     logToFile("Starting embedded backend server...");
     logToFile("Backend entry:", entryPath);
     logToFile("Data directory:", dataDir);
-    logToFile("Backend cwd:", appRoot);
+    logToFile("Backend cwd:", path.dirname(entryPath));
 
     logToFile("Checking paths...");
     logToFile("  entryPath exists:", fs.existsSync(entryPath));
@@ -613,7 +613,7 @@ function startBackendServer() {
     }
 
     backendProcess = fork(entryPath, [], {
-      cwd: appRoot,
+      cwd: path.dirname(entryPath),
       env: {
         ...process.env,
         DATA_DIR: dataDir,
