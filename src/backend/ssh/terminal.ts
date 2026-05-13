@@ -1,5 +1,15 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import { Client, type ClientChannel, type PseudoTtyOptions } from "ssh2";
+import {
+  Client,
+  type ClientChannel,
+  type PseudoTtyOptions,
+  BaseAgent,
+  utils as ssh2Utils,
+  type ParsedKey,
+  type SignCallback,
+  type SigningRequestOptions,
+  type IdentityCallback,
+} from "ssh2";
 import net from "net";
 import dgram from "dgram";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -24,6 +34,42 @@ import {
   attachOrCreateTmuxSession,
   queryNewestTmuxSession,
 } from "./tmux-helper.js";
+
+class MemoryAgent extends BaseAgent {
+  private key: ParsedKey;
+
+  constructor(key: ParsedKey) {
+    super();
+    this.key = key;
+  }
+
+  getIdentities(cb: IdentityCallback<ParsedKey>): void {
+    cb(null, [this.key]);
+  }
+
+  sign(
+    pubKey: ParsedKey | Buffer | string,
+    data: Buffer,
+    optionsOrCb: SigningRequestOptions | SignCallback,
+    cb?: SignCallback,
+  ): void {
+    const callback = typeof optionsOrCb === "function" ? optionsOrCb : cb!;
+    const options =
+      typeof optionsOrCb === "function" ? {} : optionsOrCb;
+    try {
+      const algo =
+        options.hash === "sha256"
+          ? "rsa-sha2-256"
+          : options.hash === "sha512"
+            ? "rsa-sha2-512"
+            : undefined;
+      const signature = this.key.sign(data, algo);
+      callback(null, signature);
+    } catch (err) {
+      callback(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+}
 
 async function performPortKnocking(
   host: string,
@@ -2310,6 +2356,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
+    }
+
+    if (
+      hostConfig.terminalConfig?.agentForwarding &&
+      connectConfig.privateKey
+    ) {
+      try {
+        const parsed = ssh2Utils.parseKey(
+          connectConfig.privateKey as Buffer,
+          connectConfig.passphrase as string | undefined,
+        );
+        if (parsed && !(parsed instanceof Error)) {
+          connectConfig.agent = new MemoryAgent(parsed);
+          connectConfig.agentForward = true;
+          sendLog("auth", "info", "SSH agent forwarding enabled");
+        }
+      } catch {
+        sshLogger.warn("Failed to set up agent forwarding", {
+          operation: "agent_forward_setup",
+          hostId: id,
+        });
+      }
     }
 
     if (
