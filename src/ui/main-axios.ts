@@ -4501,6 +4501,13 @@ export async function getGuacamoleTokenFromHost(
   }
 }
 
+export async function getGuacdStatus(): Promise<{
+  guacd: { status: string };
+}> {
+  const response = await authApi.get("/guacamole/status");
+  return response.data;
+}
+
 // ============================================================================
 // RBAC MANAGEMENT
 // ============================================================================
