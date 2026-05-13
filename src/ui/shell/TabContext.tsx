@@ -96,7 +96,7 @@ export function TabProvider({ children }: TabProviderProps) {
     const isElectron =
       typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
     const persistenceEnabled =
-      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+      localStorage.getItem("enableTerminalSessionPersistence") !== "false";
     const shouldRestore = isMobile || isElectron || persistenceEnabled;
 
     if (!shouldRestore) {
@@ -165,7 +165,7 @@ export function TabProvider({ children }: TabProviderProps) {
     const isElectron =
       typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
     const persistenceEnabled =
-      localStorage.getItem("enableTerminalSessionPersistence") === "true";
+      localStorage.getItem("enableTerminalSessionPersistence") !== "false";
     const shouldSave = isMobile || isElectron || persistenceEnabled;
 
     if (shouldSave) {

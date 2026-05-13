@@ -954,7 +954,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         currentHostConfigRef.current = hostConfig;
 
         const persistenceEnabled =
-          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+          localStorage.getItem("enableTerminalSessionPersistence") !== "false";
         const tabId = hostConfig.instanceId
           ? `${hostConfig.id}_${hostConfig.instanceId}`
           : `${hostConfig.id}_${Date.now()}`;
@@ -1455,8 +1455,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
             const persistenceEnabled =
-              localStorage.getItem("enableTerminalSessionPersistence") ===
-              "true";
+              localStorage.getItem("enableTerminalSessionPersistence") !==
+              "false";
             if (persistenceEnabled && hostConfig.instanceId) {
               const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
               localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
@@ -2138,7 +2138,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           const persistenceEnabled =
-            localStorage.getItem("enableTerminalSessionPersistence") === "true";
+            localStorage.getItem("enableTerminalSessionPersistence") !== "false";
           if (
             !persistenceEnabled &&
             sessionIdRef.current &&
