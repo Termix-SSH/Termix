@@ -1,4 +1,5 @@
 import express from "express";
+import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { guacLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
@@ -7,6 +8,8 @@ import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
+import { Client } from "ssh2";
+import net from "net";
 import type { AuthenticatedRequest } from "../../types/index.js";
 
 const router = express.Router();
@@ -193,11 +196,100 @@ router.post(
       }
 
       let token: string;
-      const hostname = host.ip as string;
-      const port = host.port as number;
+      let hostname = host.ip as string;
+      let port = host.port as number;
       const username = (host.username as string) || "";
       const password = (host.password as string) || "";
       const domain = (host.domain as string) || "";
+
+      // Establish SSH tunnel if jump hosts are configured
+      let jumpHosts: Array<{ hostId: number }> = [];
+      if (host.jumpHosts) {
+        try {
+          jumpHosts =
+            typeof host.jumpHosts === "string"
+              ? JSON.parse(host.jumpHosts as string)
+              : (host.jumpHosts as Array<{ hostId: number }>);
+        } catch {
+          jumpHosts = [];
+        }
+      }
+
+      if (jumpHosts.length > 0) {
+        try {
+          const { resolveHostById } = await import(
+            "../ssh/host-resolver.js"
+          );
+          const jumpHost = await resolveHostById(
+            jumpHosts[0].hostId,
+            userId,
+          );
+          if (jumpHost) {
+            const tunnelPort = await new Promise<number>(
+              (resolve, reject) => {
+                const sshClient = new Client();
+                sshClient.on("ready", () => {
+                  const server = net.createServer((sock) => {
+                    sshClient.forwardOut(
+                      "127.0.0.1",
+                      0,
+                      hostname,
+                      port,
+                      (err, stream) => {
+                        if (err) {
+                          sock.destroy();
+                          return;
+                        }
+                        sock.pipe(stream).pipe(sock);
+                      },
+                    );
+                  });
+                  server.listen(0, "127.0.0.1", () => {
+                    const addr = server.address() as net.AddressInfo;
+                    // Auto-cleanup after 1 hour
+                    setTimeout(() => {
+                      server.close();
+                      sshClient.end();
+                    }, 60 * 60 * 1000);
+                    resolve(addr.port);
+                  });
+                });
+                sshClient.on("error", reject);
+
+                const connectOpts: Record<string, unknown> = {
+                  host: jumpHost.ip,
+                  port: jumpHost.port || 22,
+                  username: jumpHost.username,
+                  readyTimeout: 30000,
+                };
+                if (jumpHost.key) {
+                  connectOpts.privateKey = jumpHost.key;
+                  if (jumpHost.keyPassword)
+                    connectOpts.passphrase = jumpHost.keyPassword;
+                } else if (jumpHost.password) {
+                  connectOpts.password = jumpHost.password;
+                }
+                sshClient.connect(connectOpts);
+              },
+            );
+            hostname = "127.0.0.1";
+            port = tunnelPort;
+            guacLogger.info("SSH tunnel established for guacamole", {
+              operation: "guac_ssh_tunnel",
+              hostId,
+              tunnelPort,
+            });
+          }
+        } catch (tunnelError) {
+          guacLogger.error("Failed to establish SSH tunnel", tunnelError, {
+            operation: "guac_ssh_tunnel_error",
+            hostId,
+          });
+          return res.status(500).json({
+            error: "Failed to establish SSH tunnel to remote host",
+          });
+        }
+      }
 
       switch (connectionType) {
         case "rdp":
