@@ -78,7 +78,7 @@ async function resolveJumpHost(
       getDb()
         .select()
         .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
+        .where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -88,8 +88,35 @@ async function resolveJumpHost(
     }
 
     const host = hostResults[0];
+    const ownerId = (host.userId || userId) as string;
 
     if (host.credentialId) {
+      if (userId !== ownerId) {
+        try {
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred =
+            await sharedCredManager.getSharedCredentialForUser(hostId, userId);
+          if (sharedCred) {
+            return {
+              ...host,
+              password: sharedCred.password,
+              key: sharedCred.key,
+              keyPassword: sharedCred.keyPassword,
+              keyType: sharedCred.keyType,
+              authType: sharedCred.key
+                ? "key"
+                : sharedCred.password
+                  ? "password"
+                  : "none",
+            } as JumpHostConfig;
+          }
+        } catch {
+          // fall through to owner credential lookup
+        }
+      }
+
       const credentials = await SimpleDBOps.select(
         getDb()
           .select()
@@ -97,11 +124,11 @@ async function resolveJumpHost(
           .where(
             and(
               eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, userId),
+              eq(sshCredentials.userId, ownerId),
             ),
           ),
         "ssh_credentials",
-        userId,
+        ownerId,
       );
 
       if (credentials.length > 0) {
