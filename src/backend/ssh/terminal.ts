@@ -433,6 +433,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     if (!token) {
+      const urlObj = new URL(req.url || "", "http://localhost");
+      const qp = urlObj.searchParams.get("token");
+      if (qp) token = qp;
+    }
+
+    if (!token) {
       ws.close(1008, "Authentication required");
       return;
     }
