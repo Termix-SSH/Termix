@@ -1,0 +1,16 @@
+[Unit]
+Description=Termix Backend
+After=network.target guacd.service
+Wants=guacd.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/termix
+EnvironmentFile=/opt/termix/.env
+ExecStart=/usr/bin/node /opt/termix/dist/backend/backend/starter.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
