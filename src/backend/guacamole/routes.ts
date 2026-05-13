@@ -192,6 +192,11 @@ router.post(
         }
       }
 
+      if (guacConfig.dpi != null) {
+        const parsed = parseInt(String(guacConfig.dpi), 10);
+        guacConfig.dpi = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+      }
+
       let token: string;
       const hostname = host.ip as string;
       const port = host.port as number;
