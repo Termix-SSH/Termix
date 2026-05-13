@@ -8,6 +8,7 @@ interface DragAndDropState {
 
 interface UseDragAndDropProps {
   onFilesDropped: (files: FileList) => void;
+  onItemsDropped?: (items: DataTransferItemList) => void;
   onError?: (error: string) => void;
   maxFileSize?: number;
   allowedTypes?: string[];
@@ -15,6 +16,7 @@ interface UseDragAndDropProps {
 
 export function useDragAndDrop({
   onFilesDropped,
+  onItemsDropped,
   onError,
   maxFileSize = 5120,
   allowedTypes = [],
@@ -123,6 +125,16 @@ export function useDragAndDrop({
         draggedFiles: [],
       });
 
+      if (onItemsDropped && e.dataTransfer.items?.length > 0) {
+        const hasDirectory = Array.from(e.dataTransfer.items).some(
+          (item) => item.webkitGetAsEntry?.()?.isDirectory,
+        );
+        if (hasDirectory) {
+          onItemsDropped(e.dataTransfer.items);
+          return;
+        }
+      }
+
       const files = e.dataTransfer.files;
 
       if (files.length === 0) {
@@ -137,7 +149,7 @@ export function useDragAndDrop({
 
       onFilesDropped(files);
     },
-    [validateFiles, onFilesDropped, onError],
+    [validateFiles, onFilesDropped, onItemsDropped, onError],
   );
 
   const resetDragState = useCallback(() => {

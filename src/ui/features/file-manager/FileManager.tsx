@@ -257,6 +257,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const { dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
+    onItemsDropped: handleItemsDropped,
     onError: (error) => toast.error(error),
     maxFileSize: 5120,
   });
@@ -781,6 +782,127 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [currentPath]);
+
+  async function handleItemsDropped(items: DataTransferItemList) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    const entries: FileSystemEntry[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry?.();
+      if (entry) entries.push(entry);
+    }
+
+    const files: { file: File; relativePath: string }[] = [];
+
+    async function readEntry(
+      entry: FileSystemEntry,
+      path: string,
+    ): Promise<void> {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) =>
+          (entry as FileSystemFileEntry).file(resolve, reject),
+        );
+        files.push({ file, relativePath: path });
+      } else if (entry.isDirectory) {
+        const reader = (
+          entry as FileSystemDirectoryEntry
+        ).createReader();
+        const dirEntries = await new Promise<FileSystemEntry[]>(
+          (resolve, reject) => reader.readEntries(resolve, reject),
+        );
+        for (const child of dirEntries) {
+          await readEntry(child, `${path}/${child.name}`);
+        }
+      }
+    }
+
+    for (const entry of entries) {
+      await readEntry(entry, entry.name);
+    }
+
+    if (files.length === 0) return;
+
+    const progressToast = toast.loading(
+      `Uploading ${files.length} file(s)...`,
+      { duration: Infinity },
+    );
+
+    try {
+      await ensureSSHConnection();
+
+      const dirs = new Set<string>();
+      for (const { relativePath } of files) {
+        const parts = relativePath.split("/");
+        for (let i = 1; i < parts.length; i++) {
+          dirs.add(parts.slice(0, i).join("/"));
+        }
+      }
+
+      const sortedDirs = Array.from(dirs).sort();
+      for (const dir of sortedDirs) {
+        const parentPath = currentPath.endsWith("/")
+          ? currentPath + dir.split("/").slice(0, -1).join("/")
+          : currentPath + "/" + dir.split("/").slice(0, -1).join("/");
+        const folderName = dir.split("/").pop()!;
+        const targetPath = parentPath.endsWith("/")
+          ? parentPath
+          : parentPath + "/";
+        try {
+          await createSSHFolder(
+            sshSessionId,
+            targetPath,
+            folderName,
+            currentHost?.id,
+          );
+        } catch {
+          // directory may already exist
+        }
+      }
+
+      for (const { file, relativePath } of files) {
+        const dirPart = relativePath.includes("/")
+          ? relativePath.substring(0, relativePath.lastIndexOf("/"))
+          : "";
+        const uploadPath = dirPart
+          ? (currentPath.endsWith("/") ? currentPath : currentPath + "/") +
+            dirPart +
+            "/"
+          : currentPath;
+
+        const fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error);
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result.split(",")[1] || "");
+            } else {
+              reject(new Error("Failed to read file"));
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+
+        await uploadSSHFile(
+          sshSessionId,
+          uploadPath,
+          file.name,
+          fileContent,
+          currentHost?.id,
+        );
+      }
+
+      toast.dismiss(progressToast);
+      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      handleRefreshDirectory();
+    } catch (error) {
+      toast.dismiss(progressToast);
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Folder upload failed:", error);
+    }
+  }
 
   function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
