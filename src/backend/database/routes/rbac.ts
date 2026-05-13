@@ -128,10 +128,10 @@ router.post(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      if (!host[0].credentialId) {
+      if (!host[0].credentialId && host[0].authType !== "opkssh") {
         return res.status(400).json({
           error:
-            "Only hosts using credentials can be shared. Please create a credential and assign it to this host before sharing.",
+            "Only hosts using credentials or OPKSSH can be shared. Please create a credential and assign it to this host before sharing.",
           code: "CREDENTIAL_REQUIRED_FOR_SHARING",
         });
       }
@@ -203,23 +203,25 @@ router.post(
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
 
-        const { SharedCredentialManager } =
-          await import("../../utils/shared-credential-manager.js");
-        const sharedCredManager = SharedCredentialManager.getInstance();
-        if (targetType === "user") {
-          await sharedCredManager.createSharedCredentialForUser(
-            existing[0].id,
-            host[0].credentialId,
-            targetUserId!,
-            userId,
-          );
-        } else {
-          await sharedCredManager.createSharedCredentialsForRole(
-            existing[0].id,
-            host[0].credentialId,
-            targetRoleId!,
-            userId,
-          );
+        if (host[0].credentialId) {
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          if (targetType === "user") {
+            await sharedCredManager.createSharedCredentialForUser(
+              existing[0].id,
+              host[0].credentialId,
+              targetUserId!,
+              userId,
+            );
+          } else {
+            await sharedCredManager.createSharedCredentialsForRole(
+              existing[0].id,
+              host[0].credentialId,
+              targetRoleId!,
+              userId,
+            );
+          }
         }
         databaseLogger.info("Permission granted", {
           operation: "rbac_permission_grant",
@@ -249,20 +251,22 @@ router.post(
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
-      if (targetType === "user") {
-        await sharedCredManager.createSharedCredentialForUser(
-          result.lastInsertRowid as number,
-          host[0].credentialId,
-          targetUserId!,
-          userId,
-        );
-      } else {
-        await sharedCredManager.createSharedCredentialsForRole(
-          result.lastInsertRowid as number,
-          host[0].credentialId,
-          targetRoleId!,
-          userId,
-        );
+      if (host[0].credentialId) {
+        if (targetType === "user") {
+          await sharedCredManager.createSharedCredentialForUser(
+            result.lastInsertRowid as number,
+            host[0].credentialId,
+            targetUserId!,
+            userId,
+          );
+        } else {
+          await sharedCredManager.createSharedCredentialsForRole(
+            result.lastInsertRowid as number,
+            host[0].credentialId,
+            targetRoleId!,
+            userId,
+          );
+        }
       }
       databaseLogger.success("Host shared successfully", {
         operation: "rbac_host_share_success",
