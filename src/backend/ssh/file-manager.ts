@@ -862,7 +862,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   );
 
   // Resolve credentials server-side when frontend doesn't provide them
-  let resolvedCredentials = { password, sshKey, keyPassword, authType };
+  let resolvedCredentials = { password, sshKey, keyPassword, authType, sudoPassword: undefined as string | undefined };
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -873,6 +873,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sshKey: resolvedHost.key,
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
+          sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         connectionLogs.push(
           createConnectionLog(
@@ -900,6 +901,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sshKey: resolvedHost.key,
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
+          sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         connectionLogs.push(
           createConnectionLog(
@@ -1194,6 +1196,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
       channelOpener: new ChannelOpenSerializer(),
       userId,
+      sudoPassword: resolvedCredentials.sudoPassword,
     };
     scheduleSessionCleanup(sessionId);
     res.json({
