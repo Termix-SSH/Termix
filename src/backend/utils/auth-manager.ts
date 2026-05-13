@@ -331,7 +331,11 @@ class AuthManager {
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
-      if (options.rememberMe) {
+      if (
+        options.rememberMe ||
+        options.deviceType === "desktop" ||
+        options.deviceType === "mobile"
+      ) {
         expiresIn = "30d";
       } else {
         expiresIn = defaultExpiry;
