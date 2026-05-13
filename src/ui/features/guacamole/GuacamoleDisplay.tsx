@@ -388,6 +388,20 @@ export const GuacamoleDisplay = forwardRef<
       Guacamole.AudioPlayer.getInstance(stream, mimetype);
     };
 
+    client.onfile = (stream: Guacamole.InputStream, mimetype: string, filename: string) => {
+      const reader = new Guacamole.BlobReader(stream, mimetype);
+      reader.onend = () => {
+        const blob = reader.getBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      stream.sendAck("OK", Guacamole.Status.Code.SUCCESS);
+    };
+
     client.connect();
   }, [
     getWebSocketUrl,

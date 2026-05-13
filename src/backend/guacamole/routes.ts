@@ -201,6 +201,10 @@ router.post(
 
       switch (connectionType) {
         case "rdp":
+          if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
+            guacConfig["drive-path"] = "/drive";
+            guacConfig["create-drive-path"] = true;
+          }
           token = tokenService.createRdpToken(hostname, username, password, {
             port: port || 3389,
             domain,
