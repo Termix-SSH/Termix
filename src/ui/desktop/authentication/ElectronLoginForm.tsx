@@ -57,19 +57,14 @@ export function ElectronLoginForm({
     setIsAuthenticating(true);
 
     try {
-      // Read the cookie fresh after login — don't use the pre-login snapshot in initialJwtRef
-      const currentJwt =
-        (await window.electronAPI
-          ?.getSessionCookie?.("jwt", serverUrl)
-          .catch(() => null)) ?? null;
-      await onAuthSuccessRef.current(currentJwt);
+      await onAuthSuccessRef.current(initialJwtRef.current ?? null);
     } catch (_err) {
       setError(t("errors.authTokenSaveFailed"));
       isAuthenticatingRef.current = false;
       setIsAuthenticating(false);
       hasAuthenticatedRef.current = false;
     }
-  }, [t, serverUrl]);
+  }, [t]);
 
   // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.
   useEffect(() => {

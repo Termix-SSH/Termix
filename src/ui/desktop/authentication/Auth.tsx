@@ -151,17 +151,12 @@ export function Auth({
   const handleElectronAuthSuccess = useCallback(
     async (previousJwt: string | null) => {
       try {
-        const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-          "jwt",
-          currentServerUrl,
-          previousJwt,
-          5000,
-        );
-        if (cookieReady && !cookieReady.success) {
-          throw new Error(
-            cookieReady.error || "Authentication cookie not ready",
-          );
-        }
+        // Wait for the cookie to change, but don't fail if it times out —
+        // the cookie may be in the custom Electron auth store rather than the
+        // native session store, so the "changed" event may never fire.
+        await window.electronAPI
+          ?.waitForSessionCookie?.("jwt", currentServerUrl, previousJwt, 3000)
+          .catch(() => null);
         const meRes = await getUserInfo();
         if (!meRes) throw new Error("Failed to get user info");
         setInternalLoggedIn(true);

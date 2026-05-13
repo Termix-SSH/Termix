@@ -22,6 +22,7 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
+  getCookie,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
@@ -44,9 +45,11 @@ function postAuthSuccessToWebView() {
   }
 
   try {
+    const token = getCookie("jwt") || localStorage.getItem("jwt");
     (window as ReactNativeWindow).ReactNativeWebView?.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
+        token,
         source: "explicit",
         platform: "mobile",
         timestamp: Date.now(),
