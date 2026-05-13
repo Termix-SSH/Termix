@@ -192,7 +192,9 @@ export function RolesTab(): React.ReactElement {
               roles.map((role) => (
                 <TableRow key={role.id}>
                   <TableCell className="font-mono">{role.name}</TableCell>
-                  <TableCell>{t(role.displayName)}</TableCell>
+                  <TableCell>
+                    {role.displayName ? t(role.displayName) : role.name}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {role.description || "-"}
                   </TableCell>

@@ -8,6 +8,7 @@ import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
 import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
+import { getUserInfo } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
@@ -34,7 +35,12 @@ const ElectronVersionCheck = lazy(() =>
   })),
 );
 
-type Phase = "idle-auth" | "fading-in" | "idle-app" | "fading-out";
+type Phase =
+  | "verifying"
+  | "idle-auth"
+  | "fading-in"
+  | "idle-app"
+  | "fading-out";
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -105,7 +111,7 @@ function FullscreenApp() {
 function App() {
   const stored = getStoredAuth();
   const [phase, setPhase] = useState<Phase>(
-    stored?.loggedIn ? "idle-app" : "idle-auth",
+    stored?.loggedIn ? "verifying" : "idle-auth",
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,6 +127,17 @@ function App() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  // Verify stored session against the server before rendering AppShell
+  useEffect(() => {
+    if (phase !== "verifying") return;
+    getUserInfo()
+      .then(() => setPhase("idle-app"))
+      .catch(() => {
+        clearStoredAuth();
+        setPhase("idle-auth");
+      });
+  }, [phase]);
 
   function handleLogin(u: string) {
     setAuthUsername(u);
@@ -143,6 +160,14 @@ function App() {
     phase === "idle-auth" || phase === "fading-in" || phase === "fading-out";
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
+
+  if (phase === "verifying") {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>

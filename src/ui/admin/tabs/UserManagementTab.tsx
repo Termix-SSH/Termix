@@ -140,7 +140,7 @@ export function UserManagementTab({
                           })
                         }
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                        title="Link to password account"
+                        title={t("admin.linkOidcTitle")}
                       >
                         <Link2 className="h-4 w-4" />
                       </Button>
@@ -151,7 +151,7 @@ export function UserManagementTab({
                         size="sm"
                         onClick={() => onUnlinkOIDC(user.id, user.username)}
                         className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                        title="Unlink OIDC (keep password only)"
+                        title={t("admin.unlinkOidcTitle")}
                       >
                         <Unlink className="h-4 w-4" />
                       </Button>

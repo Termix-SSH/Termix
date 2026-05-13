@@ -130,7 +130,14 @@ export function AdminSettings({
     Promise.allSettled([
       getAdminOIDCConfig()
         .then((res) => {
-          if (res) setOidcConfig(res);
+          if (res)
+            setOidcConfig((prev) => ({
+              ...prev,
+              ...res,
+              identifier_path: (res.identifier_path as string) || "sub",
+              name_path: (res.name_path as string) || "name",
+              scopes: (res.scopes as string) || "openid email profile",
+            }));
         })
         .catch((err) => {
           if (!err.message?.includes("No server configured")) {

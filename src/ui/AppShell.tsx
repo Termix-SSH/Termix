@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
@@ -26,6 +28,7 @@ import type {
   HostFolder,
 } from "@/types/ui-types";
 import { getSSHHosts } from "@/main-axios";
+import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
@@ -131,6 +134,7 @@ export function AppShell({
   username: string;
   onLogout: () => void;
 }) {
+  const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>([DASHBOARD_TAB]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -191,6 +195,42 @@ export function AppShell({
     window.addEventListener("termix:logout", handle);
     return () => window.removeEventListener("termix:logout", handle);
   }, [onLogout]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => onLogout();
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
+  }, [onLogout]);
+
+  useEffect(() => {
+    const handleDegraded = () => {
+      toast.loading(t("common.connectionDegraded"), {
+        id: "db-connection-degraded",
+        duration: Infinity,
+        dismissible: false,
+        action: {
+          label: t("common.reload"),
+          onClick: () => window.location.reload(),
+        },
+      });
+    };
+
+    const handleRestored = () => {
+      toast.dismiss("db-connection-degraded");
+      toast.success(t("common.backendReconnected"), { duration: 3000 });
+    };
+
+    dbHealthMonitor.on("database-connection-degraded", handleDegraded);
+    dbHealthMonitor.on("database-connection-degraded-cleared", handleRestored);
+
+    return () => {
+      dbHealthMonitor.off("database-connection-degraded", handleDegraded);
+      dbHealthMonitor.off(
+        "database-connection-degraded-cleared",
+        handleRestored,
+      );
+    };
+  }, [t]);
 
   // Load real hosts from API
   const loadHosts = useCallback(async () => {

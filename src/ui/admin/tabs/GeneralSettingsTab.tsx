@@ -318,19 +318,24 @@ export function GeneralSettingsTab({
           />
           {t("admin.allowPasswordLogin")}
         </label>
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={allowPasswordReset}
-            onCheckedChange={handleTogglePasswordReset}
-            disabled={passwordResetLoading || !allowPasswordLogin}
-          />
-          {t("admin.allowPasswordReset")}
-          {!allowPasswordLogin && (
-            <span className="text-xs text-muted-foreground">
-              ({t("admin.requiresPasswordLogin")})
-            </span>
-          )}
-        </label>
+        <div className="space-y-1">
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={allowPasswordReset}
+              onCheckedChange={handleTogglePasswordReset}
+              disabled={passwordResetLoading || !allowPasswordLogin}
+            />
+            {t("admin.allowPasswordReset")}
+            {!allowPasswordLogin && (
+              <span className="text-xs text-muted-foreground">
+                ({t("admin.requiresPasswordLogin")})
+              </span>
+            )}
+          </label>
+          <p className="text-xs text-muted-foreground ml-6">
+            {t("admin.allowPasswordResetDesc")}
+          </p>
+        </div>
       </div>
 
       <div className="rounded-lg border-2 border-border bg-card p-4 space-y-4">

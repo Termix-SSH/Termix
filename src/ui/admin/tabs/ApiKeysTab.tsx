@@ -166,13 +166,14 @@ function CreateApiKeyDialog({
   }, [open]);
 
   const handleClose = () => {
+    const wasCreated = createdKey !== null;
     setCreatedKey(null);
     setName("");
     setSelectedUserId("");
     setExpiresAt("");
     setCopied(false);
     onOpenChange(false);
-    onCreated();
+    if (wasCreated) onCreated();
   };
 
   const handleCreate = async () => {

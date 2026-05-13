@@ -405,7 +405,9 @@ export function UserEditDialog({
                         >
                           <div>
                             <p className="font-medium text-sm">
-                              {t(role.roleDisplayName)}
+                              {role.roleDisplayName
+                                ? t(role.roleDisplayName)
+                                : role.roleName}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {role.roleName}
@@ -453,7 +455,7 @@ export function UserEditDialog({
                           onClick={() => handleAssignRole(role.id)}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          {t(role.displayName)}
+                          {role.displayName ? t(role.displayName) : role.name}
                         </Button>
                       ))}
                     {availableRoles.filter(

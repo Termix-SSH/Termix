@@ -4,12 +4,6 @@ import { Input } from "@/components/input";
 import { Separator } from "@/components/separator";
 import { toast } from "sonner";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
-import {
   Eye,
   EyeOff,
   User,
@@ -17,11 +11,8 @@ import {
   ArrowLeft,
   Shield,
   CheckCircle2,
-  Globe,
-  ChevronDown,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import i18n from "@/i18n/i18n";
 import {
   loginUser,
   registerUser,
@@ -43,6 +34,45 @@ import {
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import { Checkbox } from "@/components/checkbox";
+import i18n from "@/i18n/i18n";
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "af", label: "Afrikaans" },
+  { code: "ar", label: "العربية" },
+  { code: "bn", label: "বাংলা" },
+  { code: "bg", label: "Български" },
+  { code: "ca", label: "Català" },
+  { code: "zh-CN", label: "中文 (简体)" },
+  { code: "zh-TW", label: "中文 (繁體)" },
+  { code: "cs", label: "Čeština" },
+  { code: "da", label: "Dansk" },
+  { code: "nl", label: "Nederlands" },
+  { code: "fi", label: "Suomi" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "el", label: "Ελληνικά" },
+  { code: "he", label: "עברית" },
+  { code: "hi", label: "हिन्दी" },
+  { code: "hu", label: "Magyar" },
+  { code: "id", label: "Indonesia" },
+  { code: "it", label: "Italiano" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
+  { code: "no", label: "Norsk" },
+  { code: "pl", label: "Polski" },
+  { code: "pt-PT", label: "Português (PT)" },
+  { code: "pt-BR", label: "Português (BR)" },
+  { code: "ro", label: "Română" },
+  { code: "ru", label: "Русский" },
+  { code: "sr", label: "Српски" },
+  { code: "es-ES", label: "Español" },
+  { code: "sv-SE", label: "Svenska" },
+  { code: "th", label: "ไทย" },
+  { code: "tr", label: "Türkçe" },
+  { code: "uk", label: "Українська" },
+  { code: "vi", label: "Tiếng Việt" },
+];
 
 const STORAGE_KEY = "termix_auth";
 
@@ -90,19 +120,6 @@ const isInElectronWebView = () => {
   }
   return false;
 };
-
-const AVAILABLE_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-  { code: "zh", label: "中文" },
-  { code: "ja", label: "日本語" },
-  { code: "pt", label: "Português" },
-  { code: "ru", label: "Русский" },
-  { code: "ar", label: "العربية" },
-  { code: "ko", label: "한국어" },
-];
 
 function PasswordInput({
   value,
@@ -180,10 +197,6 @@ export function Auth({ onLogin }: AuthProps) {
   const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
-  const [currentLang, setCurrentLang] = useState(
-    AVAILABLE_LANGUAGES.find((l) => l.code === i18n.language) ??
-      AVAILABLE_LANGUAGES[0],
-  );
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -205,6 +218,16 @@ export function Auth({ onLogin }: AuthProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [resetTempToken, setResetTempToken] = useState("");
+
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem("i18nextLng") ?? "en",
+  );
+
+  function handleLanguageChange(code: string) {
+    setLanguage(code);
+    localStorage.setItem("i18nextLng", code);
+    i18n.changeLanguage(code);
+  }
 
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
@@ -383,7 +406,9 @@ export function Auth({ onLogin }: AuthProps) {
   }
 
   function switchView(v: AuthView) {
+    const currentUsername = username;
     resetAll();
+    if (v === "reset") setUsername(currentUsername);
     setView(v);
   }
 
@@ -635,12 +660,6 @@ export function Auth({ onLogin }: AuthProps) {
     }
   }
 
-  function changeLanguage(lang: (typeof AVAILABLE_LANGUAGES)[0]) {
-    setCurrentLang(lang);
-    i18n.changeLanguage(lang.code);
-    localStorage.setItem("termix-language", lang.code);
-  }
-
   // Electron server config / webview auth success screens
   if (isElectron() && !isInElectronWebView()) {
     if (showServerConfig === null)
@@ -696,16 +715,53 @@ export function Auth({ onLogin }: AuthProps) {
   if (dbConnectionFailed)
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
-        <div className="flex flex-col gap-4 p-6 border border-border bg-card max-w-sm w-full">
-          <p className="font-bold text-destructive">
-            {t("errors.databaseConnection")}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {t("messages.databaseConnectionFailed")}
-          </p>
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-sm w-full">
+          <div className="flex flex-col gap-1">
+            <p className="font-bold text-destructive">
+              {t("errors.databaseConnection")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("messages.databaseConnectionFailed")}
+            </p>
+          </div>
           <Button onClick={() => window.location.reload()}>
             {t("common.refresh")}
           </Button>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {t("common.language")}
+            </span>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {isElectron() && currentServerUrl && (
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-muted-foreground">
+                  {t("serverConfig.serverUrl")}
+                </span>
+                <span className="text-xs text-muted-foreground font-mono truncate max-w-[180px]">
+                  {currentServerUrl}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowServerConfig(true)}
+              >
+                {t("common.edit")}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -756,30 +812,6 @@ export function Auth({ onLogin }: AuthProps) {
 
       {/* Right panel — auth form */}
       <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-        {/* Language selector */}
-        <div className="absolute top-4 right-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-border/80 bg-background hover:bg-muted transition-colors">
-                <Globe className="size-3.5" />
-                <span className="font-mono">{currentLang.label}</span>
-                <ChevronDown className="size-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              {AVAILABLE_LANGUAGES.map((lang) => (
-                <DropdownMenuItem
-                  key={lang.code}
-                  onClick={() => changeLanguage(lang)}
-                  className={`text-xs font-mono ${currentLang.code === lang.code ? "text-accent-brand" : ""}`}
-                >
-                  {lang.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
         <div className="w-full max-w-sm flex flex-col gap-6">
           {/* TOTP view */}
           {view === "totp" && (
@@ -1183,6 +1215,22 @@ export function Auth({ onLogin }: AuthProps) {
                   </>
                 ) : null}
               </p>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-muted-foreground">
+                  {t("common.language")}
+                </span>
+                <select
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
         </div>
