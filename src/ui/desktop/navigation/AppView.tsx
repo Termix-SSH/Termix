@@ -1,4 +1,6 @@
 import React, {
+  Component,
+  type ErrorInfo,
   Suspense,
   lazy,
   useEffect,
@@ -25,6 +27,61 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
+
+class ChunkErrorBoundaryInner extends Component<
+  { children: React.ReactNode; message: string; buttonLabel: string },
+  { hasChunkError: boolean }
+> {
+  constructor(props: {
+    children: React.ReactNode;
+    message: string;
+    buttonLabel: string;
+  }) {
+    super(props);
+    this.state = { hasChunkError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    const isChunkError =
+      error.name === "ChunkLoadError" ||
+      /Loading chunk \d+ failed/i.test(error.message) ||
+      /Failed to fetch dynamically imported module/i.test(error.message) ||
+      /error loading dynamically imported module/i.test(error.message);
+    if (isChunkError) return { hasChunkError: true };
+    throw error;
+  }
+
+  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+
+  render() {
+    if (this.state.hasChunkError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-sm text-[var(--text-secondary)]">
+          <span>{this.props.message}</span>
+          <button
+            className="px-3 py-1.5 rounded bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)] transition-colors"
+            onClick={() => window.location.reload()}
+          >
+            {this.props.buttonLabel}
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function ChunkErrorBoundary({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <ChunkErrorBoundaryInner
+      message={t("common.pageOutdated")}
+      buttonLabel={t("common.refreshPage")}
+    >
+      {children}
+    </ChunkErrorBoundaryInner>
+  );
+}
 
 const Terminal = lazy(() =>
   import("@/ui/desktop/apps/features/terminal/Terminal.tsx").then((module) => ({
@@ -449,111 +506,113 @@ export function AppView({
                     : "var(--bg-base)",
                 }}
               >
-                <Suspense
-                  fallback={
-                    <SimpleLoader
-                      visible={true}
-                      message={translate("common.loading")}
-                      backgroundColor={
-                        isTerminal ? backgroundColor : "var(--bg-base)"
-                      }
-                    />
-                  }
-                >
-                  {t.type === "terminal" ? (
-                    <Terminal
-                      key={`term-${t.id}-${t.instanceId || ""}`}
-                      ref={t.terminalRef}
-                      hostConfig={t.hostConfig}
-                      isVisible={effectiveVisible}
-                      title={t.title}
-                      showTitle={false}
-                      splitScreen={allSplitScreenTab.length > 0}
-                      onClose={() => removeTab(t.id)}
-                      onTitleChange={(title) => updateTab(t.id, { title })}
-                      onOpenFileManager={
-                        (t.hostConfig as any)?.enableFileManager
-                          ? (path?: string) =>
-                              addTab({
-                                type: "file_manager",
-                                title: t.title,
-                                hostConfig: path
-                                  ? {
-                                      ...t.hostConfig!,
-                                      defaultPath: path,
-                                    }
-                                  : t.hostConfig,
-                              })
-                          : undefined
-                      }
-                      previewTheme={
-                        t.id === currentTab ? previewTerminalTheme : null
-                      }
-                    />
-                  ) : t.type === "server_stats" ? (
-                    <ServerView
-                      key={`stats-${t.id}-${t.instanceId || ""}`}
-                      hostConfig={t.hostConfig}
-                      title={t.title}
-                      isVisible={effectiveVisible}
-                      isTopbarOpen={isTopbarOpen}
-                      embedded
-                    />
-                  ) : t.type === "rdp" ||
-                    t.type === "vnc" ||
-                    t.type === "telnet" ? (
-                    t.connectionConfig ? (
-                      <GuacamoleDisplay
-                        key={`guac-${t.id}-${t.instanceId || ""}`}
-                        connectionConfig={t.connectionConfig}
+                <ChunkErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <SimpleLoader
+                        visible={true}
+                        message={translate("common.loading")}
+                        backgroundColor={
+                          isTerminal ? backgroundColor : "var(--bg-base)"
+                        }
+                      />
+                    }
+                  >
+                    {t.type === "terminal" ? (
+                      <Terminal
+                        key={`term-${t.id}-${t.instanceId || ""}`}
+                        ref={t.terminalRef}
+                        hostConfig={t.hostConfig}
                         isVisible={effectiveVisible}
-                        onDisconnect={() => removeTab(t.id)}
-                        onError={(err) => {
-                          toast.error(err);
-                          removeTab(t.id);
-                        }}
+                        title={t.title}
+                        showTitle={false}
+                        splitScreen={allSplitScreenTab.length > 0}
+                        onClose={() => removeTab(t.id)}
+                        onTitleChange={(title) => updateTab(t.id, { title })}
+                        onOpenFileManager={
+                          (t.hostConfig as any)?.enableFileManager
+                            ? (path?: string) =>
+                                addTab({
+                                  type: "file_manager",
+                                  title: t.title,
+                                  hostConfig: path
+                                    ? {
+                                        ...t.hostConfig!,
+                                        defaultPath: path,
+                                      }
+                                    : t.hostConfig,
+                                })
+                            : undefined
+                        }
+                        previewTheme={
+                          t.id === currentTab ? previewTerminalTheme : null
+                        }
+                      />
+                    ) : t.type === "server_stats" ? (
+                      <ServerView
+                        key={`stats-${t.id}-${t.instanceId || ""}`}
+                        hostConfig={t.hostConfig}
+                        title={t.title}
+                        isVisible={effectiveVisible}
+                        isTopbarOpen={isTopbarOpen}
+                        embedded
+                      />
+                    ) : t.type === "rdp" ||
+                      t.type === "vnc" ||
+                      t.type === "telnet" ? (
+                      t.connectionConfig ? (
+                        <GuacamoleDisplay
+                          key={`guac-${t.id}-${t.instanceId || ""}`}
+                          connectionConfig={t.connectionConfig}
+                          isVisible={effectiveVisible}
+                          onDisconnect={() => removeTab(t.id)}
+                          onError={(err) => {
+                            toast.error(err);
+                            removeTab(t.id);
+                          }}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-red-500">
+                          Missing connection configuration
+                        </div>
+                      )
+                    ) : t.type === "network_graph" ? (
+                      <NetworkGraphCard
+                        key={`netgraph-${t.id}-${t.instanceId || ""}`}
+                        isTopbarOpen={isTopbarOpen}
+                        rightSidebarOpen={rightSidebarOpen}
+                        rightSidebarWidth={rightSidebarWidth}
+                        embedded={false}
+                      />
+                    ) : t.type === "tunnel" ? (
+                      <TunnelManager
+                        key={`tunnel-${t.id}-${t.instanceId || ""}`}
+                        hostConfig={t.hostConfig}
+                        title={t.title}
+                        isVisible={effectiveVisible}
+                        isTopbarOpen={isTopbarOpen}
+                        embedded
+                      />
+                    ) : t.type === "docker" ? (
+                      <DockerManager
+                        key={`docker-${t.id}-${t.instanceId || ""}`}
+                        hostConfig={t.hostConfig}
+                        title={t.title}
+                        isVisible={effectiveVisible}
+                        isTopbarOpen={isTopbarOpen}
+                        embedded
+                        onClose={() => removeTab(t.id)}
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-red-500">
-                        Missing connection configuration
-                      </div>
-                    )
-                  ) : t.type === "network_graph" ? (
-                    <NetworkGraphCard
-                      key={`netgraph-${t.id}-${t.instanceId || ""}`}
-                      isTopbarOpen={isTopbarOpen}
-                      rightSidebarOpen={rightSidebarOpen}
-                      rightSidebarWidth={rightSidebarWidth}
-                      embedded={false}
-                    />
-                  ) : t.type === "tunnel" ? (
-                    <TunnelManager
-                      key={`tunnel-${t.id}-${t.instanceId || ""}`}
-                      hostConfig={t.hostConfig}
-                      title={t.title}
-                      isVisible={effectiveVisible}
-                      isTopbarOpen={isTopbarOpen}
-                      embedded
-                    />
-                  ) : t.type === "docker" ? (
-                    <DockerManager
-                      key={`docker-${t.id}-${t.instanceId || ""}`}
-                      hostConfig={t.hostConfig}
-                      title={t.title}
-                      isVisible={effectiveVisible}
-                      isTopbarOpen={isTopbarOpen}
-                      embedded
-                      onClose={() => removeTab(t.id)}
-                    />
-                  ) : (
-                    <FileManager
-                      key={`filemgr-${t.id}-${t.instanceId || ""}`}
-                      embedded
-                      initialHost={t.hostConfig}
-                      onClose={() => removeTab(t.id)}
-                    />
-                  )}
-                </Suspense>
+                      <FileManager
+                        key={`filemgr-${t.id}-${t.instanceId || ""}`}
+                        embedded
+                        initialHost={t.hostConfig}
+                        onClose={() => removeTab(t.id)}
+                      />
+                    )}
+                  </Suspense>
+                </ChunkErrorBoundary>
               </div>
             </div>
           );

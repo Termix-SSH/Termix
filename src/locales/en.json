@@ -537,7 +537,9 @@
     "remove": "Remove",
     "revoke": "Revoke",
     "create": "Create",
-    "update": "Update"
+    "update": "Update",
+    "pageOutdated": "This page is outdated. Please refresh to load the latest version.",
+    "refreshPage": "Refresh Page"
   },
   "nav": {
     "home": "Home",
