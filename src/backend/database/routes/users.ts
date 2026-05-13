@@ -224,6 +224,13 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
+function isNativeAppRequest(req: Request): boolean {
+  return (
+    (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
+    req.get("X-Electron-App") === "true"
+  );
+}
+
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 
@@ -1575,6 +1582,7 @@ router.post("/login", async (req, res) => {
       success: true,
       is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
+      ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
     const timeoutRow = db.$client
@@ -3393,6 +3401,7 @@ router.post("/totp/verify-login", async (req, res) => {
       userId: userRecord.id,
       is_oidc: !!userRecord.isOidc,
       totp_enabled: !!userRecord.totpEnabled,
+      ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
     const timeoutRow = db.$client

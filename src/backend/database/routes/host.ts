@@ -77,6 +77,172 @@ function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function asPort(value: unknown): number | undefined {
+  const port =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : NaN;
+
+  return isValidPort(port) ? port : undefined;
+}
+
+function asInteger(value: unknown): number | undefined {
+  const number =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : NaN;
+
+  return Number.isInteger(number) ? number : undefined;
+}
+
+function asBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off"].includes(normalized)) return false;
+  }
+
+  return fallback;
+}
+
+function normalizeImportTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((tag) => asString(tag))
+      .filter((tag): tag is string => !!tag);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+type NormalizedImportedHost = Record<string, unknown> & {
+  connectionType: string;
+  name?: string;
+  ip?: string;
+  port: number;
+  username?: string;
+  folder?: string;
+  tags: string[];
+  authType?: string;
+  password?: string;
+  key?: string;
+  keyPassword?: string;
+  keyType?: string;
+  credentialId?: number;
+  pin?: unknown;
+  enableTerminal?: unknown;
+  enableTunnel?: unknown;
+  enableFileManager?: unknown;
+  enableDocker?: unknown;
+  showTerminalInSidebar?: unknown;
+  showFileManagerInSidebar?: unknown;
+  showTunnelInSidebar?: unknown;
+  showDockerInSidebar?: unknown;
+  showServerStatsInSidebar?: unknown;
+  defaultPath?: unknown;
+  sudoPassword?: unknown;
+  tunnelConnections?: unknown;
+  jumpHosts?: unknown;
+  quickActions?: unknown;
+  statsConfig?: unknown;
+  dockerConfig?: unknown;
+  terminalConfig?: unknown;
+  forceKeyboardInteractive?: unknown;
+  notes?: unknown;
+  useSocks5?: unknown;
+  socks5Host?: unknown;
+  socks5Port?: unknown;
+  socks5Username?: unknown;
+  socks5Password?: unknown;
+  socks5ProxyChain?: unknown;
+  portKnockSequence?: unknown;
+  overrideCredentialUsername?: unknown;
+  domain?: unknown;
+  security?: unknown;
+  ignoreCert?: unknown;
+  guacamoleConfig?: unknown;
+  enableSsh: boolean;
+  enableRdp: boolean;
+  enableVnc: boolean;
+  enableTelnet: boolean;
+};
+
+function normalizeImportedHost(
+  hostData: Record<string, unknown>,
+): NormalizedImportedHost {
+  const connectionType =
+    asString(hostData.connectionType) ||
+    (asBoolean(hostData.enableRdp)
+      ? "rdp"
+      : asBoolean(hostData.enableVnc)
+        ? "vnc"
+        : asBoolean(hostData.enableTelnet)
+          ? "telnet"
+          : "ssh");
+
+  const port =
+    asPort(hostData.port) ||
+    (connectionType === "rdp"
+      ? asPort(hostData.rdpPort) || 3389
+      : connectionType === "vnc"
+        ? asPort(hostData.vncPort) || 5900
+        : connectionType === "telnet"
+          ? asPort(hostData.telnetPort) || 23
+          : asPort(hostData.sshPort) || 22);
+
+  return {
+    ...hostData,
+    connectionType,
+    name: asString(hostData.name) || asString(hostData.label),
+    ip:
+      asString(hostData.ip) ||
+      asString(hostData.address) ||
+      asString(hostData.host) ||
+      asString(hostData.hostname),
+    port,
+    username: asString(hostData.username) || asString(hostData.user),
+    folder: asString(hostData.folder) || asString(hostData.group),
+    tags: normalizeImportTags(hostData.tags),
+    credentialId: asInteger(hostData.credentialId),
+    authType:
+      asString(hostData.authType) ||
+      asString(hostData.authMethod) ||
+      (hostData.credentialId ? "credential" : hostData.key ? "key" : undefined),
+    enableSsh:
+      hostData.enableSsh === undefined
+        ? connectionType === "ssh"
+        : asBoolean(hostData.enableSsh),
+    enableRdp:
+      hostData.enableRdp === undefined
+        ? connectionType === "rdp"
+        : asBoolean(hostData.enableRdp),
+    enableVnc:
+      hostData.enableVnc === undefined
+        ? connectionType === "vnc"
+        : asBoolean(hostData.enableVnc),
+    enableTelnet:
+      hostData.enableTelnet === undefined
+        ? connectionType === "telnet"
+        : asBoolean(hostData.enableTelnet),
+  };
+}
+
 const SENSITIVE_FIELDS = [
   "password",
   "key",
@@ -1351,19 +1517,26 @@ router.get(
       const ownHosts = rawData.filter((row) => row.userId === userId);
       const sharedHosts = rawData.filter((row) => row.userId !== userId);
 
-      let decryptedOwnHosts: Record<string, unknown>[] = [];
-      try {
-        decryptedOwnHosts = await SimpleDBOps.select(
-          Promise.resolve(ownHosts),
-          "ssh_data",
-          userId,
-        );
-      } catch (decryptError) {
-        sshLogger.error("Failed to decrypt own hosts", decryptError, {
-          operation: "host_fetch_own_decrypt_failed",
-          userId,
-        });
-        decryptedOwnHosts = [];
+      const decryptedOwnHosts: Record<string, unknown>[] = [];
+      const userDataKey = DataCrypto.getUserDataKey(userId);
+      if (userDataKey) {
+        for (const host of ownHosts) {
+          try {
+            decryptedOwnHosts.push(
+              DataCrypto.decryptRecord("ssh_data", host, userId, userDataKey),
+            );
+          } catch (decryptError) {
+            sshLogger.warn("Skipping host with invalid encrypted fields", {
+              operation: "host_fetch_own_decrypt_failed",
+              userId,
+              hostId: host.id,
+              error:
+                decryptError instanceof Error
+                  ? decryptError.message
+                  : "Unknown error",
+            });
+          }
+        }
       }
 
       const sanitizedSharedHosts = sharedHosts;
@@ -3374,7 +3547,7 @@ router.post(
     }
 
     for (let i = 0; i < hostsToImport.length; i++) {
-      const hostData = hostsToImport[i];
+      const hostData = normalizeImportedHost(hostsToImport[i]);
 
       try {
         const effectiveConnectionType = hostData.connectionType || "ssh";

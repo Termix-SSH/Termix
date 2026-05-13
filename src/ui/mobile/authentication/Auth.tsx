@@ -721,7 +721,10 @@ export function Auth({
             <Input
               ref={totpInputRef}
               id="totp-code"
+              name="totp"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="000000"
               maxLength={6}
               value={totpCode}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import {
   Download,
@@ -76,6 +76,29 @@ interface MenuItem {
   danger?: boolean;
 }
 
+const VIEWPORT_PADDING = 10;
+
+function getClampedMenuPosition(
+  x: number,
+  y: number,
+  menuWidth: number,
+  menuHeight: number,
+) {
+  const maxX = Math.max(
+    VIEWPORT_PADDING,
+    window.innerWidth - menuWidth - VIEWPORT_PADDING,
+  );
+  const maxY = Math.max(
+    VIEWPORT_PADDING,
+    window.innerHeight - menuHeight - VIEWPORT_PADDING,
+  );
+
+  return {
+    x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
+    y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
+  };
+}
+
 export function FileManagerContextMenu({
   x,
   y,
@@ -108,6 +131,7 @@ export function FileManagerContextMenu({
   onCopyPath,
 }: ContextMenuProps) {
   const { t } = useTranslation();
+  const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState({ x, y });
   const [isMounted, setIsMounted] = useState(false);
 
@@ -120,23 +144,9 @@ export function FileManagerContextMenu({
     setIsMounted(true);
 
     const adjustPosition = () => {
-      const menuWidth = 200;
-      const menuHeight = 300;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      let adjustedX = x;
-      let adjustedY = y;
-
-      if (x + menuWidth > viewportWidth) {
-        adjustedX = viewportWidth - menuWidth - 10;
-      }
-
-      if (y + menuHeight > viewportHeight) {
-        adjustedY = viewportHeight - menuHeight - 10;
-      }
-
-      setMenuPosition({ x: adjustedX, y: adjustedY });
+      const menuWidth = menuRef.current?.offsetWidth ?? 260;
+      const menuHeight = menuRef.current?.offsetHeight ?? 400;
+      setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
     };
 
     adjustPosition();
@@ -514,13 +524,15 @@ export function FileManagerContextMenu({
       />
 
       <div
+        ref={menuRef}
         data-context-menu
         className={cn(
-          "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-hidden",
+          "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-x-hidden overflow-y-auto",
         )}
         style={{
           left: menuPosition.x,
           top: menuPosition.y,
+          maxHeight: `calc(100vh - ${VIEWPORT_PADDING * 2}px)`,
         }}
       >
         {finalMenuItems.map((item, index) => {
