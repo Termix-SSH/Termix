@@ -23,6 +23,7 @@ import {
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
   getCookie,
+  getCurrentToken,
 } from "@/ui/main-axios.ts";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 
@@ -39,13 +40,17 @@ function isReactNativeWebView(): boolean {
   );
 }
 
-function postAuthSuccessToWebView() {
+async function postAuthSuccessToWebView() {
   if (!isReactNativeWebView()) {
     return;
   }
 
   try {
-    const token = getCookie("jwt") || localStorage.getItem("jwt");
+    // HTTP-only cookies can't be read via JS — fetch token from the API
+    let token = getCookie("jwt") || localStorage.getItem("jwt");
+    if (!token) {
+      token = await getCurrentToken();
+    }
     (window as ReactNativeWindow).ReactNativeWebView?.postMessage(
       JSON.stringify({
         type: "AUTH_SUCCESS",
@@ -133,7 +138,19 @@ export function Auth({
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
-  }, [loggedIn]);
+    if (loggedIn && !mobileAuthSuccess) {
+      // React Native may not have injected ReactNativeWebView yet — poll briefly
+      const tryPostAuth = (attemptsLeft: number) => {
+        if (isReactNativeWebView()) {
+          postAuthSuccessToWebView();
+          setMobileAuthSuccess(true);
+        } else if (attemptsLeft > 0) {
+          setTimeout(() => tryPostAuth(attemptsLeft - 1), 100);
+        }
+      };
+      tryPostAuth(10);
+    }
+  }, [loggedIn, mobileAuthSuccess]);
 
   useEffect(() => {
     if (totpRequired && totpInputRef.current) {

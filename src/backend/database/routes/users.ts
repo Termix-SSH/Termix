@@ -1693,6 +1693,33 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
+ * /users/me/token:
+ *   get:
+ *     summary: Get current session token
+ *     description: Returns the JWT for the currently authenticated session. Intended for mobile WebView clients that cannot read HTTP-only cookies.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current session token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated.
+ */
+router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
+  const token = (req as Request & { cookies: Record<string, string> }).cookies
+    ?.jwt;
+  res.json({ token: token || null });
+});
+
+/**
+ * @openapi
  * /users/setup-required:
  *   get:
  *     summary: Check if setup is required

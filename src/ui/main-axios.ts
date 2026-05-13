@@ -2952,6 +2952,15 @@ export async function getUserInfo(): Promise<UserInfo> {
   }
 }
 
+export async function getCurrentToken(): Promise<string | null> {
+  try {
+    const response = await authApi.get("/users/me/token");
+    return response.data?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function unlockUserData(
   password: string,
 ): Promise<{ success: boolean; message: string }> {
