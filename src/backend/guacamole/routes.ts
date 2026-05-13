@@ -205,7 +205,8 @@ router.post(
             port: port || 3389,
             domain,
             security: (host.security as string) || undefined,
-            "ignore-cert": (host.ignoreCert as boolean) || false,
+            "ignore-cert":
+              host.ignoreCert !== undefined ? !!host.ignoreCert : true,
             ...guacConfig,
           });
           break;
