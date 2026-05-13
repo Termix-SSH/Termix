@@ -560,13 +560,15 @@ async function clearElectronJwtCookiesAtStartup() {
   }
 }
 
-function getBackendEntryPath() {
+function getBackendPaths() {
   if (isDev) {
-    return path.join(appRoot, "dist", "backend", "backend", "starter.js");
+    const backendDir = path.join(appRoot, "dist", "backend", "backend");
+    return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
   }
-  // Backend is asarUnpack'd — fork() cannot run files inside .asar archives
+  // fork() does not go through Electron's asar redirector — use the unpacked path
   const unpackedRoot = appRoot.replace("app.asar", "app.asar.unpacked");
-  return path.join(unpackedRoot, "dist", "backend", "backend", "starter.js");
+  const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
+  return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
 }
 
 function getBackendDataDir() {
@@ -580,7 +582,7 @@ function getBackendDataDir() {
 
 function startBackendServer() {
   return new Promise((resolve) => {
-    const entryPath = getBackendEntryPath();
+    const { entryPath, backendCwd } = getBackendPaths();
 
     logToFile("isDev:", isDev, "appRoot:", appRoot);
     logToFile("app.isPackaged:", app.isPackaged);
@@ -596,24 +598,15 @@ function startBackendServer() {
     logToFile("Starting embedded backend server...");
     logToFile("Backend entry:", entryPath);
     logToFile("Data directory:", dataDir);
-    logToFile("Backend cwd:", path.dirname(entryPath));
+    logToFile("Backend cwd:", backendCwd);
 
     logToFile("Checking paths...");
     logToFile("  entryPath exists:", fs.existsSync(entryPath));
     logToFile("  dataDir exists:", fs.existsSync(dataDir));
-    logToFile("  appRoot exists:", fs.existsSync(appRoot));
-
-    const distPath = path.join(appRoot, "dist");
-    if (fs.existsSync(distPath)) {
-      logToFile("  dist directory contents:", fs.readdirSync(distPath));
-      const backendPath = path.join(distPath, "backend");
-      if (fs.existsSync(backendPath)) {
-        logToFile("  dist/backend contents:", fs.readdirSync(backendPath));
-      }
-    }
+    logToFile("  backendCwd exists:", fs.existsSync(backendCwd));
 
     backendProcess = fork(entryPath, [], {
-      cwd: path.dirname(entryPath),
+      cwd: backendCwd,
       env: {
         ...process.env,
         DATA_DIR: dataDir,
