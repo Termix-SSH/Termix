@@ -949,6 +949,18 @@ router.get("/oidc/callback", async (req, res) => {
       config = JSON.parse(
         (configRow as Record<string, unknown>).value as string,
       );
+
+      if (config.client_secret?.startsWith("encrypted:")) {
+        config.client_secret = Buffer.from(
+          config.client_secret.substring(10),
+          "base64",
+        ).toString("utf8");
+      } else if (config.client_secret?.startsWith("encoded:")) {
+        config.client_secret = Buffer.from(
+          config.client_secret.substring(8),
+          "base64",
+        ).toString("utf8");
+      }
     }
 
     const tokenResponse = await fetch(config.token_url, {
