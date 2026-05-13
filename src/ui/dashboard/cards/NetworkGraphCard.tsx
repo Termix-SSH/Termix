@@ -54,21 +54,11 @@ import {
   FolderOpen,
   Container,
   Server,
-  Check,
-  ChevronsUpDown,
   ArrowDownUp,
   Loader2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTabsSafe } from "@/shell/TabContext";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { cn } from "@/lib/utils";
 
 const AVAILABLE_COLORS = [
@@ -104,6 +94,23 @@ interface NetworkGraphCardProps {
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
 
+// Resolve a CSS variable to its actual computed color string for use in SVG
+function resolveCssVar(varName: string, fallback: string): string {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue(varName)
+    .trim();
+  if (!raw) return fallback;
+  const tmp = document.createElement("div");
+  tmp.style.position = "absolute";
+  tmp.style.visibility = "hidden";
+  tmp.style.backgroundColor = `var(${varName})`;
+  document.body.appendChild(tmp);
+  const resolved = getComputedStyle(tmp).backgroundColor;
+  document.body.removeChild(tmp);
+  // getComputedStyle returns "" or "rgba(0,0,0,0)" if unresolvable
+  return resolved && resolved !== "rgba(0, 0, 0, 0)" ? resolved : fallback;
+}
+
 function buildNodeSvg(
   name: string,
   ip: string,
@@ -118,43 +125,33 @@ function buildNodeSvg(
       ? "rgb(239,68,68)"
       : "rgb(100,116,139)";
 
-  const isDark =
-    document.documentElement.classList.contains("dark") ||
-    document.documentElement.classList.contains("dracula") ||
-    document.documentElement.classList.contains("catppuccin") ||
-    document.documentElement.classList.contains("nord") ||
-    document.documentElement.classList.contains("solarized") ||
-    document.documentElement.classList.contains("tokyo-night") ||
-    document.documentElement.classList.contains("one-dark") ||
-    document.documentElement.classList.contains("gruvbox");
+  const bg = resolveCssVar("--card", "#1e1e20");
+  const border = resolveCssVar("--border", "#2a2a2c");
+  const textPrimary = resolveCssVar("--card-foreground", "#f1f5f9");
+  const textSecondary = resolveCssVar("--muted-foreground", "#94a3b8");
 
-  const bg = isDark ? "#1c1c1e" : "#ffffff";
-  const border = isDark ? "#2a2a2c" : "#e5e7eb";
-  const textPrimary = isDark ? "#f1f5f9" : "#111827";
-  const textSecondary = isDark ? "#94a3b8" : "#6b7280";
-
-  const safeName = name.replace(/[<>&"]/g, (c) =>
-    c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : "&quot;",
-  );
-  const safeIp = ip.replace(/[<>&"]/g, (c) =>
-    c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : "&quot;",
-  );
+  const esc = (s: string) =>
+    s.replace(
+      /[<>&"]/g,
+      (c) =>
+        ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] ?? c,
+    );
 
   const tagsHtml = tags
     .slice(0, 2)
     .map(
       (tag) =>
-        `<span style="background:${statusColor};color:#fff;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;margin:0 1px;">${tag.replace(/[<>&"]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : "&quot;"))}</span>`,
+        `<span style="background:${statusColor};color:#fff;padding:1px 6px;border-radius:0;font-size:8px;font-weight:700;margin:0 1px;">${esc(tag)}</span>`,
     )
     .join("");
 
   return (
     "data:image/svg+xml;utf8," +
     encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="80" viewBox="0 0 180 80">
-  <rect x="1" y="1" width="178" height="78" rx="6" fill="${bg}" stroke="${border}" stroke-width="1.5"/>
-  <rect x="1" y="1" width="4" height="78" rx="3" fill="${statusColor}"/>
-  <text x="14" y="28" font-family="monospace,sans-serif" font-size="12" font-weight="700" fill="${textPrimary}" xml:space="preserve">${safeName.substring(0, 18)}</text>
-  <text x="14" y="46" font-family="monospace,sans-serif" font-size="10" fill="${textSecondary}" xml:space="preserve">${safeIp}</text>
+  <rect x="0" y="0" width="180" height="80" rx="0" fill="${bg}" stroke="${border}" stroke-width="1"/>
+  <rect x="0" y="0" width="4" height="80" fill="${statusColor}"/>
+  <text x="14" y="28" font-family="monospace,sans-serif" font-size="12" font-weight="700" fill="${textPrimary}" xml:space="preserve">${esc(name).substring(0, 18)}</text>
+  <text x="14" y="46" font-family="monospace,sans-serif" font-size="10" fill="${textSecondary}" xml:space="preserve">${esc(ip)}</text>
   ${tagsHtml ? `<foreignObject x="12" y="54" width="160" height="20"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;gap:2px;">${tagsHtml}</div></foreignObject>` : ""}
 </svg>`)
   );
@@ -204,11 +201,6 @@ export function NetworkGraphCard({
     type: null,
   });
 
-  const [hostComboOpen, setHostComboOpen] = useState(false);
-  const [groupComboOpen, setGroupComboOpen] = useState(false);
-  const [moveGroupComboOpen, setMoveGroupComboOpen] = useState(false);
-  const [sourceComboOpen, setSourceComboOpen] = useState(false);
-  const [targetComboOpen, setTargetComboOpen] = useState(false);
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   const cyRef = useRef<cytoscape.Core | null>(null);
@@ -216,6 +208,7 @@ export function NetworkGraphCard({
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     hostMapRef.current = hostMap;
@@ -370,7 +363,7 @@ export function NetworkGraphCard({
         label: "",
         width: "180px",
         height: "80px",
-        shape: "round-rectangle",
+        shape: "rectangle",
         "border-width": "0px",
         "background-opacity": 0,
         "background-image": (ele) =>
@@ -397,7 +390,7 @@ export function NetworkGraphCard({
         color: "#94a3b8",
         "font-size": "13px",
         "font-weight": "bold",
-        shape: "round-rectangle",
+        shape: "rectangle",
         padding: "12px",
       })
       .selector("edge")
@@ -472,7 +465,34 @@ export function NetworkGraphCard({
     [applyStyle, debouncedSave, embedded],
   );
 
+  // Zoom centered on the viewport midpoint — no panning
+  const zoomIn = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyContainerRef.current) return;
+    const rect = cyContainerRef.current.getBoundingClientRect();
+    cy.zoom({
+      level: cy.zoom() * 1.25,
+      renderedPosition: { x: rect.width / 2, y: rect.height / 2 },
+    });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy || !cyContainerRef.current) return;
+    const rect = cyContainerRef.current.getBoundingClientRect();
+    cy.zoom({
+      level: cy.zoom() / 1.25,
+      renderedPosition: { x: rect.width / 2, y: rect.height / 2 },
+    });
+  }, []);
+
   const hideMenu = () => setContextMenu((p) => ({ ...p, visible: false }));
+
+  const fireOpen = (hostId: string, type: string) => {
+    window.dispatchEvent(
+      new CustomEvent("termix:open-tab", { detail: { hostId, type } }),
+    );
+  };
 
   const handleContextAction = (action: string) => {
     hideMenu();
@@ -485,13 +505,7 @@ export function NetworkGraphCard({
         setShowNodeDetail(true);
       }
     } else if (action === "connect") {
-      const h = hostMap[targetId];
-      if (h)
-        addTab({
-          type: "terminal",
-          title: h.name || `${h.username}@${h.ip}:${h.port}`,
-          hostConfig: h,
-        });
+      fireOpen(targetId, "terminal");
     } else if (action === "move") {
       setSelectedNodeId(targetId);
       const node = cyRef.current.$id(targetId);
@@ -518,13 +532,7 @@ export function NetworkGraphCard({
 
   const handleConnectAction = (appType: string) => {
     hideMenu();
-    const h = hostMap[contextMenu.targetId];
-    if (!h) return;
-    addTab({
-      type: appType as any,
-      title: h.name || `${h.username}@${h.ip}:${h.port}`,
-      hostConfig: h,
-    });
+    fireOpen(contextMenu.targetId, appType);
   };
 
   const hasTunnelConnections = (h: SSHHostWithStatus | undefined) => {
@@ -696,7 +704,7 @@ export function NetworkGraphCard({
   const contextMenuEl = contextMenu.visible ? (
     <div
       ref={contextMenuRef}
-      className="fixed z-[300] min-w-[170px] shadow-2xl rounded-sm overflow-hidden bg-card border border-border"
+      className="fixed z-[300] min-w-[170px] shadow-2xl rounded-none bg-card border border-border"
       style={{ top: contextMenu.y, left: contextMenu.x }}
     >
       {contextMenu.type === "node" && (
@@ -712,7 +720,7 @@ export function NetworkGraphCard({
           )}
           {hostMap[contextMenu.targetId]?.enableFileManager && (
             <button
-              onClick={() => handleConnectAction("file_manager")}
+              onClick={() => handleConnectAction("files")}
               className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
             >
               <FolderOpen className="size-3 shrink-0" />
@@ -739,7 +747,7 @@ export function NetworkGraphCard({
             </button>
           )}
           <button
-            onClick={() => handleConnectAction("server_stats")}
+            onClick={() => handleConnectAction("stats")}
             className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
           >
             <Server className="size-3 shrink-0" />
@@ -806,9 +814,13 @@ export function NetworkGraphCard({
   ) : null;
 
   const cytoscapeEl = (
-    <div className="relative flex-1 min-h-0 w-full overflow-hidden bg-background">
+    <div
+      ref={cyContainerRef}
+      className="relative flex-1 min-h-0 w-full overflow-hidden bg-card"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/80">
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       )}
@@ -851,6 +863,7 @@ export function NetworkGraphCard({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Add Host dialog */}
       <Dialog open={showAddNodeDialog} onOpenChange={setShowAddNodeDialog}>
         <DialogContent className="bg-card border border-border">
           <DialogHeader>
@@ -859,139 +872,33 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectHost")}</Label>
-              <Popover open={hostComboOpen} onOpenChange={setHostComboOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="justify-between border-border"
-                  >
-                    {selectedHostForAddNode
-                      ? (() => {
-                          const h = availableHostsForAdd.find(
-                            (h) => String(h.id) === selectedHostForAddNode,
-                          );
-                          return h ? (
-                            <span className="flex flex-col items-start">
-                              <span>{h.name || h.ip}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {h.username}@{h.ip}:{h.port}
-                              </span>
-                            </span>
-                          ) : (
-                            t("networkGraph.chooseHost")
-                          );
-                        })()
-                      : t("networkGraph.chooseHost")}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-0 w-full bg-card border border-border"
-                  style={{ width: "var(--radix-popover-trigger-width)" }}
-                >
-                  <Command>
-                    <CommandInput placeholder={t("networkGraph.searchHost")} />
-                    <CommandEmpty>{t("networkGraph.noHostFound")}</CommandEmpty>
-                    <CommandGroup>
-                      {availableHostsForAdd.map((h) => (
-                        <CommandItem
-                          key={h.id}
-                          value={String(h.id)}
-                          onSelect={() => {
-                            setSelectedHostForAddNode(String(h.id));
-                            setHostComboOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedHostForAddNode === String(h.id)
-                                ? "opacity-100"
-                                : "opacity-0",
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{h.name || h.ip}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {h.username}@{h.ip}:{h.port}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={selectedHostForAddNode}
+                onChange={(e) => setSelectedHostForAddNode(e.target.value)}
+              >
+                <option value="">{t("networkGraph.chooseHost")}</option>
+                {availableHostsForAdd.map((h) => (
+                  <option key={h.id} value={String(h.id)}>
+                    {h.name || h.ip}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-2">
               <Label>{t("networkGraph.parentGroup")}</Label>
-              <Popover open={groupComboOpen} onOpenChange={setGroupComboOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="justify-between border-border"
-                  >
-                    {selectedGroupForAddNode === "ROOT"
-                      ? t("networkGraph.noGroup")
-                      : availableGroups.find(
-                          (g) => g.id === selectedGroupForAddNode,
-                        )?.label}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-0 w-full bg-card border border-border"
-                  style={{ width: "var(--radix-popover-trigger-width)" }}
-                >
-                  <Command>
-                    <CommandInput placeholder={t("networkGraph.searchGroup")} />
-                    <CommandEmpty>
-                      {t("networkGraph.noGroupFound")}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        value="ROOT"
-                        onSelect={() => {
-                          setSelectedGroupForAddNode("ROOT");
-                          setGroupComboOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedGroupForAddNode === "ROOT"
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                        {t("networkGraph.noGroup")}
-                      </CommandItem>
-                      {availableGroups.map((g) => (
-                        <CommandItem
-                          key={g.id}
-                          value={g.id}
-                          onSelect={() => {
-                            setSelectedGroupForAddNode(g.id);
-                            setGroupComboOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedGroupForAddNode === g.id
-                                ? "opacity-100"
-                                : "opacity-0",
-                            )}
-                          />
-                          {g.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={selectedGroupForAddNode}
+                onChange={(e) => setSelectedGroupForAddNode(e.target.value)}
+              >
+                <option value="ROOT">{t("networkGraph.noGroup")}</option>
+                {availableGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <DialogFooter>
@@ -1011,6 +918,7 @@ export function NetworkGraphCard({
         </DialogContent>
       </Dialog>
 
+      {/* Add / Edit Group dialog */}
       <Dialog
         open={showAddGroupDialog || showEditGroupDialog}
         onOpenChange={(o) => {
@@ -1078,6 +986,7 @@ export function NetworkGraphCard({
         </DialogContent>
       </Dialog>
 
+      {/* Move to Group dialog */}
       <Dialog open={showMoveNodeDialog} onOpenChange={setShowMoveNodeDialog}>
         <DialogContent className="bg-card border border-border">
           <DialogHeader>
@@ -1086,78 +995,20 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectGroup")}</Label>
-              <Popover
-                open={moveGroupComboOpen}
-                onOpenChange={setMoveGroupComboOpen}
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={selectedGroupForMove}
+                onChange={(e) => setSelectedGroupForMove(e.target.value)}
               >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="justify-between border-border"
-                  >
-                    {selectedGroupForMove === "ROOT"
-                      ? t("networkGraph.noGroup")
-                      : availableGroups.find(
-                          (g) => g.id === selectedGroupForMove,
-                        )?.label}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-0 w-full bg-card border border-border"
-                  style={{ width: "var(--radix-popover-trigger-width)" }}
-                >
-                  <Command>
-                    <CommandInput placeholder={t("networkGraph.searchGroup")} />
-                    <CommandEmpty>
-                      {t("networkGraph.noGroupFound")}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        value="ROOT"
-                        onSelect={() => {
-                          setSelectedGroupForMove("ROOT");
-                          setMoveGroupComboOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedGroupForMove === "ROOT"
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                        {t("networkGraph.noGroup")}
-                      </CommandItem>
-                      {availableGroups.map((g) => (
-                        <CommandItem
-                          key={g.id}
-                          value={g.id}
-                          disabled={g.id === selectedNodeId}
-                          onSelect={() => {
-                            if (g.id !== selectedNodeId) {
-                              setSelectedGroupForMove(g.id);
-                              setMoveGroupComboOpen(false);
-                            }
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedGroupForMove === g.id
-                                ? "opacity-100"
-                                : "opacity-0",
-                            )}
-                          />
-                          {g.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                <option value="ROOT">{t("networkGraph.noGroup")}</option>
+                {availableGroups
+                  .filter((g) => g.id !== selectedNodeId)
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
           <DialogFooter>
@@ -1174,83 +1025,47 @@ export function NetworkGraphCard({
         </DialogContent>
       </Dialog>
 
+      {/* Add Edge dialog */}
       <Dialog open={showAddEdgeDialog} onOpenChange={setShowAddEdgeDialog}>
         <DialogContent className="bg-card border border-border">
           <DialogHeader>
             <DialogTitle>{t("networkGraph.addConnection")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {[
-              {
-                label: t("networkGraph.source"),
-                val: selectedHostForEdge,
-                setVal: setSelectedHostForEdge,
-                open: sourceComboOpen,
-                setOpen: setSourceComboOpen,
-                placeholder: t("networkGraph.selectSourcePlaceholder"),
-              },
-              {
-                label: t("networkGraph.target"),
-                val: targetHostForEdge,
-                setVal: setTargetHostForEdge,
-                open: targetComboOpen,
-                setOpen: setTargetComboOpen,
-                placeholder: t("networkGraph.selectTargetPlaceholder"),
-              },
-            ].map(({ label, val, setVal, open, setOpen, placeholder }) => (
-              <div key={label} className="grid gap-2">
-                <Label>{label}</Label>
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="justify-between border-border"
-                    >
-                      {val
-                        ? availableNodesForConnection.find(
-                            (el) => el.id === val,
-                          )?.label
-                        : placeholder}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="p-0 w-full bg-card border border-border"
-                    style={{ width: "var(--radix-popover-trigger-width)" }}
-                  >
-                    <Command>
-                      <CommandInput
-                        placeholder={t("networkGraph.searchNode")}
-                      />
-                      <CommandEmpty>
-                        {t("networkGraph.noNodeFound")}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {availableNodesForConnection.map((el) => (
-                          <CommandItem
-                            key={el.id}
-                            value={el.id}
-                            onSelect={() => {
-                              setVal(el.id);
-                              setOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                val === el.id ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            {el.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            ))}
+            <div className="grid gap-2">
+              <Label>{t("networkGraph.source")}</Label>
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={selectedHostForEdge}
+                onChange={(e) => setSelectedHostForEdge(e.target.value)}
+              >
+                <option value="">
+                  {t("networkGraph.selectSourcePlaceholder")}
+                </option>
+                {availableNodesForConnection.map((el) => (
+                  <option key={el.id} value={el.id}>
+                    {el.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("networkGraph.target")}</Label>
+              <select
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={targetHostForEdge}
+                onChange={(e) => setTargetHostForEdge(e.target.value)}
+              >
+                <option value="">
+                  {t("networkGraph.selectTargetPlaceholder")}
+                </option>
+                {availableNodesForConnection.map((el) => (
+                  <option key={el.id} value={el.id}>
+                    {el.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1264,6 +1079,7 @@ export function NetworkGraphCard({
         </DialogContent>
       </Dialog>
 
+      {/* Node Detail dialog */}
       <Dialog open={showNodeDetail} onOpenChange={setShowNodeDetail}>
         <DialogContent className="bg-card border border-border">
           <DialogHeader>
@@ -1337,8 +1153,7 @@ export function NetworkGraphCard({
 
   if (!embedded) {
     return (
-      <div className="h-full w-full flex flex-col bg-background">
-        {/* toolbar */}
+      <div className="h-full w-full flex flex-col bg-card">
         <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 flex-wrap">
           <div className="flex items-center gap-0.5">
             <Button
@@ -1389,18 +1204,14 @@ export function NetworkGraphCard({
           <div className="w-px h-5 bg-border mx-1" />
           <div className="flex items-center gap-0.5">
             <button
-              onClick={() =>
-                cyRef.current?.zoom((cyRef.current.zoom() ?? 1) * 1.2)
-              }
+              onClick={zoomIn}
               title={t("networkGraph.zoomIn")}
               className={btnCls}
             >
               <ZoomIn className="size-3.5" />
             </button>
             <button
-              onClick={() =>
-                cyRef.current?.zoom((cyRef.current.zoom() ?? 1) / 1.2)
-              }
+              onClick={zoomOut}
               title={t("networkGraph.zoomOut")}
               className={btnCls}
             >
@@ -1456,18 +1267,14 @@ export function NetworkGraphCard({
         </div>
         <div className="flex items-center gap-0.5">
           <button
-            onClick={() =>
-              cyRef.current?.zoom((cyRef.current.zoom() ?? 1) * 1.2)
-            }
+            onClick={zoomIn}
             title={t("networkGraph.zoomIn")}
             className={btnCls}
           >
             <ZoomIn className="size-3" />
           </button>
           <button
-            onClick={() =>
-              cyRef.current?.zoom((cyRef.current.zoom() ?? 1) / 1.2)
-            }
+            onClick={zoomOut}
             title={t("networkGraph.zoomOut")}
             className={btnCls}
           >
