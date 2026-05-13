@@ -150,7 +150,8 @@ export type TabType =
   | "user-profile"
   | "admin-settings"
   | "docker"
-  | "tunnel";
+  | "tunnel"
+  | "network_graph";
 
 export type TunnelStatusValue =
   | "CONNECTED"

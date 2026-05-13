@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   Network,
   Plus,
-  RefreshCw,
   Server,
   Settings,
   Terminal,
@@ -20,7 +19,6 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import CytoscapeComponent from "react-cytoscapejs";
 import { Kbd } from "@/components/kbd";
 import { DASHBOARD_CARDS } from "@/lib/theme";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
@@ -33,16 +31,21 @@ import {
   getTunnelStatuses,
   getCredentials,
   resetRecentActivity,
+  getAllServerStatuses,
+  getServerMetricsById,
+  registerMetricsViewer,
+  sendMetricsHeartbeat,
 } from "@/main-axios";
 import type { RecentActivityItem, SSHHostWithStatus } from "@/main-axios";
 import { useTranslation } from "react-i18next";
+import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
     id: String(h.id),
     name: h.name,
-    user: h.username,
-    address: h.ip,
+    username: h.username,
+    ip: h.ip,
     port: h.port,
     folder: h.folder ?? "",
     online: h.status === "online",
@@ -365,9 +368,11 @@ function QuickActionsCard({
 
 function HostStatusCard({
   hosts,
+  hostMetrics,
   onOpenTab,
 }: {
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
   const { t } = useTranslation();
@@ -391,79 +396,89 @@ function HostStatusCard({
             {t("dashboardTab.noHostsConfigured")}
           </div>
         )}
-        {hosts.map((host, i) => (
-          <div
-            key={i}
-            onClick={() => onOpenTab(host, "stats")}
-            className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <span
-                className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold">{host.name}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {host.ip}
+        {hosts.map((host, i) => {
+          const metrics = hostMetrics.get(host.id);
+          const cpu = metrics?.cpu ?? null;
+          const ram = metrics?.ram ?? null;
+          const hasMetrics = cpu !== null || ram !== null;
+          return (
+            <div
+              key={i}
+              onClick={() => onOpenTab(host, "stats")}
+              className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold">{host.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {host.ip}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {host.online && hasMetrics ? (
+                  <div className="flex items-center gap-3">
+                    {cpu !== null && (
+                      <div className="flex flex-col gap-0.5 w-16">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("dashboard.cpu")}
+                          </span>
+                          <span className="text-[10px] font-bold text-accent-brand">
+                            {cpu.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-0.5 bg-muted w-full">
+                          <div
+                            className="h-full bg-accent-brand"
+                            style={{ width: `${cpu}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {ram !== null && (
+                      <div className="flex flex-col gap-0.5 w-16">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("dashboard.ram")}
+                          </span>
+                          <span className="text-[10px] font-bold text-accent-brand">
+                            {ram.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-0.5 bg-muted w-full">
+                          <div
+                            className="h-full bg-accent-brand"
+                            style={{ width: `${ram}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-muted-foreground w-16 text-center">
+                      —
+                    </span>
+                    <span className="text-[10px] text-muted-foreground w-16 text-center">
+                      —
+                    </span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
+                >
+                  {host.online
+                    ? t("dashboardTab.online")
+                    : t("dashboardTab.offline")}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {host.online ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col gap-0.5 w-16">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">
-                        {t("dashboard.cpu")}
-                      </span>
-                      <span className="text-[10px] font-bold text-accent-brand">
-                        {host.cpu ?? 0}%
-                      </span>
-                    </div>
-                    <div className="h-0.5 bg-muted w-full">
-                      <div
-                        className="h-full bg-accent-brand"
-                        style={{ width: `${host.cpu ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-0.5 w-16">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">
-                        {t("dashboard.ram")}
-                      </span>
-                      <span className="text-[10px] font-bold text-accent-brand">
-                        {host.ram ?? 0}%
-                      </span>
-                    </div>
-                    <div className="h-0.5 bg-muted w-full">
-                      <div
-                        className="h-full bg-accent-brand"
-                        style={{ width: `${host.ram ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-muted-foreground w-16 text-center">
-                    —
-                  </span>
-                  <span className="text-[10px] text-muted-foreground w-16 text-center">
-                    —
-                  </span>
-                </div>
-              )}
-              <span
-                className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
-              >
-                {host.online
-                  ? t("dashboardTab.online")
-                  : t("dashboardTab.offline")}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -579,188 +594,6 @@ function RecentActivityCard({
   );
 }
 
-function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
-  const { t } = useTranslation();
-  const cyRef = useRef<any>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    node: any;
-  } | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-
-  const elements = hosts.map((h, i) => ({
-    data: {
-      id: h.id,
-      label: h.name,
-      ip: `${h.ip}:${h.port ?? 22}`,
-      status: h.online ? "online" : "offline",
-    },
-    position: { x: 120 + (i % 4) * 160, y: 80 + Math.floor(i / 4) * 100 },
-  }));
-
-  const buildNodeStyle = useCallback((ele: any) => {
-    const isOnline = ele.data("status") === "online";
-    const name = ele.data("label") || "";
-    const ip = ele.data("ip") || "";
-    const statusColor = isOnline ? "rgb(251,146,60)" : "rgb(100,116,139)";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="72" viewBox="0 0 160 72">
-      <defs><filter id="sh" x="-15%" y="-15%" width="130%" height="130%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
-      </filter></defs>
-      <rect x="2" y="2" width="156" height="68" rx="4" fill="#09090b" stroke="${statusColor}" stroke-width="1.5" filter="url(#sh)"/>
-      <circle cx="18" cy="36" r="4" fill="${statusColor}" opacity="0.9"/>
-      <text x="32" y="30" font-family="monospace" font-size="12" font-weight="700" fill="#f1f5f9">${name}</text>
-      <text x="32" y="48" font-family="monospace" font-size="10" fill="#64748b">${ip}</text>
-    </svg>`;
-    return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-  }, []);
-
-  const handleCyInit = useCallback(
-    (cy: any) => {
-      cyRef.current = cy;
-      cy.style()
-        .selector("node")
-        .style({
-          label: "",
-          width: "160px",
-          height: "72px",
-          shape: "round-rectangle",
-          "border-width": "0px",
-          "background-opacity": 0,
-          "background-image": buildNodeStyle,
-          "background-fit": "contain",
-        })
-        .selector("edge")
-        .style({
-          width: "1.5px",
-          "line-color": "#2a2a2c",
-          "curve-style": "bezier",
-          "target-arrow-shape": "none",
-        })
-        .selector("node:selected")
-        .style({
-          "overlay-color": "#fb923c",
-          "overlay-opacity": 0.08,
-          "overlay-padding": "4px",
-        })
-        .update();
-      cy.nodes().ungrabify();
-      cy.on("tap", (evt: any) => {
-        if (evt.target === cy) setContextMenu(null);
-      });
-      cy.on("cxttap tap", "node", (evt: any) => {
-        evt.stopPropagation();
-        const node = evt.target;
-        setContextMenu({
-          visible: true,
-          x: evt.originalEvent.clientX,
-          y: evt.originalEvent.clientY,
-          node: node.data(),
-        });
-      });
-      cy.on("zoom pan", () => setContextMenu(null));
-    },
-    [buildNodeStyle],
-  );
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(e.target as Node)
-      )
-        setContextMenu(null);
-    };
-    document.addEventListener("mousedown", handler, true);
-    return () => document.removeEventListener("mousedown", handler, true);
-  }, []);
-
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Network className="size-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            {t("dashboard.networkGraph")}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {t("dashboardTab.nodes", { count: hosts.length })}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-auto py-0.5 px-2"
-            onClick={() => cyRef.current?.fit()}
-          >
-            <RefreshCw className="size-3" />
-          </Button>
-        </div>
-      </div>
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        {contextMenu?.visible && (
-          <div
-            ref={contextMenuRef}
-            className="fixed z-[200] min-w-[160px] shadow-2xl p-1 flex flex-col gap-0.5 bg-card border border-border"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-          >
-            <div className="px-3 py-1.5 border-b border-border mb-0.5">
-              <span className="text-xs font-bold font-mono">
-                {contextMenu.node.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground block">
-                {contextMenu.node.ip}
-              </span>
-            </div>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
-              <Terminal className="size-3" />
-              {t("networkGraph.terminal")}
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
-              <Server className="size-3" />
-              {t("networkGraph.serverStats")}
-            </button>
-          </div>
-        )}
-        {hosts.length > 0 ? (
-          <CytoscapeComponent
-            elements={elements}
-            style={{ width: "100%", height: "100%" }}
-            layout={
-              { name: "grid", rows: Math.ceil(Math.sqrt(hosts.length)) } as any
-            }
-            cy={handleCyInit}
-            wheelSensitivity={1.5}
-            minZoom={0.3}
-            maxZoom={2.5}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 h-full">
-            {t("dashboardTab.noHostsToDisplay")}
-          </div>
-        )}
-        <div className="absolute bottom-2 left-3 flex items-center gap-3 pointer-events-none">
-          <div className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-accent-brand inline-block" />
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {t("dashboardTab.onlineLower")}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-muted-foreground/50 inline-block" />
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {t("dashboardTab.offlineLower")}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 // ─── CardItem ─────────────────────────────────────────────────────────────────
 
 function CardItem({
@@ -775,6 +608,7 @@ function CardItem({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
+  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
@@ -795,6 +629,7 @@ function CardItem({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
@@ -874,7 +709,11 @@ function CardItem({
           <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
         )}
         {slot.id === "host_status" && (
-          <HostStatusCard hosts={hosts} onOpenTab={onOpenTab} />
+          <HostStatusCard
+            hosts={hosts}
+            hostMetrics={hostMetrics}
+            onOpenTab={onOpenTab}
+          />
         )}
         {slot.id === "recent_activity" && (
           <RecentActivityCard
@@ -884,7 +723,12 @@ function CardItem({
             onClear={onClearActivity}
           />
         )}
-        {slot.id === "network_graph" && <NetworkGraphCard hosts={hosts} />}
+        {slot.id === "network_graph" && (
+          <NetworkGraphCard
+            embedded={true}
+            onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+          />
+        )}
       </div>
       {editMode && !isFlex && (
         <div
@@ -981,6 +825,7 @@ type PanelColumnProps = {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
@@ -1006,6 +851,7 @@ function PanelColumn({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
+  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
@@ -1057,6 +903,7 @@ function PanelColumn({
             onOpenSingletonTab={onOpenSingletonTab}
             onOpenTab={onOpenTab}
             hosts={hosts}
+            hostMetrics={hostMetrics}
             uptimeFormatted={uptimeFormatted}
             versionText={versionText}
             versionStatus={versionStatus}
@@ -1120,10 +967,45 @@ export function DashboardTab({
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const [slots, setSlots] = useState<CardSlot[]>(DEFAULT_SLOTS);
+
+  const [slots, setSlots] = useState<CardSlot[]>(() => {
+    try {
+      const saved = localStorage.getItem("dashboardTab.slots");
+      if (saved) return JSON.parse(saved) as CardSlot[];
+    } catch {
+      /* ignore */
+    }
+    return DEFAULT_SLOTS;
+  });
+
   const [editMode, setEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
-  const [mainWidthPct, setMainWidthPct] = useState(68);
+
+  const [mainWidthPct, setMainWidthPct] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dashboardTab.mainWidthPct");
+      if (saved) return Number(saved);
+    } catch {
+      /* ignore */
+    }
+    return 68;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dashboardTab.slots", JSON.stringify(slots));
+    } catch {
+      /* ignore */
+    }
+  }, [slots]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dashboardTab.mainWidthPct", String(mainWidthPct));
+    } catch {
+      /* ignore */
+    }
+  }, [mainWidthPct]);
 
   const [hosts, setHosts] = useState<Host[]>([]);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
@@ -1135,11 +1017,70 @@ export function DashboardTab({
   const [credentialCount, setCredentialCount] = useState(0);
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
+  const [hostMetrics, setHostMetrics] = useState<
+    Map<string, { cpu: number | null; ram: number | null }>
+  >(new Map());
+  const viewerSessionsRef = useRef<Map<number, string>>(new Map());
+
+  const fetchMetrics = useCallback(async (hostList: Host[]) => {
+    let statuses: Record<number, { status?: string }> = {};
+    try {
+      statuses = (await getAllServerStatuses()) as Record<
+        number,
+        { status?: string }
+      >;
+    } catch {
+      /* best-effort */
+    }
+
+    const newSessions = new Map<number, string>(viewerSessionsRef.current);
+    const results = await Promise.all(
+      hostList.map(async (host) => {
+        const hostId = Number(host.id);
+        const knownStatus = statuses?.[hostId]?.status;
+        if (knownStatus === "offline") return null;
+        if (host.authType === "none" || host.authType === "opkssh") return null;
+
+        try {
+          const existing = newSessions.get(hostId);
+          if (!existing) {
+            const reg = await registerMetricsViewer(hostId);
+            if (reg.skipped) return null;
+            if (reg.success && reg.viewerSessionId) {
+              newSessions.set(hostId, reg.viewerSessionId);
+            }
+          }
+          const metrics = await getServerMetricsById(hostId);
+          if (!metrics) return null;
+          return {
+            id: host.id,
+            cpu: metrics.cpu?.percent ?? null,
+            ram: metrics.memory?.percent ?? null,
+          };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    viewerSessionsRef.current = newSessions;
+    const map = new Map<string, { cpu: number | null; ram: number | null }>();
+    for (const r of results) {
+      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram });
+    }
+    setHostMetrics(map);
+  }, []);
 
   useEffect(() => {
-    getSSHHosts()
-      .then((raw) => setHosts(raw.map(sshHostToHost)))
-      .catch(() => {});
+    let mounted = true;
+    const load = async () => {
+      const raw = await getSSHHosts().catch(() => []);
+      const mapped = raw.map(sshHostToHost);
+      if (mounted) setHosts(mapped);
+      fetchMetrics(mapped).catch(() => {});
+    };
+    load();
+
     getUptime()
       .then((u) => setUptimeFormatted(u.formatted))
       .catch(() => {});
@@ -1178,7 +1119,29 @@ export function DashboardTab({
         setActiveTunnelCount(active);
       })
       .catch(() => {});
-  }, []);
+
+    const metricsInterval = setInterval(async () => {
+      const raw = await getSSHHosts().catch(() => []);
+      const mapped = raw.map(sshHostToHost);
+      if (mounted) setHosts(mapped);
+      fetchMetrics(mapped).catch(() => {});
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(metricsInterval);
+    };
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    if (viewerSessionsRef.current.size === 0) return;
+    const heartbeat = setInterval(async () => {
+      for (const [, sessionId] of viewerSessionsRef.current) {
+        sendMetricsHeartbeat(sessionId).catch(() => {});
+      }
+    }, 30000);
+    return () => clearInterval(heartbeat);
+  }, [hostMetrics]);
 
   const handleClearActivity = async () => {
     try {
@@ -1280,11 +1243,11 @@ export function DashboardTab({
           ? Math.max(...panelSlots.map((s) => s.order)) + 1
           : 0;
       const defaultHeight: number | null =
-        id === "host_status" ||
-        id === "recent_activity" ||
         id === "network_graph"
-          ? null
-          : 150;
+          ? 350
+          : id === "host_status" || id === "recent_activity"
+            ? null
+            : 150;
       return [...prev, { id, panel, order: maxOrder, height: defaultHeight }];
     });
   };
@@ -1294,12 +1257,19 @@ export function DashboardTab({
     );
   const handleReset = () => {
     setSlots(DEFAULT_SLOTS);
-    setMainWidthPct(72);
+    setMainWidthPct(68);
     setEditMode(false);
+    try {
+      localStorage.removeItem("dashboardTab.slots");
+      localStorage.removeItem("dashboardTab.mainWidthPct");
+    } catch {
+      /* ignore */
+    }
   };
 
   const columnProps = {
     hosts,
+    hostMetrics,
     uptimeFormatted,
     versionText,
     versionStatus,
@@ -1397,7 +1367,11 @@ export function DashboardTab({
                 <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
               )}
               {slot.id === "host_status" && (
-                <HostStatusCard hosts={hosts} onOpenTab={onOpenTab} />
+                <HostStatusCard
+                  hosts={hosts}
+                  hostMetrics={hostMetrics}
+                  onOpenTab={onOpenTab}
+                />
               )}
               {slot.id === "recent_activity" && (
                 <RecentActivityCard
@@ -1408,7 +1382,10 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "network_graph" && (
-                <NetworkGraphCard hosts={hosts} />
+                <NetworkGraphCard
+                  embedded={true}
+                  onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+                />
               )}
             </div>
           ))}

@@ -13,30 +13,23 @@ import {
   Settings,
   Terminal,
   FolderOpen,
+  FolderSearch,
   Box,
   Globe,
   Plus,
   MessagesSquare,
   LifeBuoy,
-  DollarSign,
   Search,
   Activity,
   Network,
-  MoreHorizontal,
-  Edit3,
   User,
   KeyRound,
   LayoutDashboard,
   Monitor,
   Clock,
+  Folder,
+  Pencil,
 } from "lucide-react";
-import { Button } from "@/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
 
@@ -68,6 +61,29 @@ const ACTIVITY_TAB_TYPE: Record<string, string> = {
   vnc: "vnc",
   rdp: "rdp",
 };
+
+function getSshActions(host: Host) {
+  const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
+  return [
+    host.enableTerminal !== false && {
+      type: "terminal",
+      icon: Terminal,
+      label: "Terminal",
+    },
+    host.enableFileManager && {
+      type: "files",
+      icon: FolderSearch,
+      label: "Files",
+    },
+    host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
+    host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
+    metricsEnabled && { type: "stats", icon: Activity, label: "Stats" },
+  ].filter(Boolean) as {
+    type: string;
+    icon: React.ElementType;
+    label: string;
+  }[];
+}
 
 export function CommandPalette({
   isOpen,
@@ -107,6 +123,24 @@ export function CommandPalette({
       h.ip.toLowerCase().includes(search.toLowerCase()) ||
       h.username.toLowerCase().includes(search.toLowerCase()),
   );
+
+  // Group hosts by folder; ungrouped hosts appear first under an implicit root group
+  const groupedHosts: { folder: string | null; hosts: Host[] }[] = [];
+  const folderMap = new Map<string, Host[]>();
+  const ungrouped: Host[] = [];
+  for (const h of filteredHosts) {
+    if (h.folder) {
+      if (!folderMap.has(h.folder)) folderMap.set(h.folder, []);
+      folderMap.get(h.folder)!.push(h);
+    } else {
+      ungrouped.push(h);
+    }
+  }
+  if (ungrouped.length > 0)
+    groupedHosts.push({ folder: null, hosts: ungrouped });
+  for (const [folder, fhosts] of folderMap) {
+    groupedHosts.push({ folder, hosts: fhosts });
+  }
 
   const handleAction = (action: () => void) => {
     action();
@@ -283,145 +317,135 @@ export function CommandPalette({
 
             <CommandGroup heading="Servers & Hosts" className="px-2">
               {filteredHosts.length > 0 ? (
-                filteredHosts.map((host, i) => {
-                  const actions = [
-                    host.enableSsh &&
-                      host.enableTerminal !== false && {
-                        type: "terminal",
-                        icon: <Terminal className="size-3" />,
-                        label: "Terminal",
-                      },
-                    host.enableSsh &&
-                      host.enableFileManager && {
-                        type: "files",
-                        icon: <FolderOpen className="size-3" />,
-                        label: "Files",
-                      },
-                    host.enableSsh &&
-                      host.enableDocker && {
-                        type: "docker",
-                        icon: <Box className="size-3" />,
-                        label: "Docker",
-                      },
-                    host.enableSsh &&
-                      host.enableTunnel && {
-                        type: "tunnel",
-                        icon: <Network className="size-3" />,
-                        label: "Tunnels",
-                      },
-                    host.enableSsh && {
-                      type: "stats",
-                      icon: <Activity className="size-3" />,
-                      label: "Stats",
-                    },
-                    host.enableRdp && {
-                      type: "rdp",
-                      icon: <Monitor className="size-3" />,
-                      label: "RDP",
-                    },
-                    host.enableVnc && {
-                      type: "vnc",
-                      icon: <Monitor className="size-3" />,
-                      label: "VNC",
-                    },
-                    host.enableTelnet && {
-                      type: "telnet",
-                      icon: <Terminal className="size-3" />,
-                      label: "Telnet",
-                    },
-                  ].filter(Boolean) as {
-                    type: string;
-                    icon: React.ReactNode;
-                    label: string;
-                  }[];
-
-                  return (
-                    <CommandItem
-                      key={i}
-                      onSelect={() =>
-                        handleAction(() => onOpenTab("terminal", host.name))
-                      }
-                      className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                    >
-                      <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
-                        <Server
-                          className={cn(
-                            "size-4",
-                            host.online
-                              ? "text-accent-brand"
-                              : "text-muted-foreground",
-                          )}
-                        />
+                groupedHosts.map(({ folder, hosts: groupHosts }) => (
+                  <div key={folder ?? "__root__"}>
+                    {folder && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">
+                        <Folder className="size-3" />
+                        {folder}
                       </div>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold truncate">
-                            {host.name}
-                          </span>
-                          {host.online && (
-                            <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
-                          )}
+                    )}
+                    {groupHosts.map((host, i) => (
+                      <CommandItem
+                        key={i}
+                        onSelect={() =>
+                          handleAction(() => onOpenTab("terminal", host.name))
+                        }
+                        className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                      >
+                        <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
+                          <Server
+                            className={cn(
+                              "size-4",
+                              host.online
+                                ? "text-accent-brand"
+                                : "text-muted-foreground",
+                            )}
+                          />
                         </div>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {host.username}@{host.ip}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {actions.map((action) => (
-                          <Button
-                            key={action.type}
-                            variant="ghost"
-                            size="icon"
-                            title={action.label}
-                            className="size-7 rounded-none hover:bg-accent-brand/20 hover:text-accent-brand"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAction(() =>
-                                onOpenTab(action.type as any, host.name),
-                              );
-                            }}
-                          >
-                            {action.icon}
-                          </Button>
-                        ))}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 rounded-none hover:bg-muted"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="size-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="rounded-none border-border bg-card w-40"
-                          >
-                            <DropdownMenuItem
-                              className="rounded-none text-xs font-semibold hover:bg-accent-brand/10 hover:text-accent-brand cursor-pointer"
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold truncate">
+                              {host.name}
+                            </span>
+                            {host.online && (
+                              <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {host.username}@{host.ip}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {host.enableSsh &&
+                            getSshActions(host).map(
+                              ({ type, icon: Icon, label }) => (
+                                <button
+                                  key={type}
+                                  title={label}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAction(() =>
+                                      onOpenTab(type as any, host.name),
+                                    );
+                                  }}
+                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                                >
+                                  <Icon className="size-3.5" />
+                                </button>
+                              ),
+                            )}
+                          {host.enableSsh &&
+                            (host.enableRdp ||
+                              host.enableVnc ||
+                              host.enableTelnet) && (
+                              <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                            )}
+                          {host.enableRdp && (
+                            <button
+                              title="RDP"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setIsOpen(false);
-                                onOpenTab("host-manager");
-                                setTimeout(() => {
-                                  window.dispatchEvent(
-                                    new CustomEvent("host-manager:edit-host", {
-                                      detail: host.id,
-                                    }),
-                                  );
-                                }, 100);
+                                handleAction(() => onOpenTab("rdp", host.name));
                               }}
+                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
                             >
-                              <Edit3 className="size-3.5 mr-2" /> Edit Host
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CommandItem>
-                  );
-                })
+                              <Monitor className="size-3" />
+                              RDP
+                            </button>
+                          )}
+                          {host.enableVnc && (
+                            <button
+                              title="VNC"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAction(() => onOpenTab("vnc", host.name));
+                              }}
+                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                            >
+                              <Monitor className="size-3" />
+                              VNC
+                            </button>
+                          )}
+                          {host.enableTelnet && (
+                            <button
+                              title="Telnet"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAction(() =>
+                                  onOpenTab("telnet", host.name),
+                                );
+                              }}
+                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                            >
+                              <Terminal className="size-3" />
+                              Telnet
+                            </button>
+                          )}
+                          <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                          <button
+                            title="Edit Host"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsOpen(false);
+                              onOpenTab("host-manager");
+                              setTimeout(() => {
+                                window.dispatchEvent(
+                                  new CustomEvent("host-manager:edit-host", {
+                                    detail: host.id,
+                                  }),
+                                );
+                              }, 100);
+                            }}
+                            className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </div>
+                ))
               ) : (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   No hosts found matching &ldquo;{search}&rdquo;
@@ -432,28 +456,42 @@ export function CommandPalette({
             <CommandSeparator className="my-2" />
 
             <CommandGroup heading="Links" className="px-2">
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-3 gap-1">
                 <CommandItem
-                  onSelect={() => window.open("https://github.com", "_blank")}
+                  onSelect={() =>
+                    window.open(
+                      "https://github.com/Termix-SSH/Termix",
+                      "_blank",
+                    )
+                  }
                   className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
                 >
                   <Globe className="size-4 text-muted-foreground" />
                   <span className="text-sm font-medium">GitHub</span>
                 </CommandItem>
                 <CommandItem
-                  onSelect={() => window.open("https://discord.com", "_blank")}
+                  onSelect={() =>
+                    window.open(
+                      "https://discord.com/invite/jVQGdvHDrf",
+                      "_blank",
+                    )
+                  }
                   className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
                 >
                   <MessagesSquare className="size-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Discord</span>
                 </CommandItem>
-                <CommandItem className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer">
+                <CommandItem
+                  onSelect={() =>
+                    window.open(
+                      "https://github.com/Termix-SSH/Support/issues/new",
+                      "_blank",
+                    )
+                  }
+                  className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                >
                   <LifeBuoy className="size-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Support</span>
-                </CommandItem>
-                <CommandItem className="flex items-center gap-3 px-3 py-2 rounded-none hover:bg-accent-brand/10 cursor-pointer">
-                  <DollarSign className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Donate</span>
                 </CommandItem>
               </div>
             </CommandGroup>

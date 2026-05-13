@@ -2870,7 +2870,8 @@
     "fileManager": "File Manager",
     "tunnel": "Tunnel",
     "docker": "Docker",
-    "serverStats": "Server Stats"
+    "serverStats": "Server Stats",
+    "noNodes": "No nodes yet — add hosts to build your topology"
   },
   "rbac": {
     "shareHost": "Share Host",

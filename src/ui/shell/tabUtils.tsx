@@ -20,6 +20,7 @@ import { ServerStats } from "@/features/server-stats/ServerStats";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
+import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 
@@ -102,6 +103,8 @@ export function tabIcon(type: TabType) {
     case "docker":
       return <Box className="size-3.5" />;
     case "tunnel":
+      return <Network className="size-3.5" />;
+    case "network_graph":
       return <Network className="size-3.5" />;
   }
 }
@@ -197,6 +200,9 @@ export function renderTabContent(
           <EmptyState icon={Monitor} messageKey="guacamole.noHostSelected" />
         );
       return <GuacamoleApp hostId={host.id} />;
+
+    case "network_graph":
+      return <NetworkGraphCard embedded={false} />;
 
     case "host-manager":
     case "user-profile":

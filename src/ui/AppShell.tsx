@@ -119,6 +119,7 @@ const SINGLETON_TAB_LABELS: Partial<Record<TabType, string>> = {
   "host-manager": "Host Manager",
   docker: "Docker",
   tunnel: "Tunnels",
+  network_graph: "Network Graph",
 };
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
@@ -592,8 +593,6 @@ export function AppShell({
               "host-manager",
               "user-profile",
               "admin-settings",
-              "docker",
-              "tunnel",
             ].includes(type)
           ) {
             openSingletonTab(type, pendingEvent);
