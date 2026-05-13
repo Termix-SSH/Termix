@@ -43,6 +43,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
       timeoutMs,
     ),
 
+  oidcSystemBrowserAuth: (authUrl, callbackPort) =>
+    ipcRenderer.invoke("oidc-system-browser-auth", authUrl, callbackPort),
+
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });
 

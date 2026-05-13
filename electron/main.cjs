@@ -1079,6 +1079,42 @@ ipcMain.handle("get-embedded-server-status", () => {
   };
 });
 
+// OIDC System Browser Authentication (RFC 8252)
+ipcMain.handle("oidc-system-browser-auth", async (_event, authUrl, callbackPort) => {
+  const http = require("http");
+
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const url = new URL(req.url, `http://localhost:${callbackPort}`);
+      if (url.pathname === "/oidc-callback") {
+        const success = url.searchParams.get("success");
+        const error = url.searchParams.get("error");
+        const token = url.searchParams.get("token");
+
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(`<html><body><h2>${success === "true" ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`);
+
+        server.close();
+        if (success === "true") {
+          resolve({ success: true, token });
+        } else {
+          resolve({ success: false, error: error || "Authentication failed" });
+        }
+      }
+    });
+
+    server.listen(callbackPort, "127.0.0.1", () => {
+      shell.openExternal(authUrl);
+    });
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      server.close();
+      reject(new Error("OIDC authentication timed out"));
+    }, 5 * 60 * 1000);
+  });
+});
+
 ipcMain.handle("get-server-config", () => {
   try {
     const userDataPath = app.getPath("userData");
