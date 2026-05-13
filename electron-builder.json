@@ -6,7 +6,12 @@
     "output": "release"
   },
   "asar": true,
-  "asarUnpack": ["dist/backend/**/*", "node_modules/**/*"],
+  "asarUnpack": [
+    "dist/backend/**/*",
+    "node_modules/**/*",
+    "public/icons/**/*",
+    "public/icon.*"
+  ],
   "files": [
     "dist/**/*",
     "electron/**/*",

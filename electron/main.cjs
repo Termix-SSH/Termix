@@ -709,15 +709,21 @@ function createTray() {
   try {
     const { nativeImage } = require("electron");
 
+    // Native APIs (Tray, nativeImage) can't load files from inside app.asar —
+    // use the unpacked path so the OS sees a real file.
+    const publicRoot = isDev
+      ? path.join(appRoot, "public")
+      : path.join(appRoot.replace("app.asar", "app.asar.unpacked"), "public");
+
     let trayIcon;
     if (process.platform === "darwin") {
-      const iconPath = path.join(appRoot, "public", "icons", "16x16.png");
+      const iconPath = path.join(publicRoot, "icons", "16x16.png");
       trayIcon = nativeImage.createFromPath(iconPath);
       trayIcon.setTemplateImage(true);
     } else if (process.platform === "win32") {
-      trayIcon = path.join(appRoot, "public", "icon.ico");
+      trayIcon = path.join(publicRoot, "icon.ico");
     } else {
-      trayIcon = path.join(appRoot, "public", "icons", "32x32.png");
+      trayIcon = path.join(publicRoot, "icons", "32x32.png");
     }
 
     tray = new Tray(trayIcon);
