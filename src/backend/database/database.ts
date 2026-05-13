@@ -61,9 +61,11 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 app.use(createCorsMiddleware());
 
+const uploadsDir = path.join(process.env.DATA_DIR || "./db/data", "uploads");
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
@@ -2018,7 +2020,6 @@ httpServer.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 httpServer.listen(HTTP_PORT, async () => {
-  const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
