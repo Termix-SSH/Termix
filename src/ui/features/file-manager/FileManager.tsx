@@ -562,8 +562,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       currentLoadingPathRef.current = resolvedPath;
       setIsLoading(true);
 
-      setCreateIntent(null);
-
       try {
         const response = await listSSHFiles(sshSessionId, resolvedPath);
 
@@ -660,9 +658,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
             return false;
           } else if (initialLoadDoneRef.current) {
-            toast.error(
-              t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
-            );
+            const isPermissionDenied =
+              httpStatus === 403 ||
+              errorMessage?.toLowerCase().includes("permission denied") ||
+              errorMessage?.toLowerCase().includes("eacces");
+            if (isPermissionDenied) {
+              toast.error(t("fileManager.permissionDenied"));
+            } else {
+              toast.error(
+                t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
+              );
+            }
           }
         }
         return false;
@@ -1079,14 +1085,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       t("fileManager.newFolderDefault"),
       "directory",
     );
-    const newCreateIntent = {
+    setCreateIntent({
       id: Date.now().toString(),
       type: "directory" as const,
       defaultName,
       currentName: defaultName,
-    };
-
-    setCreateIntent(newCreateIntent);
+    });
   }
 
   function handleCreateNewFile() {
@@ -1094,13 +1098,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       t("fileManager.newFileDefault"),
       "file",
     );
-    const newCreateIntent = {
+    setCreateIntent({
       id: Date.now().toString(),
       type: "file" as const,
       defaultName,
       currentName: defaultName,
-    };
-    setCreateIntent(newCreateIntent);
+    });
   }
 
   const handleSymlinkClick = async (file: FileItem) => {
@@ -2442,7 +2445,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background relative">
+    <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
       <div
         className="h-full w-full flex flex-col"
         style={{
@@ -2617,16 +2620,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 <DropdownMenuContent
                   align="end"
                   className="w-44 rounded-none border-border bg-card"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                   <DropdownMenuItem
-                    onClick={handleCreateNewFolder}
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFolder(), 0);
+                    }}
                     className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
                   >
                     <FolderPlus className="size-4 text-accent-brand" />
                     {t("fileManager.newFolder")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={handleCreateNewFile}
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFile(), 0);
+                    }}
                     className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
                   >
                     <FilePlus className="size-4 text-muted-foreground" />
@@ -2767,6 +2775,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onSelectionChange={setSelection}
                 currentPath={currentPath}
                 isLoading={isLoading}
+                isConnected={!!sshSessionId}
                 onPathChange={navigateTo}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
@@ -2780,7 +2789,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                     setSortOrder("asc");
                   }
                 }}
-                onDownload={(files) => files.forEach(handleDownloadFile)}
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
                 onContextMenu={handleContextMenu}
                 viewMode={viewMode}
                 onRename={handleRenameConfirm}
@@ -2812,7 +2825,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onClose={() =>
                   setContextMenu((prev) => ({ ...prev, isVisible: false }))
                 }
-                onDownload={(files) => files.forEach(handleDownloadFile)}
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
+                onPreview={handleFileOpen}
                 onRename={handleRenameFile}
                 onCopy={handleCopyFiles}
                 onCut={handleCutFiles}

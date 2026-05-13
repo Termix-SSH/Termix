@@ -3252,7 +3252,9 @@
         "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
         "searchPlaceholder": "Search history...",
         "clearAll": "Clear All",
-        "noHistoryEntries": "No history entries"
+        "noHistoryEntries": "No history entries",
+        "trackingDisabled": "History tracking is disabled",
+        "trackingDisabledHint": "Enable it in your profile settings to record commands."
       },
       "sshTools": {
         "keyRecordingTitle": "Key Recording",
@@ -3261,6 +3263,9 @@
         "selectNone": "None",
         "noTerminalTabsOpen": "No terminal tabs open",
         "selectTerminalsAbove": "Select terminals above",
+        "broadcastInputPlaceholder": "Type here to broadcast keystrokes...",
+        "stopRecording": "Stop Recording",
+        "startRecording": "Start Recording",
         "settingsTitle": "Settings",
         "enableRightClickCopyPaste": "Enable right-click copy/paste"
       },
@@ -3307,7 +3312,33 @@
         "newSnippet": "New Snippet",
         "newFolder": "New Folder",
         "run": "Run",
-        "noSnippetsInFolder": "No snippets in this folder"
+        "noSnippetsInFolder": "No snippets in this folder",
+        "uncategorized": "Uncategorized",
+        "editSnippetTitle": "Edit Snippet",
+        "editSnippetDescription": "Update this command snippet",
+        "saveSnippetButton": "Save Changes",
+        "createSuccess": "Snippet created successfully",
+        "createFailed": "Failed to create snippet",
+        "updateSuccess": "Snippet updated successfully",
+        "updateFailed": "Failed to update snippet",
+        "deleteFailed": "Failed to delete snippet",
+        "folderCreateSuccess": "Folder created successfully",
+        "folderCreateFailed": "Failed to create folder",
+        "runSuccess": "Ran \"{{name}}\" in {{count}} terminal(s)",
+        "copySuccess": "Copied \"{{name}}\" to clipboard",
+        "shareTitle": "Share Snippet",
+        "shareUser": "User",
+        "shareRole": "Role",
+        "selectUser": "Select a user...",
+        "selectRole": "Select a role...",
+        "shareSuccess": "Snippet shared successfully",
+        "shareFailed": "Failed to share snippet",
+        "revokeSuccess": "Access revoked",
+        "revokeFailed": "Failed to revoke access",
+        "currentAccess": "Current Access",
+        "shareLoadError": "Failed to load share data",
+        "loading": "Loading...",
+        "close": "Close"
       },
       "userProfile": {
         "sectionAccount": "Account",
@@ -3427,7 +3458,18 @@
         "passwordUpdateFailed": "Failed to update password",
         "deletePasswordRequired": "Password is required to delete your account",
         "deleteFailed": "Failed to delete account",
-        "deleting": "Deleting..."
+        "deleting": "Deleting...",
+        "colorPickerTooltip": "Open color picker",
+        "themeSystem": "System",
+        "themeLight": "Light",
+        "themeDark": "Dark",
+        "themeDracula": "Dracula",
+        "themeCatppuccin": "Catppuccin",
+        "themeNord": "Nord",
+        "themeSolarized": "Solarized",
+        "themeTokyoNight": "Tokyo Night",
+        "themeOneDark": "One Dark",
+        "themeGruvbox": "Gruvbox"
       }
     }
   }

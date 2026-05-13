@@ -3,7 +3,15 @@ import { useTranslation } from "react-i18next";
 import {
   getSnippets,
   createSnippet as apiCreateSnippet,
+  updateSnippet as apiUpdateSnippet,
   deleteSnippet as apiDeleteSnippet,
+  getSnippetFolders,
+  createSnippetFolder as apiCreateSnippetFolder,
+  shareSnippet as apiShareSnippet,
+  getSnippetAccess,
+  revokeSnippetAccess,
+  getUserList,
+  getRoles,
 } from "@/main-axios";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -33,6 +41,8 @@ import {
   Share2,
   Terminal,
   Trash2,
+  UserPlus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FOLDER_COLORS } from "@/lib/theme";
@@ -91,47 +101,63 @@ function FolderIconEl({
   }
 }
 
-function CreateSnippetDialog({
+function SnippetFormDialog({
   open,
   onOpenChange,
   folders,
-  onCreate,
+  snippet,
+  onSave,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   folders: SnippetFolder[];
-  onCreate: (s: Omit<Snippet, "id">) => void;
+  snippet: Snippet | null;
+  onSave: (data: Omit<Snippet, "id">, id?: number) => void;
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [folderId, setFolderId] = useState<number | null>(null);
-  const [command, setCommand] = useState("");
+  const [folder, setFolder] = useState<string | null>(null);
+  const [content, setContent] = useState("");
 
-  function handleCreate() {
-    if (!name.trim() || !command.trim()) return;
-    onCreate({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      command: command.trim(),
-      folderId,
-    });
-    setName("");
-    setDescription("");
-    setFolderId(null);
-    setCommand("");
+  useEffect(() => {
+    if (open) {
+      setName(snippet?.name ?? "");
+      setDescription(snippet?.description ?? "");
+      setFolder(snippet?.folder ?? null);
+      setContent(snippet?.content ?? "");
+    }
+  }, [open, snippet]);
+
+  function handleSave() {
+    if (!name.trim() || !content.trim()) return;
+    onSave(
+      {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        content: content.trim(),
+        folder,
+      },
+      snippet?.id,
+    );
     onOpenChange(false);
   }
+
+  const isEdit = snippet !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
-            {t("newUi.sidebar.snippets.createSnippetTitle")}
+            {isEdit
+              ? t("newUi.sidebar.snippets.editSnippetTitle")
+              : t("newUi.sidebar.snippets.createSnippetTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {t("newUi.sidebar.snippets.createSnippetDescription")}
+            {isEdit
+              ? t("newUi.sidebar.snippets.editSnippetDescription")
+              : t("newUi.sidebar.snippets.createSnippetDescription")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 mt-1">
@@ -168,22 +194,18 @@ function CreateSnippetDialog({
               </span>
             </label>
             <select
-              value={folderId ?? ""}
+              value={folder ?? ""}
               onChange={(e) =>
-                setFolderId(
-                  e.target.value === "" ? null : Number(e.target.value),
-                )
+                setFolder(e.target.value === "" ? null : e.target.value)
               }
               className="px-3 py-2 text-sm bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="">{t("newUi.sidebar.snippets.noFolder")}</option>
-              {folders
-                .filter((f) => f.name !== "Uncategorized")
-                .map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
+              {folders.map((f) => (
+                <option key={f.id} value={f.name}>
+                  {f.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -193,8 +215,8 @@ function CreateSnippetDialog({
             </label>
             <textarea
               placeholder={t("newUi.sidebar.snippets.commandPlaceholder")}
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
               className="w-full h-36 px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
             />
           </div>
@@ -206,9 +228,11 @@ function CreateSnippetDialog({
           <Button
             variant="outline"
             className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-            onClick={handleCreate}
+            onClick={handleSave}
           >
-            {t("newUi.sidebar.snippets.createSnippetButton")}
+            {isEdit
+              ? t("newUi.sidebar.snippets.saveSnippetButton")
+              : t("newUi.sidebar.snippets.createSnippetButton")}
           </Button>
         </div>
       </DialogContent>
@@ -330,6 +354,317 @@ function CreateFolderDialog({
   );
 }
 
+type AccessRecord = {
+  id: number;
+  targetType: "user" | "role";
+  username: string | null;
+  roleName: string | null;
+  roleDisplayName: string | null;
+  permissionLevel: string;
+  expiresAt: string | null;
+};
+
+function ShareSnippetDialog({
+  snippet,
+  onClose,
+}: {
+  snippet: Snippet | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [users, setUsers] = useState<{ id: string; username: string }[]>([]);
+  const [roles, setRoles] = useState<
+    { id: number; name: string; displayName?: string }[]
+  >([]);
+  const [accessList, setAccessList] = useState<AccessRecord[]>([]);
+  const [targetType, setTargetType] = useState<"user" | "role">("user");
+  const [targetId, setTargetId] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!snippet) return;
+    setLoading(true);
+    Promise.all([getUserList(), getRoles(), getSnippetAccess(snippet.id)])
+      .then(([usersData, rolesData, accessData]) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setUsers(
+          (usersData?.users || []).map((u: any) => ({
+            id: u.id,
+            username: u.username,
+          })),
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setRoles((rolesData?.roles || []).map((r: any) => r));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAccessList((accessData as any).accessList || []);
+      })
+      .catch(() => toast.error(t("newUi.sidebar.snippets.shareLoadError")))
+      .finally(() => setLoading(false));
+  }, [snippet, t]);
+
+  async function handleShare() {
+    if (!snippet || !targetId) return;
+    try {
+      await apiShareSnippet(snippet.id, {
+        targetType,
+        targetUserId: targetType === "user" ? targetId : undefined,
+        targetRoleId: targetType === "role" ? parseInt(targetId) : undefined,
+      });
+      toast.success(t("newUi.sidebar.snippets.shareSuccess"));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accessData = (await getSnippetAccess(snippet.id)) as any;
+      setAccessList(accessData.accessList || []);
+      setTargetId("");
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.shareFailed"));
+    }
+  }
+
+  async function handleRevoke(accessId: number) {
+    if (!snippet) return;
+    try {
+      await revokeSnippetAccess(snippet.id, accessId);
+      toast.success(t("newUi.sidebar.snippets.revokeSuccess"));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accessData = (await getSnippetAccess(snippet.id)) as any;
+      setAccessList(accessData.accessList || []);
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.revokeFailed"));
+    }
+  }
+
+  return (
+    <Dialog open={snippet !== null} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t("newUi.sidebar.snippets.shareTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {snippet?.name}
+          </DialogDescription>
+        </DialogHeader>
+        {loading ? (
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            {t("newUi.sidebar.snippets.loading")}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 mt-1">
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setTargetType("user");
+                  setTargetId("");
+                }}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${targetType === "user" ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.shareUser")}
+              </button>
+              <button
+                onClick={() => {
+                  setTargetType("role");
+                  setTargetId("");
+                }}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${targetType === "role" ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.shareRole")}
+              </button>
+            </div>
+            <div className="flex gap-2 items-center">
+              <select
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring h-9"
+              >
+                <option value="">
+                  {targetType === "user"
+                    ? t("newUi.sidebar.snippets.selectUser")
+                    : t("newUi.sidebar.snippets.selectRole")}
+                </option>
+                {targetType === "user"
+                  ? users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.username}
+                      </option>
+                    ))
+                  : roles.map((r) => (
+                      <option key={r.id} value={String(r.id)}>
+                        {r.displayName || r.name}
+                      </option>
+                    ))}
+              </select>
+              <Button
+                variant="outline"
+                size="lg"
+                className="shrink-0 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                onClick={handleShare}
+                disabled={!targetId}
+              >
+                <UserPlus className="size-4" />
+              </Button>
+            </div>
+            {accessList.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {t("newUi.sidebar.snippets.currentAccess")}
+                </span>
+                <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+                  {accessList.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between px-2.5 py-1.5 border border-border text-xs"
+                    >
+                      <span className="truncate">
+                        {entry.targetType === "user"
+                          ? entry.username
+                          : entry.roleDisplayName || entry.roleName}
+                        <span className="text-muted-foreground ml-1">
+                          ({entry.targetType})
+                        </span>
+                      </span>
+                      <button
+                        onClick={() => handleRevoke(entry.id)}
+                        className="shrink-0 text-muted-foreground hover:text-destructive ml-2"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex justify-end mt-2">
+          <Button variant="ghost" onClick={onClose}>
+            {t("newUi.sidebar.snippets.close")}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SnippetCard({
+  snippet,
+  selectedTabIds,
+  terminalTabs,
+  onDelete,
+  onEdit,
+  onShare,
+  t,
+}: {
+  snippet: Snippet;
+  selectedTabIds: Set<string>;
+  terminalTabs: Tab[];
+  onDelete: (id: number) => void;
+  onEdit: (snippet: Snippet) => void;
+  onShare: (snippet: Snippet) => void;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) {
+  function handleRun() {
+    const targets = terminalTabs.filter((tab) => selectedTabIds.has(tab.id));
+    if (targets.length > 0) {
+      targets.forEach((tab) => {
+        tab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
+      });
+      toast.success(
+        t("newUi.sidebar.snippets.runSuccess", {
+          name: snippet.name,
+          count: targets.length,
+        }),
+      );
+    } else if (terminalTabs.length > 0) {
+      terminalTabs[0].terminalRef?.current?.sendInput?.(snippet.content + "\r");
+      toast.success(
+        t("newUi.sidebar.snippets.runSuccess", {
+          name: snippet.name,
+          count: 1,
+        }),
+      );
+    } else {
+      toast.error(t("newUi.sidebar.snippets.noTerminalTabsOpen"));
+    }
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(snippet.content);
+    toast.success(
+      t("newUi.sidebar.snippets.copySuccess", { name: snippet.name }),
+    );
+  }
+
+  return (
+    <div className="border border-border bg-background p-2.5 flex flex-col gap-2">
+      <div className="flex items-start gap-2">
+        <div className="grid grid-cols-2 gap-px mt-0.5 shrink-0 opacity-30">
+          <div className="size-1 bg-muted-foreground rounded-full" />
+          <div className="size-1 bg-muted-foreground rounded-full" />
+          <div className="size-1 bg-muted-foreground rounded-full" />
+          <div className="size-1 bg-muted-foreground rounded-full" />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-xs font-semibold">{snippet.name}</span>
+          {snippet.description && (
+            <span className="text-xs text-muted-foreground">
+              {snippet.description}
+            </span>
+          )}
+        </div>
+      </div>
+      <span className="text-xs text-muted-foreground font-mono px-1">
+        {snippet.content}
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 text-xs h-7 gap-1.5"
+          onClick={handleRun}
+        >
+          <Play className="size-3" />
+          {t("newUi.sidebar.snippets.run")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+          onClick={handleCopy}
+        >
+          <Copy className="size-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+          onClick={() => onEdit(snippet)}
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+          onClick={() => onDelete(snippet.id)}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+          onClick={() => onShare(snippet)}
+        >
+          <Share2 className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function SnippetsPanel({
   terminalTabs,
   activeTabId,
@@ -341,6 +676,19 @@ export function SnippetsPanel({
   const [snippetSearch, setSnippetSearch] = useState("");
   const [folders, setFolders] = useState<SnippetFolder[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [snippetFormOpen, setSnippetFormOpen] = useState(false);
+  const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [shareSnippet, setShareSnippet] = useState<Snippet | null>(null);
+  const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        activeTabId && terminalTabs.some((tab) => tab.id === activeTabId)
+          ? [activeTabId]
+          : [],
+      ),
+  );
+  const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
 
   useEffect(() => {
     getSnippets()
@@ -351,23 +699,28 @@ export function SnippetsPanel({
           id: s.id,
           name: s.name,
           description: s.description,
-          command: s.command,
-          folderId: s.folderId ?? null,
+          content: s.content,
+          folder: s.folder ?? null,
         }));
         setSnippets(mapped);
       })
       .catch(() => {});
+
+    getSnippetFolders()
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped: SnippetFolder[] = arr.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          color: f.color ?? FOLDER_COLORS[0],
+          icon: (f.icon as FolderIconId) ?? "folder",
+          open: true,
+        }));
+        setFolders(mapped);
+      })
+      .catch(() => {});
   }, []);
-  const [createSnippetOpen, setCreateSnippetOpen] = useState(false);
-  const [createFolderOpen, setCreateFolderOpen] = useState(false);
-  const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
-    () =>
-      new Set(
-        activeTabId && terminalTabs.some((t) => t.id === activeTabId)
-          ? [activeTabId]
-          : [],
-      ),
-  );
 
   function toggleTab(id: string) {
     setSelectedTabIds((prev) => {
@@ -377,24 +730,49 @@ export function SnippetsPanel({
     });
   }
 
-  async function handleCreateSnippet(s: Omit<Snippet, "id">) {
+  async function handleSaveSnippet(data: Omit<Snippet, "id">, id?: number) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const created = (await apiCreateSnippet(s as any)) as any;
-      setSnippets((prev) => [
-        ...prev,
-        { ...s, id: created.id ?? Math.max(0, ...prev.map((x) => x.id)) + 1 },
-      ]);
-      toast.success("Snippet created successfully");
+      if (id !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await apiUpdateSnippet(id, data as any);
+        setSnippets((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, ...data } : s)),
+        );
+        toast.success(t("newUi.sidebar.snippets.updateSuccess"));
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const created = (await apiCreateSnippet(data as any)) as any;
+        setSnippets((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: created.id ?? Math.max(0, ...prev.map((x) => x.id)) + 1,
+          },
+        ]);
+        toast.success(t("newUi.sidebar.snippets.createSuccess"));
+      }
     } catch {
-      toast.error("Failed to create snippet");
+      toast.error(
+        id !== undefined
+          ? t("newUi.sidebar.snippets.updateFailed")
+          : t("newUi.sidebar.snippets.createFailed"),
+      );
     }
   }
 
-  function handleCreateFolder(f: Omit<SnippetFolder, "id" | "open">) {
-    const id = Math.max(0, ...folders.map((x) => x.id)) + 1;
-    setFolders((prev) => [...prev, { ...f, id, open: true }]);
-    toast.success("Folder created successfully");
+  async function handleCreateFolder(f: Omit<SnippetFolder, "id" | "open">) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const created = (await apiCreateSnippetFolder({
+        name: f.name,
+        color: f.color,
+        icon: f.icon,
+      })) as any;
+      setFolders((prev) => [...prev, { ...f, id: created.id, open: true }]);
+      toast.success(t("newUi.sidebar.snippets.folderCreateSuccess"));
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.folderCreateFailed"));
+    }
   }
 
   function toggleFolder(id: number) {
@@ -403,29 +781,29 @@ export function SnippetsPanel({
     );
   }
 
-  async function deleteSnippet(id: number) {
+  async function handleDeleteSnippet(id: number) {
     try {
       await apiDeleteSnippet(id);
       setSnippets((prev) => prev.filter((s) => s.id !== id));
     } catch {
-      toast.error("Failed to delete snippet");
+      toast.error(t("newUi.sidebar.snippets.deleteFailed"));
     }
+  }
+
+  function handleEditSnippet(snippet: Snippet) {
+    setEditingSnippet(snippet);
+    setSnippetFormOpen(true);
   }
 
   const filtered = snippetSearch
     ? snippets.filter(
         (s) =>
           s.name.toLowerCase().includes(snippetSearch.toLowerCase()) ||
-          s.command.toLowerCase().includes(snippetSearch.toLowerCase()),
+          s.content.toLowerCase().includes(snippetSearch.toLowerCase()),
       )
     : snippets;
 
-  const namedFolders = folders.filter((f) => f.name !== "Uncategorized");
-  const uncategorized = folders.find((f) => f.name === "Uncategorized");
-  const allFolders = [
-    ...namedFolders,
-    ...(uncategorized ? [uncategorized] : []),
-  ];
+  const uncategorizedSnippets = filtered.filter((s) => s.folder === null);
 
   return (
     <>
@@ -442,7 +820,9 @@ export function SnippetsPanel({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() =>
-                    setSelectedTabIds(new Set(terminalTabs.map((t) => t.id)))
+                    setSelectedTabIds(
+                      new Set(terminalTabs.map((tab) => tab.id)),
+                    )
                   }
                   className="text-[10px] text-accent-brand hover:text-accent-brand/70"
                 >
@@ -511,7 +891,10 @@ export function SnippetsPanel({
           <Button
             variant="outline"
             className="flex-1 text-xs min-w-0 overflow-hidden"
-            onClick={() => setCreateSnippetOpen(true)}
+            onClick={() => {
+              setEditingSnippet(null);
+              setSnippetFormOpen(true);
+            }}
           >
             <Plus className="size-3.5 shrink-0" />
             {t("newUi.sidebar.snippets.newSnippet")}
@@ -526,11 +909,49 @@ export function SnippetsPanel({
           </Button>
         </div>
         <div className="flex flex-col gap-4">
-          {allFolders.map((folder) => {
-            const folderSnippets = filtered.filter((s) =>
-              folder.name === "Uncategorized"
-                ? s.folderId === null || s.folderId === folder.id
-                : s.folderId === folder.id,
+          {(!snippetSearch || uncategorizedSnippets.length > 0) && (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setUncategorizedOpen((v) => !v)}
+                className="flex items-center gap-1.5 w-full text-left"
+              >
+                <ChevronDown
+                  className={`size-3 text-muted-foreground shrink-0 transition-transform ${uncategorizedOpen ? "" : "-rotate-90"}`}
+                />
+                <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">
+                  {t("newUi.sidebar.snippets.uncategorized")}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {uncategorizedSnippets.length}
+                </span>
+              </button>
+              {uncategorizedOpen && (
+                <div className="flex flex-col gap-2 ml-1">
+                  {uncategorizedSnippets.map((snippet) => (
+                    <SnippetCard
+                      key={snippet.id}
+                      snippet={snippet}
+                      selectedTabIds={selectedTabIds}
+                      terminalTabs={terminalTabs}
+                      onDelete={handleDeleteSnippet}
+                      onEdit={handleEditSnippet}
+                      onShare={setShareSnippet}
+                      t={t}
+                    />
+                  ))}
+                  {uncategorizedSnippets.length === 0 && (
+                    <span className="text-xs text-muted-foreground/60 pl-1">
+                      {t("newUi.sidebar.snippets.noSnippetsInFolder")}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {folders.map((folder) => {
+            const folderSnippets = filtered.filter(
+              (s) => s.folder === folder.name,
             );
             if (folderSnippets.length === 0 && snippetSearch) return null;
             return (
@@ -549,12 +970,7 @@ export function SnippetsPanel({
                   />
                   <span
                     className="text-xs font-semibold flex-1 truncate"
-                    style={{
-                      color:
-                        folder.name === "Uncategorized"
-                          ? undefined
-                          : folder.color,
-                    }}
+                    style={{ color: folder.color }}
                   >
                     {folder.name}
                   </span>
@@ -565,71 +981,16 @@ export function SnippetsPanel({
                 {folder.open && (
                   <div className="flex flex-col gap-2 ml-1">
                     {folderSnippets.map((snippet) => (
-                      <div
+                      <SnippetCard
                         key={snippet.id}
-                        className="border border-border bg-background p-2.5 flex flex-col gap-2"
-                      >
-                        <div className="flex items-start gap-2">
-                          <div className="grid grid-cols-2 gap-px mt-0.5 shrink-0 opacity-30">
-                            <div className="size-1 bg-muted-foreground rounded-full" />
-                            <div className="size-1 bg-muted-foreground rounded-full" />
-                            <div className="size-1 bg-muted-foreground rounded-full" />
-                            <div className="size-1 bg-muted-foreground rounded-full" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-semibold">
-                              {snippet.name}
-                            </span>
-                            {snippet.description && (
-                              <span className="text-xs text-muted-foreground">
-                                {snippet.description}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground font-mono px-1">
-                          {snippet.command}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs h-7 gap-1.5"
-                          >
-                            <Play className="size-3" />
-                            {t("newUi.sidebar.snippets.run")}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-                          >
-                            <Copy className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={() => deleteSnippet(snippet.id)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-                          >
-                            <Share2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </div>
+                        snippet={snippet}
+                        selectedTabIds={selectedTabIds}
+                        terminalTabs={terminalTabs}
+                        onDelete={handleDeleteSnippet}
+                        onEdit={handleEditSnippet}
+                        onShare={setShareSnippet}
+                        t={t}
+                      />
                     ))}
                     {folderSnippets.length === 0 && (
                       <span className="text-xs text-muted-foreground/60 pl-1">
@@ -644,16 +1005,24 @@ export function SnippetsPanel({
         </div>
       </div>
 
-      <CreateSnippetDialog
-        open={createSnippetOpen}
-        onOpenChange={setCreateSnippetOpen}
+      <SnippetFormDialog
+        open={snippetFormOpen}
+        onOpenChange={(v) => {
+          setSnippetFormOpen(v);
+          if (!v) setEditingSnippet(null);
+        }}
         folders={folders}
-        onCreate={handleCreateSnippet}
+        snippet={editingSnippet}
+        onSave={handleSaveSnippet}
       />
       <CreateFolderDialog
         open={createFolderOpen}
         onOpenChange={setCreateFolderOpen}
         onCreate={handleCreateFolder}
+      />
+      <ShareSnippetDialog
+        snippet={shareSnippet}
+        onClose={() => setShareSnippet(null)}
       />
     </>
   );

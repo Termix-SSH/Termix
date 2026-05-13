@@ -12,7 +12,9 @@ import {
   enableTOTP,
   disableTOTP,
   getVersionInfo,
+  getUserRoles,
 } from "@/main-axios";
+import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
@@ -65,17 +67,17 @@ type UserProfileSection =
   | "api-keys"
   | "c2s-tunnels";
 
-const THEMES: { id: ThemeId; label: string; preview: string }[] = [
-  { id: "system", label: "System", preview: "auto" },
-  { id: "light", label: "Light", preview: "#ffffff" },
-  { id: "dark", label: "Dark", preview: "#1a1c22" },
-  { id: "dracula", label: "Dracula", preview: "#282a36" },
-  { id: "catppuccin", label: "Catppuccin", preview: "#1e1e2e" },
-  { id: "nord", label: "Nord", preview: "#2e3440" },
-  { id: "solarized", label: "Solarized", preview: "#002b36" },
-  { id: "tokyo-night", label: "Tokyo Night", preview: "#1a1b26" },
-  { id: "one-dark", label: "One Dark", preview: "#282c34" },
-  { id: "gruvbox", label: "Gruvbox", preview: "#282828" },
+const THEMES: { id: ThemeId; preview: string }[] = [
+  { id: "system", preview: "auto" },
+  { id: "light", preview: "#ffffff" },
+  { id: "dark", preview: "#1a1c22" },
+  { id: "dracula", preview: "#282a36" },
+  { id: "catppuccin", preview: "#1e1e2e" },
+  { id: "nord", preview: "#2e3440" },
+  { id: "solarized", preview: "#002b36" },
+  { id: "tokyo-night", preview: "#1a1b26" },
+  { id: "one-dark", preview: "#282c34" },
+  { id: "gruvbox", preview: "#282828" },
 ];
 
 const LANGUAGES = [
@@ -380,6 +382,18 @@ export function UserProfilePanel({
   onLogout?: () => void;
 }) {
   const { t } = useTranslation();
+  const themeLabel: Record<ThemeId, string> = {
+    system: t("newUi.sidebar.userProfile.themeSystem"),
+    light: t("newUi.sidebar.userProfile.themeLight"),
+    dark: t("newUi.sidebar.userProfile.themeDark"),
+    dracula: t("newUi.sidebar.userProfile.themeDracula"),
+    catppuccin: t("newUi.sidebar.userProfile.themeCatppuccin"),
+    nord: t("newUi.sidebar.userProfile.themeNord"),
+    solarized: t("newUi.sidebar.userProfile.themeSolarized"),
+    "tokyo-night": t("newUi.sidebar.userProfile.themeTokyoNight"),
+    "one-dark": t("newUi.sidebar.userProfile.themeOneDark"),
+    gruvbox: t("newUi.sidebar.userProfile.themeGruvbox"),
+  };
   const [openSection, setOpenSection] = useState<UserProfileSection | null>(
     "account",
   );
@@ -389,6 +403,9 @@ export function UserProfilePanel({
   const [userRole, setUserRole] = useState("");
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
+  const [versionStatus, setVersionStatus] = useState<
+    "up_to_date" | "requires_update" | "beta"
+  >("up_to_date");
   const [isOidc, setIsOidc] = useState(false);
   const [isDualAuth, setIsDualAuth] = useState(false);
 
@@ -467,6 +484,9 @@ export function UserProfilePanel({
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
+  // RBAC roles
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+
   useEffect(() => {
     getUserInfo()
       .then((info) => {
@@ -486,13 +506,19 @@ export function UserProfilePanel({
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
         }
+        getUserRoles(info.userId)
+          .then(({ roles }) => setUserRoles(roles ?? []))
+          .catch(() => {});
       })
       .catch(() => {});
     getApiKeys()
       .then(({ apiKeys: keys }) => setApiKeys(keys))
       .catch(() => {});
-    getVersionInfo(false)
-      .then((info) => setVersion(info.localVersion))
+    getVersionInfo()
+      .then((info) => {
+        setVersion(info.localVersion);
+        setVersionStatus(info.status ?? "up_to_date");
+      })
       .catch(() => {});
   }, []);
 
@@ -638,9 +664,19 @@ export function UserProfilePanel({
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
                 {t("newUi.sidebar.userProfile.roleLabel")}
               </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand mt-0.5 w-fit">
-                {userRole || "—"}
-              </span>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
+                  {userRole || "—"}
+                </span>
+                {userRoles.map((r) => (
+                  <span
+                    key={r.roleId}
+                    className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
+                  >
+                    {r.roleDisplayName}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="flex flex-col py-2">
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -678,6 +714,21 @@ export function UserProfilePanel({
             <div className="flex items-center justify-between mt-1.5">
               <span className="text-sm font-bold text-accent-brand">
                 {version ? `v${version}` : "—"}
+              </span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 font-semibold leading-none ${
+                  versionStatus === "beta"
+                    ? "bg-blue-500/20 text-blue-400"
+                    : versionStatus === "requires_update"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-accent-brand/20 text-accent-brand"
+                }`}
+              >
+                {versionStatus === "beta"
+                  ? t("dashboard.beta").toUpperCase()
+                  : versionStatus === "requires_update"
+                    ? t("dashboard.updateAvailable").toUpperCase()
+                    : t("dashboardTab.stable")}
               </span>
             </div>
           </div>
@@ -743,7 +794,7 @@ export function UserProfilePanel({
               >
                 {THEMES.map((th) => (
                   <option key={th.id} value={th.id}>
-                    {th.label}
+                    {themeLabel[th.id]}
                   </option>
                 ))}
               </select>
@@ -753,7 +804,7 @@ export function UserProfilePanel({
               {THEMES.filter((th) => th.id !== "system").map((th) => (
                 <button
                   key={th.id}
-                  title={th.label}
+                  title={themeLabel[th.id]}
                   onClick={() => setTheme(th.id)}
                   className={`h-4 flex-1 border transition-all ${theme === th.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
                   style={{ background: th.preview }}
@@ -808,7 +859,7 @@ export function UserProfilePanel({
                 onClick={() => colorInputRef.current?.click()}
                 className="size-5 shrink-0 border border-border/60 cursor-pointer"
                 style={{ background: accentColor }}
-                title="Open color picker"
+                title={t("newUi.sidebar.userProfile.colorPickerTooltip")}
               />
               <input
                 ref={colorInputRef}
@@ -1136,7 +1187,7 @@ export function UserProfilePanel({
                   <div className="flex items-center justify-center p-3 bg-background border border-border">
                     <img
                       src={totpQrCode}
-                      alt="TOTP QR Code"
+                      alt={t("newUi.sidebar.userProfile.qrCode")}
                       className="size-32"
                     />
                   </div>

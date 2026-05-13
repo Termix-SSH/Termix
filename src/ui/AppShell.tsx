@@ -4,7 +4,7 @@ import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, createRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { CommandPalette } from "@/shell/CommandPalette";
@@ -164,6 +164,9 @@ export function AppShell({
     null,
   );
   const lastShiftTime = useRef(0);
+  const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
+    new Map(),
+  );
 
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
@@ -282,11 +285,15 @@ export function AppShell({
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
       if (same.length === 0) {
+        const tabId = `${host.name}-${type}`;
+        const ref = type === "terminal" ? createRef() : undefined;
+        if (ref) terminalRefs.current.set(tabId, ref);
         const tab = {
-          id: `${host.name}-${type}`,
+          id: tabId,
           type,
           label: host.name,
           host,
+          terminalRef: ref,
         };
         setActiveTabId(tab.id);
         return [...prev, tab];
@@ -296,11 +303,15 @@ export function AppShell({
           ? { ...t, label: `${host.name} (1)`, host }
           : t,
       );
+      const tabId = `${host.name}-${type}-${Date.now()}`;
+      const ref = type === "terminal" ? createRef() : undefined;
+      if (ref) terminalRefs.current.set(tabId, ref);
       const tab = {
-        id: `${host.name}-${type}-${Date.now()}`,
+        id: tabId,
         type,
         label: `${host.name} (${same.length + 1})`,
         host,
+        terminalRef: ref,
       };
       setActiveTabId(tab.id);
       return [...next, tab];
@@ -355,6 +366,7 @@ export function AppShell({
   }
 
   function closeTab(id: string) {
+    terminalRefs.current.delete(id);
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (id === activeTabId) setActiveTabId(next[next.length - 1].id);
@@ -428,7 +440,14 @@ export function AppShell({
         />
       )}
 
-      {railView === "quick-connect" && <QuickConnectPanel />}
+      {railView === "quick-connect" && (
+        <QuickConnectPanel
+          onConnect={(host, type) => {
+            openTab(host, type);
+            if (isMobile) setSidebarOpen(false);
+          }}
+        />
+      )}
 
       {railView === "ssh-tools" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -607,7 +626,7 @@ export function AppShell({
                   onOpenTab={openTab}
                 />
               ) : activeTab ? (
-                renderTabContent(activeTab, openSingletonTab, openTab)
+                renderTabContent(activeTab, openSingletonTab, openTab, closeTab)
               ) : null}
             </div>
           </div>

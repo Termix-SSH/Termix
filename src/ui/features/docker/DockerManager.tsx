@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/alert.tsx";
 import { Button } from "@/components/button.tsx";
 import { Card } from "@/components/card.tsx";
 import { Input } from "@/components/input.tsx";
-import { AlertCircle, Box, RefreshCw, Search, Settings } from "lucide-react";
+import { AlertCircle, Box, RefreshCw, Search } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
@@ -708,9 +708,6 @@ function DockerManagerInner({
                   <RefreshCw
                     className={`size-4 text-accent-brand ${isLoadingContainers ? "animate-spin" : ""}`}
                   />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Settings className="size-4 text-accent-brand" />
                 </Button>
               </div>
             </Card>

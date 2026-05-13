@@ -132,7 +132,7 @@ export function FirewallWidget({ metrics }: FirewallWidgetProps) {
           </span>
         )}
         {firewall && firewall.chains.length > 0 ? (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 overflow-y-auto max-h-[320px]">
             {firewall.chains.map((chain) => (
               <ChainSection key={chain.name} chain={chain} />
             ))}

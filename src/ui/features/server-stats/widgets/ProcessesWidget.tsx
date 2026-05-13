@@ -45,19 +45,21 @@ export function ProcessesWidget({ metrics }: ProcessesWidgetProps) {
             <span className="text-xs">{t("serverStats.noProcessesFound")}</span>
           </div>
         ) : (
-          topProcesses.map((proc, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-4 text-xs font-mono py-1 border-b border-border/50 last:border-0 min-w-0"
-            >
-              <span className="text-muted-foreground">{proc.pid}</span>
-              <span className="text-accent-brand font-bold">{proc.cpu}%</span>
-              <span>{proc.mem}%</span>
-              <span className="truncate font-semibold" title={proc.command}>
-                {proc.command.split("/").pop()}
-              </span>
-            </div>
-          ))
+          <div className="overflow-y-auto max-h-[280px]">
+            {topProcesses.map((proc, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-4 text-xs font-mono py-1 border-b border-border/50 last:border-0 min-w-0"
+              >
+                <span className="text-muted-foreground">{proc.pid}</span>
+                <span className="text-accent-brand font-bold">{proc.cpu}%</span>
+                <span>{proc.mem}%</span>
+                <span className="truncate font-semibold" title={proc.command}>
+                  {proc.command.split("/").pop()}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </SectionCard>

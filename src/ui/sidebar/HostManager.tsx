@@ -4,6 +4,13 @@ import React, {
   useRef,
   type MutableRefObject,
 } from "react";
+import {
+  TERMINAL_THEMES,
+  TERMINAL_FONTS,
+  BELL_STYLES,
+  FAST_SCROLL_MODIFIERS,
+  CURSOR_STYLES,
+} from "@/lib/terminal-themes";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
@@ -83,7 +90,20 @@ import {
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 
+import type { Host, Credential } from "@/types/ui-types";
+
 function sshHostToHost(h: SSHHostWithStatus): Host {
+  const parseJson = (v: any) => {
+    if (!v) return undefined;
+    if (typeof v === "string") {
+      try {
+        return JSON.parse(v);
+      } catch {
+        return undefined;
+      }
+    }
+    return v;
+  };
   return {
     id: String(h.id),
     name: h.name,
@@ -113,17 +133,33 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableRdp: h.enableRdp ?? h.connectionType === "rdp",
     enableVnc: h.enableVnc ?? h.connectionType === "vnc",
     enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
-    sshPort: h.port,
-    rdpPort: 3389,
-    vncPort: 5900,
-    telnetPort: 23,
-    quickActions: (h.quickActions ?? []).map((a) => ({
+    sshPort: h.sshPort ?? h.port,
+    rdpPort: h.rdpPort ?? 3389,
+    vncPort: h.vncPort ?? 5900,
+    telnetPort: h.telnetPort ?? 23,
+    rdpUser: h.rdpUser,
+    rdpPassword: h.rdpPassword,
+    domain: h.rdpDomain,
+    security: h.rdpSecurity,
+    ignoreCert: h.rdpIgnoreCert ?? false,
+    vncPassword: h.vncPassword,
+    vncUser: h.vncUser,
+    telnetUser: h.telnetUser,
+    telnetPassword: h.telnetPassword,
+    quickActions: (h.quickActions ?? []).map((a: any) => ({
       name: a.name,
       snippetId: String(a.snippetId),
     })),
-    serverTunnels: [],
+    serverTunnels: parseJson(h.tunnelConnections) ?? [],
+    jumpHosts: (parseJson(h.jumpHosts) ?? []).map((j: any) => ({
+      hostId: String(j.hostId ?? j.hostid ?? j),
+    })),
+    portKnockSequence: parseJson(h.portKnockSequence) ?? [],
     defaultPath: h.defaultPath,
-    terminalConfig: h.terminalConfig as Host["terminalConfig"],
+    terminalConfig: parseJson(h.terminalConfig) as Host["terminalConfig"],
+    statsConfig: parseJson(h.statsConfig) as Host["statsConfig"],
+    guacamoleConfig: parseJson(h.guacamoleConfig),
+    forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,
     useSocks5: h.useSocks5,
     socks5Host: h.socks5Host,
     socks5Port: h.socks5Port,
@@ -131,7 +167,6 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Password: h.socks5Password,
   };
 }
-import type { Host, Credential } from "@/types/ui-types";
 
 const HOST_TABS = [
   { id: "general", label: "General", icon: <Settings className="size-3.5" /> },
@@ -607,93 +642,127 @@ function HostEditor({
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
 }) {
-  const [form, setForm] = useState(() => ({
-    name: host?.name ?? "",
-    ip: host?.ip ?? "",
-    username: host?.username ?? "",
-    sshPort: host?.sshPort ?? 22,
-    rdpPort: host?.rdpPort ?? 3389,
-    vncPort: host?.vncPort ?? 5900,
-    telnetPort: host?.telnetPort ?? 23,
-    authType: host?.authType ?? "password",
-    password: host?.password ?? "",
-    key: host?.key ?? "",
-    keyPassword: host?.keyPassword ?? "",
-    credentialId: host?.credentialId ?? "",
-    folder: host?.folder ?? "",
-    tags: host?.tags ?? ([] as string[]),
-    tagInput: "",
-    notes: host?.notes ?? "",
-    pin: host?.pin ?? false,
-    macAddress: host?.macAddress ?? "",
-    useSocks5: host?.useSocks5 ?? false,
-    socks5Host: host?.socks5Host ?? "",
-    socks5Port: host?.socks5Port ?? 1080,
-    socks5Username: host?.socks5Username ?? "",
-    socks5Password: host?.socks5Password ?? "",
-    enableTerminal: host?.enableTerminal ?? true,
-    enableFileManager: host?.enableFileManager ?? false,
-    enableDocker: host?.enableDocker ?? false,
-    enableTunnel: host?.enableTunnel ?? false,
-    defaultPath: host?.defaultPath ?? "/",
-    fontSize: host?.terminalConfig?.fontSize ?? 14,
-    fontFamily: host?.terminalConfig?.fontFamily ?? "JetBrains Mono",
-    theme: host?.terminalConfig?.theme ?? "Termix Dark",
-    cursorStyle: (host?.terminalConfig?.cursorStyle ?? "block") as
-      | "block"
-      | "underline"
-      | "bar",
-    cursorBlink: host?.terminalConfig?.cursorBlink ?? true,
-    scrollback: host?.terminalConfig?.scrollback ?? 10000,
-    agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
-    autoMosh: host?.terminalConfig?.autoMosh ?? false,
-    autoTmux: host?.terminalConfig?.autoTmux ?? false,
-    sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
-    sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
-    keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 30,
-    keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 3,
-    environmentVariables:
-      host?.terminalConfig?.environmentVariables ??
-      ([] as { key: string; value: string }[]),
-    serverTunnels: host?.serverTunnels ?? ([] as Host["serverTunnels"]),
-    jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
-    portKnockSequence:
-      host?.portKnockSequence ??
-      ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
-    quickActions:
-      host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
-    rdpUser: host?.rdpUser ?? "",
-    rdpPassword: host?.rdpPassword ?? "",
-    domain: host?.domain ?? "",
-    security: host?.security ?? "",
-    ignoreCert: host?.ignoreCert ?? false,
-    vncPassword: host?.vncPassword ?? "",
-    vncUser: host?.vncUser ?? "",
-    telnetUser: host?.telnetUser ?? "",
-    telnetPassword: host?.telnetPassword ?? "",
-    statsConfig: host?.statsConfig ?? {
-      statusCheckEnabled: true,
-      statusCheckInterval: 60,
-      useGlobalStatusInterval: true,
-      metricsEnabled: true,
-      metricsInterval: 30,
-      useGlobalMetricsInterval: true,
-      enabledWidgets: [
-        "cpu",
-        "memory",
-        "disk",
-        "disk_io",
-        "network",
-        "processes",
-        "logins",
-        "ports",
-        "security",
-      ],
-    },
-  }));
+  const [form, setForm] = useState(() => {
+    const rawTheme = host?.terminalConfig?.theme;
+    const normalizedTheme =
+      !rawTheme || rawTheme === "Termix Dark" || rawTheme === "Termix Light"
+        ? "termix"
+        : TERMINAL_THEMES[rawTheme]
+          ? rawTheme
+          : "termix";
+    return {
+      name: host?.name ?? "",
+      ip: host?.ip ?? "",
+      username: host?.username ?? "",
+      sshPort: host?.sshPort ?? 22,
+      rdpPort: host?.rdpPort ?? 3389,
+      vncPort: host?.vncPort ?? 5900,
+      telnetPort: host?.telnetPort ?? 23,
+      authType: host?.authType ?? "password",
+      password: host?.password ?? "",
+      key: host?.key ?? "",
+      keyPassword: host?.keyPassword ?? "",
+      credentialId: host?.credentialId ?? "",
+      folder: host?.folder ?? "",
+      tags: host?.tags ?? ([] as string[]),
+      tagInput: "",
+      notes: host?.notes ?? "",
+      pin: host?.pin ?? false,
+      macAddress: host?.macAddress ?? "",
+      useSocks5: host?.useSocks5 ?? false,
+      socks5Host: host?.socks5Host ?? "",
+      socks5Port: host?.socks5Port ?? 1080,
+      socks5Username: host?.socks5Username ?? "",
+      socks5Password: host?.socks5Password ?? "",
+      enableTerminal: host?.enableTerminal ?? true,
+      enableFileManager: host?.enableFileManager ?? false,
+      enableDocker: host?.enableDocker ?? false,
+      enableTunnel: host?.enableTunnel ?? false,
+      defaultPath: host?.defaultPath ?? "/",
+      forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
+      fontSize: host?.terminalConfig?.fontSize ?? 14,
+      fontFamily:
+        host?.terminalConfig?.fontFamily ?? "Caskaydia Cove Nerd Font Mono",
+      theme: normalizedTheme,
+      cursorStyle: (host?.terminalConfig?.cursorStyle ?? "bar") as
+        | "block"
+        | "underline"
+        | "bar",
+      cursorBlink: host?.terminalConfig?.cursorBlink ?? true,
+      scrollback: host?.terminalConfig?.scrollback ?? 10000,
+      letterSpacing: host?.terminalConfig?.letterSpacing ?? 0,
+      lineHeight: host?.terminalConfig?.lineHeight ?? 1.0,
+      bellStyle: (host?.terminalConfig?.bellStyle ?? "none") as
+        | "none"
+        | "sound"
+        | "visual"
+        | "both",
+      rightClickSelectsWord:
+        host?.terminalConfig?.rightClickSelectsWord ?? false,
+      fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ??
+        "alt") as "alt" | "ctrl" | "shift",
+      fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
+      minimumContrastRatio: host?.terminalConfig?.minimumContrastRatio ?? 1,
+      backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
+        | "normal"
+        | "control-h",
+      startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
+      moshCommand: host?.terminalConfig?.moshCommand ?? "",
+      agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
+      autoMosh: host?.terminalConfig?.autoMosh ?? false,
+      autoTmux: host?.terminalConfig?.autoTmux ?? false,
+      sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
+      sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
+      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 30,
+      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 3,
+      environmentVariables:
+        host?.terminalConfig?.environmentVariables ??
+        ([] as { key: string; value: string }[]),
+      serverTunnels: host?.serverTunnels ?? ([] as Host["serverTunnels"]),
+      jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
+      portKnockSequence:
+        host?.portKnockSequence ??
+        ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
+      quickActions:
+        host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
+      rdpUser: host?.rdpUser ?? "",
+      rdpPassword: host?.rdpPassword ?? "",
+      domain: host?.domain ?? "",
+      security: host?.security ?? "",
+      ignoreCert: host?.ignoreCert ?? false,
+      vncPassword: host?.vncPassword ?? "",
+      vncUser: host?.vncUser ?? "",
+      telnetUser: host?.telnetUser ?? "",
+      telnetPassword: host?.telnetPassword ?? "",
+      guacamoleConfig: host?.guacamoleConfig ?? ({} as Record<string, any>),
+      statsConfig: host?.statsConfig ?? {
+        statusCheckEnabled: true,
+        statusCheckInterval: 60,
+        useGlobalStatusInterval: true,
+        metricsEnabled: true,
+        metricsInterval: 30,
+        useGlobalMetricsInterval: true,
+        enabledWidgets: [
+          "cpu",
+          "memory",
+          "disk",
+          "network",
+          "uptime",
+          "system",
+          "login_stats",
+          "processes",
+          "ports",
+          "firewall",
+        ],
+      },
+    };
+  });
 
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
+
+  const setGuacField = (key: string, value: any) =>
+    setField("guacamoleConfig", { ...form.guacamoleConfig, [key]: value });
 
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
@@ -749,6 +818,11 @@ function HostEditor({
     });
   }, [activeTab, host, sharingLoaded]);
 
+  useEffect(() => {
+    setSharingLoaded(false);
+    setAccessList([]);
+  }, [host?.id]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -799,11 +873,12 @@ function HostEditor({
         rdpPort: Number(form.rdpPort),
         vncPort: Number(form.vncPort),
         telnetPort: Number(form.telnetPort),
+        forceKeyboardInteractive: form.forceKeyboardInteractive,
         rdpUser: form.rdpUser || null,
         rdpPassword: form.rdpPassword || null,
-        domain: form.domain || null,
-        security: form.security || null,
-        ignoreCert: form.ignoreCert,
+        rdpDomain: form.domain || null,
+        rdpSecurity: form.security || null,
+        rdpIgnoreCert: form.ignoreCert,
         vncPassword: form.vncPassword || null,
         vncUser: form.vncUser || null,
         telnetUser: form.telnetUser || null,
@@ -816,13 +891,28 @@ function HostEditor({
           snippetId: Number(a.snippetId),
         })),
         statsConfig: form.statsConfig,
+        guacamoleConfig:
+          protocols.enableRdp || protocols.enableVnc || protocols.enableTelnet
+            ? form.guacamoleConfig
+            : null,
         terminalConfig: protocols.enableSsh
           ? {
+              theme: form.theme,
               cursorBlink: form.cursorBlink,
               cursorStyle: form.cursorStyle,
               fontSize: Number(form.fontSize),
               fontFamily: form.fontFamily,
               scrollback: Number(form.scrollback),
+              letterSpacing: Number(form.letterSpacing),
+              lineHeight: Number(form.lineHeight),
+              bellStyle: form.bellStyle,
+              rightClickSelectsWord: form.rightClickSelectsWord,
+              fastScrollModifier: form.fastScrollModifier,
+              fastScrollSensitivity: Number(form.fastScrollSensitivity),
+              minimumContrastRatio: Number(form.minimumContrastRatio),
+              backspaceMode: form.backspaceMode,
+              startupSnippetId: form.startupSnippetId ?? null,
+              moshCommand: form.moshCommand || null,
               agentForwarding: form.agentForwarding,
               autoMosh: form.autoMosh,
               autoTmux: form.autoTmux,
@@ -992,147 +1082,6 @@ function HostEditor({
                   </span>
                 </div>
               )}
-
-            <SectionCard
-              title="Proxy & Bastion"
-              icon={<Network className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-4 py-3">
-                <SettingRow
-                  label="Use SOCKS5 Proxy"
-                  description="Route connection through a proxy server"
-                >
-                  <FakeSwitch
-                    checked={form.useSocks5}
-                    onChange={(v) => setField("useSocks5", v)}
-                  />
-                </SettingRow>
-                {form.useSocks5 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Host
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        placeholder="proxy.example.com"
-                        value={form.socks5Host}
-                        onChange={(e) => setField("socks5Host", e.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Port
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        type="number"
-                        placeholder="1080"
-                        value={form.socks5Port}
-                        onChange={(e) =>
-                          setField("socks5Port", Number(e.target.value) as any)
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Username
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        placeholder="Optional"
-                        value={form.socks5Username}
-                        onChange={(e) =>
-                          setField("socks5Username", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Password
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        type="password"
-                        placeholder="Optional"
-                        value={form.socks5Password}
-                        onChange={(e) =>
-                          setField("socks5Password", e.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Jump Host Chain
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                      onClick={() =>
-                        setField("jumpHosts", [
-                          ...form.jumpHosts,
-                          { hostId: "" },
-                        ])
-                      }
-                    >
-                      <Plus className="size-3 mr-1" /> Add Jump
-                    </Button>
-                  </div>
-                  {form.jumpHosts.length === 0 && (
-                    <p className="text-[10px] text-muted-foreground/50">
-                      No jump hosts configured.
-                    </p>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    {form.jumpHosts.map((jh, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 p-2 bg-background border border-border"
-                      >
-                        <span className="text-[10px] font-bold text-muted-foreground shrink-0">
-                          {i + 1}.
-                        </span>
-                        <select
-                          className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
-                          value={jh.hostId}
-                          onChange={(e) => {
-                            const updated = [...form.jumpHosts];
-                            updated[i] = { hostId: e.target.value };
-                            setField("jumpHosts", updated);
-                          }}
-                        >
-                          <option value="">Select a server...</option>
-                          {hosts
-                            .filter((h) => (host ? h.id !== host.id : true))
-                            .map((h) => (
-                              <option key={h.id} value={h.id}>
-                                {h.name || h.ip}
-                              </option>
-                            ))}
-                        </select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-destructive"
-                          onClick={() =>
-                            setField(
-                              "jumpHosts",
-                              form.jumpHosts.filter((_, idx) => idx !== i),
-                            )
-                          }
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
 
             <SectionCard
               title="Folder & Advanced"
@@ -1328,6 +1277,147 @@ function HostEditor({
                 </div>
               </div>
             </SectionCard>
+
+            <SectionCard
+              title="Proxy & Bastion"
+              icon={<Network className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <SettingRow
+                  label="Use SOCKS5 Proxy"
+                  description="Route connection through a proxy server"
+                >
+                  <FakeSwitch
+                    checked={form.useSocks5}
+                    onChange={(v) => setField("useSocks5", v)}
+                  />
+                </SettingRow>
+                {form.useSocks5 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Host
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        placeholder="proxy.example.com"
+                        value={form.socks5Host}
+                        onChange={(e) => setField("socks5Host", e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Port
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        type="number"
+                        placeholder="1080"
+                        value={form.socks5Port}
+                        onChange={(e) =>
+                          setField("socks5Port", Number(e.target.value) as any)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Username
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        placeholder="Optional"
+                        value={form.socks5Username}
+                        onChange={(e) =>
+                          setField("socks5Username", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Password
+                      </label>
+                      <Input
+                        className="h-7 text-xs"
+                        type="password"
+                        placeholder="Optional"
+                        value={form.socks5Password}
+                        onChange={(e) =>
+                          setField("socks5Password", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Jump Host Chain
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                      onClick={() =>
+                        setField("jumpHosts", [
+                          ...form.jumpHosts,
+                          { hostId: "" },
+                        ])
+                      }
+                    >
+                      <Plus className="size-3 mr-1" /> Add Jump
+                    </Button>
+                  </div>
+                  {form.jumpHosts.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/50">
+                      No jump hosts configured.
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {form.jumpHosts.map((jh, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 p-2 bg-background border border-border"
+                      >
+                        <span className="text-[10px] font-bold text-muted-foreground shrink-0">
+                          {i + 1}.
+                        </span>
+                        <select
+                          className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
+                          value={jh.hostId}
+                          onChange={(e) => {
+                            const updated = [...form.jumpHosts];
+                            updated[i] = { hostId: e.target.value };
+                            setField("jumpHosts", updated);
+                          }}
+                        >
+                          <option value="">Select a server...</option>
+                          {hosts
+                            .filter((h) => (host ? h.id !== host.id : true))
+                            .map((h) => (
+                              <option key={h.id} value={h.id}>
+                                {h.name || h.ip}
+                              </option>
+                            ))}
+                        </select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive"
+                          onClick={() =>
+                            setField(
+                              "jumpHosts",
+                              form.jumpHosts.filter((_, idx) => idx !== i),
+                            )
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
           </>
         )}
 
@@ -1456,7 +1546,10 @@ function HostEditor({
                   label="Force Keyboard Interactive"
                   description="Force manual password entry even if keys are present"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={form.forceKeyboardInteractive}
+                    onChange={(v) => setField("forceKeyboardInteractive", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -1533,10 +1626,11 @@ function HostEditor({
                       onChange={(e) => setField("theme", e.target.value)}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
-                      <option>Termix Dark</option>
-                      <option>One Dark</option>
-                      <option>Monokai</option>
-                      <option>Dracula</option>
+                      {Object.entries(TERMINAL_THEMES).map(([key, t]) => (
+                        <option key={key} value={key}>
+                          {t.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1548,9 +1642,11 @@ function HostEditor({
                       onChange={(e) => setField("fontFamily", e.target.value)}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
                     >
-                      <option>JetBrains Mono</option>
-                      <option>Fira Code</option>
-                      <option>Source Code Pro</option>
+                      {TERMINAL_FONTS.map((f) => (
+                        <option key={f.value} value={f.value}>
+                          {f.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1577,9 +1673,71 @@ function HostEditor({
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
-                      <option value="block">Block</option>
-                      <option value="underline">Underline</option>
-                      <option value="bar">Bar</option>
+                      {CURSOR_STYLES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Letter Spacing (px)
+                    </label>
+                    <Input
+                      type="number"
+                      value={form.letterSpacing}
+                      onChange={(e) =>
+                        setField("letterSpacing", Number(e.target.value) as any)
+                      }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Line Height
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={form.lineHeight}
+                      onChange={(e) =>
+                        setField("lineHeight", Number(e.target.value) as any)
+                      }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Bell Style
+                    </label>
+                    <select
+                      value={form.bellStyle}
+                      onChange={(e) =>
+                        setField("bellStyle", e.target.value as any)
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {BELL_STYLES.map((b) => (
+                        <option key={b.value} value={b.value}>
+                          {b.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Backspace Mode
+                    </label>
+                    <select
+                      value={form.backspaceMode}
+                      onChange={(e) =>
+                        setField("backspaceMode", e.target.value as any)
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="normal">Normal (DEL)</option>
+                      <option value="control-h">Control-H (BS)</option>
                     </select>
                   </div>
                 </div>
@@ -1590,6 +1748,15 @@ function HostEditor({
                   <FakeSwitch
                     checked={form.cursorBlink}
                     onChange={(v) => setField("cursorBlink", v)}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label="Right-click Selects Word"
+                  description="Select the word under cursor on right-click"
+                >
+                  <FakeSwitch
+                    checked={form.rightClickSelectsWord}
+                    onChange={(v) => setField("rightClickSelectsWord", v)}
                   />
                 </SettingRow>
               </div>
@@ -1730,6 +1897,78 @@ function HostEditor({
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Fast Scroll Modifier
+                    </label>
+                    <select
+                      value={form.fastScrollModifier}
+                      onChange={(e) =>
+                        setField("fastScrollModifier", e.target.value as any)
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {FAST_SCROLL_MODIFIERS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Fast Scroll Sensitivity
+                    </label>
+                    <Input
+                      type="number"
+                      value={form.fastScrollSensitivity}
+                      onChange={(e) =>
+                        setField(
+                          "fastScrollSensitivity",
+                          Number(e.target.value) as any,
+                        )
+                      }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                </div>
+                {form.autoMosh && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Mosh Command
+                    </label>
+                    <Input
+                      placeholder="mosh"
+                      value={form.moshCommand}
+                      onChange={(e) => setField("moshCommand", e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Startup Snippet
+                    </label>
+                    <select
+                      value={form.startupSnippetId ?? ""}
+                      onChange={(e) =>
+                        setField(
+                          "startupSnippetId",
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="">None</option>
+                      {snippets.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
@@ -1918,6 +2157,24 @@ function HostEditor({
                           />
                         </div>
                       )}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">
+                          Bind Host
+                        </label>
+                        <Input
+                          className="h-7 text-xs"
+                          placeholder="127.0.0.1"
+                          value={tun.bindHost ?? ""}
+                          onChange={(e) => {
+                            const updated = [...form.serverTunnels];
+                            updated[i] = {
+                              ...updated[i],
+                              bindHost: e.target.value,
+                            };
+                            setField("serverTunnels", updated);
+                          }}
+                        />
+                      </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold text-muted-foreground">
                           Source Port
@@ -2175,14 +2432,24 @@ function HostEditor({
                     desc: "Disk usage per mount point",
                   },
                   {
-                    id: "disk_io",
-                    label: "Disk I/O",
-                    desc: "Read/write MB/s per device",
-                  },
-                  {
                     id: "network",
                     label: "Network",
                     desc: "Interface list and bandwidth",
+                  },
+                  {
+                    id: "uptime",
+                    label: "Uptime",
+                    desc: "System uptime and boot time",
+                  },
+                  {
+                    id: "system",
+                    label: "System Info",
+                    desc: "OS, kernel, hostname, architecture",
+                  },
+                  {
+                    id: "login_stats",
+                    label: "Recent Logins",
+                    desc: "Successful and failed login events",
                   },
                   {
                     id: "processes",
@@ -2190,18 +2457,13 @@ function HostEditor({
                     desc: "PID, CPU%, MEM%, command",
                   },
                   {
-                    id: "logins",
-                    label: "Recent Logins",
-                    desc: "Successful and failed login events",
-                  },
-                  {
                     id: "ports",
                     label: "Listening Ports",
                     desc: "Open ports with process and state",
                   },
                   {
-                    id: "security",
-                    label: "Security",
+                    id: "firewall",
+                    label: "Firewall",
                     desc: "Firewall, AppArmor, SELinux status",
                   },
                 ].map((w) => (
@@ -2377,7 +2639,11 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Security Mode
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["security"] ?? "any"}
+                    onChange={(e) => setGuacField("security", e.target.value)}
+                  >
                     <option value="any">Any</option>
                     <option value="nla">NLA</option>
                     <option value="nla-ext">NLA Extended</option>
@@ -2407,7 +2673,13 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Color Depth
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["color-depth"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("color-depth", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="8">8-bit</option>
                     <option value="16">16-bit</option>
@@ -2420,26 +2692,47 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Width
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["width"] ?? ""}
+                      onChange={(e) => setGuacField("width", e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Height
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["height"] ?? ""}
+                      onChange={(e) => setGuacField("height", e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     DPI
                   </label>
-                  <Input type="number" placeholder="96" />
+                  <Input
+                    type="number"
+                    placeholder="96"
+                    value={form.guacamoleConfig["dpi"] ?? ""}
+                    onChange={(e) => setGuacField("dpi", e.target.value)}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Resize Method
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["resize-method"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("resize-method", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="display-update">Display Update</option>
                     <option value="reconnect">Reconnect</option>
@@ -2449,7 +2742,10 @@ function HostEditor({
                   label="Force Lossless"
                   description="Force lossless image encoding (higher quality, more bandwidth)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["force-lossless"]}
+                    onChange={(v) => setGuacField("force-lossless", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2463,13 +2759,19 @@ function HostEditor({
                   label="Disable Audio"
                   description="Mute all audio from the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-audio"]}
+                    onChange={(v) => setGuacField("disable-audio", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable Audio Input (Microphone)"
                   description="Forward local microphone to the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-audio-input"]}
+                    onChange={(v) => setGuacField("enable-audio-input", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2483,61 +2785,101 @@ function HostEditor({
                   label="Wallpaper"
                   description="Show desktop wallpaper (disabling improves performance)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-wallpaper"]}
+                    onChange={(v) => setGuacField("enable-wallpaper", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Theming"
                   description="Enable visual themes and styles"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-theming"]}
+                    onChange={(v) => setGuacField("enable-theming", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Font Smoothing"
                   description="Enable ClearType font rendering"
                 >
-                  <FakeSwitch defaultChecked={true} />
+                  <FakeSwitch
+                    checked={
+                      form.guacamoleConfig["enable-font-smoothing"] !== false
+                    }
+                    onChange={(v) => setGuacField("enable-font-smoothing", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Full Window Drag"
                   description="Show window contents while dragging"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-full-window-drag"]}
+                    onChange={(v) => setGuacField("enable-full-window-drag", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Desktop Composition"
                   description="Enable Aero glass effects"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={
+                      !!form.guacamoleConfig["enable-desktop-composition"]
+                    }
+                    onChange={(v) =>
+                      setGuacField("enable-desktop-composition", v)
+                    }
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Menu Animations"
                   description="Enable menu fade and slide animations"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-menu-animations"]}
+                    onChange={(v) => setGuacField("enable-menu-animations", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Bitmap Caching"
                   description="Turn off bitmap cache (may help with glitches)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-bitmap-caching"]}
+                    onChange={(v) => setGuacField("disable-bitmap-caching", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Offscreen Caching"
                   description="Turn off offscreen cache"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={
+                      !!form.guacamoleConfig["disable-offscreen-caching"]
+                    }
+                    onChange={(v) =>
+                      setGuacField("disable-offscreen-caching", v)
+                    }
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Glyph Caching"
                   description="Turn off glyph cache"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-glyph-caching"]}
+                    onChange={(v) => setGuacField("disable-glyph-caching", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable GFX"
                   description="Use RemoteFX graphics pipeline"
                 >
-                  <FakeSwitch defaultChecked={true} />
+                  <FakeSwitch
+                    checked={form.guacamoleConfig["enable-gfx"] !== false}
+                    onChange={(v) => setGuacField("enable-gfx", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2551,51 +2893,81 @@ function HostEditor({
                   label="Enable Printing"
                   description="Redirect local printers to the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-printing"]}
+                    onChange={(v) => setGuacField("enable-printing", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable Drive Redirection"
                   description="Map a local folder as a drive in the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-drive"]}
+                    onChange={(v) => setGuacField("enable-drive", v)}
+                  />
                 </SettingRow>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-border pt-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Drive Name
                     </label>
-                    <Input placeholder="Termix Drive" />
+                    <Input
+                      placeholder="Termix Drive"
+                      value={form.guacamoleConfig["drive-name"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("drive-name", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Drive Path
                     </label>
-                    <Input placeholder="/home/user/shared" />
+                    <Input
+                      placeholder="/home/user/shared"
+                      value={form.guacamoleConfig["drive-path"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("drive-path", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
                 <SettingRow
                   label="Create Drive Path"
                   description="Automatically create the folder if it does not exist"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["create-drive-path"]}
+                    onChange={(v) => setGuacField("create-drive-path", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Download"
                   description="Prevent downloading files from the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-download"]}
+                    onChange={(v) => setGuacField("disable-download", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Upload"
                   description="Prevent uploading files to the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-upload"]}
+                    onChange={(v) => setGuacField("disable-upload", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Enable Touch"
                   description="Enable touch input forwarding"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["enable-touch"]}
+                    onChange={(v) => setGuacField("enable-touch", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2606,25 +2978,46 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Client Name
                   </label>
-                  <Input placeholder="Termix" />
+                  <Input
+                    placeholder="Termix"
+                    value={form.guacamoleConfig["client-name"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("client-name", e.target.value)
+                    }
+                  />
                 </div>
                 <SettingRow
                   label="Console Session"
                   description="Connect to the console (session 0) instead of a new session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["console"]}
+                    onChange={(v) => setGuacField("console", v)}
+                  />
                 </SettingRow>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Initial Program
                   </label>
-                  <Input placeholder="e.g. cmd.exe" />
+                  <Input
+                    placeholder="e.g. cmd.exe"
+                    value={form.guacamoleConfig["initial-program"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("initial-program", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Server Layout
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["server-layout"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("server-layout", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option>en-us-qwerty</option>
                     <option>en-gb-qwerty</option>
@@ -2642,7 +3035,11 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Timezone
                   </label>
-                  <Input placeholder="e.g. America/New_York" />
+                  <Input
+                    placeholder="e.g. America/New_York"
+                    value={form.guacamoleConfig["timezone"] ?? ""}
+                    onChange={(e) => setGuacField("timezone", e.target.value)}
+                  />
                 </div>
               </div>
             </SectionCard>
@@ -2657,31 +3054,63 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Gateway Hostname
                     </label>
-                    <Input placeholder="gateway.example.com" />
+                    <Input
+                      placeholder="gateway.example.com"
+                      value={form.guacamoleConfig["gateway-hostname"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("gateway-hostname", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Gateway Port
                     </label>
-                    <Input type="number" placeholder="443" />
+                    <Input
+                      type="number"
+                      placeholder="443"
+                      value={form.guacamoleConfig["gateway-port"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("gateway-port", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Gateway Username
                     </label>
-                    <Input placeholder="user" />
+                    <Input
+                      placeholder="user"
+                      value={form.guacamoleConfig["gateway-username"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("gateway-username", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Gateway Password
                     </label>
-                    <Input type="password" placeholder="••••••••" />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.guacamoleConfig["gateway-password"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("gateway-password", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5 col-span-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Gateway Domain
                     </label>
-                    <Input placeholder="DOMAIN" />
+                    <Input
+                      placeholder="DOMAIN"
+                      value={form.guacamoleConfig["gateway-domain"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("gateway-domain", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -2696,19 +3125,35 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     RemoteApp Program
                   </label>
-                  <Input placeholder="||MyApp" />
+                  <Input
+                    placeholder="||MyApp"
+                    value={form.guacamoleConfig["remote-app"] ?? ""}
+                    onChange={(e) => setGuacField("remote-app", e.target.value)}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Working Directory
                   </label>
-                  <Input placeholder="C:\Apps\MyApp" />
+                  <Input
+                    placeholder="C:\Apps\MyApp"
+                    value={form.guacamoleConfig["remote-app-dir"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("remote-app-dir", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Arguments
                   </label>
-                  <Input placeholder="--flag value" />
+                  <Input
+                    placeholder="--flag value"
+                    value={form.guacamoleConfig["remote-app-args"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("remote-app-args", e.target.value)
+                    }
+                  />
                 </div>
               </div>
             </SectionCard>
@@ -2719,7 +3164,15 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Normalize Line Endings
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={
+                      form.guacamoleConfig["normalize-clipboard"] ?? "auto"
+                    }
+                    onChange={(e) =>
+                      setGuacField("normalize-clipboard", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="preserve">Preserve</option>
                     <option value="unix">Unix (LF)</option>
@@ -2730,13 +3183,19 @@ function HostEditor({
                   label="Disable Copy"
                   description="Prevent copying text from the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-copy"]}
+                    onChange={(v) => setGuacField("disable-copy", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Paste"
                   description="Prevent pasting text into the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-paste"]}
+                    onChange={(v) => setGuacField("disable-paste", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2750,37 +3209,63 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Path
                   </label>
-                  <Input placeholder="/var/lib/termix/recordings" />
+                  <Input
+                    placeholder="/var/lib/termix/recordings"
+                    value={form.guacamoleConfig["recording-path"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-path", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Name
                   </label>
-                  <Input placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}" />
+                  <Input
+                    placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
+                    value={form.guacamoleConfig["recording-name"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-name", e.target.value)
+                    }
+                  />
                 </div>
                 <SettingRow
                   label="Create Path if Missing"
                   description="Automatically create the recording directory"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["create-recording-path"]}
+                    onChange={(v) => setGuacField("create-recording-path", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Exclude Output"
                   description="Do not record screen output (metadata only)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-exclude-output"]}
+                    onChange={(v) =>
+                      setGuacField("recording-exclude-output", v)
+                    }
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Exclude Mouse"
                   description="Do not record mouse movements"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-exclude-mouse"]}
+                    onChange={(v) => setGuacField("recording-exclude-mouse", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Include Keystrokes"
                   description="Record raw keystrokes in addition to screen output"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-include-keys"]}
+                    onChange={(v) => setGuacField("recording-include-keys", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2794,7 +3279,10 @@ function HostEditor({
                   label="Send WOL Packet"
                   description="Send a magic packet to wake this host before connecting"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["wol-send-packet"]}
+                    onChange={(v) => setGuacField("wol-send-packet", v)}
+                  />
                 </SettingRow>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
@@ -2803,26 +3291,53 @@ function HostEditor({
                     </label>
                     <Input
                       placeholder="AA:BB:CC:DD:EE:FF"
-                      defaultValue={host?.macAddress || ""}
+                      value={
+                        form.guacamoleConfig["wol-mac-addr"] ??
+                        host?.macAddress ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        setGuacField("wol-mac-addr", e.target.value)
+                      }
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Broadcast Address
                     </label>
-                    <Input placeholder="255.255.255.255" />
+                    <Input
+                      placeholder="255.255.255.255"
+                      value={form.guacamoleConfig["wol-broadcast-addr"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-broadcast-addr", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       UDP Port
                     </label>
-                    <Input type="number" placeholder="9" />
+                    <Input
+                      type="number"
+                      placeholder="9"
+                      value={form.guacamoleConfig["wol-udp-port"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-udp-port", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Wait Time (s)
                     </label>
-                    <Input type="number" placeholder="0" />
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={form.guacamoleConfig["wol-wait-time"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-wait-time", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -2891,7 +3406,13 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Color Depth
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["color-depth"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("color-depth", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="8">8-bit</option>
                     <option value="16">16-bit</option>
@@ -2904,20 +3425,36 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Width
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["width"] ?? ""}
+                      onChange={(e) => setGuacField("width", e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Height
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["height"] ?? ""}
+                      onChange={(e) => setGuacField("height", e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Resize Method
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["resize-method"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("resize-method", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="display-update">Display Update</option>
                     <option value="reconnect">Reconnect</option>
@@ -2927,7 +3464,10 @@ function HostEditor({
                   label="Force Lossless"
                   description="Force lossless image encoding (higher quality, more bandwidth)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["force-lossless"]}
+                    onChange={(v) => setGuacField("force-lossless", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2941,7 +3481,10 @@ function HostEditor({
                   label="Disable Audio"
                   description="Mute all audio from the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-audio"]}
+                    onChange={(v) => setGuacField("disable-audio", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2955,7 +3498,11 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Cursor Mode
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["cursor"] ?? "auto"}
+                    onChange={(e) => setGuacField("cursor", e.target.value)}
+                  >
                     <option value="auto">Auto</option>
                     <option value="local">Local</option>
                     <option value="remote">Remote</option>
@@ -2965,13 +3512,19 @@ function HostEditor({
                   label="Swap Red/Blue"
                   description="Swap the red and blue color channels (fixes some colour issues)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["swap-red-blue"]}
+                    onChange={(v) => setGuacField("swap-red-blue", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Read-only"
                   description="View the remote screen without sending any input"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["read-only"]}
+                    onChange={(v) => setGuacField("read-only", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -2982,7 +3535,15 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Normalize Line Endings
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={
+                      form.guacamoleConfig["normalize-clipboard"] ?? "auto"
+                    }
+                    onChange={(e) =>
+                      setGuacField("normalize-clipboard", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="preserve">Preserve</option>
                     <option value="unix">Unix (LF)</option>
@@ -2993,13 +3554,19 @@ function HostEditor({
                   label="Disable Copy"
                   description="Prevent copying text from the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-copy"]}
+                    onChange={(v) => setGuacField("disable-copy", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Disable Paste"
                   description="Prevent pasting text into the remote session"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["disable-paste"]}
+                    onChange={(v) => setGuacField("disable-paste", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -3013,37 +3580,63 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Path
                   </label>
-                  <Input placeholder="/var/lib/termix/recordings" />
+                  <Input
+                    placeholder="/var/lib/termix/recordings"
+                    value={form.guacamoleConfig["recording-path"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-path", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Name
                   </label>
-                  <Input placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}" />
+                  <Input
+                    placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
+                    value={form.guacamoleConfig["recording-name"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-name", e.target.value)
+                    }
+                  />
                 </div>
                 <SettingRow
                   label="Create Path if Missing"
                   description="Automatically create the recording directory"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["create-recording-path"]}
+                    onChange={(v) => setGuacField("create-recording-path", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Exclude Output"
                   description="Do not record screen output (metadata only)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-exclude-output"]}
+                    onChange={(v) =>
+                      setGuacField("recording-exclude-output", v)
+                    }
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Exclude Mouse"
                   description="Do not record mouse movements"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-exclude-mouse"]}
+                    onChange={(v) => setGuacField("recording-exclude-mouse", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Include Keystrokes"
                   description="Record raw keystrokes in addition to screen output"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-include-keys"]}
+                    onChange={(v) => setGuacField("recording-include-keys", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -3057,7 +3650,10 @@ function HostEditor({
                   label="Send WOL Packet"
                   description="Send a magic packet to wake this host before connecting"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["wol-send-packet"]}
+                    onChange={(v) => setGuacField("wol-send-packet", v)}
+                  />
                 </SettingRow>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
@@ -3066,26 +3662,53 @@ function HostEditor({
                     </label>
                     <Input
                       placeholder="AA:BB:CC:DD:EE:FF"
-                      defaultValue={host?.macAddress || ""}
+                      value={
+                        form.guacamoleConfig["wol-mac-addr"] ??
+                        host?.macAddress ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        setGuacField("wol-mac-addr", e.target.value)
+                      }
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Broadcast Address
                     </label>
-                    <Input placeholder="255.255.255.255" />
+                    <Input
+                      placeholder="255.255.255.255"
+                      value={form.guacamoleConfig["wol-broadcast-addr"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-broadcast-addr", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       UDP Port
                     </label>
-                    <Input type="number" placeholder="9" />
+                    <Input
+                      type="number"
+                      placeholder="9"
+                      value={form.guacamoleConfig["wol-udp-port"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-udp-port", e.target.value)
+                      }
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Wait Time (s)
                     </label>
-                    <Input type="number" placeholder="0" />
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={form.guacamoleConfig["wol-wait-time"] ?? ""}
+                      onChange={(e) =>
+                        setGuacField("wol-wait-time", e.target.value)
+                      }
+                    />
                   </div>
                 </div>
               </div>
@@ -3155,13 +3778,23 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Width
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["width"] ?? ""}
+                      onChange={(e) => setGuacField("width", e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Height
                     </label>
-                    <Input type="number" placeholder="Auto" />
+                    <Input
+                      type="number"
+                      placeholder="Auto"
+                      value={form.guacamoleConfig["height"] ?? ""}
+                      onChange={(e) => setGuacField("height", e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
@@ -3176,7 +3809,13 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Terminal Type
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["terminal-type"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("terminal-type", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="xterm">xterm</option>
                     <option value="xterm-256color">xterm-256color</option>
@@ -3188,19 +3827,35 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Font Name
                   </label>
-                  <Input placeholder="monospace" />
+                  <Input
+                    placeholder="monospace"
+                    value={form.guacamoleConfig["font-name"] ?? ""}
+                    onChange={(e) => setGuacField("font-name", e.target.value)}
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Font Size
                   </label>
-                  <Input type="number" defaultValue={12} />
+                  <Input
+                    type="number"
+                    value={form.guacamoleConfig["font-size"] ?? 12}
+                    onChange={(e) =>
+                      setGuacField("font-size", Number(e.target.value))
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Color Scheme
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["color-scheme"] ?? "auto"}
+                    onChange={(e) =>
+                      setGuacField("color-scheme", e.target.value)
+                    }
+                  >
                     <option value="auto">Auto</option>
                     <option value="black-white">Black on White</option>
                     <option value="white-black">White on Black</option>
@@ -3212,7 +3867,11 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Backspace Key
                   </label>
-                  <select className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring">
+                  <select
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    value={form.guacamoleConfig["backspace"] ?? "auto"}
+                    onChange={(e) => setGuacField("backspace", e.target.value)}
+                  >
                     <option value="auto">Auto</option>
                     <option value="127">DEL (127)</option>
                     <option value="8">BS (8)</option>
@@ -3230,31 +3889,54 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Path
                   </label>
-                  <Input placeholder="/var/lib/termix/recordings" />
+                  <Input
+                    placeholder="/var/lib/termix/recordings"
+                    value={form.guacamoleConfig["recording-path"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-path", e.target.value)
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Recording Name
                   </label>
-                  <Input placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}" />
+                  <Input
+                    placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
+                    value={form.guacamoleConfig["recording-name"] ?? ""}
+                    onChange={(e) =>
+                      setGuacField("recording-name", e.target.value)
+                    }
+                  />
                 </div>
                 <SettingRow
                   label="Create Path if Missing"
                   description="Automatically create the recording directory"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["create-recording-path"]}
+                    onChange={(v) => setGuacField("create-recording-path", v)}
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Exclude Output"
                   description="Do not record screen output (metadata only)"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-exclude-output"]}
+                    onChange={(v) =>
+                      setGuacField("recording-exclude-output", v)
+                    }
+                  />
                 </SettingRow>
                 <SettingRow
                   label="Include Keystrokes"
                   description="Record raw keystrokes in addition to screen output"
                 >
-                  <FakeSwitch />
+                  <FakeSwitch
+                    checked={!!form.guacamoleConfig["recording-include-keys"]}
+                    onChange={(v) => setGuacField("recording-include-keys", v)}
+                  />
                 </SettingRow>
               </div>
             </SectionCard>
@@ -3828,6 +4510,19 @@ function CredentialEditorView({
                         ? "Generating..."
                         : "Generate from Private Key"}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2"
+                      disabled={!credForm.publicKey}
+                      onClick={() => {
+                        navigator.clipboard.writeText(credForm.publicKey ?? "");
+                        toast.success("Public key copied");
+                      }}
+                    >
+                      <Copy className="size-3 mr-1" /> Copy
+                    </Button>
                   </div>
                   <textarea
                     placeholder="ssh-rsa AAAAB3Nza..."
@@ -3907,6 +4602,7 @@ export function HostManager({
     enableVnc: false,
     enableTelnet: false,
   });
+  const [statusesLoading, setStatusesLoading] = useState(true);
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
@@ -3924,6 +4620,7 @@ export function HostManager({
           new Set(converted.map((h) => h.folder.split(" / ")[0])),
         );
 
+        setStatusesLoading(true);
         let statuses: Record<number, { status?: string }> = {};
         try {
           statuses = (await getAllServerStatuses()) as Record<
@@ -3932,6 +4629,8 @@ export function HostManager({
           >;
         } catch {
           // best-effort
+        } finally {
+          setStatusesLoading(false);
         }
 
         const onlineHosts = converted.filter(
@@ -3975,6 +4674,8 @@ export function HostManager({
             type: c.authType === "key" ? "key" : "password",
             description: c.description ?? "",
             folder: c.folder ?? "",
+            tags: c.tags ?? [],
+            publicKey: c.publicKey ?? undefined,
           })),
         );
       })
@@ -4130,8 +4831,8 @@ export function HostManager({
         hosts: [
           {
             name: "My Server",
-            address: "192.168.1.1",
-            user: "root",
+            ip: "192.168.1.1",
+            username: "root",
             port: 22,
             folder: "Production",
             enableSsh: true,
@@ -4170,6 +4871,7 @@ export function HostManager({
       const converted = raw.map(sshHostToHost);
       setHosts(converted);
 
+      setStatusesLoading(true);
       let statuses: Record<number, { status?: string }> = {};
       try {
         statuses = (await getAllServerStatuses()) as Record<
@@ -4178,6 +4880,8 @@ export function HostManager({
         >;
       } catch {
         // best-effort
+      } finally {
+        setStatusesLoading(false);
       }
       const onlineHosts = converted.filter(
         (h) => statuses[Number(h.id)]?.status === "online",
@@ -4493,7 +5197,7 @@ export function HostManager({
             <ArrowLeft className="size-3.5 shrink-0" />
             <span>Back to {isHost ? "Hosts" : "Credentials"}</span>
             {isHost && editingHost !== "new" && (
-              <span className="ml-auto font-semibold text-foreground truncate max-w-[200px]">
+              <span className="ml-auto font-semibold text-foreground">
                 {(editingHost as Host).name}
               </span>
             )}
@@ -4822,6 +5526,12 @@ export function HostManager({
           <div className="flex-1 min-h-0 overflow-y-auto">
             {section === "hosts" && (
               <div className="flex flex-col">
+                {statusesLoading && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground/50 border-b border-border/30">
+                    <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                    Checking host statuses...
+                  </div>
+                )}
                 {/* Pinned hosts */}
                 {pinnedHosts.length > 0 && (
                   <div className="flex flex-col">
@@ -4994,6 +5704,23 @@ export function HostManager({
                                     </span>
                                   )}
                                 </span>
+                                {cred.tags && cred.tags.length > 0 && (
+                                  <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
+                                    {cred.tags.slice(0, 3).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="text-[9px] px-1 py-px border border-border/50 bg-muted/30 text-muted-foreground/60 lowercase leading-none"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {cred.tags.length > 3 && (
+                                      <span className="text-[9px] text-muted-foreground/40">
+                                        +{cred.tags.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -5012,7 +5739,14 @@ export function HostManager({
                                     title="Copy deploy command"
                                     className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
                                     onClick={() => {
-                                      const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${cred.username ? `# ${cred.username}@Termix` : "# Termix"}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+                                      const pubKey = cred.publicKey;
+                                      if (!pubKey) {
+                                        toast.error(
+                                          "No public key available — open the credential editor first",
+                                        );
+                                        return;
+                                      }
+                                      const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${pubKey}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
                                       navigator.clipboard.writeText(cmd);
                                       toast.success("Deploy command copied");
                                     }}

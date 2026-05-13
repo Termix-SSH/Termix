@@ -13,7 +13,7 @@ export function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col border border-border bg-card">
+    <div className="flex flex-col border border-border bg-card overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
         <span className="text-muted-foreground">{icon}</span>
         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex-1">

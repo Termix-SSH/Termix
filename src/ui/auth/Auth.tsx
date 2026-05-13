@@ -19,6 +19,7 @@ import {
   getUserInfo,
   getRegistrationAllowed,
   getPasswordLoginAllowed,
+  getPasswordResetAllowed,
   getOIDCConfig,
   getSetupRequired,
   initiatePasswordReset,
@@ -231,6 +232,7 @@ export function Auth({ onLogin }: AuthProps) {
 
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
+  const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
@@ -255,6 +257,9 @@ export function Auth({ onLogin }: AuthProps) {
     getPasswordLoginAllowed()
       .then((res) => setPasswordLoginAllowed(res.allowed))
       .catch(() => {});
+    getPasswordResetAllowed()
+      .then((allowed) => setPasswordResetAllowed(allowed))
+      .catch(() => setPasswordResetAllowed(false));
     getOIDCConfig()
       .then((res) => setOidcConfigured(!!res))
       .catch(() => setOidcConfigured(false));
@@ -1108,13 +1113,15 @@ export function Auth({ onLogin }: AuthProps) {
                         {t("auth.rememberMe")}
                       </label>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => switchView("reset")}
-                      className="text-xs text-muted-foreground hover:text-accent-brand transition-colors"
-                    >
-                      {t("auth.forgotPassword")}
-                    </button>
+                    {passwordResetAllowed && (
+                      <button
+                        type="button"
+                        onClick={() => switchView("reset")}
+                        className="text-xs text-muted-foreground hover:text-accent-brand transition-colors"
+                      >
+                        {t("auth.forgotPassword")}
+                      </button>
+                    )}
                   </div>
                   <Button
                     type="submit"

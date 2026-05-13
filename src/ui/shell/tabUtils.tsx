@@ -113,6 +113,7 @@ export function renderTabContent(
   tab: Tab,
   onOpenSingletonTab?: (type: TabType) => void,
   onOpenTab?: (host: Host, type: TabType) => void,
+  onCloseTab?: (id: string) => void,
 ) {
   const { host, label } = tab;
 
@@ -136,6 +137,7 @@ export function renderTabContent(
       return (
         <CommandHistoryProvider>
           <TerminalFeature
+            ref={tab.terminalRef as any}
             hostConfig={
               {
                 ...hostToSSHHost(host),
@@ -146,7 +148,7 @@ export function renderTabContent(
             title={label}
             showTitle={false}
             splitScreen={false}
-            onClose={() => {}}
+            onClose={() => onCloseTab?.(tab.id)}
           />
         </CommandHistoryProvider>
       );

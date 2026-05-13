@@ -21,36 +21,40 @@ function Sparkline({
     current ?? 0,
   ].slice(-20);
 
-  if (points.length < 2) return null;
-
   const w = 300;
   const h = 48;
-  const max = Math.max(...points, 1);
-  const coords = points.map((v, i) => {
-    const x = (i / (points.length - 1)) * w;
-    const y = h - (v / max) * h;
-    return `${x},${y}`;
-  });
 
-  const d = `M ${coords.join(" L ")}`;
-  const fill = `M 0,${h} L ${coords.join(" L ")} L ${w},${h} Z`;
+  const hasData = points.length >= 2;
+  const max = hasData ? Math.max(...points, 1) : 1;
+  const coords = hasData
+    ? points.map((v, i) => {
+        const x = (i / (points.length - 1)) * w;
+        const y = h - (v / max) * h;
+        return `${x},${y}`;
+      })
+    : [];
+
+  const d = hasData ? `M ${coords.join(" L ")}` : "";
+  const fill = hasData ? `M 0,${h} L ${coords.join(" L ")} L ${w},${h} Z` : "";
 
   return (
     <div className="h-12 md:h-16 w-full mt-2 bg-muted/20 border border-border/50 relative overflow-hidden">
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio="none"
-      >
-        <path d={fill} fill="currentColor" className="text-accent-brand/10" />
-        <path
-          d={d}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="text-accent-brand/60"
-        />
-      </svg>
+      {hasData && (
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox={`0 0 ${w} ${h}`}
+          preserveAspectRatio="none"
+        >
+          <path d={fill} fill="currentColor" className="text-accent-brand/10" />
+          <path
+            d={d}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="text-accent-brand/60"
+          />
+        </svg>
+      )}
     </div>
   );
 }

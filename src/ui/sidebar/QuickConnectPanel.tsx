@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, FolderSearch, Terminal } from "lucide-react";
 import { Input } from "@/components/input";
+import type { Host } from "@/types/ui-types";
 
-export function QuickConnectPanel() {
+interface QuickConnectPanelProps {
+  onConnect: (host: Host, type: "terminal" | "files") => void;
+}
+
+export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
   const { t } = useTranslation();
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
@@ -12,7 +17,44 @@ export function QuickConnectPanel() {
     "password",
   );
   const [password, setPassword] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const connect = (type: "terminal" | "files") => {
+    if (!host || !username) return;
+    const hostConfig: Host = {
+      id: `quick-connect-${Date.now()}`,
+      name: `${username}@${host}`,
+      ip: host,
+      port: parseInt(port) || 22,
+      username,
+      authType,
+      password: authType === "password" ? password : undefined,
+      key: authType === "key" ? privateKey : undefined,
+      folder: "",
+      online: false,
+      cpu: null,
+      ram: null,
+      lastAccess: new Date().toISOString(),
+      pin: false,
+      defaultPath: "",
+      serverTunnels: [],
+      quickActions: [],
+      enableTerminal: true,
+      enableFileManager: true,
+      enableTunnel: true,
+      enableDocker: true,
+      enableSsh: true,
+      enableRdp: false,
+      enableVnc: false,
+      enableTelnet: false,
+      sshPort: parseInt(port) || 22,
+      rdpPort: 3389,
+      vncPort: 5900,
+      telnetPort: 23,
+    };
+    onConnect(hostConfig, type);
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
@@ -25,6 +67,9 @@ export function QuickConnectPanel() {
             placeholder={t("newUi.sidebar.quickConnect.hostPlaceholder")}
             value={host}
             onChange={(e) => setHost(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") connect("terminal");
+            }}
             className="h-7 text-xs"
           />
         </div>
@@ -36,6 +81,9 @@ export function QuickConnectPanel() {
             placeholder={t("newUi.sidebar.quickConnect.portPlaceholder")}
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") connect("terminal");
+            }}
             className="h-7 text-xs"
           />
         </div>
@@ -47,6 +95,9 @@ export function QuickConnectPanel() {
             placeholder={t("newUi.sidebar.quickConnect.usernamePlaceholder")}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") connect("terminal");
+            }}
             className="h-7 text-xs"
           />
         </div>
@@ -83,6 +134,9 @@ export function QuickConnectPanel() {
                 )}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") connect("terminal");
+                }}
                 className="h-7 text-xs pr-8"
               />
               <button
@@ -107,6 +161,8 @@ export function QuickConnectPanel() {
               placeholder={t(
                 "newUi.sidebar.quickConnect.privateKeyPlaceholder",
               )}
+              value={privateKey}
+              onChange={(e) => setPrivateKey(e.target.value)}
               className="w-full h-24 px-2.5 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
             />
           </div>
@@ -125,11 +181,17 @@ export function QuickConnectPanel() {
           </div>
         )}
         <div className="flex flex-col gap-1.5 pt-1">
-          <button className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors">
+          <button
+            onClick={() => connect("terminal")}
+            className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
+          >
             <Terminal className="size-3.5" />
             {t("newUi.sidebar.quickConnect.connectToTerminal")}
           </button>
-          <button className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors">
+          <button
+            onClick={() => connect("files")}
+            className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
+          >
             <FolderSearch className="size-3.5" />
             {t("newUi.sidebar.quickConnect.connectToFiles")}
           </button>

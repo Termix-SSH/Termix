@@ -32,8 +32,11 @@ import {
   updateOIDCConfig,
   disableOIDCConfig,
   isElectron,
+  getUserRoles,
+  assignRoleToUser,
+  removeRoleFromUser,
 } from "@/main-axios";
-import type { ApiKey, CreatedApiKey } from "@/main-axios";
+import type { ApiKey, CreatedApiKey, UserRole } from "@/main-axios";
 import type React from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -154,6 +157,8 @@ export function AdminSettingsPanel() {
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [editUserTarget, setEditUserTarget] = useState<any | null>(null);
   const [editUserLoading, setEditUserLoading] = useState(false);
+  const [editUserRoles, setEditUserRoles] = useState<UserRole[]>([]);
+  const [editUserRolesLoading, setEditUserRolesLoading] = useState(false);
 
   // Link account dialog
   const [linkAccountOpen, setLinkAccountOpen] = useState(false);
@@ -195,6 +200,17 @@ export function AdminSettingsPanel() {
     loadGeneralSettings();
     loadOidcConfig();
   }, []);
+
+  useEffect(() => {
+    if (editUserOpen && editUserTarget) {
+      setEditUserRoles([]);
+      setEditUserRolesLoading(true);
+      getUserRoles(editUserTarget.id)
+        .then(({ roles: r }) => setEditUserRoles(r))
+        .catch(() => {})
+        .finally(() => setEditUserRolesLoading(false));
+    }
+  }, [editUserOpen, editUserTarget?.id]);
 
   function loadUsers() {
     getUserList()
@@ -257,18 +273,21 @@ export function AdminSettingsPanel() {
     try {
       const config = await getAdminOIDCConfig();
       if (!config) return;
-      setOidcClientId((config.clientId as string) ?? "");
-      setOidcClientSecret((config.clientSecret as string) ?? "");
-      setOidcAuthUrl((config.authorizationUrl as string) ?? "");
-      setOidcIssuerUrl((config.issuerUrl as string) ?? "");
-      setOidcTokenUrl((config.tokenUrl as string) ?? "");
-      setOidcUserIdentifier((config.userIdentifierPath as string) ?? "sub");
-      setOidcDisplayName((config.displayNamePath as string) ?? "name");
+      setOidcClientId((config.client_id as string) ?? "");
+      setOidcClientSecret((config.client_secret as string) ?? "");
+      setOidcAuthUrl((config.authorization_url as string) ?? "");
+      setOidcIssuerUrl((config.issuer_url as string) ?? "");
+      setOidcTokenUrl((config.token_url as string) ?? "");
+      setOidcUserIdentifier((config.identifier_path as string) ?? "sub");
+      setOidcDisplayName((config.name_path as string) ?? "name");
       setOidcScopes((config.scopes as string) ?? "openid email profile");
-      setOidcUserinfoUrl((config.overrideUserinfoUrl as string) ?? "");
+      setOidcUserinfoUrl((config.userinfo_url as string) ?? "");
       setOidcAllowedUsers(
-        Array.isArray(config.allowedUsers)
-          ? (config.allowedUsers as string[]).join("\n")
+        typeof config.allowed_users === "string"
+          ? (config.allowed_users as string)
+              .split(",")
+              .filter(Boolean)
+              .join("\n")
           : "",
       );
     } catch {
@@ -378,18 +397,18 @@ export function AdminSettingsPanel() {
     setOidcSaving(true);
     try {
       await updateOIDCConfig({
-        clientId: oidcClientId,
-        clientSecret: oidcClientSecret,
-        authorizationUrl: oidcAuthUrl,
-        issuerUrl: oidcIssuerUrl,
-        tokenUrl: oidcTokenUrl,
-        userIdentifierPath: oidcUserIdentifier,
-        displayNamePath: oidcDisplayName,
+        client_id: oidcClientId,
+        client_secret: oidcClientSecret,
+        authorization_url: oidcAuthUrl,
+        issuer_url: oidcIssuerUrl,
+        token_url: oidcTokenUrl,
+        identifier_path: oidcUserIdentifier,
+        name_path: oidcDisplayName,
         scopes: oidcScopes,
-        overrideUserinfoUrl: oidcUserinfoUrl || null,
-        allowedUsers: oidcAllowedUsers
-          ? oidcAllowedUsers.split("\n").filter(Boolean)
-          : [],
+        userinfo_url: oidcUserinfoUrl || "",
+        allowed_users: oidcAllowedUsers
+          ? oidcAllowedUsers.split("\n").filter(Boolean).join(",")
+          : "",
       });
       toast.success("OIDC configuration saved");
     } catch (e: any) {
@@ -497,18 +516,19 @@ export function AdminSettingsPanel() {
       return;
     }
     setCreateRoleLoading(true);
+    const displayName = newRoleDisplayName.trim();
     try {
-      const { role } = await createRole({
+      await createRole({
         name: newRoleName.trim(),
-        displayName: newRoleDisplayName.trim(),
+        displayName,
         description: newRoleDescription.trim() || null,
       });
-      setRoles((prev) => [...prev, role]);
       setShowCreateRole(false);
       setNewRoleName("");
       setNewRoleDisplayName("");
       setNewRoleDescription("");
-      toast.success(`Role "${role.displayName}" created`);
+      toast.success(`Role "${displayName}" created`);
+      loadRoles();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to create role");
     } finally {
@@ -532,7 +552,7 @@ export function AdminSettingsPanel() {
         newKeyUserId.trim(),
         newKeyExpiry ? new Date(newKeyExpiry).toISOString() : undefined,
       );
-      setApiKeys((prev) => [created, ...prev]);
+      setApiKeys((prev) => [{ ...created, isActive: true }, ...prev]);
       setCreatedKeyToken(created.token);
       setNewKeyName("");
       setNewKeyUserId("");
@@ -682,7 +702,7 @@ export function AdminSettingsPanel() {
           </SettingRow>
           <SettingRow
             label="Allow Password Reset"
-            description="Email-based password reset"
+            description="Reset code via Docker logs"
           >
             <AdminToggle
               on={allowPasswordReset}
@@ -1451,29 +1471,20 @@ export function AdminSettingsPanel() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      Scoped User ID{" "}
-                      <span className="text-accent-brand">*</span>
+                      User <span className="text-accent-brand">*</span>
                     </label>
-                    <Input
-                      placeholder="User ID"
+                    <select
+                      className="px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
                       value={newKeyUserId}
                       onChange={(e) => setNewKeyUserId(e.target.value)}
-                      className="text-xs font-mono"
-                    />
-                    {users.length > 0 && (
-                      <select
-                        className="mt-1 px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
-                        value={newKeyUserId}
-                        onChange={(e) => setNewKeyUserId(e.target.value)}
-                      >
-                        <option value="">Select a user...</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.username}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    >
+                      <option value="">Select a user...</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.username}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
@@ -1692,6 +1703,112 @@ export function AdminSettingsPanel() {
                   on={editUserTarget.isAdmin}
                   onToggle={() => handleToggleAdmin(editUserTarget)}
                 />
+              </div>
+              <div className="flex flex-col gap-2 py-3">
+                <span className="text-sm font-medium">Roles</span>
+                {editUserRolesLoading ? (
+                  <span className="text-xs text-muted-foreground">
+                    Loading...
+                  </span>
+                ) : (
+                  <>
+                    {editUserRoles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {editUserRoles.map((ur) => {
+                          const roleInfo = roles.find(
+                            (r) => r.id === ur.roleId,
+                          );
+                          const isSystem = roleInfo?.isSystem ?? false;
+                          return (
+                            <span
+                              key={ur.roleId}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
+                            >
+                              {ur.roleDisplayName}
+                              {!isSystem && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await removeRoleFromUser(
+                                        editUserTarget.id,
+                                        ur.roleId,
+                                      );
+                                      setEditUserRoles((prev) =>
+                                        prev.filter(
+                                          (r) => r.roleId !== ur.roleId,
+                                        ),
+                                      );
+                                    } catch {
+                                      toast.error("Failed to remove role");
+                                    }
+                                  }}
+                                  className="hover:text-destructive ml-0.5"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {roles.filter(
+                      (r) =>
+                        !r.isSystem &&
+                        !editUserRoles.some((ur) => ur.roleId === r.id),
+                    ).length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                          Add role
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {roles
+                            .filter(
+                              (r) =>
+                                !r.isSystem &&
+                                !editUserRoles.some((ur) => ur.roleId === r.id),
+                            )
+                            .map((r) => (
+                              <button
+                                key={r.id}
+                                onClick={async () => {
+                                  try {
+                                    await assignRoleToUser(
+                                      editUserTarget.id,
+                                      r.id,
+                                    );
+                                    setEditUserRoles((prev) => [
+                                      ...prev,
+                                      {
+                                        userId: editUserTarget.id,
+                                        roleId: r.id,
+                                        roleName: r.name,
+                                        roleDisplayName: r.displayName,
+                                        grantedBy: "",
+                                        grantedByUsername: "",
+                                        grantedAt: new Date().toISOString(),
+                                      },
+                                    ]);
+                                  } catch {
+                                    toast.error("Failed to assign role");
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border border-border text-muted-foreground hover:border-accent-brand/40 hover:text-accent-brand transition-colors"
+                              >
+                                + {r.displayName}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                    {editUserRoles.length === 0 &&
+                      roles.filter((r) => !r.isSystem).length === 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          No custom roles defined
+                        </span>
+                      )}
+                  </>
+                )}
               </div>
               <div className="flex items-center justify-between py-3">
                 <div className="flex flex-col gap-0.5">

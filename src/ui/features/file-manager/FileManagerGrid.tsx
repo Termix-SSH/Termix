@@ -67,6 +67,7 @@ interface FileManagerGridProps {
   onSelectionChange: (files: FileItem[]) => void;
   currentPath: string;
   isLoading?: boolean;
+  isConnected?: boolean;
   onPathChange: (path: string) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
@@ -191,6 +192,7 @@ export function FileManagerGrid({
   onSelectionChange,
   currentPath,
   isLoading,
+  isConnected,
   onPathChange,
   onRefresh,
   onUpload,
@@ -525,20 +527,30 @@ export function FileManagerGrid({
     e.stopPropagation();
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && e.button === 0) {
-      e.preventDefault();
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const startX = e.clientX - rect.left;
-      const startY = e.clientY - rect.top;
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (createIntent) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT") {
+          e.preventDefault();
+        }
+        return;
+      }
+      if (e.target === e.currentTarget && e.button === 0) {
+        e.preventDefault();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
 
-      setIsSelecting(true);
-      setSelectionStart({ x: startX, y: startY });
-      setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
+        setIsSelecting(true);
+        setSelectionStart({ x: startX, y: startY });
+        setSelectionRect({ x: startX, y: startY, width: 0, height: 0 });
 
-      setJustFinishedSelecting(false);
-    }
-  }, []);
+        setJustFinishedSelecting(false);
+      }
+    },
+    [createIntent],
+  );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -695,7 +707,7 @@ export function FileManagerGrid({
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (gridRef.current) {
+    if (gridRef.current && !createIntent) {
       gridRef.current.focus();
     }
 
@@ -730,7 +742,7 @@ export function FileManagerGrid({
   };
 
   const handleGridClick = (event: React.MouseEvent) => {
-    if (gridRef.current) {
+    if (gridRef.current && !createIntent) {
       gridRef.current.focus();
     }
 
@@ -974,6 +986,7 @@ export function FileManagerGrid({
                           onBlur={handleEditConfirm}
                           className="max-w-[120px] min-w-[60px] w-fit border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 text-center pointer-events-auto"
                           onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
                         />
                       ) : (
                         <p
@@ -1096,6 +1109,7 @@ export function FileManagerGrid({
                           onBlur={handleEditConfirm}
                           className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto"
                           onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
                         />
                       ) : (
                         <span
@@ -1227,7 +1241,10 @@ export function FileManagerGrid({
           document.body,
         )}
 
-      <SimpleLoader visible={isLoading} message={t("common.connecting")} />
+      <SimpleLoader
+        visible={!!isLoading && !!isConnected}
+        message={t("common.loading")}
+      />
     </div>
   );
 }
@@ -1244,24 +1261,49 @@ function CreateIntentGridItem({
   const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
   const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [intent.id]);
+
+  const commit = useCallback(
+    (name: string) => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      if (name) {
+        onConfirm?.(name);
+      } else {
+        onCancel?.();
+      }
+    },
+    [onConfirm, onCancel],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      onConfirm?.(inputName.trim());
+      commit(inputName.trim());
     } else if (e.key === "Escape") {
       e.preventDefault();
+      if (doneRef.current) return;
+      doneRef.current = true;
       onCancel?.();
     }
   };
 
   return (
-    <div className="group flex flex-col items-center p-3 rounded-none border-2 border-dashed border-accent-brand/60 bg-accent-brand/5">
+    <div
+      className="group flex flex-col items-center p-3 rounded-none border-2 border-dashed border-accent-brand/60 bg-accent-brand/5"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <div className="mb-2">
         {intent.type === "directory" ? (
           <Folder className="size-10 text-accent-brand" />
@@ -1275,7 +1317,7 @@ function CreateIntentGridItem({
         value={inputName}
         onChange={(e) => setInputName(e.target.value)}
         onKeyDown={handleKeyDown}
-        onBlur={() => onConfirm?.(inputName.trim())}
+        onBlur={() => commit(inputName.trim())}
         className="w-full max-w-[120px] border border-accent-brand/60 bg-card px-2 py-1 text-xs text-center rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50"
         placeholder={
           intent.type === "directory"
@@ -1299,24 +1341,49 @@ function CreateIntentListItem({
   const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
   const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [intent.id]);
+
+  const commit = useCallback(
+    (name: string) => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      if (name) {
+        onConfirm?.(name);
+      } else {
+        onCancel?.();
+      }
+    },
+    [onConfirm, onCancel],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      onConfirm?.(inputName.trim());
+      commit(inputName.trim());
     } else if (e.key === "Escape") {
       e.preventDefault();
+      if (doneRef.current) return;
+      doneRef.current = true;
       onCancel?.();
     }
   };
 
   return (
-    <div className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none">
+    <div
+      className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <div className="flex items-center gap-3">
         <div className="shrink-0">
           {intent.type === "directory" ? (
@@ -1331,7 +1398,7 @@ function CreateIntentListItem({
           value={inputName}
           onChange={(e) => setInputName(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={() => onConfirm?.(inputName.trim())}
+          onBlur={() => commit(inputName.trim())}
           className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50"
           placeholder={
             intent.type === "directory"

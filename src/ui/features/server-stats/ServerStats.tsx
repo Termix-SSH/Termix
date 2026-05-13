@@ -606,16 +606,6 @@ function ServerStatsInner({
                 </div>
                 <div>
                   <h1 className="text-lg md:text-2xl font-bold">{title}</h1>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`size-2 rounded-full ${serverStatus === "online" ? "bg-accent-brand" : "bg-destructive"}`}
-                    />
-                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-                      {serverStatus === "online"
-                        ? t("serverStats.online")
-                        : t("serverStats.offline")}
-                    </span>
-                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-0">

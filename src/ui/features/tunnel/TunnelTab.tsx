@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
-import { Separator } from "@/components/separator";
 
 import {
   AlertCircle,
@@ -397,7 +396,7 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
   const connectedCount = tunnels.filter((t, i) => {
     if (!sshHost) return false;
     const name = tunnelName(sshHost, i, t);
-    return tunnelStatuses[name]?.connected;
+    return tunnelStatuses[name]?.status === "connected";
   }).length;
 
   return (
@@ -417,12 +416,6 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
                 </span>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-0">
-            <Separator orientation="vertical" className="h-8 mx-3" />
-            <Button variant="ghost" size="icon">
-              <Settings className="size-4 text-accent-brand" />
-            </Button>
           </div>
         </Card>
 

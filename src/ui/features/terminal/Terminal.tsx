@@ -1206,7 +1206,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             shouldNotReconnectRef.current = true;
             setIsConnected(false);
             setIsConnecting(false);
-            if (wasConnectedRef.current) {
+            if (msg.graceful) {
+              wasConnectedRef.current = false;
+              if (onClose) onClose();
+            } else if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
               setShowDisconnectedOverlay(true);
             } else if (!connectionErrorRef.current) {
@@ -1559,6 +1562,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         setIsConnected(false);
         isConnectingRef.current = false;
 
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
+
         if (pongTimeoutRef.current) {
           clearTimeout(pongTimeoutRef.current);
           pongTimeoutRef.current = null;
@@ -1648,6 +1656,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           terminal.clear();
         }
         setIsConnecting(false);
+
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
 
         if (totpTimeoutRef.current) {
           clearTimeout(totpTimeoutRef.current);
@@ -2478,9 +2491,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         {showDisconnectedOverlay && !isConnecting && (
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-[120]"
             style={{ backgroundColor }}
           >
+            <p className="text-sm text-muted-foreground">
+              {t("terminal.connectionLost")}
+            </p>
             <div className="flex gap-2">
               <Button
                 onClick={() => {
@@ -2502,7 +2518,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 {t("terminal.reconnect")}
               </Button>
               {onClose && (
-                <Button variant="secondary" onClick={onClose}>
+                <Button variant="outline" onClick={onClose}>
                   {t("terminal.closeTab")}
                 </Button>
               )}
@@ -2513,7 +2529,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         <ConnectionLog
           isConnecting={isConnecting}
           isConnected={isConnected}
-          hasConnectionError={hasConnectionError}
+          hasConnectionError={hasConnectionError && !showDisconnectedOverlay}
           position={hasConnectionError ? "top" : "bottom"}
         />
 

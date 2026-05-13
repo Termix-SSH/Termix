@@ -118,6 +118,7 @@ export type Host = {
   telnetPassword?: string;
 
   guacamoleConfig?: Record<string, any>;
+  forceKeyboardInteractive?: boolean;
 };
 
 export type Credential = {
@@ -180,6 +181,9 @@ export type Tab = {
   type: TabType;
   label: string;
   host?: Host;
+  terminalRef?: import("react").RefObject<{
+    sendInput?: (data: string) => void;
+  } | null>;
 };
 
 export type DockerContainerStatus =
@@ -274,8 +278,8 @@ export type Snippet = {
   id: number;
   name: string;
   description?: string;
-  command: string;
-  folderId: number | null;
+  content: string;
+  folder: string | null;
 };
 
 export const FOLDER_ICONS = [

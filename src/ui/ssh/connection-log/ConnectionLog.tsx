@@ -51,7 +51,7 @@ export function ConnectionLog({
   }, [logs, isExpanded]);
 
   const shouldShow =
-    isConnecting || hasConnectionError || (logs.length > 0 && !isConnected);
+    !isConnected && (isConnecting || hasConnectionError || logs.length > 0);
 
   if (!shouldShow) {
     return null;

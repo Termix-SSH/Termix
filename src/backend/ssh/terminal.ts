@@ -1580,6 +1580,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   JSON.stringify({
                     type: "disconnected",
                     message: "Connection lost",
+                    graceful: true,
                   }),
                 );
               }

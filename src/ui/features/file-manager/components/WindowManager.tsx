@@ -116,14 +116,19 @@ export function WindowManager({ children }: WindowManagerProps) {
   return (
     <WindowManagerContext.Provider value={contextValue}>
       {children}
-      <div className="window-container">
-        {windows.map((window) => (
-          <div key={window.id}>
-            {typeof window.component === "function"
-              ? window.component(window.id)
-              : window.component}
-          </div>
-        ))}
+      <div
+        className="window-container absolute inset-0 pointer-events-none overflow-hidden"
+        style={{ zIndex: 1000 }}
+      >
+        <div className="relative w-full h-full pointer-events-none">
+          {windows.map((window) => (
+            <div key={window.id} className="pointer-events-auto">
+              {typeof window.component === "function"
+                ? window.component(window.id)
+                : window.component}
+            </div>
+          ))}
+        </div>
       </div>
     </WindowManagerContext.Provider>
   );

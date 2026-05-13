@@ -4,20 +4,7 @@ import { Terminal } from "@/features/terminal/Terminal.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
-
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  authType: "password" | "key";
-  credentialId?: number;
-  userId?: number;
-}
+import type { SSHHost } from "@/types/index.ts";
 
 interface TerminalWindowProps {
   windowId: string;
@@ -114,8 +101,8 @@ export function TerminalWindow({
         zIndex={currentWindow.zIndex}
       >
         <Terminal
-          ref={terminalRef}
-          hostConfig={hostConfig}
+          ref={terminalRef as any}
+          hostConfig={hostConfig as any}
           isVisible={!currentWindow.isMinimized}
           initialPath={initialPath}
           executeCommand={executeCommand}

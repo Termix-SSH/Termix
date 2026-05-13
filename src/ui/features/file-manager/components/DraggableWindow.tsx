@@ -53,14 +53,20 @@ export function DraggableWindow({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
   const [sizeStart, setSizeStart] = useState({ width: 0, height: 0 });
+  const containerBoundsRef = useRef({ width: 0, height: 0 });
 
   const windowRef = useRef<HTMLDivElement>(null);
   const titleBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (targetSize && !isMaximized) {
-      const maxWidth = Math.min(window.innerWidth * 0.9, 1200);
-      const maxHeight = Math.min(window.innerHeight * 0.8, 800);
+      const container = windowRef.current?.offsetParent as HTMLElement | null;
+      const maxWidth = container
+        ? Math.min(container.clientWidth * 0.9, 1200)
+        : Math.min(window.innerWidth * 0.9, 1200);
+      const maxHeight = container
+        ? Math.min(container.clientHeight * 0.8, 800)
+        : Math.min(window.innerHeight * 0.8, 800);
 
       let newWidth = Math.min(targetSize.width + 50, maxWidth);
       let newHeight = Math.min(targetSize.height + 150, maxHeight);
@@ -80,8 +86,16 @@ export function DraggableWindow({
       setSize({ width: newWidth, height: newHeight });
 
       setPosition({
-        x: Math.max(0, (window.innerWidth - newWidth) / 2),
-        y: Math.max(0, (window.innerHeight - newHeight) / 2),
+        x: Math.max(
+          0,
+          (container ? container.clientWidth : window.innerWidth) / 2 -
+            newWidth / 2,
+        ),
+        y: Math.max(
+          0,
+          (container ? container.clientHeight : window.innerHeight) / 2 -
+            newHeight / 2,
+        ),
       });
     }
   }, [targetSize, isMaximized, minWidth, minHeight]);
@@ -98,6 +112,13 @@ export function DraggableWindow({
       setIsDragging(true);
       setDragStart({ x: e.clientX, y: e.clientY });
       setWindowStart({ x: position.x, y: position.y });
+
+      const container = windowRef.current?.offsetParent as HTMLElement | null;
+      containerBoundsRef.current = {
+        width: container ? container.clientWidth : window.innerWidth,
+        height: container ? container.clientHeight : window.innerHeight,
+      };
+
       onFocus?.();
     },
     [isMaximized, position, onFocus],
@@ -112,50 +133,14 @@ export function DraggableWindow({
         const newX = windowStart.x + deltaX;
         const newY = windowStart.y + deltaY;
 
-        const windowElement = windowRef.current;
-        let positioningContainer = null;
-        let currentElement = windowElement?.parentElement;
-
-        while (currentElement && currentElement !== document.body) {
-          const computedStyle = window.getComputedStyle(currentElement);
-          const position = computedStyle.position;
-          const transform = computedStyle.transform;
-
-          if (
-            position === "relative" ||
-            position === "absolute" ||
-            position === "fixed" ||
-            transform !== "none"
-          ) {
-            positioningContainer = currentElement;
-            break;
-          }
-
-          currentElement = currentElement.parentElement;
-        }
-
-        let maxX, maxY, minX, minY;
-
-        if (positioningContainer) {
-          const containerRect = positioningContainer.getBoundingClientRect();
-
-          maxX = containerRect.width - size.width;
-          maxY = containerRect.height - size.height;
-          minX = 0;
-          minY = 0;
-        } else {
-          maxX = window.innerWidth - size.width;
-          maxY = window.innerHeight - size.height;
-          minX = 0;
-          minY = 0;
-        }
-
-        const constrainedX = Math.max(minX, Math.min(maxX, newX));
-        const constrainedY = Math.max(minY, Math.min(maxY, newY));
+        const { width: containerW, height: containerH } =
+          containerBoundsRef.current;
+        const maxX = containerW - size.width;
+        const maxY = containerH - size.height;
 
         setPosition({
-          x: constrainedX,
-          y: constrainedY,
+          x: Math.max(0, Math.min(maxX, newX)),
+          y: Math.max(49, Math.min(maxY, newY)),
         });
       }
 
@@ -194,8 +179,10 @@ export function DraggableWindow({
           }
         }
 
-        newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
-        newY = Math.max(0, Math.min(window.innerHeight - newHeight, newY));
+        const { width: containerW, height: containerH } =
+          containerBoundsRef.current;
+        newX = Math.max(0, Math.min(containerW - newWidth, newX));
+        newY = Math.max(49, Math.min(containerH - newHeight, newY));
 
         setSize({ width: newWidth, height: newHeight });
         setPosition({ x: newX, y: newY });
@@ -213,7 +200,6 @@ export function DraggableWindow({
       windowStart,
       sizeStart,
       size,
-      position,
       minWidth,
       minHeight,
       resizeDirection,
@@ -238,6 +224,13 @@ export function DraggableWindow({
       setDragStart({ x: e.clientX, y: e.clientY });
       setWindowStart({ x: position.x, y: position.y });
       setSizeStart({ width: size.width, height: size.height });
+
+      const container = windowRef.current?.offsetParent as HTMLElement | null;
+      containerBoundsRef.current = {
+        width: container ? container.clientWidth : window.innerWidth,
+        height: container ? container.clientHeight : window.innerHeight,
+      };
+
       onFocus?.();
     },
     [isMaximized, position, size, onFocus],
