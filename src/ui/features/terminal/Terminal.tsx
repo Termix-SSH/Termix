@@ -884,6 +884,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             .replace(/^https?:\/\//, "")
             .replace(/\/$/, "");
           baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
+          const storedJwt = localStorage.getItem("jwt");
+          if (storedJwt) {
+            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
+          }
         }
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
