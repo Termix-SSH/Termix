@@ -224,6 +224,13 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
+function isNativeAppRequest(req: Request): boolean {
+  return (
+    (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
+    req.get("X-Electron-App") === "true"
+  );
+}
+
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 
@@ -1575,6 +1582,7 @@ router.post("/login", async (req, res) => {
       success: true,
       is_admin: !!userRecord.isAdmin,
       username: userRecord.username,
+      ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
     const timeoutRow = db.$client
@@ -1681,6 +1689,33 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     authLogger.error("Failed to get username", err);
     res.status(500).json({ error: "Failed to get username" });
   }
+});
+
+/**
+ * @openapi
+ * /users/me/token:
+ *   get:
+ *     summary: Get current session token
+ *     description: Returns the JWT for the currently authenticated session. Intended for mobile WebView clients that cannot read HTTP-only cookies.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Current session token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated.
+ */
+router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
+  const token = (req as Request & { cookies: Record<string, string> }).cookies
+    ?.jwt;
+  res.json({ token: token || null });
 });
 
 /**
@@ -3393,6 +3428,7 @@ router.post("/totp/verify-login", async (req, res) => {
       userId: userRecord.id,
       is_oidc: !!userRecord.isOidc,
       totp_enabled: !!userRecord.totpEnabled,
+      ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
     const timeoutRow = db.$client

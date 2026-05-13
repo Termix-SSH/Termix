@@ -383,6 +383,14 @@ function createApiInstance(
       } else {
         config.headers["X-Electron-App"] = "true";
       }
+      const jwt = localStorage.getItem("jwt");
+      if (jwt) {
+        if (config.headers.set) {
+          config.headers.set("Authorization", `Bearer ${jwt}`);
+        } else {
+          config.headers["Authorization"] = `Bearer ${jwt}`;
+        }
+      }
     }
 
     if (
@@ -2941,6 +2949,15 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function getCurrentToken(): Promise<string | null> {
+  try {
+    const response = await authApi.get("/users/me/token");
+    return response.data?.token ?? null;
+  } catch {
+    return null;
   }
 }
 

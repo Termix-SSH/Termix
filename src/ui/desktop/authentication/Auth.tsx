@@ -149,20 +149,27 @@ export function Auth({
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
   const handleElectronAuthSuccess = useCallback(
-    async (previousJwt: string | null) => {
+    async (token: string | null) => {
       try {
-        const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-          "jwt",
-          currentServerUrl,
-          previousJwt,
-          5000,
-        );
-        if (cookieReady && !cookieReady.success) {
-          throw new Error(
-            cookieReady.error || "Authentication cookie not ready",
-          );
+        // token was stored in localStorage by ElectronLoginForm before this runs,
+        // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.
+        let retries = 5;
+        let meRes = null;
+        while (retries-- > 0) {
+          try {
+            meRes = await getUserInfo();
+            break;
+          } catch (err: unknown) {
+            const isNoServer =
+              (err as { code?: string })?.code === "NO_SERVER_CONFIGURED" ||
+              (err as Error)?.message?.includes("no-server-configured");
+            if (isNoServer && retries > 0) {
+              await new Promise((r) => setTimeout(r, 500));
+            } else {
+              throw err;
+            }
+          }
         }
-        const meRes = await getUserInfo();
         if (!meRes) throw new Error("Failed to get user info");
         setInternalLoggedIn(true);
         setLoggedIn(true);
@@ -187,7 +194,6 @@ export function Auth({
       setUserId,
       t,
       setInternalLoggedIn,
-      currentServerUrl,
     ],
   );
 
@@ -334,9 +340,10 @@ export function Auth({
               type: "AUTH_SUCCESS",
               source: "auth_component",
               platform: "desktop",
+              token: res.token || null,
               timestamp: Date.now(),
             },
-            window.location.origin,
+            "*",
           );
           setWebviewAuthSuccess(true);
           return;
@@ -537,9 +544,10 @@ export function Auth({
               type: "AUTH_SUCCESS",
               source: "totp_auth_component",
               platform: "desktop",
+              token: res.token || null,
               timestamp: Date.now(),
             },
-            window.location.origin,
+            "*",
           );
           setWebviewAuthSuccess(true);
           setTotpLoading(false);
@@ -665,14 +673,16 @@ export function Auth({
 
       if (isInElectronWebView()) {
         try {
+          const urlToken = urlParams.get("token");
           window.parent.postMessage(
             {
               type: "AUTH_SUCCESS",
               source: "oidc_callback",
               platform: "desktop",
+              token: urlToken || null,
               timestamp: Date.now(),
             },
-            window.location.origin,
+            "*",
           );
           setWebviewAuthSuccess(true);
           setOidcLoading(false);
@@ -1100,7 +1110,10 @@ export function Auth({
                   <Input
                     ref={totpInputRef}
                     id="totp-code"
+                    name="totp"
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="000000"
                     maxLength={6}
                     value={totpCode}

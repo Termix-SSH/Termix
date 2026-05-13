@@ -95,7 +95,7 @@ export function SSHAuthDialog({
       } = {};
 
       if (authTab === "password") {
-        if (password.trim()) {
+        if (password !== "") {
           credentials.password = password;
         }
       } else {
@@ -129,7 +129,7 @@ export function SSHAuthDialog({
 
   const canSubmit = () => {
     if (authTab === "password") {
-      return password.trim() !== "";
+      return password !== "";
     } else {
       return sshKey.trim() !== "";
     }

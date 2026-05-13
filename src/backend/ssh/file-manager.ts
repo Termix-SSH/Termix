@@ -1033,7 +1033,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         .json({ error: "Invalid SSH key format", connectionLogs });
     }
   } else if (resolvedCredentials.authType === "password") {
-    if (!resolvedCredentials.password || !resolvedCredentials.password.trim()) {
+    if (!resolvedCredentials.password) {
       connectionLogs.push(
         createConnectionLog(
           "error",

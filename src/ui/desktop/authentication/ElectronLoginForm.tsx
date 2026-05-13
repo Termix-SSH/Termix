@@ -5,7 +5,7 @@ import { AlertCircle, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
 
 interface ElectronLoginFormProps {
   serverUrl: string;
-  onAuthSuccess: (previousJwt: string | null) => void | Promise<void>;
+  onAuthSuccess: (token: string | null) => void | Promise<void>;
   onChangeServer: () => void;
 }
 
@@ -27,60 +27,49 @@ export function ElectronLoginForm({
   const isAuthenticatingRef = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasAuthenticatedRef = useRef(false);
-  const [cookieSnapshotReady, setCookieSnapshotReady] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(serverUrl);
   const hasLoadedOnce = useRef(false);
   const onAuthSuccessRef = useRef(onAuthSuccess);
-  const initialJwtRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     onAuthSuccessRef.current = onAuthSuccess;
   }, [onAuthSuccess]);
 
-  useEffect(() => {
-    window.electronAPI
-      ?.getSessionCookie?.("jwt", serverUrl)
-      .then((value) => {
-        initialJwtRef.current = value;
-      })
-      .catch(() => {
-        initialJwtRef.current = null;
-      })
-      .finally(() => {
-        setCookieSnapshotReady(true);
-      });
-  }, [serverUrl]);
+  const handleAuthSuccess = useCallback(
+    async (token: string | null) => {
+      if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
+      hasAuthenticatedRef.current = true;
+      isAuthenticatingRef.current = true;
+      setIsAuthenticating(true);
 
-  const handleAuthSuccess = useCallback(async () => {
-    if (hasAuthenticatedRef.current || isAuthenticatingRef.current) return;
-    hasAuthenticatedRef.current = true;
-    isAuthenticatingRef.current = true;
-    setIsAuthenticating(true);
-
-    try {
-      await onAuthSuccessRef.current(initialJwtRef.current ?? null);
-    } catch (_err) {
-      setError(t("errors.authTokenSaveFailed"));
-      isAuthenticatingRef.current = false;
-      setIsAuthenticating(false);
-      hasAuthenticatedRef.current = false;
-    }
-  }, [t]);
+      try {
+        if (token) {
+          localStorage.setItem("jwt", token);
+        }
+        await onAuthSuccessRef.current(token);
+      } catch (_err) {
+        setError(t("errors.authTokenSaveFailed"));
+        isAuthenticatingRef.current = false;
+        setIsAuthenticating(false);
+        hasAuthenticatedRef.current = false;
+      }
+    },
+    [t],
+  );
 
   // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.
+  // Uses '*' as target origin because the iframe may be cross-origin (e.g. remote Docker server).
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
-        const expectedOrigin = new URL(serverUrl).origin;
-        if (event.origin !== expectedOrigin) return;
         if (event.source !== iframeRef.current?.contentWindow) return;
         if (!event.data || typeof event.data !== "object") return;
-        const { type, platform, source } = event.data;
+        const { type, platform, source, token } = event.data;
         if (
           type === "AUTH_SUCCESS" &&
           platform === "desktop" &&
           AUTH_MESSAGE_SOURCES.has(source)
         ) {
-          await handleAuthSuccess();
+          await handleAuthSuccess(token ?? null);
         }
       } catch {
         // ignore
@@ -89,7 +78,7 @@ export function ElectronLoginForm({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleAuthSuccess, serverUrl]);
+  }, [handleAuthSuccess]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -202,7 +191,7 @@ export function ElectronLoginForm({
       >
         <iframe
           ref={iframeRef}
-          src={cookieSnapshotReady ? serverUrl : "about:blank"}
+          src={serverUrl}
           className="w-full h-full border-0"
           title="Server Authentication"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"

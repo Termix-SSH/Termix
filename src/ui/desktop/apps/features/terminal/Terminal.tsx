@@ -232,7 +232,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
     const wasConnectedRef = useRef(false);
-    const closeAfterDisconnectRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -242,7 +241,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       reconnectAttempts.current = 0;
       wasConnectedRef.current = false;
       isAttachingSessionRef.current = false;
-      closeAfterDisconnectRef.current = false;
 
       return () => {};
     }, [hostConfig.id]);
@@ -1212,12 +1210,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setIsConnecting(false);
             if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
-              setShowDisconnectedOverlay(false);
-              if (onClose && !closeAfterDisconnectRef.current) {
-                closeAfterDisconnectRef.current = true;
-                isUnmountingRef.current = true;
-                window.setTimeout(onClose, 0);
-              }
+              setShowDisconnectedOverlay(true);
             } else if (!connectionErrorRef.current) {
               updateConnectionError(
                 msg.message || t("terminal.connectionRejected"),
@@ -1978,7 +1971,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        if (isElectron() && getUseRightClickCopyPaste()) {
+        if (getUseRightClickCopyPaste()) {
           e.preventDefault();
           e.stopPropagation();
           if (terminal.hasSelection()) {
