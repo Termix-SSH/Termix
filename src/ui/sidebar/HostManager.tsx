@@ -336,6 +336,7 @@ function HostRow({
   onToggleSelect,
   onEdit,
   onDelete,
+  onClone,
   onDragStart,
   onDragEnd,
   depth = 0,
@@ -349,6 +350,7 @@ function HostRow({
   onToggleSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onClone: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   depth?: number;
@@ -649,9 +651,7 @@ function HostRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem
-                  onClick={() => toast.success(t("hosts.hostCloned"))}
-                >
+                <DropdownMenuItem onClick={() => onClone()}>
                   <Copy className="size-3.5 mr-2" />
                   {t("hosts.cloneHostAction")}
                 </DropdownMenuItem>
@@ -5442,6 +5442,19 @@ export function HostManager({
                       },
                     });
                   }}
+                  onClone={async () => {
+                    try {
+                      const cloned = await createSSHHost({
+                        ...host,
+                        name: `${host.name || host.ip} (Copy)`,
+                        pin: false,
+                      } as any);
+                      setHosts((prev) => [...prev, cloned]);
+                      toast.success(`Cloned ${host.name}`);
+                    } catch {
+                      toast.error("Failed to clone host");
+                    }
+                  }}
                   onDragStart={() => setDraggedHost(host)}
                   onDragEnd={() => setDraggedHost(null)}
                 />
@@ -5892,6 +5905,19 @@ export function HostManager({
                             },
                           });
                         }}
+                        onClone={async () => {
+                          try {
+                            const cloned = await createSSHHost({
+                              ...host,
+                              name: `${host.name || host.ip} (Copy)`,
+                              pin: false,
+                            } as any);
+                            setHosts((prev) => [...prev, cloned]);
+                            toast.success(`Cloned ${host.name}`);
+                          } catch {
+                            toast.error("Failed to clone host");
+                          }
+                        }}
                       />
                     ))}
                   </div>
@@ -5942,6 +5968,19 @@ export function HostManager({
                           }
                         },
                       });
+                    }}
+                    onClone={async () => {
+                      try {
+                        const cloned = await createSSHHost({
+                          ...host,
+                          name: `${host.name || host.ip} (Copy)`,
+                          pin: false,
+                        } as any);
+                        setHosts((prev) => [...prev, cloned]);
+                        toast.success(`Cloned ${host.name}`);
+                      } catch {
+                        toast.error("Failed to clone host");
+                      }
                     }}
                     onDragStart={() => setDraggedHost(host)}
                     onDragEnd={() => setDraggedHost(null)}
