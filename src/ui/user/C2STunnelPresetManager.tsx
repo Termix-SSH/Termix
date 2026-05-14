@@ -693,7 +693,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                 setLocalConfig((current) => [...current, createClientTunnel()])
               }
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="size-3.5 mr-1.5" />
               {t("tunnels.addClientTunnel")}
             </Button>
             {hasUnsavedLocalChanges && (
@@ -702,7 +702,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
               </span>
             )}
             <Button type="button" onClick={handleSaveLocal}>
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="size-3.5 mr-1.5" />
               {t("common.save")}
             </Button>
           </div>
@@ -738,7 +738,10 @@ export function C2STunnelPresetManager(): React.ReactElement {
               const lastTested = formatDateTime(tunnel.lastTestedAt);
 
               return (
-                <div key={index} className="p-4 border rounded-lg bg-muted/50">
+                <div
+                  key={index}
+                  className="p-4 border border-border bg-muted/20"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-[240px] flex-1 space-y-1">
                       <Label className="text-xs text-muted-foreground">
@@ -752,7 +755,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                           })
                         }
                         placeholder={getTunnelDisplayName(tunnel, index)}
-                        className="h-8 max-w-md bg-background"
+                        className="h-8 max-w-md"
                       />
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -766,9 +769,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                         className="h-8 px-3 text-xs"
                       >
                         <Activity
-                          className={`h-3 w-3 mr-1 ${
-                            isTunnelTestLoading ? "animate-pulse" : ""
-                          }`}
+                          className={`size-3 mr-1 ${isTunnelTestLoading ? "animate-pulse" : ""}`}
                         />
                         {t("tunnels.test")}
                       </Button>
@@ -784,6 +785,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                         type="button"
                         variant="ghost"
                         size="sm"
+                        className="h-8 text-muted-foreground hover:text-destructive"
                         onClick={() =>
                           setLocalConfig((current) =>
                             current.filter(
@@ -792,7 +794,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                           )
                         }
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="size-3.5 mr-1.5" />
                         {t("common.delete")}
                       </Button>
                     </div>
@@ -895,7 +897,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     {modeDescription}
                   </p>
                   <div
-                    className="mt-2 rounded-md border bg-canvasX px-3 py-2 text-xs text-muted-foreground"
+                    className="mt-2 border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
                     title={tunnelSummary}
                   >
                     <span className="font-medium text-foreground">
@@ -921,10 +923,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                         </span>
                       )}
                       {lastError && (
-                        <span
-                          className="text-red-600 dark:text-red-400"
-                          title={lastError}
-                        >
+                        <span className="text-destructive" title={lastError}>
                           {t("tunnels.lastError")}: {lastError}
                         </span>
                       )}
@@ -965,7 +964,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                     </div>
 
                     <div className="col-span-12 space-y-2">
-                      <div className="flex items-center justify-between gap-3 rounded-md border bg-canvas p-3">
+                      <div className="flex items-center justify-between gap-3 border border-border bg-muted/20 px-3 py-2.5">
                         <Label>{t("tunnels.autoStart")}</Label>
                         <Switch
                           checked={tunnel.autoStart}
@@ -1014,7 +1013,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                 placeholder={t("profile.c2sPresetNamePlaceholder")}
               />
               <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="size-3.5 mr-1.5" />
                 {t("common.save")}
               </Button>
             </div>
@@ -1063,7 +1062,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                 onClick={handleLoadPreset}
                 disabled={!selectedPreset || selectedMatchesCurrent}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="size-3.5 mr-1.5" />
                 {t("profile.c2sLoadPreset")}
               </Button>
               <Button
@@ -1071,15 +1070,16 @@ export function C2STunnelPresetManager(): React.ReactElement {
                 onClick={handleRenamePreset}
                 disabled={!selectedPreset || !presetName.trim()}
               >
-                <Pencil className="w-4 h-4 mr-2" />
+                <Pencil className="size-3.5 mr-1.5" />
                 {t("common.rename")}
               </Button>
               <Button
                 variant="ghost"
                 onClick={handleDeletePreset}
                 disabled={!selectedPreset}
+                className="text-muted-foreground hover:text-destructive"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="size-3.5 mr-1.5" />
                 {t("common.delete")}
               </Button>
             </div>

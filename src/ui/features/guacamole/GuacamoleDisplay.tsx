@@ -10,6 +10,8 @@ import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
 import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { WifiOff, RefreshCw } from "lucide-react";
+import { Button } from "@/components/button.tsx";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -65,6 +67,7 @@ export const GuacamoleDisplay = forwardRef<
     typeof document === "undefined" ? true : document.hasFocus(),
   );
   const [isReady, setIsReady] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -267,6 +270,7 @@ export const GuacamoleDisplay = forwardRef<
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     setIsReady(false);
+    setConnectionError(null);
 
     let containerWidth = containerRef.current?.clientWidth || 0;
     let containerHeight = containerRef.current?.clientHeight || 0;
@@ -351,6 +355,7 @@ export const GuacamoleDisplay = forwardRef<
         case 2:
           break;
         case 3:
+          isConnectingRef.current = false;
           setIsReady(true);
           onConnect?.();
           break;
@@ -366,8 +371,10 @@ export const GuacamoleDisplay = forwardRef<
     };
 
     client.onerror = (error: Guacamole.Status) => {
-      const errorMessage = error.message || "Connection error";
+      const errorMessage = error.message || t("guacamole.connectionError");
       setIsReady(false);
+      setConnectionError(errorMessage);
+      isConnectingRef.current = false;
       onError?.(errorMessage);
     };
 
@@ -530,6 +537,18 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [isReady, syncClipboard]);
 
+  const handleReconnect = useCallback(() => {
+    setConnectionError(null);
+    hasInitiatedRef.current = false;
+    isConnectingRef.current = false;
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
+    }
+    displayElementRef.current = null;
+    connect();
+  }, [connect]);
+
   const connectingMessage = t("guacamole.connecting", {
     type: (
       connectionConfig.protocol ||
@@ -553,7 +572,32 @@ export const GuacamoleDisplay = forwardRef<
         }}
       />
 
-      <SimpleLoader visible={!isReady} message={connectingMessage} />
+      {connectionError ? (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-[100]"
+          style={{ backgroundColor: "var(--bg-base)" }}
+        >
+          <WifiOff className="size-10" style={{ color: "var(--foreground)" }} />
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "var(--foreground)" }}
+          >
+            {t("guacamole.connectionFailed")}
+          </p>
+          <p
+            className="text-xs max-w-xs text-center"
+            style={{ color: "var(--foreground-secondary)" }}
+          >
+            {connectionError}
+          </p>
+          <Button variant="outline" size="sm" onClick={handleReconnect}>
+            <RefreshCw className="size-4 mr-2" />
+            {t("guacamole.reconnect")}
+          </Button>
+        </div>
+      ) : (
+        <SimpleLoader visible={!isReady} message={connectingMessage} />
+      )}
     </div>
   );
 });

@@ -4,6 +4,7 @@ import React, {
   useRef,
   type MutableRefObject,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   TERMINAL_THEMES,
   TERMINAL_FONTS,
@@ -85,8 +86,12 @@ import {
   getHostAccess,
   revokeHostAccess,
   renameFolder,
+  renameCredentialFolder,
   refreshServerPolling,
   deleteAllHostsInFolder,
+  subscribeTunnelStatuses,
+  connectTunnel,
+  disconnectTunnel,
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 
@@ -125,14 +130,22 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
-    enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
-    enableTerminal: h.enableTerminal ?? true,
+    enableSsh:
+      h.enableSsh != null
+        ? h.enableSsh
+        : h.connectionType === "ssh" || !h.connectionType,
+    enableTerminal:
+      h.enableTerminal ??
+      (h.enableSsh != null
+        ? h.enableSsh
+        : h.connectionType === "ssh" || !h.connectionType),
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
-    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
-    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
-    enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
+    enableRdp: h.enableRdp != null ? h.enableRdp : h.connectionType === "rdp",
+    enableVnc: h.enableVnc != null ? h.enableVnc : h.connectionType === "vnc",
+    enableTelnet:
+      h.enableTelnet != null ? h.enableTelnet : h.connectionType === "telnet",
     sshPort: h.sshPort ?? h.port,
     rdpPort: h.rdpPort ?? 3389,
     vncPort: h.vncPort ?? 5900,
@@ -168,27 +181,88 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
   };
 }
 
-const HOST_TABS = [
-  { id: "general", label: "General", icon: <Settings className="size-3.5" /> },
-  { id: "ssh", label: "SSH", icon: <Terminal className="size-3.5" /> },
-  { id: "tunnels", label: "Tunnels", icon: <Network className="size-3.5" /> },
-  { id: "docker", label: "Docker", icon: <Box className="size-3.5" /> },
-  { id: "files", label: "Files", icon: <FolderSearch className="size-3.5" /> },
-  {
-    id: "stats",
-    label: "Stats & Actions",
-    icon: <Activity className="size-3.5" />,
-  },
-  { id: "rdp", label: "RDP", icon: <Monitor className="size-3.5" /> },
-  { id: "vnc", label: "VNC", icon: <Monitor className="size-3.5" /> },
-  { id: "telnet", label: "Telnet", icon: <Terminal className="size-3.5" /> },
-  { id: "sharing", label: "Sharing", icon: <Share2 className="size-3.5" /> },
-];
+const HOST_TAB_IDS = [
+  "general",
+  "ssh",
+  "tunnels",
+  "docker",
+  "files",
+  "stats",
+  "rdp",
+  "vnc",
+  "telnet",
+  "sharing",
+] as const;
+const CREDENTIAL_TAB_IDS = ["general", "auth"] as const;
 
-const CREDENTIAL_TABS = [
-  { id: "general", label: "General", icon: <Info className="size-3.5" /> },
-  { id: "auth", label: "Authentication", icon: <Lock className="size-3.5" /> },
-];
+type HostTab = {
+  id: (typeof HOST_TAB_IDS)[number];
+  label: string;
+  icon: React.ReactNode;
+};
+type CredentialTab = {
+  id: (typeof CREDENTIAL_TAB_IDS)[number];
+  label: string;
+  icon: React.ReactNode;
+};
+
+function makeHostTabs(t: (key: string) => string): HostTab[] {
+  return [
+    {
+      id: "general",
+      label: t("hosts.tabGeneral"),
+      icon: <Settings className="size-3" />,
+    },
+    { id: "ssh", label: "SSH", icon: <Terminal className="size-3" /> },
+    {
+      id: "tunnels",
+      label: t("hosts.tabTunnels"),
+      icon: <Network className="size-3" />,
+    },
+    {
+      id: "docker",
+      label: t("hosts.tabDocker"),
+      icon: <Box className="size-3" />,
+    },
+    {
+      id: "files",
+      label: t("hosts.tabFiles"),
+      icon: <Folder className="size-3" />,
+    },
+    {
+      id: "stats",
+      label: t("hosts.tabStats"),
+      icon: <Activity className="size-3" />,
+    },
+    { id: "rdp", label: "RDP", icon: <Monitor className="size-3" /> },
+    { id: "vnc", label: "VNC", icon: <Monitor className="size-3" /> },
+    {
+      id: "telnet",
+      label: t("hosts.tabTelnet"),
+      icon: <Terminal className="size-3" />,
+    },
+    {
+      id: "sharing",
+      label: t("hosts.tabSharing"),
+      icon: <Share2 className="size-3" />,
+    },
+  ];
+}
+
+function makeCredentialTabs(t: (key: string) => string): CredentialTab[] {
+  return [
+    {
+      id: "general",
+      label: t("hosts.tabGeneral"),
+      icon: <Settings className="size-3" />,
+    },
+    {
+      id: "auth",
+      label: t("hosts.tabAuthentication"),
+      icon: <KeyRound className="size-3" />,
+    },
+  ];
+}
 
 const SSH_DEP_TABS = new Set(["tunnels", "docker", "files", "stats"]);
 
@@ -266,6 +340,8 @@ function HostRow({
   onDragEnd,
   depth = 0,
   stripeIndex = 0,
+  statusesLoading = false,
+  initialLoadComplete = true,
 }: {
   host: Host;
   selectionMode: boolean;
@@ -277,30 +353,15 @@ function HostRow({
   onDragEnd?: () => void;
   depth?: number;
   stripeIndex?: number;
+  statusesLoading?: boolean;
+  initialLoadComplete?: boolean;
 }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
 
   const connTypeColor = "border-border/60 text-muted-foreground/60";
 
-  const hasSsh = host.enableSsh;
-
   const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
-
-  const sshActions: { type: string; icon: typeof Terminal; label: string }[] = [
-    host.enableTerminal && {
-      type: "terminal",
-      icon: Terminal,
-      label: "Terminal",
-    },
-    host.enableFileManager && {
-      type: "files",
-      icon: FolderSearch,
-      label: "Files",
-    },
-    host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
-    host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
-    metricsEnabled && { type: "stats", icon: Server, label: "Stats" },
-  ].filter(Boolean) as { type: string; icon: typeof Terminal; label: string }[];
 
   const fireOpen = (type: string) => {
     window.dispatchEvent(
@@ -334,7 +395,13 @@ function HostRow({
 
         {/* Status dot */}
         <div
-          className={`size-1.5 rounded-full shrink-0 ${host.online ? `bg-accent-brand${selectionMode ? "" : " shadow-[0_0_4px_rgba(251,146,60,0.5)]"}` : "bg-muted-foreground/25"}`}
+          className={`size-1.5 rounded-full shrink-0 ${
+            !initialLoadComplete || (statusesLoading && !host.online)
+              ? "bg-muted-foreground/30 animate-[blink_1s_step-start_infinite]"
+              : host.online
+                ? "bg-accent-brand"
+                : "bg-muted-foreground/25"
+          }`}
         />
 
         {/* Name + badges */}
@@ -429,7 +496,7 @@ function HostRow({
             depth > 0 ? `${depth * 12 + 8 + 12 + 8 + 6}px` : undefined,
         }}
       >
-        <span className="text-[11px] text-muted-foreground/50 font-mono truncate shrink-0 max-w-[160px]">
+        <span className="text-[11px] text-muted-foreground/50 font-mono break-all">
           {host.username}@{host.ip}:{host.sshPort || host.port}
         </span>
         {host.tags && host.tags.length > 0 && (
@@ -452,7 +519,7 @@ function HostRow({
       </div>
 
       {/* Hover action tray */}
-      {(hovered || selectionMode) && (
+      {hovered && !selectionMode && (
         <div
           className="border-t border-border/40"
           style={{ marginLeft: depth > 0 ? `-${depth * 12 + 8}px` : undefined }}
@@ -464,25 +531,66 @@ function HostRow({
               paddingRight: "8px",
             }}
           >
-            {hasSsh &&
-              sshActions.map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  title={label}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fireOpen(type);
-                  }}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-                >
-                  <Icon className="size-3 shrink-0" />
-                  <span>{label}</span>
-                </button>
-              ))}
-            {hasSsh &&
-              (host.enableRdp || host.enableVnc || host.enableTelnet) && (
-                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
-              )}
+            {host.enableTerminal && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fireOpen("terminal");
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                <Terminal className="size-3 shrink-0" />
+                <span>{t("hosts.terminal")}</span>
+              </button>
+            )}
+            {host.enableFileManager && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fireOpen("files");
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                <FolderSearch className="size-3 shrink-0" />
+                <span>{t("hosts.fileManager")}</span>
+              </button>
+            )}
+            {host.enableDocker && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fireOpen("docker");
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                <Box className="size-3 shrink-0" />
+                <span>{t("hosts.docker")}</span>
+              </button>
+            )}
+            {host.enableTunnel && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fireOpen("tunnel");
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                <Network className="size-3 shrink-0" />
+                <span>{t("hosts.tunnel")}</span>
+              </button>
+            )}
+            {metricsEnabled && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fireOpen("stats");
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                <Server className="size-3 shrink-0" />
+                <span>{t("hosts.serverStats")}</span>
+              </button>
+            )}
             {host.enableRdp && (
               <button
                 onClick={(e) => {
@@ -516,12 +624,12 @@ function HostRow({
                 className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
               >
                 <Terminal className="size-3 shrink-0" />
-                <span>Telnet</span>
+                <span>{t("hosts.telnet")}</span>
               </button>
             )}
             <div className="flex-1" />
             <button
-              title="Edit Host"
+              title={t("hosts.editHostTooltip")}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit();
@@ -529,7 +637,7 @@ function HostRow({
               className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
             >
               <Pencil className="size-3 shrink-0" />
-              <span>Edit</span>
+              <span>{t("common.edit")}</span>
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -541,20 +649,22 @@ function HostRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem onClick={() => toast.success("Host cloned")}>
+                <DropdownMenuItem
+                  onClick={() => toast.success(t("hosts.hostCloned"))}
+                >
                   <Copy className="size-3.5 mr-2" />
-                  Clone Host
+                  {t("hosts.cloneHostAction")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     navigator.clipboard.writeText(
                       `${host.username}@${host.ip}`,
                     );
-                    toast.success("Copied to clipboard");
+                    toast.success(t("hosts.copiedToClipboard"));
                   }}
                 >
                   <Copy className="size-3.5 mr-2" />
-                  Copy Address
+                  {t("hosts.copyAddress")}
                 </DropdownMenuItem>
                 {host.enableTerminal && (
                   <DropdownMenuItem
@@ -562,11 +672,11 @@ function HostRow({
                       navigator.clipboard.writeText(
                         `${window.location.origin}?view=terminal&hostId=${host.id}`,
                       );
-                      toast.success("Terminal URL copied");
+                      toast.success(t("hosts.terminalUrlCopied"));
                     }}
                   >
                     <Copy className="size-3.5 mr-2" />
-                    Copy Terminal URL
+                    {t("hosts.copyTerminalUrlAction")}
                   </DropdownMenuItem>
                 )}
                 {host.enableFileManager && (
@@ -575,11 +685,11 @@ function HostRow({
                       navigator.clipboard.writeText(
                         `${window.location.origin}?view=file_manager&hostId=${host.id}`,
                       );
-                      toast.success("File Manager URL copied");
+                      toast.success(t("hosts.fileManagerUrlCopied"));
                     }}
                   >
                     <Copy className="size-3.5 mr-2" />
-                    Copy File Manager URL
+                    {t("hosts.copyFileManagerUrlAction")}
                   </DropdownMenuItem>
                 )}
                 {(host.enableRdp || host.enableVnc || host.enableTelnet) && (
@@ -593,11 +703,11 @@ function HostRow({
                       navigator.clipboard.writeText(
                         `${window.location.origin}?view=${proto}&hostId=${host.id}`,
                       );
-                      toast.success("Remote Desktop URL copied");
+                      toast.success(t("hosts.remoteDesktopUrlCopied"));
                     }}
                   >
                     <Copy className="size-3.5 mr-2" />
-                    Copy Remote Desktop URL
+                    {t("hosts.copyRemoteDesktopUrlAction")}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
@@ -605,7 +715,7 @@ function HostRow({
                   onClick={onDelete}
                 >
                   <Trash2 className="size-3.5 mr-2" />
-                  Delete
+                  {t("common.delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -642,10 +752,14 @@ function HostEditor({
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState(() => {
     const rawTheme = host?.terminalConfig?.theme;
     const normalizedTheme =
-      !rawTheme || rawTheme === "Termix Dark" || rawTheme === "Termix Light"
+      !rawTheme ||
+      ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
+        rawTheme,
+      )
         ? "termix"
         : TERMINAL_THEMES[rawTheme]
           ? rawTheme
@@ -778,6 +892,9 @@ function HostEditor({
     [],
   );
   const [sharingLoaded, setSharingLoaded] = useState(false);
+  const [sharingLoadError, setSharingLoadError] = useState(false);
+  const [tunnelStatuses, setTunnelStatuses] = useState<Record<string, any>>({});
+  const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
 
   useEffect(() => {
     getSnippets()
@@ -801,27 +918,36 @@ function HostEditor({
       getHostAccess(Number(host.id)).catch(() => ({ access: [] })),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
-    ]).then(([accessRes, usersRes, rolesRes]) => {
-      setAccessList((accessRes as any)?.access ?? []);
-      setShareUsers(
-        ((usersRes as any)?.users ?? []).map((u: any) => ({
-          id: String(u.id ?? u.userId),
-          username: u.username,
-        })),
-      );
-      setShareRoles(
-        ((rolesRes as any)?.roles ?? []).map((r: any) => ({
-          id: String(r.id),
-          name: r.name,
-        })),
-      );
-    });
+    ])
+      .then(([accessRes, usersRes, rolesRes]) => {
+        setAccessList((accessRes as any)?.access ?? []);
+        setShareUsers(
+          ((usersRes as any)?.users ?? []).map((u: any) => ({
+            id: String(u.id ?? u.userId),
+            username: u.username,
+          })),
+        );
+        setShareRoles(
+          ((rolesRes as any)?.roles ?? []).map((r: any) => ({
+            id: String(r.id),
+            name: r.name,
+          })),
+        );
+      })
+      .catch(() => setSharingLoadError(true));
   }, [activeTab, host, sharingLoaded]);
 
   useEffect(() => {
     setSharingLoaded(false);
+    setSharingLoadError(false);
     setAccessList([]);
   }, [host?.id]);
+
+  useEffect(() => {
+    if (activeTab !== "tunnels") return;
+    const unsub = subscribeTunnelStatuses((s) => setTunnelStatuses(s));
+    return unsub;
+  }, [activeTab]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -892,7 +1018,10 @@ function HostEditor({
         })),
         statsConfig: form.statsConfig,
         guacamoleConfig:
-          protocols.enableRdp || protocols.enableVnc || protocols.enableTelnet
+          (protocols.enableRdp ||
+            protocols.enableVnc ||
+            protocols.enableTelnet) &&
+          Object.keys(form.guacamoleConfig).length > 0
             ? form.guacamoleConfig
             : null,
         terminalConfig: protocols.enableSsh
@@ -927,10 +1056,10 @@ function HostEditor({
       const saved = host
         ? await updateSSHHost(Number(host.id), data as any)
         : await createSSHHost(data as any);
-      toast.success(host ? "Host updated" : "Host created");
+      toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       onSave(saved);
     } catch {
-      toast.error("Failed to save host");
+      toast.error(t("hosts.failedToSave"));
     } finally {
       setSaving(false);
     }
@@ -960,7 +1089,7 @@ function HostEditor({
           <>
             {/* Protocols — enable/disable each connection type */}
             <SectionCard
-              title="Protocols"
+              title={t("hosts.protocols")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-3">
@@ -968,7 +1097,7 @@ function HostEditor({
                   {
                     proto: "enableSsh" as const,
                     label: "SSH",
-                    desc: "Secure Shell",
+                    desc: t("hosts.secureShell"),
                     icon: <Terminal className="size-4" />,
                     portField: "sshPort" as const,
                   },
@@ -982,14 +1111,14 @@ function HostEditor({
                   {
                     proto: "enableVnc" as const,
                     label: "VNC",
-                    desc: "Virtual Network",
+                    desc: t("hosts.virtualNetwork"),
                     icon: <Monitor className="size-4" />,
                     portField: "vncPort" as const,
                   },
                   {
                     proto: "enableTelnet" as const,
                     label: "Telnet",
-                    desc: "Unencrypted shell",
+                    desc: t("hosts.unencryptedShell"),
                     icon: <Terminal className="size-4" />,
                     portField: "telnetPort" as const,
                   },
@@ -1028,13 +1157,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Connection Details"
+              title={t("hosts.connectionDetails")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Address / IP
+                    {t("hosts.addressIp")}
                   </label>
                   <Input
                     placeholder="10.0.0.1 or example.com"
@@ -1046,7 +1175,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Friendly Name
+                      {t("hosts.friendlyName")}
                     </label>
                     <Input
                       placeholder="e.g. Web Server Production"
@@ -1076,21 +1205,18 @@ function HostEditor({
               !protocols.enableTelnet && (
                 <div className="flex items-center gap-3 p-3 border border-border bg-muted/20 text-xs text-muted-foreground">
                   <Globe className="size-4 shrink-0 text-muted-foreground/40" />
-                  <span>
-                    Enable at least one protocol above to configure
-                    authentication and connection settings.
-                  </span>
+                  <span>{t("hosts.enableAtLeastOneProtocol")}</span>
                 </div>
               )}
 
             <SectionCard
-              title="Folder & Advanced"
+              title={t("hosts.folderAndAdvanced")}
               icon={<Tag className="size-3.5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Folder
+                    {t("hosts.folder")}
                   </label>
                   <Input
                     placeholder="e.g. Production"
@@ -1100,7 +1226,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Tags
+                    {t("hosts.tags")}
                   </label>
                   <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
                     {form.tags.map((tag) => (
@@ -1114,7 +1240,7 @@ function HostEditor({
                           onClick={() =>
                             setField(
                               "tags",
-                              form.tags.filter((t) => t !== tag),
+                              form.tags.filter((tg) => tg !== tag),
                             )
                           }
                           className="text-muted-foreground hover:text-destructive ml-0.5"
@@ -1125,7 +1251,9 @@ function HostEditor({
                     ))}
                     <input
                       className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
-                      placeholder={form.tags.length === 0 ? "Add tags..." : ""}
+                      placeholder={
+                        form.tags.length === 0 ? t("hosts.addTag") : ""
+                      }
                       value={form.tagInput}
                       onChange={(e) => setField("tagInput", e.target.value)}
                       onKeyDown={(e) => {
@@ -1151,19 +1279,19 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Private Notes
+                    {t("hosts.privateNotes")}
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Details about this server..."
+                    placeholder={t("hosts.privateNotesPlaceholder")}
                     className="w-full px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
                     value={form.notes}
                     onChange={(e) => setField("notes", e.target.value)}
                   />
                 </div>
                 <SettingRow
-                  label="Pin to Top"
-                  description="Always show this host at the top of the list"
+                  label={t("hosts.pinToTop")}
+                  description={t("hosts.pinToTopDesc")}
                 >
                   <FakeSwitch
                     checked={form.pin}
@@ -1171,10 +1299,10 @@ function HostEditor({
                   />
                 </SettingRow>
               </div>
-              <div className="flex flex-col gap-3 border-t border-border pt-4 pb-2">
+              <div className="flex flex-col gap-3 border-t border-border pt-4 pb-0">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Port Knocking Sequence
+                    {t("hosts.portKnockingSequence")}
                   </span>
                   <Button
                     variant="outline"
@@ -1187,12 +1315,12 @@ function HostEditor({
                       ])
                     }
                   >
-                    <Plus className="size-3 mr-1" /> Add Knock
+                    <Plus className="size-3 mr-1" /> {t("hosts.addKnockBtn")}
                   </Button>
                 </div>
                 {form.portKnockSequence.length === 0 && (
                   <p className="text-[10px] text-muted-foreground/50">
-                    No port knocking configured.
+                    {t("hosts.noPortKnocking")}
                   </p>
                 )}
                 <div className="flex flex-col gap-2">
@@ -1201,12 +1329,15 @@ function HostEditor({
                       key={i}
                       className="flex items-end gap-1.5 p-1.5 bg-muted/30 border border-border"
                     >
+                      <span className="text-[9px] font-bold text-muted-foreground/50 mb-1.5 shrink-0">
+                        {i + 1}.
+                      </span>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
-                          Port
+                          {t("hosts.knockPort")}
                         </span>
                         <Input
-                          className="h-7 text-xs w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="8080"
                           type="number"
                           value={knock.port}
@@ -1222,7 +1353,7 @@ function HostEditor({
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
-                          Protocol
+                          {t("hosts.protocol")}
                         </span>
                         <select
                           className="h-7 text-[10px] bg-background border border-border px-1"
@@ -1242,7 +1373,7 @@ function HostEditor({
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
-                          Delay (ms)
+                          {t("hosts.delayAfterMs")}
                         </span>
                         <Input
                           className="h-7 text-xs w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -1276,16 +1407,10 @@ function HostEditor({
                   ))}
                 </div>
               </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Proxy & Bastion"
-              icon={<Network className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-4 py-3">
+              <div className="flex flex-col gap-4 border-t border-border pt-4 pb-2">
                 <SettingRow
-                  label="Use SOCKS5 Proxy"
-                  description="Route connection through a proxy server"
+                  label={t("hosts.useSocks5Proxy")}
+                  description={t("hosts.useSocks5ProxyDesc")}
                 >
                   <FakeSwitch
                     checked={form.useSocks5}
@@ -1296,7 +1421,7 @@ function HostEditor({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Host
+                        {t("hosts.proxyHost")}
                       </label>
                       <Input
                         className="h-7 text-xs"
@@ -1307,7 +1432,7 @@ function HostEditor({
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Port
+                        {t("hosts.proxyPort")}
                       </label>
                       <Input
                         className="h-7 text-xs"
@@ -1321,7 +1446,7 @@ function HostEditor({
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Username
+                        {t("hosts.proxyUsername")}
                       </label>
                       <Input
                         className="h-7 text-xs"
@@ -1334,7 +1459,7 @@ function HostEditor({
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Password
+                        {t("hosts.proxyPassword")}
                       </label>
                       <Input
                         className="h-7 text-xs"
@@ -1351,7 +1476,7 @@ function HostEditor({
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Jump Host Chain
+                      {t("hosts.jumpHostChainLabel")}
                     </span>
                     <Button
                       variant="outline"
@@ -1364,12 +1489,12 @@ function HostEditor({
                         ])
                       }
                     >
-                      <Plus className="size-3 mr-1" /> Add Jump
+                      <Plus className="size-3 mr-1" /> {t("hosts.addJumpBtn")}
                     </Button>
                   </div>
                   {form.jumpHosts.length === 0 && (
                     <p className="text-[10px] text-muted-foreground/50">
-                      No jump hosts configured.
+                      {t("hosts.noJumpHosts")}
                     </p>
                   )}
                   <div className="flex flex-col gap-2">
@@ -1390,7 +1515,7 @@ function HostEditor({
                             setField("jumpHosts", updated);
                           }}
                         >
-                          <option value="">Select a server...</option>
+                          <option value="">{t("hosts.selectAServer")}</option>
                           {hosts
                             .filter((h) => (host ? h.id !== host.id : true))
                             .map((h) => (
@@ -1424,13 +1549,13 @@ function HostEditor({
         {activeTab === "ssh" && (
           <>
             <SectionCard
-              title="Connection"
+              title={t("hosts.connectionLabel")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    SSH Port
+                    {t("hosts.sshPort")}
                   </label>
                   <Input
                     type="number"
@@ -1445,13 +1570,13 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Authentication"
+              title={t("hosts.authenticationLabel")}
               icon={<Shield className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Auth Method
+                    {t("hosts.authMethod")}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {["password", "key", "credential", "none", "opkssh"].map(
@@ -1470,7 +1595,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-1">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Username
+                      {t("hosts.username")}
                     </label>
                     <Input
                       placeholder="root"
@@ -1481,7 +1606,7 @@ function HostEditor({
                   {authMethod === "password" && (
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Password
+                        {t("hosts.password")}
                       </label>
                       <Input
                         type="password"
@@ -1495,7 +1620,7 @@ function HostEditor({
                     <>
                       <div className="flex flex-col gap-1.5 col-span-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          SSH Private Key
+                          {t("hosts.sshPrivateKey")}
                         </label>
                         <textarea
                           placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
@@ -1507,7 +1632,7 @@ function HostEditor({
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Key Passphrase
+                          {t("hosts.keyPassphrase")}
                         </label>
                         <Input
                           type="password"
@@ -1523,7 +1648,7 @@ function HostEditor({
                   {authMethod === "credential" && (
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Stored Credential
+                        {t("hosts.storedCredential")}
                       </label>
                       <select
                         value={form.credentialId}
@@ -1532,7 +1657,7 @@ function HostEditor({
                         }
                         className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                       >
-                        <option value="">Select a credential...</option>
+                        <option value="">{t("hosts.selectACredential")}</option>
                         {credentials.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name} ({c.username})
@@ -1543,8 +1668,8 @@ function HostEditor({
                   )}
                 </div>
                 <SettingRow
-                  label="Force Keyboard Interactive"
-                  description="Force manual password entry even if keys are present"
+                  label={t("hosts.forceKeyboardInteractiveLabel")}
+                  description={t("hosts.forceKeyboardInteractiveShortDesc")}
                 >
                   <FakeSwitch
                     checked={form.forceKeyboardInteractive}
@@ -1555,13 +1680,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Terminal Appearance"
+              title={t("hosts.terminalAppearance")}
               icon={<Palette className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Theme Preview
+                    {t("hosts.themePreview")}
                   </label>
                   <div className="w-full bg-[#111210] border border-border font-mono text-xs leading-relaxed overflow-hidden">
                     <div className="px-3 py-2.5 flex flex-col gap-0.5">
@@ -1619,23 +1744,28 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Color Theme
+                      {t("hosts.colorTheme")}
                     </label>
                     <select
                       value={form.theme}
                       onChange={(e) => setField("theme", e.target.value)}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
-                      {Object.entries(TERMINAL_THEMES).map(([key, t]) => (
-                        <option key={key} value={key}>
-                          {t.name}
-                        </option>
-                      ))}
+                      {Object.entries(TERMINAL_THEMES)
+                        .filter(
+                          ([key]) =>
+                            key !== "termixDark" && key !== "termixLight",
+                        )
+                        .map(([key, theme]) => (
+                          <option key={key} value={key}>
+                            {theme.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Font Family
+                      {t("hosts.fontFamilyLabel")}
                     </label>
                     <select
                       value={form.fontFamily}
@@ -1651,7 +1781,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Font Size
+                      {t("hosts.fontSizeLabel")}
                     </label>
                     <Input
                       type="number"
@@ -1664,7 +1794,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Cursor Style
+                      {t("hosts.cursorStyleLabel")}
                     </label>
                     <select
                       value={form.cursorStyle}
@@ -1682,7 +1812,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Letter Spacing (px)
+                      {t("hosts.letterSpacingPx")}
                     </label>
                     <Input
                       type="number"
@@ -1695,7 +1825,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Line Height
+                      {t("hosts.lineHeightLabel")}
                     </label>
                     <Input
                       type="number"
@@ -1709,7 +1839,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Bell Style
+                      {t("hosts.bellStyleLabel")}
                     </label>
                     <select
                       value={form.bellStyle}
@@ -1727,7 +1857,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Backspace Mode
+                      {t("hosts.backspaceModeLabel")}
                     </label>
                     <select
                       value={form.backspaceMode}
@@ -1742,8 +1872,8 @@ function HostEditor({
                   </div>
                 </div>
                 <SettingRow
-                  label="Cursor Blinking"
-                  description="Enable blinking animation for the terminal cursor"
+                  label={t("hosts.cursorBlinking")}
+                  description={t("hosts.cursorBlinkingDesc")}
                 >
                   <FakeSwitch
                     checked={form.cursorBlink}
@@ -1751,8 +1881,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Right-click Selects Word"
-                  description="Select the word under cursor on right-click"
+                  label={t("hosts.rightClickSelectsWordLabel")}
+                  description={t("hosts.rightClickSelectsWordShortDesc")}
                 >
                   <FakeSwitch
                     checked={form.rightClickSelectsWord}
@@ -1763,13 +1893,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Behavior & Advanced"
+              title={t("hosts.behaviorAndAdvanced")}
               icon={<Zap className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Scrollback Buffer
+                    {t("hosts.scrollbackBufferLabel")}
                   </label>
                   <Input
                     type="number"
@@ -1780,12 +1910,12 @@ function HostEditor({
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-[10px] text-muted-foreground">
-                    Maximum number of lines kept in history
+                    {t("hosts.scrollbackMaxLines")}
                   </span>
                 </div>
                 <SettingRow
-                  label="SSH Agent Forwarding"
-                  description="Pass your local SSH keys to this host"
+                  label={t("hosts.sshAgentForwardingLabel")}
+                  description={t("hosts.sshAgentForwardingShortDesc")}
                 >
                   <FakeSwitch
                     checked={form.agentForwarding}
@@ -1793,8 +1923,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable Auto-Mosh"
-                  description="Prefer Mosh over SSH if available"
+                  label={t("hosts.enableAutoMosh")}
+                  description={t("hosts.enableAutoMoshDesc")}
                 >
                   <FakeSwitch
                     checked={form.autoMosh}
@@ -1802,8 +1932,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable Auto-Tmux"
-                  description="Automatically launch or attach to tmux session"
+                  label={t("hosts.enableAutoTmux")}
+                  description={t("hosts.enableAutoTmuxDesc")}
                 >
                   <FakeSwitch
                     checked={form.autoTmux}
@@ -1811,8 +1941,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Sudo Password Auto-fill"
-                  description="Automatically provide sudo password when prompted"
+                  label={t("hosts.sudoPasswordAutoFillLabel")}
+                  description={t("hosts.sudoPasswordAutoFillShortDesc")}
                 >
                   <FakeSwitch
                     checked={form.sudoPasswordAutoFill}
@@ -1822,7 +1952,7 @@ function HostEditor({
                 {form.sudoPasswordAutoFill && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Sudo Password
+                      {t("hosts.sudoPasswordLabel")}
                     </label>
                     <Input
                       type="password"
@@ -1835,7 +1965,7 @@ function HostEditor({
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Environment Variables
+                      {t("hosts.environmentVariablesLabel")}
                     </span>
                     <Button
                       variant="outline"
@@ -1848,12 +1978,13 @@ function HostEditor({
                         ])
                       }
                     >
-                      <Plus className="size-3 mr-1" /> Add Variable
+                      <Plus className="size-3 mr-1" />{" "}
+                      {t("hosts.addVariableBtn")}
                     </Button>
                   </div>
                   {form.environmentVariables.length === 0 && (
                     <p className="text-[10px] text-muted-foreground/50">
-                      No environment variables configured.
+                      {t("hosts.noEnvVars")}
                     </p>
                   )}
                   <div className="flex flex-col gap-2">
@@ -1902,7 +2033,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Fast Scroll Modifier
+                      {t("hosts.fastScrollModifierLabel")}
                     </label>
                     <select
                       value={form.fastScrollModifier}
@@ -1920,7 +2051,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Fast Scroll Sensitivity
+                      {t("hosts.fastScrollSensitivityLabel")}
                     </label>
                     <Input
                       type="number"
@@ -1938,7 +2069,7 @@ function HostEditor({
                 {form.autoMosh && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Mosh Command
+                      {t("hosts.moshCommandLabel")}
                     </label>
                     <Input
                       placeholder="mosh"
@@ -1950,7 +2081,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Startup Snippet
+                      {t("hosts.startupSnippetLabel")}
                     </label>
                     <select
                       value={form.startupSnippetId ?? ""}
@@ -1962,7 +2093,7 @@ function HostEditor({
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
-                      <option value="">None</option>
+                      <option value="">{t("hosts.none")}</option>
                       {snippets.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -1974,7 +2105,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Keepalive Interval
+                      {t("hosts.keepaliveIntervalLabel")}
                     </label>
                     <Input
                       type="number"
@@ -1989,7 +2120,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Max Keepalive Misses
+                      {t("hosts.maxKeepaliveMisses")}
                     </label>
                     <Input
                       type="number"
@@ -2011,13 +2142,13 @@ function HostEditor({
         {activeTab === "tunnels" && (
           <>
             <SectionCard
-              title="Tunnel Settings"
+              title={t("hosts.tunnelSettings")}
               icon={<Network className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
-                  label="Enable Tunneling"
-                  description="Enable SSH tunnel functionality for this host"
+                  label={t("hosts.enableTunneling")}
+                  description={t("hosts.enableTunnelingDesc")}
                 >
                   <FakeSwitch
                     checked={form.enableTunnel}
@@ -2025,22 +2156,12 @@ function HostEditor({
                   />
                 </SettingRow>
                 <div className="text-xs text-muted-foreground p-3 bg-muted/30 border border-border space-y-1">
-                  <p>
-                    <strong>Requirements:</strong> The SSH server must have{" "}
-                    <code className="bg-muted px-1">GatewayPorts yes</code>,{" "}
-                    <code className="bg-muted px-1">
-                      AllowTcpForwarding yes
-                    </code>
-                    , and{" "}
-                    <code className="bg-muted px-1">PermitRootLogin yes</code>{" "}
-                    set in{" "}
-                    <code className="bg-muted px-1">/etc/ssh/sshd_config</code>.
-                  </p>
+                  <p>{t("hosts.tunnelRequirementsText")}</p>
                 </div>
               </div>
             </SectionCard>
             <SectionCard
-              title="Server Tunnels"
+              title={t("hosts.serverTunnelsSection")}
               icon={<Network className="size-3.5" />}
               action={
                 <Button
@@ -2063,188 +2184,276 @@ function HostEditor({
                     ])
                   }
                 >
-                  <Plus className="size-3 mr-1" /> Add Tunnel
+                  <Plus className="size-3 mr-1" /> {t("hosts.addTunnelBtn")}
                 </Button>
               }
             >
               <div className="flex flex-col gap-3 py-3">
                 {form.serverTunnels.length === 0 && (
                   <p className="text-[10px] text-muted-foreground/50 px-1">
-                    No tunnels configured.
+                    {t("hosts.noTunnelsConfigured")}
                   </p>
                 )}
-                {form.serverTunnels.map((tun, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col gap-3 p-3 border border-border bg-muted/20 relative group"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-muted-foreground">
-                        Tunnel {i + 1}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-[10px] px-2 text-destructive"
-                        onClick={() =>
-                          setField(
-                            "serverTunnels",
-                            form.serverTunnels.filter((_, idx) => idx !== i),
-                          )
-                        }
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground">
-                        Tunnel Type
-                      </label>
-                      <div className="flex gap-2">
-                        {(["remote", "local", "dynamic"] as const).map((m) => (
-                          <button
-                            key={m}
-                            onClick={() => {
-                              const updated = [...form.serverTunnels];
-                              updated[i] = { ...updated[i], mode: m };
-                              setField("serverTunnels", updated);
-                            }}
-                            className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${tun.mode === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                          >
-                            {m}
-                          </button>
-                        ))}
+                {form.serverTunnels.map((tun, i) => {
+                  const tunnelName = `${host?.id ?? "new"}-${i}-${tun.sourcePort}`;
+                  const tunnelStatus = tunnelStatuses[tunnelName]?.status as
+                    | string
+                    | undefined;
+                  const isConnected = tunnelStatus === "connected";
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-col gap-3 p-3 border border-border bg-muted/20 relative group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-muted-foreground">
+                            {t("hosts.tunnelLabel", { number: i + 1 })}
+                          </span>
+                          <div
+                            className={`size-1.5 rounded-full shrink-0 ${
+                              isConnected
+                                ? "bg-accent-brand shadow-[0_0_4px_rgba(251,146,60,0.4)]"
+                                : tunnelStatus === "error"
+                                  ? "bg-red-400"
+                                  : "bg-muted-foreground/25"
+                            }`}
+                            title={tunnelStatus ?? "not connected"}
+                          />
+                          {host && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={connectingTunnel === i}
+                              className={`h-6 text-[10px] px-2 ${isConnected ? "border-destructive/40 text-destructive hover:bg-destructive/10" : "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"}`}
+                              onClick={async () => {
+                                setConnectingTunnel(i);
+                                try {
+                                  if (isConnected) {
+                                    await disconnectTunnel(tunnelName);
+                                    toast.success(
+                                      t("hosts.tunnelDisconnected"),
+                                    );
+                                  } else {
+                                    await connectTunnel({
+                                      name: tunnelName,
+                                      mode: tun.mode as any,
+                                      sourceHostId: Number(host.id),
+                                      tunnelIndex: i,
+                                      hostName: host.name,
+                                      sourceIP: host.ip,
+                                      sourceSSHPort: host.sshPort ?? host.port,
+                                      sourceUsername: form.username,
+                                      sourcePassword:
+                                        form.password || undefined,
+                                      sourceAuthMethod: form.authType,
+                                      sourceSSHKey: form.key || undefined,
+                                      sourceKeyPassword:
+                                        form.keyPassword || undefined,
+                                      sourceCredentialId: form.credentialId
+                                        ? Number(form.credentialId)
+                                        : undefined,
+                                      endpointIP: host.ip,
+                                      endpointSSHPort:
+                                        host.sshPort ?? host.port,
+                                      endpointHost: tun.endpointHost ?? "",
+                                      endpointUsername: form.username,
+                                      endpointAuthMethod: form.authType,
+                                      sourcePort: tun.sourcePort,
+                                      endpointPort: tun.endpointPort ?? 0,
+                                      bindHost: tun.bindHost ?? "127.0.0.1",
+                                      maxRetries: tun.maxRetries ?? 3,
+                                      retryInterval: tun.retryInterval ?? 10,
+                                      autoStart: tun.autoStart ?? false,
+                                      isPinned: false,
+                                    });
+                                    toast.success(t("hosts.tunnelConnecting"));
+                                  }
+                                } catch {
+                                  toast.error(
+                                    isConnected
+                                      ? t("hosts.failedToDisconnectTunnel")
+                                      : t("hosts.failedToConnectTunnel"),
+                                  );
+                                } finally {
+                                  setConnectingTunnel(null);
+                                }
+                              }}
+                            >
+                              {connectingTunnel === i
+                                ? "..."
+                                : isConnected
+                                  ? t("hosts.disconnectBtn")
+                                  : t("hosts.connectBtn")}
+                            </Button>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2 text-destructive"
+                          onClick={() =>
+                            setField(
+                              "serverTunnels",
+                              form.serverTunnels.filter((_, idx) => idx !== i),
+                            )
+                          }
+                        >
+                          {t("common.delete")}
+                        </Button>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {tun.mode !== "dynamic" && (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-muted-foreground">
+                          {t("hosts.tunnelType")}
+                        </label>
+                        <div className="flex gap-2">
+                          {(["remote", "local", "dynamic"] as const).map(
+                            (m) => (
+                              <button
+                                key={m}
+                                onClick={() => {
+                                  const updated = [...form.serverTunnels];
+                                  updated[i] = { ...updated[i], mode: m };
+                                  setField("serverTunnels", updated);
+                                }}
+                                className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${tun.mode === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {m}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {tun.mode !== "dynamic" && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground">
+                              {t("hosts.endpointHost")}
+                            </label>
+                            <Input
+                              className="h-7 text-xs"
+                              placeholder="e.g. 127.0.0.1"
+                              value={tun.endpointHost}
+                              onChange={(e) => {
+                                const updated = [...form.serverTunnels];
+                                updated[i] = {
+                                  ...updated[i],
+                                  endpointHost: e.target.value,
+                                };
+                                setField("serverTunnels", updated);
+                              }}
+                            />
+                          </div>
+                        )}
+                        {tun.mode !== "dynamic" && (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-muted-foreground">
+                              {t("hosts.endpointPort")}
+                            </label>
+                            <Input
+                              className="h-7 text-xs"
+                              type="number"
+                              value={tun.endpointPort}
+                              onChange={(e) => {
+                                const updated = [...form.serverTunnels];
+                                updated[i] = {
+                                  ...updated[i],
+                                  endpointPort: Number(e.target.value),
+                                };
+                                setField("serverTunnels", updated);
+                              }}
+                            />
+                          </div>
+                        )}
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-muted-foreground">
-                            Endpoint Host
+                            {t("hosts.bindHost")}
                           </label>
                           <Input
                             className="h-7 text-xs"
-                            placeholder="e.g. 127.0.0.1"
-                            value={tun.endpointHost}
+                            placeholder="127.0.0.1"
+                            value={tun.bindHost ?? ""}
                             onChange={(e) => {
                               const updated = [...form.serverTunnels];
                               updated[i] = {
                                 ...updated[i],
-                                endpointHost: e.target.value,
+                                bindHost: e.target.value,
                               };
                               setField("serverTunnels", updated);
                             }}
                           />
                         </div>
-                      )}
-                      {tun.mode !== "dynamic" && (
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold text-muted-foreground">
-                            Endpoint Port
+                            {t("hosts.sourcePort")}
                           </label>
                           <Input
                             className="h-7 text-xs"
                             type="number"
-                            value={tun.endpointPort}
+                            value={tun.sourcePort}
                             onChange={(e) => {
                               const updated = [...form.serverTunnels];
                               updated[i] = {
                                 ...updated[i],
-                                endpointPort: Number(e.target.value),
+                                sourcePort: Number(e.target.value),
                               };
                               setField("serverTunnels", updated);
                             }}
                           />
                         </div>
-                      )}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-muted-foreground">
-                          Bind Host
-                        </label>
-                        <Input
-                          className="h-7 text-xs"
-                          placeholder="127.0.0.1"
-                          value={tun.bindHost ?? ""}
-                          onChange={(e) => {
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground">
+                            {t("hosts.maxRetries")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            type="number"
+                            value={tun.maxRetries}
+                            onChange={(e) => {
+                              const updated = [...form.serverTunnels];
+                              updated[i] = {
+                                ...updated[i],
+                                maxRetries: Number(e.target.value),
+                              };
+                              setField("serverTunnels", updated);
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold text-muted-foreground">
+                            {t("hosts.retryIntervalS")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            type="number"
+                            value={tun.retryInterval}
+                            onChange={(e) => {
+                              const updated = [...form.serverTunnels];
+                              updated[i] = {
+                                ...updated[i],
+                                retryInterval: Number(e.target.value),
+                              };
+                              setField("serverTunnels", updated);
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <SettingRow
+                        label={t("hosts.autoStartLabel")}
+                        description={t("hosts.autoStartDesc")}
+                      >
+                        <FakeSwitch
+                          checked={tun.autoStart}
+                          onChange={(v) => {
                             const updated = [...form.serverTunnels];
-                            updated[i] = {
-                              ...updated[i],
-                              bindHost: e.target.value,
-                            };
+                            updated[i] = { ...updated[i], autoStart: v };
                             setField("serverTunnels", updated);
                           }}
                         />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-muted-foreground">
-                          Source Port
-                        </label>
-                        <Input
-                          className="h-7 text-xs"
-                          type="number"
-                          value={tun.sourcePort}
-                          onChange={(e) => {
-                            const updated = [...form.serverTunnels];
-                            updated[i] = {
-                              ...updated[i],
-                              sourcePort: Number(e.target.value),
-                            };
-                            setField("serverTunnels", updated);
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-muted-foreground">
-                          Max Retries
-                        </label>
-                        <Input
-                          className="h-7 text-xs"
-                          type="number"
-                          value={tun.maxRetries}
-                          onChange={(e) => {
-                            const updated = [...form.serverTunnels];
-                            updated[i] = {
-                              ...updated[i],
-                              maxRetries: Number(e.target.value),
-                            };
-                            setField("serverTunnels", updated);
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-muted-foreground">
-                          Retry Interval (s)
-                        </label>
-                        <Input
-                          className="h-7 text-xs"
-                          type="number"
-                          value={tun.retryInterval}
-                          onChange={(e) => {
-                            const updated = [...form.serverTunnels];
-                            updated[i] = {
-                              ...updated[i],
-                              retryInterval: Number(e.target.value),
-                            };
-                            setField("serverTunnels", updated);
-                          }}
-                        />
-                      </div>
+                      </SettingRow>
                     </div>
-                    <SettingRow
-                      label="Auto-start"
-                      description="Automatically connect this tunnel when the host is loaded"
-                    >
-                      <FakeSwitch
-                        checked={tun.autoStart}
-                        onChange={(v) => {
-                          const updated = [...form.serverTunnels];
-                          updated[i] = { ...updated[i], autoStart: v };
-                          setField("serverTunnels", updated);
-                        }}
-                      />
-                    </SettingRow>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </SectionCard>
           </>
@@ -2252,13 +2461,13 @@ function HostEditor({
 
         {activeTab === "docker" && (
           <SectionCard
-            title="Docker Integration"
+            title={t("hosts.dockerIntegration")}
             icon={<Box className="size-3.5" />}
           >
             <div className="flex flex-col gap-4 py-3">
               <SettingRow
-                label="Enable Docker"
-                description="Monitor and manage containers on this host via Docker"
+                label={t("hosts.enableDockerMonitor")}
+                description={t("hosts.enableDockerMonitorDesc")}
               >
                 <FakeSwitch
                   checked={form.enableDocker}
@@ -2271,13 +2480,13 @@ function HostEditor({
 
         {activeTab === "files" && (
           <SectionCard
-            title="File Manager"
+            title={t("hosts.fileManager")}
             icon={<FolderSearch className="size-3.5" />}
           >
             <div className="flex flex-col gap-4 py-3">
               <SettingRow
-                label="Enable File Manager"
-                description="Browse and manage files on this host over SFTP"
+                label={t("hosts.enableFileManagerMonitor")}
+                description={t("hosts.enableFileManagerMonitorDesc")}
               >
                 <FakeSwitch
                   checked={form.enableFileManager}
@@ -2286,7 +2495,7 @@ function HostEditor({
               </SettingRow>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Default Path
+                  {t("hosts.defaultPathLabel")}
                 </label>
                 <Input
                   placeholder="/"
@@ -2294,8 +2503,7 @@ function HostEditor({
                   onChange={(e) => setField("defaultPath", e.target.value)}
                 />
                 <span className="text-[10px] text-muted-foreground">
-                  The directory to open when the file manager launches for this
-                  host.
+                  {t("hosts.fileManagerPathHint")}
                 </span>
               </div>
             </div>
@@ -2305,13 +2513,13 @@ function HostEditor({
         {activeTab === "stats" && (
           <>
             <SectionCard
-              title="Status Checks"
+              title={t("hosts.statusChecksLabel")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 <SettingRow
-                  label="Enable Status Checks"
-                  description="Periodically ping this host to verify availability"
+                  label={t("hosts.enableStatusChecks")}
+                  description={t("hosts.enableStatusChecksDesc")}
                 >
                   <FakeSwitch
                     checked={form.statsConfig.statusCheckEnabled}
@@ -2324,8 +2532,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Use Global Interval"
-                  description="Override with the server-wide status check interval"
+                  label={t("hosts.useGlobalInterval")}
+                  description={t("hosts.useGlobalIntervalDesc")}
                 >
                   <FakeSwitch
                     checked={form.statsConfig.useGlobalStatusInterval}
@@ -2339,8 +2547,8 @@ function HostEditor({
                 </SettingRow>
                 {!form.statsConfig.useGlobalStatusInterval && (
                   <SettingRow
-                    label="Check Interval (s)"
-                    description="Seconds between each connectivity ping"
+                    label={t("hosts.checkIntervalS")}
+                    description={t("hosts.checkIntervalDesc")}
                   >
                     <Input
                       type="number"
@@ -2358,13 +2566,13 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Metrics Collection"
+              title={t("hosts.metricsCollectionLabel")}
               icon={<Server className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 <SettingRow
-                  label="Enable Metrics"
-                  description="Collect CPU, RAM, disk, and network usage from this host"
+                  label={t("hosts.enableMetricsLabel")}
+                  description={t("hosts.enableMetricsDesc")}
                 >
                   <FakeSwitch
                     checked={form.statsConfig.metricsEnabled}
@@ -2377,8 +2585,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Use Global Interval"
-                  description="Override with the server-wide metrics interval"
+                  label={t("hosts.useGlobalMetrics")}
+                  description={t("hosts.useGlobalMetricsDesc")}
                 >
                   <FakeSwitch
                     checked={form.statsConfig.useGlobalMetricsInterval}
@@ -2392,8 +2600,8 @@ function HostEditor({
                 </SettingRow>
                 {!form.statsConfig.useGlobalMetricsInterval && (
                   <SettingRow
-                    label="Metrics Interval (s)"
-                    description="Seconds between metric snapshots"
+                    label={t("hosts.metricsIntervalS")}
+                    description={t("hosts.metricsIntervalDesc2")}
                   >
                     <Input
                       type="number"
@@ -2411,60 +2619,60 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Visible Widgets"
+              title={t("hosts.visibleWidgets")}
               icon={<LayoutDashboard className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 {[
                   {
                     id: "cpu",
-                    label: "CPU Usage",
-                    desc: "CPU percent, load averages, sparkline graph",
+                    label: t("hosts.cpuUsageLabel"),
+                    desc: t("hosts.cpuUsageDesc"),
                   },
                   {
                     id: "memory",
-                    label: "Memory",
-                    desc: "RAM usage, swap, cached",
+                    label: t("hosts.memoryLabel"),
+                    desc: t("hosts.memoryDesc"),
                   },
                   {
                     id: "disk",
-                    label: "Storage",
-                    desc: "Disk usage per mount point",
+                    label: t("hosts.storageLabel"),
+                    desc: t("hosts.storageDesc"),
                   },
                   {
                     id: "network",
-                    label: "Network",
-                    desc: "Interface list and bandwidth",
+                    label: t("hosts.networkLabel"),
+                    desc: t("hosts.networkDesc"),
                   },
                   {
                     id: "uptime",
-                    label: "Uptime",
-                    desc: "System uptime and boot time",
+                    label: t("hosts.uptimeLabel"),
+                    desc: t("hosts.uptimeDesc"),
                   },
                   {
                     id: "system",
-                    label: "System Info",
-                    desc: "OS, kernel, hostname, architecture",
+                    label: t("hosts.systemInfoLabel"),
+                    desc: t("hosts.systemInfoDesc"),
                   },
                   {
                     id: "login_stats",
-                    label: "Recent Logins",
-                    desc: "Successful and failed login events",
+                    label: t("hosts.recentLoginsLabel"),
+                    desc: t("hosts.recentLoginsDesc"),
                   },
                   {
                     id: "processes",
-                    label: "Top Processes",
-                    desc: "PID, CPU%, MEM%, command",
+                    label: t("hosts.topProcessesLabel"),
+                    desc: t("hosts.topProcessesDesc"),
                   },
                   {
                     id: "ports",
-                    label: "Listening Ports",
-                    desc: "Open ports with process and state",
+                    label: t("hosts.listeningPortsLabel"),
+                    desc: t("hosts.listeningPortsDesc"),
                   },
                   {
                     id: "firewall",
-                    label: "Firewall",
-                    desc: "Firewall, AppArmor, SELinux status",
+                    label: t("hosts.firewallLabel"),
+                    desc: t("hosts.firewallDesc"),
                   },
                 ].map((w) => (
                   <SettingRow key={w.id} label={w.label} description={w.desc}>
@@ -2487,7 +2695,7 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Quick Actions"
+              title={t("hosts.quickActionsToolbar").split(".")[0]}
               icon={<Zap className="size-3.5" />}
               action={
                 <Button
@@ -2501,19 +2709,18 @@ function HostEditor({
                     ])
                   }
                 >
-                  <Plus className="size-3 mr-1" /> Add Action
+                  <Plus className="size-3 mr-1" /> {t("hosts.addActionBtn")}
                 </Button>
               }
             >
               <div className="flex flex-col gap-3 py-3">
                 <p className="text-xs text-muted-foreground">
-                  Quick actions appear as buttons in the Server Stats toolbar
-                  for one-click command execution.
+                  {t("hosts.quickActionsToolbar")}
                 </p>
                 {form.quickActions.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
                     <Zap className="size-6" />
-                    <span className="text-xs">No quick actions yet.</span>
+                    <span className="text-xs">{t("hosts.noQuickActions")}</span>
                   </div>
                 )}
                 {form.quickActions.map((a, i) => (
@@ -2523,7 +2730,7 @@ function HostEditor({
                   >
                     <Input
                       className="h-7 text-xs flex-1"
-                      placeholder="Button label"
+                      placeholder={t("hosts.buttonLabel")}
                       value={a.name}
                       onChange={(e) => {
                         const updated = [...form.quickActions];
@@ -2543,7 +2750,9 @@ function HostEditor({
                         setField("quickActions", updated);
                       }}
                     >
-                      <option value="">Select snippet...</option>
+                      <option value="">
+                        {t("hosts.selectSnippetPlaceholder")}
+                      </option>
                       {snippets.map((s) => (
                         <option key={s.id} value={String(s.id)}>
                           {s.name}
@@ -2571,13 +2780,13 @@ function HostEditor({
         {activeTab === "rdp" && (
           <>
             <SectionCard
-              title="Connection"
+              title={t("hosts.guac.connection")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    RDP Port
+                    {t("hosts.guac.rdpPort")}
                   </label>
                   <Input
                     type="number"
@@ -2592,13 +2801,13 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Authentication"
+              title={t("hosts.guac.authentication")}
               icon={<Shield className="size-3.5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Username
+                    {t("hosts.guac.username")}
                   </label>
                   <Input
                     placeholder="Administrator"
@@ -2608,7 +2817,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Password
+                    {t("hosts.guac.password")}
                   </label>
                   <Input
                     type="password"
@@ -2619,7 +2828,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Domain
+                    {t("hosts.guac.domain")}
                   </label>
                   <Input
                     placeholder="WORKGROUP"
@@ -2631,13 +2840,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Connection Settings"
+              title={t("hosts.guac.connectionSettings")}
               icon={<Shield className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Security Mode
+                    {t("hosts.guac.securityMode")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -2653,8 +2862,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Ignore Certificate"
-                  description="Allow connections to hosts with self-signed certificates"
+                  label={t("hosts.guac.ignoreCertificate")}
+                  description={t("hosts.guac.ignoreCertificateDesc")}
                 >
                   <FakeSwitch
                     checked={form.ignoreCert}
@@ -2665,13 +2874,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Display Settings"
+              title={t("hosts.guac.displaySettings")}
               icon={<Monitor className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Color Depth
+                    {t("hosts.guac.colorDepth")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -2690,7 +2899,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Width
+                      {t("hosts.guac.width")}
                     </label>
                     <Input
                       type="number"
@@ -2701,7 +2910,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Height
+                      {t("hosts.guac.height")}
                     </label>
                     <Input
                       type="number"
@@ -2713,7 +2922,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    DPI
+                    {t("hosts.guac.dpi")}
                   </label>
                   <Input
                     type="number"
@@ -2724,7 +2933,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Resize Method
+                    {t("hosts.guac.resizeMethod")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -2739,8 +2948,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Force Lossless"
-                  description="Force lossless image encoding (higher quality, more bandwidth)"
+                  label={t("hosts.guac.forceLossless")}
+                  description={t("hosts.guac.forceLosslessDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["force-lossless"]}
@@ -2751,13 +2960,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Audio Settings"
+              title={t("hosts.guac.audioSettings")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 <SettingRow
-                  label="Disable Audio"
-                  description="Mute all audio from the remote session"
+                  label={t("hosts.guac.disableAudio")}
+                  description={t("hosts.guac.disableAudioDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-audio"]}
@@ -2765,8 +2974,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable Audio Input (Microphone)"
-                  description="Forward local microphone to the remote session"
+                  label={t("hosts.guac.enableAudioInput")}
+                  description={t("hosts.guac.enableAudioInputDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-audio-input"]}
@@ -2777,13 +2986,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="RDP Performance"
+              title={t("hosts.guac.rdpPerformance")}
               icon={<Zap className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 <SettingRow
-                  label="Wallpaper"
-                  description="Show desktop wallpaper (disabling improves performance)"
+                  label={t("hosts.guac.wallpaper")}
+                  description={t("hosts.guac.wallpaperDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-wallpaper"]}
@@ -2791,8 +3000,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Theming"
-                  description="Enable visual themes and styles"
+                  label={t("hosts.guac.theming")}
+                  description={t("hosts.guac.themingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-theming"]}
@@ -2800,8 +3009,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Font Smoothing"
-                  description="Enable ClearType font rendering"
+                  label={t("hosts.guac.fontSmoothing")}
+                  description={t("hosts.guac.fontSmoothingDesc")}
                 >
                   <FakeSwitch
                     checked={
@@ -2811,8 +3020,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Full Window Drag"
-                  description="Show window contents while dragging"
+                  label={t("hosts.guac.fullWindowDrag")}
+                  description={t("hosts.guac.fullWindowDragDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-full-window-drag"]}
@@ -2820,8 +3029,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Desktop Composition"
-                  description="Enable Aero glass effects"
+                  label={t("hosts.guac.desktopComposition")}
+                  description={t("hosts.guac.desktopCompositionDesc")}
                 >
                   <FakeSwitch
                     checked={
@@ -2833,8 +3042,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Menu Animations"
-                  description="Enable menu fade and slide animations"
+                  label={t("hosts.guac.menuAnimations")}
+                  description={t("hosts.guac.menuAnimationsDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-menu-animations"]}
@@ -2842,8 +3051,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Bitmap Caching"
-                  description="Turn off bitmap cache (may help with glitches)"
+                  label={t("hosts.guac.disableBitmapCaching")}
+                  description={t("hosts.guac.disableBitmapCachingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-bitmap-caching"]}
@@ -2851,8 +3060,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Offscreen Caching"
-                  description="Turn off offscreen cache"
+                  label={t("hosts.guac.disableOffscreenCaching")}
+                  description={t("hosts.guac.disableOffscreenCachingDesc")}
                 >
                   <FakeSwitch
                     checked={
@@ -2864,8 +3073,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Glyph Caching"
-                  description="Turn off glyph cache"
+                  label={t("hosts.guac.disableGlyphCaching")}
+                  description={t("hosts.guac.disableGlyphCachingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-glyph-caching"]}
@@ -2873,8 +3082,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable GFX"
-                  description="Use RemoteFX graphics pipeline"
+                  label={t("hosts.guac.enableGfx")}
+                  description={t("hosts.guac.enableGfxDesc")}
                 >
                   <FakeSwitch
                     checked={form.guacamoleConfig["enable-gfx"] !== false}
@@ -2885,13 +3094,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Device Redirection"
+              title={t("hosts.guac.deviceRedirection")}
               icon={<Settings className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
-                  label="Enable Printing"
-                  description="Redirect local printers to the remote session"
+                  label={t("hosts.guac.enablePrinting")}
+                  description={t("hosts.guac.enablePrintingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-printing"]}
@@ -2899,8 +3108,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable Drive Redirection"
-                  description="Map a local folder as a drive in the remote session"
+                  label={t("hosts.guac.enableDriveRedirection")}
+                  description={t("hosts.guac.enableDriveRedirectionDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-drive"]}
@@ -2910,7 +3119,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-border pt-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Drive Name
+                      {t("hosts.guac.driveName")}
                     </label>
                     <Input
                       placeholder="Termix Drive"
@@ -2922,7 +3131,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Drive Path
+                      {t("hosts.guac.drivePath")}
                     </label>
                     <Input
                       placeholder="/home/user/shared"
@@ -2934,8 +3143,8 @@ function HostEditor({
                   </div>
                 </div>
                 <SettingRow
-                  label="Create Drive Path"
-                  description="Automatically create the folder if it does not exist"
+                  label={t("hosts.guac.createDrivePath")}
+                  description={t("hosts.guac.createDrivePathDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["create-drive-path"]}
@@ -2943,8 +3152,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Download"
-                  description="Prevent downloading files from the remote session"
+                  label={t("hosts.guac.disableDownload")}
+                  description={t("hosts.guac.disableDownloadDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-download"]}
@@ -2952,8 +3161,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Upload"
-                  description="Prevent uploading files to the remote session"
+                  label={t("hosts.guac.disableUpload")}
+                  description={t("hosts.guac.disableUploadDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-upload"]}
@@ -2961,8 +3170,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Enable Touch"
-                  description="Enable touch input forwarding"
+                  label={t("hosts.guac.enableTouch")}
+                  description={t("hosts.guac.enableTouchDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["enable-touch"]}
@@ -2972,11 +3181,14 @@ function HostEditor({
               </div>
             </SectionCard>
 
-            <SectionCard title="Session" icon={<Server className="size-3.5" />}>
+            <SectionCard
+              title={t("hosts.guac.session")}
+              icon={<Server className="size-3.5" />}
+            >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Client Name
+                    {t("hosts.guac.clientName")}
                   </label>
                   <Input
                     placeholder="Termix"
@@ -2987,8 +3199,8 @@ function HostEditor({
                   />
                 </div>
                 <SettingRow
-                  label="Console Session"
-                  description="Connect to the console (session 0) instead of a new session"
+                  label={t("hosts.guac.consoleSession")}
+                  description={t("hosts.guac.consoleSessionDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["console"]}
@@ -2997,7 +3209,7 @@ function HostEditor({
                 </SettingRow>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Initial Program
+                    {t("hosts.guac.initialProgram")}
                   </label>
                   <Input
                     placeholder="e.g. cmd.exe"
@@ -3009,7 +3221,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Server Layout
+                    {t("hosts.guac.serverLayout")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3033,7 +3245,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Timezone
+                    {t("hosts.guac.timezone")}
                   </label>
                   <Input
                     placeholder="e.g. America/New_York"
@@ -3045,14 +3257,14 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Gateway"
+              title={t("hosts.guac.gateway")}
               icon={<Network className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Gateway Hostname
+                      {t("hosts.guac.gatewayHostname")}
                     </label>
                     <Input
                       placeholder="gateway.example.com"
@@ -3064,7 +3276,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Gateway Port
+                      {t("hosts.guac.gatewayPort")}
                     </label>
                     <Input
                       type="number"
@@ -3077,7 +3289,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Gateway Username
+                      {t("hosts.guac.gatewayUsername")}
                     </label>
                     <Input
                       placeholder="user"
@@ -3089,7 +3301,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Gateway Password
+                      {t("hosts.guac.gatewayPassword")}
                     </label>
                     <Input
                       type="password"
@@ -3102,7 +3314,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5 col-span-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Gateway Domain
+                      {t("hosts.guac.gatewayDomain")}
                     </label>
                     <Input
                       placeholder="DOMAIN"
@@ -3117,13 +3329,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="RemoteApp"
+              title={t("hosts.guac.remoteApp")}
               icon={<Monitor className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    RemoteApp Program
+                    {t("hosts.guac.remoteAppProgram")}
                   </label>
                   <Input
                     placeholder="||MyApp"
@@ -3133,7 +3345,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Working Directory
+                    {t("hosts.guac.workingDirectory")}
                   </label>
                   <Input
                     placeholder="C:\Apps\MyApp"
@@ -3145,7 +3357,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Arguments
+                    {t("hosts.guac.arguments")}
                   </label>
                   <Input
                     placeholder="--flag value"
@@ -3158,11 +3370,14 @@ function HostEditor({
               </div>
             </SectionCard>
 
-            <SectionCard title="Clipboard" icon={<Copy className="size-3.5" />}>
+            <SectionCard
+              title={t("hosts.guac.clipboard")}
+              icon={<Copy className="size-3.5" />}
+            >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Normalize Line Endings
+                    {t("hosts.guac.normalizeLineEndings")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3180,8 +3395,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Disable Copy"
-                  description="Prevent copying text from the remote session"
+                  label={t("hosts.guac.disableCopy")}
+                  description={t("hosts.guac.disableCopyDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-copy"]}
@@ -3189,8 +3404,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Paste"
-                  description="Prevent pasting text into the remote session"
+                  label={t("hosts.guac.disablePaste")}
+                  description={t("hosts.guac.disablePasteDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-paste"]}
@@ -3201,13 +3416,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Session Recording"
+              title={t("hosts.guac.sessionRecording")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Path
+                    {t("hosts.guac.recordingPath")}
                   </label>
                   <Input
                     placeholder="/var/lib/termix/recordings"
@@ -3219,7 +3434,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Name
+                    {t("hosts.guac.recordingName")}
                   </label>
                   <Input
                     placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
@@ -3230,8 +3445,8 @@ function HostEditor({
                   />
                 </div>
                 <SettingRow
-                  label="Create Path if Missing"
-                  description="Automatically create the recording directory"
+                  label={t("hosts.guac.createPathIfMissing")}
+                  description={t("hosts.guac.createPathIfMissingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["create-recording-path"]}
@@ -3239,8 +3454,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Exclude Output"
-                  description="Do not record screen output (metadata only)"
+                  label={t("hosts.guac.excludeOutput")}
+                  description={t("hosts.guac.excludeOutputDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-exclude-output"]}
@@ -3250,8 +3465,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Exclude Mouse"
-                  description="Do not record mouse movements"
+                  label={t("hosts.guac.excludeMouse")}
+                  description={t("hosts.guac.excludeMouseDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-exclude-mouse"]}
@@ -3259,8 +3474,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Include Keystrokes"
-                  description="Record raw keystrokes in addition to screen output"
+                  label={t("hosts.guac.includeKeystrokes")}
+                  description={t("hosts.guac.includeKeystrokesDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-include-keys"]}
@@ -3271,13 +3486,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Wake-on-LAN"
+              title={t("hosts.guac.wakeOnLan")}
               icon={<Zap className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
-                  label="Send WOL Packet"
-                  description="Send a magic packet to wake this host before connecting"
+                  label={t("hosts.guac.sendWolPacket")}
+                  description={t("hosts.guac.sendWolPacketDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["wol-send-packet"]}
@@ -3287,7 +3502,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      MAC Address
+                      {t("hosts.guac.macAddress")}
                     </label>
                     <Input
                       placeholder="AA:BB:CC:DD:EE:FF"
@@ -3303,7 +3518,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Broadcast Address
+                      {t("hosts.guac.broadcastAddress")}
                     </label>
                     <Input
                       placeholder="255.255.255.255"
@@ -3315,7 +3530,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      UDP Port
+                      {t("hosts.guac.udpPort")}
                     </label>
                     <Input
                       type="number"
@@ -3328,7 +3543,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Wait Time (s)
+                      {t("hosts.guac.waitTimeS")}
                     </label>
                     <Input
                       type="number"
@@ -3348,13 +3563,13 @@ function HostEditor({
         {activeTab === "vnc" && (
           <>
             <SectionCard
-              title="Connection"
+              title={t("hosts.guac.connection")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    VNC Port
+                    {t("hosts.guac.vncPort")}
                   </label>
                   <Input
                     type="number"
@@ -3369,13 +3584,13 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Authentication"
+              title={t("hosts.guac.authentication")}
               icon={<Shield className="size-3.5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    VNC Password
+                    {t("hosts.guac.vncPassword")}
                   </label>
                   <Input
                     type="password"
@@ -3386,10 +3601,10 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Username (optional)
+                    {t("hosts.guac.vncUsernameOptional")}
                   </label>
                   <Input
-                    placeholder="Leave blank if not required"
+                    placeholder={t("hosts.guac.vncLeaveBlank")}
                     value={form.vncUser}
                     onChange={(e) => setField("vncUser", e.target.value)}
                   />
@@ -3398,13 +3613,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Display Settings"
+              title={t("hosts.guac.displaySettings")}
               icon={<Monitor className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Color Depth
+                    {t("hosts.guac.colorDepth")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3423,7 +3638,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Width
+                      {t("hosts.guac.width")}
                     </label>
                     <Input
                       type="number"
@@ -3434,7 +3649,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Height
+                      {t("hosts.guac.height")}
                     </label>
                     <Input
                       type="number"
@@ -3446,7 +3661,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Resize Method
+                    {t("hosts.guac.resizeMethod")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3461,8 +3676,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Force Lossless"
-                  description="Force lossless image encoding (higher quality, more bandwidth)"
+                  label={t("hosts.guac.forceLossless")}
+                  description={t("hosts.guac.forceLosslessDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["force-lossless"]}
@@ -3473,13 +3688,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Audio Settings"
+              title={t("hosts.guac.audioSettings")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-0 py-1">
                 <SettingRow
-                  label="Disable Audio"
-                  description="Mute all audio from the remote session"
+                  label={t("hosts.guac.disableAudio")}
+                  description={t("hosts.guac.disableAudioDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-audio"]}
@@ -3490,13 +3705,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="VNC Settings"
+              title={t("hosts.guac.vncSettings")}
               icon={<Settings className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Cursor Mode
+                    {t("hosts.guac.cursorMode")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3509,8 +3724,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Swap Red/Blue"
-                  description="Swap the red and blue color channels (fixes some colour issues)"
+                  label={t("hosts.guac.swapRedBlue")}
+                  description={t("hosts.guac.swapRedBlueDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["swap-red-blue"]}
@@ -3518,8 +3733,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Read-only"
-                  description="View the remote screen without sending any input"
+                  label={t("hosts.guac.readOnly")}
+                  description={t("hosts.guac.readOnlyDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["read-only"]}
@@ -3529,11 +3744,14 @@ function HostEditor({
               </div>
             </SectionCard>
 
-            <SectionCard title="Clipboard" icon={<Copy className="size-3.5" />}>
+            <SectionCard
+              title={t("hosts.guac.clipboard")}
+              icon={<Copy className="size-3.5" />}
+            >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Normalize Line Endings
+                    {t("hosts.guac.normalizeLineEndings")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3551,8 +3769,8 @@ function HostEditor({
                   </select>
                 </div>
                 <SettingRow
-                  label="Disable Copy"
-                  description="Prevent copying text from the remote session"
+                  label={t("hosts.guac.disableCopy")}
+                  description={t("hosts.guac.disableCopyDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-copy"]}
@@ -3560,8 +3778,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Disable Paste"
-                  description="Prevent pasting text into the remote session"
+                  label={t("hosts.guac.disablePaste")}
+                  description={t("hosts.guac.disablePasteDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["disable-paste"]}
@@ -3572,13 +3790,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Session Recording"
+              title={t("hosts.guac.sessionRecording")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Path
+                    {t("hosts.guac.recordingPath")}
                   </label>
                   <Input
                     placeholder="/var/lib/termix/recordings"
@@ -3590,7 +3808,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Name
+                    {t("hosts.guac.recordingName")}
                   </label>
                   <Input
                     placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
@@ -3601,8 +3819,8 @@ function HostEditor({
                   />
                 </div>
                 <SettingRow
-                  label="Create Path if Missing"
-                  description="Automatically create the recording directory"
+                  label={t("hosts.guac.createPathIfMissing")}
+                  description={t("hosts.guac.createPathIfMissingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["create-recording-path"]}
@@ -3610,8 +3828,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Exclude Output"
-                  description="Do not record screen output (metadata only)"
+                  label={t("hosts.guac.excludeOutput")}
+                  description={t("hosts.guac.excludeOutputDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-exclude-output"]}
@@ -3621,8 +3839,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Exclude Mouse"
-                  description="Do not record mouse movements"
+                  label={t("hosts.guac.excludeMouse")}
+                  description={t("hosts.guac.excludeMouseDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-exclude-mouse"]}
@@ -3630,8 +3848,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Include Keystrokes"
-                  description="Record raw keystrokes in addition to screen output"
+                  label={t("hosts.guac.includeKeystrokes")}
+                  description={t("hosts.guac.includeKeystrokesDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-include-keys"]}
@@ -3642,13 +3860,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Wake-on-LAN"
+              title={t("hosts.guac.wakeOnLan")}
               icon={<Zap className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
-                  label="Send WOL Packet"
-                  description="Send a magic packet to wake this host before connecting"
+                  label={t("hosts.guac.sendWolPacket")}
+                  description={t("hosts.guac.sendWolPacketDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["wol-send-packet"]}
@@ -3658,7 +3876,7 @@ function HostEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      MAC Address
+                      {t("hosts.guac.macAddress")}
                     </label>
                     <Input
                       placeholder="AA:BB:CC:DD:EE:FF"
@@ -3674,7 +3892,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Broadcast Address
+                      {t("hosts.guac.broadcastAddress")}
                     </label>
                     <Input
                       placeholder="255.255.255.255"
@@ -3686,7 +3904,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      UDP Port
+                      {t("hosts.guac.udpPort")}
                     </label>
                     <Input
                       type="number"
@@ -3699,7 +3917,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Wait Time (s)
+                      {t("hosts.guac.waitTimeS")}
                     </label>
                     <Input
                       type="number"
@@ -3719,13 +3937,13 @@ function HostEditor({
         {activeTab === "telnet" && (
           <>
             <SectionCard
-              title="Connection"
+              title={t("hosts.guac.connection")}
               icon={<Globe className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Telnet Port
+                    {t("hosts.guac.telnetPort")}
                   </label>
                   <Input
                     type="number"
@@ -3740,13 +3958,13 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title="Authentication"
+              title={t("hosts.guac.authentication")}
               icon={<Shield className="size-3.5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Username
+                    {t("hosts.guac.username")}
                   </label>
                   <Input
                     placeholder="admin"
@@ -3756,7 +3974,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Password
+                    {t("hosts.guac.password")}
                   </label>
                   <Input
                     type="password"
@@ -3769,14 +3987,14 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Display Settings"
+              title={t("hosts.guac.displaySettings")}
               icon={<Monitor className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Width
+                      {t("hosts.guac.width")}
                     </label>
                     <Input
                       type="number"
@@ -3787,7 +4005,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Height
+                      {t("hosts.guac.height")}
                     </label>
                     <Input
                       type="number"
@@ -3801,13 +4019,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Terminal Settings"
+              title={t("hosts.guac.terminalSettings")}
               icon={<Terminal className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Terminal Type
+                    {t("hosts.guac.terminalType")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3825,7 +4043,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Font Name
+                    {t("hosts.guac.fontName")}
                   </label>
                   <Input
                     placeholder="monospace"
@@ -3835,7 +4053,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Font Size
+                    {t("hosts.guac.fontSize")}
                   </label>
                   <Input
                     type="number"
@@ -3847,7 +4065,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Color Scheme
+                    {t("hosts.guac.colorScheme")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3865,7 +4083,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Backspace Key
+                    {t("hosts.guac.backspaceKey")}
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3881,13 +4099,13 @@ function HostEditor({
             </SectionCard>
 
             <SectionCard
-              title="Session Recording"
+              title={t("hosts.guac.sessionRecording")}
               icon={<Activity className="size-3.5" />}
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Path
+                    {t("hosts.guac.recordingPath")}
                   </label>
                   <Input
                     placeholder="/var/lib/termix/recordings"
@@ -3899,7 +4117,7 @@ function HostEditor({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Recording Name
+                    {t("hosts.guac.recordingName")}
                   </label>
                   <Input
                     placeholder="${GUAC_USERNAME}-${GUAC_DATE}-${GUAC_TIME}"
@@ -3910,8 +4128,8 @@ function HostEditor({
                   />
                 </div>
                 <SettingRow
-                  label="Create Path if Missing"
-                  description="Automatically create the recording directory"
+                  label={t("hosts.guac.createPathIfMissing")}
+                  description={t("hosts.guac.createPathIfMissingDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["create-recording-path"]}
@@ -3919,8 +4137,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Exclude Output"
-                  description="Do not record screen output (metadata only)"
+                  label={t("hosts.guac.excludeOutput")}
+                  description={t("hosts.guac.excludeOutputDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-exclude-output"]}
@@ -3930,8 +4148,8 @@ function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label="Include Keystrokes"
-                  description="Record raw keystrokes in addition to screen output"
+                  label={t("hosts.guac.includeKeystrokes")}
+                  description={t("hosts.guac.includeKeystrokesDesc")}
                 >
                   <FakeSwitch
                     checked={!!form.guacamoleConfig["recording-include-keys"]}
@@ -3949,37 +4167,43 @@ function HostEditor({
               <div className="flex items-start gap-3 p-3 border border-yellow-500/30 bg-yellow-500/5 text-xs text-yellow-500">
                 <Shield className="size-3.5 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Save the host first.</strong> Sharing options are
-                  available after the host has been saved.
+                  <strong>{t("hosts.guac.saveHostFirst")}</strong>{" "}
+                  {t("hosts.guac.sharingOptionsAfterSave")}
                 </div>
+              </div>
+            )}
+            {sharingLoadError && (
+              <div className="flex items-start gap-3 p-3 border border-destructive/30 bg-destructive/5 text-xs text-destructive">
+                <Shield className="size-3.5 shrink-0 mt-0.5" />
+                <div>{t("hosts.guac.sharingLoadError")}</div>
               </div>
             )}
 
             {host !== null && (
               <SectionCard
-                title="Share Host"
+                title={t("hosts.guac.shareHostSection")}
                 icon={<Users className="size-3.5" />}
               >
                 <div className="flex flex-col gap-4 py-3">
                   <div className="flex gap-2">
-                    {(["user", "role"] as const).map((t) => (
+                    {(["user", "role"] as const).map((shareTypeOpt) => (
                       <button
-                        key={t}
+                        key={shareTypeOpt}
                         onClick={() => {
-                          setShareType(t);
+                          setShareType(shareTypeOpt);
                           setShareGranteeId("");
                         }}
-                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${shareType === t ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${shareType === shareTypeOpt ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                       >
-                        {t === "user" ? (
+                        {shareTypeOpt === "user" ? (
                           <>
                             <User className="size-3 inline mr-1" />
-                            Share with User
+                            {t("hosts.guac.shareWithUser")}
                           </>
                         ) : (
                           <>
                             <Shield className="size-3 inline mr-1" />
-                            Share with Role
+                            {t("hosts.guac.shareWithRole")}
                           </>
                         )}
                       </button>
@@ -3987,7 +4211,9 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {shareType === "user" ? "Select User" : "Select Role"}
+                      {shareType === "user"
+                        ? t("hosts.guac.selectUser")
+                        : t("hosts.guac.selectRole")}
                     </label>
                     <select
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -3995,7 +4221,9 @@ function HostEditor({
                       onChange={(e) => setShareGranteeId(e.target.value)}
                     >
                       <option value="">
-                        Select {shareType === "user" ? "a user" : "a role"}...
+                        {shareType === "user"
+                          ? t("hosts.guac.selectUserOption")
+                          : t("hosts.guac.selectRoleOption")}
                       </option>
                       {shareType === "user"
                         ? shareUsers.map((u) => (
@@ -4012,7 +4240,7 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Permission Level
+                      {t("hosts.guac.permissionLevel")}
                     </label>
                     <select
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -4026,11 +4254,11 @@ function HostEditor({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Expires in (hours)
+                      {t("hosts.guac.expiresInHours")}
                     </label>
                     <Input
                       type="number"
-                      placeholder="Leave empty for no expiry"
+                      placeholder={t("hosts.guac.noExpiryPlaceholder")}
                       value={shareExpiryHours}
                       onChange={(e) => setShareExpiryHours(e.target.value)}
                       className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -4056,14 +4284,14 @@ function HostEditor({
                           setAccessList((res as any)?.access ?? []);
                           setShareGranteeId("");
                           setShareExpiryHours("");
-                          toast.success("Host shared successfully");
+                          toast.success(t("hosts.hostSharedSuccessfully"));
                         } catch {
-                          toast.error("Failed to share host");
+                          toast.error(t("hosts.failedToShareHost"));
                         }
                       }}
                     >
                       <Plus className="size-3.5 mr-1.5" />
-                      Share
+                      {t("hosts.guac.shareBtn")}
                     </Button>
                   </div>
                 </div>
@@ -4072,21 +4300,21 @@ function HostEditor({
 
             {host !== null && (
               <SectionCard
-                title="Current Access"
+                title={t("hosts.guac.currentAccess")}
                 icon={<ListChecks className="size-3.5" />}
               >
                 <div className="py-2">
                   <div className="grid grid-cols-6 gap-2 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
-                    <span>Type</span>
-                    <span>Target</span>
-                    <span>Permission</span>
-                    <span>Granted By</span>
-                    <span>Expires</span>
+                    <span>{t("hosts.guac.typeHeader")}</span>
+                    <span>{t("hosts.guac.targetHeader")}</span>
+                    <span>{t("hosts.guac.permissionHeader")}</span>
+                    <span>{t("hosts.guac.grantedByHeader")}</span>
+                    <span>{t("hosts.guac.expiresHeader")}</span>
                     <span></span>
                   </div>
                   {accessList.length === 0 && (
                     <div className="px-2 py-4 text-xs text-muted-foreground/50 text-center">
-                      No access entries yet.
+                      {t("hosts.guac.noAccessEntries")}
                     </div>
                   )}
                   {accessList.map((r: any, i: number) => {
@@ -4124,12 +4352,12 @@ function HostEditor({
                           {expired ? (
                             <span className="flex items-center gap-1">
                               <X className="size-3" />
-                              Expired
+                              {t("hosts.guac.expiredLabel")}
                             </span>
                           ) : r.expiresAt ? (
                             new Date(r.expiresAt).toLocaleDateString()
                           ) : (
-                            "Never"
+                            t("hosts.guac.neverLabel")
                           )}
                         </span>
                         <div className="flex justify-end">
@@ -4143,13 +4371,13 @@ function HostEditor({
                                 setAccessList((prev) =>
                                   prev.filter((_, idx) => idx !== i),
                                 );
-                                toast.success("Access revoked");
+                                toast.success(t("hosts.accessRevoked"));
                               } catch {
-                                toast.error("Failed to revoke access");
+                                toast.error(t("hosts.failedToRevokeAccess"));
                               }
                             }}
                           >
-                            Revoke
+                            {t("hosts.guac.revokeBtn")}
                           </Button>
                         </div>
                       </div>
@@ -4164,7 +4392,7 @@ function HostEditor({
 
       <div className="flex justify-end gap-3 mt-3 mb-6">
         <Button variant="ghost" onClick={onBack} disabled={saving}>
-          Cancel
+          {t("hosts.guac.cancelBtn")}
         </Button>
         <Button
           variant="outline"
@@ -4172,7 +4400,11 @@ function HostEditor({
           onClick={handleSave}
           disabled={saving}
         >
-          {saving ? "Saving..." : host ? "Update Host" : "Add Host"}
+          {saving
+            ? t("hosts.guac.savingBtn")
+            : host
+              ? t("hosts.guac.updateHostBtn")
+              : t("hosts.guac.addHostBtn")}
         </Button>
       </div>
     </div>
@@ -4202,6 +4434,7 @@ function CredentialEditorView({
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
   }));
+  const { t } = useTranslation();
   const [generatingKey, setGeneratingKey] = useState(false);
   const [generatingPublicKey, setGeneratingPublicKey] = useState(false);
   const credFileInputRef = useRef<HTMLInputElement>(null);
@@ -4229,10 +4462,14 @@ function CredentialEditorView({
       const saved = credential
         ? await updateCredential(Number(credential.id), data)
         : await createCredential(data);
-      toast.success(credential ? "Credential updated" : "Credential created");
+      toast.success(
+        credential
+          ? t("hosts.credentialUpdated")
+          : t("hosts.credentialCreated"),
+      );
       onSave(saved);
     } catch {
-      toast.error("Failed to save credential");
+      toast.error(t("hosts.failedToSaveCredential"));
     } finally {
       setSaving(false);
     }
@@ -4244,13 +4481,13 @@ function CredentialEditorView({
     <div className="flex flex-col gap-3">
       {activeTab === "general" && (
         <SectionCard
-          title="Basic Information"
+          title={t("hosts.basicInformation")}
           icon={<Info className="size-3.5" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Friendly Name
+                {t("hosts.friendlyNameLabel")}
               </label>
               <Input
                 placeholder="e.g. Production SSH Key"
@@ -4260,7 +4497,7 @@ function CredentialEditorView({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Folder
+                {t("hosts.folder")}
               </label>
               <Input
                 placeholder="e.g. Server Keys"
@@ -4270,7 +4507,7 @@ function CredentialEditorView({
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Description
+                {t("hosts.descriptionLabel")}
               </label>
               <Input
                 placeholder="Optional details..."
@@ -4280,7 +4517,7 @@ function CredentialEditorView({
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Tags
+                {t("hosts.tags")}
               </label>
               <div className="flex flex-wrap items-center gap-1 min-h-9 px-2 py-1 border border-border bg-background focus-within:ring-1 focus-within:ring-ring">
                 {credForm.tags.map((tag) => (
@@ -4294,7 +4531,7 @@ function CredentialEditorView({
                       onClick={() =>
                         setCredField(
                           "tags",
-                          credForm.tags.filter((t) => t !== tag),
+                          credForm.tags.filter((tg) => tg !== tag),
                         )
                       }
                       className="text-muted-foreground hover:text-destructive ml-0.5"
@@ -4305,7 +4542,11 @@ function CredentialEditorView({
                 ))}
                 <input
                   className="flex-1 min-w-16 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50"
-                  placeholder={credForm.tags.length === 0 ? "Add tags..." : ""}
+                  placeholder={
+                    credForm.tags.length === 0
+                      ? t("hosts.addTagsPlaceholder")
+                      : ""
+                  }
                   value={credForm.tagInput}
                   onChange={(e) => setCredField("tagInput", e.target.value)}
                   onKeyDown={(e) => {
@@ -4335,13 +4576,13 @@ function CredentialEditorView({
 
       {activeTab === "auth" && (
         <SectionCard
-          title="Authentication Details"
+          title={t("hosts.authDetailsSection")}
           icon={<Lock className="size-3.5" />}
         >
           <div className="flex flex-col gap-4 py-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Type
+                {t("hosts.credTypeLabel")}
               </label>
               <div className="flex gap-2">
                 {["password", "key"].map((m) => (
@@ -4350,14 +4591,16 @@ function CredentialEditorView({
                     onClick={() => setCredField("type", m as any)}
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                   >
-                    {m === "key" ? "SSH Private Key" : "Password"}
+                    {m === "key"
+                      ? t("hosts.sshPrivateKey")
+                      : t("hosts.password")}
                   </button>
                 ))}
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Username
+                {t("hosts.username")}
               </label>
               <Input
                 placeholder="e.g. root or deploy"
@@ -4368,7 +4611,7 @@ function CredentialEditorView({
             {type === "password" && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Password
+                  {t("hosts.password")}
                 </label>
                 <Input
                   type="password"
@@ -4382,17 +4625,19 @@ function CredentialEditorView({
               <div className="flex flex-col gap-4">
                 <div className="p-3 border border-border bg-muted/20">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                    Generate Key Pair
+                    {t("hosts.generateKeyPairTitle")}
                   </p>
                   <p className="text-[10px] text-muted-foreground mb-2">
-                    Generate a new key pair — both private and public keys will
-                    be filled automatically.
+                    {t("hosts.generateKeyPairDescription")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {[
                       { label: "Ed25519", type: "ssh-ed25519" },
-                      { label: "ECDSA (nistp256)", type: "ecdsa" },
-                      { label: "RSA (2048)", type: "rsa", bits: 2048 },
+                      {
+                        label: "ECDSA (nistp256)",
+                        type: "ecdsa-sha2-nistp256",
+                      },
+                      { label: "RSA (2048)", type: "ssh-rsa", bits: 2048 },
                     ].map(({ label, type: keyType, bits }) => (
                       <Button
                         key={label}
@@ -4412,20 +4657,25 @@ function CredentialEditorView({
                             if (result.success) {
                               setCredField("value", result.privateKey);
                               setCredField("publicKey", result.publicKey);
-                              toast.success(`${label} key pair generated`);
+                              toast.success(
+                                t("hosts.keyPairGenerated", { label }),
+                              );
                             } else {
                               toast.error(
-                                result.error ?? "Failed to generate key pair",
+                                result.error ??
+                                  t("hosts.failedToGenerateKeyPair"),
                               );
                             }
                           } catch {
-                            toast.error("Failed to generate key pair");
+                            toast.error(t("hosts.failedToGenerateKeyPair"));
                           } finally {
                             setGeneratingKey(false);
                           }
                         }}
                       >
-                        {generatingKey ? "Generating..." : `Generate ${label}`}
+                        {generatingKey
+                          ? t("hosts.generatingKey")
+                          : t("hosts.generateLabel", { label })}
                       </Button>
                     ))}
                   </div>
@@ -4433,14 +4683,14 @@ function CredentialEditorView({
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      SSH Private Key
+                      {t("hosts.sshPrivateKey")}
                     </label>
                     <button
                       type="button"
                       className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1"
                       onClick={() => credFileInputRef.current?.click()}
                     >
-                      <Upload className="size-3" /> Upload file
+                      <Upload className="size-3" /> {t("hosts.uploadFileBtn")}
                     </button>
                   </div>
                   <input
@@ -4466,7 +4716,7 @@ function CredentialEditorView({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Key Passphrase (Optional)
+                    {t("hosts.keyPassphraseOptional")}
                   </label>
                   <Input
                     type="password"
@@ -4478,7 +4728,7 @@ function CredentialEditorView({
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      SSH Public Key (Optional)
+                      {t("hosts.sshPublicKeyOptional")}
                     </label>
                     <Button
                       type="button"
@@ -4495,20 +4745,20 @@ function CredentialEditorView({
                           );
                           if (result?.publicKey) {
                             setCredField("publicKey", result.publicKey);
-                            toast.success("Public key generated");
+                            toast.success(t("hosts.publicKeyGenerated"));
                           } else {
-                            toast.error("Failed to derive public key");
+                            toast.error(t("hosts.failedToGeneratePublicKey"));
                           }
                         } catch {
-                          toast.error("Failed to derive public key");
+                          toast.error(t("hosts.failedToGeneratePublicKey"));
                         } finally {
                           setGeneratingPublicKey(false);
                         }
                       }}
                     >
                       {generatingPublicKey
-                        ? "Generating..."
-                        : "Generate from Private Key"}
+                        ? t("hosts.generatingKey")
+                        : t("hosts.generateFromPrivateKey")}
                     </Button>
                     <Button
                       type="button"
@@ -4518,10 +4768,10 @@ function CredentialEditorView({
                       disabled={!credForm.publicKey}
                       onClick={() => {
                         navigator.clipboard.writeText(credForm.publicKey ?? "");
-                        toast.success("Public key copied");
+                        toast.success(t("hosts.publicKeyCopied"));
                       }}
                     >
-                      <Copy className="size-3 mr-1" /> Copy
+                      <Copy className="size-3 mr-1" /> {t("common.copy")}
                     </Button>
                   </div>
                   <textarea
@@ -4540,7 +4790,7 @@ function CredentialEditorView({
 
       <div className="flex justify-end gap-3 mt-3">
         <Button variant="ghost" onClick={onBack} disabled={saving}>
-          Cancel
+          {t("hosts.cancelBtn")}
         </Button>
         <Button
           variant="outline"
@@ -4549,10 +4799,10 @@ function CredentialEditorView({
           disabled={saving}
         >
           {saving
-            ? "Saving..."
+            ? t("hosts.savingBtn")
             : credential
-              ? "Update Credential"
-              : "Add Credential"}
+              ? t("hosts.updateCredentialBtn")
+              : t("hosts.addCredentialBtn")}
         </Button>
       </div>
     </div>
@@ -4568,6 +4818,7 @@ export function HostManager({
   pendingEditId?: MutableRefObject<string | null>;
   pendingAction?: MutableRefObject<"add-host" | "add-credential" | null>;
 } = {}) {
+  const { t } = useTranslation();
   const [section, setSection] = useState<"hosts" | "credentials">("hosts");
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
   const [editingCredential, setEditingCredential] = useState<
@@ -4594,6 +4845,10 @@ export function HostManager({
     hostId: string;
   } | null>(null);
   const [deploying, setDeploying] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [draggedHost, setDraggedHost] = useState<Host | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingProtocols, setEditingProtocols] = useState({
@@ -4603,6 +4858,7 @@ export function HostManager({
     enableTelnet: false,
   });
   const [statusesLoading, setStatusesLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
@@ -4610,6 +4866,32 @@ export function HostManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingCredFolderName, setEditingCredFolderName] = useState<
+    string | null
+  >(null);
+  const [editingCredFolderValue, setEditingCredFolderValue] = useState("");
+
+  const applyPendingEdit = (hostList: Host[]) => {
+    if (pendingEditId?.current) {
+      const id = pendingEditId.current;
+      pendingEditId.current = null;
+      const host = hostList.find((h) => h.id === id);
+      if (host) {
+        setSection("hosts");
+        setEditingHost(host);
+        setEditingCredential(null);
+        setActiveHostTab("general");
+        setEditingProtocols({
+          enableSsh: host.enableSsh,
+          enableRdp: host.enableRdp,
+          enableVnc: host.enableVnc,
+          enableTelnet: host.enableTelnet,
+        });
+        return true;
+      }
+    }
+    return false;
+  };
 
   useEffect(() => {
     getSSHHosts()
@@ -4619,6 +4901,7 @@ export function HostManager({
         setExpandedFolders(
           new Set(converted.map((h) => h.folder.split(" / ")[0])),
         );
+        applyPendingEdit(converted);
 
         setStatusesLoading(true);
         let statuses: Record<number, { status?: string }> = {};
@@ -4631,6 +4914,7 @@ export function HostManager({
           // best-effort
         } finally {
           setStatusesLoading(false);
+          setInitialLoadComplete(true);
         }
 
         const onlineHosts = converted.filter(
@@ -4665,7 +4949,7 @@ export function HostManager({
       .catch(() => {});
     getCredentials()
       .then((res: any) => {
-        const arr = Array.isArray(res?.credentials) ? res.credentials : [];
+        const arr = Array.isArray(res) ? res : [];
         setCredentials(
           arr.map((c: any) => ({
             id: String(c.id),
@@ -4683,23 +4967,6 @@ export function HostManager({
   }, []);
 
   useEffect(() => {
-    if (pendingEditId?.current) {
-      const id = pendingEditId.current;
-      pendingEditId.current = null;
-      const host = hostsRef.current.find((h) => h.id === id);
-      if (host) {
-        setSection("hosts");
-        setEditingHost(host);
-        setEditingCredential(null);
-        setActiveHostTab("general");
-        setEditingProtocols({
-          enableSsh: host.enableSsh,
-          enableRdp: host.enableRdp,
-          enableVnc: host.enableVnc,
-          enableTelnet: host.enableTelnet,
-        });
-      }
-    }
     if (pendingAction?.current) {
       const action = pendingAction.current;
       pendingAction.current = null;
@@ -4774,7 +5041,9 @@ export function HostManager({
     (h) =>
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      h.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())),
+      h.tags?.some((tg) =>
+        tg.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
   );
   const filteredCredentials = credentials.filter(
     (c) =>
@@ -4822,7 +5091,7 @@ export function HostManager({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("Hosts exported successfully");
+    toast.success(t("hosts.hostsExported"));
   };
 
   const handleDownloadSample = () => {
@@ -4858,7 +5127,7 @@ export function HostManager({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("Sample file downloaded");
+    toast.success(t("hosts.sampleDownloaded"));
   };
 
   const handleRefresh = async () => {
@@ -4906,9 +5175,9 @@ export function HostManager({
           }),
         );
       }
-      toast.success("Host statuses refreshed");
+      toast.success(t("hosts.hostStatusesRefreshed"));
     } catch {
-      toast.error("Failed to refresh hosts");
+      toast.error(t("hosts.failedToRefreshHosts"));
     } finally {
       setRefreshing(false);
     }
@@ -5010,10 +5279,13 @@ export function HostManager({
                   ),
                 );
                 toast.success(
-                  `Moved ${h.name} to "${node.fullPath || "root"}"`,
+                  t("hosts.movedHostTo", {
+                    host: h.name,
+                    folder: node.fullPath || "root",
+                  }),
                 );
               } catch {
-                toast.error("Failed to move host");
+                toast.error(t("hosts.failedToMoveHost"));
               }
             }
           }}
@@ -5043,9 +5315,11 @@ export function HostManager({
                       await renameFolder(node.fullPath, newName);
                       const raw = await getSSHHosts();
                       setHosts(raw.map(sshHostToHost));
-                      toast.success(`Folder renamed to "${newName}"`);
+                      toast.success(
+                        t("hosts.folderRenamedTo", { name: newName }),
+                      );
                     } catch {
-                      toast.error("Failed to rename folder");
+                      toast.error(t("hosts.failedToRenameFolder"));
                     }
                   }
                 }}
@@ -5058,9 +5332,11 @@ export function HostManager({
                         await renameFolder(node.fullPath, newName);
                         const raw = await getSSHHosts();
                         setHosts(raw.map(sshHostToHost));
-                        toast.success(`Folder renamed to "${newName}"`);
+                        toast.success(
+                          t("hosts.folderRenamedTo", { name: newName }),
+                        );
                       } catch {
-                        toast.error("Failed to rename folder");
+                        toast.error(t("hosts.failedToRenameFolder"));
                       }
                     }
                   }
@@ -5094,22 +5370,23 @@ export function HostManager({
             </button>
             <button
               className="size-5 flex items-center justify-center text-muted-foreground/40 hover:text-destructive rounded transition-colors"
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-                if (
-                  !confirm(
-                    `Delete all hosts in "${node.name}"? This cannot be undone.`,
-                  )
-                )
-                  return;
-                try {
-                  await deleteAllHostsInFolder(node.fullPath);
-                  const raw = await getSSHHosts();
-                  setHosts(raw.map(sshHostToHost));
-                  toast.success(`Deleted folder "${node.name}"`);
-                } catch {
-                  toast.error("Failed to delete folder");
-                }
+                setConfirmDialog({
+                  message: t("hosts.deleteAllInFolder", { name: node.name }),
+                  onConfirm: async () => {
+                    try {
+                      await deleteAllHostsInFolder(node.fullPath);
+                      const raw = await getSSHHosts();
+                      setHosts(raw.map(sshHostToHost));
+                      toast.success(
+                        t("hosts.deletedFolder", { name: node.name }),
+                      );
+                    } catch {
+                      toast.error(t("hosts.failedToDeleteFolder"));
+                    }
+                  },
+                });
               }}
             >
               <Trash2 className="size-2.5" />
@@ -5131,6 +5408,8 @@ export function HostManager({
                   selectionMode={selectionMode}
                   selected={selectedHostIds.has(host.id)}
                   onToggleSelect={() => toggleHostSelection(host.id)}
+                  statusesLoading={statusesLoading}
+                  initialLoadComplete={initialLoadComplete}
                   onEdit={() => {
                     setEditingHost(host);
                     setActiveHostTab("general");
@@ -5141,14 +5420,27 @@ export function HostManager({
                       enableTelnet: host.enableTelnet,
                     });
                   }}
-                  onDelete={async () => {
-                    try {
-                      await deleteSSHHost(Number(host.id));
-                      setHosts((prev) => prev.filter((h) => h.id !== host.id));
-                      toast.success(`Deleted ${host.name}`);
-                    } catch {
-                      toast.error(`Failed to delete ${host.name}`);
-                    }
+                  onDelete={() => {
+                    setConfirmDialog({
+                      message: t("hosts.deleteHostConfirm", {
+                        name: host.name,
+                      }),
+                      onConfirm: async () => {
+                        try {
+                          await deleteSSHHost(Number(host.id));
+                          setHosts((prev) =>
+                            prev.filter((h) => h.id !== host.id),
+                          );
+                          toast.success(
+                            t("hosts.deletedHost", { name: host.name }),
+                          );
+                        } catch {
+                          toast.error(
+                            t("hosts.failedToDeleteHost", { name: host.name }),
+                          );
+                        }
+                      },
+                    });
                   }}
                   onDragStart={() => setDraggedHost(host)}
                   onDragEnd={() => setDraggedHost(null)}
@@ -5165,16 +5457,16 @@ export function HostManager({
   const renderEditorView = () => {
     const isHost = !!editingHost;
     const tabs = isHost
-      ? HOST_TABS.filter((t) => {
-          if (t.id === "general" || t.id === "sharing") return true;
-          if (["ssh", "tunnels", "docker", "files", "stats"].includes(t.id))
+      ? makeHostTabs(t).filter((tab) => {
+          if (tab.id === "general" || tab.id === "sharing") return true;
+          if (["ssh", "tunnels", "docker", "files", "stats"].includes(tab.id))
             return editingProtocols.enableSsh;
-          if (t.id === "rdp") return editingProtocols.enableRdp;
-          if (t.id === "vnc") return editingProtocols.enableVnc;
-          if (t.id === "telnet") return editingProtocols.enableTelnet;
+          if (tab.id === "rdp") return editingProtocols.enableRdp;
+          if (tab.id === "vnc") return editingProtocols.enableVnc;
+          if (tab.id === "telnet") return editingProtocols.enableTelnet;
           return false;
         })
-      : CREDENTIAL_TABS;
+      : makeCredentialTabs(t);
     const activeTab = isHost ? activeHostTab : activeCredentialTab;
     const setActiveTab = isHost ? setActiveHostTab : setActiveCredentialTab;
 
@@ -5195,9 +5487,14 @@ export function HostManager({
             className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-b border-border/50"
           >
             <ArrowLeft className="size-3.5 shrink-0" />
-            <span>Back to {isHost ? "Hosts" : "Credentials"}</span>
+            <span>
+              {isHost ? t("hosts.backToHosts") : t("hosts.backToCredentials")}
+            </span>
             {isHost && editingHost !== "new" && (
-              <span className="ml-auto font-semibold text-foreground">
+              <span
+                className="ml-auto font-semibold text-foreground truncate max-w-[200px]"
+                title={(editingHost as Host).name}
+              >
                 {(editingHost as Host).name}
               </span>
             )}
@@ -5266,7 +5563,7 @@ export function HostManager({
                     id: String(saved.id),
                     name: saved.name,
                     username: saved.username ?? "",
-                    type: saved.type ?? "password",
+                    type: saved.authType === "key" ? "key" : "password",
                     value: saved.value,
                     publicKey: saved.publicKey,
                     passphrase: saved.passphrase,
@@ -5308,7 +5605,7 @@ export function HostManager({
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${section === "hosts" ? "border-accent-brand text-accent-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             <Server className="size-3.5" />
-            Hosts
+            {t("hosts.hostsTab")}
             <span className="text-[10px] font-bold text-muted-foreground/50 ml-0.5">
               {allHosts.length}
             </span>
@@ -5322,7 +5619,7 @@ export function HostManager({
             className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${section === "credentials" ? "border-accent-brand text-accent-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             <KeyRound className="size-3.5" />
-            Credentials
+            {t("hosts.credentialsTab")}
             <span className="text-[10px] font-bold text-muted-foreground/50 ml-0.5">
               {credentials.length}
             </span>
@@ -5335,7 +5632,7 @@ export function HostManager({
               variant="ghost"
               size="icon"
               className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-              title="Collapse"
+              title={t("hosts.collapseBtn")}
               onClick={onCollapse}
             >
               <ChevronLeft className="size-3.5" />
@@ -5368,8 +5665,12 @@ export function HostManager({
                       toast.error("Cannot import more than 100 hosts at once");
                       return;
                     }
+                    const normalized = hostsArray.map((h: any) => ({
+                      ...h,
+                      port: h.port ?? h.sshPort ?? 22,
+                    }));
                     const result = await bulkImportSSHHosts(
-                      hostsArray,
+                      normalized,
                       importOverwriteRef.current,
                     );
                     const raw = await getSSHHosts();
@@ -5391,7 +5692,7 @@ export function HostManager({
                 variant="ghost"
                 size="icon"
                 className="size-8 text-muted-foreground hover:text-foreground"
-                title="Refresh"
+                title={t("hosts.refreshBtn2")}
                 onClick={handleRefresh}
                 disabled={refreshing}
               >
@@ -5405,7 +5706,7 @@ export function HostManager({
                     variant="ghost"
                     size="icon"
                     className="size-8 text-muted-foreground hover:text-foreground"
-                    title="Import / Export"
+                    title={t("hosts.importExportBtn")}
                   >
                     <Upload className="size-3.5" />
                   </Button>
@@ -5418,7 +5719,7 @@ export function HostManager({
                     }}
                   >
                     <Upload className="size-3.5 mr-2" />
-                    Import (skip existing)
+                    {t("hosts.importSkipExisting")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
@@ -5427,18 +5728,18 @@ export function HostManager({
                     }}
                   >
                     <Upload className="size-3.5 mr-2" />
-                    Import (overwrite)
+                    {t("hosts.importOverwrite")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={handleExportHosts}
                     disabled={allHosts.length === 0}
                   >
                     <Download className="size-3.5 mr-2" />
-                    Export All
+                    {t("hosts.exportAll")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDownloadSample}>
                     <Download className="size-3.5 mr-2" />
-                    Download Sample
+                    {t("hosts.downloadSample")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -5446,7 +5747,11 @@ export function HostManager({
                 variant="ghost"
                 size="icon"
                 className={`size-8 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
-                title={selectionMode ? "Exit selection" : "Select multiple"}
+                title={
+                  selectionMode
+                    ? t("hosts.exitSelectionTitle")
+                    : t("hosts.selectMultiple")
+                }
                 onClick={() => {
                   setSelectionMode((s) => !s);
                   setSelectedHostIds(new Set());
@@ -5471,7 +5776,7 @@ export function HostManager({
                 }}
               >
                 <Plus className="size-3.5 mr-1" />
-                Add Host
+                {t("hosts.addHostBtn2")}
               </Button>
             </div>
           )}
@@ -5487,7 +5792,7 @@ export function HostManager({
                 }}
               >
                 <Plus className="size-3.5 mr-1" />
-                Add Credential
+                {t("hosts.addCredentialBtn2")}
               </Button>
             </div>
           )}
@@ -5507,8 +5812,8 @@ export function HostManager({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
                   section === "hosts"
-                    ? "Search hosts, addresses, tags…"
-                    : "Search credentials…"
+                    ? t("hosts.searchHostsPlaceholder")
+                    : t("hosts.searchCredentialsPlaceholder")
                 }
                 className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
               />
@@ -5529,7 +5834,7 @@ export function HostManager({
                 {statusesLoading && (
                   <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground/50 border-b border-border/30">
                     <RefreshCw className="size-2.5 animate-spin shrink-0" />
-                    Checking host statuses...
+                    {t("hosts.checkingHostStatuses")}
                   </div>
                 )}
                 {/* Pinned hosts */}
@@ -5538,7 +5843,7 @@ export function HostManager({
                     <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-accent-brand/5">
                       <Pin className="size-2.5 text-accent-brand" />
                       <span className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-                        Pinned
+                        {t("hosts.pinnedSection")}
                       </span>
                       <span className="text-[10px] text-accent-brand/50 ml-0.5">
                         {pinnedHosts.length}
@@ -5551,6 +5856,8 @@ export function HostManager({
                         selectionMode={selectionMode}
                         selected={selectedHostIds.has(host.id)}
                         onToggleSelect={() => toggleHostSelection(host.id)}
+                        statusesLoading={statusesLoading}
+                        initialLoadComplete={initialLoadComplete}
                         onEdit={() => {
                           setEditingHost(host);
                           setActiveHostTab("general");
@@ -5561,16 +5868,29 @@ export function HostManager({
                             enableTelnet: host.enableTelnet,
                           });
                         }}
-                        onDelete={async () => {
-                          try {
-                            await deleteSSHHost(Number(host.id));
-                            setHosts((prev) =>
-                              prev.filter((h) => h.id !== host.id),
-                            );
-                            toast.success(`Deleted ${host.name}`);
-                          } catch {
-                            toast.error(`Failed to delete ${host.name}`);
-                          }
+                        onDelete={() => {
+                          setConfirmDialog({
+                            message: t("hosts.deleteHostConfirm", {
+                              name: host.name,
+                            }),
+                            onConfirm: async () => {
+                              try {
+                                await deleteSSHHost(Number(host.id));
+                                setHosts((prev) =>
+                                  prev.filter((h) => h.id !== host.id),
+                                );
+                                toast.success(
+                                  t("hosts.deletedHost", { name: host.name }),
+                                );
+                              } catch {
+                                toast.error(
+                                  t("hosts.failedToDeleteHost", {
+                                    name: host.name,
+                                  }),
+                                );
+                              }
+                            },
+                          });
                         }}
                       />
                     ))}
@@ -5587,6 +5907,8 @@ export function HostManager({
                     selectionMode={selectionMode}
                     selected={selectedHostIds.has(host.id)}
                     onToggleSelect={() => toggleHostSelection(host.id)}
+                    statusesLoading={statusesLoading}
+                    initialLoadComplete={initialLoadComplete}
                     onEdit={() => {
                       setEditingHost(host);
                       setActiveHostTab("general");
@@ -5597,16 +5919,29 @@ export function HostManager({
                         enableTelnet: host.enableTelnet,
                       });
                     }}
-                    onDelete={async () => {
-                      try {
-                        await deleteSSHHost(Number(host.id));
-                        setHosts((prev) =>
-                          prev.filter((h) => h.id !== host.id),
-                        );
-                        toast.success(`Deleted ${host.name}`);
-                      } catch {
-                        toast.error(`Failed to delete ${host.name}`);
-                      }
+                    onDelete={() => {
+                      setConfirmDialog({
+                        message: t("hosts.deleteHostConfirm", {
+                          name: host.name,
+                        }),
+                        onConfirm: async () => {
+                          try {
+                            await deleteSSHHost(Number(host.id));
+                            setHosts((prev) =>
+                              prev.filter((h) => h.id !== host.id),
+                            );
+                            toast.success(
+                              t("hosts.deletedHost", { name: host.name }),
+                            );
+                          } catch {
+                            toast.error(
+                              t("hosts.failedToDeleteHost", {
+                                name: host.name,
+                              }),
+                            );
+                          }
+                        },
+                      });
                     }}
                     onDragStart={() => setDraggedHost(host)}
                     onDragEnd={() => setDraggedHost(null)}
@@ -5617,12 +5952,12 @@ export function HostManager({
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                     <Server className="size-8 text-muted-foreground/20 mb-2" />
                     <span className="text-sm font-semibold text-muted-foreground/60">
-                      No hosts found
+                      {t("hosts.noHostsFound")}
                     </span>
                     <span className="text-xs text-muted-foreground/40 mt-1">
                       {searchQuery
-                        ? "Try a different term"
-                        : "Add your first host to get started"}
+                        ? t("hosts.tryDifferentTerm")
+                        : t("hosts.addFirstHost")}
                     </span>
                     {!searchQuery && (
                       <Button
@@ -5641,7 +5976,7 @@ export function HostManager({
                         }}
                       >
                         <Plus className="size-3 mr-1" />
-                        Add Host
+                        {t("hosts.addHostBtn2")}
                       </Button>
                     )}
                   </div>
@@ -5657,15 +5992,91 @@ export function HostManager({
                   );
                   if (creds.length === 0) return null;
                   return (
-                    <div key={folder}>
+                    <div key={folder} className="group/folder">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-muted/20">
-                        <Folder className="size-3 text-muted-foreground/50" />
-                        <span className="text-[10px] font-semibold text-muted-foreground/70">
-                          {folder}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground/40">
-                          {creds.length}
-                        </span>
+                        <Folder className="size-3 text-muted-foreground/50 shrink-0" />
+                        {editingCredFolderName === folder ? (
+                          <>
+                            <input
+                              autoFocus
+                              value={editingCredFolderValue}
+                              onChange={(e) =>
+                                setEditingCredFolderValue(e.target.value)
+                              }
+                              onBlur={async () => {
+                                const newName = editingCredFolderValue.trim();
+                                setEditingCredFolderName(null);
+                                if (newName && newName !== folder) {
+                                  try {
+                                    await renameCredentialFolder(
+                                      folder,
+                                      newName,
+                                    );
+                                    const res = (await getCredentials()) as any;
+                                    const arr = Array.isArray(res) ? res : [];
+                                    setCredentials(
+                                      arr.map((c: any) => ({
+                                        id: String(c.id),
+                                        name: c.name,
+                                        username: c.username,
+                                        type:
+                                          c.authType === "key"
+                                            ? "key"
+                                            : "password",
+                                        description: c.description ?? "",
+                                        folder: c.folder ?? "",
+                                        tags: c.tags ?? [],
+                                        publicKey: c.publicKey ?? undefined,
+                                      })),
+                                    );
+                                    toast.success(
+                                      t("hosts.folderRenamedTo", {
+                                        name: newName,
+                                      }),
+                                    );
+                                  } catch {
+                                    toast.error(
+                                      t("hosts.failedToRenameFolder"),
+                                    );
+                                  }
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (e.key === "Escape")
+                                  setEditingCredFolderName(null);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
+                            />
+                            <button
+                              onClick={() => setEditingCredFolderName(null)}
+                              className="text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-semibold text-muted-foreground/70 flex-1">
+                              {folder}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/40">
+                              {creds.length}
+                            </span>
+                            {folder !== "Uncategorized" && (
+                              <button
+                                className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
+                                onClick={() => {
+                                  setEditingCredFolderName(folder);
+                                  setEditingCredFolderValue(folder);
+                                }}
+                              >
+                                <Pencil className="size-2.5" />
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                       {creds.map((cred) => {
                         const usedByHosts = allHosts.filter(
@@ -5766,22 +6177,30 @@ export function HostManager({
                               </button>
                               <button
                                 className="size-6 flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
-                                onClick={async () => {
-                                  if (
-                                    !confirm(
-                                      `Delete credential "${cred.name}"?`,
-                                    )
-                                  )
-                                    return;
-                                  try {
-                                    await deleteCredential(Number(cred.id));
-                                    setCredentials((prev) =>
-                                      prev.filter((c) => c.id !== cred.id),
-                                    );
-                                    toast.success(`Deleted ${cred.name}`);
-                                  } catch {
-                                    toast.error("Failed to delete credential");
-                                  }
+                                onClick={() => {
+                                  setConfirmDialog({
+                                    message: t(
+                                      "hosts.deleteCredentialConfirm",
+                                      { name: cred.name },
+                                    ),
+                                    onConfirm: async () => {
+                                      try {
+                                        await deleteCredential(Number(cred.id));
+                                        setCredentials((prev) =>
+                                          prev.filter((c) => c.id !== cred.id),
+                                        );
+                                        toast.success(
+                                          t("hosts.deletedCredential", {
+                                            name: cred.name,
+                                          }),
+                                        );
+                                      } catch {
+                                        toast.error(
+                                          t("hosts.failedToDeleteCredential2"),
+                                        );
+                                      }
+                                    },
+                                  });
                                 }}
                               >
                                 <Trash2 className="size-3" />
@@ -5797,7 +6216,7 @@ export function HostManager({
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                     <KeyRound className="size-8 text-muted-foreground/20 mb-2" />
                     <span className="text-sm font-semibold text-muted-foreground/60">
-                      No credentials found
+                      {t("hosts.noCredentialsFound")}
                     </span>
                     <Button
                       variant="outline"
@@ -5809,7 +6228,7 @@ export function HostManager({
                       }}
                     >
                       <Plus className="size-3 mr-1" />
-                      Add Credential
+                      {t("hosts.addCredentialBtn2")}
                     </Button>
                   </div>
                 )}
@@ -5819,12 +6238,40 @@ export function HostManager({
         </div>
       )}
 
+      {/* Confirm dialog */}
+      {confirmDialog && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
+            <p className="text-sm text-foreground">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                {t("hosts.cancelBtn")}
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(null);
+                }}
+                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+              >
+                {t("hosts.deleteConfirmBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deploy credential dialog */}
       {deployDialog && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-popover border border-border shadow-xl w-full max-w-sm flex flex-col gap-4 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold">Deploy SSH Key</span>
+              <span className="text-sm font-bold">
+                {t("hosts.deploySSHKeyTitle")}
+              </span>
               <button
                 onClick={() => setDeployDialog(null)}
                 className="text-muted-foreground hover:text-foreground"
@@ -5833,16 +6280,11 @@ export function HostManager({
               </button>
             </div>
             <div className="text-xs text-muted-foreground">
-              Deploy{" "}
-              <span className="font-semibold text-foreground">
-                {deployDialog.cred.name}
-              </span>{" "}
-              to a host's <code className="bg-muted px-1">authorized_keys</code>
-              .
+              {t("hosts.deployDialogDesc", { name: deployDialog.cred.name })}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Target Host
+                {t("hosts.targetHostLabel")}
               </label>
               <select
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -5851,9 +6293,13 @@ export function HostManager({
                   setDeployDialog({ ...deployDialog, hostId: e.target.value })
                 }
               >
-                <option value="">Select a host...</option>
+                <option value="">{t("hosts.selectHostOption")}</option>
                 {allHosts
-                  .filter((h) => h.enableSsh)
+                  .filter(
+                    (h) =>
+                      h.enableSsh ||
+                      (!h.enableRdp && !h.enableVnc && !h.enableTelnet),
+                  )
                   .map((h) => (
                     <option key={h.id} value={h.id}>
                       {h.name || h.ip}
@@ -5868,7 +6314,7 @@ export function HostManager({
                 onClick={() => setDeployDialog(null)}
                 disabled={deploying}
               >
-                Cancel
+                {t("hosts.cancelBtn")}
               </Button>
               <Button
                 variant="outline"
@@ -5882,16 +6328,16 @@ export function HostManager({
                       Number(deployDialog.cred.id),
                       Number(deployDialog.hostId),
                     );
-                    toast.success("Key deployed successfully");
+                    toast.success(t("hosts.keyDeployedSuccess"));
                     setDeployDialog(null);
                   } catch {
-                    toast.error("Failed to deploy key");
+                    toast.error(t("hosts.failedToDeployKey2"));
                   } finally {
                     setDeploying(false);
                   }
                 }}
               >
-                {deploying ? "Deploying..." : "Deploy"}
+                {deploying ? t("hosts.deployingBtn") : t("hosts.deployBtn")}
               </Button>
             </div>
           </div>
@@ -5903,7 +6349,7 @@ export function HostManager({
         <div className="absolute bottom-4 inset-x-3 z-50">
           <div className="bg-popover border border-border shadow-xl px-2.5 py-2 flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold tabular-nums shrink-0">
-              {selectedHostIds.size} selected
+              {t("hosts.nSelected", { count: selectedHostIds.size })}
             </span>
             <div className="w-px h-4 bg-border mx-0.5" />
             <button
@@ -5915,8 +6361,8 @@ export function HostManager({
               }}
             >
               {selectedHostIds.size === allHosts.length
-                ? "Deselect All"
-                : "Select All"}
+                ? t("hosts.deselectAll")
+                : t("hosts.selectAll")}
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -5924,62 +6370,62 @@ export function HostManager({
                   className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
                   disabled={selectedHostIds.size === 0}
                 >
-                  Features <ChevronDown className="size-2.5" />
+                  {t("hosts.featuresMenu")} <ChevronDown className="size-2.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="text-xs">
                 {[
                   {
-                    label: "Enable Terminal",
+                    labelKey: "hosts.enableTerminalFeature",
                     field: "enableTerminal",
                     value: true,
                     icon: Terminal,
                   },
                   {
-                    label: "Disable Terminal",
+                    labelKey: "hosts.disableTerminalFeature",
                     field: "enableTerminal",
                     value: false,
                     icon: Terminal,
                   },
                   {
-                    label: "Enable Files",
+                    labelKey: "hosts.enableFilesFeature",
                     field: "enableFileManager",
                     value: true,
                     icon: FolderSearch,
                   },
                   {
-                    label: "Disable Files",
+                    labelKey: "hosts.disableFilesFeature",
                     field: "enableFileManager",
                     value: false,
                     icon: FolderSearch,
                   },
                   {
-                    label: "Enable Tunnels",
+                    labelKey: "hosts.enableTunnelsFeature",
                     field: "enableTunnel",
                     value: true,
                     icon: Network,
                   },
                   {
-                    label: "Disable Tunnels",
+                    labelKey: "hosts.disableTunnelsFeature",
                     field: "enableTunnel",
                     value: false,
                     icon: Network,
                   },
                   {
-                    label: "Enable Docker",
+                    labelKey: "hosts.enableDockerFeature",
                     field: "enableDocker",
                     value: true,
                     icon: Box,
                   },
                   {
-                    label: "Disable Docker",
+                    labelKey: "hosts.disableDockerFeature",
                     field: "enableDocker",
                     value: false,
                     icon: Box,
                   },
-                ].map(({ label, field, value, icon: Icon }) => (
+                ].map(({ labelKey, field, value, icon: Icon }) => (
                   <DropdownMenuItem
-                    key={label}
+                    key={labelKey}
                     onClick={async () => {
                       const ids = Array.from(selectedHostIds).map(Number);
                       try {
@@ -5988,14 +6434,16 @@ export function HostManager({
                         });
                         const raw = await getSSHHosts();
                         setHosts(raw.map(sshHostToHost));
-                        toast.success(`Updated ${result.updated} hosts`);
+                        toast.success(
+                          t("hosts.updatedCount", { count: result.updated }),
+                        );
                       } catch {
-                        toast.error("Bulk update failed");
+                        toast.error(t("hosts.bulkUpdateFailed"));
                       }
                     }}
                   >
                     <Icon className="size-3.5 mr-2" />
-                    {label}
+                    {t(labelKey)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -6006,7 +6454,7 @@ export function HostManager({
                   className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
                   disabled={selectedHostIds.size === 0}
                 >
-                  Move <ChevronDown className="size-2.5" />
+                  {t("hosts.moveMenu")} <ChevronDown className="size-2.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="text-xs">
@@ -6017,14 +6465,14 @@ export function HostManager({
                       await bulkUpdateSSHHosts(ids, { folder: "" });
                       const raw = await getSSHHosts();
                       setHosts(raw.map(sshHostToHost));
-                      toast.success("Moved to root");
+                      toast.success(t("hosts.movedToRoot"));
                     } catch {
-                      toast.error("Failed to move hosts");
+                      toast.error(t("hosts.failedToMoveHosts"));
                     }
                   }}
                 >
                   <FolderOpen className="size-3.5 mr-2" />
-                  (No folder)
+                  {t("hosts.noFolderOption")}
                 </DropdownMenuItem>
                 {folders.filter(Boolean).map((f) => (
                   <DropdownMenuItem
@@ -6035,9 +6483,9 @@ export function HostManager({
                         await bulkUpdateSSHHosts(ids, { folder: f });
                         const raw = await getSSHHosts();
                         setHosts(raw.map(sshHostToHost));
-                        toast.success(`Moved to "${f}"`);
+                        toast.success(t("hosts.movedToFolder", { folder: f }));
                       } catch {
-                        toast.error("Failed to move hosts");
+                        toast.error(t("hosts.failedToMoveHosts"));
                       }
                     }}
                   >
@@ -6050,32 +6498,40 @@ export function HostManager({
             <button
               className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
               disabled={selectedHostIds.size === 0}
-              onClick={async () => {
-                if (
-                  !confirm(
-                    `Delete ${selectedHostIds.size} hosts? This cannot be undone.`,
-                  )
-                )
-                  return;
-                const ids = Array.from(selectedHostIds);
-                const results = await Promise.allSettled(
-                  ids.map((id) => deleteSSHHost(Number(id))),
-                );
-                const succeeded = results.filter(
-                  (r) => r.status === "fulfilled",
-                ).length;
-                const failed = results.filter(
-                  (r) => r.status === "rejected",
-                ).length;
-                setHosts((prev) =>
-                  prev.filter((h) => !selectedHostIds.has(h.id)),
-                );
-                setSelectedHostIds(new Set());
-                if (succeeded > 0) toast.success(`Deleted ${succeeded} hosts`);
-                if (failed > 0) toast.error(`Failed to delete ${failed} hosts`);
+              onClick={() => {
+                setConfirmDialog({
+                  message: t("hosts.deleteHostsConfirm", {
+                    count: selectedHostIds.size,
+                    plural: selectedHostIds.size !== 1 ? "s" : "",
+                  }),
+                  onConfirm: async () => {
+                    const ids = Array.from(selectedHostIds);
+                    const results = await Promise.allSettled(
+                      ids.map((id) => deleteSSHHost(Number(id))),
+                    );
+                    const succeeded = results.filter(
+                      (r) => r.status === "fulfilled",
+                    ).length;
+                    const failed = results.filter(
+                      (r) => r.status === "rejected",
+                    ).length;
+                    setHosts((prev) =>
+                      prev.filter((h) => !selectedHostIds.has(h.id)),
+                    );
+                    setSelectedHostIds(new Set());
+                    if (succeeded > 0)
+                      toast.success(
+                        t("hosts.deletedCount", { count: succeeded }),
+                      );
+                    if (failed > 0)
+                      toast.error(
+                        t("hosts.failedToDeleteCount", { count: failed }),
+                      );
+                  },
+                });
               }}
             >
-              Delete
+              {t("hosts.deleteSelected")}
             </button>
             <div className="flex-1" />
             <button
@@ -6085,7 +6541,7 @@ export function HostManager({
                 setSelectedHostIds(new Set());
               }}
             >
-              Cancel
+              {t("hosts.cancelSelection")}
             </button>
           </div>
         </div>

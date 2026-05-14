@@ -7,6 +7,8 @@ import type { SSHHost } from "@/types";
 import { Dashboard } from "@/dashboard/Dashboard.tsx";
 import { Toaster } from "@/components/sonner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
+import { useTranslation } from "react-i18next";
+import { RefreshCw } from "lucide-react";
 
 interface FullScreenAppWrapperProps {
   hostId?: string;
@@ -17,6 +19,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   hostId,
   children,
 }) => {
+  const { t } = useTranslation();
   const [hostConfig, setHostConfig] = useState<SSHHost | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -84,13 +87,16 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   if (authLoading) {
     return (
       <div
-        className="w-full h-screen overflow-hidden flex items-center justify-center"
-        style={{ backgroundColor: "#18181b" }}
+        className="w-full h-screen overflow-hidden flex flex-col items-center justify-center gap-4"
+        style={{ backgroundColor: "var(--bg-base)" }}
       >
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <RefreshCw
+          className="size-8 animate-spin"
+          style={{ color: "var(--foreground)" }}
+        />
+        <p className="text-sm" style={{ color: "var(--foreground-secondary)" }}>
+          {t("common.loading")}
+        </p>
       </div>
     );
   }
@@ -102,7 +108,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
           <CommandHistoryProvider>
             <div
               className="w-full h-screen overflow-hidden flex items-center justify-center"
-              style={{ backgroundColor: "#18181b" }}
+              style={{ backgroundColor: "var(--bg-base)" }}
             >
               <Dashboard
                 isAuthenticated={false}
@@ -131,7 +137,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
         <CommandHistoryProvider>
           <div
             className="w-full h-screen overflow-hidden"
-            style={{ backgroundColor: "#18181b" }}
+            style={{ backgroundColor: "var(--bg-base)" }}
           >
             {children(hostConfig, loading)}
           </div>

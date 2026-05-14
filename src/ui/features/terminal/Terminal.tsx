@@ -688,9 +688,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
         fit: () => {
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
+          if (!fitAddonRef.current || !terminal || isFittingRef.current) return;
+          isFittingRef.current = true;
+          try {
+            fitAddonRef.current.fit();
+            if (terminal.cols > 0 && terminal.rows > 0) {
+              const lastSize = lastFittedSizeRef.current;
+              if (
+                !lastSize ||
+                lastSize.cols !== terminal.cols ||
+                lastSize.rows !== terminal.rows
+              ) {
+                scheduleNotify(terminal.cols, terminal.rows);
+                lastFittedSizeRef.current = {
+                  cols: terminal.cols,
+                  rows: terminal.rows,
+                };
+              }
+            }
+            setIsFitted(true);
+          } finally {
+            isFittingRef.current = false;
+          }
         },
         sendInput: (data: string) => {
           if (webSocketRef.current?.readyState === 1) {
@@ -2448,7 +2467,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {
-      if (!terminal || !fitAddonRef.current || !isVisible) return;
+      if (!terminal || !fitAddonRef.current) return;
+
+      if (!isVisible) {
+        lastFittedSizeRef.current = null;
+        lastSentSizeRef.current = null;
+        return;
+      }
 
       const fitTimeoutId = setTimeout(() => {
         if (!isFittingRef.current && terminal.cols > 0 && terminal.rows > 0) {
@@ -2457,7 +2482,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             requestAnimationFrame(() => terminal.focus());
           }
         }
-      }, 0);
+      }, 50);
 
       return () => clearTimeout(fitTimeoutId);
     }, [terminal, isVisible, splitScreen, isConnecting]);

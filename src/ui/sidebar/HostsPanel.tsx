@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Settings, X } from "lucide-react";
 import { SidebarTree } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
@@ -24,6 +25,7 @@ export function HostsPanel({
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
 }) {
+  const { t } = useTranslation();
   const [hostSearch, setHostSearch] = useState("");
 
   if (expanded) {
@@ -44,7 +46,7 @@ export function HostsPanel({
           <input
             value={hostSearch}
             onChange={(e) => setHostSearch(e.target.value)}
-            placeholder="Search hosts..."
+            placeholder={t("hosts.searchHosts")}
             className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
           />
           {hostSearch && (

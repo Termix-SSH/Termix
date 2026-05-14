@@ -291,10 +291,23 @@ function transformHostResponse(
     showTunnelInSidebar: !!host.showTunnelInSidebar,
     showDockerInSidebar: !!host.showDockerInSidebar,
     showServerStatsInSidebar: !!host.showServerStatsInSidebar,
-    enableSsh: host.enableSsh !== undefined ? !!host.enableSsh : true,
-    enableRdp: !!host.enableRdp,
-    enableVnc: !!host.enableVnc,
-    enableTelnet: !!host.enableTelnet,
+    // Old hosts only had connection_type set; the per-protocol enable flags didn't exist yet.
+    // The schema defaults (enableSsh=true, others=false) wrongly mark every old host as SSH.
+    // Detect this migration case: if no non-SSH protocol is explicitly enabled AND
+    // connectionType is set to a non-SSH value, fall back to inferring from connectionType.
+    ...(() => {
+      const ct = host.connectionType;
+      const rdp = !!host.enableRdp;
+      const vnc = !!host.enableVnc;
+      const tel = !!host.enableTelnet;
+      const isMigratedNonSsh = !rdp && !vnc && !tel && ct && ct !== "ssh";
+      return {
+        enableSsh: isMigratedNonSsh ? false : !!host.enableSsh,
+        enableRdp: isMigratedNonSsh ? ct === "rdp" : rdp,
+        enableVnc: isMigratedNonSsh ? ct === "vnc" : vnc,
+        enableTelnet: isMigratedNonSsh ? ct === "telnet" : tel,
+      };
+    })(),
     sshPort: host.sshPort ?? host.port ?? 22,
     rdpPort: host.rdpPort ?? 3389,
     vncPort: host.vncPort ?? 5900,

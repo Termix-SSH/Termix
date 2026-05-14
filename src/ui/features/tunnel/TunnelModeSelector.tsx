@@ -46,26 +46,32 @@ export function TunnelModeSelector({
   ];
 
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-2 lg:grid-cols-3">
       {options.map((option) => (
-        <label
+        <button
           key={option.value}
-          className="flex items-start gap-3 rounded-md border bg-card p-3 cursor-pointer"
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`flex items-start gap-2.5 border p-3 text-left transition-colors ${
+            mode === option.value
+              ? "border-accent-brand bg-accent-brand/5 text-foreground"
+              : "border-border bg-muted/20 text-muted-foreground hover:border-border/80 hover:bg-muted/30"
+          }`}
         >
-          <input
-            type="radio"
-            value={option.value}
-            checked={mode === option.value}
-            onChange={() => onChange(option.value)}
-            className="mt-0.5 w-4 h-4 text-primary border-input focus:ring-ring"
+          <div
+            className={`mt-0.5 size-3.5 shrink-0 rounded-full border-2 ${
+              mode === option.value
+                ? "border-accent-brand bg-accent-brand"
+                : "border-muted-foreground/40"
+            }`}
           />
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{option.label}</span>
-            <span className="text-xs text-muted-foreground">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold">{option.label}</span>
+            <span className="text-[10px] text-muted-foreground leading-tight">
               {option.description}
             </span>
           </div>
-        </label>
+        </button>
       ))}
     </div>
   );

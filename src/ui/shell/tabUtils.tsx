@@ -114,6 +114,7 @@ export function renderTabContent(
   onOpenSingletonTab?: (type: TabType) => void,
   onOpenTab?: (host: Host, type: TabType) => void,
   onCloseTab?: (id: string) => void,
+  isVisible = true,
 ) {
   const { host, label } = tab;
 
@@ -144,7 +145,7 @@ export function renderTabContent(
                 sshPort: host.sshPort ?? host.port,
               } as any
             }
-            isVisible={true}
+            isVisible={isVisible}
             title={label}
             showTitle={false}
             splitScreen={false}
@@ -170,7 +171,7 @@ export function renderTabContent(
         <DockerManager
           hostConfig={hostToSSHHost(host)}
           title={label}
-          isVisible={true}
+          isVisible={isVisible}
           isTopbarOpen={false}
           embedded={true}
         />
@@ -185,7 +186,7 @@ export function renderTabContent(
         <ServerStats
           hostConfig={hostToSSHHost(host) as any}
           title={label}
-          isVisible={true}
+          isVisible={isVisible}
           isTopbarOpen={false}
           embedded={true}
         />

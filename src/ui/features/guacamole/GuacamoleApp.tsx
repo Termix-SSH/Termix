@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 import { getGuacamoleTokenFromHost } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/button.tsx";
+import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import type { SSHHost } from "@/types";
 
 interface GuacamoleAppProps {
@@ -18,20 +20,26 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId }) => {
       {(hostConfig, loading) => {
         if (loading) {
           return (
-            <div className="flex flex-col items-center justify-center h-full opacity-40 gap-4">
-              <RefreshCw className="size-8 animate-spin" />
-              <span className="text-sm font-semibold uppercase tracking-widest">
-                {t("common.loading")}
-              </span>
+            <div className="relative w-full h-full">
+              <SimpleLoader visible={true} message={t("common.loading")} />
             </div>
           );
         }
 
         if (!hostConfig) {
           return (
-            <div className="flex flex-col items-center justify-center h-full opacity-40 gap-4">
-              <AlertCircle className="size-8 text-destructive" />
-              <span className="text-sm font-semibold text-destructive">
+            <div
+              className="flex flex-col items-center justify-center h-full gap-4"
+              style={{ backgroundColor: "var(--bg-base)" }}
+            >
+              <AlertCircle
+                className="size-10"
+                style={{ color: "var(--foreground)" }}
+              />
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "var(--foreground)" }}
+              >
                 {t("guacamole.hostNotFound")}
               </span>
             </div>
@@ -61,31 +69,63 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    setToken(null);
+    setError(null);
     getGuacamoleTokenFromHost(hostId)
       .then((result) => setToken(result.token))
       .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
-  }, [hostId]);
+  }, [hostId, retryCount]);
+
+  const handleReconnect = useCallback(() => {
+    setConnectionError(null);
+    setError(null);
+    setToken(null);
+    setRetryCount((c) => c + 1);
+  }, []);
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full opacity-40 gap-4">
-        <AlertCircle className="size-8 text-destructive" />
-        <span className="text-sm font-semibold text-destructive">{error}</span>
+      <div
+        className="flex flex-col items-center justify-center h-full gap-4"
+        style={{ backgroundColor: "var(--bg-base)" }}
+      >
+        <AlertCircle
+          className="size-10"
+          style={{ color: "var(--foreground)" }}
+        />
+        <p
+          className="text-sm font-semibold"
+          style={{ color: "var(--foreground)" }}
+        >
+          {t("guacamole.connectionFailed")}
+        </p>
+        <p
+          className="text-xs max-w-xs text-center"
+          style={{ color: "var(--foreground-secondary)" }}
+        >
+          {error}
+        </p>
+        <Button variant="outline" size="sm" onClick={handleReconnect}>
+          <RefreshCw className="size-4 mr-2" />
+          {t("guacamole.retry")}
+        </Button>
       </div>
     );
   }
 
   if (!token) {
     return (
-      <div className="flex flex-col items-center justify-center h-full opacity-40 gap-4">
-        <RefreshCw className="size-8 animate-spin" />
-        <span className="text-sm font-semibold uppercase tracking-widest">
-          {t("guacamole.connecting", {
+      <div className="relative w-full h-full">
+        <SimpleLoader
+          visible={true}
+          message={t("guacamole.connecting", {
             type: (hostConfig.connectionType || "remote").toUpperCase(),
           })}
-        </span>
+        />
       </div>
     );
   }
@@ -94,9 +134,37 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
 
   return (
     <div className="relative w-full h-full">
+      {connectionError && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-50"
+          style={{ backgroundColor: "var(--bg-base)" }}
+        >
+          <AlertCircle
+            className="size-10"
+            style={{ color: "var(--foreground)" }}
+          />
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "var(--foreground)" }}
+          >
+            {t("guacamole.connectionFailed")}
+          </p>
+          <p
+            className="text-xs max-w-xs text-center"
+            style={{ color: "var(--foreground-secondary)" }}
+          >
+            {connectionError}
+          </p>
+          <Button variant="outline" size="sm" onClick={handleReconnect}>
+            <RefreshCw className="size-4 mr-2" />
+            {t("guacamole.reconnect")}
+          </Button>
+        </div>
+      )}
       <GuacamoleDisplay
         connectionConfig={{ token, protocol, type: protocol }}
         isVisible={true}
+        onError={(err) => setConnectionError(err)}
       />
     </div>
   );

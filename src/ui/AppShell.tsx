@@ -149,7 +149,7 @@ export function AppShell({
   const [railView, setRailView] = useState<RailView>("hosts");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [hostManagerExpanded, setHostManagerExpanded] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarWidth, setSidebarWidth] = useState(266);
   const [sidebarDragging, setSidebarDragging] = useState(false);
 
   const isMobile = useIsMobile();
@@ -204,6 +204,24 @@ export function AppShell({
     dbHealthMonitor.on("session-expired", handleSessionExpired);
     return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
   }, [onLogout]);
+
+  useEffect(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (!activeTab?.terminalRef) return;
+    let innerRafId: number;
+    const outerRafId = requestAnimationFrame(() => {
+      innerRafId = requestAnimationFrame(() => {
+        const ref = activeTab.terminalRef?.current;
+        ref?.fit?.();
+        ref?.notifyResize?.();
+        ref?.refresh?.();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outerRafId);
+      cancelAnimationFrame(innerRafId);
+    };
+  }, [activeTabId]);
 
   useEffect(() => {
     const handleDegraded = () => {
@@ -513,7 +531,7 @@ export function AppShell({
             size="icon"
             className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
-            onClick={() => setSidebarWidth(256)}
+            onClick={() => setSidebarWidth(266)}
           >
             <Maximize2 className="size-3.5" />
           </Button>
@@ -616,7 +634,7 @@ export function AppShell({
               onCloseTab={closeTab}
               onReorderTabs={setTabs}
             />
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {isSplit && !isMobile ? (
                 <SplitView
                   tabs={tabs}
@@ -625,9 +643,56 @@ export function AppShell({
                   onOpenSingletonTab={openSingletonTab}
                   onOpenTab={openTab}
                 />
-              ) : activeTab ? (
-                renderTabContent(activeTab, openSingletonTab, openTab, closeTab)
-              ) : null}
+              ) : (
+                <>
+                  {/* Terminal tabs: always in DOM, absolutely positioned so xterm always has real dimensions */}
+                  {tabs
+                    .filter((tab) => tab.type === "terminal")
+                    .map((tab) => {
+                      const visible = tab.id === activeTabId;
+                      return (
+                        <div
+                          key={tab.id}
+                          className="absolute inset-0 overflow-hidden"
+                          style={{
+                            visibility: visible ? "visible" : "hidden",
+                            pointerEvents: visible ? "auto" : "none",
+                            zIndex: visible ? 1 : 0,
+                          }}
+                        >
+                          {renderTabContent(
+                            tab,
+                            openSingletonTab,
+                            openTab,
+                            closeTab,
+                            visible,
+                          )}
+                        </div>
+                      );
+                    })}
+                  {/* Non-terminal tabs: display:none when inactive */}
+                  {tabs
+                    .filter((tab) => tab.type !== "terminal")
+                    .map((tab) => {
+                      const visible = tab.id === activeTabId;
+                      return (
+                        <div
+                          key={tab.id}
+                          className="flex flex-col flex-1 min-h-0 overflow-hidden"
+                          style={{ display: visible ? undefined : "none" }}
+                        >
+                          {renderTabContent(
+                            tab,
+                            openSingletonTab,
+                            openTab,
+                            closeTab,
+                            visible,
+                          )}
+                        </div>
+                      );
+                    })}
+                </>
+              )}
             </div>
           </div>
 

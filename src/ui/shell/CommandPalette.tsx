@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/kbd";
 import {
@@ -91,6 +92,7 @@ export function CommandPalette({
   hosts,
   onOpenTab,
 }: CommandPaletteProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
@@ -169,7 +171,7 @@ export function CommandPalette({
               ref={inputRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search hosts, commands, or settings..."
+              placeholder={t("commandPalette.searchPlaceholder")}
               className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <div className="flex items-center gap-1.5 ml-2">
@@ -180,7 +182,10 @@ export function CommandPalette({
           </div>
 
           <CommandList className="max-h-[60vh] thin-scrollbar">
-            <CommandGroup heading="Quick Actions" className="px-2">
+            <CommandGroup
+              heading={t("commandPalette.quickActions")}
+              className="px-2"
+            >
               <CommandItem
                 onSelect={() => handleAction(() => onOpenTab("host-manager"))}
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
@@ -189,9 +194,11 @@ export function CommandPalette({
                   <LayoutDashboard className="size-4 text-accent-brand" />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">Host Manager</span>
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.hostManager")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Manage, add, or edit hosts
+                    {t("commandPalette.hostManagerDesc")}
                   </span>
                 </div>
               </CommandItem>
@@ -212,9 +219,11 @@ export function CommandPalette({
                   <Plus className="size-4 text-accent-brand" />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">Add New Host</span>
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.addNewHost")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Register a new host
+                    {t("commandPalette.addNewHostDesc")}
                   </span>
                 </div>
               </CommandItem>
@@ -227,9 +236,11 @@ export function CommandPalette({
                   <Settings className="size-4 text-accent-brand" />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">Admin Settings</span>
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.adminSettings")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Configure system preferences and users
+                    {t("commandPalette.adminSettingsDesc")}
                   </span>
                 </div>
               </CommandItem>
@@ -242,9 +253,11 @@ export function CommandPalette({
                   <User className="size-4 text-accent-brand" />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">User Profile</span>
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.userProfile")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Manage your account and preferences
+                    {t("commandPalette.userProfileDesc")}
                   </span>
                 </div>
               </CommandItem>
@@ -265,9 +278,11 @@ export function CommandPalette({
                   <KeyRound className="size-4 text-accent-brand" />
                 </div>
                 <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">Add Credential</span>
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.addCredential")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Store SSH keys or passwords
+                    {t("commandPalette.addCredentialDesc")}
                   </span>
                 </div>
               </CommandItem>
@@ -276,7 +291,10 @@ export function CommandPalette({
             {recentActivity.length > 0 && (
               <>
                 <CommandSeparator className="my-2" />
-                <CommandGroup heading="Recent Activity" className="px-2">
+                <CommandGroup
+                  heading={t("commandPalette.recentActivity")}
+                  className="px-2"
+                >
                   {recentActivity.map((item) => (
                     <CommandItem
                       key={item.id}
@@ -315,7 +333,10 @@ export function CommandPalette({
 
             <CommandSeparator className="my-2" />
 
-            <CommandGroup heading="Servers & Hosts" className="px-2">
+            <CommandGroup
+              heading={t("commandPalette.serversAndHosts")}
+              className="px-2"
+            >
               {filteredHosts.length > 0 ? (
                 groupedHosts.map(({ folder, hosts: groupHosts }) => (
                   <div key={folder ?? "__root__"}>
@@ -448,14 +469,14 @@ export function CommandPalette({
                 ))
               ) : (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  No hosts found matching &ldquo;{search}&rdquo;
+                  {t("commandPalette.noHostsFound", { search })}
                 </div>
               )}
             </CommandGroup>
 
             <CommandSeparator className="my-2" />
 
-            <CommandGroup heading="Links" className="px-2">
+            <CommandGroup heading={t("commandPalette.links")} className="px-2">
               <div className="grid grid-cols-3 gap-1">
                 <CommandItem
                   onSelect={() =>
@@ -501,15 +522,15 @@ export function CommandPalette({
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <Kbd className="h-5 px-1 bg-background rounded-none">↑↓</Kbd>
-                <span>Navigate</span>
+                <span>{t("commandPalette.navigate")}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Kbd className="h-5 px-1 bg-background rounded-none">ENTER</Kbd>
-                <span>Select</span>
+                <span>{t("commandPalette.select")}</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <span>Toggle with</span>
+              <span>{t("commandPalette.toggleWith")}</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
               <span>+</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>

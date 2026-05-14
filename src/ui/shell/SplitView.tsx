@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { renderTabContent, tabIcon } from "@/shell/tabUtils";
 import type { Tab, TabType, Host, SplitMode } from "@/types/ui-types";
@@ -253,6 +254,7 @@ function PaneHeader({
   tab: Tab | null;
   paneIndex: number;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1.5 px-2.5 h-7 shrink-0 bg-sidebar border-b border-border text-xs font-medium text-muted-foreground select-none">
       {tab ? (
@@ -263,13 +265,16 @@ function PaneHeader({
           </span>
         </>
       ) : (
-        <span className="opacity-40">Pane {paneIndex + 1} — empty</span>
+        <span className="opacity-40">
+          {t("splitScreen.paneEmpty", { index: paneIndex + 1 })}
+        </span>
       )}
     </div>
   );
 }
 
 function EmptyPane() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center w-full h-full gap-2 text-muted-foreground/30 bg-background">
       <div className="grid grid-cols-2 gap-1">
@@ -278,7 +283,7 @@ function EmptyPane() {
         <div className="size-5 border-2 border-current rounded-sm" />
         <div className="size-5 border-2 border-current rounded-sm" />
       </div>
-      <span className="text-xs">No tab assigned</span>
+      <span className="text-xs">{t("splitScreen.noTabAssigned")}</span>
     </div>
   );
 }
