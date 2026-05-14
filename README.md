@@ -6,7 +6,7 @@
   <span style="color:#F39044;">Termix</span>
 </h1>
 
-<p>Open-source · Forever free · Self-hosted server management</p>
+<p>Self-hosted server management</p>
 
 <p>
   English ·
@@ -61,50 +61,36 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 <tr>
 <td width="50%" valign="top">
 
-**SSH Terminal Access**
-Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+**SSH Terminal Access:** Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
 
-**Remote Desktop Access**
-RDP, VNC, and Telnet support over the browser with complete customization and split screening.
+**Remote Desktop Access:** RDP, VNC, and Telnet support over the browser with complete customization and split screening.
 
-**SSH Tunnel Management**
-Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
+**SSH Tunnel Management:** Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
 
-**Remote File Manager**
-Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+**Remote File Manager:** Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
 
-**Docker Management**
-Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
+**Docker Management:** Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 
-**SSH Host Manager**
-Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
+**SSH Host Manager:** Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
 
 </td>
 <td width="50%" valign="top">
 
-**Server Stats**
-View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
+**Server Stats:** View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
 
-**User Authentication**
-Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+**User Authentication:** Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 
-**RBAC**
-Create roles and share hosts across users/roles.
+**RBAC:** Create roles and share hosts across users/roles.
 
-**Database Encryption**
-Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
+**Database Encryption:** Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 
-**Network Graph**
-Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
+**Network Graph:** Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
 
-**SSH Tools**
-Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
+**SSH Tools:** Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 
-**Persistent Tabs**
-SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
+**Persistent Tabs:** SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
 
-**Languages**
-Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations)).
+**Languages:** Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations)).
 
 </td>
 </tr>
@@ -194,7 +180,7 @@ networks:
 
 [![YouTube](./repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>Watch the full overview on YouTube</sub>
+<sub>Watch update overviews overview on YouTube</sub>
 
 <br />
 <br />
