@@ -1251,6 +1251,7 @@ app.post(
       };
 
       try {
+        mainDb.$client.exec("PRAGMA foreign_keys = OFF");
         try {
           const importedHosts = importDb
             .prepare("SELECT * FROM ssh_data")
@@ -1561,6 +1562,7 @@ app.post(
           );
         }
 
+        mainDb.$client.exec("PRAGMA foreign_keys = ON");
         result.success = true;
 
         try {
