@@ -383,13 +383,34 @@ export function AppShell({
     setActiveTabId(id);
   }
 
-  function closeTab(id: string) {
+  const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+
+  function doCloseTab(id: string) {
     terminalRefs.current.delete(id);
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (id === activeTabId) setActiveTabId(next[next.length - 1].id);
       return next;
     });
+  }
+
+  function closeTab(id: string) {
+    const tab = tabs.find((t) => t.id === id);
+    if (tab && SESSION_TAB_TYPES.includes(tab.type)) {
+      toast(t("nav.confirmClose"), {
+        duration: 5000,
+        action: {
+          label: t("nav.close"),
+          onClick: () => doCloseTab(id),
+        },
+        cancel: {
+          label: t("nav.cancel"),
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+    doCloseTab(id);
   }
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
