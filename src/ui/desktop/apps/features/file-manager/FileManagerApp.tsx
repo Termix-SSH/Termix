@@ -31,13 +31,7 @@ const FileManagerApp: React.FC<FileManagerAppProps> = ({ hostId }) => {
           );
         }
 
-        return (
-          <FileManager
-            embedded={true}
-            initialHost={hostConfig}
-            onClose={() => {}}
-          />
-        );
+        return <FileManager initialHost={hostConfig} onClose={() => {}} />;
       }}
     </FullScreenAppWrapper>
   );

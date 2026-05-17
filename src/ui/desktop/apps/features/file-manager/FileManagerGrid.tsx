@@ -24,7 +24,7 @@ import {
   Edit,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { FileItem } from "../../../types/index.js";
+import type { FileItem } from "@/types/index.ts";
 import { SimpleLoader } from "@/ui/desktop/navigation/animations/SimpleLoader.tsx";
 
 interface CreateIntent {
@@ -754,7 +754,7 @@ export function FileManagerGrid({
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }
