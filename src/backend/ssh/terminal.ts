@@ -2351,6 +2351,55 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostConfig.jumpHosts.length > 0 &&
       hostConfig.userId;
 
+    // Cloudflare Tunnel: connect via WebSocket proxy
+    const cfConfig = hostConfig.terminalConfig as Record<string, unknown> | undefined;
+    if (cfConfig?.cfAccessClientId && cfConfig?.cfAccessClientSecret) {
+      try {
+        const WebSocket = (await import("ws")).default;
+        const cfHostname = (cfConfig.cfTunnelHostname as string) || ip;
+        const wsUrl = `wss://${cfHostname}/cdn-cgi/access/ssh-connect`;
+        const cfWs = new WebSocket(wsUrl, {
+          headers: {
+            "CF-Access-Client-Id": cfConfig.cfAccessClientId as string,
+            "CF-Access-Client-Secret": cfConfig.cfAccessClientSecret as string,
+          },
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          cfWs.on("open", () => resolve());
+          cfWs.on("error", (err) => reject(err));
+          setTimeout(() => reject(new Error("Cloudflare tunnel timeout")), 30000);
+        });
+
+        const { Duplex } = await import("stream");
+        const duplexStream = new Duplex({
+          read() {},
+          write(chunk, _encoding, callback) {
+            cfWs.send(chunk, callback);
+          },
+        });
+        cfWs.on("message", (data) => duplexStream.push(data));
+        cfWs.on("close", () => duplexStream.push(null));
+
+        connectConfig.sock = duplexStream as unknown as typeof connectConfig.sock;
+        sendLog("handshake", "info", "Connected via Cloudflare Tunnel");
+      } catch (cfError) {
+        sshLogger.error("Cloudflare tunnel connection failed", cfError, {
+          operation: "cf_tunnel_connect",
+          hostId: id,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: "Cloudflare tunnel connection failed: " +
+              (cfError instanceof Error ? cfError.message : "Unknown error"),
+          }),
+        );
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
+    }
+
     if (hasJumpHosts) {
       try {
         const jumpClient = await createJumpHostChain(
