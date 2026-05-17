@@ -276,10 +276,15 @@ function CountersBarCard({
 
 function QuickActionsCard({
   onOpenSingletonTab,
+  hosts,
+  onOpenTab,
 }: {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
+  hosts: Host[];
+  onOpenTab: (host: Host, type: TabType) => void;
 }) {
   const { t } = useTranslation();
+  const pinnedHosts = hosts.filter((h) => h.pin);
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
@@ -328,38 +333,64 @@ function QuickActionsCard({
           </button>
         </div>
         <div className="flex flex-col flex-1">
-          <button
-            onClick={() => onOpenSingletonTab("admin-settings")}
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <Settings className="size-3 text-accent-brand" />
+          {pinnedHosts.length > 0 ? (
+            <div className="flex flex-col flex-1 overflow-y-auto thin-scrollbar">
+              {pinnedHosts.slice(0, 4).map((host) => (
+                <button
+                  key={host.id}
+                  onClick={() => onOpenTab(host, "terminal")}
+                  className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
+                >
+                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                    <Terminal className="size-3 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <span className="text-xs font-semibold truncate w-full">
+                      {host.name || host.ip}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate w-full">
+                      {host.ip}:{host.sshPort}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">
-                {t("dashboard.adminSettings")}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {t("dashboardTab.manageUsersAndRoles")}
-              </span>
-            </div>
-          </button>
-          <button
-            onClick={() => onOpenSingletonTab("user-profile")}
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <User className="size-3 text-accent-brand" />
-            </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">
-                {t("dashboard.userProfile")}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {t("dashboardTab.manageYourAccount")}
-              </span>
-            </div>
-          </button>
+          ) : (
+            <>
+              <button
+                onClick={() => onOpenSingletonTab("admin-settings")}
+                className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
+              >
+                <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                  <Settings className="size-3 text-accent-brand" />
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-xs font-semibold">
+                    {t("dashboard.adminSettings")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("dashboardTab.manageUsersAndRoles")}
+                  </span>
+                </div>
+              </button>
+              <button
+                onClick={() => onOpenSingletonTab("user-profile")}
+                className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
+              >
+                <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                  <User className="size-3 text-accent-brand" />
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-xs font-semibold">
+                    {t("dashboard.userProfile")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("dashboardTab.manageYourAccount")}
+                  </span>
+                </div>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Card>
@@ -706,7 +737,7 @@ function CardItem({
           />
         )}
         {slot.id === "quick_actions" && (
-          <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
+          <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
         )}
         {slot.id === "host_status" && (
           <HostStatusCard
@@ -1364,7 +1395,7 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "quick_actions" && (
-                <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
+                <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
               )}
               {slot.id === "host_status" && (
                 <HostStatusCard
