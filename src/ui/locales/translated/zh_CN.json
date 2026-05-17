@@ -1586,6 +1586,8 @@
     "tmuxTimeDays": "{{count}}d ago",
     "tmuxCreateNew": "开始新会话",
     "tmuxCopyHint": "调整选区并按回车键复制到剪贴板",
+    "tmuxDetach": "从 tmux 会话分离",
+    "tmuxDetached": "已从 tmux 会话分离",
     "maxReconnectAttemptsReached": "已达到最大重连尝试次数",
     "closeTab": "关闭",
     "connectionTimeout": "连接超时",
