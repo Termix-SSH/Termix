@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
-import { getGuacamoleTokenFromHost } from "@/main-axios.ts";
+import { getGuacamoleTokenFromHost, getGuacdStatus } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/button.tsx";
@@ -75,8 +75,19 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   useEffect(() => {
     setToken(null);
     setError(null);
-    getGuacamoleTokenFromHost(hostId)
-      .then((result) => setToken(result.token))
+    getGuacdStatus()
+      .then((status) => {
+        if (status.guacd.status !== "connected") {
+          setError(
+            "Remote desktop service (guacd) is not available. Please ensure guacd is running and accessible.",
+          );
+          return;
+        }
+        return getGuacamoleTokenFromHost(hostId);
+      })
+      .then((result) => {
+        if (result) setToken(result.token);
+      })
       .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
   }, [hostId, retryCount]);
 
