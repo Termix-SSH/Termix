@@ -22,6 +22,47 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type TreeInteractionSource = "item" | "chevron";
+
+interface TreeInteractionPlan {
+  shouldSelect: boolean;
+  shouldToggle: boolean;
+}
+
+interface ExpandedStateResult {
+  expandedIds: Set<string>;
+  isExpanded: boolean;
+}
+
+function planFolderTreeInteraction(
+  source: TreeInteractionSource,
+  hasChildren: boolean,
+): TreeInteractionPlan {
+  return {
+    shouldSelect: source === "item",
+    shouldToggle: source === "chevron" && hasChildren,
+  };
+}
+
+function toggleExpandedIds(
+  expandedIds: Set<string>,
+  id: string,
+): ExpandedStateResult {
+  const nextExpandedIds = new Set(expandedIds);
+  const isExpanded = !nextExpandedIds.has(id);
+
+  if (isExpanded) {
+    nextExpandedIds.add(id);
+  } else {
+    nextExpandedIds.delete(id);
+  }
+
+  return {
+    expandedIds: nextExpandedIds,
+    isExpanded,
+  };
+}
+
 const animationVariants: Variants = {
   rootInitial: { opacity: 0, y: 20 },
   rootAnimate: { opacity: 1, y: 0 },
@@ -128,6 +169,7 @@ interface RootProps {
   selectedId?: string | null;
   expandedIds?: Set<string>;
   onSelect?: (id: string, label: string) => void;
+  onToggle?: (id: string, expanded: boolean) => void;
   className?: string;
   children: React.ReactNode;
   id?: string;
@@ -159,6 +201,7 @@ const Root: React.FC<RootProps> = ({
   selectedId: controlledSelectedId,
   expandedIds: additionalExpandedIds,
   onSelect,
+  onToggle,
   className = "",
   children,
   id = "folder-tree",
@@ -192,17 +235,16 @@ const Root: React.FC<RootProps> = ({
     });
   }, [additionalExpandedIds]);
 
-  const toggleExpanded = useCallback((id: string) => {
-    setExpandedIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  }, []);
+  const toggleExpanded = useCallback(
+    (id: string) => {
+      setExpandedIds((prev) => {
+        const nextState = toggleExpandedIds(prev, id);
+        onToggle?.(id, nextState.isExpanded);
+        return nextState.expandedIds;
+      });
+    },
+    [onToggle],
+  );
 
   const setSelected = useCallback((id: string) => {
     setInternalSelectedId(id);
@@ -462,13 +504,18 @@ const Item: React.FC<ItemProps> = ({
   const isFocused = treeContext.focusedId === id;
 
   const handleItemClick = useCallback(() => {
+    const plan = planFolderTreeInteraction("item", hasChildren);
+
     treeContext.setKeyboardMode(false);
-    selectionContext.setSelected(id);
     treeContext.setFocusedId(id);
-    if (selectionContext.onSelect) {
-      selectionContext.onSelect(id, label);
+
+    if (plan.shouldSelect) {
+      selectionContext.setSelected(id);
+      if (selectionContext.onSelect) {
+        selectionContext.onSelect(id, label);
+      }
     }
-  }, [id, label, selectionContext, treeContext]);
+  }, [hasChildren, id, label, selectionContext, treeContext]);
 
   const toggleExpanded = useCallback(() => {
     if (hasChildren) {
@@ -540,7 +587,7 @@ const Item: React.FC<ItemProps> = ({
             data-selected={isSelected ? "true" : "false"}
             data-id={id}
             className={cn(
-              "flex items-center gap-2 py-1.5 text-sm transition-colors cursor-pointer select-none",
+              "flex min-w-0 items-center gap-2 py-1.5 text-sm transition-colors cursor-pointer select-none",
               getPaddingClass(level),
               className,
               isSelected
@@ -554,7 +601,6 @@ const Item: React.FC<ItemProps> = ({
             onClick={(e: React.MouseEvent) => {
               handleItemClick();
               e.stopPropagation();
-              toggleExpanded();
             }}
             onFocus={handleFocus}
             role="treeitem"
@@ -570,7 +616,21 @@ const Item: React.FC<ItemProps> = ({
                 variants={animationVariants}
                 animate={isExpanded ? "chevronOpen" : "chevronClosed"}
                 transition={transitions.chevron}
-                aria-hidden="true"
+                onClick={(e: React.MouseEvent) => {
+                  const plan = planFolderTreeInteraction(
+                    "chevron",
+                    hasChildren,
+                  );
+                  e.stopPropagation();
+                  treeContext.setKeyboardMode(false);
+                  treeContext.setFocusedId(id);
+                  if (plan.shouldToggle) {
+                    toggleExpanded();
+                  }
+                }}
+                role="button"
+                aria-label={isExpanded ? "Collapse" : "Expand"}
+                tabIndex={-1}
               >
                 <ChevronRight size={14} className="text-muted-foreground" />
               </motion.span>
@@ -587,7 +647,7 @@ const Item: React.FC<ItemProps> = ({
                 aria-hidden="true"
               />
             )}
-            <span className="flex-1">{label}</span>
+            <span className="min-w-0 flex-1 truncate">{label}</span>
             {badge && (
               <span
                 className="ml-auto text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full"

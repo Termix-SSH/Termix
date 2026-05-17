@@ -2207,7 +2207,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     const file: FileItem = {
       name: sidebarItem.name,
       path: sidebarItem.path,
-      type: "file",
+      type: sidebarItem.type === "link" ? "link" : "file",
     };
 
     await handleFileOpen(file);

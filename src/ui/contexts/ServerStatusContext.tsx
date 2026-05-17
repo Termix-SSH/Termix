@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { getAllServerStatuses, getSSHHosts } from "@/ui/main-axios";
-import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
+import { DEFAULT_STATS_CONFIG, type StatsConfig } from "@/types/stats-widgets";
 
 type StatusValue = "online" | "offline" | "degraded";
 
@@ -57,11 +57,21 @@ export function ServerStatusProvider({
       const enabled = new Set<number>();
 
       hosts.forEach((host) => {
-        const statsConfig = (() => {
+        const statsConfig = ((): StatsConfig => {
           try {
-            return host.statsConfig
-              ? JSON.parse(host.statsConfig)
-              : DEFAULT_STATS_CONFIG;
+            if (!host.statsConfig) {
+              return DEFAULT_STATS_CONFIG;
+            }
+
+            const parsed =
+              typeof host.statsConfig === "string"
+                ? JSON.parse(host.statsConfig)
+                : host.statsConfig;
+
+            return {
+              ...DEFAULT_STATS_CONFIG,
+              ...(parsed as Partial<StatsConfig>),
+            };
           } catch {
             return DEFAULT_STATS_CONFIG;
           }

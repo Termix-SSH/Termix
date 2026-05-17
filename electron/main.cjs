@@ -563,12 +563,18 @@ async function clearElectronJwtCookiesAtStartup() {
 function getBackendPaths() {
   if (isDev) {
     const backendDir = path.join(appRoot, "dist", "backend", "backend");
-    return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
+    return {
+      entryPath: path.join(backendDir, "starter.js"),
+      backendCwd: backendDir,
+    };
   }
   // fork() does not go through Electron's asar redirector — use the unpacked path
   const unpackedRoot = appRoot.replace("app.asar", "app.asar.unpacked");
   const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
-  return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
+  return {
+    entryPath: path.join(backendDir, "starter.js"),
+    backendCwd: backendDir,
+  };
 }
 
 function getBackendDataDir() {

@@ -23,6 +23,107 @@ import FolderTree from "@/components/ui/folder.tsx";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
+interface SidebarDirectoryItem {
+  name: string;
+  path: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+type SidebarTreeItemType = "folder" | "file" | "link";
+
+interface SidebarTreeItemData {
+  id: string;
+  name: string;
+  path: string;
+  type: SidebarTreeItemType;
+  isExpanded?: boolean;
+  children?: SidebarTreeItemData[];
+}
+
+type SidebarTreeSelection =
+  | { kind: "navigate"; path: string }
+  | { kind: "open-file"; fileType: "file" | "link" };
+
+function toSidebarTreeItemType(type: string): SidebarTreeItemType | null {
+  switch (type) {
+    case "directory":
+      return "folder";
+    case "file":
+      return "file";
+    case "link":
+      return "link";
+    default:
+      return null;
+  }
+}
+
+function createSidebarTreeItemId(
+  path: string,
+  type: SidebarTreeItemType,
+): string {
+  return `${type}-${encodeURIComponent(path)}`;
+}
+
+function mapDirectoryItemToSidebarTree(
+  item: SidebarDirectoryItem,
+): SidebarTreeItemData | null {
+  const type = toSidebarTreeItemType(item.type);
+  if (!type) return null;
+
+  if (type === "folder") {
+    return {
+      id: createSidebarTreeItemId(item.path, type),
+      name: item.name,
+      path: item.path,
+      type,
+      isExpanded: false,
+      children: [],
+    };
+  }
+
+  return {
+    id: createSidebarTreeItemId(item.path, type),
+    name: item.name,
+    path: item.path,
+    type,
+  };
+}
+
+function mapDirectoryItemsToSidebarTree(
+  items: SidebarDirectoryItem[],
+): SidebarTreeItemData[] {
+  const folders: SidebarTreeItemData[] = [];
+  const leafNodes: SidebarTreeItemData[] = [];
+
+  for (const item of items) {
+    const treeItem = mapDirectoryItemToSidebarTree(item);
+    if (!treeItem) continue;
+
+    if (treeItem.type === "folder") {
+      folders.push(treeItem);
+      continue;
+    }
+
+    leafNodes.push(treeItem);
+  }
+
+  return [...folders, ...leafNodes];
+}
+
+function resolveSidebarTreeSelection(
+  item: Pick<SidebarTreeItemData, "path" | "type">,
+): SidebarTreeSelection {
+  if (item.type === "folder") {
+    return { kind: "navigate", path: item.path };
+  }
+
+  return {
+    kind: "open-file",
+    fileType: item.type === "link" ? "link" : "file",
+  };
+}
+
 interface RecentFileData {
   id: number;
   name: string;
@@ -45,18 +146,11 @@ interface ShortcutData {
   [key: string]: unknown;
 }
 
-interface DirectoryItemData {
-  name: string;
-  path: string;
-  type: string;
-  [key: string]: unknown;
-}
-
 export interface SidebarItem {
   id: string;
   name: string;
   path: string;
-  type: "recent" | "pinned" | "shortcut" | "folder";
+  type: "recent" | "pinned" | "shortcut" | SidebarTreeItemType;
   lastAccessed?: string;
   isExpanded?: boolean;
   children?: SidebarItem[];
@@ -69,6 +163,20 @@ interface FileManagerSidebarProps {
   onFileOpen?: (file: SidebarItem) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
+}
+
+function findSidebarItemById(
+  items: SidebarItem[],
+  id: string,
+): SidebarItem | null {
+  for (const item of items) {
+    if (item.id === id) return item;
+    if (item.children) {
+      const found = findSidebarItemById(item.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -203,19 +311,8 @@ export function FileManagerSidebar({
 
     try {
       const response = await listSSHFiles(sshSessionId, "/");
-      const rootFiles = (response.files || []) as DirectoryItemData[];
-      const rootFolders = rootFiles.filter(
-        (item: DirectoryItemData) => item.type === "directory",
-      );
-
-      const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
-        id: `folder-${folder.name}`,
-        name: folder.name,
-        path: folder.path,
-        type: "folder" as const,
-        isExpanded: false,
-        children: [],
-      }));
+      const rootFiles = (response.files || []) as SidebarDirectoryItem[];
+      const rootTreeItems = mapDirectoryItemsToSidebarTree(rootFiles);
 
       setDirectoryTree([
         {
@@ -252,7 +349,7 @@ export function FileManagerSidebar({
 
   /**
    * Lazily fetches subdirectory contents and patches them into the tree state.
-   * Called the first time a folder is expanded via FolderTree's onSelect.
+   * Called the first time a folder is expanded via FolderTree's onToggle.
    */
   const loadSubdirectory = useCallback(
     async (folderId: string, folderPath: string) => {
@@ -260,19 +357,8 @@ export function FileManagerSidebar({
 
       try {
         const subResponse = await listSSHFiles(sshSessionId, folderPath);
-        const subFiles = (subResponse.files || []) as DirectoryItemData[];
-        const subFolders = subFiles.filter(
-          (item: DirectoryItemData) => item.type === "directory",
-        );
-
-        const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
-          id: `folder-${folder.path.replace(/\//g, "-")}`,
-          name: folder.name,
-          path: folder.path,
-          type: "folder" as const,
-          isExpanded: false,
-          children: [],
-        }));
+        const subFiles = (subResponse.files || []) as SidebarDirectoryItem[];
+        const subTreeItems = mapDirectoryItemsToSidebarTree(subFiles);
 
         setDirectoryTree((prevTree) => {
           const updateChildren = (items: SidebarItem[]): SidebarItem[] =>
@@ -376,39 +462,45 @@ export function FileManagerSidebar({
 
   /**
    * Called by FolderTree whenever the user selects (clicks) a tree item.
-   * We navigate to the folder and lazily load children on first visit.
+   * Selection only navigates to the folder; expansion is handled separately.
    */
   const handleDirectorySelect = useCallback(
-    async (id: string) => {
-      // Walk the tree to find the item by id
-      const findItem = (items: SidebarItem[]): SidebarItem | null => {
-        for (const item of items) {
-          if (item.id === id) return item;
-          if (item.children) {
-            const found = findItem(item.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const item = findItem(directoryTree);
+    (id: string) => {
+      const item = findSidebarItemById(directoryTree, id);
       if (!item) return;
 
-      // Navigate to path
-      onPathChange(item.path);
+      const selection = resolveSidebarTreeSelection(item);
+      if (selection.kind === "navigate") {
+        onPathChange(selection.path);
+        return;
+      }
 
-      // Lazy-load children the first time this folder is expanded
-      if (
-        sshSessionId &&
-        item.path !== "/" &&
-        !loadedFoldersRef.current.has(item.path)
-      ) {
+      if (onFileOpen) {
+        onFileOpen(item);
+        return;
+      }
+
+      const directory =
+        item.path.substring(0, item.path.lastIndexOf("/")) || "/";
+      onPathChange(directory);
+    },
+    [directoryTree, onFileOpen, onPathChange],
+  );
+
+  const handleDirectoryToggle = useCallback(
+    async (id: string, expanded: boolean) => {
+      if (!sshSessionId || !expanded) return;
+
+      const item = findSidebarItemById(directoryTree, id);
+      if (!item) return;
+      if (item.type !== "folder") return;
+
+      if (shouldLazyLoadFolder(item.path, expanded, loadedFoldersRef.current)) {
         loadedFoldersRef.current.add(item.path);
         await loadSubdirectory(id, item.path);
       }
     },
-    [directoryTree, onPathChange, sshSessionId, loadSubdirectory],
+    [directoryTree, loadSubdirectory, sshSessionId],
   );
 
   // ─── Context menu ─────────────────────────────────────────────────────────────
@@ -488,13 +580,19 @@ export function FileManagerSidebar({
    * absent, so an unloaded folder simply expands to an empty state while
    * the async fetch fills it in.
    */
-  const renderFolderTreeItem = (item: SidebarItem): React.ReactNode => (
-    <FolderTree.Item key={item.id} id={item.id} label={item.name}>
-      <FolderTree.Content>
-        {item.children?.map((child) => renderFolderTreeItem(child))}
-      </FolderTree.Content>
-    </FolderTree.Item>
-  );
+  const renderFolderTreeItem = (item: SidebarItem): React.ReactNode => {
+    if (item.type !== "folder") {
+      return <FolderTree.Item key={item.id} id={item.id} label={item.name} />;
+    }
+
+    return (
+      <FolderTree.Item key={item.id} id={item.id} label={item.name}>
+        <FolderTree.Content>
+          {item.children?.map((child) => renderFolderTreeItem(child))}
+        </FolderTree.Content>
+      </FolderTree.Item>
+    );
+  };
 
   /**
    * Styled quick-access row (recent / pinned / shortcut).
@@ -651,6 +749,9 @@ export function FileManagerSidebar({
                   selectedId={selectedTreeId}
                   expandedIds={ancestorIds}
                   onSelect={(id) => handleDirectorySelect(id)}
+                  onToggle={(id, expanded) =>
+                    void handleDirectoryToggle(id, expanded)
+                  }
                   className="bg-transparent border-0 rounded-none shadow-none"
                 >
                   {directoryTree.map((item) => renderFolderTreeItem(item))}
