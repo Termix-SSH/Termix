@@ -465,7 +465,7 @@ export function UserProfilePanel({
     return v !== null ? v === "true" : true;
   });
   const [sessionPersistence, setSessionPersistence] = useState(
-    () => localStorage.getItem("enableTerminalSessionPersistence") === "true",
+    () => localStorage.getItem("enableTerminalSessionPersistence") !== "false",
   );
   const [showHostTags, setShowHostTags] = useState(() => {
     const v = localStorage.getItem("showHostTags");
