@@ -1970,7 +1970,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const clipboardProvider = new RobustClipboardProvider();
       const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
-      const webLinksAddon = new WebLinksAddon();
+      const webLinksAddon = new WebLinksAddon((_event, uri) => {
+        const url = uri.startsWith("http://") || uri.startsWith("https://")
+          ? uri
+          : `https://${uri}`;
+        window.open(url, "_blank");
+      });
 
       fitAddonRef.current = fitAddon;
       terminal.loadAddon(fitAddon);
