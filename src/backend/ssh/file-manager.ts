@@ -3061,6 +3061,50 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
           stream.on("close", (code) => {
             if (code !== 0) {
+              const isPermissionDenied =
+                errorData.toLowerCase().includes("permission denied");
+
+              if (isPermissionDenied && sshConn.sudoPassword) {
+                execWithSudo(
+                  sshConn,
+                  `cat '${escapedPath}'`,
+                  sshConn.sudoPassword,
+                  (sudoErr, sudoStream) => {
+                    if (sudoErr) {
+                      return res.status(403).json({
+                        error: "Permission denied",
+                        needsSudo: true,
+                      });
+                    }
+                    let sudoData = Buffer.alloc(0);
+                    let sudoErrorData = "";
+                    sudoStream.on("data", (chunk: Buffer) => {
+                      sudoData = Buffer.concat([sudoData, chunk]);
+                    });
+                    sudoStream.stderr.on("data", (chunk: Buffer) => {
+                      sudoErrorData += chunk.toString();
+                    });
+                    sudoStream.on("close", (sudoCode) => {
+                      if (sudoCode !== 0) {
+                        return res.status(403).json({
+                          error: `Permission denied: ${sudoErrorData}`,
+                          needsSudo: true,
+                        });
+                      }
+                      const isBinary = detectBinary(sudoData);
+                      res.json({
+                        content: isBinary
+                          ? sudoData.toString("base64")
+                          : sudoData.toString("utf8"),
+                        isBinary,
+                        size: sudoData.length,
+                      });
+                    });
+                  },
+                );
+                return;
+              }
+
               fileLogger.error(
                 `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
               );
@@ -3493,12 +3537,39 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
               }
             });
           } else {
+            const isPermDenied = errorData.toLowerCase().includes("permission denied");
+            if (isPermDenied && sshConn.sudoPassword) {
+              const sudoWriteCmd = `echo '${base64Content}' | base64 -d | sudo tee '${escapedPath}' > /dev/null && echo "SUCCESS"`;
+              execWithSudo(sshConn, `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`, sshConn.sudoPassword, (sudoErr, sudoStream) => {
+                if (sudoErr) {
+                  if (!res.headersSent) {
+                    res.status(403).json({ error: "Permission denied", needsSudo: true });
+                  }
+                  return;
+                }
+                let sudoOut = "";
+                sudoStream.on("data", (chunk: Buffer) => { sudoOut += chunk.toString(); });
+                sudoStream.on("close", () => {
+                  if (sudoOut.includes("SUCCESS")) {
+                    restoreOriginalMode(null, () => {
+                      if (!res.headersSent) {
+                        res.json({ message: "File written successfully", path: filePath });
+                      }
+                    });
+                  } else if (!res.headersSent) {
+                    res.status(403).json({ error: "Permission denied", needsSudo: true });
+                  }
+                });
+              });
+              return;
+            }
             fileLogger.error(
               `Fallback write failed with code ${code}: ${errorData}`,
             );
             if (!res.headersSent) {
               res.status(500).json({
                 error: `Write failed: ${errorData}`,
+                needsSudo: isPermDenied,
                 toast: { type: "error", message: `Write failed: ${errorData}` },
               });
             }
