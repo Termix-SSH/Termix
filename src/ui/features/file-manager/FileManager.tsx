@@ -2543,7 +2543,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   return (
     <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
       <div
-        className="h-full w-full flex flex-col"
+        className="h-full w-full flex flex-col min-h-0"
         style={{
           visibility: isConnectionLogExpanded ? "hidden" : "visible",
         }}
@@ -2847,7 +2847,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 : "hidden md:flex",
             )}
           >
-            <div className="flex-1 flex flex-col overflow-hidden border border-border bg-card">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
               <FileManagerSidebar
                 currentHost={currentHost}
                 currentPath={currentPath}
