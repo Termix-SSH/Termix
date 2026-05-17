@@ -566,7 +566,7 @@ function getBackendPaths() {
     return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
   }
   // fork() does not go through Electron's asar redirector — use the unpacked path
-  const unpackedRoot = appRoot.replace("app.asar", "app.asar.unpacked");
+  const unpackedRoot = appRoot.replace(/app\.asar(?!\.unpacked)/, "app.asar.unpacked");
   const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
   return { entryPath: path.join(backendDir, "starter.js"), backendCwd: backendDir };
 }
@@ -606,7 +606,9 @@ function startBackendServer() {
     logToFile("  backendCwd exists:", fs.existsSync(backendCwd));
 
     backendProcess = fork(entryPath, [], {
-      cwd: backendCwd,
+      cwd: fs.existsSync(backendCwd) && fs.statSync(backendCwd).isDirectory()
+        ? backendCwd
+        : dataDir,
       env: {
         ...process.env,
         DATA_DIR: dataDir,
