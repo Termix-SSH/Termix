@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import {
   Download,
@@ -132,10 +132,9 @@ export function FileManagerContextMenu({
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
-  const [menuPosition, setMenuPosition] = useState({ x, y });
   const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isVisible) {
       setIsMounted(false);
       return;
@@ -143,18 +142,20 @@ export function FileManagerContextMenu({
 
     setIsMounted(true);
 
-    const adjustPosition = () => {
-      const menuWidth = menuRef.current?.offsetWidth ?? 260;
-      const menuHeight = menuRef.current?.offsetHeight ?? 400;
-      setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
-    };
-
-    adjustPosition();
+    if (menuRef.current) {
+      const menuWidth = menuRef.current.offsetWidth;
+      const menuHeight = menuRef.current.offsetHeight;
+      const clamped = getClampedMenuPosition(x, y, menuWidth, menuHeight);
+      menuRef.current.style.left = `${clamped.x}px`;
+      menuRef.current.style.top = `${clamped.y}px`;
+    }
 
     let cleanupFn: (() => void) | null = null;
 
     const timeoutId = setTimeout(() => {
       const handleClickOutside = (event: MouseEvent) => {
+        if (event.button === 2) return;
+
         const target = event.target as Element;
         const menuElement = document.querySelector("[data-context-menu]");
 
@@ -530,8 +531,8 @@ export function FileManagerContextMenu({
           "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-x-hidden overflow-y-auto",
         )}
         style={{
-          left: menuPosition.x,
-          top: menuPosition.y,
+          left: x,
+          top: y,
           maxHeight: `calc(100vh - ${VIEWPORT_PADDING * 2}px)`,
         }}
       >
