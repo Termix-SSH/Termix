@@ -3121,10 +3121,11 @@ export async function changePassword(oldPassword: string, newPassword: string) {
 
 export async function getOIDCAuthorizeUrl(
   rememberMe = false,
+  desktopCallbackPort?: number,
 ): Promise<OIDCAuthorize> {
   try {
     const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe },
+      params: { rememberMe, desktopCallbackPort },
     });
     return response.data;
   } catch (error) {

@@ -819,7 +819,7 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
-    const { rememberMe } = req.query;
+    const { rememberMe, desktopCallbackPort } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
     const backendCallbackUri = `${origin}/users/oidc/callback`;
 
@@ -842,7 +842,9 @@ router.get("/oidc/authorize", async (req, res) => {
 
     const referer = req.get("Referer");
     let frontendOrigin;
-    if (referer) {
+    if (desktopCallbackPort) {
+      frontendOrigin = `http://127.0.0.1:${desktopCallbackPort}/oidc-callback`;
+    } else if (referer) {
       const refererUrl = new URL(referer);
       frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
     } else {
@@ -1365,6 +1367,8 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    const isDesktopCallback = frontendOrigin.startsWith("http://127.0.0.1:");
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -1373,6 +1377,11 @@ router.get("/oidc/callback", async (req, res) => {
           : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
+
+    if (isDesktopCallback) {
+      redirectUrl.searchParams.set("token", token);
+      return res.redirect(redirectUrl.toString());
+    }
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
