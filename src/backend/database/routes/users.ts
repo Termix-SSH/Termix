@@ -1166,11 +1166,28 @@ router.get("/oidc/callback", async (req, res) => {
         }
       }
 
-      const oidcAllowRegistration =
-        (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
-        "true";
+      let oidcAutoProvision = false;
+      try {
+        const oidcProvRow = db.$client
+          .prepare(
+            "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
+          )
+          .get();
+        if (oidcProvRow) {
+          oidcAutoProvision =
+            (oidcProvRow as Record<string, unknown>).value === "true";
+        }
+      } catch {
+        // fall through to env var check
+      }
 
-      if (!isFirstUser && !oidcAllowRegistration) {
+      if (!oidcAutoProvision) {
+        oidcAutoProvision =
+          (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
+          "true";
+      }
+
+      if (!isFirstUser && !oidcAutoProvision) {
         try {
           const regRow = db.$client
             .prepare(
@@ -1921,6 +1938,52 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to set registration allowed", err);
     res.status(500).json({ error: "Failed to set registration allowed" });
+  }
+});
+
+router.get("/oidc-auto-provision", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
+      .get();
+    res.json({
+      enabled: row
+        ? (row as Record<string, unknown>).value === "true"
+        : false,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get OIDC auto-provision setting", err);
+    res.status(500).json({ error: "Failed to get OIDC auto-provision setting" });
+  }
+});
+
+router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for enabled" });
+    }
+    const existing = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
+      .get();
+    if (existing) {
+      db.$client
+        .prepare("UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'")
+        .run(enabled ? "true" : "false");
+    } else {
+      db.$client
+        .prepare("INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)")
+        .run(enabled ? "true" : "false");
+    }
+    res.json({ enabled });
+  } catch (err) {
+    authLogger.error("Failed to set OIDC auto-provision", err);
+    res.status(500).json({ error: "Failed to set OIDC auto-provision" });
   }
 });
 

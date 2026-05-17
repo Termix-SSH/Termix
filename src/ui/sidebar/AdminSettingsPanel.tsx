@@ -31,6 +31,8 @@ import {
   getAdminOIDCConfig,
   updateOIDCConfig,
   disableOIDCConfig,
+  getOidcAutoProvision,
+  updateOidcAutoProvision,
   isElectron,
   getUserRoles,
   assignRoleToUser,
@@ -134,6 +136,7 @@ export function AdminSettingsPanel() {
   const [logLevel, setLogLevel] = useState("info");
 
   // OIDC state
+  const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
   const [oidcClientId, setOidcClientId] = useState("");
   const [oidcClientSecret, setOidcClientSecret] = useState("");
   const [oidcAuthUrl, setOidcAuthUrl] = useState("");
@@ -238,7 +241,7 @@ export function AdminSettingsPanel() {
 
   async function loadGeneralSettings() {
     try {
-      const [reg, pwLogin, pwReset, timeout, monitoring, level, guac] =
+      const [reg, pwLogin, pwReset, timeout, monitoring, level, guac, oidcProv] =
         await Promise.allSettled([
           getRegistrationAllowed(),
           getPasswordLoginAllowed(),
@@ -247,11 +250,14 @@ export function AdminSettingsPanel() {
           getGlobalMonitoringSettings(),
           getLogLevel(),
           getGuacamoleSettings(),
+          getOidcAutoProvision(),
         ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
       if (pwLogin.status === "fulfilled")
         setAllowPasswordLogin(pwLogin.value.allowed);
+      if (oidcProv.status === "fulfilled")
+        setOidcAutoProvision(oidcProv.value.enabled);
       if (pwReset.status === "fulfilled") setAllowPasswordReset(pwReset.value);
       if (timeout.status === "fulfilled")
         setSessionTimeout(String(timeout.value.timeoutHours));
@@ -318,6 +324,17 @@ export function AdminSettingsPanel() {
     } catch {
       setAllowPasswordLogin(!newVal);
       toast.error("Failed to update password login setting");
+    }
+  }
+
+  async function handleToggleOidcAutoProvision() {
+    const newVal = !oidcAutoProvision;
+    setOidcAutoProvision(newVal);
+    try {
+      await updateOidcAutoProvision(newVal);
+    } catch {
+      setOidcAutoProvision(!newVal);
+      toast.error("Failed to update OIDC auto-provision setting");
     }
   }
 
@@ -698,6 +715,15 @@ export function AdminSettingsPanel() {
             <AdminToggle
               on={allowPasswordLogin}
               onToggle={handleTogglePasswordLogin}
+            />
+          </SettingRow>
+          <SettingRow
+            label="OIDC Auto-Provision"
+            description="Auto-create accounts for OIDC users even when registration is disabled"
+          >
+            <AdminToggle
+              on={oidcAutoProvision}
+              onToggle={handleToggleOidcAutoProvision}
             />
           </SettingRow>
           <SettingRow
