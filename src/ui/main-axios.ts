@@ -2082,6 +2082,25 @@ export async function downloadSSHFile(
   }
 }
 
+export async function downloadSSHFileStream(
+  sessionId: string,
+  filePath: string,
+): Promise<void> {
+  const response = await fileManagerApi.post(
+    "/ssh/downloadFileStream",
+    { sessionId, path: filePath },
+    { responseType: "blob" },
+  );
+  const blob = response.data as Blob;
+  const fileName = filePath.split("/").pop() || "download";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function createSSHFile(
   sessionId: string,
   path: string,

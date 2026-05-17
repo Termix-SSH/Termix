@@ -870,38 +870,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     try {
       await ensureSSHConnection();
 
-      const response = await downloadSSHFile(sshSessionId, file.path);
+      const { downloadSSHFileStream } = await import("@/main-axios.ts");
+      await downloadSSHFileStream(sshSessionId, file.path);
 
-      const content = response?.content as string | undefined;
-      const mimeType = response?.mimeType as string | undefined;
-      const fileName = response?.fileName as string | undefined;
-
-      if (content) {
-        const byteCharacters = atob(content);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {
-          type: mimeType || "application/octet-stream",
-        });
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName || file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        toast.success(
-          t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
-        );
-      } else {
-        toast.error(t("fileManager.failedToDownloadFile"));
-      }
+      toast.success(
+        t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+      );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
       if (

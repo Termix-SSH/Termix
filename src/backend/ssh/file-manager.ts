@@ -4944,6 +4944,55 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
     });
 });
 
+app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
+  const { sessionId, path: filePath } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!sessionId || !filePath) {
+    return res.status(400).json({ error: "Missing download parameters" });
+  }
+
+  const sshConn = sshSessions[sessionId];
+  if (!sshConn?.isConnected) {
+    return res.status(400).json({ error: "SSH session not found or not connected" });
+  }
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  sshConn.lastActive = Date.now();
+
+  try {
+    const sftp = await getSessionSftp(sshConn);
+    const stats = await new Promise<{ size: number; isFile: () => boolean }>((resolve, reject) => {
+      sftp.stat(filePath, (err, s) => (err ? reject(err) : resolve(s)));
+    });
+
+    if (!stats.isFile()) {
+      return res.status(400).json({ error: "Cannot download directories" });
+    }
+
+    const fileName = filePath.split("/").pop() || "download";
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader("Content-Length", String(stats.size));
+
+    const readStream = sftp.createReadStream(filePath);
+    readStream.on("error", (err) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: `Download failed: ${err.message}` });
+      } else {
+        res.destroy();
+      }
+    });
+    readStream.pipe(res);
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: `Download failed: ${(err as Error).message}` });
+    }
+  }
+});
+
 /**
  * @openapi
  * /ssh/file_manager/ssh/copyItem:
