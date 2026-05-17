@@ -3,6 +3,38 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/jetbrains-mono";
 
+@font-face {
+  font-family: "Caskaydia Cove Nerd Font Mono";
+  src: url("/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Caskaydia Cove Nerd Font Mono";
+  src: url("/fonts/CaskaydiaCoveNerdFontMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Caskaydia Cove Nerd Font Mono";
+  src: url("/fonts/CaskaydiaCoveNerdFontMono-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Caskaydia Cove Nerd Font Mono";
+  src: url("/fonts/CaskaydiaCoveNerdFontMono-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 @custom-variant dracula (&:is(.dracula *));
 @custom-variant catppuccin (&:is(.catppuccin *));
