@@ -17,6 +17,7 @@ import {
 import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { getDockerSessionAccessState } from "./docker-session-access.js";
 
 const sshLogger = logger;
 
@@ -117,6 +118,47 @@ function scheduleSessionCleanup(sessionId: string) {
       cleanupSession(sessionId);
     }, SESSION_IDLE_TIMEOUT);
   }
+}
+
+function getPendingSessionForUser(sessionId: string, userId: string) {
+  const session = pendingTOTPSessions[sessionId];
+  const accessState = getDockerSessionAccessState(session, userId);
+
+  if (accessState !== "allowed") {
+    return { session: null, accessState };
+  }
+
+  return { session, accessState };
+}
+
+function getActiveSessionForUser(sessionId: string, userId: string) {
+  const session = sshSessions[sessionId];
+  const accessState = getDockerSessionAccessState(session, userId);
+
+  if (accessState !== "allowed") {
+    return { session: null, accessState };
+  }
+
+  if (!session.isConnected) {
+    return { session: null, accessState: "missing" as const };
+  }
+
+  return { session, accessState };
+}
+
+function closePendingSession(sessionId: string) {
+  const session = pendingTOTPSessions[sessionId];
+  if (!session) {
+    return;
+  }
+
+  try {
+    session.client.end();
+  } catch {
+    void sessionId;
+  }
+
+  delete pendingTOTPSessions[sessionId];
 }
 
 interface JumpHostConfig {
@@ -549,6 +591,53 @@ app.post("/docker/ssh/connect", async (req, res) => {
     ),
   );
 
+  const existingSessionAccessState = getDockerSessionAccessState(
+    sshSessions[sessionId],
+    userId,
+  );
+  if (existingSessionAccessState === "forbidden") {
+    sshLogger.warn("Docker SSH connection rejected: session access denied", {
+      operation: "docker_connect",
+      sessionId,
+      userId,
+    });
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Session access denied",
+      ),
+    );
+    return res
+      .status(403)
+      .json({ error: "Session access denied", connectionLogs });
+  }
+
+  const pendingSessionAccessState = getDockerSessionAccessState(
+    pendingTOTPSessions[sessionId],
+    userId,
+  );
+  if (pendingSessionAccessState === "forbidden") {
+    sshLogger.warn(
+      "Docker SSH connection rejected: pending session access denied",
+      {
+        operation: "docker_connect",
+        sessionId,
+        userId,
+      },
+    );
+    connectionLogs.push(
+      createConnectionLog(
+        "error",
+        "docker_connecting",
+        "Session access denied",
+      ),
+    );
+    return res
+      .status(403)
+      .json({ error: "Session access denied", connectionLogs });
+  }
+
   try {
     const hostResults = await SimpleDBOps.select(
       getDb().select().from(hosts).where(eq(hosts.id, hostId)),
@@ -631,17 +720,12 @@ app.post("/docker/ssh/connect", async (req, res) => {
       ),
     );
 
-    if (sshSessions[sessionId]) {
+    if (existingSessionAccessState === "allowed") {
       cleanupSession(sessionId);
     }
 
-    if (pendingTOTPSessions[sessionId]) {
-      try {
-        pendingTOTPSessions[sessionId].client.end();
-      } catch {
-        // expected
-      }
-      delete pendingTOTPSessions[sessionId];
+    if (pendingSessionAccessState === "allowed") {
+      closePendingSession(sessionId);
     }
 
     let resolvedCredentials: {
@@ -1489,12 +1573,38 @@ app.post("/docker/ssh/connect", async (req, res) => {
  */
 app.post("/docker/ssh/disconnect", async (req, res) => {
   const { sessionId } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
   }
 
-  cleanupSession(sessionId);
+  const activeSessionAccessState = getDockerSessionAccessState(
+    sshSessions[sessionId],
+    userId,
+  );
+  if (activeSessionAccessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  const pendingSessionAccessState = getDockerSessionAccessState(
+    pendingTOTPSessions[sessionId],
+    userId,
+  );
+  if (pendingSessionAccessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  if (activeSessionAccessState === "allowed") {
+    cleanupSession(sessionId);
+  }
+  if (pendingSessionAccessState === "allowed") {
+    closePendingSession(sessionId);
+  }
 
   res.json({ success: true, message: "SSH session disconnected" });
 });
@@ -1544,7 +1654,17 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
     return res.status(400).json({ error: "Session ID and TOTP code required" });
   }
 
-  const session = pendingTOTPSessions[sessionId];
+  const pendingSessionResult = getPendingSessionForUser(sessionId, userId);
+  if (pendingSessionResult.accessState === "forbidden") {
+    sshLogger.warn("TOTP session access denied", {
+      operation: "docker_totp_verify",
+      sessionId,
+      userId,
+    });
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  const session = pendingSessionResult.session;
 
   if (!session) {
     sshLogger.warn("TOTP session not found or expired", {
@@ -1736,7 +1856,17 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
     return res.status(400).json({ error: "Session ID required" });
   }
 
-  const session = pendingTOTPSessions[sessionId];
+  const pendingSessionResult = getPendingSessionForUser(sessionId, userId);
+  if (pendingSessionResult.accessState === "forbidden") {
+    sshLogger.warn("Warpgate session access denied", {
+      operation: "docker_warpgate_verify",
+      sessionId,
+      userId,
+    });
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  const session = pendingSessionResult.session;
 
   if (!session) {
     sshLogger.warn("Warpgate session not found or expired", {
@@ -1911,17 +2041,18 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
     return res.status(400).json({ error: "Session ID is required" });
   }
 
-  const session = sshSessions[sessionId];
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
 
-  if (!session || !session.isConnected) {
+  const session = sessionResult.session;
+
+  if (!session) {
     return res.status(400).json({
       error: "SSH session not found or not connected",
       connected: false,
     });
-  }
-
-  if (session.userId && session.userId !== userId) {
-    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();
@@ -1957,12 +2088,30 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
  */
 app.get("/docker/ssh/status", async (req, res) => {
   const sessionId = req.query.sessionId as string;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
   }
 
-  const isConnected = !!sshSessions[sessionId]?.isConnected;
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  const pendingSessionAccessState = getDockerSessionAccessState(
+    pendingTOTPSessions[sessionId],
+    userId,
+  );
+  if (pendingSessionAccessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  const isConnected = !!sessionResult.session;
 
   res.json({ success: true, connected: isConnected });
 });
@@ -1997,16 +2146,26 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  if (pendingTOTPSessions[sessionId]) {
+  const pendingSessionResult = getPendingSessionForUser(sessionId, userId);
+  if (pendingSessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  if (pendingSessionResult.session) {
     return res.status(400).json({
       error: "Connection pending authentication",
       code: "AUTH_PENDING",
     });
   }
 
-  const session = sshSessions[sessionId];
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
 
-  if (!session || !session.isConnected) {
+  const session = sessionResult.session;
+
+  if (!session) {
     return res.status(400).json({
       error: "SSH session not found or not connected",
     });
@@ -2129,16 +2288,26 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  if (pendingTOTPSessions[sessionId]) {
+  const pendingSessionResult = getPendingSessionForUser(sessionId, userId);
+  if (pendingSessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  if (pendingSessionResult.session) {
     return res.status(400).json({
       error: "Connection pending authentication",
       code: "AUTH_PENDING",
     });
   }
 
-  const session = sshSessions[sessionId];
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
 
-  if (!session || !session.isConnected) {
+  const session = sessionResult.session;
+
+  if (!session) {
     return res.status(400).json({
       error: "SSH session not found or not connected",
     });
@@ -2230,9 +2399,14 @@ app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  const session = sshSessions[sessionId];
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
 
-  if (!session || !session.isConnected) {
+  const session = sessionResult.session;
+
+  if (!session) {
     return res.status(400).json({
       error: "SSH session not found or not connected",
     });
@@ -2325,9 +2499,14 @@ app.post(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2425,9 +2604,14 @@ app.post(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2525,9 +2709,14 @@ app.post(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2625,9 +2814,14 @@ app.post(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2725,9 +2919,14 @@ app.post(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2830,9 +3029,14 @@ app.delete(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
@@ -2958,9 +3162,14 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
-  const session = sshSessions[sessionId];
+  const sessionResult = getActiveSessionForUser(sessionId, userId);
+  if (sessionResult.accessState === "forbidden") {
+    return res.status(403).json({ error: "Session access denied" });
+  }
 
-  if (!session || !session.isConnected) {
+  const session = sessionResult.session;
+
+  if (!session) {
     return res.status(400).json({
       error: "SSH session not found or not connected",
     });
@@ -3067,9 +3276,14 @@ app.get(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const sessionResult = getActiveSessionForUser(sessionId, userId);
+    if (sessionResult.accessState === "forbidden") {
+      return res.status(403).json({ error: "Session access denied" });
+    }
 
-    if (!session || !session.isConnected) {
+    const session = sessionResult.session;
+
+    if (!session) {
       return res.status(400).json({
         error: "SSH session not found or not connected",
       });
