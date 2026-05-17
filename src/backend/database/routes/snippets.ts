@@ -93,6 +93,7 @@ async function getAccessibleSnippet(snippetId: number, userId: string) {
       order: snippets.order,
       createdAt: snippets.createdAt,
       updatedAt: snippets.updatedAt,
+      hostFilter: snippets.hostFilter,
     })
     .from(snippetAccess)
     .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
@@ -1104,7 +1105,7 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name, content, description, folder, order } = req.body;
+    const { name, content, description, folder, order, hostFilter } = req.body;
 
     if (
       !isNonEmptyString(userId) ||
@@ -1146,6 +1147,7 @@ router.post(
         description: description?.trim() || null,
         folder: folder?.trim() || null,
         order: snippetOrder,
+        hostFilter: hostFilter ? JSON.stringify(hostFilter) : null,
       };
 
       const result = await db.insert(snippets).values(insertData).returning();
@@ -1238,6 +1240,7 @@ router.put(
         description: string | null;
         folder: string | null;
         order: number;
+        hostFilter: string | null;
       }> = {
         updatedAt: sql`CURRENT_TIMESTAMP`,
       };
@@ -1251,6 +1254,10 @@ router.put(
       if (updateData.folder !== undefined)
         updateFields.folder = updateData.folder?.trim() || null;
       if (updateData.order !== undefined) updateFields.order = updateData.order;
+      if (updateData.hostFilter !== undefined)
+        updateFields.hostFilter = updateData.hostFilter
+          ? JSON.stringify(updateData.hostFilter)
+          : null;
 
       await db
         .update(snippets)

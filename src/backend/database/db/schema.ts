@@ -302,6 +302,7 @@ export const snippets = sqliteTable("snippets", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  hostFilter: text("host_filter"),
 });
 
 export const snippetFolders = sqliteTable("snippet_folders", {
