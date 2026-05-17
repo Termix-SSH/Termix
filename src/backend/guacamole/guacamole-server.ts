@@ -75,6 +75,7 @@ const clientOptions = {
     vnc: {
       "swap-red-blue": false,
       cursor: "remote",
+      security: "any",
       width: 1280,
       height: 720,
     },

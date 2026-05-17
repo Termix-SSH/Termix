@@ -216,6 +216,7 @@ router.post(
             password,
             {
               port: port || 5900,
+              security: "any",
               ...guacConfig,
             },
           );
