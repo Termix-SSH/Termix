@@ -13,9 +13,9 @@ interface SSHHost {
   password?: string;
   key?: string;
   keyPassword?: string;
-  authType: "password" | "key";
+  authType: "password" | "key" | "credential" | "none" | "opkssh";
   credentialId?: number;
-  userId?: number;
+  userId?: string;
 }
 
 interface TerminalWindowProps {

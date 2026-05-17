@@ -179,6 +179,14 @@ function findSidebarItemById(
   return null;
 }
 
+function shouldLazyLoadFolder(
+  path: string,
+  expanded: boolean,
+  loadedFolders: Set<string>,
+): boolean {
+  return expanded && !loadedFolders.has(path);
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function FileManagerSidebar({
@@ -264,7 +272,7 @@ export function FileManagerSidebar({
 
     try {
       const recentData = await getRecentFiles(currentHost.id);
-      const recentItems = (recentData as RecentFileData[])
+      const recentItems = (recentData as unknown as RecentFileData[])
         .slice(0, 5)
         .map((item: RecentFileData) => ({
           id: `recent-${item.id}`,
@@ -276,7 +284,7 @@ export function FileManagerSidebar({
       setRecentItems(recentItems);
 
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedItems = (pinnedData as PinnedFileData[]).map(
+      const pinnedItems = (pinnedData as unknown as PinnedFileData[]).map(
         (item: PinnedFileData) => ({
           id: `pinned-${item.id}`,
           name: item.name,
@@ -287,7 +295,7 @@ export function FileManagerSidebar({
       setPinnedItems(pinnedItems);
 
       const shortcutData = await getFolderShortcuts(currentHost.id);
-      const shortcutItems = (shortcutData as ShortcutData[]).map(
+      const shortcutItems = (shortcutData as unknown as ShortcutData[]).map(
         (item: ShortcutData) => ({
           id: `shortcut-${item.id}`,
           name: item.name,
@@ -469,7 +477,9 @@ export function FileManagerSidebar({
       const item = findSidebarItemById(directoryTree, id);
       if (!item) return;
 
-      const selection = resolveSidebarTreeSelection(item);
+      const selection = resolveSidebarTreeSelection(
+        item as Pick<SidebarTreeItemData, "path" | "type">,
+      );
       if (selection.kind === "navigate") {
         onPathChange(selection.path);
         return;

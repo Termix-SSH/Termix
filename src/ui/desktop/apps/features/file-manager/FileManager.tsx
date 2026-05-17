@@ -48,7 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
-import type { SSHHost, FileItem } from "../../../types/index.js";
+import type { SSHHost, FileItem } from "@/types/index.ts";
 import {
   ConnectionLogProvider,
   useConnectionLog,
@@ -105,6 +105,17 @@ type SSHConnectionError = Error & {
   status?: string;
   reason?: "no_keyboard" | "auth_failed" | "timeout";
 };
+
+interface SSHConnectResult {
+  requires_warpgate?: boolean;
+  requires_totp?: boolean;
+  status?: string;
+  url?: string;
+  securityKey?: string;
+  prompt?: string;
+  reason?: "no_keyboard" | "auth_failed" | "timeout";
+  success?: boolean;
+}
 
 interface CreateIntent {
   id: string;
@@ -398,7 +409,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       const sessionId = currentHost.id.toString();
 
-      const result = await connectSSH(sessionId, {
+      const result = (await connectSSH(sessionId, {
         hostId: currentHost.id,
         ip: currentHost.ip,
         port: currentHost.port,
@@ -417,7 +428,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         socks5Username: currentHost.socks5Username,
         socks5Password: currentHost.socks5Password,
         socks5ProxyChain: currentHost.socks5ProxyChain,
-      });
+      })) as unknown as SSHConnectResult;
 
       if (result?.requires_warpgate) {
         setWarpgateRequired(true);
@@ -447,9 +458,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
-        const files = Array.isArray(response)
+        const files = (Array.isArray(response)
           ? response
-          : response?.files || [];
+          : response?.files || []) as FileItem[];
         setFiles(files);
         clearSelection();
         initialLoadDoneRef.current = true;
@@ -508,7 +519,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       handleCloseWithError(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") + ": " + (sshError.message || String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -548,9 +559,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           return false;
         }
 
-        const files = Array.isArray(response)
+        const files = (Array.isArray(response)
           ? response
-          : response?.files || [];
+          : response?.files || []) as FileItem[];
 
         setFiles(files);
         clearSelection();
@@ -709,7 +720,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }
@@ -782,9 +793,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     } catch (error: unknown) {
       toast.dismiss(progressToast);
 
+      const uploadErr = error as { message?: string };
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        uploadErr.message?.includes("connection") ||
+        uploadErr.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -806,7 +818,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     try {
       await ensureSSHConnection();
 
-      const response = await downloadSSHFile(sshSessionId, file.path);
+      const response = (await downloadSSHFile(sshSessionId, file.path)) as {
+        content?: string;
+        mimeType?: string;
+        fileName?: string;
+      };
 
       if (response?.content) {
         const byteCharacters = atob(response.content);
@@ -835,9 +851,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         toast.error(t("fileManager.failedToDownloadFile"));
       }
     } catch (error: unknown) {
+      const dlErr = error as { message?: string };
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        dlErr.message?.includes("connection") ||
+        dlErr.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -1097,9 +1114,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         });
       }
     } catch (error: unknown) {
+      const symlinkErr = error as {
+        response?: { data?: { error?: string } };
+        message?: string;
+      };
       toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
+        symlinkErr?.response?.data?.error ||
+          symlinkErr?.message ||
           t("fileManager.failedToResolveSymlink"),
       );
     }
@@ -1229,7 +1250,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               currentHost?.id,
               currentHost?.userId?.toString(),
             );
-            copiedItems.push(result.uniqueName || file.name);
+            copiedItems.push((result.uniqueName as string) || file.name);
             successCount++;
           } else {
             const targetPath = currentPath.endsWith("/")
@@ -1249,6 +1270,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }
         } catch (error: unknown) {
           console.error(`Failed to ${operation} file ${file.name}:`, error);
+          const pasteItemErr = error as { message?: string };
           toast.error(
             t("fileManager.operationFailed", {
               operation:
@@ -1256,7 +1278,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   ? t("fileManager.copy")
                   : t("fileManager.move"),
               name: file.name,
-              error: error.message,
+              error: pasteItemErr.message,
             }),
           );
         }
@@ -1349,8 +1371,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setClipboard(null);
       }
     } catch (error: unknown) {
+      const pasteErr = error as { message?: string };
       toast.error(
-        `${t("fileManager.pasteFailed")}: ${error.message || t("fileManager.unknownError")}`,
+        `${t("fileManager.pasteFailed")}: ${pasteErr.message || t("fileManager.unknownError")}`,
       );
     }
   }
@@ -1462,10 +1485,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   `Failed to delete copied file ${copiedFile.targetName}:`,
                   error,
                 );
+                const undoCopyErr = error as { message?: string };
                 toast.error(
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
-                    error: error.message,
+                    error: undoCopyErr.message,
                   }),
                 );
               }
@@ -1504,10 +1528,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                   `Failed to move back file ${movedFile.targetName}:`,
                   error,
                 );
+                const undoMoveErr = error as { message?: string };
                 toast.error(
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
-                    error: error.message,
+                    error: undoMoveErr.message,
                   }),
                 );
               }
@@ -1540,8 +1565,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       handleRefreshDirectory();
     } catch (error: unknown) {
+      const undoErr = error as { message?: string };
       toast.error(
-        `${t("fileManager.undoOperationFailed")}: ${error.message || t("fileManager.unknownError")}`,
+        `${t("fileManager.undoOperationFailed")}: ${undoErr.message || t("fileManager.unknownError")}`,
       );
       console.error("Undo failed:", error);
     }
@@ -1694,9 +1720,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
         try {
           const response = await listSSHFiles(totpSessionId, currentPath);
-          const files = Array.isArray(response)
+          const files = (Array.isArray(response)
             ? response
-            : response?.files || [];
+            : response?.files || []) as FileItem[];
           setFiles(files);
           clearSelection();
           initialLoadDoneRef.current = true;
@@ -1738,9 +1764,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
         try {
           const response = await listSSHFiles(warpgateSessionId, currentPath);
-          const files = Array.isArray(response)
+          const files = (Array.isArray(response)
             ? response
-            : response?.files || [];
+            : response?.files || []) as FileItem[];
           setFiles(files);
           clearSelection();
           initialLoadDoneRef.current = true;
@@ -1786,7 +1812,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       const sessionId = currentHost.id.toString();
 
-      const result = await connectSSH(sessionId, {
+      const result = (await connectSSH(sessionId, {
         hostId: currentHost.id,
         ip: currentHost.ip,
         port: currentHost.port,
@@ -1804,7 +1830,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         socks5Username: currentHost.socks5Username,
         socks5Password: currentHost.socks5Password,
         socks5ProxyChain: currentHost.socks5ProxyChain,
-      });
+      })) as unknown as SSHConnectResult;
 
       if (result?.requires_warpgate) {
         setWarpgateRequired(true);
@@ -1835,9 +1861,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
-        const files = Array.isArray(response)
+        const files = (Array.isArray(response)
           ? response
-          : response?.files || [];
+          : response?.files || []) as FileItem[];
         setFiles(files);
         clearSelection();
         initialLoadDoneRef.current = true;
@@ -1850,8 +1876,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       console.error("SSH connection with credentials failed:", error);
       setAuthDialogReason("auth_failed");
       setShowAuthDialog(true);
+      const authErr = error as { message?: string };
       toast.error(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") + ": " + (authErr.message || String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -1917,10 +1944,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }
         } catch (error: unknown) {
           console.error(`Failed to move file ${file.name}:`, error);
+          const dropItemErr = error as { message?: string };
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              error.message,
+              dropItemErr.message,
           );
         }
       }
@@ -1963,7 +1991,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
     } catch (error: unknown) {
       console.error("Drag move operation failed:", error);
-      toast.error(t("fileManager.moveOperationFailed") + ": " + error.message);
+      const dropErr = error as { message?: string };
+      toast.error(t("fileManager.moveOperationFailed") + ": " + dropErr.message);
     }
   }
 
@@ -1995,15 +2024,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     );
 
     openWindow({
-      id: windowId,
-      type: "diff",
       title: t("fileManager.fileComparison", {
         file1: file1.name,
         file2: file2.name,
       }),
+      x: offsetX,
+      y: offsetY,
+      width: 1200,
+      height: 700,
       isMaximized: false,
+      isMinimized: false,
       component: createWindowComponent,
-      zIndex: Date.now(),
     });
 
     toast.success(
@@ -2034,10 +2065,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
     } catch (error: unknown) {
       console.error("Drag to desktop failed:", error);
+      const dragErr = error as { message?: string };
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (error.message || t("fileManager.unknownError")),
+          (dragErr.message || t("fileManager.unknownError")),
       );
     }
   }
@@ -2127,8 +2159,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
     try {
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedPaths = new Set(
-        pinnedData.map((item: Record<string, unknown>) => item.path),
+      const pinnedArray = pinnedData as unknown as Array<Record<string, unknown>>;
+      const pinnedPaths = new Set<string>(
+        pinnedArray.map((item) => item.path as string),
       );
       setPinnedFiles(pinnedPaths);
     } catch (error) {
@@ -2432,7 +2465,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               currentHost={currentHost}
               currentPath={currentPath}
               onPathChange={setCurrentPath}
-              onLoadDirectory={loadDirectory}
               onFileOpen={handleSidebarFileOpen}
               sshSessionId={sshSessionId}
               refreshTrigger={sidebarRefreshTrigger}
