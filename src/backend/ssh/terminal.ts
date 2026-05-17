@@ -32,7 +32,7 @@ import { sessionManager } from "./terminal-session-manager.js";
 import {
   detectTmux,
   attachOrCreateTmuxSession,
-  queryNewestTmuxSession,
+  waitForTmuxSession,
 } from "./tmux-helper.js";
 
 class MemoryAgent extends BaseAgent {
@@ -879,8 +879,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           : null;
         if (session?.sshStream) {
           const existingName = tmuxData.sessionName || undefined;
-          attachOrCreateTmuxSession(session.sshStream, existingName);
           if (existingName) {
+            attachOrCreateTmuxSession(session.sshStream, existingName);
             session.tmuxSessionName = existingName;
             sshLogger.info("User selected tmux session to attach", {
               operation: "tmux_user_attach",
@@ -894,26 +894,45 @@ wss.on("connection", async (ws: WebSocket, req) => {
               }),
             );
           } else {
-            // New session from picker -- query name after startup
+            const newName = `termix-${session.hostId}-${Date.now().toString(36).slice(-4)}`;
+            attachOrCreateTmuxSession(session.sshStream, undefined, newName);
             const sshConn = session.sshConn;
-            setTimeout(async () => {
-              const sessionName = sshConn
-                ? await queryNewestTmuxSession(sshConn)
-                : null;
-              session.tmuxSessionName = sessionName;
-              sshLogger.info("User requested new tmux session", {
-                operation: "tmux_user_create",
-                sessionName,
-                hostId: session.hostId,
-              });
-              ws.send(
-                JSON.stringify({
-                  type: "tmux_session_created",
-                  sessionName,
-                }),
-              );
-            }, 500);
+            if (sshConn) {
+              (async () => {
+                const confirmed = await waitForTmuxSession(sshConn, newName);
+                session.tmuxSessionName = confirmed;
+                sshLogger.info("User requested new tmux session", {
+                  operation: "tmux_user_create",
+                  sessionName: confirmed,
+                  hostId: session.hostId,
+                });
+                ws.send(
+                  JSON.stringify({
+                    type: "tmux_session_created",
+                    sessionName: confirmed,
+                  }),
+                );
+              })();
+            }
           }
+        }
+        break;
+      }
+
+      case "tmux_detach": {
+        const session = currentSessionId
+          ? sessionManager.getSession(currentSessionId)
+          : null;
+        if (session?.sshConn && session.tmuxSessionName) {
+          const tmuxName = session.tmuxSessionName;
+          session.sshStream?.write("\x02d");
+          session.tmuxSessionName = null;
+          sshLogger.info("User detached from tmux session", {
+            operation: "tmux_user_detach",
+            sessionName: tmuxName,
+            hostId: session.hostId,
+          });
+          ws.send(JSON.stringify({ type: "tmux_detached", sessionName: tmuxName }));
         }
         break;
       }
@@ -1719,31 +1738,27 @@ wss.on("connection", async (ws: WebSocket, req) => {
                         "tmux is not installed on the remote host. Falling back to standard shell.",
                     }),
                   );
-                  // tmux unavailable, run commands in plain shell
                   runPostShellCommands(0);
                 } else if (detection.sessions.length === 0) {
-                  attachOrCreateTmuxSession(stream);
-                  // Query the name tmux assigned after a short delay
-                  setTimeout(async () => {
-                    const sessionName = await queryNewestTmuxSession(conn);
-                    const session = sessionManager.getSession(boundSessionId);
-                    if (session) {
-                      session.tmuxSessionName = sessionName;
-                    }
-                    sshLogger.info("Created new tmux session", {
-                      operation: "tmux_new_session",
-                      sessionName,
-                      hostId: id,
-                    });
-                    ws.send(
-                      JSON.stringify({
-                        type: "tmux_session_created",
-                        sessionName,
-                      }),
-                    );
-                  }, 500);
-                  // Wait for tmux to start before running commands inside it
-                  runPostShellCommands(500);
+                  const newName = `termix-${id}-${Date.now().toString(36).slice(-4)}`;
+                  attachOrCreateTmuxSession(stream, undefined, newName);
+                  const confirmed = await waitForTmuxSession(conn, newName);
+                  const session = sessionManager.getSession(boundSessionId);
+                  if (session) {
+                    session.tmuxSessionName = confirmed;
+                  }
+                  sshLogger.info("Created new tmux session", {
+                    operation: "tmux_new_session",
+                    sessionName: confirmed,
+                    hostId: id,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_session_created",
+                      sessionName: confirmed,
+                    }),
+                  );
+                  runPostShellCommands(0);
                 } else if (detection.sessions.length === 1) {
                   attachOrCreateTmuxSession(stream, detection.sessions[0].name);
                   const sessionName = detection.sessions[0].name;

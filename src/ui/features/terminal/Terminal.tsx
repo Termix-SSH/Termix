@@ -220,6 +220,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }>;
     } | null>(null);
     const tmuxSessionNameRef = useRef<string | null>(null);
+    const [isTmuxAttached, setIsTmuxAttached] = useState(false);
     const tmuxCopyModeHintShownRef = useRef(false);
 
     const isVisibleRef = useRef<boolean>(false);
@@ -1533,6 +1534,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const sessionName =
               typeof msg.sessionName === "string" ? msg.sessionName : "";
             tmuxSessionNameRef.current = sessionName || "(active)";
+            setIsTmuxAttached(true);
             addLog({
               type: "info",
               stage: "connection",
@@ -1556,6 +1558,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               stage: "connection",
               message: t("terminal.tmuxUnavailable"),
             });
+          } else if (msg.type === "tmux_detached") {
+            tmuxSessionNameRef.current = null;
+            setIsTmuxAttached(false);
+            toast.info(t("terminal.tmuxDetached"), { duration: 3000 });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -2512,6 +2518,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }}
         />
+
+        {isTmuxAttached && isConnected && (
+          <button
+            onClick={() => {
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "tmux_detach" }),
+                );
+              }
+            }}
+            title={t("terminal.tmuxDetach")}
+            className="absolute top-2 right-2 z-[110] px-2 py-1 text-xs rounded bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+          >
+            tmux:detach
+          </button>
+        )}
 
         <SimpleLoader
           visible={isConnecting && !isConnectionLogExpanded}
