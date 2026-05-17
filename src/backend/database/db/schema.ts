@@ -462,6 +462,10 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
+  overrideCredentialId: integer("override_credential_id").references(
+    () => sshCredentials.id,
+    { onDelete: "set null" },
+  ),
 });
 
 export const sharedCredentials = sqliteTable("shared_credentials", {

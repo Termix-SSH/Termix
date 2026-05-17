@@ -75,8 +75,52 @@ export async function resolveHostById(
   if (host.credentialId) {
     const ownerId = (host.userId || userId) as string;
     try {
-      // Try shared credential first for non-owner users
+      // Try user's own override credential first
       if (userId !== ownerId) {
+        try {
+          const { hostAccess } = await import("../database/db/schema.js");
+          const accessRecords = await db
+            .select()
+            .from(hostAccess)
+            .where(
+              and(
+                eq(hostAccess.hostId, hostId),
+                eq(hostAccess.userId, userId),
+              ),
+            )
+            .limit(1);
+          const overrideCredId = accessRecords[0]?.overrideCredentialId as number | null;
+          if (overrideCredId) {
+            const userCreds = await SimpleDBOps.select(
+              db
+                .select()
+                .from(sshCredentials)
+                .where(
+                  and(
+                    eq(sshCredentials.id, overrideCredId),
+                    eq(sshCredentials.userId, userId),
+                  ),
+                ),
+              "ssh_credentials",
+              userId,
+            );
+            if (userCreds.length > 0) {
+              const cred = userCreds[0] as Record<string, unknown>;
+              host.password = cred.password;
+              host.key = cred.key;
+              host.keyPassword = cred.keyPassword;
+              host.keyType = cred.keyType;
+              if (!host.overrideCredentialUsername) {
+                host.username = cred.username;
+              }
+              host.authType = cred.key ? "key" : cred.password ? "password" : "none";
+              return host as unknown as SSHHost;
+            }
+          }
+        } catch {
+          // fall through to shared credential
+        }
+
         try {
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");

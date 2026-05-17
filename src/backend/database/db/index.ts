@@ -1009,6 +1009,19 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT override_credential_id FROM host_access LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE host_access ADD COLUMN override_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add override_credential_id column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
   } catch {
     try {
