@@ -192,6 +192,11 @@ router.post(
         }
       }
 
+      if (guacConfig.dpi != null) {
+        const parsed = parseInt(String(guacConfig.dpi), 10);
+        guacConfig.dpi = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+      }
+
       let token: string;
       const hostname = host.ip as string;
       const port = host.port as number;
@@ -205,7 +210,8 @@ router.post(
             port: port || 3389,
             domain,
             security: (host.security as string) || undefined,
-            "ignore-cert": (host.ignoreCert as boolean) || false,
+            "ignore-cert":
+              host.ignoreCert !== undefined ? !!host.ignoreCert : true,
             ...guacConfig,
           });
           break;
