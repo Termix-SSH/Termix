@@ -521,6 +521,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
       name_path,
       scopes,
       allowed_users,
+      admin_group,
     } = req.body;
 
     const isDisableRequest =
@@ -579,6 +580,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         name_path,
         scopes: scopes || "openid email profile",
         allowed_users: allowed_users || "",
+        admin_group: admin_group || "",
       };
 
       let encryptedConfig;
@@ -1312,8 +1314,26 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
+    // Sync admin status based on OIDC group membership
+    if (config.admin_group) {
+      const groups = (userInfo.groups || userInfo.roles || []) as string[];
+      const shouldBeAdmin = groups.includes(config.admin_group);
+      if (!!userRecord.isAdmin !== shouldBeAdmin) {
+        await db
+          .update(users)
+          .set({ isAdmin: shouldBeAdmin })
+          .where(eq(users.id, userRecord.id));
+        userRecord.isAdmin = shouldBeAdmin;
+        authLogger.info("OIDC admin status synced", {
+          operation: "oidc_admin_group_sync",
+          userId: userRecord.id,
+          group: config.admin_group,
+          isAdmin: shouldBeAdmin,
+        });
+      }
+    }
+
     try {
-      await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
       authLogger.error("Failed to setup OIDC user encryption", setupError, {
         operation: "oidc_user_encryption_setup_failed",
