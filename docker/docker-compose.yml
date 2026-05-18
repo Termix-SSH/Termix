@@ -1,5 +1,4 @@
 services:
-services:
   termix:
     image: ghcr.io/lukegus/termix:latest
     container_name: termix

@@ -1,5 +1,4 @@
 import express from "express";
-import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { guacLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";

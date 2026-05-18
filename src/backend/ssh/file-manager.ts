@@ -455,21 +455,33 @@ function execWithSudo(
   command: string,
   sudoPassword: string,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
+  return execWithSudoBuffer(session, command, sudoPassword).then((result) => ({
+    stdout: result.stdout.toString("utf8"),
+    stderr: result.stderr,
+    code: result.code,
+  }));
+}
+
+function execWithSudoBuffer(
+  session: SSHSession,
+  command: string,
+  sudoPassword: string,
+): Promise<{ stdout: Buffer; stderr: string; code: number }> {
   return new Promise((resolve) => {
     const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
     const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
 
     execChannel(session, sudoCommand, (err, stream) => {
       if (err) {
-        resolve({ stdout: "", stderr: err.message, code: 1 });
+        resolve({ stdout: Buffer.alloc(0), stderr: err.message, code: 1 });
         return;
       }
 
-      let stdout = "";
+      const stdoutChunks: Buffer[] = [];
       let stderr = "";
 
       stream.on("data", (chunk: Buffer) => {
-        stdout += chunk.toString();
+        stdoutChunks.push(chunk);
       });
 
       stream.stderr.on("data", (chunk: Buffer) => {
@@ -477,12 +489,18 @@ function execWithSudo(
       });
 
       stream.on("close", (code: number) => {
-        stdout = stdout.replace(/\[sudo\] password for .+?:\s*/g, "");
+        let stdout = Buffer.concat(stdoutChunks);
+        const sudoPromptMatch = stdout
+          .toString("utf8", 0, Math.min(stdout.length, 256))
+          .match(/^\[sudo\] password for .+?:\s*/);
+        if (sudoPromptMatch) {
+          stdout = stdout.subarray(Buffer.byteLength(sudoPromptMatch[0]));
+        }
         resolve({ stdout, stderr, code: code || 0 });
       });
 
       stream.on("error", (streamErr: Error) => {
-        resolve({ stdout, stderr: streamErr.message, code: 1 });
+        resolve({ stdout: Buffer.concat(stdoutChunks), stderr: streamErr.message, code: 1 });
       });
     });
   });
@@ -3092,43 +3110,28 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
                 errorData.toLowerCase().includes("permission denied");
 
               if (isPermissionDenied && sshConn.sudoPassword) {
-                execWithSudo(
+                execWithSudoBuffer(
                   sshConn,
                   `cat '${escapedPath}'`,
                   sshConn.sudoPassword,
-                  (sudoErr, sudoStream) => {
-                    if (sudoErr) {
-                      return res.status(403).json({
-                        error: "Permission denied",
-                        needsSudo: true,
-                      });
-                    }
-                    let sudoData = Buffer.alloc(0);
-                    let sudoErrorData = "";
-                    sudoStream.on("data", (chunk: Buffer) => {
-                      sudoData = Buffer.concat([sudoData, chunk]);
+                ).then((result) => {
+                  if (result.code !== 0) {
+                    return res.status(403).json({
+                      error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
+                      needsSudo: true,
                     });
-                    sudoStream.stderr.on("data", (chunk: Buffer) => {
-                      sudoErrorData += chunk.toString();
-                    });
-                    sudoStream.on("close", (sudoCode) => {
-                      if (sudoCode !== 0) {
-                        return res.status(403).json({
-                          error: `Permission denied: ${sudoErrorData}`,
-                          needsSudo: true,
-                        });
-                      }
-                      const isBinary = detectBinary(sudoData);
-                      res.json({
-                        content: isBinary
-                          ? sudoData.toString("base64")
-                          : sudoData.toString("utf8"),
-                        isBinary,
-                        size: sudoData.length,
-                      });
-                    });
-                  },
-                );
+                  }
+
+                  const sudoData = result.stdout;
+                  const isBinary = detectBinary(sudoData);
+                  res.json({
+                    content: isBinary
+                      ? sudoData.toString("base64")
+                      : sudoData.toString("utf8"),
+                    isBinary,
+                    size: sudoData.length,
+                  });
+                });
                 return;
               }
 
@@ -3566,27 +3569,20 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
           } else {
             const isPermDenied = errorData.toLowerCase().includes("permission denied");
             if (isPermDenied && sshConn.sudoPassword) {
-              const sudoWriteCmd = `echo '${base64Content}' | base64 -d | sudo tee '${escapedPath}' > /dev/null && echo "SUCCESS"`;
-              execWithSudo(sshConn, `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`, sshConn.sudoPassword, (sudoErr, sudoStream) => {
-                if (sudoErr) {
-                  if (!res.headersSent) {
-                    res.status(403).json({ error: "Permission denied", needsSudo: true });
-                  }
-                  return;
+              execWithSudo(
+                sshConn,
+                `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
+                sshConn.sudoPassword,
+              ).then((result) => {
+                if (result.code === 0 && result.stdout.includes("SUCCESS")) {
+                  restoreOriginalMode(null, () => {
+                    if (!res.headersSent) {
+                      res.json({ message: "File written successfully", path: filePath });
+                    }
+                  });
+                } else if (!res.headersSent) {
+                  res.status(403).json({ error: "Permission denied", needsSudo: true });
                 }
-                let sudoOut = "";
-                sudoStream.on("data", (chunk: Buffer) => { sudoOut += chunk.toString(); });
-                sudoStream.on("close", () => {
-                  if (sudoOut.includes("SUCCESS")) {
-                    restoreOriginalMode(null, () => {
-                      if (!res.headersSent) {
-                        res.json({ message: "File written successfully", path: filePath });
-                      }
-                    });
-                  } else if (!res.headersSent) {
-                    res.status(403).json({ error: "Permission denied", needsSudo: true });
-                  }
-                });
               });
               return;
             }
