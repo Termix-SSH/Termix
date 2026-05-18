@@ -813,9 +813,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         );
         files.push({ file, relativePath: path });
       } else if (entry.isDirectory) {
-        const reader = (
-          entry as FileSystemDirectoryEntry
-        ).createReader();
+        const reader = (entry as FileSystemDirectoryEntry).createReader();
         const dirEntries = await new Promise<FileSystemEntry[]>(
           (resolve, reject) => reader.readEntries(resolve, reject),
         );

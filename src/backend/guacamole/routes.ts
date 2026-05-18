@@ -196,7 +196,8 @@ router.post(
 
       if (guacConfig.dpi != null) {
         const parsed = parseInt(String(guacConfig.dpi), 10);
-        guacConfig.dpi = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+        guacConfig.dpi =
+          Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
       }
 
       let token: string;
@@ -221,61 +222,57 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
-          const { resolveHostById } = await import(
-            "../ssh/host-resolver.js"
-          );
-          const jumpHost = await resolveHostById(
-            jumpHosts[0].hostId,
-            userId,
-          );
+          const { resolveHostById } = await import("../ssh/host-resolver.js");
+          const jumpHost = await resolveHostById(jumpHosts[0].hostId, userId);
           if (jumpHost) {
-            const tunnelPort = await new Promise<number>(
-              (resolve, reject) => {
-                const sshClient = new Client();
-                sshClient.on("ready", () => {
-                  const server = net.createServer((sock) => {
-                    sshClient.forwardOut(
-                      "127.0.0.1",
-                      0,
-                      hostname,
-                      port,
-                      (err, stream) => {
-                        if (err) {
-                          sock.destroy();
-                          return;
-                        }
-                        sock.pipe(stream).pipe(sock);
-                      },
-                    );
-                  });
-                  server.listen(0, "127.0.0.1", () => {
-                    const addr = server.address() as net.AddressInfo;
-                    // Auto-cleanup after 1 hour
-                    setTimeout(() => {
+            const tunnelPort = await new Promise<number>((resolve, reject) => {
+              const sshClient = new Client();
+              sshClient.on("ready", () => {
+                const server = net.createServer((sock) => {
+                  sshClient.forwardOut(
+                    "127.0.0.1",
+                    0,
+                    hostname,
+                    port,
+                    (err, stream) => {
+                      if (err) {
+                        sock.destroy();
+                        return;
+                      }
+                      sock.pipe(stream).pipe(sock);
+                    },
+                  );
+                });
+                server.listen(0, "127.0.0.1", () => {
+                  const addr = server.address() as net.AddressInfo;
+                  // Auto-cleanup after 1 hour
+                  setTimeout(
+                    () => {
                       server.close();
                       sshClient.end();
-                    }, 60 * 60 * 1000);
-                    resolve(addr.port);
-                  });
+                    },
+                    60 * 60 * 1000,
+                  );
+                  resolve(addr.port);
                 });
-                sshClient.on("error", reject);
+              });
+              sshClient.on("error", reject);
 
-                const connectOpts: Record<string, unknown> = {
-                  host: jumpHost.ip,
-                  port: jumpHost.port || 22,
-                  username: jumpHost.username,
-                  readyTimeout: 30000,
-                };
-                if (jumpHost.key) {
-                  connectOpts.privateKey = jumpHost.key;
-                  if (jumpHost.keyPassword)
-                    connectOpts.passphrase = jumpHost.keyPassword;
-                } else if (jumpHost.password) {
-                  connectOpts.password = jumpHost.password;
-                }
-                sshClient.connect(connectOpts);
-              },
-            );
+              const connectOpts: Record<string, unknown> = {
+                host: jumpHost.ip,
+                port: jumpHost.port || 22,
+                username: jumpHost.username,
+                readyTimeout: 30000,
+              };
+              if (jumpHost.key) {
+                connectOpts.privateKey = jumpHost.key;
+                if (jumpHost.keyPassword)
+                  connectOpts.passphrase = jumpHost.keyPassword;
+              } else if (jumpHost.password) {
+                connectOpts.password = jumpHost.password;
+              }
+              sshClient.connect(connectOpts);
+            });
             hostname = "127.0.0.1";
             port = tunnelPort;
             guacLogger.info("SSH tunnel established for guacamole", {

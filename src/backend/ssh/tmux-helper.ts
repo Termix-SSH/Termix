@@ -124,7 +124,10 @@ export async function waitForTmuxSession(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      await execCommand(conn, `tmux has-session -t ${shellEscape(sessionName)} 2>/dev/null`);
+      await execCommand(
+        conn,
+        `tmux has-session -t ${shellEscape(sessionName)} 2>/dev/null`,
+      );
       return sessionName;
     } catch {
       // session not ready yet

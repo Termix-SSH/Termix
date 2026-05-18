@@ -395,7 +395,11 @@ export const GuacamoleDisplay = forwardRef<
       Guacamole.AudioPlayer.getInstance(stream, mimetype);
     };
 
-    client.onfile = (stream: Guacamole.InputStream, mimetype: string, filename: string) => {
+    client.onfile = (
+      stream: Guacamole.InputStream,
+      mimetype: string,
+      filename: string,
+    ) => {
       const reader = new Guacamole.BlobReader(stream, mimetype);
       reader.onend = () => {
         const blob = reader.getBlob();
