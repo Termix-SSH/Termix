@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { PasswordInput } from "@/components/password-input.tsx";
@@ -31,6 +31,10 @@ import {
 } from "@/main-axios";
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
+import {
+  removeSilentSigninFromSearch,
+  shouldTriggerSilentSignin,
+} from "./silent-signin";
 
 function isMissingServerConfigError(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -123,6 +127,8 @@ export function Auth({
   const [registrationAllowed, setRegistrationAllowed] = useState(true);
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
+  const [oidcConfigLoaded, setOidcConfigLoaded] = useState(false);
+  const silentSigninHandledRef = useRef(false);
 
   const [resetStep, setResetStep] = useState<
     "initiate" | "verify" | "newPassword"
@@ -248,6 +254,9 @@ export function Auth({
         } else {
           setOidcConfigured(false);
         }
+      })
+      .finally(() => {
+        setOidcConfigLoaded(true);
       });
   }, []);
 
@@ -625,7 +634,7 @@ export function Auth({
     }
   }
 
-  async function handleOIDCLogin() {
+  const handleOIDCLogin = useCallback(async () => {
     setOidcLoading(true);
     try {
       const authResponse = await getOIDCAuthorizeUrl(rememberMe);
@@ -648,7 +657,27 @@ export function Auth({
       toast.error(errorMessage);
       setOidcLoading(false);
     }
-  }
+  }, [rememberMe, t]);
+
+  useEffect(() => {
+    if (!oidcConfigLoaded || silentSigninHandledRef.current) return;
+    if (!shouldTriggerSilentSignin(window.location.search)) return;
+
+    const nextSearch = removeSilentSigninFromSearch(window.location.search);
+    window.history.replaceState(
+      {},
+      document.title,
+      `${window.location.pathname}${nextSearch}${window.location.hash}`,
+    );
+
+    silentSigninHandledRef.current = true;
+    if (oidcConfigured && !isElectron()) {
+      handleOIDCLogin();
+      return;
+    }
+
+    toast.info(t("errors.silentSigninOidcUnavailable"));
+  }, [handleOIDCLogin, oidcConfigLoaded, oidcConfigured, t]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
