@@ -2,9 +2,7 @@
 
 <img src="./public/icon.svg" width="120" height="120" alt="Termix Logo" />
 
-<h1>
-  <span style="color:#F39044;">Termix</span>
-</h1>
+<h1><span style="color:#F39044;">Termix</span></h1>
 
 <p>Self-hosted server management</p>
 
@@ -47,54 +45,132 @@
 
 </div>
 
+<br />
+
 ---
 
-## Overview
+<br />
+
+## <span style="color:#F39044;">Overview</span>
+
+<div style="border-left: 3px solid #F39044; padding-left: 16px; margin: 12px 0;">
 
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal access, remote desktop control (RDP, VNC, Telnet), SSH tunneling capabilities, remote SSH file management, and many other tools. Termix is the perfect free and self-hosted alternative to Termius available for all platforms.
 
+</div>
+
+<br />
+
 ---
 
-## Features
+<br />
+
+## <span style="color:#F39044;">Features</span>
+
+<br />
 
 <table>
 <tr>
-<td width="50%" valign="top">
-
-<b>SSH Terminal Access</b><br>Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
-
-<b>Remote Desktop Access</b><br>RDP, VNC, and Telnet support over the browser with complete customization and split screening.
-
-<b>SSH Tunnel Management</b><br>Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
-
-<b>Remote File Manager</b><br>Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
-
-<b>Docker Management</b><br>Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
-
-<b>SSH Host Manager</b><br>Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
-
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">SSH Terminal Access</b><br/><br/>
+Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+</div>
 </td>
-<td width="50%" valign="top">
-
-<b>Server Stats</b><br>View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
-
-<b>User Authentication</b><br>Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
-
-<b>RBAC</b><br>Create roles and share hosts across users/roles.
-
-<b>Database Encryption</b><br>Backend stored as encrypted SQLite database files. View <a href="https://docs.termix.site/security">docs</a> for more.
-
-<b>Network Graph</b><br>Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
-
-<b>SSH Tools</b><br>Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
-
-<b>Persistent Tabs</b><br>SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
-
-<b>Languages</b><br>Built-in support ~30 languages (managed by <a href="https://docs.termix.site/translations">Crowdin</a>).
-
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Remote Desktop Access</b><br/><br/>
+RDP, VNC, and Telnet support over the browser with complete customization and split screening.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">SSH Tunnel Management</b><br/><br/>
+Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Remote File Manager</b><br/><br/>
+Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Docker Management</b><br/><br/>
+Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">SSH Host Manager</b><br/><br/>
+Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Server Stats</b><br/><br/>
+View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">User Authentication</b><br/><br/>
+Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">RBAC</b><br/><br/>
+Create roles and share hosts across users/roles.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Database Encryption</b><br/><br/>
+Backend stored as encrypted SQLite database files. View <a href="https://docs.termix.site/security">docs</a> for more.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Network Graph</b><br/><br/>
+Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">SSH Tools</b><br/><br/>
+Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
+</div>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Persistent Tabs</b><br/><br/>
+SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
+</div>
+</td>
+<td width="50%" valign="top" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-left: 3px solid #F39044; border-radius: 8px; padding: 16px; height: 100%;">
+<b style="color:#F39044;">Languages</b><br/><br/>
+Built-in support ~30 languages (managed by <a href="https://docs.termix.site/translations">Crowdin</a>).
+</div>
 </td>
 </tr>
 </table>
+
+<br />
 
 <details>
 <summary><b>More features</b></summary>
@@ -112,26 +188,66 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 
 </details>
 
+<br />
+
 ---
 
-## Platform Support
+<br />
 
-<div align="center">
+## <span style="color:#F39044;">Platform Support</span>
 
-|           Platform           | Distribution                                               |
-| :--------------------------: | :--------------------------------------------------------- |
-|           **Web**            | Any modern browser (Chrome, Safari, Firefox) · PWA support |
-|    **Windows** (x64/ia32)    | Portable · MSI Installer · Chocolatey                      |
-|     **Linux** (x64/ia32)     | Portable · AUR · AppImage · Deb · Flatpak                  |
-| **macOS** (x64/ia32, v12.0+) | Apple App Store · DMG · Homebrew                           |
-|   **iOS/iPadOS** (v15.1+)    | Apple App Store · IPA                                      |
-|     **Android** (v7.0+)      | Google Play Store · APK                                    |
+<br />
 
+<table>
+<tr>
+<td align="center" style="padding: 8px;" width="33%">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>Web</b><br/><br/>
+<sub>Any modern browser (Chrome, Safari, Firefox) · PWA support</sub>
 </div>
+</td>
+<td align="center" style="padding: 8px;" width="33%">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>Windows</b> <sub>x64/ia32</sub><br/><br/>
+<sub>Portable · MSI Installer · Chocolatey</sub>
+</div>
+</td>
+<td align="center" style="padding: 8px;" width="33%">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>Linux</b> <sub>x64/ia32</sub><br/><br/>
+<sub>Portable · AUR · AppImage · Deb · Flatpak</sub>
+</div>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>macOS</b> <sub>x64/ia32, v12.0+</sub><br/><br/>
+<sub>Apple App Store · DMG · Homebrew</sub>
+</div>
+</td>
+<td align="center" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>iOS/iPadOS</b> <sub>v15.1+</sub><br/><br/>
+<sub>Apple App Store · IPA</sub>
+</div>
+</td>
+<td align="center" style="padding: 8px;">
+<div style="border: 1px solid rgba(243,144,68,0.25); border-top: 3px solid #F39044; border-radius: 8px; padding: 16px;">
+<b>Android</b> <sub>v7.0+</sub><br/><br/>
+<sub>Google Play Store · APK</sub>
+</div>
+</td>
+</tr>
+</table>
+
+<br />
 
 ---
 
-## Installation
+<br />
+
+## <span style="color:#F39044;">Installation</span>
 
 Visit the [Termix Docs](https://docs.termix.site/install) for full installation instructions across all platforms.
 
@@ -172,15 +288,19 @@ networks:
     driver: bridge
 ```
 
+<br />
+
 ---
 
-## Screenshots
+<br />
+
+## <span style="color:#F39044;">Screenshots</span>
 
 <div align="center">
 
 [![YouTube](./repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>Watch update overviews overview on YouTube</sub>
+<sub>Watch update overviews on YouTube</sub>
 
 <br />
 <br />
@@ -216,15 +336,23 @@ networks:
 
 </div>
 
+<br />
+
 ---
 
-## Planned Features
+<br />
+
+## <span style="color:#F39044;">Planned Features</span>
 
 See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
+<br />
+
 ---
 
-## Sponsors
+<br />
+
+## <span style="color:#F39044;">Sponsors</span>
 
 <div align="center">
 
@@ -258,14 +386,22 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned fe
 
 </div>
 
+<br />
+
 ---
 
-## Support
+<br />
+
+## <span style="color:#F39044;">Support</span>
 
 If you need help or want to request a feature with Termix, visit the [Issues](https://github.com/Termix-SSH/Support/issues) page, log in, and press `New Issue`. Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel, however, response times may be longer.
 
+<br />
+
 ---
 
-## License
+<br />
+
+## <span style="color:#F39044;">License</span>
 
 Distributed under the Apache License Version 2.0. See `LICENSE` for more information.

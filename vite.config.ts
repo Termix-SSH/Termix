@@ -53,7 +53,6 @@ const manualChunkGroups: Record<string, string[]> = {
   ],
   "remote-desktop-vendor": ["guacamole-common-js"],
   "graph-vendor": ["cytoscape", "react-cytoscapejs"],
-  "chart-vendor": ["recharts"],
   "file-preview-vendor": [
     "react-pdf",
     "pdfjs-dist",
