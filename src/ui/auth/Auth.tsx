@@ -877,7 +877,7 @@ export function Auth({ onLogin }: AuthProps) {
         </div>
       </div>
 
-      {/* Right panel — auth form */}
+      {/* Right panel */}
       <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
         <div className="w-full max-w-sm flex flex-col gap-6">
           {/* TOTP view */}

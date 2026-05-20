@@ -55,7 +55,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 
 <img src="./repo-images/header-features.svg" alt="Features" />
 
-<img src="./repo-images/features.svg" alt="Features" />
+<p><img src="./repo-images/features.svg" alt="Features" /></p>
 
 <br />
 
@@ -79,7 +79,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 
 <img src="./repo-images/header-platform-support.svg" alt="Platform Support" />
 
-<img src="./repo-images/platform-support.svg" alt="Platform Support" />
+<p><img src="./repo-images/platform-support.svg" alt="Platform Support" /></p>
 
 <br />
 
