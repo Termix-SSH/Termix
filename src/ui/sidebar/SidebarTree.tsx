@@ -139,7 +139,13 @@ export function HostItem({
       className={`relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onOpenTab("terminal")}
+      onClick={() => {
+        if (host.enableSsh) onOpenTab("terminal");
+        else if (host.enableRdp) onOpenTab("rdp");
+        else if (host.enableVnc) onOpenTab("vnc");
+        else if (host.enableTelnet) onOpenTab("telnet");
+        else onOpenTab("terminal");
+      }}
     >
       {/* Status stripe */}
       <div

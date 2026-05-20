@@ -35,6 +35,7 @@ import {
   getServerMetricsById,
   registerMetricsViewer,
   sendMetricsHeartbeat,
+  getUserInfo,
 } from "@/main-axios";
 import type { RecentActivityItem, SSHHostWithStatus } from "@/main-axios";
 import { useTranslation } from "react-i18next";
@@ -278,10 +279,12 @@ function QuickActionsCard({
   onOpenSingletonTab,
   hosts,
   onOpenTab,
+  isAdmin,
 }: {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   hosts: Host[];
   onOpenTab: (host: Host, type: TabType) => void;
+  isAdmin: boolean;
 }) {
   const { t } = useTranslation();
   const pinnedHosts = hosts.filter((h) => h.pin);
@@ -357,22 +360,24 @@ function QuickActionsCard({
             </div>
           ) : (
             <>
-              <button
-                onClick={() => onOpenSingletonTab("admin-settings")}
-                className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
-              >
-                <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-                  <Settings className="size-3 text-accent-brand" />
-                </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs font-semibold">
-                    {t("dashboard.adminSettings")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("dashboardTab.manageUsersAndRoles")}
-                  </span>
-                </div>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => onOpenSingletonTab("admin-settings")}
+                  className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
+                >
+                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                    <Settings className="size-3 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xs font-semibold">
+                      {t("dashboard.adminSettings")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("dashboardTab.manageUsersAndRoles")}
+                    </span>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={() => onOpenSingletonTab("user-profile")}
                 className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
@@ -648,6 +653,7 @@ function CardItem({
   activeTunnelCount,
   activity,
   onClearActivity,
+  isAdmin,
 }: {
   slot: CardSlot;
   editMode: boolean;
@@ -669,6 +675,7 @@ function CardItem({
   activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
+  isAdmin: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -737,13 +744,18 @@ function CardItem({
           />
         )}
         {slot.id === "quick_actions" && (
-          <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
+          <QuickActionsCard
+            onOpenSingletonTab={onOpenSingletonTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
+          />
         )}
         {slot.id === "host_status" && (
           <HostStatusCard
             hosts={hosts}
             hostMetrics={hostMetrics}
             onOpenTab={onOpenTab}
+            isAdmin={isAdmin}
           />
         )}
         {slot.id === "recent_activity" && (
@@ -866,6 +878,7 @@ type PanelColumnProps = {
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   cardLabels: Record<DashboardCardId, string>;
+  isAdmin: boolean;
 };
 
 function PanelColumn({
@@ -892,6 +905,7 @@ function PanelColumn({
   activity,
   onClearActivity,
   cardLabels,
+  isAdmin,
 }: PanelColumnProps) {
   const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
@@ -943,6 +957,7 @@ function PanelColumn({
             activeTunnelCount={activeTunnelCount}
             activity={activity}
             onClearActivity={onClearActivity}
+            isAdmin={isAdmin}
           />
         </div>
       ))}
@@ -1039,6 +1054,7 @@ export function DashboardTab({
   }, [mainWidthPct]);
 
   const [hosts, setHosts] = useState<Host[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");
   const [versionStatus, setVersionStatus] = useState<
@@ -1112,6 +1128,9 @@ export function DashboardTab({
     };
     load();
 
+    getUserInfo()
+      .then((info) => setIsAdmin(!!info.is_admin))
+      .catch(() => {});
     getUptime()
       .then((u) => setUptimeFormatted(u.formatted))
       .catch(() => {});
@@ -1312,6 +1331,7 @@ export function DashboardTab({
     onOpenSingletonTab,
     onOpenTab,
     cardLabels,
+    isAdmin,
   };
 
   const isMobile = useIsMobile();
@@ -1395,13 +1415,18 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "quick_actions" && (
-                <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
+                <QuickActionsCard
+                  onOpenSingletonTab={onOpenSingletonTab}
+                  hosts={hosts}
+                  onOpenTab={onOpenTab}
+                />
               )}
               {slot.id === "host_status" && (
                 <HostStatusCard
                   hosts={hosts}
                   hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
+                  isAdmin={isAdmin}
                 />
               )}
               {slot.id === "recent_activity" && (

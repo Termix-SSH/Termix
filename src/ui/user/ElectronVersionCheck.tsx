@@ -4,7 +4,6 @@ import { VersionAlert } from "@/components/version-alert.tsx";
 import { useTranslation } from "react-i18next";
 import { isElectron } from "@/lib/electron";
 import { checkElectronUpdate } from "@/main-axios.ts";
-import { useTheme } from "@/components/theme-provider";
 
 interface VersionCheckModalProps {
   onContinue: () => void;
@@ -18,7 +17,6 @@ type ElectronWindow = Window & {
 
 export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const { t } = useTranslation();
-  const { theme } = useTheme();
   const [versionInfo, setVersionInfo] = useState<Record<
     string,
     unknown
@@ -26,15 +24,6 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const [versionChecking, setVersionChecking] = useState(false);
   const [versionDismissed] = useState(false);
 
-  const isDarkMode =
-    theme === "dark" ||
-    theme === "dracula" ||
-    theme === "gentlemansChoice" ||
-    theme === "midnightEspresso" ||
-    theme === "catppuccinMocha" ||
-    (theme === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
   const versionModalTitle =
     versionInfo?.status === "beta"
       ? t("versionCheck.betaVersion")
@@ -112,24 +101,10 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
 
   if (versionChecking && !versionInfo) {
     return (
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50"
-        style={{
-          background: "var(--bg-elevated)",
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 35px,
-            ${lineColor} 35px,
-            ${lineColor} 37px
-          )`,
-        }}
-      >
-        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-          <p className="text-center text-muted-foreground">
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-6 z-50">
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-md w-full items-center">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">
             {t("versionCheck.checkingUpdates")}
           </p>
         </div>
@@ -139,76 +114,40 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
 
   if (!versionInfo || versionDismissed) {
     return (
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50"
-        style={{
-          background: "var(--bg-elevated)",
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 35px,
-            ${lineColor} 35px,
-            ${lineColor} 37px
-          )`,
-        }}
-      >
-        <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">
-              {t("versionCheck.checkUpdates")}
-            </h2>
-          </div>
-
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-6 z-50">
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-md w-full">
+          <p className="font-bold">{t("versionCheck.checkUpdates")}</p>
           {versionInfo && !versionDismissed && (
-            <div className="mb-4">
-              <VersionAlert
-                updateInfo={versionInfo}
-                onDownload={handleDownloadUpdate}
-              />
-            </div>
+            <VersionAlert
+              updateInfo={versionInfo}
+              onDownload={handleDownloadUpdate}
+            />
           )}
-
-          <div className="flex gap-2">
-            <Button onClick={handleContinue} className="flex-1 h-10">
-              {t("common.continue")}
-            </Button>
-          </div>
+          <Button
+            onClick={handleContinue}
+            className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+          >
+            {t("common.continue")}
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        background: "var(--bg-elevated)",
-        backgroundImage: `repeating-linear-gradient(
-          45deg,
-          transparent,
-          transparent 35px,
-          ${lineColor} 35px,
-          ${lineColor} 37px
-        )`,
-      }}
-    >
-      <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">{versionModalTitle}</h2>
-        </div>
-
-        <div className="mb-4">
-          <VersionAlert
-            updateInfo={versionInfo}
-            onDownload={handleDownloadUpdate}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Button onClick={handleContinue} className="flex-1 h-10">
-            {t("common.continue")}
-          </Button>
-        </div>
+    <div className="fixed inset-0 flex items-center justify-center bg-background p-6 z-50">
+      <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-md w-full">
+        <p className="font-bold">{versionModalTitle}</p>
+        <VersionAlert
+          updateInfo={versionInfo}
+          onDownload={handleDownloadUpdate}
+        />
+        <Button
+          onClick={handleContinue}
+          className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+        >
+          {t("common.continue")}
+        </Button>
       </div>
     </div>
   );

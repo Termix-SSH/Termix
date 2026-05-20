@@ -288,48 +288,42 @@ export function AppShell({
     };
     window.addEventListener("termix:open-tab", handle);
     return () => window.removeEventListener("termix:open-tab", handle);
-  }, [tabs, allHosts]);
+  }, [allHosts]);
 
   // ─── Tab management ──────────────────────────────────────────────────────
 
   function openTab(host: Host, type: TabType) {
+    const same = tabs.filter(
+      (t) => t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
+    );
+    if (same.length === 0) {
+      const tabId = `${host.name}-${type}`;
+      const ref = type === "terminal" ? createRef() : undefined;
+      if (ref) terminalRefs.current.set(tabId, ref);
+      const tab = { id: tabId, type, label: host.name, host, terminalRef: ref };
+      setTabs((prev) => [...prev, tab]);
+      setActiveTabId(tab.id);
+      return;
+    }
+    const tabId = `${host.name}-${type}-${Date.now()}`;
+    const ref = type === "terminal" ? createRef() : undefined;
+    if (ref) terminalRefs.current.set(tabId, ref);
+    const tab = {
+      id: tabId,
+      type,
+      label: `${host.name} (${same.length + 1})`,
+      host,
+      terminalRef: ref,
+    };
     setTabs((prev) => {
-      const same = prev.filter(
-        (t) =>
-          t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
-      );
-      if (same.length === 0) {
-        const tabId = `${host.name}-${type}`;
-        const ref = type === "terminal" ? createRef() : undefined;
-        if (ref) terminalRefs.current.set(tabId, ref);
-        const tab = {
-          id: tabId,
-          type,
-          label: host.name,
-          host,
-          terminalRef: ref,
-        };
-        setActiveTabId(tab.id);
-        return [...prev, tab];
-      }
       const next = prev.map((t) =>
         t.id === same[0].id && !/\(\d+\)$/.test(t.label)
           ? { ...t, label: `${host.name} (1)`, host }
           : t,
       );
-      const tabId = `${host.name}-${type}-${Date.now()}`;
-      const ref = type === "terminal" ? createRef() : undefined;
-      if (ref) terminalRefs.current.set(tabId, ref);
-      const tab = {
-        id: tabId,
-        type,
-        label: `${host.name} (${same.length + 1})`,
-        host,
-        terminalRef: ref,
-      };
-      setActiveTabId(tab.id);
       return [...next, tab];
     });
+    setActiveTabId(tab.id);
   }
 
   function connectHost(host: Host, preferredType?: TabType) {
@@ -389,16 +383,26 @@ export function AppShell({
 
   function doCloseTab(id: string) {
     terminalRefs.current.delete(id);
+    if (id === activeTabId) {
+      const remaining = tabs.filter((t) => t.id !== id);
+      setActiveTabId(
+        remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
+      );
+    }
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
-      if (id === activeTabId) setActiveTabId(next[next.length - 1].id);
+      if (next.length === 0)
+        return [
+          { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+        ];
       return next;
     });
   }
 
   function closeTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
-    if (tab && SESSION_TAB_TYPES.includes(tab.type)) {
+    const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
+    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
       toast(t("nav.confirmClose"), {
         duration: 5000,
         action: {
@@ -670,31 +674,37 @@ export function AppShell({
               ) : (
                 <>
                   {/* Terminal tabs: always in DOM, absolutely positioned so xterm always has real dimensions */}
-                  {tabs
-                    .filter((tab) => tab.type === "terminal")
-                    .map((tab) => {
-                      const visible = tab.id === activeTabId;
-                      return (
-                        <div
-                          key={tab.id}
-                          className="absolute inset-0 overflow-hidden"
-                          style={{
-                            visibility: visible ? "visible" : "hidden",
-                            pointerEvents: visible ? "auto" : "none",
-                            zIndex: visible ? 1 : 0,
-                          }}
-                        >
-                          {renderTabContent(
-                            tab,
-                            openSingletonTab,
-                            openTab,
-                            closeTab,
-                            visible,
-                          )}
-                        </div>
-                      );
-                    })}
-                  {/* Non-terminal tabs: display:none when inactive */}
+                  {(() => {
+                    const activeTab = tabs.find((t) => t.id === activeTabId);
+                    const nonTerminalActive =
+                      activeTab && activeTab.type !== "terminal";
+                    return tabs
+                      .filter((tab) => tab.type === "terminal")
+                      .map((tab) => {
+                        const visible = tab.id === activeTabId;
+                        return (
+                          <div
+                            key={tab.id}
+                            className="absolute inset-0 overflow-hidden"
+                            style={{
+                              display: nonTerminalActive ? "none" : undefined,
+                              visibility: visible ? "visible" : "hidden",
+                              pointerEvents: visible ? "auto" : "none",
+                              zIndex: visible ? 1 : 0,
+                            }}
+                          >
+                            {renderTabContent(
+                              tab,
+                              openSingletonTab,
+                              openTab,
+                              closeTab,
+                              visible,
+                            )}
+                          </div>
+                        );
+                      });
+                  })()}
+                  {/* Non-terminal tabs: absolutely positioned above terminals when active */}
                   {tabs
                     .filter((tab) => tab.type !== "terminal")
                     .map((tab) => {
@@ -702,8 +712,16 @@ export function AppShell({
                       return (
                         <div
                           key={tab.id}
-                          className="flex flex-col flex-1 min-h-0 overflow-hidden"
-                          style={{ display: visible ? undefined : "none" }}
+                          className="flex flex-col overflow-hidden"
+                          style={
+                            visible
+                              ? {
+                                  position: "absolute",
+                                  inset: 0,
+                                  zIndex: 2,
+                                }
+                              : { display: "none" }
+                          }
                         >
                           {renderTabContent(
                             tab,

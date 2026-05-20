@@ -125,15 +125,15 @@ export function ElectronLoginForm({
   const isEmbeddedServer = serverUrl.includes("localhost:30001");
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-canvas flex flex-col">
+    <div className="fixed inset-0 w-screen h-screen bg-background flex flex-col">
       {isAuthenticating && (
-        <div className="absolute inset-0 flex items-center justify-center bg-canvas z-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-50">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
 
       {!isAuthenticating && (
-        <div className="flex items-center justify-between p-4 bg-canvas border-b border-edge">
+        <div className="flex items-center justify-between p-4 bg-background border-b border-border">
           <button
             onClick={onChangeServer}
             className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
@@ -173,7 +173,7 @@ export function ElectronLoginForm({
 
       {loading && !isAuthenticating && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-canvas z-40"
+          className="absolute inset-0 flex items-center justify-center bg-background z-40"
           style={{ marginTop: "60px" }}
         >
           <div className="flex items-center">

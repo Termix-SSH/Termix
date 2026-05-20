@@ -209,7 +209,7 @@ export function AppRail({
                   {username || "User"}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
-                  Administrator
+                  {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
                 </span>
               </div>
             </button>

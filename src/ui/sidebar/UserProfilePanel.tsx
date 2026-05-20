@@ -480,6 +480,9 @@ export function UserProfilePanel({
   const [disableUpdateCheck, setDisableUpdateCheck] = useState(
     () => localStorage.getItem("disableUpdateCheck") === "true",
   );
+  const [confirmTabClose, setConfirmTabClose] = useState(
+    () => localStorage.getItem("confirmTabClose") === "true",
+  );
 
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -1005,6 +1008,18 @@ export function UserProfilePanel({
                     "enableTerminalSessionPersistence",
                     v.toString(),
                   );
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.confirmTabClose")}
+              description={t("newUi.sidebar.userProfile.confirmTabCloseDesc")}
+            >
+              <FakeSwitch
+                checked={confirmTabClose}
+                onChange={(v) => {
+                  setConfirmTabClose(v);
+                  localStorage.setItem("confirmTabClose", v.toString());
                 }}
               />
             </SettingRow>

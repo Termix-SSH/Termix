@@ -137,7 +137,9 @@
     "history": "History",
     "hosts": "Hosts",
     "snippets": "Snippets",
-    "hostManager": "Host Manager"
+    "hostManager": "Host Manager",
+    "roleAdministrator": "Administrator",
+    "roleUser": "User"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -459,7 +461,7 @@
     "addTagsPlaceholder": "Add tags...",
     "authDetails": "Authentication Details",
     "credType": "Type",
-    "generateKeyPairDesc": "Generate a new key pair — both private and public keys will be filled automatically.",
+    "generateKeyPairDesc": "Generate a new key pair, both private and public keys will be filled automatically.",
     "generatingKey": "Generating...",
     "generateLabel": "Generate {{label}}",
     "uploadFileBtn": "Upload file",
@@ -490,7 +492,7 @@
     "connectionLabel": "Connection",
     "authenticationLabel": "Authentication",
     "generateKeyPairTitle": "Generate Key Pair",
-    "generateKeyPairDescription": "Generate a new key pair — both private and public keys will be filled automatically.",
+    "generateKeyPairDescription": "Generate a new key pair, both private and public keys will be filled automatically.",
     "generateFromPrivateKey": "Generate from Private Key",
     "refreshBtn2": "Refresh",
     "exitSelectionTitle": "Exit selection",
@@ -690,7 +692,7 @@
     "toggleWith": "Toggle with"
   },
   "splitScreen": {
-    "paneEmpty": "Pane {{index}} — empty",
+    "paneEmpty": "Pane {{index}} - empty",
     "noTabAssigned": "No tab assigned"
   },
   "guacamole": {
@@ -1396,7 +1398,7 @@
     "tunnel": "Tunnel",
     "docker": "Docker",
     "serverStats": "Server Stats",
-    "noNodes": "No nodes yet — add hosts to build your topology"
+    "noNodes": "No nodes yet"
   },
   "docker": {
     "notEnabled": "Docker is not enabled for this host",
@@ -1646,6 +1648,8 @@
         "commandPaletteDesc": "Enable keyboard shortcut",
         "sessionPersistence": "Session Persistence",
         "sessionPersistenceDesc": "Keep sessions between reconnects",
+        "confirmTabClose": "Confirm Tab Close",
+        "confirmTabCloseDesc": "Ask before closing terminal tabs",
         "settingsSidebar": "Sidebar",
         "showHostTags": "Show Host Tags",
         "showHostTagsDesc": "Display tags in host list",

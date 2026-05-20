@@ -64,6 +64,7 @@ import {
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
+import { TerminalPreview } from "@/features/terminal/TerminalPreview";
 import {
   getSSHHosts,
   getCredentials,
@@ -2047,58 +2048,15 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.themePreview")}
                   </label>
-                  <div className="w-full bg-[#111210] border border-border font-mono text-xs leading-relaxed overflow-hidden">
-                    <div className="px-3 py-2.5 flex flex-col gap-0.5">
-                      <div>
-                        <span className="text-[#5af78e]">deploy@web-01</span>
-                        <span className="text-[#555]">:</span>
-                        <span className="text-[#57c7ff]">~</span>
-                        <span className="text-[#555]">$</span>
-                        <span className="text-[#f1f1f0]"> ls -la</span>
-                      </div>
-                      <div className="text-[#555]">total 48</div>
-                      <div>
-                        <span className="text-[#9aedfe]">drwxr-xr-x</span>
-                        <span className="text-[#555]">
-                          {" "}
-                          5 deploy deploy 4096 May 1 09:12{" "}
-                        </span>
-                        <span className="text-[#57c7ff]">.</span>
-                      </div>
-                      <div>
-                        <span className="text-[#9aedfe]">drwxr-xr-x</span>
-                        <span className="text-[#555]">
-                          {" "}
-                          3 root root 4096 Apr 15 18:44{" "}
-                        </span>
-                        <span className="text-[#57c7ff]">..</span>
-                      </div>
-                      <div>
-                        <span className="text-[#9aedfe]">-rw-r--r--</span>
-                        <span className="text-[#555]">
-                          {" "}
-                          1 deploy deploy 220 Apr 15 18:44{" "}
-                        </span>
-                        <span className="text-[#f1f1f0]">.bash_logout</span>
-                      </div>
-                      <div>
-                        <span className="text-[#9aedfe]">-rwxr-xr-x</span>
-                        <span className="text-[#555]">
-                          {" "}
-                          1 deploy deploy 8192 May 1 08:55{" "}
-                        </span>
-                        <span className="text-[#5af78e]">deploy.sh</span>
-                      </div>
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        <span className="text-[#5af78e]">deploy@web-01</span>
-                        <span className="text-[#555]">:</span>
-                        <span className="text-[#57c7ff]">~</span>
-                        <span className="text-[#555]">$</span>
-                        <span className="text-[#f1f1f0]"> </span>
-                        <span className="inline-block w-1.5 h-3.5 bg-[#f1f1f0] animate-pulse" />
-                      </div>
-                    </div>
-                  </div>
+                  <TerminalPreview
+                    theme={form.theme}
+                    fontSize={form.fontSize}
+                    fontFamily={form.fontFamily}
+                    cursorStyle={form.cursorStyle}
+                    cursorBlink={form.cursorBlink}
+                    letterSpacing={form.letterSpacing}
+                    lineHeight={form.lineHeight}
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
@@ -5506,19 +5464,146 @@ export function HostManager({
       {
         hosts: [
           {
-            name: "My Server",
-            ip: "192.168.1.1",
-            username: "root",
-            port: 22,
+            name: "Web Server (Production)",
+            ip: "192.168.1.100",
+            username: "admin",
+            authType: "password",
+            password: "your_secure_password_here",
             folder: "Production",
+            tags: ["web", "production", "nginx"],
+            pin: true,
+            notes: "Main production web server running Nginx",
             enableSsh: true,
             enableRdp: false,
             enableVnc: false,
             enableTelnet: false,
             sshPort: 22,
+            enableTerminal: true,
+            enableTunnel: false,
+            enableFileManager: true,
+            enableDocker: false,
+            defaultPath: "/var/www",
+          },
+          {
+            name: "Database Server",
+            ip: "192.168.1.101",
+            username: "dbadmin",
+            authType: "key",
+            key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
+            keyPassword: "optional_key_passphrase",
+            keyType: "ssh-ed25519",
+            folder: "Production",
+            tags: ["database", "production", "postgresql"],
+            enableSsh: true,
+            enableRdp: false,
+            enableVnc: false,
+            enableTelnet: false,
+            sshPort: 22,
+            enableTerminal: true,
+            enableTunnel: true,
+            enableFileManager: false,
+            enableDocker: false,
+            tunnelConnections: [
+              {
+                sourcePort: 5432,
+                endpointPort: 5432,
+                endpointHost: "localhost",
+                maxRetries: 3,
+                retryInterval: 10,
+                autoStart: true,
+              },
+            ],
+            statsConfig: {
+              enabledWidgets: ["cpu", "memory", "disk", "network", "uptime"],
+              statusCheckEnabled: true,
+              statusCheckInterval: 30,
+              metricsEnabled: true,
+              metricsInterval: 30,
+            },
+          },
+          {
+            name: "Development Server",
+            ip: "192.168.1.102",
+            username: "developer",
+            authType: "password",
+            password: "dev_password",
+            folder: "Development",
+            tags: ["dev", "testing"],
+            enableSsh: true,
+            enableRdp: false,
+            enableVnc: false,
+            enableTelnet: false,
+            sshPort: 2222,
+            enableTerminal: true,
+            enableTunnel: false,
+            enableFileManager: true,
+            enableDocker: true,
+            defaultPath: "/home/developer",
+          },
+          {
+            name: "Windows Server 2022",
+            ip: "192.168.1.200",
+            username: "Administrator",
+            folder: "Remote Desktop",
+            tags: ["rdp", "windows", "production"],
+            enableSsh: false,
+            enableRdp: true,
+            enableVnc: false,
+            enableTelnet: false,
             rdpPort: 3389,
+            rdpUser: "Administrator",
+            rdpPassword: "windows_password",
+            rdpDomain: "COMPANY",
+            rdpSecurity: "nla",
+            rdpIgnoreCert: false,
+          },
+          {
+            name: "Ubuntu Desktop",
+            ip: "192.168.1.201",
+            username: "vncuser",
+            folder: "Remote Desktop",
+            tags: ["vnc", "linux", "desktop"],
+            enableSsh: false,
+            enableRdp: false,
+            enableVnc: true,
+            enableTelnet: false,
             vncPort: 5900,
+            vncPassword: "vnc_password",
+          },
+          {
+            name: "Network Switch",
+            ip: "192.168.1.254",
+            username: "admin",
+            folder: "Infrastructure",
+            tags: ["telnet", "network", "switch"],
+            enableSsh: false,
+            enableRdp: false,
+            enableVnc: false,
+            enableTelnet: true,
             telnetPort: 23,
+            telnetUser: "admin",
+            telnetPassword: "switch_password",
+          },
+          {
+            name: "Server with SOCKS5 Proxy",
+            ip: "10.10.10.100",
+            username: "proxyuser",
+            authType: "password",
+            password: "secure_password",
+            folder: "Proxied Hosts",
+            tags: ["proxy", "socks5"],
+            enableSsh: true,
+            enableRdp: false,
+            enableVnc: false,
+            enableTelnet: false,
+            sshPort: 22,
+            enableTerminal: true,
+            enableFileManager: true,
+            useSocks5: true,
+            socks5Host: "proxy.example.com",
+            socks5Port: 1080,
+            socks5Username: "proxyauth",
+            socks5Password: "proxypass",
           },
         ],
       },

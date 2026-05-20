@@ -143,6 +143,9 @@ function App() {
     setAuthUsername(u);
     setPhase("fading-in");
     timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+    if (isElectron()) {
+      window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
+    }
   }
 
   function handleLogout() {
