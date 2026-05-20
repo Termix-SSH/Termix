@@ -557,10 +557,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return false;
       }
 
-      if (isLoading && currentLoadingPathRef.current !== path) {
-        return false;
-      }
-
       let resolvedPath = path;
       if (path.includes("$") || path.startsWith("~")) {
         resolvedPath = await resolveSSHPath(sshSessionId, path);
@@ -711,6 +707,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const navigateTo = useCallback(
     (path: string) => {
+      if (sshSessionId) setIsLoading(true);
       setCurrentPath(path);
       setNavHistory((prev) => {
         const next = [...prev.slice(0, navIndex + 1), path];
@@ -718,24 +715,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return next;
       });
     },
-    [navIndex],
+    [navIndex, sshSessionId],
   );
 
   const goBack = useCallback(() => {
     if (navIndex > 0) {
+      if (sshSessionId) setIsLoading(true);
       const newIndex = navIndex - 1;
       setNavIndex(newIndex);
       setCurrentPath(navHistory[newIndex]);
     }
-  }, [navIndex, navHistory]);
+  }, [navIndex, navHistory, sshSessionId]);
 
   const goForward = useCallback(() => {
     if (navIndex < navHistory.length - 1) {
+      if (sshSessionId) setIsLoading(true);
       const newIndex = navIndex + 1;
       setNavIndex(newIndex);
       setCurrentPath(navHistory[newIndex]);
     }
-  }, [navIndex, navHistory]);
+  }, [navIndex, navHistory, sshSessionId]);
 
   const goUp = useCallback(() => {
     if (currentPath === "/") return;
@@ -1291,6 +1290,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
+      if (sshSessionId) setIsLoading(true);
       setCurrentPath(file.path);
     } else if (file.type === "link") {
       await handleSymlinkClick(file);
@@ -2599,11 +2599,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 variant="ghost"
                 size="icon"
                 onClick={handleRefreshDirectory}
-                disabled={isLoading}
                 className="size-8 rounded-none"
               >
                 <RefreshCw
-                  className={`size-4 ${isLoading ? "animate-spin" : ""}`}
+                  className={`size-4 ${isLoading && !!sshSessionId ? "animate-spin [animation-duration:0.5s]" : ""}`}
                 />
               </Button>
             </div>
@@ -2878,8 +2877,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onFileOpen={handleFileOpen}
                 onSelectionChange={setSelection}
                 currentPath={currentPath}
-                isLoading={isLoading}
-                isConnected={!!sshSessionId}
                 onPathChange={navigateTo}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}

@@ -739,7 +739,7 @@ router.post(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh !== false ? 1 : 0,
+      enableSsh: enableSsh ? 1 : 0,
       enableRdp: enableRdp ? 1 : 0,
       enableVnc: enableVnc ? 1 : 0,
       enableTelnet: enableTelnet ? 1 : 0,
@@ -1274,7 +1274,7 @@ router.put(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh !== false ? 1 : 0,
+      enableSsh: enableSsh ? 1 : 0,
       enableRdp: enableRdp ? 1 : 0,
       enableVnc: enableVnc ? 1 : 0,
       enableTelnet: enableTelnet ? 1 : 0,

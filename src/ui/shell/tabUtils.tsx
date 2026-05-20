@@ -23,6 +23,7 @@ import { TunnelTab } from "@/features/tunnel/TunnelTab";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
+import { useTabsSafe } from "@/shell/TabContext";
 
 function hostToSSHHost(h: Host): SSHHost {
   return {
@@ -109,6 +110,41 @@ export function tabIcon(type: TabType) {
   }
 }
 
+function TerminalTabContent({
+  tab,
+  host,
+  label,
+  isVisible,
+  onCloseTab,
+}: {
+  tab: Tab;
+  host: Host;
+  label: string;
+  isVisible: boolean;
+  onCloseTab?: (id: string) => void;
+}) {
+  const { previewTerminalTheme } = useTabsSafe();
+  return (
+    <CommandHistoryProvider>
+      <TerminalFeature
+        ref={tab.terminalRef as any}
+        hostConfig={
+          {
+            ...hostToSSHHost(host),
+            sshPort: host.sshPort ?? host.port,
+          } as any
+        }
+        isVisible={isVisible}
+        title={label}
+        showTitle={false}
+        splitScreen={false}
+        onClose={() => onCloseTab?.(tab.id)}
+        previewTheme={previewTerminalTheme}
+      />
+    </CommandHistoryProvider>
+  );
+}
+
 export function renderTabContent(
   tab: Tab,
   onOpenSingletonTab?: (type: TabType) => void,
@@ -136,22 +172,13 @@ export function renderTabContent(
           />
         );
       return (
-        <CommandHistoryProvider>
-          <TerminalFeature
-            ref={tab.terminalRef as any}
-            hostConfig={
-              {
-                ...hostToSSHHost(host),
-                sshPort: host.sshPort ?? host.port,
-              } as any
-            }
-            isVisible={isVisible}
-            title={label}
-            showTitle={false}
-            splitScreen={false}
-            onClose={() => onCloseTab?.(tab.id)}
-          />
-        </CommandHistoryProvider>
+        <TerminalTabContent
+          tab={tab}
+          host={host}
+          label={label}
+          isVisible={isVisible}
+          onCloseTab={onCloseTab}
+        />
       );
 
     case "files":

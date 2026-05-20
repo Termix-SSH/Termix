@@ -83,7 +83,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
       .then((status) => {
         if (status.guacd.status !== "connected") {
           setError(
-            "Remote desktop service (guacd) is not available. Please ensure guacd is running and accessible.",
+            "Remote desktop service (guacd) is not available. Please ensure guacd is running and accessible and configured properly in admin settings.",
           );
           return;
         }

@@ -41,12 +41,12 @@ export function WarpgateDialog({
   };
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
+    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200 overflow-y-auto">
       <div
         className="absolute inset-0 bg-canvas rounded-md"
         style={{ backgroundColor: backgroundColor || undefined }}
       />
-      <div className="bg-card border border-border w-full max-w-md mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-card border border-border w-full max-w-md mx-4 my-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Shield className="size-4 text-accent-brand" />
@@ -95,7 +95,7 @@ export function WarpgateDialog({
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-1">
+          <div className="flex flex-wrap justify-end gap-2 pt-1">
             <Button
               type="button"
               variant="ghost"

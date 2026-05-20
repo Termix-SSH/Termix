@@ -53,6 +53,46 @@ import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 
+// Background/foreground per UI theme for "Termix Default" — must match index.css
+const TERMIX_DEFAULT_COLORS: Record<
+  string,
+  { background: string; foreground: string }
+> = {
+  dark: { background: "#0c0d0b", foreground: "#fafafa" },
+  light: { background: "#ffffff", foreground: "#111210" },
+  dracula: { background: "#282a36", foreground: "#f8f8f2" },
+  catppuccin: { background: "#1e1e2e", foreground: "#cdd6f4" },
+  nord: { background: "#2e3440", foreground: "#eceff4" },
+  solarized: { background: "#002b36", foreground: "#839496" },
+  "tokyo-night": { background: "#1a1b26", foreground: "#a9b1d6" },
+  "one-dark": { background: "#282c34", foreground: "#abb2bf" },
+  gruvbox: { background: "#282828", foreground: "#ebdbb2" },
+};
+
+function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
+  if (activeTheme !== "termix") {
+    return (
+      TERMINAL_THEMES[activeTheme]?.colors || TERMINAL_THEMES.termixDark.colors
+    );
+  }
+  let resolvedUiTheme = appTheme;
+  if (appTheme === "system") {
+    resolvedUiTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  const uiColors =
+    TERMIX_DEFAULT_COLORS[resolvedUiTheme] ?? TERMIX_DEFAULT_COLORS.dark;
+  const base = TERMINAL_THEMES.termixDark.colors;
+  return {
+    ...base,
+    background: uiColors.background,
+    foreground: uiColors.foreground,
+    cursor: uiColors.foreground,
+    cursorAccent: uiColors.background,
+  };
+}
+
 interface HostConfig {
   id?: number;
   instanceId?: string;
@@ -130,27 +170,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         DEFAULT_TERMINAL_CONFIG.theme,
     };
 
-    const isDarkMode =
-      appTheme === "dark" ||
-      appTheme === "dracula" ||
-      appTheme === "gentlemansChoice" ||
-      appTheme === "midnightEspresso" ||
-      appTheme === "catppuccinMocha" ||
-      (appTheme === "system" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    let themeColors;
     const activeTheme = previewTheme || config.theme;
-
-    if (activeTheme === "termix") {
-      themeColors = isDarkMode
-        ? TERMINAL_THEMES.termixDark.colors
-        : TERMINAL_THEMES.termixLight.colors;
-    } else {
-      themeColors =
-        TERMINAL_THEMES[activeTheme]?.colors ||
-        TERMINAL_THEMES.termixDark.colors;
-    }
+    const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
     const backgroundColor = themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
@@ -1828,18 +1849,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      let themeColors;
       const activeTheme = previewTheme || config.theme;
-
-      if (activeTheme === "termix") {
-        themeColors = isDarkMode
-          ? TERMINAL_THEMES.termixDark.colors
-          : TERMINAL_THEMES.termixLight.colors;
-      } else {
-        themeColors =
-          TERMINAL_THEMES[activeTheme]?.colors ||
-          TERMINAL_THEMES.termixDark.colors;
-      }
+      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
 
       const fontConfig = TERMINAL_FONTS.find(
         (f) => f.value === config.fontFamily,
@@ -1896,13 +1907,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [
-      terminal,
-      hostConfig.terminalConfig,
-      previewTheme,
-      isDarkMode,
-      isFitted,
-    ]);
+    }, [terminal, hostConfig.terminalConfig, previewTheme, appTheme, isFitted]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1917,18 +1922,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
-      let themeColors;
       const activeTheme = previewTheme || config.theme;
-
-      if (activeTheme === "termix") {
-        themeColors = isDarkMode
-          ? TERMINAL_THEMES.termixDark.colors
-          : TERMINAL_THEMES.termixLight.colors;
-      } else {
-        themeColors =
-          TERMINAL_THEMES[activeTheme]?.colors ||
-          TERMINAL_THEMES.termixDark.colors;
-      }
+      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
 
       // Set initial options before opening the terminal
       terminal.options = {

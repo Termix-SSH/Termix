@@ -265,6 +265,11 @@ export function AppShell({
     loadHosts();
   }, [loadHosts]);
 
+  useEffect(() => {
+    window.addEventListener("termix:hosts-changed", loadHosts);
+    return () => window.removeEventListener("termix:hosts-changed", loadHosts);
+  }, [loadHosts]);
+
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
   useEffect(() => {
     if (allHosts.length === 0) return;
@@ -293,37 +298,29 @@ export function AppShell({
   // ─── Tab management ──────────────────────────────────────────────────────
 
   function openTab(host: Host, type: TabType) {
-    const same = tabs.filter(
-      (t) => t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
-    );
-    if (same.length === 0) {
-      const tabId = `${host.name}-${type}`;
-      const ref = type === "terminal" ? createRef() : undefined;
-      if (ref) terminalRefs.current.set(tabId, ref);
-      const tab = { id: tabId, type, label: host.name, host, terminalRef: ref };
-      setTabs((prev) => [...prev, tab]);
-      setActiveTabId(tab.id);
-      return;
-    }
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const ref = type === "terminal" ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
-    const tab = {
-      id: tabId,
-      type,
-      label: `${host.name} (${same.length + 1})`,
-      host,
-      terminalRef: ref,
-    };
+
     setTabs((prev) => {
-      const next = prev.map((t) =>
-        t.id === same[0].id && !/\(\d+\)$/.test(t.label)
-          ? { ...t, label: `${host.name} (1)`, host }
-          : t,
+      const same = prev.filter(
+        (t) =>
+          t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      return [...next, tab];
+      const label =
+        same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
+
+      // Retrofit the first duplicate's label to "(1)" if needed
+      const next =
+        same.length === 1 && !/\(\d+\)$/.test(same[0].label)
+          ? prev.map((t) =>
+              t.id === same[0].id ? { ...t, label: `${host.name} (1)` } : t,
+            )
+          : prev;
+
+      return [...next, { id: tabId, type, label, host, terminalRef: ref }];
     });
-    setActiveTabId(tab.id);
+    setActiveTabId(tabId);
   }
 
   function connectHost(host: Host, preferredType?: TabType) {
@@ -674,36 +671,30 @@ export function AppShell({
               ) : (
                 <>
                   {/* Terminal tabs: always in DOM, absolutely positioned so xterm always has real dimensions */}
-                  {(() => {
-                    const activeTab = tabs.find((t) => t.id === activeTabId);
-                    const nonTerminalActive =
-                      activeTab && activeTab.type !== "terminal";
-                    return tabs
-                      .filter((tab) => tab.type === "terminal")
-                      .map((tab) => {
-                        const visible = tab.id === activeTabId;
-                        return (
-                          <div
-                            key={tab.id}
-                            className="absolute inset-0 overflow-hidden"
-                            style={{
-                              display: nonTerminalActive ? "none" : undefined,
-                              visibility: visible ? "visible" : "hidden",
-                              pointerEvents: visible ? "auto" : "none",
-                              zIndex: visible ? 1 : 0,
-                            }}
-                          >
-                            {renderTabContent(
-                              tab,
-                              openSingletonTab,
-                              openTab,
-                              closeTab,
-                              visible,
-                            )}
-                          </div>
-                        );
-                      });
-                  })()}
+                  {tabs
+                    .filter((tab) => tab.type === "terminal")
+                    .map((tab) => {
+                      const visible = tab.id === activeTabId;
+                      return (
+                        <div
+                          key={tab.id}
+                          className="absolute inset-0 overflow-hidden"
+                          style={{
+                            visibility: visible ? "visible" : "hidden",
+                            pointerEvents: visible ? "auto" : "none",
+                            zIndex: visible ? 1 : 0,
+                          }}
+                        >
+                          {renderTabContent(
+                            tab,
+                            openSingletonTab,
+                            openTab,
+                            closeTab,
+                            visible,
+                          )}
+                        </div>
+                      );
+                    })}
                   {/* Non-terminal tabs: absolutely positioned above terminals when active */}
                   {tabs
                     .filter((tab) => tab.type !== "terminal")

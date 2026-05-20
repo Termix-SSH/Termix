@@ -14,6 +14,7 @@ import {
 } from "@/lib/terminal-themes";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
   Activity,
@@ -32,6 +33,7 @@ import {
   Info,
   KeyRound,
   LayoutDashboard,
+  Link,
   ListChecks,
   Lock,
   MoreHorizontal,
@@ -60,6 +62,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
@@ -98,6 +103,7 @@ import {
 import type { SSHHostWithStatus } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
+import { useTabsSafe } from "@/shell/TabContext";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   const parseJson = (v: any) => {
@@ -125,6 +131,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     tags: h.tags ?? [],
     authType: h.authType,
     password: h.password,
+    hasPassword: !!(h as any).hasPassword || !!h.password,
+    hasKey: !!(h as any).hasKey || !!(typeof h.key === "string" && h.key),
     key: typeof h.key === "string" ? h.key : undefined,
     keyPassword: h.keyPassword,
     keyType: h.keyType,
@@ -132,15 +140,10 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
-    enableSsh:
-      h.enableSsh != null
-        ? h.enableSsh
-        : h.connectionType === "ssh" || !h.connectionType,
+    enableSsh: h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh",
     enableTerminal:
       h.enableTerminal ??
-      (h.enableSsh != null
-        ? h.enableSsh
-        : h.connectionType === "ssh" || !h.connectionType),
+      (h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh"),
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
@@ -539,7 +542,7 @@ function HostRow({
               paddingRight: "8px",
             }}
           >
-            {host.enableTerminal && (
+            {host.enableSsh && host.enableTerminal && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -551,7 +554,7 @@ function HostRow({
                 <span>{t("hosts.terminal")}</span>
               </button>
             )}
-            {host.enableFileManager && (
+            {host.enableSsh && host.enableFileManager && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -563,7 +566,7 @@ function HostRow({
                 <span>{t("hosts.fileManager")}</span>
               </button>
             )}
-            {host.enableDocker && (
+            {host.enableSsh && host.enableDocker && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -575,7 +578,7 @@ function HostRow({
                 <span>{t("hosts.docker")}</span>
               </button>
             )}
-            {host.enableTunnel && (
+            {host.enableSsh && host.enableTunnel && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -587,7 +590,7 @@ function HostRow({
                 <span>{t("hosts.tunnel")}</span>
               </button>
             )}
-            {metricsEnabled && (
+            {host.enableSsh && metricsEnabled && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -672,50 +675,118 @@ function HostRow({
                   <Copy className="size-3.5 mr-2" />
                   {t("hosts.copyAddress")}
                 </DropdownMenuItem>
-                {host.enableTerminal && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${window.location.origin}?view=terminal&hostId=${host.id}`,
-                      );
-                      toast.success(t("hosts.terminalUrlCopied"));
-                    }}
-                  >
-                    <Copy className="size-3.5 mr-2" />
-                    {t("hosts.copyTerminalUrlAction")}
-                  </DropdownMenuItem>
-                )}
-                {host.enableFileManager && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${window.location.origin}?view=file_manager&hostId=${host.id}`,
-                      );
-                      toast.success(t("hosts.fileManagerUrlCopied"));
-                    }}
-                  >
-                    <Copy className="size-3.5 mr-2" />
-                    {t("hosts.copyFileManagerUrlAction")}
-                  </DropdownMenuItem>
-                )}
-                {(host.enableRdp || host.enableVnc || host.enableTelnet) && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const proto = host.enableRdp
-                        ? "rdp"
-                        : host.enableVnc
-                          ? "vnc"
-                          : "telnet";
-                      navigator.clipboard.writeText(
-                        `${window.location.origin}?view=${proto}&hostId=${host.id}`,
-                      );
-                      toast.success(t("hosts.remoteDesktopUrlCopied"));
-                    }}
-                  >
-                    <Copy className="size-3.5 mr-2" />
-                    {t("hosts.copyRemoteDesktopUrlAction")}
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Link className="size-3.5 mr-2" />
+                    {t("hosts.copyLink")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {host.enableSsh && host.enableTerminal && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=terminal&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.terminalUrlCopied"));
+                        }}
+                      >
+                        <Terminal className="size-3.5 mr-2" />
+                        {t("hosts.copyTerminalUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableFileManager && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=file-manager&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.fileManagerUrlCopied"));
+                        }}
+                      >
+                        <FolderSearch className="size-3.5 mr-2" />
+                        {t("hosts.copyFileManagerUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableTunnel && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=tunnel&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.tunnelUrlCopied"));
+                        }}
+                      >
+                        <Network className="size-3.5 mr-2" />
+                        {t("hosts.copyTunnelUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableDocker && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=docker&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.dockerUrlCopied"));
+                        }}
+                      >
+                        <Box className="size-3.5 mr-2" />
+                        {t("hosts.copyDockerUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && metricsEnabled && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=server-stats&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.serverStatsUrlCopied"));
+                        }}
+                      >
+                        <Server className="size-3.5 mr-2" />
+                        {t("hosts.copyServerStatsUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableRdp && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=rdp&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.rdpUrlCopied"));
+                        }}
+                      >
+                        <Monitor className="size-3.5 mr-2" />
+                        {t("hosts.copyRdpUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableVnc && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=vnc&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.vncUrlCopied"));
+                        }}
+                      >
+                        <Monitor className="size-3.5 mr-2" />
+                        {t("hosts.copyVncUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableTelnet && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=telnet&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.telnetUrlCopied"));
+                        }}
+                      >
+                        <Terminal className="size-3.5 mr-2" />
+                        {t("hosts.copyTelnetUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={onDelete}
@@ -759,6 +830,7 @@ function HostEditor({
   credentials: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();
+  const { setPreviewTerminalTheme } = useTabsSafe();
   const [form, setForm] = useState(() => {
     const rawTheme = host?.terminalConfig?.theme;
     const normalizedTheme =
@@ -779,8 +851,9 @@ function HostEditor({
       vncPort: host?.vncPort ?? 5900,
       telnetPort: host?.telnetPort ?? 23,
       authType: host?.authType ?? "password",
-      password: host?.password ?? "",
-      key: host?.key ?? "",
+      password:
+        host?.password ?? (host?.hasPassword ? "existing_password" : ""),
+      key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
       keyPassword: host?.keyPassword ?? "",
       keyType: host?.keyType ?? "auto",
       keySubTab: "paste" as "paste" | "upload",
@@ -994,8 +1067,11 @@ function HostEditor({
         tags,
         pin: form.pin,
         authType: form.authType,
-        password: form.password || null,
-        key: form.key || null,
+        password:
+          form.password === "existing_password"
+            ? undefined
+            : form.password || null,
+        key: form.key === "existing_key" ? undefined : form.key || null,
         keyPassword: form.keyPassword || null,
         keyType: form.keyType !== "auto" ? form.keyType : null,
         credentialId: form.credentialId ? Number(form.credentialId) : null,
@@ -1088,6 +1164,7 @@ function HostEditor({
         ? await updateSSHHost(Number(host.id), data as any)
         : await createSSHHost(data as any);
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
+      setPreviewTerminalTheme(null);
       onSave(saved);
     } catch {
       toast.error(t("hosts.failedToSave"));
@@ -1515,9 +1592,8 @@ function HostEditor({
                           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {t("hosts.proxyPassword")}
                           </label>
-                          <Input
-                            className="h-7 text-xs"
-                            type="password"
+                          <PasswordInput
+                            className="h-7 text-xs pr-8"
                             placeholder={t("hosts.optional")}
                             value={form.socks5Password}
                             onChange={(e) =>
@@ -1629,9 +1705,8 @@ function HostEditor({
                                 <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                                   {t("hosts.proxyPassword")}
                                 </label>
-                                <Input
-                                  className="h-7 text-xs"
-                                  type="password"
+                                <PasswordInput
+                                  className="h-7 text-xs pr-8"
                                   placeholder={t("hosts.optional")}
                                   value={node.password}
                                   onChange={(e) => {
@@ -1854,10 +1929,22 @@ function HostEditor({
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         {t("hosts.password")}
                       </label>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        value={form.password}
+                      <PasswordInput
+                        className="h-8 text-xs pr-8"
+                        placeholder={
+                          form.password === "existing_password"
+                            ? t("hosts.passwordSaved")
+                            : "••••••••"
+                        }
+                        value={
+                          form.password === "existing_password"
+                            ? ""
+                            : form.password
+                        }
+                        onFocus={() => {
+                          if (form.password === "existing_password")
+                            setField("password", "");
+                        }}
                         onChange={(e) => setField("password", e.target.value)}
                       />
                     </div>
@@ -1932,9 +2019,9 @@ function HostEditor({
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           {t("hosts.keyPassphrase")}
                         </label>
-                        <Input
-                          type="password"
-                          placeholder="Optional"
+                        <PasswordInput
+                          className="h-8 text-xs pr-8"
+                          placeholder={t("hosts.optional")}
                           value={form.keyPassword}
                           onChange={(e) =>
                             setField("keyPassword", e.target.value)
@@ -2065,7 +2152,10 @@ function HostEditor({
                     </label>
                     <select
                       value={form.theme}
-                      onChange={(e) => setField("theme", e.target.value)}
+                      onChange={(e) => {
+                        setField("theme", e.target.value);
+                        setPreviewTerminalTheme(e.target.value);
+                      }}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
                       {Object.entries(TERMINAL_THEMES)
@@ -2286,8 +2376,8 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.sudoPasswordLabel")}
                     </label>
-                    <Input
-                      type="password"
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
                       placeholder="••••••••"
                       value={form.sudoPassword}
                       onChange={(e) => setField("sudoPassword", e.target.value)}
@@ -3178,8 +3268,8 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.guac.password")}
                   </label>
-                  <Input
-                    type="password"
+                  <PasswordInput
+                    className="h-8 text-xs pr-8"
                     placeholder="••••••••"
                     value={form.rdpPassword}
                     onChange={(e) => setField("rdpPassword", e.target.value)}
@@ -3665,8 +3755,8 @@ function HostEditor({
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.guac.gatewayPassword")}
                     </label>
-                    <Input
-                      type="password"
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
                       placeholder="••••••••"
                       value={form.guacamoleConfig["gateway-password"] ?? ""}
                       onChange={(e) =>
@@ -3954,8 +4044,8 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.guac.vncPassword")}
                   </label>
-                  <Input
-                    type="password"
+                  <PasswordInput
+                    className="h-8 text-xs pr-8"
                     placeholder="••••••••"
                     value={form.vncPassword}
                     onChange={(e) => setField("vncPassword", e.target.value)}
@@ -4338,8 +4428,8 @@ function HostEditor({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.guac.password")}
                   </label>
-                  <Input
-                    type="password"
+                  <PasswordInput
+                    className="h-8 text-xs pr-8"
                     placeholder="••••••••"
                     value={form.telnetPassword}
                     onChange={(e) => setField("telnetPassword", e.target.value)}
@@ -4753,7 +4843,14 @@ function HostEditor({
       </div>
 
       <div className="flex justify-end gap-3 mt-3 mb-6">
-        <Button variant="ghost" onClick={onBack} disabled={saving}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setPreviewTerminalTheme(null);
+            onBack();
+          }}
+          disabled={saving}
+        >
           {t("hosts.guac.cancelBtn")}
         </Button>
         <Button
@@ -4975,8 +5072,8 @@ function CredentialEditorView({
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t("hosts.password")}
                 </label>
-                <Input
-                  type="password"
+                <PasswordInput
+                  className="h-8 text-xs pr-8"
                   placeholder="••••••••"
                   value={credForm.value}
                   onChange={(e) => setCredField("value", e.target.value)}
@@ -5083,8 +5180,8 @@ function CredentialEditorView({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("hosts.keyPassphraseOptional")}
                   </label>
-                  <Input
-                    type="password"
+                  <PasswordInput
+                    className="h-8 text-xs pr-8"
                     placeholder="••••••••"
                     value={credForm.passphrase}
                     onChange={(e) => setCredField("passphrase", e.target.value)}
@@ -6033,6 +6130,7 @@ export function HostManager({
                   }
                   return [...prev, updated];
                 });
+                window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
                 setEditingHost(null);
                 setActiveHostTab("general");
               }}
@@ -6173,9 +6271,7 @@ export function HostManager({
                     const normalized = hostsArray.map((h: any) => ({
                       ...h,
                       port: h.port ?? h.sshPort ?? 22,
-                      enableSsh:
-                        h.enableSsh ??
-                        (h.connectionType === "ssh" || !h.connectionType),
+                      enableSsh: h.enableSsh ?? h.connectionType === "ssh",
                       enableRdp: h.enableRdp ?? h.connectionType === "rdp",
                       enableVnc: h.enableVnc ?? h.connectionType === "vnc",
                       enableTelnet:
@@ -6187,6 +6283,9 @@ export function HostManager({
                     );
                     const raw = await getSSHHosts();
                     setHosts(raw.map(sshHostToHost));
+                    window.dispatchEvent(
+                      new CustomEvent("termix:hosts-changed"),
+                    );
                     const msg = [
                       result.success ? `${result.success} imported` : null,
                       result.updated ? `${result.updated} updated` : null,

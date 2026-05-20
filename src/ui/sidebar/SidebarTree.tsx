@@ -21,28 +21,33 @@ export function isFolder(item: Host | HostFolder): item is HostFolder {
 function getSshActions(
   host: Host,
 ): { type: TabType; icon: typeof Terminal; label: string }[] {
-  const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
+  const metricsEnabled =
+    host.enableSsh && host.statsConfig?.metricsEnabled !== false;
   return [
-    host.enableTerminal && {
-      type: "terminal" as TabType,
-      icon: Terminal,
-      label: "Terminal",
-    },
-    host.enableFileManager && {
-      type: "files" as TabType,
-      icon: FolderSearch,
-      label: "Files",
-    },
-    host.enableDocker && {
-      type: "docker" as TabType,
-      icon: Box,
-      label: "Docker",
-    },
-    host.enableTunnel && {
-      type: "tunnel" as TabType,
-      icon: Network,
-      label: "Tunnel",
-    },
+    host.enableSsh &&
+      host.enableTerminal && {
+        type: "terminal" as TabType,
+        icon: Terminal,
+        label: "Terminal",
+      },
+    host.enableSsh &&
+      host.enableFileManager && {
+        type: "files" as TabType,
+        icon: FolderSearch,
+        label: "Files",
+      },
+    host.enableSsh &&
+      host.enableDocker && {
+        type: "docker" as TabType,
+        icon: Box,
+        label: "Docker",
+      },
+    host.enableSsh &&
+      host.enableTunnel && {
+        type: "tunnel" as TabType,
+        icon: Network,
+        label: "Tunnel",
+      },
     metricsEnabled && {
       type: "stats" as TabType,
       icon: Server,
@@ -211,22 +216,22 @@ export function HostItem({
           )}
 
           <div className="flex items-center flex-wrap gap-1 pt-1.5 pl-2 pb-1">
+            {getSshActions(host).map(({ type, icon: Icon, label }) => (
+              <button
+                key={type}
+                title={label}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab(type);
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
             {host.enableSsh &&
-              getSshActions(host).map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  title={label}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab(type);
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Icon className="size-3.5" />
-                </button>
-              ))}
-            {host.enableSsh &&
-              (host.enableRdp || host.enableVnc || host.enableTelnet) && (
+              (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+              getSshActions(host).length > 0 && (
                 <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
               )}
             {host.enableRdp && (

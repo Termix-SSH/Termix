@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "@/types/index";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 
 interface CreateIntent {
   id: string;
@@ -66,8 +65,6 @@ interface FileManagerGridProps {
   onFileOpen: (file: FileItem) => void;
   onSelectionChange: (files: FileItem[]) => void;
   currentPath: string;
-  isLoading?: boolean;
-  isConnected?: boolean;
   onPathChange: (path: string) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
@@ -191,8 +188,6 @@ export function FileManagerGrid({
   onFileOpen,
   onSelectionChange,
   currentPath,
-  isLoading,
-  isConnected,
   onPathChange,
   onRefresh,
   onUpload,
@@ -1240,11 +1235,6 @@ export function FileManagerGrid({
           </div>,
           document.body,
         )}
-
-      <SimpleLoader
-        visible={!!isLoading && !!isConnected}
-        message={t("common.loading")}
-      />
     </div>
   );
 }
