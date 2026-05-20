@@ -272,6 +272,7 @@ export type SplitMode =
   | "none"
   | "2-way"
   | "3-way"
+  | "3-way-horizontal"
   | "4-way"
   | "5-way"
   | "6-way";

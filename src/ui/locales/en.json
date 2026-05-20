@@ -1228,6 +1228,7 @@
     "failedCompleteReset": "Failed to complete password reset",
     "invalidTotpCode": "Invalid TOTP code",
     "failedOidcLogin": "Failed to start OIDC login",
+    "silentSigninOidcUnavailable": "Silent sign-in was requested, but OIDC login is not available.",
     "failedUserInfo": "Failed to get user info after login",
     "oidcAuthFailed": "OIDC authentication failed",
     "invalidAuthUrl": "Invalid authorization URL received from backend",

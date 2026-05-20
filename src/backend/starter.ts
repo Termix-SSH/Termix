@@ -199,9 +199,8 @@ import {
         operation: "shutdown",
       });
       try {
-        const { saveMemoryDatabaseToFile } = await import(
-          "./database/db/index.js"
-        );
+        const { saveMemoryDatabaseToFile } =
+          await import("./database/db/index.js");
         await saveMemoryDatabaseToFile();
         systemLogger.info("Database saved to disk before exit", {
           operation: "shutdown_db_saved",
