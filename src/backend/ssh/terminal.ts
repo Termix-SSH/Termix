@@ -1,14 +1,14 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import {
-  Client,
-  type ClientChannel,
-  type PseudoTtyOptions,
-  BaseAgent,
-  utils as ssh2Utils,
-  type ParsedKey,
-  type SignCallback,
-  type SigningRequestOptions,
-  type IdentityCallback,
+import ssh2pkg from "ssh2";
+const { Client, BaseAgent, utils: ssh2Utils } = ssh2pkg;
+import type {
+  Client as ClientType,
+  ClientChannel,
+  PseudoTtyOptions,
+  ParsedKey,
+  SignCallback,
+  SigningRequestOptions,
+  IdentityCallback,
 } from "ssh2";
 import net from "net";
 import dgram from "dgram";
@@ -54,8 +54,7 @@ class MemoryAgent extends BaseAgent {
     cb?: SignCallback,
   ): void {
     const callback = typeof optionsOrCb === "function" ? optionsOrCb : cb!;
-    const options =
-      typeof optionsOrCb === "function" ? {} : optionsOrCb;
+    const options = typeof optionsOrCb === "function" ? {} : optionsOrCb;
     try {
       const algo =
         options.hash === "sha256"
@@ -191,10 +190,7 @@ async function resolveJumpHost(
   });
   try {
     const hostResults = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.id, hostId)),
+      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -212,8 +208,10 @@ async function resolveJumpHost(
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred =
-            await sharedCredManager.getSharedCredentialForUser(hostId, userId);
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            hostId,
+            userId,
+          );
           if (sharedCred) {
             return {
               ...host,
@@ -275,13 +273,13 @@ async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
   socks5Config?: SOCKS5Config | null,
-): Promise<Client | null> {
+): Promise<ClientType | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
   }
 
-  let currentClient: Client | null = null;
-  const clients: Client[] = [];
+  let currentClient: ClientType | null = null;
+  const clients: ClientType[] = [];
 
   try {
     const jumpHostConfigs = await Promise.all(
@@ -562,9 +560,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   let currentSessionId: string | null = null;
-  let sshConn: Client | null = null;
+  let sshConn: ClientType | null = null;
   let sshStream: ClientChannel | null = null;
-  let lastJumpClient: Client | null = null;
+  let lastJumpClient: ClientType | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
   let totpTimeout: NodeJS.Timeout | null = null;
@@ -938,7 +936,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
             sessionName: tmuxName,
             hostId: session.hostId,
           });
-          ws.send(JSON.stringify({ type: "tmux_detached", sessionName: tmuxName }));
+          ws.send(
+            JSON.stringify({ type: "tmux_detached", sessionName: tmuxName }),
+          );
         }
         break;
       }
@@ -2468,7 +2468,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostConfig.userId;
 
     // Cloudflare Tunnel: connect via WebSocket proxy
-    const cfConfig = hostConfig.terminalConfig as Record<string, unknown> | undefined;
+    const cfConfig = hostConfig.terminalConfig as
+      | Record<string, unknown>
+      | undefined;
     if (cfConfig?.cfAccessClientId && cfConfig?.cfAccessClientSecret) {
       try {
         const WebSocket = (await import("ws")).default;
@@ -2484,7 +2486,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         await new Promise<void>((resolve, reject) => {
           cfWs.on("open", () => resolve());
           cfWs.on("error", (err) => reject(err));
-          setTimeout(() => reject(new Error("Cloudflare tunnel timeout")), 30000);
+          setTimeout(
+            () => reject(new Error("Cloudflare tunnel timeout")),
+            30000,
+          );
         });
 
         const { Duplex } = await import("stream");
@@ -2497,7 +2502,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         cfWs.on("message", (data) => duplexStream.push(data));
         cfWs.on("close", () => duplexStream.push(null));
 
-        connectConfig.sock = duplexStream as unknown as typeof connectConfig.sock;
+        connectConfig.sock =
+          duplexStream as unknown as typeof connectConfig.sock;
         sendLog("handshake", "info", "Connected via Cloudflare Tunnel");
       } catch (cfError) {
         sshLogger.error("Cloudflare tunnel connection failed", cfError, {
@@ -2507,7 +2513,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message: "Cloudflare tunnel connection failed: " +
+            message:
+              "Cloudflare tunnel connection failed: " +
               (cfError instanceof Error ? cfError.message : "Unknown error"),
           }),
         );

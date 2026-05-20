@@ -27,7 +27,7 @@ import type {
   SplitMode,
   HostFolder,
 } from "@/types/ui-types";
-import { getSSHHosts } from "@/main-axios";
+import { getSSHHosts, getUserInfo } from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 
@@ -58,9 +58,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
-    enableRdp: h.connectionType === "rdp",
-    enableVnc: h.connectionType === "vnc",
-    enableTelnet: h.connectionType === "telnet",
+    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
+    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
+    enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
     sshPort: h.port,
     rdpPort: 3389,
     vncPort: 5900,
@@ -112,19 +112,6 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 import { renderTabContent } from "@/shell/tabUtils";
 
-const DASHBOARD_TAB: Tab = {
-  id: "dashboard",
-  type: "dashboard",
-  label: "Dashboard",
-};
-
-const SINGLETON_TAB_LABELS: Partial<Record<TabType, string>> = {
-  "host-manager": "Host Manager",
-  docker: "Docker",
-  tunnel: "Tunnels",
-  network_graph: "Network Graph",
-};
-
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
 export function AppShell({
@@ -135,7 +122,9 @@ export function AppShell({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>([DASHBOARD_TAB]);
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+  ]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [splitMode, setSplitMode] = useState<SplitMode>("none");
@@ -144,6 +133,7 @@ export function AppShell({
   );
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
@@ -158,6 +148,12 @@ export function AppShell({
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
+
+  useEffect(() => {
+    getUserInfo()
+      .then((info) => setIsAdmin(info.is_admin))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   const pendingHostManagerEditId = useRef<string | null>(null);
   const pendingHostManagerAction = useRef<"add-host" | "add-credential" | null>(
@@ -378,7 +374,13 @@ export function AppShell({
     const id = type;
     setTabs((prev) => {
       if (prev.find((t) => t.id === id)) return prev;
-      return [...prev, { id, type, label: SINGLETON_TAB_LABELS[type] ?? type }];
+      const singletonLabels: Partial<Record<TabType, string>> = {
+        "host-manager": t("nav.hostManager"),
+        docker: t("nav.docker"),
+        tunnel: t("nav.tunnels"),
+        network_graph: t("nav.networkGraph"),
+      };
+      return [...prev, { id, type, label: singletonLabels[type] ?? type }];
     });
     setActiveTabId(id);
   }
@@ -530,7 +532,7 @@ export function AppShell({
         </div>
       )}
 
-      {railView === "admin-settings" && (
+      {railView === "admin-settings" && isAdmin && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <AdminSettingsPanel />
         </div>
@@ -582,6 +584,7 @@ export function AppShell({
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
           username={username}
+          isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
           onProfileDropdownChange={setProfileDropdownOpen}
           onRailClick={handleRailClick}

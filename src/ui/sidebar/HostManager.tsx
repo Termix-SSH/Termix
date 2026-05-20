@@ -14,6 +14,7 @@ import {
 } from "@/lib/terminal-themes";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { Slider } from "@/components/slider";
 import {
   Activity,
   ArrowLeft,
@@ -146,10 +147,12 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableVnc: h.enableVnc != null ? h.enableVnc : h.connectionType === "vnc",
     enableTelnet:
       h.enableTelnet != null ? h.enableTelnet : h.connectionType === "telnet",
-    sshPort: h.sshPort ?? h.port,
-    rdpPort: h.rdpPort ?? 3389,
-    vncPort: h.vncPort ?? 5900,
-    telnetPort: h.telnetPort ?? 23,
+    sshPort:
+      h.sshPort ??
+      (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
+    rdpPort: h.rdpPort ?? (h.connectionType === "rdp" ? h.port : 3389),
+    vncPort: h.vncPort ?? (h.connectionType === "vnc" ? h.port : 5900),
+    telnetPort: h.telnetPort ?? (h.connectionType === "telnet" ? h.port : 23),
     rdpUser: h.rdpUser,
     rdpPassword: h.rdpPassword,
     domain: h.rdpDomain,
@@ -178,6 +181,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Port: h.socks5Port,
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
+    socks5ProxyChain: parseJson(h.socks5ProxyChain) ?? [],
+    overrideCredentialUsername: h.overrideCredentialUsername ?? false,
   };
 }
 
@@ -776,7 +781,10 @@ function HostEditor({
       password: host?.password ?? "",
       key: host?.key ?? "",
       keyPassword: host?.keyPassword ?? "",
+      keyType: host?.keyType ?? "auto",
+      keySubTab: "paste" as "paste" | "upload",
       credentialId: host?.credentialId ?? "",
+      overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
       folder: host?.folder ?? "",
       tags: host?.tags ?? ([] as string[]),
       tagInput: "",
@@ -788,6 +796,16 @@ function HostEditor({
       socks5Port: host?.socks5Port ?? 1080,
       socks5Username: host?.socks5Username ?? "",
       socks5Password: host?.socks5Password ?? "",
+      socks5ProxyMode: ((host?.socks5ProxyChain as any[])?.length > 0
+        ? "chain"
+        : "single") as "single" | "chain",
+      socks5ProxyChain: ((host?.socks5ProxyChain as any[]) ?? []) as {
+        host: string;
+        port: number;
+        type: string;
+        username: string;
+        password: string;
+      }[],
       enableTerminal: host?.enableTerminal ?? true,
       enableFileManager: host?.enableFileManager ?? false,
       enableDocker: host?.enableDocker ?? false,
@@ -978,7 +996,9 @@ function HostEditor({
         password: form.password || null,
         key: form.key || null,
         keyPassword: form.keyPassword || null,
+        keyType: form.keyType !== "auto" ? form.keyType : null,
         credentialId: form.credentialId ? Number(form.credentialId) : null,
+        overrideCredentialUsername: form.overrideCredentialUsername,
         notes: form.notes,
         macAddress: form.macAddress || null,
         enableTerminal: form.enableTerminal,
@@ -987,10 +1007,20 @@ function HostEditor({
         enableDocker: form.enableDocker,
         defaultPath: form.defaultPath || "/",
         useSocks5: form.useSocks5,
-        socks5Host: form.socks5Host || null,
-        socks5Port: form.socks5Port || null,
-        socks5Username: form.socks5Username || null,
-        socks5Password: form.socks5Password || null,
+        socks5Host:
+          form.socks5ProxyMode === "single" ? form.socks5Host || null : null,
+        socks5Port:
+          form.socks5ProxyMode === "single" ? form.socks5Port || null : null,
+        socks5Username:
+          form.socks5ProxyMode === "single"
+            ? form.socks5Username || null
+            : null,
+        socks5Password:
+          form.socks5ProxyMode === "single"
+            ? form.socks5Password || null
+            : null,
+        socks5ProxyChain:
+          form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
         enableSsh: protocols.enableSsh,
         enableRdp: protocols.enableRdp,
         enableVnc: protocols.enableVnc,
@@ -1418,59 +1448,274 @@ function HostEditor({
                   />
                 </SettingRow>
                 {form.useSocks5 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.proxyHost")}
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        placeholder="proxy.example.com"
-                        value={form.socks5Host}
-                        onChange={(e) => setField("socks5Host", e.target.value)}
-                      />
+                  <div className="flex flex-col gap-3">
+                    {/* Single / Chain mode toggle */}
+                    <div className="flex gap-2">
+                      {(["single", "chain"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setField("socks5ProxyMode", m)}
+                          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${form.socks5ProxyMode === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {m === "single"
+                            ? t("hosts.proxySingleMode")
+                            : t("hosts.proxyChainMode")}
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.proxyPort")}
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        type="number"
-                        placeholder="1080"
-                        value={form.socks5Port}
-                        onChange={(e) =>
-                          setField("socks5Port", Number(e.target.value) as any)
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.proxyUsername")}
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        placeholder="Optional"
-                        value={form.socks5Username}
-                        onChange={(e) =>
-                          setField("socks5Username", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.proxyPassword")}
-                      </label>
-                      <Input
-                        className="h-7 text-xs"
-                        type="password"
-                        placeholder="Optional"
-                        value={form.socks5Password}
-                        onChange={(e) =>
-                          setField("socks5Password", e.target.value)
-                        }
-                      />
-                    </div>
+
+                    {form.socks5ProxyMode === "single" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/20 border border-border">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.proxyHost")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            placeholder="proxy.example.com"
+                            value={form.socks5Host}
+                            onChange={(e) =>
+                              setField("socks5Host", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.proxyPort")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            type="number"
+                            placeholder="1080"
+                            value={form.socks5Port}
+                            onChange={(e) =>
+                              setField(
+                                "socks5Port",
+                                Number(e.target.value) as any,
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.proxyUsername")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            placeholder={t("hosts.optional")}
+                            value={form.socks5Username}
+                            onChange={(e) =>
+                              setField("socks5Username", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.proxyPassword")}
+                          </label>
+                          <Input
+                            className="h-7 text-xs"
+                            type="password"
+                            placeholder={t("hosts.optional")}
+                            value={form.socks5Password}
+                            onChange={(e) =>
+                              setField("socks5Password", e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {form.socks5ProxyMode === "chain" && (
+                      <div className="flex flex-col gap-2">
+                        {form.socks5ProxyChain.map((node, ni) => (
+                          <div
+                            key={ni}
+                            className="flex flex-col gap-2 p-3 bg-muted/20 border border-border"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-muted-foreground">
+                                {t("hosts.proxyNode")} {ni + 1}
+                              </span>
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() =>
+                                  setField(
+                                    "socks5ProxyChain",
+                                    form.socks5ProxyChain.filter(
+                                      (_, idx) => idx !== ni,
+                                    ),
+                                  )
+                                }
+                              >
+                                <X className="size-3.5" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  {t("hosts.proxyHost")}
+                                </label>
+                                <Input
+                                  className="h-7 text-xs"
+                                  placeholder="proxy.example.com"
+                                  value={node.host}
+                                  onChange={(e) => {
+                                    const u = [...form.socks5ProxyChain];
+                                    u[ni] = { ...u[ni], host: e.target.value };
+                                    setField("socks5ProxyChain", u);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  {t("hosts.proxyPort")}
+                                </label>
+                                <Input
+                                  className="h-7 text-xs"
+                                  type="number"
+                                  placeholder="1080"
+                                  value={node.port}
+                                  onChange={(e) => {
+                                    const u = [...form.socks5ProxyChain];
+                                    u[ni] = {
+                                      ...u[ni],
+                                      port: Number(e.target.value),
+                                    };
+                                    setField("socks5ProxyChain", u);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  {t("hosts.proxyType")}
+                                </label>
+                                <select
+                                  className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                                  value={node.type}
+                                  onChange={(e) => {
+                                    const u = [...form.socks5ProxyChain];
+                                    u[ni] = { ...u[ni], type: e.target.value };
+                                    setField("socks5ProxyChain", u);
+                                  }}
+                                >
+                                  <option value="socks5">SOCKS5</option>
+                                  <option value="socks4">SOCKS4</option>
+                                  <option value="http">HTTP</option>
+                                </select>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  {t("hosts.proxyUsername")}
+                                </label>
+                                <Input
+                                  className="h-7 text-xs"
+                                  placeholder={t("hosts.optional")}
+                                  value={node.username}
+                                  onChange={(e) => {
+                                    const u = [...form.socks5ProxyChain];
+                                    u[ni] = {
+                                      ...u[ni],
+                                      username: e.target.value,
+                                    };
+                                    setField("socks5ProxyChain", u);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1 col-span-2">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                                  {t("hosts.proxyPassword")}
+                                </label>
+                                <Input
+                                  className="h-7 text-xs"
+                                  type="password"
+                                  placeholder={t("hosts.optional")}
+                                  value={node.password}
+                                  onChange={(e) => {
+                                    const u = [...form.socks5ProxyChain];
+                                    u[ni] = {
+                                      ...u[ni],
+                                      password: e.target.value,
+                                    };
+                                    setField("socks5ProxyChain", u);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand self-start"
+                          onClick={() =>
+                            setField("socks5ProxyChain", [
+                              ...form.socks5ProxyChain,
+                              {
+                                host: "",
+                                port: 1080,
+                                type: "socks5",
+                                username: "",
+                                password: "",
+                              },
+                            ])
+                          }
+                        >
+                          <Plus className="size-3 mr-1" />{" "}
+                          {t("hosts.addProxyNode")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Connection path visualization */}
+                    {(form.socks5ProxyMode === "single" && form.socks5Host) ||
+                    (form.socks5ProxyMode === "chain" &&
+                      form.socks5ProxyChain.length > 0) ? (
+                      <div className="flex items-center gap-1 flex-wrap p-2 bg-muted/30 border border-border text-[10px]">
+                        <span className="px-2 py-0.5 bg-background border border-border text-foreground font-mono">
+                          {t("hosts.you")}
+                        </span>
+                        {form.socks5ProxyMode === "single" &&
+                        form.socks5Host ? (
+                          <>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="px-2 py-0.5 bg-muted border border-border text-muted-foreground font-mono">
+                              {form.socks5Host}:{form.socks5Port}
+                            </span>
+                          </>
+                        ) : (
+                          form.socks5ProxyChain
+                            .filter((n) => n.host)
+                            .map((n, ni) => (
+                              <React.Fragment key={ni}>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="px-2 py-0.5 bg-muted border border-border text-muted-foreground font-mono">
+                                  {n.host}:{n.port}
+                                </span>
+                              </React.Fragment>
+                            ))
+                        )}
+                        {form.jumpHosts
+                          .filter((j) => j.hostId)
+                          .map((j, ji) => {
+                            const jh = hosts.find((h) => h.id === j.hostId);
+                            return jh ? (
+                              <React.Fragment key={`j${ji}`}>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="px-2 py-0.5 bg-muted border border-border text-muted-foreground font-mono">
+                                  {jh.name || jh.ip}
+                                </span>
+                              </React.Fragment>
+                            ) : null;
+                          })}
+                        <span className="text-muted-foreground">→</span>
+                        <span className="px-2 py-0.5 bg-accent-brand/10 border border-accent-brand/30 text-accent-brand font-mono">
+                          {form.ip || "target"}:{form.sshPort}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 )}
                 <div className="flex flex-col gap-3">
@@ -1619,16 +1864,68 @@ function HostEditor({
                   {authMethod === "key" && (
                     <>
                       <div className="flex flex-col gap-1.5 col-span-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.sshPrivateKey")}
-                        </label>
-                        <textarea
-                          placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-                          rows={5}
-                          value={form.key}
-                          onChange={(e) => setField("key", e.target.value)}
-                          className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                        />
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.sshPrivateKey")}
+                          </label>
+                          <div className="flex gap-1">
+                            {(["paste", "upload"] as const).map((tab) => (
+                              <button
+                                key={tab}
+                                type="button"
+                                onClick={() => setField("keySubTab", tab)}
+                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border transition-colors ${form.keySubTab === tab ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {tab === "paste"
+                                  ? t("hosts.keyPasteTab")
+                                  : t("hosts.keyUploadTab")}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {form.keySubTab === "paste" ? (
+                          <textarea
+                            placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                            rows={5}
+                            value={form.key}
+                            onChange={(e) => setField("key", e.target.value)}
+                            className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                          />
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <label
+                              className={`flex items-center justify-center gap-2 h-16 border-2 border-dashed cursor-pointer transition-colors ${form.key ? "border-accent-brand/40 bg-accent-brand/5 text-accent-brand" : "border-border text-muted-foreground hover:border-accent-brand/30 hover:text-foreground"}`}
+                            >
+                              <Upload className="size-4" />
+                              <span className="text-xs">
+                                {form.key
+                                  ? t("hosts.keyFileLoaded")
+                                  : t("hosts.keyUploadClick")}
+                              </span>
+                              <input
+                                type="file"
+                                accept=".pem,.key,.txt,.ppk"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const text = await file.text();
+                                  setField("key", text);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                            {form.key && (
+                              <button
+                                type="button"
+                                onClick={() => setField("key", "")}
+                                className="text-[10px] text-destructive self-start"
+                              >
+                                {t("hosts.clearKey")}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1643,28 +1940,90 @@ function HostEditor({
                           }
                         />
                       </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.keyTypeLabel")}
+                        </label>
+                        <select
+                          value={form.keyType}
+                          onChange={(e) =>
+                            setField("keyType", e.target.value as any)
+                          }
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="auto">{t("hosts.keyTypeAuto")}</option>
+                          <option value="ssh-rsa">RSA</option>
+                          <option value="ssh-ed25519">Ed25519</option>
+                          <option value="ecdsa-sha2-nistp256">
+                            ECDSA P-256
+                          </option>
+                          <option value="ecdsa-sha2-nistp384">
+                            ECDSA P-384
+                          </option>
+                          <option value="ecdsa-sha2-nistp521">
+                            ECDSA P-521
+                          </option>
+                          <option value="ssh-dss">DSA</option>
+                          <option value="ssh-rsa-sha2-256">RSA SHA2-256</option>
+                          <option value="ssh-rsa-sha2-512">RSA SHA2-512</option>
+                        </select>
+                      </div>
                     </>
                   )}
                   {authMethod === "credential" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.storedCredential")}
-                      </label>
-                      <select
-                        value={form.credentialId}
-                        onChange={(e) =>
-                          setField("credentialId", e.target.value)
-                        }
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        <option value="">{t("hosts.selectACredential")}</option>
-                        {credentials.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.username})
+                    <>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.storedCredential")}
+                        </label>
+                        <select
+                          value={form.credentialId}
+                          onChange={(e) =>
+                            setField("credentialId", e.target.value)
+                          }
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">
+                            {t("hosts.selectACredential")}
                           </option>
-                        ))}
-                      </select>
-                    </div>
+                          {credentials.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.username})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between col-span-2 pt-1">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-medium">
+                            {t("hosts.overrideCredentialUsername")}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("hosts.overrideCredentialUsernameDesc")}
+                          </span>
+                        </div>
+                        <FakeSwitch
+                          checked={form.overrideCredentialUsername}
+                          onChange={(v) =>
+                            setField("overrideCredentialUsername", v)
+                          }
+                        />
+                      </div>
+                      {form.overrideCredentialUsername && (
+                        <div className="flex flex-col gap-1.5 col-span-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.username")}
+                          </label>
+                          <Input
+                            placeholder="root"
+                            value={form.username}
+                            onChange={(e) =>
+                              setField("username", e.target.value)
+                            }
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <SettingRow
@@ -1780,16 +2139,20 @@ function HostEditor({
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.fontSizeLabel")}
-                    </label>
-                    <Input
-                      type="number"
-                      value={form.fontSize}
-                      onChange={(e) =>
-                        setField("fontSize", Number(e.target.value) as any)
-                      }
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.fontSizeLabel")}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {form.fontSize}px
+                      </span>
+                    </div>
+                    <Slider
+                      min={8}
+                      max={24}
+                      step={1}
+                      value={[form.fontSize]}
+                      onValueChange={([v]) => setField("fontSize", v as any)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1811,30 +2174,39 @@ function HostEditor({
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.letterSpacingPx")}
-                    </label>
-                    <Input
-                      type="number"
-                      value={form.letterSpacing}
-                      onChange={(e) =>
-                        setField("letterSpacing", Number(e.target.value) as any)
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.letterSpacingPx")}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {form.letterSpacing}px
+                      </span>
+                    </div>
+                    <Slider
+                      min={-2}
+                      max={10}
+                      step={0.5}
+                      value={[form.letterSpacing]}
+                      onValueChange={([v]) =>
+                        setField("letterSpacing", v as any)
                       }
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.lineHeightLabel")}
-                    </label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={form.lineHeight}
-                      onChange={(e) =>
-                        setField("lineHeight", Number(e.target.value) as any)
-                      }
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.lineHeightLabel")}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {form.lineHeight.toFixed(1)}
+                      </span>
+                    </div>
+                    <Slider
+                      min={1.0}
+                      max={2.0}
+                      step={0.1}
+                      value={[form.lineHeight]}
+                      onValueChange={([v]) => setField("lineHeight", v as any)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1898,20 +2270,22 @@ function HostEditor({
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.scrollbackBufferLabel")}
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.scrollback}
-                    onChange={(e) =>
-                      setField("scrollback", Number(e.target.value) as any)
-                    }
-                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.scrollbackBufferLabel")}
+                    </label>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {form.scrollback.toLocaleString()}{" "}
+                      {t("hosts.scrollbackMaxLines")}
+                    </span>
+                  </div>
+                  <Slider
+                    min={1000}
+                    max={100000}
+                    step={1000}
+                    value={[form.scrollback]}
+                    onValueChange={([v]) => setField("scrollback", v as any)}
                   />
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("hosts.scrollbackMaxLines")}
-                  </span>
                 </div>
                 <SettingRow
                   label={t("hosts.sshAgentForwardingLabel")}
@@ -2050,19 +2424,22 @@ function HostEditor({
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.fastScrollSensitivityLabel")}
-                    </label>
-                    <Input
-                      type="number"
-                      value={form.fastScrollSensitivity}
-                      onChange={(e) =>
-                        setField(
-                          "fastScrollSensitivity",
-                          Number(e.target.value) as any,
-                        )
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.fastScrollSensitivityLabel")}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {form.fastScrollSensitivity}
+                      </span>
+                    </div>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={[form.fastScrollSensitivity]}
+                      onValueChange={([v]) =>
+                        setField("fastScrollSensitivity", v as any)
                       }
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -2116,6 +2493,7 @@ function HostEditor({
                           Number(e.target.value) as any,
                         )
                       }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -2131,6 +2509,7 @@ function HostEditor({
                           Number(e.target.value) as any,
                         )
                       }
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -2323,6 +2702,13 @@ function HostEditor({
                             ),
                           )}
                         </div>
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                          {tun.mode === "local"
+                            ? t("hosts.tunnelModeLocalDesc")
+                            : tun.mode === "remote"
+                              ? t("hosts.tunnelModeRemoteDesc")
+                              : t("hosts.tunnelModeDynamicDesc")}
+                        </p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {tun.mode !== "dynamic" && (
@@ -2330,10 +2716,9 @@ function HostEditor({
                             <label className="text-[10px] font-bold text-muted-foreground">
                               {t("hosts.endpointHost")}
                             </label>
-                            <Input
-                              className="h-7 text-xs"
-                              placeholder="e.g. 127.0.0.1"
-                              value={tun.endpointHost}
+                            <select
+                              className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                              value={tun.endpointHost ?? ""}
                               onChange={(e) => {
                                 const updated = [...form.serverTunnels];
                                 updated[i] = {
@@ -2342,7 +2727,21 @@ function HostEditor({
                                 };
                                 setField("serverTunnels", updated);
                               }}
-                            />
+                            >
+                              <option value="">
+                                {t("hosts.selectAServer")}
+                              </option>
+                              <option value="127.0.0.1">
+                                127.0.0.1 (localhost)
+                              </option>
+                              {hosts
+                                .filter((h) => h.enableSsh)
+                                .map((h) => (
+                                  <option key={h.id} value={h.ip}>
+                                    {h.name || h.ip} ({h.ip})
+                                  </option>
+                                ))}
+                            </select>
                           </div>
                         )}
                         {tun.mode !== "dynamic" && (
@@ -2351,7 +2750,7 @@ function HostEditor({
                               {t("hosts.endpointPort")}
                             </label>
                             <Input
-                              className="h-7 text-xs"
+                              className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               type="number"
                               value={tun.endpointPort}
                               onChange={(e) => {
@@ -2388,7 +2787,7 @@ function HostEditor({
                             {t("hosts.sourcePort")}
                           </label>
                           <Input
-                            className="h-7 text-xs"
+                            className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             type="number"
                             value={tun.sourcePort}
                             onChange={(e) => {
@@ -2406,7 +2805,7 @@ function HostEditor({
                             {t("hosts.maxRetries")}
                           </label>
                           <Input
-                            className="h-7 text-xs"
+                            className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             type="number"
                             value={tun.maxRetries}
                             onChange={(e) => {
@@ -2424,7 +2823,7 @@ function HostEditor({
                             {t("hosts.retryIntervalS")}
                           </label>
                           <Input
-                            className="h-7 text-xs"
+                            className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             type="number"
                             value={tun.retryInterval}
                             onChange={(e) => {
@@ -2545,24 +2944,25 @@ function HostEditor({
                     }
                   />
                 </SettingRow>
-                {!form.statsConfig.useGlobalStatusInterval && (
-                  <SettingRow
-                    label={t("hosts.checkIntervalS")}
-                    description={t("hosts.checkIntervalDesc")}
-                  >
-                    <Input
-                      type="number"
-                      value={form.statsConfig.statusCheckInterval}
-                      onChange={(e) =>
-                        setField("statsConfig", {
-                          ...form.statsConfig,
-                          statusCheckInterval: Number(e.target.value),
-                        })
-                      }
-                      className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </SettingRow>
-                )}
+                {form.statsConfig.statusCheckEnabled &&
+                  !form.statsConfig.useGlobalStatusInterval && (
+                    <SettingRow
+                      label={t("hosts.checkIntervalS")}
+                      description={t("hosts.checkIntervalDesc")}
+                    >
+                      <Input
+                        type="number"
+                        value={form.statsConfig.statusCheckInterval}
+                        onChange={(e) =>
+                          setField("statsConfig", {
+                            ...form.statsConfig,
+                            statusCheckInterval: Number(e.target.value),
+                          })
+                        }
+                        className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </SettingRow>
+                  )}
               </div>
             </SectionCard>
             <SectionCard
@@ -2598,24 +2998,25 @@ function HostEditor({
                     }
                   />
                 </SettingRow>
-                {!form.statsConfig.useGlobalMetricsInterval && (
-                  <SettingRow
-                    label={t("hosts.metricsIntervalS")}
-                    description={t("hosts.metricsIntervalDesc2")}
-                  >
-                    <Input
-                      type="number"
-                      value={form.statsConfig.metricsInterval}
-                      onChange={(e) =>
-                        setField("statsConfig", {
-                          ...form.statsConfig,
-                          metricsInterval: Number(e.target.value),
-                        })
-                      }
-                      className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </SettingRow>
-                )}
+                {form.statsConfig.metricsEnabled &&
+                  !form.statsConfig.useGlobalMetricsInterval && (
+                    <SettingRow
+                      label={t("hosts.metricsIntervalS")}
+                      description={t("hosts.metricsIntervalDesc2")}
+                    >
+                      <Input
+                        type="number"
+                        value={form.statsConfig.metricsInterval}
+                        onChange={(e) =>
+                          setField("statsConfig", {
+                            ...form.statsConfig,
+                            metricsInterval: Number(e.target.value),
+                          })
+                        }
+                        className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </SettingRow>
+                  )}
               </div>
             </SectionCard>
             <SectionCard
@@ -2695,7 +3096,7 @@ function HostEditor({
               </div>
             </SectionCard>
             <SectionCard
-              title={t("hosts.quickActionsToolbar").split(".")[0]}
+              title={t("hosts.quickActionsLabel")}
               icon={<Zap className="size-3.5" />}
               action={
                 <Button
@@ -2906,6 +3307,7 @@ function HostEditor({
                       placeholder="Auto"
                       value={form.guacamoleConfig["width"] ?? ""}
                       onChange={(e) => setGuacField("width", e.target.value)}
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -2917,6 +3319,7 @@ function HostEditor({
                       placeholder="Auto"
                       value={form.guacamoleConfig["height"] ?? ""}
                       onChange={(e) => setGuacField("height", e.target.value)}
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -2929,6 +3332,7 @@ function HostEditor({
                     placeholder="96"
                     value={form.guacamoleConfig["dpi"] ?? ""}
                     onChange={(e) => setGuacField("dpi", e.target.value)}
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -4650,7 +5054,10 @@ function CredentialEditorView({
                           setGeneratingKey(true);
                           try {
                             const result = await generateKeyPair(
-                              keyType,
+                              keyType as
+                                | "ssh-ed25519"
+                                | "ssh-rsa"
+                                | "ecdsa-sha2-nistp256",
                               bits,
                               credForm.passphrase || undefined,
                             );
@@ -5681,6 +6088,13 @@ export function HostManager({
                     const normalized = hostsArray.map((h: any) => ({
                       ...h,
                       port: h.port ?? h.sshPort ?? 22,
+                      enableSsh:
+                        h.enableSsh ??
+                        (h.connectionType === "ssh" || !h.connectionType),
+                      enableRdp: h.enableRdp ?? h.connectionType === "rdp",
+                      enableVnc: h.enableVnc ?? h.connectionType === "vnc",
+                      enableTelnet:
+                        h.enableTelnet ?? h.connectionType === "telnet",
                     }));
                     const result = await bulkImportSSHHosts(
                       normalized,

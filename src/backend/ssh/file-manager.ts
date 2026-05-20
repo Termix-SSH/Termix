@@ -151,10 +151,7 @@ async function resolveJumpHost(
 ): Promise<JumpHostConfig | null> {
   try {
     const hostResults = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.id, hostId)),
+      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -172,8 +169,10 @@ async function resolveJumpHost(
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred =
-            await sharedCredManager.getSharedCredentialForUser(hostId, userId);
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            hostId,
+            userId,
+          );
           if (sharedCred) {
             return {
               ...host,
@@ -889,7 +888,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   );
 
   // Resolve credentials server-side when frontend doesn't provide them
-  let resolvedCredentials = { password, sshKey, keyPassword, authType, sudoPassword: undefined as string | undefined };
+  let resolvedCredentials = {
+    password,
+    sshKey,
+    keyPassword,
+    authType,
+    sudoPassword: undefined as string | undefined,
+  };
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -3088,47 +3093,36 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
           stream.on("close", (code) => {
             if (code !== 0) {
-              const isPermissionDenied =
-                errorData.toLowerCase().includes("permission denied");
+              const isPermissionDenied = errorData
+                .toLowerCase()
+                .includes("permission denied");
 
               if (isPermissionDenied && sshConn.sudoPassword) {
                 execWithSudo(
                   sshConn,
                   `cat '${escapedPath}'`,
                   sshConn.sudoPassword,
-                  (sudoErr, sudoStream) => {
-                    if (sudoErr) {
+                )
+                  .then(({ stdout, stderr, code: sudoCode }) => {
+                    if (sudoCode !== 0) {
                       return res.status(403).json({
-                        error: "Permission denied",
+                        error: `Permission denied: ${stderr}`,
                         needsSudo: true,
                       });
                     }
-                    let sudoData = Buffer.alloc(0);
-                    let sudoErrorData = "";
-                    sudoStream.on("data", (chunk: Buffer) => {
-                      sudoData = Buffer.concat([sudoData, chunk]);
+                    const sudoData = Buffer.from(stdout, "utf8");
+                    const isBinary = detectBinary(sudoData);
+                    res.json({
+                      content: isBinary ? sudoData.toString("base64") : stdout,
+                      isBinary,
+                      size: sudoData.length,
                     });
-                    sudoStream.stderr.on("data", (chunk: Buffer) => {
-                      sudoErrorData += chunk.toString();
-                    });
-                    sudoStream.on("close", (sudoCode) => {
-                      if (sudoCode !== 0) {
-                        return res.status(403).json({
-                          error: `Permission denied: ${sudoErrorData}`,
-                          needsSudo: true,
-                        });
-                      }
-                      const isBinary = detectBinary(sudoData);
-                      res.json({
-                        content: isBinary
-                          ? sudoData.toString("base64")
-                          : sudoData.toString("utf8"),
-                        isBinary,
-                        size: sudoData.length,
-                      });
-                    });
-                  },
-                );
+                  })
+                  .catch(() => {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  });
                 return;
               }
 
@@ -3564,30 +3558,38 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
               }
             });
           } else {
-            const isPermDenied = errorData.toLowerCase().includes("permission denied");
+            const isPermDenied = errorData
+              .toLowerCase()
+              .includes("permission denied");
             if (isPermDenied && sshConn.sudoPassword) {
-              const sudoWriteCmd = `echo '${base64Content}' | base64 -d | sudo tee '${escapedPath}' > /dev/null && echo "SUCCESS"`;
-              execWithSudo(sshConn, `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`, sshConn.sudoPassword, (sudoErr, sudoStream) => {
-                if (sudoErr) {
-                  if (!res.headersSent) {
-                    res.status(403).json({ error: "Permission denied", needsSudo: true });
-                  }
-                  return;
-                }
-                let sudoOut = "";
-                sudoStream.on("data", (chunk: Buffer) => { sudoOut += chunk.toString(); });
-                sudoStream.on("close", () => {
-                  if (sudoOut.includes("SUCCESS")) {
+              execWithSudo(
+                sshConn,
+                `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
+                sshConn.sudoPassword,
+              )
+                .then(({ stdout, code: sudoCode }) => {
+                  if (sudoCode === 0 && stdout.includes("SUCCESS")) {
                     restoreOriginalMode(null, () => {
                       if (!res.headersSent) {
-                        res.json({ message: "File written successfully", path: filePath });
+                        res.json({
+                          message: "File written successfully",
+                          path: filePath,
+                        });
                       }
                     });
                   } else if (!res.headersSent) {
-                    res.status(403).json({ error: "Permission denied", needsSudo: true });
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  }
+                })
+                .catch(() => {
+                  if (!res.headersSent) {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
                   }
                 });
-              });
               return;
             }
             fileLogger.error(
@@ -4981,7 +4983,9 @@ app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
 
   const sshConn = sshSessions[sessionId];
   if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH session not found or not connected" });
+    return res
+      .status(400)
+      .json({ error: "SSH session not found or not connected" });
   }
   if (!verifySessionOwnership(sshConn, userId)) {
     return res.status(403).json({ error: "Session access denied" });
@@ -4991,9 +4995,11 @@ app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
 
   try {
     const sftp = await getSessionSftp(sshConn);
-    const stats = await new Promise<{ size: number; isFile: () => boolean }>((resolve, reject) => {
-      sftp.stat(filePath, (err, s) => (err ? reject(err) : resolve(s)));
-    });
+    const stats = await new Promise<{ size: number; isFile: () => boolean }>(
+      (resolve, reject) => {
+        sftp.stat(filePath, (err, s) => (err ? reject(err) : resolve(s)));
+      },
+    );
 
     if (!stats.isFile()) {
       return res.status(400).json({ error: "Cannot download directories" });
@@ -5001,7 +5007,10 @@ app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
 
     const fileName = filePath.split("/").pop() || "download";
     res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(fileName)}"`,
+    );
     res.setHeader("Content-Length", String(stats.size));
 
     const readStream = sftp.createReadStream(filePath);
@@ -5015,7 +5024,9 @@ app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
     readStream.pipe(res);
   } catch (err) {
     if (!res.headersSent) {
-      res.status(500).json({ error: `Download failed: ${(err as Error).message}` });
+      res
+        .status(500)
+        .json({ error: `Download failed: ${(err as Error).message}` });
     }
   }
 });
