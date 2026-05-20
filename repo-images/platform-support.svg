@@ -10,45 +10,45 @@
   </defs>
 
   <!-- Row 1, Col 1: Web -->
-  <rect x="0" y="0" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="0" y="0" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="0" y="0" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="0" y="0" width="272" height="3" class="card-accent"/>
   <text x="136" y="28" text-anchor="middle" class="plat-name">Web</text>
   <text x="136" y="50" text-anchor="middle" class="plat-dist">Any modern browser</text>
   <text x="136" y="66" text-anchor="middle" class="plat-dist">(Chrome, Safari, Firefox) · PWA</text>
 
   <!-- Row 1, Col 2: Windows -->
-  <rect x="294" y="0" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="294" y="0" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="294" y="0" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="294" y="0" width="272" height="3" class="card-accent"/>
   <text x="430" y="24" text-anchor="middle" class="plat-name">Windows</text>
   <text x="430" y="40" text-anchor="middle" class="plat-sub">x64 / ia32</text>
   <text x="430" y="60" text-anchor="middle" class="plat-dist">Portable · MSI Installer</text>
   <text x="430" y="76" text-anchor="middle" class="plat-dist">Chocolatey</text>
 
   <!-- Row 1, Col 3: Linux -->
-  <rect x="588" y="0" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="588" y="0" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="588" y="0" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="588" y="0" width="272" height="3" class="card-accent"/>
   <text x="724" y="24" text-anchor="middle" class="plat-name">Linux</text>
   <text x="724" y="40" text-anchor="middle" class="plat-sub">x64 / ia32</text>
   <text x="724" y="60" text-anchor="middle" class="plat-dist">Portable · AUR · AppImage</text>
   <text x="724" y="76" text-anchor="middle" class="plat-dist">Deb · Flatpak</text>
 
   <!-- Row 2, Col 1: macOS -->
-  <rect x="0" y="120" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="0" y="120" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="0" y="120" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="0" y="120" width="272" height="3" class="card-accent"/>
   <text x="136" y="144" text-anchor="middle" class="plat-name">macOS</text>
   <text x="136" y="160" text-anchor="middle" class="plat-sub">x64 / ia32 · v12.0+</text>
   <text x="136" y="180" text-anchor="middle" class="plat-dist">Apple App Store · DMG · Homebrew</text>
 
   <!-- Row 2, Col 2: iOS/iPadOS -->
-  <rect x="294" y="120" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="294" y="120" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="294" y="120" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="294" y="120" width="272" height="3" class="card-accent"/>
   <text x="430" y="144" text-anchor="middle" class="plat-name">iOS / iPadOS</text>
   <text x="430" y="160" text-anchor="middle" class="plat-sub">v15.1+</text>
   <text x="430" y="180" text-anchor="middle" class="plat-dist">Apple App Store · IPA</text>
 
   <!-- Row 2, Col 3: Android -->
-  <rect x="588" y="120" width="272" height="100" rx="6" fill="transparent" class="card-border"/>
-  <rect x="588" y="120" width="272" height="3" rx="1" class="card-accent"/>
+  <rect x="588" y="120" width="272" height="100" fill="transparent" class="card-border"/>
+  <rect x="588" y="120" width="272" height="3" class="card-accent"/>
   <text x="724" y="144" text-anchor="middle" class="plat-name">Android</text>
   <text x="724" y="160" text-anchor="middle" class="plat-sub">v7.0+</text>
   <text x="724" y="180" text-anchor="middle" class="plat-dist">Google Play Store · APK</text>
