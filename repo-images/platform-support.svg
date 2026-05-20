@@ -1,54 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="780" height="220" viewBox="0 0 780 220">
   <defs>
     <style>
-      .cb { fill: none; stroke: #F39044; stroke-opacity: 0.22; stroke-width: 1; }
-      .ca { fill: #F39044; }
+      .cb { fill: none; stroke: #F39044; stroke-opacity: 0.4; stroke-width: 1.5; }
       .pn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #F39044; }
       .ps { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; fill: #8b949e; }
       .pd { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11.5px; fill: #8b949e; }
     </style>
   </defs>
 
-  <!-- R1C1: Web  y=0..100 -->
+  <!-- R1C1: Web -->
   <rect x="0"   y="0" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="0"   y="0" width="245" height="3"   class="ca"/>
   <text x="122" y="28" text-anchor="middle" class="pn">Web</text>
   <text x="122" y="50" text-anchor="middle" class="pd">Any modern browser</text>
   <text x="122" y="66" text-anchor="middle" class="pd">(Chrome, Safari, Firefox) · PWA</text>
 
-  <!-- R1C2: Windows  y=0..100 -->
+  <!-- R1C2: Windows -->
   <rect x="267" y="0" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="267" y="0" width="245" height="3"   class="ca"/>
   <text x="389" y="24" text-anchor="middle" class="pn">Windows</text>
   <text x="389" y="40" text-anchor="middle" class="ps">x64 / ia32</text>
   <text x="389" y="60" text-anchor="middle" class="pd">Portable · MSI Installer</text>
   <text x="389" y="76" text-anchor="middle" class="pd">Chocolatey</text>
 
-  <!-- R1C3: Linux  y=0..100 -->
+  <!-- R1C3: Linux -->
   <rect x="535" y="0" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="535" y="0" width="245" height="3"   class="ca"/>
   <text x="657" y="24" text-anchor="middle" class="pn">Linux</text>
   <text x="657" y="40" text-anchor="middle" class="ps">x64 / ia32</text>
   <text x="657" y="60" text-anchor="middle" class="pd">Portable · AUR · AppImage</text>
   <text x="657" y="76" text-anchor="middle" class="pd">Deb · Flatpak</text>
 
-  <!-- R2C1: macOS  y=120..220 -->
+  <!-- R2C1: macOS -->
   <rect x="0"   y="120" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="0"   y="120" width="245" height="3"   class="ca"/>
   <text x="122" y="144" text-anchor="middle" class="pn">macOS</text>
   <text x="122" y="160" text-anchor="middle" class="ps">x64 / ia32 · v12.0+</text>
   <text x="122" y="180" text-anchor="middle" class="pd">Apple App Store · DMG · Homebrew</text>
 
-  <!-- R2C2: iOS/iPadOS  y=120..220 -->
+  <!-- R2C2: iOS/iPadOS -->
   <rect x="267" y="120" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="267" y="120" width="245" height="3"   class="ca"/>
   <text x="389" y="144" text-anchor="middle" class="pn">iOS / iPadOS</text>
   <text x="389" y="160" text-anchor="middle" class="ps">v15.1+</text>
   <text x="389" y="180" text-anchor="middle" class="pd">Apple App Store · IPA</text>
 
-  <!-- R2C3: Android  y=120..220 -->
+  <!-- R2C3: Android -->
   <rect x="535" y="120" width="245" height="100" fill="transparent" class="cb"/>
-  <rect x="535" y="120" width="245" height="3"   class="ca"/>
   <text x="657" y="144" text-anchor="middle" class="pn">Android</text>
   <text x="657" y="160" text-anchor="middle" class="ps">v7.0+</text>
   <text x="657" y="180" text-anchor="middle" class="pd">Google Play Store · APK</text>
