@@ -19,6 +19,8 @@ function defaultSizes(mode: SplitMode): {
       return { rowSizes: [100], rowColSizes: [[50, 50]] };
     case "3-way":
       return { rowSizes: [50, 50], rowColSizes: [[50, 50], [100]] };
+    case "3-way-horizontal":
+      return { rowSizes: [50, 50], rowColSizes: [[50, 50], [100]] };
     case "4-way":
       return {
         rowSizes: [50, 50],
@@ -440,6 +442,36 @@ export function SplitView({
             >
               {pane(2)}
             </div>
+          </div>
+        </div>
+      )}
+
+      {splitMode === "3-way-horizontal" && (
+        <div className="flex flex-col w-full h-full min-h-0">
+          <div
+            className="flex min-h-0 overflow-hidden"
+            style={{ height: `${rowSizes[0]}%` }}
+          >
+            <div
+              className="min-w-0 min-h-0 overflow-hidden"
+              style={{ width: `${rowColSizes[0][0]}%` }}
+            >
+              {pane(0)}
+            </div>
+            <ColDivider
+              onMouseDown={(e) => onColDivider(e, 0, 0)}
+              onTouchStart={(e) => onColDividerTouch(e, 0, 0)}
+            />
+            <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+              {pane(1)}
+            </div>
+          </div>
+          <RowDivider
+            onMouseDown={(e) => onRowDivider(e, 0)}
+            onTouchStart={(e) => onRowDividerTouch(e, 0)}
+          />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {pane(2)}
           </div>
         </div>
       )}
