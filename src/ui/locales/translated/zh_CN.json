@@ -2336,6 +2336,7 @@
     "failedCompleteReset": "密码重置失败",
     "invalidTotpCode": "无效的 TOTP 代码",
     "failedOidcLogin": "OIDC 登录启动失败",
+    "silentSigninOidcUnavailable": "已请求静默登录，但当前未启用 OIDC 登录。",
     "failedUserInfo": "登录后无法获取用户信息",
     "oidcAuthFailed": "OIDC 身份验证失败",
     "noTokenReceived": "登录未收到令牌",

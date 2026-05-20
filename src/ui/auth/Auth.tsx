@@ -36,6 +36,10 @@ import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronSe
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import { Checkbox } from "@/components/checkbox";
 import i18n from "@/i18n/i18n";
+import {
+  removeSilentSigninFromSearch,
+  shouldTriggerSilentSignin,
+} from "./silent-signin";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -234,6 +238,8 @@ export function Auth({ onLogin }: AuthProps) {
   const [passwordLoginAllowed, setPasswordLoginAllowed] = useState(true);
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [oidcConfigured, setOidcConfigured] = useState(false);
+  const [oidcConfigLoaded, setOidcConfigLoaded] = useState(false);
+  const silentSigninHandledRef = useRef(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(true);
@@ -262,7 +268,8 @@ export function Auth({ onLogin }: AuthProps) {
       .catch(() => setPasswordResetAllowed(false));
     getOIDCConfig()
       .then((res) => setOidcConfigured(!!res))
-      .catch(() => setOidcConfigured(false));
+      .catch(() => setOidcConfigured(false))
+      .finally(() => setOidcConfigLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -643,7 +650,7 @@ export function Auth({ onLogin }: AuthProps) {
     }
   }
 
-  async function handleOIDCLogin() {
+  const handleOIDCLogin = useCallback(async () => {
     setOidcLoading(true);
     try {
       if (isElectron()) {
@@ -679,7 +686,27 @@ export function Auth({ onLogin }: AuthProps) {
       );
       setOidcLoading(false);
     }
-  }
+  }, [rememberMe, t]);
+
+  useEffect(() => {
+    if (!oidcConfigLoaded || silentSigninHandledRef.current) return;
+    if (!shouldTriggerSilentSignin(window.location.search)) return;
+
+    const nextSearch = removeSilentSigninFromSearch(window.location.search);
+    window.history.replaceState(
+      {},
+      document.title,
+      `${window.location.pathname}${nextSearch}${window.location.hash}`,
+    );
+
+    silentSigninHandledRef.current = true;
+    if (oidcConfigured && !isElectron()) {
+      handleOIDCLogin();
+      return;
+    }
+
+    toast.info(t("errors.silentSigninOidcUnavailable"));
+  }, [handleOIDCLogin, oidcConfigLoaded, oidcConfigured, t]);
 
   // Electron server config / webview auth success screens
   if (isElectron() && !isInElectronWebView()) {
