@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="860" height="52" viewBox="0 0 860 52">
-  <rect width="860" height="52" fill="none"/>
-  <rect x="0" y="36" width="860" height="1" fill="#F39044" opacity="0.25"/>
-  <rect x="0" y="36" width="224" height="2" fill="#F39044"/>
-  <text x="0" y="28" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#F39044">Platform Support</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="44" viewBox="0 0 860 44">
+  <rect width="860" height="44" fill="none"/>
+  <text x="0" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#F39044">Platform Support</text>
+  <rect x="0" y="32" width="860" height="1" fill="#F39044" opacity="0.2"/>
 </svg>
