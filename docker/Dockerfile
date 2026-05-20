@@ -20,10 +20,7 @@ COPY . .
 RUN find public/fonts -name "*.ttf" ! -name "*Regular.ttf" ! -name "*Bold.ttf" ! -name "*Italic.ttf" -delete
 
 RUN npm cache clean --force && \
-    NODE_OPTIONS="--max-old-space-size=3072" npm run prebuild && \
-    npx vite build && \
-    npx tsc -p tsconfig.node.json && \
-    cp src/backend/package.json dist/backend/package.json
+    NODE_OPTIONS="--max-old-space-size=3072" npm run build
 
 # Stage 3: Build backend
 FROM deps AS backend-builder
@@ -33,7 +30,7 @@ COPY . .
 
 RUN npm rebuild better-sqlite3
 
-RUN npx tsc -p tsconfig.node.json && cp src/backend/package.json dist/backend/package.json
+RUN npm run build:backend
 
 # Stage 4: Production dependencies only
 FROM node:24-slim AS production-deps

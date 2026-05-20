@@ -22,10 +22,7 @@ jobs:
         run: npm ci
 
       - name: Generate OpenAPI specification
-        run: |
-          npx tsc -p tsconfig.node.json
-          cp src/backend/package.json dist/backend/package.json
-          node ./dist/backend/backend/swagger.js
+        run: npm run generate:openapi
 
       - name: Upload OpenAPI artifact
         uses: actions/upload-artifact@v4
