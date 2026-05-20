@@ -1,115 +1,115 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="860" height="982" viewBox="0 0 860 982">
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="1120" viewBox="0 0 860 1120">
   <defs>
     <style>
-      .card-border { fill: none; stroke: #F39044; stroke-opacity: 0.22; stroke-width: 1; }
-      .card-accent { fill: #F39044; }
-      .feat-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #F39044; }
-      .feat-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11.5px; fill: #8b949e; }
+      .cb { fill: none; stroke: #F39044; stroke-opacity: 0.22; stroke-width: 1; }
+      .ca { fill: #F39044; }
+      .ft { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #F39044; }
+      .fb { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11.5px; fill: #8b949e; }
     </style>
   </defs>
 
-  <!-- Row 1, Col 1: SSH Terminal Access -->
-  <rect x="0" y="0" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="0" width="3" height="130" class="card-accent"/>
-  <text x="18" y="22" class="feat-title">SSH Terminal Access</text>
-  <text x="18" y="40" class="feat-body">Full-featured terminal with split-screen support (up to 4 panels)</text>
-  <text x="18" y="55" class="feat-body">with a browser-like tab system. Includes support for customizing</text>
-  <text x="18" y="70" class="feat-body">the terminal including common terminal themes, fonts, and other</text>
-  <text x="18" y="85" class="feat-body">components.</text>
+  <!-- R1C1: SSH Terminal Access  y=0..130 -->
+  <rect x="0"   y="0"   width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="0"   width="3"   height="130" class="ca"/>
+  <text x="18"  y="22"  class="ft">SSH Terminal Access</text>
+  <text x="18"  y="40"  class="fb">Full-featured terminal with split-screen support (up to 4 panels)</text>
+  <text x="18"  y="55"  class="fb">with a browser-like tab system. Includes support for customizing</text>
+  <text x="18"  y="70"  class="fb">the terminal including common terminal themes, fonts, and other</text>
+  <text x="18"  y="85"  class="fb">components.</text>
 
-  <!-- Row 1, Col 2: Remote Desktop Access -->
-  <rect x="442" y="0" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="0" width="3" height="130" class="card-accent"/>
-  <text x="460" y="22" class="feat-title">Remote Desktop Access</text>
-  <text x="460" y="40" class="feat-body">RDP, VNC, and Telnet support over the browser with complete</text>
-  <text x="460" y="55" class="feat-body">customization and split screening.</text>
+  <!-- R1C2: Remote Desktop Access  y=0..130 -->
+  <rect x="442" y="0"   width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="0"   width="3"   height="130" class="ca"/>
+  <text x="460" y="22"  class="ft">Remote Desktop Access</text>
+  <text x="460" y="40"  class="fb">RDP, VNC, and Telnet support over the browser with complete</text>
+  <text x="460" y="55"  class="fb">customization and split screening.</text>
 
-  <!-- Row 2, Col 1: SSH Tunnel Management -->
-  <rect x="0" y="142" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="142" width="3" height="130" class="card-accent"/>
-  <text x="18" y="164" class="feat-title">SSH Tunnel Management</text>
-  <text x="18" y="182" class="feat-body">Create and manage server-to-server SSH tunnels with automatic</text>
-  <text x="18" y="197" class="feat-body">reconnection, health monitoring, and local, remote, or dynamic</text>
-  <text x="18" y="212" class="feat-body">SOCKS forwarding. C2S preset snapshots can be saved, renamed,</text>
-  <text x="18" y="227" class="feat-body">loaded, or deleted across clients.</text>
+  <!-- R2C1: SSH Tunnel Management  y=160..290 -->
+  <rect x="0"   y="160" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="160" width="3"   height="130" class="ca"/>
+  <text x="18"  y="182" class="ft">SSH Tunnel Management</text>
+  <text x="18"  y="200" class="fb">Create and manage server-to-server SSH tunnels with automatic</text>
+  <text x="18"  y="215" class="fb">reconnection, health monitoring, and local, remote, or dynamic</text>
+  <text x="18"  y="230" class="fb">SOCKS forwarding. C2S preset snapshots can be saved, renamed,</text>
+  <text x="18"  y="245" class="fb">loaded, or deleted across clients.</text>
 
-  <!-- Row 2, Col 2: Remote File Manager -->
-  <rect x="442" y="142" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="142" width="3" height="130" class="card-accent"/>
-  <text x="460" y="164" class="feat-title">Remote File Manager</text>
-  <text x="460" y="182" class="feat-body">Manage files directly on remote servers with support for viewing</text>
-  <text x="460" y="197" class="feat-body">and editing code, images, audio, and video. Upload, download,</text>
-  <text x="460" y="212" class="feat-body">rename, delete, and move files seamlessly with sudo support.</text>
+  <!-- R2C2: Remote File Manager  y=160..290 -->
+  <rect x="442" y="160" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="160" width="3"   height="130" class="ca"/>
+  <text x="460" y="182" class="ft">Remote File Manager</text>
+  <text x="460" y="200" class="fb">Manage files directly on remote servers with support for viewing</text>
+  <text x="460" y="215" class="fb">and editing code, images, audio, and video. Upload, download,</text>
+  <text x="460" y="230" class="fb">rename, delete, and move files seamlessly with sudo support.</text>
 
-  <!-- Row 3, Col 1: Docker Management -->
-  <rect x="0" y="284" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="284" width="3" height="130" class="card-accent"/>
-  <text x="18" y="306" class="feat-title">Docker Management</text>
-  <text x="18" y="324" class="feat-body">Start, stop, pause, remove containers. View container stats.</text>
-  <text x="18" y="339" class="feat-body">Control containers using docker exec terminal. Not a replacement</text>
-  <text x="18" y="354" class="feat-body">for Portainer or Dockge, built for managing, not creating.</text>
+  <!-- R3C1: Docker Management  y=320..450 -->
+  <rect x="0"   y="320" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="320" width="3"   height="130" class="ca"/>
+  <text x="18"  y="342" class="ft">Docker Management</text>
+  <text x="18"  y="360" class="fb">Start, stop, pause, remove containers. View container stats.</text>
+  <text x="18"  y="375" class="fb">Control containers using docker exec terminal. Not a replacement</text>
+  <text x="18"  y="390" class="fb">for Portainer or Dockge, built for managing, not creating.</text>
 
-  <!-- Row 3, Col 2: SSH Host Manager -->
-  <rect x="442" y="284" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="284" width="3" height="130" class="card-accent"/>
-  <text x="460" y="306" class="feat-title">SSH Host Manager</text>
-  <text x="460" y="324" class="feat-body">Save, organize, and manage your SSH connections with tags and</text>
-  <text x="460" y="339" class="feat-body">folders. Save reusable login info and automate the deployment</text>
-  <text x="460" y="354" class="feat-body">of SSH keys.</text>
+  <!-- R3C2: SSH Host Manager  y=320..450 -->
+  <rect x="442" y="320" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="320" width="3"   height="130" class="ca"/>
+  <text x="460" y="342" class="ft">SSH Host Manager</text>
+  <text x="460" y="360" class="fb">Save, organize, and manage your SSH connections with tags and</text>
+  <text x="460" y="375" class="fb">folders. Save reusable login info and automate the deployment</text>
+  <text x="460" y="390" class="fb">of SSH keys.</text>
 
-  <!-- Row 4, Col 1: Server Stats -->
-  <rect x="0" y="426" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="426" width="3" height="130" class="card-accent"/>
-  <text x="18" y="448" class="feat-title">Server Stats</text>
-  <text x="18" y="466" class="feat-body">View CPU, memory, and disk usage along with network, uptime,</text>
-  <text x="18" y="481" class="feat-body">system information, firewall, and port monitor on most Linux</text>
-  <text x="18" y="496" class="feat-body">based servers.</text>
+  <!-- R4C1: Server Stats  y=480..610 -->
+  <rect x="0"   y="480" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="480" width="3"   height="130" class="ca"/>
+  <text x="18"  y="502" class="ft">Server Stats</text>
+  <text x="18"  y="520" class="fb">View CPU, memory, and disk usage along with network, uptime,</text>
+  <text x="18"  y="535" class="fb">system information, firewall, and port monitor on most Linux</text>
+  <text x="18"  y="550" class="fb">based servers.</text>
 
-  <!-- Row 4, Col 2: User Authentication -->
-  <rect x="442" y="426" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="426" width="3" height="130" class="card-accent"/>
-  <text x="460" y="448" class="feat-title">User Authentication</text>
-  <text x="460" y="466" class="feat-body">Secure user management with admin controls and OIDC (with</text>
-  <text x="460" y="481" class="feat-body">access control) and 2FA (TOTP) support. View active sessions</text>
-  <text x="460" y="496" class="feat-body">across all platforms and link OIDC/Local accounts together.</text>
+  <!-- R4C2: User Authentication  y=480..610 -->
+  <rect x="442" y="480" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="480" width="3"   height="130" class="ca"/>
+  <text x="460" y="502" class="ft">User Authentication</text>
+  <text x="460" y="520" class="fb">Secure user management with admin controls and OIDC (with</text>
+  <text x="460" y="535" class="fb">access control) and 2FA (TOTP) support. View active sessions</text>
+  <text x="460" y="550" class="fb">across all platforms and link OIDC/Local accounts together.</text>
 
-  <!-- Row 5, Col 1: RBAC -->
-  <rect x="0" y="568" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="568" width="3" height="130" class="card-accent"/>
-  <text x="18" y="590" class="feat-title">RBAC</text>
-  <text x="18" y="608" class="feat-body">Create roles and share hosts across users and roles.</text>
+  <!-- R5C1: RBAC  y=640..770 -->
+  <rect x="0"   y="640" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="640" width="3"   height="130" class="ca"/>
+  <text x="18"  y="662" class="ft">RBAC</text>
+  <text x="18"  y="680" class="fb">Create roles and share hosts across users and roles.</text>
 
-  <!-- Row 5, Col 2: Database Encryption -->
-  <rect x="442" y="568" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="568" width="3" height="130" class="card-accent"/>
-  <text x="460" y="590" class="feat-title">Database Encryption</text>
-  <text x="460" y="608" class="feat-body">Backend stored as encrypted SQLite database files.</text>
+  <!-- R5C2: Database Encryption  y=640..770 -->
+  <rect x="442" y="640" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="640" width="3"   height="130" class="ca"/>
+  <text x="460" y="662" class="ft">Database Encryption</text>
+  <text x="460" y="680" class="fb">Backend stored as encrypted SQLite database files.</text>
 
-  <!-- Row 6, Col 1: Network Graph -->
-  <rect x="0" y="710" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="710" width="3" height="130" class="card-accent"/>
-  <text x="18" y="732" class="feat-title">Network Graph</text>
-  <text x="18" y="750" class="feat-body">Customize your Dashboard to visualize your homelab based off</text>
-  <text x="18" y="765" class="feat-body">your SSH connections with status support.</text>
+  <!-- R6C1: Network Graph  y=800..930 -->
+  <rect x="0"   y="800" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="800" width="3"   height="130" class="ca"/>
+  <text x="18"  y="822" class="ft">Network Graph</text>
+  <text x="18"  y="840" class="fb">Customize your Dashboard to visualize your homelab based off</text>
+  <text x="18"  y="855" class="fb">your SSH connections with status support.</text>
 
-  <!-- Row 6, Col 2: SSH Tools -->
-  <rect x="442" y="710" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="710" width="3" height="130" class="card-accent"/>
-  <text x="460" y="732" class="feat-title">SSH Tools</text>
-  <text x="460" y="750" class="feat-body">Create reusable command snippets that execute with a single</text>
-  <text x="460" y="765" class="feat-body">click. Run one command simultaneously across multiple terminals.</text>
+  <!-- R6C2: SSH Tools  y=800..930 -->
+  <rect x="442" y="800" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="800" width="3"   height="130" class="ca"/>
+  <text x="460" y="822" class="ft">SSH Tools</text>
+  <text x="460" y="840" class="fb">Create reusable command snippets that execute with a single</text>
+  <text x="460" y="855" class="fb">click. Run one command simultaneously across multiple terminals.</text>
 
-  <!-- Row 7, Col 1: Persistent Tabs -->
-  <rect x="0" y="852" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="0" y="852" width="3" height="130" class="card-accent"/>
-  <text x="18" y="874" class="feat-title">Persistent Tabs</text>
-  <text x="18" y="892" class="feat-body">SSH sessions and tabs stay open across devices and refreshes</text>
-  <text x="18" y="907" class="feat-body">if enabled in user profile.</text>
+  <!-- R7C1: Persistent Tabs  y=960..1090 -->
+  <rect x="0"   y="960" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="0"   y="960" width="3"   height="130" class="ca"/>
+  <text x="18"  y="982" class="ft">Persistent Tabs</text>
+  <text x="18"  y="1000" class="fb">SSH sessions and tabs stay open across devices and refreshes</text>
+  <text x="18"  y="1015" class="fb">if enabled in user profile.</text>
 
-  <!-- Row 7, Col 2: Languages -->
-  <rect x="442" y="852" width="418" height="130" fill="transparent" class="card-border"/>
-  <rect x="442" y="852" width="3" height="130" class="card-accent"/>
-  <text x="460" y="874" class="feat-title">Languages</text>
-  <text x="460" y="892" class="feat-body">Built-in support for ~30 languages, managed by Crowdin.</text>
+  <!-- R7C2: Languages  y=960..1090 -->
+  <rect x="442" y="960" width="418" height="130" fill="transparent" class="cb"/>
+  <rect x="442" y="960" width="3"   height="130" class="ca"/>
+  <text x="460" y="982" class="ft">Languages</text>
+  <text x="460" y="1000" class="fb">Built-in support for ~30 languages, managed by Crowdin.</text>
 
 </svg>
