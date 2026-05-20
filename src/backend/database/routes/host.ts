@@ -671,6 +671,8 @@ router.post(
       authType ||
       authMethod ||
       (effectiveConnectionType !== "ssh" ? "password" : undefined);
+    const effectiveUsername =
+      username || rdpUser || vncUser || telnetUser || "";
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
       connectionType: effectiveConnectionType,
@@ -679,7 +681,7 @@ router.post(
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
-      username,
+      username: effectiveUsername,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -1203,6 +1205,8 @@ router.put(
     }
 
     const effectiveAuthType = authType || authMethod;
+    const effectiveUsername =
+      username || rdpUser || vncUser || telnetUser || "";
     const sshDataObj: Record<string, unknown> = {
       connectionType: connectionType || "ssh",
       name,
@@ -1210,7 +1214,7 @@ router.put(
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
-      username,
+      username: effectiveUsername,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -3817,6 +3821,10 @@ router.post(
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
             : 0,
+          enableSsh: hostData.enableSsh ?? false,
+          enableRdp: hostData.enableRdp ?? false,
+          enableVnc: hostData.enableVnc ?? false,
+          enableTelnet: hostData.enableTelnet ?? false,
           updatedAt: new Date().toISOString(),
         };
 

@@ -12,6 +12,7 @@ export type Host = {
   tags?: string[];
   authType: "password" | "key" | "credential" | "none" | "opkssh";
   credentialId?: string;
+  overrideCredentialUsername?: boolean;
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -45,6 +46,7 @@ export type Host = {
     keepaliveInterval?: number;
     keepaliveCountMax?: number;
     environmentVariables: { key: string; value: string }[];
+    startupSnippetId?: number | null;
   };
 
   useSocks5?: boolean;
@@ -55,7 +57,7 @@ export type Host = {
   socks5ProxyChain?: {
     host: string;
     port: number;
-    type: 4 | 5 | "http";
+    type: 4 | 5 | "http" | string;
     username?: string;
     password?: string;
   }[];

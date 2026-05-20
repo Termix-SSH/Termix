@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Clock,
   Hammer,
@@ -35,22 +36,29 @@ type RailItem =
     }
   | { kind: "separator" };
 
-function buildRailButtons(splitMode: SplitMode): RailItem[] {
+function buildRailButtons(
+  splitMode: SplitMode,
+  t: (key: string) => string,
+): RailItem[] {
   return [
-    { view: "hosts", icon: <Server size={16} />, title: "Hosts" },
+    { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
     { kind: "separator" },
-    { view: "quick-connect", icon: <Zap size={16} />, title: "Quick Connect" },
+    {
+      view: "quick-connect",
+      icon: <Zap size={16} />,
+      title: t("nav.quickConnect"),
+    },
     { kind: "separator" },
-    { view: "ssh-tools", icon: <Hammer size={16} />, title: "SSH Tools" },
+    { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
     { kind: "separator" },
-    { view: "snippets", icon: <Play size={16} />, title: "Snippets" },
+    { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
     { kind: "separator" },
-    { view: "history", icon: <Clock size={16} />, title: "History" },
+    { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
     { kind: "separator" },
     {
       view: "split-screen",
       icon: <LayoutPanelLeft size={16} />,
-      title: "Split Screen",
+      title: t("nav.splitScreen"),
       dot: splitMode !== "none",
     },
     { kind: "separator" },
@@ -66,6 +74,7 @@ export function AppRail({
   sidebarOpen,
   splitMode,
   username,
+  isAdmin,
   profileDropdownOpen,
   onProfileDropdownChange,
   onRailClick,
@@ -75,14 +84,16 @@ export function AppRail({
   sidebarOpen: boolean;
   splitMode: SplitMode;
   username: string;
+  isAdmin: boolean;
   profileDropdownOpen: boolean;
   onProfileDropdownChange: (open: boolean) => void;
   onRailClick: (view: RailView) => void;
   onLogout: () => void;
 }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const railExpanded = hovered || profileDropdownOpen;
-  const railButtons = buildRailButtons(splitMode);
+  const railButtons = buildRailButtons(splitMode, t);
 
   return (
     <div
@@ -132,20 +143,22 @@ export function AppRail({
       </div>
 
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
-        {(
-          [
-            {
-              view: "user-profile" as RailView,
-              icon: <User size={16} />,
-              title: "Profile",
-            },
-            {
-              view: "admin-settings" as RailView,
-              icon: <Settings size={16} />,
-              title: "Admin",
-            },
-          ] as const
-        ).map((item) => (
+        {[
+          {
+            view: "user-profile" as RailView,
+            icon: <User size={16} />,
+            title: t("nav.userProfile"),
+          },
+          ...(isAdmin
+            ? [
+                {
+                  view: "admin-settings" as RailView,
+                  icon: <Settings size={16} />,
+                  title: t("nav.admin"),
+                },
+              ]
+            : []),
+        ].map((item) => (
           <button
             key={item.view}
             onClick={() => onRailClick(item.view)}

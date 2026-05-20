@@ -70,7 +70,6 @@ import {
   listSSHFiles,
   resolveSSHPath,
   uploadSSHFile,
-  downloadSSHFile,
   createSSHFile,
   createSSHFolder,
   deleteSSHItem,
@@ -409,6 +408,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   async function initializeSSHConnection() {
     if (!currentHost || isConnectingRef.current) return;
+
+    if (currentHost.enableSsh === false) {
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        message: t("fileManager.sshRequiredForFileManager"),
+        timestamp: new Date().toISOString(),
+      });
+      setIsLoading(false);
+      return;
+    }
 
     isConnectingRef.current = true;
 

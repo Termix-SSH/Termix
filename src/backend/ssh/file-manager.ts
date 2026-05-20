@@ -3124,24 +3124,30 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
                   sshConn,
                   `cat '${escapedPath}'`,
                   sshConn.sudoPassword,
-                ).then((result) => {
-                  if (result.code !== 0) {
-                    return res.status(403).json({
-                      error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
-                      needsSudo: true,
-                    });
-                  }
+                )
+                  .then((result) => {
+                    if (result.code !== 0) {
+                      return res.status(403).json({
+                        error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
+                        needsSudo: true,
+                      });
+                    }
 
-                  const sudoData = result.stdout;
-                  const isBinary = detectBinary(sudoData);
-                  res.json({
-                    content: isBinary
-                      ? sudoData.toString("base64")
-                      : sudoData.toString("utf8"),
-                    isBinary,
-                    size: sudoData.length,
+                    const sudoData = result.stdout;
+                    const isBinary = detectBinary(sudoData);
+                    res.json({
+                      content: isBinary
+                        ? sudoData.toString("base64")
+                        : sudoData.toString("utf8"),
+                      isBinary,
+                      size: sudoData.length,
+                    });
+                  })
+                  .catch(() => {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
                   });
-                });
                 return;
               }
 
@@ -3585,22 +3591,30 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
                 sshConn,
                 `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
                 sshConn.sudoPassword,
-              ).then((result) => {
-                if (result.code === 0 && result.stdout.includes("SUCCESS")) {
-                  restoreOriginalMode(null, () => {
-                    if (!res.headersSent) {
-                      res.json({
-                        message: "File written successfully",
-                        path: filePath,
-                      });
-                    }
-                  });
-                } else if (!res.headersSent) {
-                  res
-                    .status(403)
-                    .json({ error: "Permission denied", needsSudo: true });
-                }
-              });
+              )
+                .then(({ stdout, code: sudoCode }) => {
+                  if (sudoCode === 0 && stdout.includes("SUCCESS")) {
+                    restoreOriginalMode(null, () => {
+                      if (!res.headersSent) {
+                        res.json({
+                          message: "File written successfully",
+                          path: filePath,
+                        });
+                      }
+                    });
+                  } else if (!res.headersSent) {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  }
+                })
+                .catch(() => {
+                  if (!res.headersSent) {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  }
+                });
               return;
             }
             fileLogger.error(
