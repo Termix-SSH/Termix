@@ -55,7 +55,106 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 
 <img src="./repo-images/header-features.svg" alt="Features" />
 
-<p><img src="./repo-images/features.svg" alt="Features" /></p>
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**SSH Terminal Access**
+Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+
+</td>
+<td width="50%" valign="top">
+
+**Remote Desktop Access**
+RDP, VNC, and Telnet support over the browser with complete customization and split screening.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**SSH Tunnel Management**
+Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
+
+</td>
+<td width="50%" valign="top">
+
+**Remote File Manager**
+Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Docker Management**
+Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
+
+</td>
+<td width="50%" valign="top">
+
+**SSH Host Manager**
+Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Server Stats**
+View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
+
+</td>
+<td width="50%" valign="top">
+
+**User Authentication**
+Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**RBAC**
+Create roles and share hosts across users/roles.
+
+</td>
+<td width="50%" valign="top">
+
+**Database Encryption**
+Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Network Graph**
+Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
+
+</td>
+<td width="50%" valign="top">
+
+**SSH Tools**
+Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Persistent Tabs**
+SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
+
+</td>
+<td width="50%" valign="top">
+
+**Languages**
+Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations)).
+
+</td>
+</tr>
+</table>
 
 <br />
 
@@ -79,7 +178,36 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 
 <img src="./repo-images/header-platform-support.svg" alt="Platform Support" />
 
-<p><img src="./repo-images/platform-support.svg" alt="Platform Support" /></p>
+<table align="center">
+<tr>
+<th align="center">Platform</th>
+<th align="center">Distribution</th>
+</tr>
+<tr>
+<td align="center"><b>Web</b></td>
+<td>Any modern browser (Chrome, Safari, Firefox) · PWA support</td>
+</tr>
+<tr>
+<td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
+<td>Portable · MSI Installer · Chocolatey</td>
+</tr>
+<tr>
+<td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
+<td>Portable · AUR · AppImage · Deb · Flatpak</td>
+</tr>
+<tr>
+<td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
+<td>Apple App Store · DMG · Homebrew</td>
+</tr>
+<tr>
+<td align="center"><b>iOS/iPadOS</b> <sub>v15.1+</sub></td>
+<td>Apple App Store · IPA</td>
+</tr>
+<tr>
+<td align="center"><b>Android</b> <sub>v7.0+</sub></td>
+<td>Google Play Store · APK</td>
+</tr>
+</table>
 
 <br />
 
