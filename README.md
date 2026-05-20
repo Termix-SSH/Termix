@@ -59,13 +59,13 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 <tr>
 <td width="50%" valign="top">
 
-**SSH Terminal Access**
+**SSH Terminal Access:**
 Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
 
 </td>
 <td width="50%" valign="top">
 
-**Remote Desktop Access**
+**Remote Desktop Access:**
 RDP, VNC, and Telnet support over the browser with complete customization and split screening.
 
 </td>
@@ -73,13 +73,13 @@ RDP, VNC, and Telnet support over the browser with complete customization and sp
 <tr>
 <td width="50%" valign="top">
 
-**SSH Tunnel Management**
+**SSH Tunnel Management:**
 Create and manage server-to-server SSH tunnels with automatic reconnection, health monitoring, and local, remote, or dynamic SOCKS forwarding. Desktop client-to-server tunnel settings are stored locally per desktop install, optional C2S preset snapshots can be saved to the server, renamed, loaded, or deleted when you want to move a local tunnel configuration between clients.
 
 </td>
 <td width="50%" valign="top">
 
-**Remote File Manager**
+**Remote File Manager:**
 Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
 
 </td>
@@ -87,13 +87,13 @@ Manage files directly on remote servers with support for viewing and editing cod
 <tr>
 <td width="50%" valign="top">
 
-**Docker Management**
+**Docker Management:**
 Start, stop, pause, remove containers. View container stats. Control container using docker exec terminal. It was not made to replace Portainer or Dockge but rather to simply manage your containers compared to creating them.
 
 </td>
 <td width="50%" valign="top">
 
-**SSH Host Manager**
+**SSH Host Manager:**
 Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
 
 </td>
@@ -101,13 +101,13 @@ Save, organize, and manage your SSH connections with tags and folders, and easil
 <tr>
 <td width="50%" valign="top">
 
-**Server Stats**
+**Server Stats:**
 View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
 
 </td>
 <td width="50%" valign="top">
 
-**User Authentication**
+**User Authentication:**
 Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
 
 </td>
@@ -115,13 +115,13 @@ Secure user management with admin controls and OIDC (with access control) and 2F
 <tr>
 <td width="50%" valign="top">
 
-**RBAC**
+**RBAC:**
 Create roles and share hosts across users/roles.
 
 </td>
 <td width="50%" valign="top">
 
-**Database Encryption**
+**Database Encryption:**
 Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 
 </td>
@@ -129,13 +129,13 @@ Backend stored as encrypted SQLite database files. View [docs](https://docs.term
 <tr>
 <td width="50%" valign="top">
 
-**Network Graph**
+**Network Graph:**
 Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
 
 </td>
 <td width="50%" valign="top">
 
-**SSH Tools**
+**SSH Tools:**
 Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 
 </td>
@@ -143,13 +143,13 @@ Create reusable command snippets that execute with a single click. Run one comma
 <tr>
 <td width="50%" valign="top">
 
-**Persistent Tabs**
+**Persistent Tabs:**
 SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
 
 </td>
 <td width="50%" valign="top">
 
-**Languages**
+**Languages:**
 Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/translations)).
 
 </td>
