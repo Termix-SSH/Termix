@@ -654,13 +654,32 @@ export function Auth({ onLogin }: AuthProps) {
     setOidcLoading(true);
     try {
       if (isElectron()) {
-        const electronAPI = (window as unknown as { electronAPI?: { oidcSystemBrowserAuth?: (authUrl: string, port: number) => Promise<{ success: boolean; token?: string; error?: string }> } }).electronAPI;
+        const electronAPI = (
+          window as unknown as {
+            electronAPI?: {
+              oidcSystemBrowserAuth?: (
+                authUrl: string,
+                port: number,
+              ) => Promise<{
+                success: boolean;
+                token?: string;
+                error?: string;
+              }>;
+            };
+          }
+        ).electronAPI;
         if (electronAPI?.oidcSystemBrowserAuth) {
           const callbackPort = 17832 + Math.floor(Math.random() * 100);
-          const authResponse = await getOIDCAuthorizeUrl(rememberMe, callbackPort);
+          const authResponse = await getOIDCAuthorizeUrl(
+            rememberMe,
+            callbackPort,
+          );
           const { auth_url: authUrl } = authResponse;
           if (!authUrl) throw new Error(t("errors.invalidAuthUrl"));
-          const result = await electronAPI.oidcSystemBrowserAuth(authUrl, callbackPort);
+          const result = await electronAPI.oidcSystemBrowserAuth(
+            authUrl,
+            callbackPort,
+          );
           if (result.success && result.token) {
             localStorage.setItem("jwt_token", result.token);
             window.location.reload();

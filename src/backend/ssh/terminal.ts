@@ -1,15 +1,14 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import ssh2pkg from "ssh2";
-const { Client, BaseAgent, utils: ssh2Utils } = ssh2pkg;
-import type {
-  Client as ClientType,
-  ClientChannel,
-  PseudoTtyOptions,
-  ParsedKey,
-  SignCallback,
-  SigningRequestOptions,
-  IdentityCallback,
+import ssh2Pkg, {
+  type Client as SSHClientType,
+  type ClientChannel,
+  type PseudoTtyOptions,
+  type ParsedKey,
+  type SignCallback,
+  type SigningRequestOptions,
+  type IdentityCallback,
 } from "ssh2";
+const { Client, BaseAgent, utils: ssh2Utils } = ssh2Pkg;
 import net from "net";
 import dgram from "dgram";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -273,13 +272,13 @@ async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
   socks5Config?: SOCKS5Config | null,
-): Promise<ClientType | null> {
+): Promise<SSHClientType | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
   }
 
-  let currentClient: ClientType | null = null;
-  const clients: ClientType[] = [];
+  let currentClient: SSHClientType | null = null;
+  const clients: SSHClientType[] = [];
 
   try {
     const jumpHostConfigs = await Promise.all(
@@ -560,9 +559,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   let currentSessionId: string | null = null;
-  let sshConn: ClientType | null = null;
+  let sshConn: SSHClientType | null = null;
   let sshStream: ClientChannel | null = null;
-  let lastJumpClient: ClientType | null = null;
+  let lastJumpClient: SSHClientType | null = null;
   let keyboardInteractiveFinish: ((responses: string[]) => void) | null = null;
   let totpPromptSent = false;
   let totpTimeout: NodeJS.Timeout | null = null;

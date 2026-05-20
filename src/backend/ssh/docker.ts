@@ -139,10 +139,7 @@ async function resolveJumpHost(
 ): Promise<JumpHostConfig | null> {
   try {
     const hostResults = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.id, hostId)),
+      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -160,8 +157,10 @@ async function resolveJumpHost(
           const { SharedCredentialManager } =
             await import("../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred =
-            await sharedCredManager.getSharedCredentialForUser(hostId, userId);
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            hostId,
+            userId,
+          );
           if (sharedCred) {
             return {
               ...host,

@@ -83,13 +83,12 @@ export async function resolveHostById(
             .select()
             .from(hostAccess)
             .where(
-              and(
-                eq(hostAccess.hostId, hostId),
-                eq(hostAccess.userId, userId),
-              ),
+              and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
             )
             .limit(1);
-          const overrideCredId = accessRecords[0]?.overrideCredentialId as number | null;
+          const overrideCredId = accessRecords[0]?.overrideCredentialId as
+            | number
+            | null;
           if (overrideCredId) {
             const userCreds = await SimpleDBOps.select(
               db
@@ -113,7 +112,11 @@ export async function resolveHostById(
               if (!host.overrideCredentialUsername) {
                 host.username = cred.username;
               }
-              host.authType = cred.key ? "key" : cred.password ? "password" : "none";
+              host.authType = cred.key
+                ? "key"
+                : cred.password
+                  ? "password"
+                  : "none";
               return host as unknown as SSHHost;
             }
           }

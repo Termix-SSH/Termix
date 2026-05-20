@@ -737,7 +737,11 @@ function CardItem({
           />
         )}
         {slot.id === "quick_actions" && (
-          <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
+          <QuickActionsCard
+            onOpenSingletonTab={onOpenSingletonTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
+          />
         )}
         {slot.id === "host_status" && (
           <HostStatusCard
@@ -1395,7 +1399,11 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "quick_actions" && (
-                <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} hosts={hosts} onOpenTab={onOpenTab} />
+                <QuickActionsCard
+                  onOpenSingletonTab={onOpenSingletonTab}
+                  hosts={hosts}
+                  onOpenTab={onOpenTab}
+                />
               )}
               {slot.id === "host_status" && (
                 <HostStatusCard
