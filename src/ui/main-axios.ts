@@ -3326,6 +3326,28 @@ export async function updateRegistrationAllowed(
   }
 }
 
+export async function getOidcAutoProvision(): Promise<{ enabled: boolean }> {
+  try {
+    const response = await authApi.get("/users/oidc-auto-provision");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check OIDC auto-provision status");
+  }
+}
+
+export async function updateOidcAutoProvision(
+  enabled: boolean,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.patch("/users/oidc-auto-provision", {
+      enabled,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update OIDC auto-provision");
+  }
+}
+
 export async function updatePasswordLoginAllowed(
   allowed: boolean,
 ): Promise<{ allowed: boolean }> {
