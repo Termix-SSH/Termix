@@ -673,10 +673,12 @@ router.post(
       (effectiveConnectionType !== "ssh" ? "password" : undefined);
     const effectiveUsername =
       username || rdpUser || vncUser || telnetUser || "";
+    const effectiveName =
+      name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
       connectionType: effectiveConnectionType,
-      name,
+      name: effectiveName,
       folder: folder || null,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
@@ -1207,9 +1209,11 @@ router.put(
     const effectiveAuthType = authType || authMethod;
     const effectiveUsername =
       username || rdpUser || vncUser || telnetUser || "";
+    const effectiveName =
+      name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
       connectionType: connectionType || "ssh",
-      name,
+      name: effectiveName,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
@@ -1583,6 +1587,20 @@ router.get(
           guacamoleConfig: hosts.guacamoleConfig,
           macAddress: hosts.macAddress,
           dockerConfig: hosts.dockerConfig,
+          enableSsh: hosts.enableSsh,
+          enableRdp: hosts.enableRdp,
+          enableVnc: hosts.enableVnc,
+          enableTelnet: hosts.enableTelnet,
+          sshPort: hosts.sshPort,
+          rdpPort: hosts.rdpPort,
+          vncPort: hosts.vncPort,
+          telnetPort: hosts.telnetPort,
+          rdpUser: hosts.rdpUser,
+          rdpDomain: hosts.rdpDomain,
+          rdpSecurity: hosts.rdpSecurity,
+          rdpIgnoreCert: hosts.rdpIgnoreCert,
+          vncUser: hosts.vncUser,
+          telnetUser: hosts.telnetUser,
 
           ownerId: hosts.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,
