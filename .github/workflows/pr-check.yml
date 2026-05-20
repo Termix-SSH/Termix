@@ -33,4 +33,8 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Build
-        run: npm run build
+        run: |
+          npm run prebuild
+          npx vite build
+          npx tsc -p tsconfig.node.json
+          cp src/backend/package.json dist/backend/package.json
