@@ -24,39 +24,6 @@ const activeSessions = new Map<string, SSHSession>();
 const wss = new WebSocketServer({
   host: "0.0.0.0",
   port: 30009,
-  verifyClient: async (info) => {
-    try {
-      let token: string | undefined;
-
-      const cookieHeader = info.req.headers.cookie;
-      if (cookieHeader) {
-        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-        if (match) token = decodeURIComponent(match[1]);
-      }
-
-      if (!token) {
-        const authHeader = info.req.headers.authorization;
-        if (authHeader?.startsWith("Bearer ")) {
-          token = authHeader.slice("Bearer ".length);
-        }
-      }
-
-      if (!token) {
-        return false;
-      }
-
-      const authManager = AuthManager.getInstance();
-      const decoded = await authManager.verifyJWTToken(token);
-
-      if (!decoded || !decoded.userId) {
-        return false;
-      }
-
-      return true;
-    } catch {
-      return false;
-    }
-  },
 });
 
 async function detectShell(

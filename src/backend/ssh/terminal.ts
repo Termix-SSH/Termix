@@ -434,52 +434,6 @@ async function createJumpHostChain(
 
 const wss = new WebSocketServer({
   port: 30002,
-  verifyClient: async (info) => {
-    try {
-      let token: string | undefined;
-
-      const cookieHeader = info.req.headers.cookie;
-      if (cookieHeader) {
-        const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-        if (match) token = decodeURIComponent(match[1]);
-      }
-
-      if (!token) {
-        const authHeader = info.req.headers.authorization;
-        if (authHeader?.startsWith("Bearer ")) {
-          token = authHeader.slice("Bearer ".length);
-        }
-      }
-
-      if (!token) {
-        return false;
-      }
-
-      const payload = await authManager.verifyJWTToken(token);
-
-      if (!payload) {
-        return false;
-      }
-
-      if (payload.pendingTOTP) {
-        return false;
-      }
-
-      const existingConnections = userConnections.get(payload.userId);
-
-      if (existingConnections && existingConnections.size >= 10) {
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      sshLogger.error("WebSocket authentication error", error, {
-        operation: "websocket_auth_error",
-        ip: info.req.socket.remoteAddress,
-      });
-      return false;
-    }
-  },
 });
 
 wss.on("connection", async (ws: WebSocket, req) => {

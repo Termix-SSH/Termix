@@ -8,7 +8,7 @@ import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
 import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
-import { getUserInfo, appReadyPromise } from "@/main-axios";
+import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
@@ -130,11 +130,22 @@ function App() {
 
   // Verify stored session against the server before rendering AppShell.
   // Wait for API instances to be initialized with correct embedded/server config first.
+  // In Electron, also repopulate localStorage["jwt"] so WebSocket connections can auth
+  // after a session restore (the token is only written to localStorage during a fresh login).
   useEffect(() => {
     if (phase !== "verifying") return;
     appReadyPromise
       .then(() => getUserInfo())
-      .then(() => setPhase("idle-app"))
+      .then(() => {
+        if (isElectron()) {
+          getCurrentToken()
+            .then((token) => {
+              if (token) localStorage.setItem("jwt", token);
+            })
+            .catch(() => {});
+        }
+        setPhase("idle-app");
+      })
       .catch(() => {
         clearStoredAuth();
         setPhase("idle-auth");
