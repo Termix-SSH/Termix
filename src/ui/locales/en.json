@@ -8,7 +8,9 @@
     "upload": "Upload",
     "keyPassword": "Key Password",
     "sshKey": "SSH Key",
-    "uploadPrivateKeyFile": "Upload Private Key File"
+    "uploadPrivateKeyFile": "Upload Private Key File",
+    "searchCredentials": "Search credentials...",
+    "addCredential": "Add Credential"
   },
   "homepage": {
     "failedToLoadAlerts": "Failed to load alerts",
@@ -138,6 +140,7 @@
     "hosts": "Hosts",
     "snippets": "Snippets",
     "hostManager": "Host Manager",
+    "credentials": "Credentials",
     "roleAdministrator": "Administrator",
     "roleUser": "User"
   },
@@ -536,6 +539,7 @@
     "loadingHost": "Loading host...",
     "hostNotFound": "Host not found",
     "searchHosts": "Search hosts...",
+    "addHost": "Add Host",
     "guac": {
       "connection": "Connection",
       "authentication": "Authentication",

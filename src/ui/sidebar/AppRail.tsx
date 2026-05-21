@@ -21,6 +21,7 @@ import type { SplitMode, ToolsTab } from "@/types/ui-types";
 
 export type RailView =
   | "hosts"
+  | "credentials"
   | "quick-connect"
   | ToolsTab
   | "user-profile"
@@ -42,6 +43,11 @@ function buildRailButtons(
 ): RailItem[] {
   return [
     { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
+    {
+      view: "credentials",
+      icon: <KeyRound size={16} />,
+      title: t("nav.credentials"),
+    },
     { kind: "separator" },
     {
       view: "quick-connect",

@@ -18,6 +18,7 @@ import { HistoryPanel } from "@/sidebar/HistoryPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
+import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
 import { SplitView } from "@/shell/SplitView";
 import { TabBar } from "@/shell/TabBar";
 import type {
@@ -138,9 +139,9 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [hostManagerExpanded, setHostManagerExpanded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(266);
   const [sidebarDragging, setSidebarDragging] = useState(false);
+  const [sidebarEditing, setSidebarEditing] = useState(false);
 
   const isMobile = useIsMobile();
 
@@ -155,10 +156,6 @@ export function AppShell({
       .catch(() => setIsAdmin(false));
   }, []);
 
-  const pendingHostManagerEditId = useRef<string | null>(null);
-  const pendingHostManagerAction = useRef<"add-host" | "add-credential" | null>(
-    null,
-  );
   const lastShiftTime = useRef(0);
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
@@ -166,6 +163,7 @@ export function AppShell({
 
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
+    credentials: "Credentials",
     "quick-connect": "Quick Connect",
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
@@ -340,21 +338,25 @@ export function AppShell({
 
   function openSingletonTab(type: TabType, pendingEvent?: string) {
     if (type === "host-manager") {
-      if (pendingEvent === "host-manager:add-host")
-        pendingHostManagerAction.current = "add-host";
-      else if (pendingEvent === "host-manager:add-credential")
-        pendingHostManagerAction.current = "add-credential";
-
-      setHostManagerExpanded(true);
-      setSidebarOpen(true);
-      setRailView("hosts");
-
-      if (pendingEvent) {
-        // Use a small delay to ensure HostManager is mounted if it wasn't already,
-        // and to allow the current render cycle to complete.
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent(pendingEvent));
-        }, 0);
+      if (pendingEvent === "host-manager:add-credential") {
+        setSidebarOpen(true);
+        setRailView("credentials");
+        setTimeout(
+          () =>
+            window.dispatchEvent(
+              new CustomEvent("host-manager:add-credential"),
+            ),
+          0,
+        );
+      } else {
+        setSidebarOpen(true);
+        setRailView("hosts");
+        if (pendingEvent) {
+          setTimeout(
+            () => window.dispatchEvent(new CustomEvent(pendingEvent)),
+            0,
+          );
+        }
       }
       return;
     }
@@ -422,16 +424,20 @@ export function AppShell({
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
+      if (view !== railView) setSidebarEditing(false);
       setRailView(view);
       setSidebarOpen(true);
     }
   }
 
   function editHostInManager(host: Host) {
-    pendingHostManagerEditId.current = host.id;
-    setHostManagerExpanded(true);
     setSidebarOpen(true);
     setRailView("hosts");
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("host-manager:edit-host", { detail: host.id }),
+      );
+    }, 0);
   }
 
   const onSidebarMouseDown = useCallback(
@@ -465,21 +471,18 @@ export function AppShell({
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {railView === "hosts" && (
         <HostsPanel
-          expanded={hostManagerExpanded}
-          onExpand={() => setHostManagerExpanded(true)}
-          onCollapse={() => {
-            setHostManagerExpanded(false);
-            loadHosts();
-          }}
-          pendingEditId={pendingHostManagerEditId}
-          pendingAction={pendingHostManagerAction}
           onOpenTab={(host, type) => {
             connectHost(host, type);
             if (isMobile) setSidebarOpen(false);
           }}
           onEditHost={editHostInManager}
           hostTree={realHostTree ?? undefined}
+          onEditingChange={setSidebarEditing}
         />
+      )}
+
+      {railView === "credentials" && (
+        <CredentialsPanel onEditingChange={setSidebarEditing} />
       )}
 
       {railView === "quick-connect" && (
@@ -547,7 +550,7 @@ export function AppShell({
       <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
         {sidebarTitle[railView]}
       </span>
-      {!hostManagerExpanded && !isMobile && (
+      {!isMobile && (
         <>
           <Separator orientation="vertical" />
           <Button
@@ -566,10 +569,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          setSidebarOpen(false);
-          setHostManagerExpanded(false);
-        }}
+        onClick={() => setSidebarOpen(false)}
       >
         <ChevronLeft className="size-4" />
       </Button>
@@ -597,18 +597,14 @@ export function AppShell({
           <div
             className={`relative flex flex-col bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
             style={{
-              width: sidebarOpen
-                ? hostManagerExpanded && railView === "hosts"
-                  ? 720
-                  : sidebarWidth
-                : 0,
+              width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
               transition: sidebarDragging ? "none" : "width 0.2s",
             }}
           >
             {sidebarHeader}
             {sidebarPanelContent}
 
-            {sidebarOpen && !(hostManagerExpanded && railView === "hosts") && (
+            {sidebarOpen && !sidebarEditing && (
               <div
                 onMouseDown={onSidebarMouseDown}
                 className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
@@ -619,13 +615,7 @@ export function AppShell({
 
         {/* Mobile: sidebar as overlay sheet */}
         {isMobile && (
-          <Sheet
-            open={sidebarOpen}
-            onOpenChange={(open) => {
-              setSidebarOpen(open);
-              if (!open) setHostManagerExpanded(false);
-            }}
-          >
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetContent
               side="left"
               showCloseButton={false}

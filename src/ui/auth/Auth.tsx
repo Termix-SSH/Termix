@@ -347,7 +347,7 @@ export function Auth({ onLogin }: AuthProps) {
             platform: "desktop",
             timestamp: Date.now(),
           },
-          window.location.origin,
+          "*",
         );
         setWebviewAuthSuccess(true);
         window.history.replaceState(
@@ -378,16 +378,19 @@ export function Auth({ onLogin }: AuthProps) {
   }, [onLogin, t]);
 
   const handleElectronAuthSuccess = useCallback(
-    async (previousJwt: string | null) => {
+    async (token: string | null) => {
       try {
-        const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-          "jwt",
-          currentServerUrl,
-          previousJwt,
-          5000,
-        );
-        if (cookieReady && !cookieReady.success)
-          throw new Error(cookieReady.error || "Auth cookie not ready");
+        if (!token) {
+          // No token in postMessage — fall back to waiting for the HttpOnly cookie
+          const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
+            "jwt",
+            currentServerUrl,
+            null,
+            5000,
+          );
+          if (cookieReady && !cookieReady.success)
+            throw new Error(cookieReady.error || "Auth cookie not ready");
+        }
         const meRes = await getUserInfo();
         if (!meRes) throw new Error("Failed to get user info");
         storeAuth(meRes.username || "");
@@ -447,7 +450,7 @@ export function Auth({ onLogin }: AuthProps) {
             platform: "desktop",
             timestamp: Date.now(),
           },
-          window.location.origin,
+          "*",
         );
         setWebviewAuthSuccess(true);
         return;
@@ -539,7 +542,7 @@ export function Auth({ onLogin }: AuthProps) {
             platform: "desktop",
             timestamp: Date.now(),
           },
-          window.location.origin,
+          "*",
         );
         setWebviewAuthSuccess(true);
         return;

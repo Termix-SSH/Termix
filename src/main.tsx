@@ -8,7 +8,7 @@ import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
 import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
-import { getUserInfo } from "@/main-axios";
+import { getUserInfo, appReadyPromise } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
@@ -128,10 +128,12 @@ function App() {
     };
   }, []);
 
-  // Verify stored session against the server before rendering AppShell
+  // Verify stored session against the server before rendering AppShell.
+  // Wait for API instances to be initialized with correct embedded/server config first.
   useEffect(() => {
     if (phase !== "verifying") return;
-    getUserInfo()
+    appReadyPromise
+      .then(() => getUserInfo())
       .then(() => setPhase("idle-app"))
       .catch(() => {
         clearStoredAuth();

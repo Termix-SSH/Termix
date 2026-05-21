@@ -99,6 +99,7 @@ import {
   subscribeTunnelStatuses,
   connectTunnel,
   disconnectTunnel,
+  getCredentialDetails,
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 
@@ -5047,7 +5048,15 @@ function CredentialEditorView({
                 {["password", "key"].map((m) => (
                   <button
                     key={m}
-                    onClick={() => setCredField("type", m as any)}
+                    onClick={() =>
+                      setCredForm((p) => ({
+                        ...p,
+                        type: m as any,
+                        value: "",
+                        publicKey: "",
+                        passphrase: "",
+                      }))
+                    }
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                   >
                     {m === "key"
@@ -5275,13 +5284,23 @@ export function HostManager({
   onCollapse,
   pendingEditId,
   pendingAction,
+  onEditingChange,
+  initialSection,
+  hideListHeader,
+  externalSearch,
 }: {
   onCollapse?: () => void;
   pendingEditId?: MutableRefObject<string | null>;
   pendingAction?: MutableRefObject<"add-host" | "add-credential" | null>;
+  onEditingChange?: (editing: boolean) => void;
+  initialSection?: "hosts" | "credentials";
+  hideListHeader?: boolean;
+  externalSearch?: string;
 } = {}) {
   const { t } = useTranslation();
-  const [section, setSection] = useState<"hosts" | "credentials">("hosts");
+  const [section, setSection] = useState<"hosts" | "credentials">(
+    initialSection ?? "hosts",
+  );
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
   const [editingCredential, setEditingCredential] = useState<
     Credential | "new" | null
@@ -5289,6 +5308,7 @@ export function HostManager({
   const [activeHostTab, setActiveHostTab] = useState("general");
   const [activeCredentialTab, setActiveCredentialTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
+  const effectiveSearch = externalSearch ?? searchQuery;
   const [hosts, setHosts] = useState<Host[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
@@ -5501,16 +5521,16 @@ export function HostManager({
   const allHosts = hosts;
   const filteredHosts = allHosts.filter(
     (h) =>
-      h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      h.ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      h.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+      h.ip.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
       h.tags?.some((tg) =>
-        tg.toLowerCase().includes(searchQuery.toLowerCase()),
+        tg.toLowerCase().includes(effectiveSearch.toLowerCase()),
       ),
   );
   const filteredCredentials = credentials.filter(
     (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.username.toLowerCase().includes(searchQuery.toLowerCase()),
+      c.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
+      c.username.toLowerCase().includes(effectiveSearch.toLowerCase()),
   );
 
   const folders = Array.from(new Set(allHosts.map((h) => h.folder))).sort();
@@ -6193,10 +6213,14 @@ export function HostManager({
 
   const isEditing = !!editingHost || !!editingCredential;
 
+  useEffect(() => {
+    onEditingChange?.(isEditing);
+  }, [isEditing]);
+
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Top bar: section switcher + actions */}
-      {!isEditing && (
+      {!isEditing && !hideListHeader && (
         <div className="flex items-center gap-0 shrink-0 border-b border-border/60">
           {/* Section tabs */}
           <button
@@ -6414,30 +6438,32 @@ export function HostManager({
         renderEditorView()
       ) : (
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Search bar */}
-          <div className="px-2 py-1.5 shrink-0 border-b border-border/40">
-            <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60">
-              <Search className="size-3 text-muted-foreground/60 shrink-0" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  section === "hosts"
-                    ? t("hosts.searchHostsPlaceholder")
-                    : t("hosts.searchCredentialsPlaceholder")
-                }
-                className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
+          {/* Search bar — hidden when parent supplies its own */}
+          {!hideListHeader && (
+            <div className="px-2 py-1.5 shrink-0 border-b border-border/40">
+              <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60">
+                <Search className="size-3 text-muted-foreground/60 shrink-0" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={
+                    section === "hosts"
+                      ? t("hosts.searchHostsPlaceholder")
+                      : t("hosts.searchCredentialsPlaceholder")
+                  }
+                  className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex-1 min-h-0 overflow-y-auto">
             {section === "hosts" && (
@@ -6743,15 +6769,17 @@ export function HostManager({
                                     {cred.type === "key" ? "KEY" : "PWD"}
                                   </span>
                                 </div>
-                                <span className="text-[11px] text-muted-foreground/50 truncate">
-                                  {cred.username}
-                                  {usedByHosts.length > 0 && (
-                                    <span className="text-muted-foreground/30">
-                                      {" "}
-                                      · {usedByHosts.length}h
-                                    </span>
-                                  )}
-                                </span>
+                                {(cred.username || usedByHosts.length > 0) && (
+                                  <span className="text-[11px] text-muted-foreground/50 truncate">
+                                    {cred.username}
+                                    {usedByHosts.length > 0 && (
+                                      <span className="text-muted-foreground/30">
+                                        {cred.username ? " · " : ""}
+                                        {usedByHosts.length}h
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
                                 {cred.tags && cred.tags.length > 0 && (
                                   <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
                                     {cred.tags.slice(0, 3).map((tag) => (
@@ -6805,8 +6833,23 @@ export function HostManager({
                               )}
                               <button
                                 className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                onClick={() => {
-                                  setEditingCredential(cred);
+                                onClick={async () => {
+                                  try {
+                                    const full = await getCredentialDetails(
+                                      Number(cred.id),
+                                    );
+                                    setEditingCredential({
+                                      ...cred,
+                                      value:
+                                        (full as any).password ??
+                                        (full as any).key ??
+                                        "",
+                                      passphrase:
+                                        (full as any).keyPassword ?? "",
+                                    });
+                                  } catch {
+                                    setEditingCredential(cred);
+                                  }
                                   setActiveCredentialTab("general");
                                 }}
                               >

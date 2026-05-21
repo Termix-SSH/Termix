@@ -1,23 +1,15 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, X } from "lucide-react";
-import { SidebarTree } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
-import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
-export function HostsPanel({
-  onOpenTab,
-  onEditHost,
-  hostTree,
+export function CredentialsPanel({
   onEditingChange,
 }: {
-  onOpenTab: (host: Host, type: TabType) => void;
-  onEditHost: (host: Host) => void;
-  hostTree?: HostFolder;
   onEditingChange?: (editing: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const [hostSearch, setHostSearch] = useState("");
+  const [search, setSearch] = useState("");
   const [managerEditing, setManagerEditing] = useState(false);
 
   function handleEditingChange(editing: boolean) {
@@ -32,14 +24,14 @@ export function HostsPanel({
           <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60 rounded-sm flex-1 min-w-0">
             <Search className="size-3 text-muted-foreground/60 shrink-0" />
             <input
-              value={hostSearch}
-              onChange={(e) => setHostSearch(e.target.value)}
-              placeholder={t("hosts.searchHosts")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("credentials.searchCredentials")}
               className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
             />
-            {hostSearch && (
+            {search && (
               <button
-                onClick={() => setHostSearch("")}
+                onClick={() => setSearch("")}
                 className="text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
                 <X className="size-3" />
@@ -48,32 +40,26 @@ export function HostsPanel({
           </div>
           <button
             onClick={() =>
-              window.dispatchEvent(new CustomEvent("host-manager:add-host"))
+              window.dispatchEvent(
+                new CustomEvent("host-manager:add-credential"),
+              )
             }
-            title={t("hosts.addHost")}
+            title={t("credentials.addCredential")}
             className="flex items-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 border border-accent-brand/30 rounded-sm shrink-0 transition-colors"
           >
             <Plus className="size-3 shrink-0" />
-            {t("hosts.addHost")}
+            {t("credentials.addCredential")}
           </button>
         </div>
       )}
 
-      <div
-        className={`flex-1 min-h-0 overflow-y-auto py-1 ${managerEditing ? "hidden" : ""}`}
-      >
-        <SidebarTree
-          children={hostTree?.children ?? []}
-          onOpenTab={onOpenTab}
-          onEditHost={onEditHost}
-          query={hostSearch.trim().toLowerCase()}
+      <div className="flex flex-col flex-1 min-h-0">
+        <HostManager
+          initialSection="credentials"
+          hideListHeader
+          externalSearch={managerEditing ? undefined : search}
+          onEditingChange={handleEditingChange}
         />
-      </div>
-
-      <div
-        className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}
-      >
-        <HostManager onEditingChange={handleEditingChange} />
       </div>
     </div>
   );

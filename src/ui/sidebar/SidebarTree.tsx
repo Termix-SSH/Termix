@@ -282,7 +282,7 @@ export function HostItem({
                     e.stopPropagation();
                     onEditHost();
                   }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors"
                 >
                   <Pencil className="size-3.5" />
                 </button>

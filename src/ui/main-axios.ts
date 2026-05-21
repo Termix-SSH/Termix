@@ -865,6 +865,11 @@ export let dockerApi: AxiosInstance;
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
 
+let _resolveAppReady!: () => void;
+export const appReadyPromise: Promise<void> = new Promise((resolve) => {
+  _resolveAppReady = resolve;
+});
+
 function initializeApp() {
   if (isElectron()) {
     Promise.all([getServerConfig(), getEmbeddedServerStatus()])
@@ -895,9 +900,13 @@ function initializeApp() {
           error,
         );
         initializeApiInstances();
+      })
+      .finally(() => {
+        _resolveAppReady();
       });
   } else {
     initializeApiInstances();
+    _resolveAppReady();
   }
 }
 
