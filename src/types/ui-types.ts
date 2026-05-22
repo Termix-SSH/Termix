@@ -14,8 +14,8 @@ export type Host = {
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
-  hasPassword?: boolean;
   hasKey?: boolean;
+  hasKeyPassword?: boolean;
   key?: string;
   keyPassword?: string;
   keyType?: string;

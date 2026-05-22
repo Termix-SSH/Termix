@@ -105,16 +105,11 @@ export interface Host {
   vncUser?: string;
   telnetUser?: string;
   telnetPassword?: string;
-  hasRdpPassword?: boolean;
-  hasVncPassword?: boolean;
-  hasTelnetPassword?: boolean;
-
   createdAt: string;
   updatedAt: string;
 
-  hasPassword?: boolean;
   hasKey?: boolean;
-  hasSudoPassword?: boolean;
+  hasKeyPassword?: boolean;
 
   isShared?: boolean;
   permissionLevel?: "view";

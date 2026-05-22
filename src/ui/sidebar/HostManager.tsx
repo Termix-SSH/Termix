@@ -132,8 +132,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     tags: h.tags ?? [],
     authType: h.authType,
     password: h.password,
-    hasPassword: !!(h as any).hasPassword || !!h.password,
     hasKey: !!(h as any).hasKey || !!(typeof h.key === "string" && h.key),
+    hasKeyPassword: !!(h as any).hasKeyPassword || !!h.keyPassword,
     key: typeof h.key === "string" ? h.key : undefined,
     keyPassword: h.keyPassword,
     keyType: h.keyType,
@@ -159,20 +159,14 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     vncPort: h.vncPort ?? (h.connectionType === "vnc" ? h.port : 5900),
     telnetPort: h.telnetPort ?? (h.connectionType === "telnet" ? h.port : 23),
     rdpUser: h.rdpUser,
-    rdpPassword: (h as any).hasRdpPassword
-      ? "existing_password"
-      : (h.rdpPassword ?? ""),
+    rdpPassword: h.rdpPassword ?? "",
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
-    vncPassword: (h as any).hasVncPassword
-      ? "existing_password"
-      : (h.vncPassword ?? ""),
+    vncPassword: h.vncPassword ?? "",
     vncUser: h.vncUser,
     telnetUser: h.telnetUser,
-    telnetPassword: (h as any).hasTelnetPassword
-      ? "existing_password"
-      : (h.telnetPassword ?? ""),
+    telnetPassword: h.telnetPassword ?? "",
     quickActions: (h.quickActions ?? []).map((a: any) => ({
       name: a.name,
       snippetId: String(a.snippetId),
@@ -870,10 +864,11 @@ function HostEditor({
       vncPort: host?.vncPort ?? 5900,
       telnetPort: host?.telnetPort ?? 23,
       authType: host?.authType ?? "password",
-      password:
-        host?.password ?? (host?.hasPassword ? "existing_password" : ""),
+      password: host?.password ?? "",
       key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
-      keyPassword: host?.keyPassword ?? "",
+      keyPassword: host?.hasKeyPassword
+        ? "existing_key_password"
+        : (host?.keyPassword ?? ""),
       keyType: host?.keyType ?? "auto",
       keySubTab: "paste" as "paste" | "upload",
       credentialId: host?.credentialId ?? "",
@@ -951,20 +946,14 @@ function HostEditor({
       quickActions:
         host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
       rdpUser: host?.rdpUser ?? "",
-      rdpPassword: (host as any)?.hasRdpPassword
-        ? "existing_password"
-        : (host?.rdpPassword ?? ""),
+      rdpPassword: host?.rdpPassword ?? "",
       domain: host?.domain ?? "",
       security: host?.security ?? "",
       ignoreCert: host?.ignoreCert ?? false,
-      vncPassword: (host as any)?.hasVncPassword
-        ? "existing_password"
-        : (host?.vncPassword ?? ""),
+      vncPassword: host?.vncPassword ?? "",
       vncUser: host?.vncUser ?? "",
       telnetUser: host?.telnetUser ?? "",
-      telnetPassword: (host as any)?.hasTelnetPassword
-        ? "existing_password"
-        : (host?.telnetPassword ?? ""),
+      telnetPassword: host?.telnetPassword ?? "",
       guacamoleConfig: host?.guacamoleConfig ?? ({} as Record<string, any>),
       statsConfig: host?.statsConfig ?? {
         statusCheckEnabled: true,
@@ -1092,12 +1081,12 @@ function HostEditor({
         tags,
         pin: form.pin,
         authType: form.authType,
-        password:
-          form.password === "existing_password"
-            ? undefined
-            : form.password || null,
+        password: form.password || null,
         key: form.key === "existing_key" ? undefined : form.key || null,
-        keyPassword: form.keyPassword || null,
+        keyPassword:
+          form.keyPassword === "existing_key_password"
+            ? undefined
+            : form.keyPassword || null,
         keyType: form.keyType !== "auto" ? form.keyType : null,
         credentialId: form.credentialId ? Number(form.credentialId) : null,
         overrideCredentialUsername: form.overrideCredentialUsername,
@@ -1133,23 +1122,14 @@ function HostEditor({
         telnetPort: Number(form.telnetPort),
         forceKeyboardInteractive: form.forceKeyboardInteractive,
         rdpUser: form.rdpUser || null,
-        rdpPassword:
-          form.rdpPassword === "existing_password"
-            ? undefined
-            : form.rdpPassword || null,
+        rdpPassword: form.rdpPassword || null,
         rdpDomain: form.domain || null,
         rdpSecurity: form.security || null,
         rdpIgnoreCert: form.ignoreCert,
-        vncPassword:
-          form.vncPassword === "existing_password"
-            ? undefined
-            : form.vncPassword || null,
+        vncPassword: form.vncPassword || null,
         vncUser: form.vncUser || null,
         telnetUser: form.telnetUser || null,
-        telnetPassword:
-          form.telnetPassword === "existing_password"
-            ? undefined
-            : form.telnetPassword || null,
+        telnetPassword: form.telnetPassword || null,
         jumpHosts: form.jumpHosts,
         portKnockSequence: form.portKnockSequence,
         tunnelConnections: form.serverTunnels,
@@ -1973,20 +1953,8 @@ function HostEditor({
                       </label>
                       <PasswordInput
                         className="h-8 text-xs pr-8"
-                        placeholder={
-                          form.password === "existing_password"
-                            ? t("hosts.passwordSaved")
-                            : "••••••••"
-                        }
-                        value={
-                          form.password === "existing_password"
-                            ? ""
-                            : form.password
-                        }
-                        onFocus={() => {
-                          if (form.password === "existing_password")
-                            setField("password", "");
-                        }}
+                        placeholder="••••••••"
+                        value={form.password}
                         onChange={(e) => setField("password", e.target.value)}
                       />
                     </div>
@@ -2077,8 +2045,20 @@ function HostEditor({
                         </label>
                         <PasswordInput
                           className="h-8 text-xs pr-8"
-                          placeholder={t("hosts.optional")}
-                          value={form.keyPassword}
+                          placeholder={
+                            form.keyPassword === "existing_key_password"
+                              ? t("hosts.keyPassphraseSaved")
+                              : t("hosts.optional")
+                          }
+                          value={
+                            form.keyPassword === "existing_key_password"
+                              ? ""
+                              : form.keyPassword
+                          }
+                          onFocus={() => {
+                            if (form.keyPassword === "existing_key_password")
+                              setField("keyPassword", "");
+                          }}
                           onChange={(e) =>
                             setField("keyPassword", e.target.value)
                           }
@@ -3330,20 +3310,8 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder={
-                      form.rdpPassword === "existing_password"
-                        ? t("hosts.passwordSaved")
-                        : "••••••••"
-                    }
-                    value={
-                      form.rdpPassword === "existing_password"
-                        ? ""
-                        : form.rdpPassword
-                    }
-                    onFocus={() => {
-                      if (form.rdpPassword === "existing_password")
-                        setField("rdpPassword", "");
-                    }}
+                    placeholder="••••••••"
+                    value={form.rdpPassword}
                     onChange={(e) => setField("rdpPassword", e.target.value)}
                   />
                 </div>
@@ -4118,20 +4086,8 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder={
-                      form.vncPassword === "existing_password"
-                        ? t("hosts.passwordSaved")
-                        : "••••••••"
-                    }
-                    value={
-                      form.vncPassword === "existing_password"
-                        ? ""
-                        : form.vncPassword
-                    }
-                    onFocus={() => {
-                      if (form.vncPassword === "existing_password")
-                        setField("vncPassword", "");
-                    }}
+                    placeholder="••••••••"
+                    value={form.vncPassword}
                     onChange={(e) => setField("vncPassword", e.target.value)}
                   />
                 </div>
@@ -4514,20 +4470,8 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder={
-                      form.telnetPassword === "existing_password"
-                        ? t("hosts.passwordSaved")
-                        : "••••••••"
-                    }
-                    value={
-                      form.telnetPassword === "existing_password"
-                        ? ""
-                        : form.telnetPassword
-                    }
-                    onFocus={() => {
-                      if (form.telnetPassword === "existing_password")
-                        setField("telnetPassword", "");
-                    }}
+                    placeholder="••••••••"
+                    value={form.telnetPassword}
                     onChange={(e) => setField("telnetPassword", e.target.value)}
                   />
                 </div>
@@ -5010,9 +4954,19 @@ function CredentialEditorView({
         tags: credForm.tags,
         authType: credForm.type,
         password: credForm.type === "password" ? credForm.value : null,
-        key: credForm.type === "key" ? credForm.value : null,
+        key:
+          credForm.type === "key"
+            ? credForm.value === "existing_key"
+              ? undefined
+              : credForm.value || null
+            : null,
         publicKey: credForm.type === "key" ? credForm.publicKey : null,
-        keyPassword: credForm.type === "key" ? credForm.passphrase : null,
+        keyPassword:
+          credForm.type === "key"
+            ? credForm.passphrase === "existing_key_password"
+              ? undefined
+              : credForm.passphrase || null
+            : null,
       };
       const saved = credential
         ? await updateCredential(Number(credential.id), data)
@@ -5218,7 +5172,9 @@ function CredentialEditorView({
                                 | "ssh-rsa"
                                 | "ecdsa-sha2-nistp256",
                               bits,
-                              credForm.passphrase || undefined,
+                              credForm.passphrase === "existing_key_password"
+                                ? undefined
+                                : credForm.passphrase || undefined,
                             );
                             if (result.success) {
                               setCredField("value", result.privateKey);
@@ -5272,10 +5228,17 @@ function CredentialEditorView({
                       e.target.value = "";
                     }}
                   />
+                  {credForm.value === "existing_key" && (
+                    <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
+                      {t("hosts.keySaved")} — {t("hosts.keyReplaceNotice")}
+                    </div>
+                  )}
                   <textarea
                     placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                     rows={8}
-                    value={credForm.value}
+                    value={
+                      credForm.value === "existing_key" ? "" : credForm.value
+                    }
                     onChange={(e) => setCredField("value", e.target.value)}
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
@@ -5286,8 +5249,20 @@ function CredentialEditorView({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder="••••••••"
-                    value={credForm.passphrase}
+                    placeholder={
+                      credForm.passphrase === "existing_key_password"
+                        ? t("hosts.keyPassphraseSaved")
+                        : "••••••••"
+                    }
+                    value={
+                      credForm.passphrase === "existing_key_password"
+                        ? ""
+                        : credForm.passphrase
+                    }
+                    onFocus={() => {
+                      if (credForm.passphrase === "existing_key_password")
+                        setCredField("passphrase", "");
+                    }}
                     onChange={(e) => setCredField("passphrase", e.target.value)}
                   />
                 </div>
@@ -5301,13 +5276,19 @@ function CredentialEditorView({
                       variant="outline"
                       size="sm"
                       className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                      disabled={!credForm.value || generatingPublicKey}
+                      disabled={
+                        !credForm.value ||
+                        credForm.value === "existing_key" ||
+                        generatingPublicKey
+                      }
                       onClick={async () => {
                         setGeneratingPublicKey(true);
                         try {
                           const result = await generatePublicKeyFromPrivate(
                             credForm.value,
-                            credForm.passphrase || undefined,
+                            credForm.passphrase === "existing_key_password"
+                              ? undefined
+                              : credForm.passphrase || undefined,
                           );
                           if (result?.publicKey) {
                             setCredField("publicKey", result.publicKey);
@@ -6935,12 +6916,12 @@ export function HostManager({
                                     );
                                     setEditingCredential({
                                       ...cred,
-                                      value:
-                                        (full as any).password ??
-                                        (full as any).key ??
-                                        "",
-                                      passphrase:
-                                        (full as any).keyPassword ?? "",
+                                      value: (full as any).hasKey
+                                        ? "existing_key"
+                                        : ((full as any).password ?? ""),
+                                      passphrase: (full as any).hasKeyPassword
+                                        ? "existing_key_password"
+                                        : "",
                                     });
                                   } catch {
                                     setEditingCredential(cred);

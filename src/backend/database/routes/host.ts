@@ -246,29 +246,18 @@ function normalizeImportedHost(
 }
 
 const SENSITIVE_FIELDS = [
-  "password",
   "key",
   "keyPassword",
-  "sudoPassword",
-  "autostartPassword",
   "autostartKey",
   "autostartKeyPassword",
-  "socks5Password",
-  "rdpPassword",
-  "vncPassword",
-  "telnetPassword",
 ];
 
 function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...host };
-  result.hasPassword = !!host.password;
   result.hasKey = !!host.key;
-  result.hasSudoPassword = !!host.sudoPassword;
-  result.hasRdpPassword = !!host.rdpPassword;
-  result.hasVncPassword = !!host.vncPassword;
-  result.hasTelnetPassword = !!host.telnetPassword;
+  result.hasKeyPassword = !!host.keyPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
@@ -323,9 +312,6 @@ function transformHostResponse(
     rdpIgnoreCert: !!host.rdpIgnoreCert,
     vncUser: host.vncUser || undefined,
     telnetUser: host.telnetUser || undefined,
-    hasRdpPassword: !!host.rdpPassword,
-    hasVncPassword: !!host.vncPassword,
-    hasTelnetPassword: !!host.telnetPassword,
     tunnelConnections: host.tunnelConnections
       ? JSON.parse(host.tunnelConnections as string)
       : [],

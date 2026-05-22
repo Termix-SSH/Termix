@@ -431,17 +431,10 @@ router.get(
       if (credential.password) {
         output.password = credential.password;
       }
-      if (credential.key) {
-        output.key = credential.key;
-      }
-      if (credential.privateKey) {
-        output.privateKey = credential.privateKey;
-      }
+      output.hasKey = !!credential.key;
+      output.hasKeyPassword = !!credential.keyPassword;
       if (credential.publicKey) {
         output.publicKey = credential.publicKey;
-      }
-      if (credential.keyPassword) {
-        output.keyPassword = credential.keyPassword;
       }
 
       res.json(output);
