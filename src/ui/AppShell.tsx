@@ -398,6 +398,19 @@ export function AppShell({
     });
   }
 
+  function refreshTab(id: string) {
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    if (tab.type === "terminal") {
+      const ref = tab.terminalRef?.current;
+      ref?.reconnect?.();
+    } else if (["rdp", "vnc", "telnet"].includes(tab.type)) {
+      window.dispatchEvent(
+        new CustomEvent("termix:refresh-guacamole", { detail: { tabId: id } }),
+      );
+    }
+  }
+
   function closeTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
@@ -556,7 +569,7 @@ export function AppShell({
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
             onClick={() => setSidebarWidth(266)}
           >
@@ -647,6 +660,7 @@ export function AppShell({
               activeTabId={activeTabId}
               onSetActiveTab={setActiveTabId}
               onCloseTab={closeTab}
+              onRefreshTab={refreshTab}
               onReorderTabs={setTabs}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">

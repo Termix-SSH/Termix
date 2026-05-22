@@ -8,7 +8,6 @@ import React, {
 import {
   GripVertical,
   Monitor,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -240,247 +239,239 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
     zIndex: 20,
   };
 
-  if (collapsed) {
-    return (
-      <div
-        ref={toolbarRef}
-        style={containerStyle}
-        onMouseDown={(e) => e.preventDefault()}
-      >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm overflow-hidden">
-              <button
-                type="button"
-                onMouseDown={startDrag}
-                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-grab active:cursor-grabbing"
-              >
-                <GripVertical className="size-3" />
-              </button>
-              <div className="w-px h-4 bg-border" />
-              <button
-                type="button"
-                onClick={() => setCollapsed(false)}
-                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title={t("guacamole.toolbar.expand")}
-              >
-                <Monitor className="size-3.5" />
-              </button>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {t("guacamole.toolbar.expand")}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    );
-  }
-
   return (
     <TooltipProvider delayDuration={500}>
       <div
         ref={toolbarRef}
         style={containerStyle}
         onMouseDown={(e) => e.preventDefault()}
-        className="flex items-center bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm px-0.5 py-0.5 gap-0"
       >
-        {/* Drag handle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onMouseDown={startDrag}
-              className="flex items-center justify-center h-7 px-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm cursor-grab active:cursor-grabbing"
-            >
-              <GripVertical className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {t("guacamole.toolbar.dragHandle")}
-          </TooltipContent>
-        </Tooltip>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm overflow-hidden">
+                <button
+                  type="button"
+                  onMouseDown={startDrag}
+                  className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="size-3" />
+                </button>
+                <div className="w-px h-4 bg-border" />
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(false)}
+                  className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Monitor className="size-3.5" />
+                </button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {t("guacamole.toolbar.expand")}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex items-center bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm px-0.5 py-0.5 gap-0">
+            {/* Drag handle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onMouseDown={startDrag}
+                  className="flex items-center justify-center h-7 px-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {t("guacamole.toolbar.dragHandle")}
+              </TooltipContent>
+            </Tooltip>
 
-        {/* System combos — RDP/VNC only */}
-        {isRdpVnc && (
-          <>
+            {/* System combos — RDP/VNC only */}
+            {isRdpVnc && (
+              <>
+                <div className={SEP} />
+                <TipBtn
+                  tooltip={t("guacamole.toolbar.ctrlAltDel")}
+                  onClick={() => sendCombo(0xffe3, 0xffe9, 0xffff)}
+                >
+                  CAD
+                </TipBtn>
+                <TipBtn
+                  tooltip={t("guacamole.toolbar.winL")}
+                  onClick={() => sendCombo(0xff67, 0x006c)}
+                >
+                  Win+L
+                </TipBtn>
+                <TipBtn
+                  tooltip={t("guacamole.toolbar.winKey")}
+                  onClick={() => sendCombo(0xff67)}
+                >
+                  Win
+                </TipBtn>
+              </>
+            )}
+
+            {/* Sticky modifiers — RDP/VNC only */}
+            {isRdpVnc && (
+              <>
+                <div className={SEP} />
+                {(
+                  [
+                    [
+                      "ctrl",
+                      MODIFIER_KEYSYMS.ctrl,
+                      t("guacamole.toolbar.ctrl"),
+                    ],
+                    ["alt", MODIFIER_KEYSYMS.alt, t("guacamole.toolbar.alt")],
+                    [
+                      "shift",
+                      MODIFIER_KEYSYMS.shift,
+                      t("guacamole.toolbar.shift"),
+                    ],
+                    ["win", MODIFIER_KEYSYMS.win, t("guacamole.toolbar.win")],
+                  ] as [string, number, string][]
+                ).map(([key, ks, label]) => (
+                  <Tooltip key={key}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => toggleStickyKey(ks)}
+                        className={cn(
+                          BTN_BASE,
+                          stickyKeys[ks] &&
+                            "bg-primary/15 text-primary border border-primary/30",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>
+                      {stickyKeys[ks]
+                        ? t("guacamole.toolbar.stickyActive", { key: label })
+                        : t("guacamole.toolbar.stickyInactive", { key: label })}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </>
+            )}
+
+            {/* Function key toggle */}
             <div className={SEP} />
             <TipBtn
-              tooltip={t("guacamole.toolbar.ctrlAltDel")}
-              onClick={() => sendCombo(0xffe3, 0xffe9, 0xffff)}
+              tooltip={t("guacamole.toolbar.fnToggle")}
+              onClick={() => setShowFKeys((v) => !v)}
+              className={cn(
+                showFKeys &&
+                  "bg-primary/15 text-primary border border-primary/30",
+              )}
             >
-              CAD
+              Fn
             </TipBtn>
-            <TipBtn
-              tooltip={t("guacamole.toolbar.winL")}
-              onClick={() => sendCombo(0xff67, 0x006c)}
-            >
-              Win+L
-            </TipBtn>
-            <TipBtn
-              tooltip={t("guacamole.toolbar.winKey")}
-              onClick={() => sendCombo(0xff67)}
-            >
-              Win
-            </TipBtn>
-          </>
-        )}
 
-        {/* Sticky modifiers — RDP/VNC only */}
-        {isRdpVnc && (
-          <>
+            {/* F1-F12 row */}
+            {showFKeys &&
+              FKEY_KEYSYMS.map((ks, i) => (
+                <TipBtn
+                  key={ks}
+                  tooltip={`F${i + 1}`}
+                  onClick={() => sendCombo(ks)}
+                >
+                  F{i + 1}
+                </TipBtn>
+              ))}
+
+            {/* Navigation */}
             <div className={SEP} />
-            {(
-              [
-                ["ctrl", MODIFIER_KEYSYMS.ctrl, t("guacamole.toolbar.ctrl")],
-                ["alt", MODIFIER_KEYSYMS.alt, t("guacamole.toolbar.alt")],
-                ["shift", MODIFIER_KEYSYMS.shift, t("guacamole.toolbar.shift")],
-                ["win", MODIFIER_KEYSYMS.win, t("guacamole.toolbar.win")],
-              ] as [string, number, string][]
-            ).map(([key, ks, label]) => (
-              <Tooltip key={key}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => toggleStickyKey(ks)}
-                    className={cn(
-                      BTN_BASE,
-                      stickyKeys[ks] &&
-                        "bg-primary/15 text-primary border border-primary/30",
-                    )}
-                  >
-                    {label}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={6}>
-                  {stickyKeys[ks]
-                    ? t("guacamole.toolbar.stickyActive", { key: label })
-                    : t("guacamole.toolbar.stickyInactive", { key: label })}
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </>
-        )}
-
-        {/* Function key toggle */}
-        <div className={SEP} />
-        <TipBtn
-          tooltip={t("guacamole.toolbar.fnToggle")}
-          onClick={() => setShowFKeys((v) => !v)}
-          className={cn(
-            showFKeys && "bg-primary/15 text-primary border border-primary/30",
-          )}
-        >
-          Fn
-        </TipBtn>
-
-        {/* F1-F12 row */}
-        {showFKeys &&
-          FKEY_KEYSYMS.map((ks, i) => (
             <TipBtn
-              key={ks}
-              tooltip={`F${i + 1}`}
-              onClick={() => sendCombo(ks)}
+              tooltip={t("guacamole.toolbar.esc")}
+              onClick={() => sendCombo(0xff1b)}
             >
-              F{i + 1}
+              Esc
             </TipBtn>
-          ))}
-
-        {/* Navigation */}
-        <div className={SEP} />
-        <TipBtn
-          tooltip={t("guacamole.toolbar.esc")}
-          onClick={() => sendCombo(0xff1b)}
-        >
-          Esc
-        </TipBtn>
-        <TipBtn
-          tooltip={t("guacamole.toolbar.tab")}
-          onClick={() => sendCombo(0xff09)}
-        >
-          Tab
-        </TipBtn>
-        <TipBtn
-          tooltip={t("guacamole.toolbar.home")}
-          onClick={() => sendCombo(0xff50)}
-        >
-          Home
-        </TipBtn>
-        <TipBtn
-          tooltip={t("guacamole.toolbar.end")}
-          onClick={() => sendCombo(0xff57)}
-        >
-          End
-        </TipBtn>
-        <TipBtn
-          tooltip={t("guacamole.toolbar.pageUp")}
-          onClick={() => sendCombo(0xff55)}
-        >
-          PgUp
-        </TipBtn>
-        <TipBtn
-          tooltip={t("guacamole.toolbar.pageDown")}
-          onClick={() => sendCombo(0xff56)}
-        >
-          PgDn
-        </TipBtn>
-
-        {/* Arrow cluster */}
-        <div className="flex flex-col ml-0.5">
-          <div className="flex justify-center">
-            <TipIconBtn
-              tooltip={t("guacamole.toolbar.arrowUp")}
-              onClick={() => sendCombo(0xff52)}
+            <TipBtn
+              tooltip={t("guacamole.toolbar.tab")}
+              onClick={() => sendCombo(0xff09)}
             >
-              <ChevronUp className="size-3" />
-            </TipIconBtn>
+              Tab
+            </TipBtn>
+            <TipBtn
+              tooltip={t("guacamole.toolbar.home")}
+              onClick={() => sendCombo(0xff50)}
+            >
+              Home
+            </TipBtn>
+            <TipBtn
+              tooltip={t("guacamole.toolbar.end")}
+              onClick={() => sendCombo(0xff57)}
+            >
+              End
+            </TipBtn>
+            <TipBtn
+              tooltip={t("guacamole.toolbar.pageUp")}
+              onClick={() => sendCombo(0xff55)}
+            >
+              PgUp
+            </TipBtn>
+            <TipBtn
+              tooltip={t("guacamole.toolbar.pageDown")}
+              onClick={() => sendCombo(0xff56)}
+            >
+              PgDn
+            </TipBtn>
+
+            {/* Arrow cluster */}
+            <div className="flex flex-col ml-0.5">
+              <div className="flex justify-center">
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.arrowUp")}
+                  onClick={() => sendCombo(0xff52)}
+                >
+                  <ChevronUp className="size-3" />
+                </TipIconBtn>
+              </div>
+              <div className="flex">
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.arrowLeft")}
+                  onClick={() => sendCombo(0xff51)}
+                >
+                  <ChevronLeft className="size-3" />
+                </TipIconBtn>
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.arrowDown")}
+                  onClick={() => sendCombo(0xff54)}
+                >
+                  <ChevronDown className="size-3" />
+                </TipIconBtn>
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.arrowRight")}
+                  onClick={() => sendCombo(0xff53)}
+                >
+                  <ChevronRight className="size-3" />
+                </TipIconBtn>
+              </div>
+            </div>
+
+            {/* Collapse */}
+            <div className="w-px h-5 bg-border mx-0.5 shrink-0" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(true)}
+                  className={cn(BTN_ICON)}
+                >
+                  <ChevronsLeftRight className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {t("guacamole.toolbar.collapse")}
+              </TooltipContent>
+            </Tooltip>
           </div>
-          <div className="flex">
-            <TipIconBtn
-              tooltip={t("guacamole.toolbar.arrowLeft")}
-              onClick={() => sendCombo(0xff51)}
-            >
-              <ChevronLeft className="size-3" />
-            </TipIconBtn>
-            <TipIconBtn
-              tooltip={t("guacamole.toolbar.arrowDown")}
-              onClick={() => sendCombo(0xff54)}
-            >
-              <ChevronDown className="size-3" />
-            </TipIconBtn>
-            <TipIconBtn
-              tooltip={t("guacamole.toolbar.arrowRight")}
-              onClick={() => sendCombo(0xff53)}
-            >
-              <ChevronRight className="size-3" />
-            </TipIconBtn>
-          </div>
-        </div>
-
-        {/* Session */}
-        <div className={SEP} />
-        <TipIconBtn
-          tooltip={t("guacamole.toolbar.reconnect")}
-          onClick={onReconnect}
-        >
-          <RefreshCw className="size-3.5" />
-        </TipIconBtn>
-
-        {/* Collapse */}
-        <div className="w-px h-5 bg-border mx-0.5 shrink-0" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              className={cn(BTN_ICON)}
-            >
-              <ChevronsLeftRight className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {t("guacamole.toolbar.collapse")}
-          </TooltipContent>
-        </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   );

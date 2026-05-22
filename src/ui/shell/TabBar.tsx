@@ -6,21 +6,25 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, RefreshCw, X } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
-import type { Tab } from "@/types/ui-types";
+import type { Tab, TabType } from "@/types/ui-types";
+
+const CONNECTION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
 
 export function TabBar({
   tabs,
   activeTabId,
   onSetActiveTab,
   onCloseTab,
+  onRefreshTab,
   onReorderTabs,
 }: {
   tabs: Tab[];
   activeTabId: string;
   onSetActiveTab: (id: string) => void;
   onCloseTab: (id: string) => void;
+  onRefreshTab: (id: string) => void;
   onReorderTabs: (tabs: Tab[]) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -217,16 +221,33 @@ export function TabBar({
                 {tabIcon(tab.type)}
                 {tab.type !== "dashboard" && tab.label}
                 {tab.type !== "dashboard" && (
-                  <button
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCloseTab(tab.id);
-                    }}
-                    className={`flex items-center justify-center size-5 md:size-4 rounded-sm transition-opacity text-muted-foreground hover:text-foreground hover:bg-muted ml-1 ${active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"}`}
+                  <div
+                    className={`flex items-center gap-0.5 ml-1 ${active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"}`}
                   >
-                    <X className="size-3" />
-                  </button>
+                    {CONNECTION_TAB_TYPES.includes(tab.type) && (
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRefreshTab(tab.id);
+                        }}
+                        title="Refresh connection"
+                        className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+                      >
+                        <RefreshCw className="size-3" />
+                      </button>
+                    )}
+                    <button
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseTab(tab.id);
+                      }}
+                      className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
                 )}
               </div>
             );
@@ -272,7 +293,7 @@ export function TabBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+                className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
               >
                 <ChevronDown className="size-4" />
               </Button>
@@ -313,7 +334,7 @@ export function TabBar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
             onClick={() => setOpen((o) => !o)}
           >
             <ChevronUp
@@ -325,7 +346,7 @@ export function TabBar({
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center justify-center w-full h-6 bg-sidebar border-b border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors shrink-0"
+          className="flex  items-center justify-center w-full h-6 bg-sidebar border-b border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors shrink-0"
         >
           <ChevronDown className="size-3.5" />
         </button>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, X } from "lucide-react";
+import { ListChecks, Plus, Search, X } from "lucide-react";
 import { SidebarTree } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
@@ -19,10 +19,15 @@ export function HostsPanel({
   const { t } = useTranslation();
   const [hostSearch, setHostSearch] = useState("");
   const [managerEditing, setManagerEditing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   function handleEditingChange(editing: boolean) {
     setManagerEditing(editing);
     onEditingChange?.(editing);
+  }
+
+  function toggleSelectionMode() {
+    setSelectionMode((v) => !v);
   }
 
   return (
@@ -47,6 +52,13 @@ export function HostsPanel({
             )}
           </div>
           <button
+            title={t("hosts.selectHosts")}
+            onClick={toggleSelectionMode}
+            className={`flex items-center justify-center size-7 rounded-sm shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10 border border-accent-brand/30" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 border border-transparent"}`}
+          >
+            <ListChecks className="size-3.5" />
+          </button>
+          <button
             onClick={() =>
               window.dispatchEvent(new CustomEvent("host-manager:add-host"))
             }
@@ -60,13 +72,15 @@ export function HostsPanel({
       )}
 
       <div
-        className={`flex-1 min-h-0 overflow-y-auto py-1 ${managerEditing ? "hidden" : ""}`}
+        className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
       >
         <SidebarTree
           children={hostTree?.children ?? []}
           onOpenTab={onOpenTab}
           onEditHost={onEditHost}
           query={hostSearch.trim().toLowerCase()}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={toggleSelectionMode}
         />
       </div>
 

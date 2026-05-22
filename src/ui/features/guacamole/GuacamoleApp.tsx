@@ -14,9 +14,10 @@ import type { SSHHost } from "@/types";
 
 interface GuacamoleAppProps {
   hostId?: string;
+  tabId?: string;
 }
 
-const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId }) => {
+const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId, tabId }) => {
   const { t } = useTranslation();
 
   return (
@@ -74,6 +75,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId }) => {
           <GuacamoleAppInner
             hostId={parseInt(hostId, 10)}
             hostConfig={hostConfig}
+            tabId={tabId}
           />
         );
       }}
@@ -84,11 +86,13 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId }) => {
 interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<SSHHost, "connectionType">;
+  tabId?: string;
 }
 
 const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   hostId,
   hostConfig,
+  tabId,
 }) => {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
@@ -120,6 +124,17 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
     setToken(null);
     setRetryCount((c) => c + 1);
   }, []);
+
+  useEffect(() => {
+    if (!tabId) return;
+    const handler = (e: Event) => {
+      const { tabId: eventTabId } = (e as CustomEvent).detail;
+      if (eventTabId === tabId) handleReconnect();
+    };
+    window.addEventListener("termix:refresh-guacamole", handler);
+    return () =>
+      window.removeEventListener("termix:refresh-guacamole", handler);
+  }, [tabId, handleReconnect]);
 
   if (error) {
     return (

@@ -10,8 +10,6 @@ import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
 import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
-import { WifiOff, RefreshCw } from "lucide-react";
-import { Button } from "@/components/button.tsx";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -67,7 +65,6 @@ export const GuacamoleDisplay = forwardRef<
     typeof document === "undefined" ? true : document.hasFocus(),
   );
   const [isReady, setIsReady] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -270,14 +267,19 @@ export const GuacamoleDisplay = forwardRef<
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     setIsReady(false);
-    setConnectionError(null);
 
-    let containerWidth = containerRef.current?.clientWidth || 0;
-    let containerHeight = containerRef.current?.clientHeight || 0;
+    // Wait two frames so the container is fully laid out before measuring.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    let containerWidth = rect?.width || 0;
+    let containerHeight = rect?.height || 0;
 
     if (containerWidth < 100 || containerHeight < 100) {
-      containerWidth = 1280;
-      containerHeight = 720;
+      containerWidth = window.innerWidth || 1280;
+      containerHeight = window.innerHeight || 720;
     }
 
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
@@ -306,6 +308,11 @@ export const GuacamoleDisplay = forwardRef<
       rescaleDisplay(true);
       setIsReady(true);
     };
+
+    const protocol = connectionConfig.protocol ?? connectionConfig.type;
+    if (protocol === "telnet") {
+      setIsReady(true);
+    }
 
     const mouse = new Guacamole.Mouse(displayElement);
     const sendMouseState = (state: Guacamole.Mouse.State) => {
@@ -358,6 +365,12 @@ export const GuacamoleDisplay = forwardRef<
           isConnectingRef.current = false;
           setIsReady(true);
           onConnect?.();
+          if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const w = Math.round(rect.width);
+            const h = Math.round(rect.height);
+            if (w > 0 && h > 0) client.sendSize(w, h);
+          }
           break;
         case 4:
           break;
@@ -373,7 +386,6 @@ export const GuacamoleDisplay = forwardRef<
     client.onerror = (error: Guacamole.Status) => {
       const errorMessage = error.message || t("guacamole.connectionError");
       setIsReady(false);
-      setConnectionError(errorMessage);
       isConnectingRef.current = false;
       onError?.(errorMessage);
     };
@@ -432,11 +444,7 @@ export const GuacamoleDisplay = forwardRef<
 
     if (isVisible && !hasInitiatedRef.current) {
       hasInitiatedRef.current = true;
-      requestAnimationFrame(() => {
-        if (isMountedRef.current) {
-          connect();
-        }
-      });
+      connect();
     }
   }, [isVisible, connect]);
 
@@ -500,26 +508,23 @@ export const GuacamoleDisplay = forwardRef<
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      rescaleDisplay(false);
       if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
       resizeTimeoutRef.current = setTimeout(() => {
         if (clientRef.current && containerRef.current) {
-          const w = containerRef.current.clientWidth;
-          const h = containerRef.current.clientHeight;
+          const rect = containerRef.current.getBoundingClientRect();
+          const w = Math.round(rect.width);
+          const h = Math.round(rect.height);
           if (w > 0 && h > 0) clientRef.current.sendSize(w, h);
         }
-      }, 200);
+      }, 150);
     });
 
     resizeObserver.observe(containerRef.current);
 
-    const initialTimeout = setTimeout(() => rescaleDisplay(true), 100);
-
     return () => {
       resizeObserver.disconnect();
-      clearTimeout(initialTimeout);
     };
-  }, [rescaleDisplay]);
+  }, []);
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
@@ -555,18 +560,6 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [isReady, syncClipboard]);
 
-  const handleReconnect = useCallback(() => {
-    setConnectionError(null);
-    hasInitiatedRef.current = false;
-    isConnectingRef.current = false;
-    if (clientRef.current) {
-      clientRef.current.disconnect();
-      clientRef.current = null;
-    }
-    displayElementRef.current = null;
-    connect();
-  }, [connect]);
-
   const connectingMessage = t("guacamole.connecting", {
     type: (
       connectionConfig.protocol ||
@@ -590,32 +583,7 @@ export const GuacamoleDisplay = forwardRef<
         }}
       />
 
-      {connectionError ? (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-[100]"
-          style={{ backgroundColor: "var(--bg-base)" }}
-        >
-          <WifiOff className="size-10" style={{ color: "var(--foreground)" }} />
-          <p
-            className="text-sm font-semibold"
-            style={{ color: "var(--foreground)" }}
-          >
-            {t("guacamole.connectionFailed")}
-          </p>
-          <p
-            className="text-xs max-w-xs text-center"
-            style={{ color: "var(--foreground-secondary)" }}
-          >
-            {connectionError}
-          </p>
-          <Button variant="outline" size="sm" onClick={handleReconnect}>
-            <RefreshCw className="size-4 mr-2" />
-            {t("guacamole.reconnect")}
-          </Button>
-        </div>
-      ) : (
-        <SimpleLoader visible={!isReady} message={connectingMessage} />
-      )}
+      <SimpleLoader visible={!isReady} message={connectingMessage} />
     </div>
   );
 });

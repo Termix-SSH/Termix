@@ -159,14 +159,20 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     vncPort: h.vncPort ?? (h.connectionType === "vnc" ? h.port : 5900),
     telnetPort: h.telnetPort ?? (h.connectionType === "telnet" ? h.port : 23),
     rdpUser: h.rdpUser,
-    rdpPassword: h.rdpPassword,
+    rdpPassword: (h as any).hasRdpPassword
+      ? "existing_password"
+      : (h.rdpPassword ?? ""),
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
-    vncPassword: h.vncPassword,
+    vncPassword: (h as any).hasVncPassword
+      ? "existing_password"
+      : (h.vncPassword ?? ""),
     vncUser: h.vncUser,
     telnetUser: h.telnetUser,
-    telnetPassword: h.telnetPassword,
+    telnetPassword: (h as any).hasTelnetPassword
+      ? "existing_password"
+      : (h.telnetPassword ?? ""),
     quickActions: (h.quickActions ?? []).map((a: any) => ({
       name: a.name,
       snippetId: String(a.snippetId),
@@ -945,14 +951,20 @@ function HostEditor({
       quickActions:
         host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
       rdpUser: host?.rdpUser ?? "",
-      rdpPassword: host?.rdpPassword ?? "",
+      rdpPassword: (host as any)?.hasRdpPassword
+        ? "existing_password"
+        : (host?.rdpPassword ?? ""),
       domain: host?.domain ?? "",
       security: host?.security ?? "",
       ignoreCert: host?.ignoreCert ?? false,
-      vncPassword: host?.vncPassword ?? "",
+      vncPassword: (host as any)?.hasVncPassword
+        ? "existing_password"
+        : (host?.vncPassword ?? ""),
       vncUser: host?.vncUser ?? "",
       telnetUser: host?.telnetUser ?? "",
-      telnetPassword: host?.telnetPassword ?? "",
+      telnetPassword: (host as any)?.hasTelnetPassword
+        ? "existing_password"
+        : (host?.telnetPassword ?? ""),
       guacamoleConfig: host?.guacamoleConfig ?? ({} as Record<string, any>),
       statsConfig: host?.statsConfig ?? {
         statusCheckEnabled: true,
@@ -1121,14 +1133,23 @@ function HostEditor({
         telnetPort: Number(form.telnetPort),
         forceKeyboardInteractive: form.forceKeyboardInteractive,
         rdpUser: form.rdpUser || null,
-        rdpPassword: form.rdpPassword || null,
+        rdpPassword:
+          form.rdpPassword === "existing_password"
+            ? undefined
+            : form.rdpPassword || null,
         rdpDomain: form.domain || null,
         rdpSecurity: form.security || null,
         rdpIgnoreCert: form.ignoreCert,
-        vncPassword: form.vncPassword || null,
+        vncPassword:
+          form.vncPassword === "existing_password"
+            ? undefined
+            : form.vncPassword || null,
         vncUser: form.vncUser || null,
         telnetUser: form.telnetUser || null,
-        telnetPassword: form.telnetPassword || null,
+        telnetPassword:
+          form.telnetPassword === "existing_password"
+            ? undefined
+            : form.telnetPassword || null,
         jumpHosts: form.jumpHosts,
         portKnockSequence: form.portKnockSequence,
         tunnelConnections: form.serverTunnels,
@@ -1187,6 +1208,9 @@ function HostEditor({
   };
 
   const authMethod = form.authType;
+  const selectedCredential = credentials.find(
+    (c) => c.id === form.credentialId,
+  );
 
   const handleProtocolToggle = (
     proto: keyof typeof protocols,
@@ -1934,6 +1958,11 @@ function HostEditor({
                     <Input
                       placeholder="root"
                       value={form.username}
+                      disabled={
+                        authMethod === "credential" &&
+                        !!selectedCredential?.username &&
+                        !form.overrideCredentialUsername
+                      }
                       onChange={(e) => setField("username", e.target.value)}
                     />
                   </div>
@@ -1985,13 +2014,23 @@ function HostEditor({
                           </div>
                         </div>
                         {form.keySubTab === "paste" ? (
-                          <textarea
-                            placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-                            rows={5}
-                            value={form.key}
-                            onChange={(e) => setField("key", e.target.value)}
-                            className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                          />
+                          <div className="flex flex-col gap-1.5">
+                            {form.key === "existing_key" && (
+                              <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
+                                {t("hosts.keySaved")} —{" "}
+                                {t("hosts.keyReplaceNotice")}
+                              </div>
+                            )}
+                            <textarea
+                              placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                              rows={5}
+                              value={
+                                form.key === "existing_key" ? "" : form.key
+                              }
+                              onChange={(e) => setField("key", e.target.value)}
+                              className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                            />
+                          </div>
                         ) : (
                           <div className="flex flex-col gap-2">
                             <label
@@ -1999,9 +2038,11 @@ function HostEditor({
                             >
                               <Upload className="size-4" />
                               <span className="text-xs">
-                                {form.key
-                                  ? t("hosts.keyFileLoaded")
-                                  : t("hosts.keyUploadClick")}
+                                {form.key === "existing_key"
+                                  ? t("hosts.keySaved")
+                                  : form.key
+                                    ? t("hosts.keyFileLoaded")
+                                    : t("hosts.keyUploadClick")}
                               </span>
                               <input
                                 type="file"
@@ -2022,7 +2063,9 @@ function HostEditor({
                                 onClick={() => setField("key", "")}
                                 className="text-[10px] text-destructive self-start"
                               >
-                                {t("hosts.clearKey")}
+                                {form.key === "existing_key"
+                                  ? t("hosts.replaceKey")
+                                  : t("hosts.clearKey")}
                               </button>
                             )}
                           </div>
@@ -2079,9 +2122,17 @@ function HostEditor({
                         </label>
                         <select
                           value={form.credentialId}
-                          onChange={(e) =>
-                            setField("credentialId", e.target.value)
-                          }
+                          onChange={(e) => {
+                            const newId = e.target.value;
+                            setField("credentialId", newId);
+                            if (!form.overrideCredentialUsername) {
+                              const cred = credentials.find(
+                                (c) => c.id === newId,
+                              );
+                              if (cred?.username)
+                                setField("username", cred.username);
+                            }
+                          }}
                           className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                         >
                           <option value="">
@@ -2089,38 +2140,34 @@ function HostEditor({
                           </option>
                           {credentials.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.name} ({c.username})
+                              {c.username
+                                ? `${c.name} (${c.username})`
+                                : c.name}
                             </option>
                           ))}
                         </select>
                       </div>
-                      <div className="flex items-center justify-between col-span-2 pt-1">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-medium">
-                            {t("hosts.overrideCredentialUsername")}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {t("hosts.overrideCredentialUsernameDesc")}
-                          </span>
-                        </div>
-                        <FakeSwitch
-                          checked={form.overrideCredentialUsername}
-                          onChange={(v) =>
-                            setField("overrideCredentialUsername", v)
-                          }
-                        />
-                      </div>
-                      {form.overrideCredentialUsername && (
-                        <div className="flex flex-col gap-1.5 col-span-2">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            {t("hosts.username")}
-                          </label>
-                          <Input
-                            placeholder="root"
-                            value={form.username}
-                            onChange={(e) =>
-                              setField("username", e.target.value)
-                            }
+                      {selectedCredential?.username && (
+                        <div className="flex items-center justify-between col-span-2 pt-1">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-medium">
+                              {t("hosts.overrideCredentialUsername")}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {t("hosts.overrideCredentialUsernameDesc")}
+                            </span>
+                          </div>
+                          <FakeSwitch
+                            checked={form.overrideCredentialUsername}
+                            onChange={(v) => {
+                              setField("overrideCredentialUsername", v);
+                              if (!v && selectedCredential?.username) {
+                                setField(
+                                  "username",
+                                  selectedCredential.username,
+                                );
+                              }
+                            }}
                           />
                         </div>
                       )}
@@ -3283,8 +3330,20 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder="••••••••"
-                    value={form.rdpPassword}
+                    placeholder={
+                      form.rdpPassword === "existing_password"
+                        ? t("hosts.passwordSaved")
+                        : "••••••••"
+                    }
+                    value={
+                      form.rdpPassword === "existing_password"
+                        ? ""
+                        : form.rdpPassword
+                    }
+                    onFocus={() => {
+                      if (form.rdpPassword === "existing_password")
+                        setField("rdpPassword", "");
+                    }}
                     onChange={(e) => setField("rdpPassword", e.target.value)}
                   />
                 </div>
@@ -4059,8 +4118,20 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder="••••••••"
-                    value={form.vncPassword}
+                    placeholder={
+                      form.vncPassword === "existing_password"
+                        ? t("hosts.passwordSaved")
+                        : "••••••••"
+                    }
+                    value={
+                      form.vncPassword === "existing_password"
+                        ? ""
+                        : form.vncPassword
+                    }
+                    onFocus={() => {
+                      if (form.vncPassword === "existing_password")
+                        setField("vncPassword", "");
+                    }}
                     onChange={(e) => setField("vncPassword", e.target.value)}
                   />
                 </div>
@@ -4443,8 +4514,20 @@ function HostEditor({
                   </label>
                   <PasswordInput
                     className="h-8 text-xs pr-8"
-                    placeholder="••••••••"
-                    value={form.telnetPassword}
+                    placeholder={
+                      form.telnetPassword === "existing_password"
+                        ? t("hosts.passwordSaved")
+                        : "••••••••"
+                    }
+                    value={
+                      form.telnetPassword === "existing_password"
+                        ? ""
+                        : form.telnetPassword
+                    }
+                    onFocus={() => {
+                      if (form.telnetPassword === "existing_password")
+                        setField("telnetPassword", "");
+                    }}
                     onChange={(e) => setField("telnetPassword", e.target.value)}
                   />
                 </div>

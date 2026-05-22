@@ -187,6 +187,7 @@ export type Tab = {
   host?: Host;
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
+    reconnect?: () => void;
   } | null>;
 };
 

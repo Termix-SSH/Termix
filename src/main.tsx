@@ -12,6 +12,7 @@ import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
+import { useTranslation } from "react-i18next";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -177,19 +178,36 @@ function App() {
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
 
+  const { t } = useTranslation();
+  const isTransitioning = phase === "fading-in" || phase === "fading-out";
+
   if (phase === "verifying") {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <>
+      {isTransitioning && (
+        <div className="fixed inset-0 z-0 flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">
+              {t("common.loading")}
+            </p>
+          </div>
+        </div>
+      )}
+
       {showApp && (
         <div
-          className="fixed inset-0 z-0 transition-opacity duration-[450ms] ease-in-out"
+          className="fixed inset-0 z-10 transition-opacity duration-[450ms] ease-in-out"
           style={{
             opacity: appOpacity,
             pointerEvents: phase === "idle-app" ? "auto" : "none",
@@ -203,7 +221,7 @@ function App() {
 
       {showAuth && (
         <div
-          className="fixed inset-0 z-10 transition-opacity duration-[450ms] ease-in-out"
+          className="fixed inset-0 z-20 transition-opacity duration-[450ms] ease-in-out"
           style={{
             opacity: authOpacity,
             pointerEvents: phase === "idle-auth" ? "auto" : "none",

@@ -1,17 +1,37 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
+  Check,
+  ChevronDown,
   ChevronRight,
+  Copy,
   Cpu,
   FolderOpen,
   FolderSearch,
+  Link,
   MemoryStick,
   Monitor,
+  MoreHorizontal,
   Network,
   Pencil,
+  Pin,
   Server,
   Terminal,
+  Trash2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
+import { toast } from "sonner";
+import { bulkUpdateSSHHosts, deleteSSHHost } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
@@ -80,9 +100,6 @@ function folderHasMatch(folder: HostFolder, query: string): boolean {
   return false;
 }
 
-// Walks the visible tree in render order and pushes every visible row
-// (folder header + hosts) into `out`. This gives us a flat ordered list
-// to assign a single global stripe counter across folders and hosts.
 function collectVisibleRows(
   children: (Host | HostFolder)[],
   query: string,
@@ -93,7 +110,7 @@ function collectVisibleRows(
     if (isFolder(child)) {
       const visible = query ? folderHasMatch(child, query) : true;
       if (!visible) continue;
-      out.push(child); // folder header row counts
+      out.push(child);
       const childOpen = query ? true : openSet.has(child.name);
       if (childOpen) collectVisibleRows(child.children, query, openSet, out);
     } else {
@@ -101,6 +118,29 @@ function collectVisibleRows(
     }
   }
   return out;
+}
+
+function collectAllHosts(children: (Host | HostFolder)[]): Host[] {
+  const out: Host[] = [];
+  for (const child of children) {
+    if (isFolder(child)) {
+      out.push(...collectAllHosts(child.children));
+    } else {
+      out.push(child);
+    }
+  }
+  return out;
+}
+
+function collectAllFolders(children: (Host | HostFolder)[]): string[] {
+  const names = new Set<string>();
+  for (const child of children) {
+    if (isFolder(child)) {
+      names.add(child.name);
+      for (const f of collectAllFolders(child.children)) names.add(f);
+    }
+  }
+  return Array.from(names).sort();
 }
 
 function folderHostCount(folder: HostFolder): {
@@ -126,25 +166,47 @@ export function HostItem({
   host,
   onOpenTab,
   onEditHost,
+  onDelete,
   query = "",
   stripeIndex = 0,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+  isMenuOpen = false,
+  onMenuOpenChange,
 }: {
   host: Host;
   onOpenTab: (type: TabType) => void;
   onEditHost?: () => void;
+  onDelete: () => void;
   query?: string;
   stripeIndex?: number;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  isMenuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const [hovered, setHovered] = useState(false);
+  const { t } = useTranslation();
+  const metricsEnabled =
+    host.enableSsh && host.statsConfig?.metricsEnabled !== false;
 
   if (query && !hostMatchesQuery(host, query)) return null;
 
   return (
     <div
-      className={`relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${
+        selected
+          ? "bg-accent-brand/5"
+          : stripeIndex % 2 === 1
+            ? "bg-muted/20"
+            : ""
+      } ${isMenuOpen ? "bg-muted/40" : ""}`}
       onClick={() => {
+        if (selectionMode) {
+          onToggleSelect?.();
+          return;
+        }
         if (host.enableSsh) onOpenTab("terminal");
         else if (host.enableRdp) onOpenTab("rdp");
         else if (host.enableVnc) onOpenTab("vnc");
@@ -158,62 +220,90 @@ export function HostItem({
       />
 
       <div className="flex flex-col flex-1 min-w-0 px-2.5 pt-2 pb-1.5 gap-1">
-        {/* Name + dot */}
+        {/* Name row */}
         <div className="flex items-center gap-1.5 min-w-0">
+          {selectionMode && (
+            <div
+              className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+            >
+              {selected && <Check className="size-2 text-background" />}
+            </div>
+          )}
           <span
             className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/25"}`}
           />
           <span className="text-[13px] font-medium truncate text-foreground leading-none">
             {host.name}
           </span>
+          {host.pin && (
+            <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
+          )}
         </div>
-        {/* Address — only visible on hover */}
+
+        {/* Address — only visible on hover or while menu is open */}
         <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${hovered ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}
+          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 group-hover:opacity-100 group-hover:h-auto ${isMenuOpen ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
         >
           {host.username}@{host.ip}
         </span>
 
-        {/* Action tray — slides open on hover */}
+        {/* Tag pills */}
+        {host.tags && host.tags.length > 0 && (
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden pl-3">
+            {host.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="text-[9px] px-1 py-px border border-border/50 bg-muted/30 text-muted-foreground/60 lowercase shrink-0 leading-none"
+              >
+                {tag}
+              </span>
+            ))}
+            {host.tags.length > 4 && (
+              <span className="text-[9px] text-muted-foreground/40 shrink-0">
+                +{host.tags.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Action tray — slides open on CSS hover or while menu is open */}
         <div
-          className="overflow-hidden transition-all duration-150 ease-out"
-          style={{
-            maxHeight: hovered ? "200px" : "0px",
-            opacity: hovered ? 1 : 0,
-          }}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[200px] group-hover:opacity-100 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[200px] !opacity-100" : ""}`}
         >
-          {host.online && (host.cpu != null || host.ram != null) && (
-            <div className="flex items-center gap-3 pl-3">
-              {host.cpu != null && (
-                <div className="flex items-center gap-1">
-                  <Cpu className="size-2.5 shrink-0 text-muted-foreground/30" />
-                  <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
-                      style={{ width: `${host.cpu}%` }}
-                    />
+          {host.online &&
+            ((host.cpu != null && host.cpu > 0) ||
+              (host.ram != null && host.ram > 0)) && (
+              <div className="flex items-center gap-3 pl-3">
+                {host.cpu != null && host.cpu > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Cpu className="size-2.5 shrink-0 text-muted-foreground/30" />
+                    <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                        style={{ width: `${host.cpu}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] tabular-nums text-muted-foreground/40">
+                      {host.cpu}%
+                    </span>
                   </div>
-                  <span className="text-[9px] tabular-nums text-muted-foreground/40">
-                    {host.cpu}%
-                  </span>
-                </div>
-              )}
-              {host.ram != null && (
-                <div className="flex items-center gap-1">
-                  <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/30" />
-                  <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
-                      style={{ width: `${host.ram}%` }}
-                    />
+                )}
+                {host.ram != null && host.ram > 0 && (
+                  <div className="flex items-center gap-1">
+                    <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/30" />
+                    <div className="w-9 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                        style={{ width: `${host.ram}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] tabular-nums text-muted-foreground/40">
+                      {host.ram}%
+                    </span>
                   </div>
-                  <span className="text-[9px] tabular-nums text-muted-foreground/40">
-                    {host.ram}%
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
           <div className="flex items-center flex-wrap gap-1 pt-1.5 pl-2 pb-1">
             {getSshActions(host).map(({ type, icon: Icon, label }) => (
@@ -288,6 +378,162 @@ export function HostItem({
                 </button>
               </>
             )}
+            <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  title="More options"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(
+                      `${host.username}@${host.ip}`,
+                    );
+                    toast.success(t("hosts.copiedToClipboard"));
+                  }}
+                >
+                  <Copy className="size-3.5 mr-2" />
+                  {t("hosts.copyAddress")}
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Link className="size-3.5 mr-2" />
+                    {t("hosts.copyLink")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {host.enableSsh && host.enableTerminal && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=terminal&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.terminalUrlCopied"));
+                        }}
+                      >
+                        <Terminal className="size-3.5 mr-2" />
+                        {t("hosts.copyTerminalUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableFileManager && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=file-manager&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.fileManagerUrlCopied"));
+                        }}
+                      >
+                        <FolderSearch className="size-3.5 mr-2" />
+                        {t("hosts.copyFileManagerUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableTunnel && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=tunnel&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.tunnelUrlCopied"));
+                        }}
+                      >
+                        <Network className="size-3.5 mr-2" />
+                        {t("hosts.copyTunnelUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && host.enableDocker && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=docker&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.dockerUrlCopied"));
+                        }}
+                      >
+                        <Box className="size-3.5 mr-2" />
+                        {t("hosts.copyDockerUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableSsh && metricsEnabled && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=server-stats&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.serverStatsUrlCopied"));
+                        }}
+                      >
+                        <Server className="size-3.5 mr-2" />
+                        {t("hosts.copyServerStatsUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableRdp && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=rdp&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.rdpUrlCopied"));
+                        }}
+                      >
+                        <Monitor className="size-3.5 mr-2" />
+                        {t("hosts.copyRdpUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableVnc && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=vnc&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.vncUrlCopied"));
+                        }}
+                      >
+                        <Monitor className="size-3.5 mr-2" />
+                        {t("hosts.copyVncUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                    {host.enableTelnet && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}?view=telnet&hostId=${host.id}`,
+                          );
+                          toast.success(t("hosts.telnetUrlCopied"));
+                        }}
+                      >
+                        <Terminal className="size-3.5 mr-2" />
+                        {t("hosts.copyTelnetUrlAction")}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                >
+                  <Trash2 className="size-3.5 mr-2" />
+                  {t("common.delete")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -300,19 +546,31 @@ export function FolderItem({
   depth = 0,
   onOpenTab,
   onEditHost,
+  onDeleteHost,
   query = "",
   stripeMap,
   openFolders,
   onToggleFolder,
+  selectionMode,
+  selectedHostIds,
+  onToggleSelect,
+  openMenuHostId,
+  onMenuOpenChange,
 }: {
   folder: HostFolder;
   depth?: number;
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost?: (host: Host) => void;
+  onDeleteHost: (host: Host) => void;
   query?: string;
   stripeMap: Map<Host | HostFolder, number>;
   openFolders: Set<string>;
   onToggleFolder: (name: string) => void;
+  selectionMode: boolean;
+  selectedHostIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  openMenuHostId: string | null;
+  onMenuOpenChange: (hostId: string | null) => void;
 }) {
   const { total, online } = folderHostCount(folder);
 
@@ -353,10 +611,16 @@ export function FolderItem({
                 depth={depth + 1}
                 onOpenTab={onOpenTab}
                 onEditHost={onEditHost}
+                onDeleteHost={onDeleteHost}
                 query={query}
                 stripeMap={stripeMap}
                 openFolders={openFolders}
                 onToggleFolder={onToggleFolder}
+                selectionMode={selectionMode}
+                selectedHostIds={selectedHostIds}
+                onToggleSelect={onToggleSelect}
+                openMenuHostId={openMenuHostId}
+                onMenuOpenChange={onMenuOpenChange}
               />
             ) : (
               <HostItem
@@ -364,8 +628,16 @@ export function FolderItem({
                 host={child}
                 onOpenTab={(t) => onOpenTab(child, t)}
                 onEditHost={onEditHost ? () => onEditHost(child) : undefined}
+                onDelete={() => onDeleteHost(child)}
                 query={query}
                 stripeIndex={stripeMap.get(child) ?? 0}
+                selectionMode={selectionMode}
+                selected={selectedHostIds.has(child.id)}
+                onToggleSelect={() => onToggleSelect(child.id)}
+                isMenuOpen={openMenuHostId === child.id}
+                onMenuOpenChange={(open) =>
+                  onMenuOpenChange(open ? child.id : null)
+                }
               />
             ),
           )}
@@ -375,19 +647,31 @@ export function FolderItem({
   );
 }
 
-// Top-level tree renderer — owns open state and global stripe index.
 export function SidebarTree({
   children,
   onOpenTab,
   onEditHost,
   query = "",
+  selectionMode,
+  onToggleSelectionMode,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost: (host: Host) => void;
   query?: string;
+  selectionMode: boolean;
+  onToggleSelectionMode: () => void;
 }) {
+  const { t } = useTranslation();
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+  const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
 
   function toggleFolder(name: string) {
     setOpenFolders((prev) => {
@@ -397,36 +681,308 @@ export function SidebarTree({
     });
   }
 
+  function toggleSelect(id: string) {
+    setSelectedHostIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function handleDeleteHost(host: Host) {
+    setConfirmDialog({
+      message: t("hosts.deleteHostConfirm", { name: host.name }),
+      onConfirm: async () => {
+        try {
+          await deleteSSHHost(Number(host.id));
+          window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+          toast.success(t("hosts.deletedCount", { count: 1 }));
+        } catch {
+          toast.error(t("hosts.failedToDeleteCount", { count: 1 }));
+        }
+      },
+    });
+  }
+
+  const allHosts = collectAllHosts(children);
+  const allFolders = collectAllFolders(children);
+
   const visibleRows = collectVisibleRows(children, query, openFolders);
   const stripeMap = new Map<Host | HostFolder, number>(
     visibleRows.map((r, i) => [r, i]),
   );
 
   return (
-    <>
-      {children.map((child, i) =>
-        isFolder(child) ? (
-          <FolderItem
-            key={i}
-            folder={child}
-            onOpenTab={onOpenTab}
-            onEditHost={onEditHost}
-            query={query}
-            stripeMap={stripeMap}
-            openFolders={openFolders}
-            onToggleFolder={toggleFolder}
-          />
-        ) : (
-          <HostItem
-            key={i}
-            host={child}
-            onOpenTab={(t) => onOpenTab(child, t)}
-            onEditHost={() => onEditHost(child)}
-            query={query}
-            stripeIndex={stripeMap.get(child) ?? 0}
-          />
-        ),
+    <div className="relative flex flex-col flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {children.map((child, i) =>
+          isFolder(child) ? (
+            <FolderItem
+              key={i}
+              folder={child}
+              onOpenTab={onOpenTab}
+              onEditHost={onEditHost}
+              onDeleteHost={handleDeleteHost}
+              query={query}
+              stripeMap={stripeMap}
+              openFolders={openFolders}
+              onToggleFolder={toggleFolder}
+              selectionMode={selectionMode}
+              selectedHostIds={selectedHostIds}
+              onToggleSelect={toggleSelect}
+              openMenuHostId={openMenuHostId}
+              onMenuOpenChange={setOpenMenuHostId}
+            />
+          ) : (
+            <HostItem
+              key={i}
+              host={child}
+              onOpenTab={(type) => onOpenTab(child, type)}
+              onEditHost={() => onEditHost(child)}
+              onDelete={() => handleDeleteHost(child)}
+              query={query}
+              stripeIndex={stripeMap.get(child) ?? 0}
+              selectionMode={selectionMode}
+              selected={selectedHostIds.has(child.id)}
+              onToggleSelect={() => toggleSelect(child.id)}
+              isMenuOpen={openMenuHostId === child.id}
+              onMenuOpenChange={(open) =>
+                setOpenMenuHostId(open ? child.id : null)
+              }
+            />
+          ),
+        )}
+      </div>
+
+      {/* Floating selection bar */}
+      {selectionMode && (
+        <div className="absolute bottom-4 inset-x-3 z-50">
+          <div className="bg-popover border border-border shadow-xl px-2.5 py-2 flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold tabular-nums shrink-0">
+              {t("hosts.nSelected", { count: selectedHostIds.size })}
+            </span>
+            <div className="w-px h-4 bg-border mx-0.5" />
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors"
+              onClick={() => {
+                if (selectedHostIds.size === allHosts.length)
+                  setSelectedHostIds(new Set());
+                else setSelectedHostIds(new Set(allHosts.map((h) => h.id)));
+              }}
+            >
+              {selectedHostIds.size === allHosts.length
+                ? t("hosts.deselectAll")
+                : t("hosts.selectAll")}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+                  disabled={selectedHostIds.size === 0}
+                >
+                  {t("hosts.featuresMenu")} <ChevronDown className="size-2.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                {[
+                  {
+                    labelKey: "hosts.enableTerminalFeature",
+                    field: "enableTerminal",
+                    value: true,
+                    icon: Terminal,
+                  },
+                  {
+                    labelKey: "hosts.disableTerminalFeature",
+                    field: "enableTerminal",
+                    value: false,
+                    icon: Terminal,
+                  },
+                  {
+                    labelKey: "hosts.enableFilesFeature",
+                    field: "enableFileManager",
+                    value: true,
+                    icon: FolderSearch,
+                  },
+                  {
+                    labelKey: "hosts.disableFilesFeature",
+                    field: "enableFileManager",
+                    value: false,
+                    icon: FolderSearch,
+                  },
+                  {
+                    labelKey: "hosts.enableTunnelsFeature",
+                    field: "enableTunnel",
+                    value: true,
+                    icon: Network,
+                  },
+                  {
+                    labelKey: "hosts.disableTunnelsFeature",
+                    field: "enableTunnel",
+                    value: false,
+                    icon: Network,
+                  },
+                  {
+                    labelKey: "hosts.enableDockerFeature",
+                    field: "enableDocker",
+                    value: true,
+                    icon: Box,
+                  },
+                  {
+                    labelKey: "hosts.disableDockerFeature",
+                    field: "enableDocker",
+                    value: false,
+                    icon: Box,
+                  },
+                ].map(({ labelKey, field, value, icon: Icon }) => (
+                  <DropdownMenuItem
+                    key={labelKey}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        await bulkUpdateSSHHosts(ids, { [field]: value });
+                        window.dispatchEvent(
+                          new CustomEvent("termix:hosts-changed"),
+                        );
+                        toast.success(
+                          t("hosts.updatedCount", { count: ids.length }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.bulkUpdateFailed"));
+                      }
+                    }}
+                  >
+                    <Icon className="size-3.5 mr-2" />
+                    {t(labelKey)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+                  disabled={selectedHostIds.size === 0}
+                >
+                  {t("hosts.moveMenu")} <ChevronDown className="size-2.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const ids = Array.from(selectedHostIds).map(Number);
+                    try {
+                      await bulkUpdateSSHHosts(ids, { folder: "" });
+                      window.dispatchEvent(
+                        new CustomEvent("termix:hosts-changed"),
+                      );
+                      toast.success(t("hosts.movedToRoot"));
+                    } catch {
+                      toast.error(t("hosts.failedToMoveHosts"));
+                    }
+                  }}
+                >
+                  <FolderOpen className="size-3.5 mr-2" />
+                  {t("hosts.noFolderOption")}
+                </DropdownMenuItem>
+                {allFolders.map((f) => (
+                  <DropdownMenuItem
+                    key={f}
+                    onClick={async () => {
+                      const ids = Array.from(selectedHostIds).map(Number);
+                      try {
+                        await bulkUpdateSSHHosts(ids, { folder: f });
+                        window.dispatchEvent(
+                          new CustomEvent("termix:hosts-changed"),
+                        );
+                        toast.success(t("hosts.movedToFolder", { folder: f }));
+                      } catch {
+                        toast.error(t("hosts.failedToMoveHosts"));
+                      }
+                    }}
+                  >
+                    <FolderOpen className="size-3.5 mr-2" />
+                    {f}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
+              disabled={selectedHostIds.size === 0}
+              onClick={() => {
+                setConfirmDialog({
+                  message: t("hosts.deleteHostsConfirm", {
+                    count: selectedHostIds.size,
+                    plural: selectedHostIds.size !== 1 ? "s" : "",
+                  }),
+                  onConfirm: async () => {
+                    const ids = Array.from(selectedHostIds);
+                    const results = await Promise.allSettled(
+                      ids.map((id) => deleteSSHHost(Number(id))),
+                    );
+                    const succeeded = results.filter(
+                      (r) => r.status === "fulfilled",
+                    ).length;
+                    const failed = results.filter(
+                      (r) => r.status === "rejected",
+                    ).length;
+                    setSelectedHostIds(new Set());
+                    window.dispatchEvent(
+                      new CustomEvent("termix:hosts-changed"),
+                    );
+                    if (succeeded > 0)
+                      toast.success(
+                        t("hosts.deletedCount", { count: succeeded }),
+                      );
+                    if (failed > 0)
+                      toast.error(
+                        t("hosts.failedToDeleteCount", { count: failed }),
+                      );
+                  },
+                });
+              }}
+            >
+              {t("hosts.deleteSelected")}
+            </button>
+            <div className="flex-1" />
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors"
+              onClick={() => {
+                onToggleSelectionMode();
+                setSelectedHostIds(new Set());
+              }}
+            >
+              {t("hosts.cancelSelection")}
+            </button>
+          </div>
+        </div>
       )}
-    </>
+
+      {/* Confirm dialog */}
+      {confirmDialog && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
+            <p className="text-sm text-foreground">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                {t("hosts.cancelBtn")}
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(null);
+                }}
+                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+              >
+                {t("hosts.deleteConfirmBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
