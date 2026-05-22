@@ -235,6 +235,10 @@ export interface Credential {
   password?: string;
   key?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string;
+  /** True when a cert is stored but certPublicKey content is redacted in list responses */
+  hasCertPublicKey?: boolean;
   keyPassword?: string;
   keyType?: string;
   usageCount: number;
@@ -256,6 +260,8 @@ export interface CredentialBackend {
   key: string;
   privateKey?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string;
   keyPassword: string | null;
   keyType?: string;
   detectedKeyType: string;
@@ -275,6 +281,8 @@ export interface CredentialData {
   password?: string;
   key?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string | null;
   keyPassword?: string;
   keyType?: string;
 }

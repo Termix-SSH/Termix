@@ -10,7 +10,17 @@
     "sshKey": "SSH Key",
     "uploadPrivateKeyFile": "Upload Private Key File",
     "searchCredentials": "Search credentials...",
-    "addCredential": "Add Credential"
+    "addCredential": "Add Credential",
+    "caCertificate": "CA Certificate (-cert.pub)",
+    "caCertificateDescription": "Optional: Upload or paste the CA-signed certificate file (e.g. id_ed25519-cert.pub). Required when your SSH server uses certificate-based authorization.",
+    "uploadCertFile": "Upload -cert.pub File",
+    "clearCert": "Clear",
+    "certLoaded": "Certificate loaded",
+    "certPublicKeyLabel": "CA Certificate",
+    "certTypeLabel": "Certificate type",
+    "pasteOrUploadCert": "Paste or upload a -cert.pub certificate...",
+    "hasCaCert": "Has CA Certificate",
+    "noCaCert": "No CA Certificate"
   },
   "homepage": {
     "failedToLoadAlerts": "Failed to load alerts",

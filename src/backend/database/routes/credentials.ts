@@ -147,6 +147,7 @@ router.post(
       key,
       keyPassword,
       keyType,
+      certPublicKey,
     } = req.body;
 
     if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
@@ -230,6 +231,8 @@ router.post(
         keyPassword: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
+        certPublicKey:
+          authType === "key" && certPublicKey ? certPublicKey.trim() : null,
         usageCount: 0,
         lastUsed: null,
       };
@@ -436,6 +439,12 @@ router.get(
       if (credential.publicKey) {
         output.publicKey = credential.publicKey;
       }
+      if (credential.certPublicKey) {
+        output.certPublicKey = credential.certPublicKey;
+      }
+      if (credential.keyPassword) {
+        output.keyPassword = credential.keyPassword;
+      }
 
       res.json(output);
     } catch (err) {
@@ -564,6 +573,9 @@ router.put(
       }
       if (updateData.keyPassword !== undefined) {
         updateFields.keyPassword = updateData.keyPassword || null;
+      }
+      if (updateData.certPublicKey !== undefined) {
+        updateFields.certPublicKey = updateData.certPublicKey?.trim() || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -940,6 +952,7 @@ function formatCredentialOutput(
     authType: credential.authType,
     username: credential.username || null,
     publicKey: credential.publicKey,
+    hasCertPublicKey: !!credential.certPublicKey,
     keyType: credential.keyType,
     detectedKeyType: credential.detectedKeyType,
     usageCount: credential.usageCount || 0,

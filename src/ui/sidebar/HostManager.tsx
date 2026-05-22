@@ -4932,11 +4932,13 @@ function CredentialEditorView({
     value: credential?.value ?? "",
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
+    certPublicKey: (credential as any)?.certPublicKey ?? "",
   }));
   const { t } = useTranslation();
   const [generatingKey, setGeneratingKey] = useState(false);
   const [generatingPublicKey, setGeneratingPublicKey] = useState(false);
   const credFileInputRef = useRef<HTMLInputElement>(null);
+  const certFileInputRef = useRef<HTMLInputElement>(null);
   const setCredField = <K extends keyof typeof credForm>(
     k: K,
     v: (typeof credForm)[K],
@@ -4961,6 +4963,8 @@ function CredentialEditorView({
               : credForm.value || null
             : null,
         publicKey: credForm.type === "key" ? credForm.publicKey : null,
+        certPublicKey:
+          credForm.type === "key" ? credForm.certPublicKey || null : null,
         keyPassword:
           credForm.type === "key"
             ? credForm.passphrase === "existing_key_password"
@@ -5103,6 +5107,7 @@ function CredentialEditorView({
                         type: m as any,
                         value: "",
                         publicKey: "",
+                        certPublicKey: "",
                         passphrase: "",
                       }))
                     }
@@ -5326,6 +5331,52 @@ function CredentialEditorView({
                     rows={3}
                     value={credForm.publicKey}
                     onChange={(e) => setCredField("publicKey", e.target.value)}
+                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 p-3 border border-border bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("credentials.caCertificate")}
+                    </label>
+                    {credForm.certPublicKey && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-destructive hover:text-destructive/80"
+                        onClick={() => setCredField("certPublicKey", "")}
+                      >
+                        {t("credentials.clearCert")}
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("credentials.caCertificateDescription")}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1 self-start"
+                    onClick={() => certFileInputRef.current?.click()}
+                  >
+                    <Upload className="size-3" /> {t("credentials.uploadCertFile")}
+                  </button>
+                  <input
+                    ref={certFileInputRef}
+                    type="file"
+                    accept=".pub,.txt"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const text = await file.text();
+                      setCredField("certPublicKey", text.trim());
+                      e.target.value = "";
+                    }}
+                  />
+                  <textarea
+                    placeholder={t("credentials.pasteOrUploadCert")}
+                    rows={2}
+                    value={credForm.certPublicKey}
+                    onChange={(e) => setCredField("certPublicKey", e.target.value)}
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
@@ -6922,6 +6973,8 @@ export function HostManager({
                                       passphrase: (full as any).hasKeyPassword
                                         ? "existing_key_password"
                                         : "",
+                                      certPublicKey:
+                                        (full as any).certPublicKey ?? "",
                                     });
                                   } catch {
                                     setEditingCredential(cred);
