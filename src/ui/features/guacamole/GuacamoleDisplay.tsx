@@ -65,6 +65,7 @@ export const GuacamoleDisplay = forwardRef<
     typeof document === "undefined" ? true : document.hasFocus(),
   );
   const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -267,6 +268,7 @@ export const GuacamoleDisplay = forwardRef<
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     setIsReady(false);
+    setHasError(false);
 
     // Wait two frames so the container is fully laid out before measuring.
     await new Promise<void>((resolve) =>
@@ -386,6 +388,7 @@ export const GuacamoleDisplay = forwardRef<
     client.onerror = (error: Guacamole.Status) => {
       const errorMessage = error.message || t("guacamole.connectionError");
       setIsReady(false);
+      setHasError(true);
       isConnectingRef.current = false;
       onError?.(errorMessage);
     };
@@ -583,7 +586,10 @@ export const GuacamoleDisplay = forwardRef<
         }}
       />
 
-      <SimpleLoader visible={!isReady} message={connectingMessage} />
+      <SimpleLoader
+        visible={!isReady && !hasError}
+        message={connectingMessage}
+      />
     </div>
   );
 });
