@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/form.tsx";
 import { PasswordInput } from "@/components/ui/password-input.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
 import {
   Tabs,
   TabsContent,
@@ -23,6 +24,20 @@ import {
   generatePublicKeyFromPrivate,
 } from "@/ui/main-axios.ts";
 import type { CredentialAuthenticationTabProps } from "./shared/tab-types";
+
+/** Map an OpenSSH cert type string to a human-readable label. */
+function getCertTypeName(certContent: string): string {
+  const firstWord = certContent.trim().split(/\s+/)[0] ?? "";
+  const map: Record<string, string> = {
+    "ssh-ed25519-cert-v01@openssh.com": "Ed25519 Certificate",
+    "ssh-rsa-cert-v01@openssh.com": "RSA Certificate",
+    "ecdsa-sha2-nistp256-cert-v01@openssh.com": "ECDSA P-256 Certificate",
+    "ecdsa-sha2-nistp384-cert-v01@openssh.com": "ECDSA P-384 Certificate",
+    "ecdsa-sha2-nistp521-cert-v01@openssh.com": "ECDSA P-521 Certificate",
+    "sk-ssh-ed25519-cert-v01@openssh.com": "SK-Ed25519 Certificate",
+  };
+  return map[firstWord] ?? (firstWord.includes("-cert-") ? firstWord : "");
+}
 
 export function CredentialAuthenticationTab({
   form,
@@ -489,6 +504,121 @@ export function CredentialAuthenticationTab({
                 )}
               />
             </div>
+            {/* CA Certificate (-cert.pub) */}
+            <div className="mt-3 p-3 border border-muted rounded-md">
+              <FormLabel className="mb-1 font-bold block">
+                {t("credentials.caCertificate")}
+              </FormLabel>
+              <p className="text-xs text-muted-foreground mb-2">
+                {t("credentials.caCertificateDescription")}
+              </p>
+              <Controller
+                control={form.control}
+                name="certPublicKey"
+                render={({ field }) => {
+                  const certTypeName = field.value
+                    ? getCertTypeName(field.value)
+                    : "";
+                  return (
+                    <FormItem className="flex flex-col gap-2">
+                      <div className="flex gap-2 items-center">
+                        <div className="relative inline-block flex-1">
+                          <input
+                            id="cert-upload"
+                            type="file"
+                            accept=".pub,.txt,*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const content = await file.text();
+                                  field.onChange(content.trim());
+                                } catch {
+                                  toast.error(
+                                    t("credentials.failedToGeneratePublicKey"),
+                                  );
+                                }
+                              }
+                              // reset so the same file can be re-selected
+                              e.target.value = "";
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start text-left"
+                          >
+                            <span className="truncate">
+                              {t("credentials.uploadCertFile")}
+                            </span>
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-shrink-0"
+                            onClick={() => field.onChange("")}
+                          >
+                            {t("credentials.clearCert")}
+                          </Button>
+                        )}
+                      </div>
+                      <FormControl>
+                        <CodeMirror
+                          value={field.value ?? ""}
+                          onChange={(value) => field.onChange(value)}
+                          placeholder={t("credentials.pasteOrUploadCert")}
+                          theme={editorTheme}
+                          className="border border-input rounded-md overflow-hidden"
+                          minHeight="60px"
+                          basicSetup={{
+                            lineNumbers: false,
+                            foldGutter: false,
+                            dropCursor: false,
+                            allowMultipleSelections: false,
+                            highlightSelectionMatches: false,
+                            searchKeymap: false,
+                            scrollPastEnd: false,
+                          }}
+                          extensions={[
+                            EditorView.theme({
+                              ".cm-scroller": {
+                                overflow: "auto",
+                                scrollbarWidth: "thin",
+                                scrollbarColor:
+                                  "var(--scrollbar-thumb) var(--scrollbar-track)",
+                              },
+                            }),
+                          ]}
+                        />
+                      </FormControl>
+                      {field.value && certTypeName && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground">
+                            {t("credentials.certTypeLabel")}:
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 border-green-600"
+                          >
+                            {certTypeName}
+                          </Badge>
+                        </div>
+                      )}
+                      {field.value && !certTypeName && (
+                        <p className="text-xs text-destructive">
+                          {t("credentials.invalidKey")}
+                        </p>
+                      )}
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
+
             <div className="grid grid-cols-8 gap-3 mt-3">
               <FormField
                 control={form.control}

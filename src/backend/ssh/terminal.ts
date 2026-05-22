@@ -1245,6 +1245,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       keyPassword,
       keyType,
       authType,
+      certPublicKey: undefined as string | undefined,
     };
     const authMethodNotAvailable = false;
     if (id && userId && !password && !key) {
@@ -1259,6 +1260,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyPassword: keyPassword || resolvedHost.keyPassword,
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
+            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
+              .certPublicKey as string | undefined,
           };
           sendLog(
             "auth",
@@ -1286,6 +1289,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyPassword: keyPassword || resolvedHost.keyPassword,
             keyType: resolvedHost.keyType,
             authType: resolvedHost.authType,
+            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
+              .certPublicKey as string | undefined,
           };
         }
       } catch (error) {
@@ -2238,6 +2243,45 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         if (resolvedCredentials.password) {
           connectConfig.password = resolvedCredentials.password;
+        }
+
+        // Apply CA-signed certificate if one is stored in the credential
+        if (
+          resolvedCredentials.certPublicKey &&
+          resolvedCredentials.certPublicKey.trim()
+        ) {
+          try {
+            const { setupCACertAuth } = await import("./opkssh-cert-auth.js");
+            await setupCACertAuth(
+              connectConfig,
+              sshConn,
+              connectConfig.privateKey as Buffer,
+              resolvedCredentials.certPublicKey,
+              username,
+              resolvedCredentials.keyPassword,
+            );
+            sendLog("auth", "info", "CA certificate authentication configured");
+            sshLogger.info("CA cert auth configured", {
+              operation: "ca_cert_auth_configured",
+              userId,
+              hostId: id,
+            });
+          } catch (certError) {
+            sendLog(
+              "auth",
+              "warning",
+              "CA certificate setup failed – falling back to key-only auth",
+            );
+            sshLogger.warn("CA cert auth setup failed", {
+              operation: "ca_cert_auth_setup_failed",
+              userId,
+              hostId: id,
+              error:
+                certError instanceof Error
+                  ? certError.message
+                  : String(certError),
+            });
+          }
         }
       } catch (keyError) {
         sshLogger.error("SSH key format error: " + keyError.message);

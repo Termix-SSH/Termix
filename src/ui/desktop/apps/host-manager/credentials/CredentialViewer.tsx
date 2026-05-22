@@ -444,6 +444,29 @@ const CredentialViewer: React.FC<CredentialViewerProps> = ({
                         "keyPassword",
                         t("credentials.keyPassphrase"),
                       )}
+
+                    {/* CA Certificate indicator */}
+                    <div className="flex items-center space-x-3 p-3 bg-surface rounded-lg">
+                      <Shield className="h-4 w-4 text-foreground-subtle" />
+                      <div>
+                        <div className="text-sm font-medium text-foreground-secondary">
+                          {t("credentials.caCertificate")}
+                        </div>
+                        {credentialDetails.hasCertPublicKey ||
+                        credentialDetails.certPublicKey ? (
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 border-green-600 mt-1"
+                          >
+                            {t("credentials.certLoaded")}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {t("credentials.noCaCert")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

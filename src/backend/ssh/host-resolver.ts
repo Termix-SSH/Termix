@@ -126,13 +126,17 @@ export async function resolveHostById(
       if (credentials.length > 0) {
         const cred = credentials[0] as Record<string, unknown>;
         host.password = cred.password;
-        host.key = cred.key;
+        // Prefer the normalised private key; fall back to raw key field
+        host.key = (cred.privateKey || cred.key) as string | null;
         host.keyPassword = cred.keyPassword;
         host.keyType = cred.keyType;
+        // CA-signed certificate for cert-based auth
+        (host as Record<string, unknown>).certPublicKey =
+          cred.certPublicKey || null;
         if (!host.overrideCredentialUsername) {
           host.username = cred.username;
         }
-        host.authType = cred.key ? "key" : cred.password ? "password" : "none";
+        host.authType = host.key ? "key" : host.password ? "password" : "none";
       }
     } catch (e) {
       sshLogger.warn("Failed to resolve credential for host", {

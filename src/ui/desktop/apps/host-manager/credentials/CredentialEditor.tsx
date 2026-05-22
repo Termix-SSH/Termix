@@ -132,6 +132,8 @@ export function CredentialEditor({
       password: z.string().optional(),
       key: z.any().optional().nullable(),
       publicKey: z.string().optional(),
+      /** CA-signed certificate file content (id_ed25519-cert.pub) */
+      certPublicKey: z.string().optional(),
       keyPassword: z.string().optional(),
       keyType: z
         .enum([
@@ -184,6 +186,7 @@ export function CredentialEditor({
       password: "",
       key: null,
       publicKey: "",
+      certPublicKey: "",
       keyPassword: "",
       keyType: "auto",
     },
@@ -215,6 +218,7 @@ export function CredentialEditor({
       if (authTab === "password") {
         form.setValue("key", null, { shouldValidate: true });
         form.setValue("publicKey", "", { shouldValidate: true });
+        form.setValue("certPublicKey", "", { shouldValidate: true });
         form.setValue("keyPassword", "", { shouldValidate: true });
         form.setValue("keyType", "auto", { shouldValidate: true });
       } else if (authTab === "key") {
@@ -253,6 +257,7 @@ export function CredentialEditor({
         } else if (defaultAuthType === "key") {
           formData.key = fullCredentialDetails.key || "";
           formData.publicKey = fullCredentialDetails.publicKey || "";
+          formData.certPublicKey = fullCredentialDetails.certPublicKey || "";
           formData.keyPassword = fullCredentialDetails.keyPassword || "";
           formData.keyType =
             (fullCredentialDetails.keyType as string) || ("auto" as const);
@@ -273,6 +278,7 @@ export function CredentialEditor({
         password: "",
         key: null,
         publicKey: "",
+        certPublicKey: "",
         keyPassword: "",
         keyType: "auto",
       });
@@ -404,6 +410,7 @@ export function CredentialEditor({
       } else if (data.authType === "key") {
         submitData.key = data.key;
         submitData.publicKey = data.publicKey;
+        submitData.certPublicKey = data.certPublicKey || null;
         submitData.keyPassword = data.keyPassword;
         submitData.keyType = data.keyType;
       }

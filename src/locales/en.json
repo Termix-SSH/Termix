@@ -189,7 +189,17 @@
     "failedToDeployKey": "Failed to deploy SSH key",
     "clickToRenameFolder": "Click to rename folder",
     "renameFolder": "Rename folder",
-    "idLabel": "ID:"
+    "idLabel": "ID:",
+    "caCertificate": "CA Certificate (-cert.pub)",
+    "caCertificateDescription": "Optional: Upload or paste the CA-signed certificate file (e.g. id_ed25519-cert.pub). Required when your SSH server uses certificate-based authorization.",
+    "uploadCertFile": "Upload -cert.pub File",
+    "clearCert": "Clear",
+    "certLoaded": "Certificate loaded",
+    "certPublicKeyLabel": "CA Certificate",
+    "certTypeLabel": "Certificate type",
+    "pasteOrUploadCert": "Paste or upload a -cert.pub certificate...",
+    "hasCaCert": "Has CA Certificate",
+    "noCaCert": "No CA Certificate"
   },
   "quickConnect": {
     "title": "Quick Connect",

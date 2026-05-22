@@ -234,6 +234,8 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
 
+  certPublicKey: text("cert_public_key", { length: 8192 }),
+
   systemPassword: text("system_password"),
   systemKey: text("system_key", { length: 16384 }),
   systemKeyPassword: text("system_key_password"),
