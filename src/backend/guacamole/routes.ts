@@ -18,18 +18,52 @@ const authManager = AuthManager.getInstance();
 router.use(authManager.createAuthMiddleware());
 
 /**
- * POST /guacamole/token
- * Generate an encrypted connection token for guacamole-lite
- *
- * Body: {
- *   type: "rdp" | "vnc" | "telnet",
- *   hostname: string,
- *   port?: number,
- *   username?: string,
- *   password?: string,
- *   domain?: string,
- *   // Additional protocol-specific options
- * }
+ * @openapi
+ * /guacamole/token:
+ *   post:
+ *     summary: Generate an encrypted Guacamole connection token
+ *     description: Creates an AES-256-CBC encrypted token for guacamole-lite with the given connection parameters
+ *     tags:
+ *       - Guacamole
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *               - hostname
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [rdp, vnc, telnet]
+ *               hostname:
+ *                 type: string
+ *               port:
+ *                 type: integer
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               domain:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Encrypted connection token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Server error
  */
 router.post("/token", async (req, res) => {
   try {
@@ -203,9 +237,35 @@ router.post(
       let token: string;
       let hostname = host.ip as string;
       let port = host.port as number;
-      const username = (host.username as string) || "";
-      const password = (host.password as string) || "";
-      const domain = (host.domain as string) || "";
+      let username: string;
+      let password: string;
+
+      switch (connectionType) {
+        case "rdp":
+          username =
+            (host.rdpUser as string) || (host.username as string) || "";
+          password =
+            (host.rdpPassword as string) || (host.password as string) || "";
+          port = (host.rdpPort as number) || port || 3389;
+          break;
+        case "vnc":
+          username = (host.vncUser as string) || "";
+          password =
+            (host.vncPassword as string) || (host.password as string) || "";
+          port = (host.vncPort as number) || port || 5900;
+          break;
+        case "telnet":
+          username = (host.telnetUser as string) || "";
+          password =
+            (host.telnetPassword as string) || (host.password as string) || "";
+          port = (host.telnetPort as number) || port || 23;
+          break;
+        default:
+          username = "";
+          password = "";
+      }
+      const domain =
+        (host.rdpDomain as string) || (host.domain as string) || "";
 
       // Establish SSH tunnel if jump hosts are configured
       let jumpHosts: Array<{ hostId: number }> = [];
@@ -299,11 +359,18 @@ router.post(
             guacConfig["create-drive-path"] = true;
           }
           token = tokenService.createRdpToken(hostname, username, password, {
-            port: port || 3389,
+            port,
             domain,
-            security: (host.security as string) || undefined,
+            security:
+              (host.rdpSecurity as string) ||
+              (host.security as string) ||
+              undefined,
             "ignore-cert":
-              host.ignoreCert !== undefined ? !!host.ignoreCert : true,
+              host.rdpIgnoreCert !== undefined
+                ? !!host.rdpIgnoreCert
+                : host.ignoreCert !== undefined
+                  ? !!host.ignoreCert
+                  : true,
             ...guacConfig,
           });
           break;
@@ -313,7 +380,7 @@ router.post(
             username || undefined,
             password,
             {
-              port: port || 5900,
+              port,
               security: "any",
               ...guacConfig,
             },
@@ -321,7 +388,7 @@ router.post(
           break;
         case "telnet":
           token = tokenService.createTelnetToken(hostname, username, password, {
-            port: port || 23,
+            port,
             ...guacConfig,
           });
           break;

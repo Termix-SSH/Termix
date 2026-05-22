@@ -43,6 +43,8 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+const STATS_SERVER_URL = "http://localhost:30005";
+
 function notifyStatsHostUpdated(
   hostId: number,
   headers: Pick<Request["headers"], "authorization" | "cookie">,
@@ -50,7 +52,7 @@ function notifyStatsHostUpdated(
 ): void {
   axios
     .post(
-      "http://localhost:30005/host-updated",
+      `${STATS_SERVER_URL}/host-updated`,
       { hostId },
       {
         headers: {
@@ -1926,9 +1928,21 @@ router.get(
       const exportData = isRemoteDesktop
         ? {
             ...baseExportData,
-            domain: resolvedHost.domain || null,
-            security: resolvedHost.security || null,
-            ignoreCert: !!resolvedHost.ignoreCert,
+            enableRdp: !!resolvedHost.enableRdp,
+            enableVnc: !!resolvedHost.enableVnc,
+            enableTelnet: !!resolvedHost.enableTelnet,
+            rdpPort: resolvedHost.rdpPort || 3389,
+            vncPort: resolvedHost.vncPort || 5900,
+            telnetPort: resolvedHost.telnetPort || 23,
+            rdpUser: resolvedHost.rdpUser || null,
+            rdpPassword: resolvedHost.rdpPassword || null,
+            rdpDomain: resolvedHost.rdpDomain || null,
+            rdpSecurity: resolvedHost.rdpSecurity || null,
+            rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
+            vncUser: resolvedHost.vncUser || null,
+            vncPassword: resolvedHost.vncPassword || null,
+            telnetUser: resolvedHost.telnetUser || null,
+            telnetPassword: resolvedHost.telnetPassword || null,
             guacamoleConfig: resolvedHost.guacamoleConfig
               ? JSON.parse(resolvedHost.guacamoleConfig as string)
               : null,
@@ -2252,9 +2266,8 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = 30005;
         await axios.post(
-          `http://localhost:${statsPort}/host-deleted`,
+          `${STATS_SERVER_URL}/host-deleted`,
           { hostId: numericHostId },
           {
             headers: {
@@ -3429,11 +3442,10 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = 30005;
         for (const host of hostsToDelete) {
           try {
             await axios.post(
-              `http://localhost:${statsPort}/host-deleted`,
+              `${STATS_SERVER_URL}/host-deleted`,
               { hostId: host.id },
               {
                 headers: {
@@ -3853,9 +3865,21 @@ router.post(
           sshDataObj.key = null;
           sshDataObj.keyPassword = null;
           sshDataObj.keyType = null;
-          sshDataObj.domain = hostData.domain || null;
-          sshDataObj.security = hostData.security || null;
-          sshDataObj.ignoreCert = hostData.ignoreCert ? 1 : 0;
+          sshDataObj.rdpUser = hostData.rdpUser || null;
+          sshDataObj.rdpPassword = hostData.rdpPassword || null;
+          sshDataObj.rdpDomain = hostData.rdpDomain || null;
+          sshDataObj.rdpSecurity = hostData.rdpSecurity || null;
+          sshDataObj.rdpIgnoreCert = hostData.rdpIgnoreCert ? 1 : 0;
+          sshDataObj.rdpPort = hostData.rdpPort || 3389;
+          sshDataObj.vncUser = hostData.vncUser || null;
+          sshDataObj.vncPassword = hostData.vncPassword || null;
+          sshDataObj.vncPort = hostData.vncPort || 5900;
+          sshDataObj.telnetUser = hostData.telnetUser || null;
+          sshDataObj.telnetPassword = hostData.telnetPassword || null;
+          sshDataObj.telnetPort = hostData.telnetPort || 23;
+          sshDataObj.enableRdp = hostData.enableRdp ? 1 : 0;
+          sshDataObj.enableVnc = hostData.enableVnc ? 1 : 0;
+          sshDataObj.enableTelnet = hostData.enableTelnet ? 1 : 0;
           sshDataObj.guacamoleConfig = hostData.guacamoleConfig
             ? JSON.stringify(hostData.guacamoleConfig)
             : null;

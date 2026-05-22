@@ -693,7 +693,7 @@ export function AppShell({
                       return (
                         <div
                           key={tab.id}
-                          className="flex flex-col overflow-hidden"
+                          className="flex flex-col overflow-hidden bg-background"
                           style={
                             visible
                               ? {

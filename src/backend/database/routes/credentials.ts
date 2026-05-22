@@ -1617,9 +1617,12 @@ async function deploySSHKeyToHost(
           const escapedKey = actualPublicKey
             .replace(/\\/g, "\\\\")
             .replace(/'/g, "'\\''");
+          const escapedName = credData.name
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "'\\''");
 
           conn.exec(
-            `printf '%s\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\n' '${escapedKey} ${escapedName}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
               if (err) {
                 clearTimeout(addTimeout);

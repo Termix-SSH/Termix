@@ -223,7 +223,11 @@ function makeHostTabs(t: (key: string) => string): HostTab[] {
       label: t("hosts.tabGeneral"),
       icon: <Settings className="size-3" />,
     },
-    { id: "ssh", label: "SSH", icon: <Terminal className="size-3" /> },
+    {
+      id: "ssh",
+      label: t("hosts.tabSsh"),
+      icon: <Terminal className="size-3" />,
+    },
     {
       id: "tunnels",
       label: t("hosts.tabTunnels"),
@@ -244,8 +248,16 @@ function makeHostTabs(t: (key: string) => string): HostTab[] {
       label: t("hosts.tabStats"),
       icon: <Activity className="size-3" />,
     },
-    { id: "rdp", label: "RDP", icon: <Monitor className="size-3" /> },
-    { id: "vnc", label: "VNC", icon: <Monitor className="size-3" /> },
+    {
+      id: "rdp",
+      label: t("hosts.tabRdp"),
+      icon: <Monitor className="size-3" />,
+    },
+    {
+      id: "vnc",
+      label: t("hosts.tabVnc"),
+      icon: <Monitor className="size-3" />,
+    },
     {
       id: "telnet",
       label: t("hosts.tabTelnet"),
@@ -1205,28 +1217,28 @@ function HostEditor({
                 {[
                   {
                     proto: "enableSsh" as const,
-                    label: "SSH",
+                    label: t("hosts.tabSsh"),
                     desc: t("hosts.secureShell"),
                     icon: <Terminal className="size-4" />,
                     portField: "sshPort" as const,
                   },
                   {
                     proto: "enableRdp" as const,
-                    label: "RDP",
-                    desc: "Remote Desktop",
+                    label: t("hosts.tabRdp"),
+                    desc: t("hosts.remoteDesktop"),
                     icon: <Monitor className="size-4" />,
                     portField: "rdpPort" as const,
                   },
                   {
                     proto: "enableVnc" as const,
-                    label: "VNC",
+                    label: t("hosts.tabVnc"),
                     desc: t("hosts.virtualNetwork"),
                     icon: <Monitor className="size-4" />,
                     portField: "vncPort" as const,
                   },
                   {
                     proto: "enableTelnet" as const,
-                    label: "Telnet",
+                    label: t("hosts.tabTelnet"),
                     desc: t("hosts.unencryptedShell"),
                     icon: <Terminal className="size-4" />,
                     portField: "telnetPort" as const,
@@ -3300,8 +3312,8 @@ function HostEditor({
                   </label>
                   <select
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                    value={form.guacamoleConfig["security"] ?? "any"}
-                    onChange={(e) => setGuacField("security", e.target.value)}
+                    value={form.security ?? "any"}
+                    onChange={(e) => setField("security", e.target.value)}
                   >
                     <option value="any">Any</option>
                     <option value="nla">NLA</option>

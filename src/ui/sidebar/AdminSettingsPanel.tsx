@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getUserList,
   getSessions,
@@ -122,6 +123,7 @@ function AccordionSection({
 }
 
 export function AdminSettingsPanel() {
+  const { t } = useTranslation();
   const [openSection, setOpenSection] = useState<AdminSection | null>(
     "general",
   );
@@ -241,17 +243,25 @@ export function AdminSettingsPanel() {
 
   async function loadGeneralSettings() {
     try {
-      const [reg, pwLogin, pwReset, timeout, monitoring, level, guac, oidcProv] =
-        await Promise.allSettled([
-          getRegistrationAllowed(),
-          getPasswordLoginAllowed(),
-          getPasswordResetAllowed(),
-          getSessionTimeout(),
-          getGlobalMonitoringSettings(),
-          getLogLevel(),
-          getGuacamoleSettings(),
-          getOidcAutoProvision(),
-        ]);
+      const [
+        reg,
+        pwLogin,
+        pwReset,
+        timeout,
+        monitoring,
+        level,
+        guac,
+        oidcProv,
+      ] = await Promise.allSettled([
+        getRegistrationAllowed(),
+        getPasswordLoginAllowed(),
+        getPasswordResetAllowed(),
+        getSessionTimeout(),
+        getGlobalMonitoringSettings(),
+        getLogLevel(),
+        getGuacamoleSettings(),
+        getOidcAutoProvision(),
+      ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
       if (pwLogin.status === "fulfilled")
@@ -312,7 +322,7 @@ export function AdminSettingsPanel() {
       await updateRegistrationAllowed(newVal);
     } catch {
       setAllowRegistration(!newVal);
-      toast.error("Failed to update registration setting");
+      toast.error(t("admin.updateRegistrationFailed"));
     }
   }
 
@@ -323,7 +333,7 @@ export function AdminSettingsPanel() {
       await updatePasswordLoginAllowed(newVal);
     } catch {
       setAllowPasswordLogin(!newVal);
-      toast.error("Failed to update password login setting");
+      toast.error(t("admin.updatePasswordLoginFailed"));
     }
   }
 
@@ -334,7 +344,7 @@ export function AdminSettingsPanel() {
       await updateOidcAutoProvision(newVal);
     } catch {
       setOidcAutoProvision(!newVal);
-      toast.error("Failed to update OIDC auto-provision setting");
+      toast.error(t("admin.updateOidcAutoProvisionFailed"));
     }
   }
 
@@ -345,21 +355,21 @@ export function AdminSettingsPanel() {
       await updatePasswordResetAllowed(newVal);
     } catch {
       setAllowPasswordReset(!newVal);
-      toast.error("Failed to update password reset setting");
+      toast.error(t("admin.updatePasswordResetFailed"));
     }
   }
 
   async function handleSaveSessionTimeout() {
     const hours = parseInt(sessionTimeout, 10);
     if (isNaN(hours) || hours < 1 || hours > 720) {
-      toast.error("Session timeout must be between 1 and 720 hours");
+      toast.error(t("admin.sessionTimeoutRange2"));
       return;
     }
     try {
       await updateSessionTimeout(hours);
-      toast.success("Session timeout saved");
+      toast.success(t("admin.sessionTimeoutSaved"));
     } catch {
-      toast.error("Failed to save session timeout");
+      toast.error(t("admin.sessionTimeoutSaveFailed"));
     }
   }
 
@@ -367,7 +377,7 @@ export function AdminSettingsPanel() {
     const status = parseInt(statusInterval, 10);
     const metrics = parseInt(metricsInterval, 10);
     if (isNaN(status) || isNaN(metrics)) {
-      toast.error("Invalid interval values");
+      toast.error(t("admin.monitoringIntervalInvalid"));
       return;
     }
     try {
@@ -375,18 +385,18 @@ export function AdminSettingsPanel() {
         statusCheckInterval: status,
         metricsInterval: metrics,
       });
-      toast.success("Monitoring settings saved");
+      toast.success(t("admin.monitoringSaved"));
     } catch {
-      toast.error("Failed to save monitoring settings");
+      toast.error(t("admin.monitoringSaveFailed"));
     }
   }
 
   async function handleSaveGuacamole() {
     try {
       await updateGuacamoleSettings({ enabled: guacEnabled, url: guacUrl });
-      toast.success("Guacamole settings saved");
+      toast.success(t("admin.guacamoleSaved"));
     } catch {
-      toast.error("Failed to save Guacamole settings");
+      toast.error(t("admin.guacamoleSaveFailed"));
     }
   }
 
@@ -397,7 +407,7 @@ export function AdminSettingsPanel() {
       await updateGuacamoleSettings({ enabled: newVal, url: guacUrl });
     } catch {
       setGuacEnabled(!newVal);
-      toast.error("Failed to update Guacamole setting");
+      toast.error(t("admin.guacamoleUpdateFailed"));
     }
   }
 
@@ -406,7 +416,7 @@ export function AdminSettingsPanel() {
     try {
       await updateLogLevel(level);
     } catch {
-      toast.error("Failed to update log level");
+      toast.error(t("admin.logLevelUpdateFailed"));
     }
   }
 
@@ -427,9 +437,9 @@ export function AdminSettingsPanel() {
           ? oidcAllowedUsers.split("\n").filter(Boolean).join(",")
           : "",
       });
-      toast.success("OIDC configuration saved");
+      toast.success(t("admin.oidcSaved"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to save OIDC config");
+      toast.error(e?.response?.data?.error || t("admin.oidcSaveFailed"));
     } finally {
       setOidcSaving(false);
     }
@@ -448,31 +458,31 @@ export function AdminSettingsPanel() {
       setOidcScopes("openid email profile");
       setOidcUserinfoUrl("");
       setOidcAllowedUsers("");
-      toast.success("OIDC configuration removed");
+      toast.success(t("admin.oidcRemoved"));
     } catch {
-      toast.error("Failed to remove OIDC config");
+      toast.error(t("admin.oidcRemoveFailed"));
     }
   }
 
   async function handleCreateUser() {
     if (!newUsername.trim() || !newPassword.trim()) {
-      toast.error("Username and password are required");
+      toast.error(t("admin.createUserRequired"));
       return;
     }
     if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error(t("admin.createUserPasswordTooShort"));
       return;
     }
     setCreateUserLoading(true);
     try {
       await registerUser(newUsername.trim(), newPassword);
-      toast.success(`User "${newUsername}" created`);
+      toast.success(t("admin.createUserSuccess", { username: newUsername }));
       setCreateUserOpen(false);
       setNewUsername("");
       setNewPassword("");
       loadUsers();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to create user");
+      toast.error(e?.response?.data?.error || t("admin.createUserFailed"));
     } finally {
       setCreateUserLoading(false);
     }
@@ -495,7 +505,7 @@ export function AdminSettingsPanel() {
         );
       }
     } catch {
-      toast.error("Failed to update admin status");
+      toast.error(t("admin.updateAdminStatusFailed"));
     } finally {
       setEditUserLoading(false);
     }
@@ -504,10 +514,10 @@ export function AdminSettingsPanel() {
   async function handleRevokeUserSessions(userId: string) {
     try {
       await revokeAllUserSessions(userId);
-      toast.success("All sessions revoked");
+      toast.success(t("admin.allSessionsRevoked"));
       loadSessions();
     } catch {
-      toast.error("Failed to revoke sessions");
+      toast.error(t("admin.revokeSessionsFailed"));
     }
   }
 
@@ -519,9 +529,11 @@ export function AdminSettingsPanel() {
       setUsers((prev) => prev.filter((u) => u.id !== editUserTarget.id));
       setEditUserOpen(false);
       setEditUserTarget(null);
-      toast.success(`User "${editUserTarget.username}" deleted`);
+      toast.success(
+        t("admin.deleteUserSuccess", { username: editUserTarget.username }),
+      );
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to delete user");
+      toast.error(e?.response?.data?.error || t("admin.deleteUserFailed"));
     } finally {
       setEditUserLoading(false);
     }
@@ -529,7 +541,7 @@ export function AdminSettingsPanel() {
 
   async function handleCreateRole() {
     if (!newRoleName.trim() || !newRoleDisplayName.trim()) {
-      toast.error("Name and display name are required");
+      toast.error(t("admin.createRoleRequired"));
       return;
     }
     setCreateRoleLoading(true);
@@ -544,10 +556,10 @@ export function AdminSettingsPanel() {
       setNewRoleName("");
       setNewRoleDisplayName("");
       setNewRoleDescription("");
-      toast.success(`Role "${displayName}" created`);
+      toast.success(t("admin.createRoleSuccess", { name: displayName }));
       loadRoles();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to create role");
+      toast.error(e?.response?.data?.error || t("admin.createRoleFailed"));
     } finally {
       setCreateRoleLoading(false);
     }
@@ -555,11 +567,11 @@ export function AdminSettingsPanel() {
 
   async function handleCreateApiKey() {
     if (!newKeyName.trim()) {
-      toast.error("Key name is required");
+      toast.error(t("admin.apiKeyNameRequired"));
       return;
     }
     if (!newKeyUserId.trim()) {
-      toast.error("User ID is required");
+      toast.error(t("admin.apiKeyUserRequired"));
       return;
     }
     setNewKeyLoading(true);
@@ -574,9 +586,9 @@ export function AdminSettingsPanel() {
       setNewKeyName("");
       setNewKeyUserId("");
       setNewKeyExpiry("");
-      toast.success(`API key "${created.name}" created`);
+      toast.success(t("admin.apiKeyCreatedSuccess", { name: created.name }));
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to create API key");
+      toast.error(e?.response?.data?.error || t("admin.apiKeyCreateFailed"));
     } finally {
       setNewKeyLoading(false);
     }
@@ -618,13 +630,13 @@ export function AdminSettingsPanel() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        toast.success("Database exported successfully");
+        toast.success(t("admin.exportSuccess"));
       } else {
         const err = await response.json().catch(() => ({}));
-        toast.error(err.error || "Database export failed");
+        toast.error(err.error || t("admin.exportFailed"));
       }
     } catch {
-      toast.error("Database export failed");
+      toast.error(t("admin.exportFailed"));
     } finally {
       setExportLoading(false);
     }
@@ -632,7 +644,7 @@ export function AdminSettingsPanel() {
 
   async function handleImportDatabase() {
     if (!importFile) {
-      toast.error("Please select a file first");
+      toast.error(t("admin.importSelectFile"));
       return;
     }
     setImportLoading(true);
@@ -669,21 +681,23 @@ export function AdminSettingsPanel() {
             (s.dismissedAlertsImported || 0) +
             (s.settingsImported || 0);
           toast.success(
-            `Import completed: ${total} items imported, ${s.skippedItems || 0} skipped`,
+            t("admin.importCompleted", { total, skipped: s.skippedItems || 0 }),
           );
           setImportFile(null);
           setTimeout(() => window.location.reload(), 1500);
         } else {
           toast.error(
-            `Import failed: ${result.summary?.errors?.join(", ") || "Unknown error"}`,
+            t("admin.importFailed", {
+              error: result.summary?.errors?.join(", ") || "Unknown error",
+            }),
           );
         }
       } else {
         const err = await response.json().catch(() => ({}));
-        toast.error(err.error || "Database import failed");
+        toast.error(err.error || t("admin.importError"));
       }
     } catch {
-      toast.error("Database import failed");
+      toast.error(t("admin.importError"));
     } finally {
       setImportLoading(false);
     }
@@ -693,15 +707,15 @@ export function AdminSettingsPanel() {
     <div className="flex flex-col gap-2 p-3">
       {/* General */}
       <AccordionSection
-        label="General"
+        label={t("admin.sectionGeneral")}
         icon={<Settings className="size-3.5" />}
         open={openSection === "general"}
         onToggle={() => toggle("general")}
       >
         <div className="flex flex-col gap-0 pt-2">
           <SettingRow
-            label="Allow User Registration"
-            description="Let new users self-register"
+            label={t("admin.allowRegistration")}
+            description={t("admin.allowRegistrationDesc")}
           >
             <AdminToggle
               on={allowRegistration}
@@ -709,8 +723,8 @@ export function AdminSettingsPanel() {
             />
           </SettingRow>
           <SettingRow
-            label="Allow Password Login"
-            description="Username/password login"
+            label={t("admin.allowPasswordLogin")}
+            description={t("admin.allowPasswordLoginDesc")}
           >
             <AdminToggle
               on={allowPasswordLogin}
@@ -718,8 +732,8 @@ export function AdminSettingsPanel() {
             />
           </SettingRow>
           <SettingRow
-            label="OIDC Auto-Provision"
-            description="Auto-create accounts for OIDC users even when registration is disabled"
+            label={t("admin.oidcAutoProvision")}
+            description={t("admin.oidcAutoProvisionDesc")}
           >
             <AdminToggle
               on={oidcAutoProvision}
@@ -727,8 +741,8 @@ export function AdminSettingsPanel() {
             />
           </SettingRow>
           <SettingRow
-            label="Allow Password Reset"
-            description="Reset code via Docker logs"
+            label={t("admin.allowPasswordReset")}
+            description={t("admin.allowPasswordResetDesc")}
           >
             <AdminToggle
               on={allowPasswordReset}
@@ -738,7 +752,7 @@ export function AdminSettingsPanel() {
 
           <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Session Timeout
+              {t("admin.sessionTimeout")}
             </span>
             <div className="flex items-center gap-2">
               <Input
@@ -749,28 +763,30 @@ export function AdminSettingsPanel() {
                 onChange={(e) => setSessionTimeout(e.target.value)}
                 className="w-20 text-sm"
               />
-              <span className="text-xs text-muted-foreground">hours</span>
+              <span className="text-xs text-muted-foreground">
+                {t("admin.hours")}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
                 className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
                 onClick={handleSaveSessionTimeout}
               >
-                Save
+                {t("common.save")}
               </Button>
             </div>
             <span className="text-[10px] text-muted-foreground">
-              Min 1h · Max 720h
+              {t("admin.sessionTimeoutRange")}
             </span>
           </div>
 
           <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Monitoring Defaults
+              {t("admin.monitoringDefaults")}
             </span>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Status Check
+                {t("admin.statusCheck")}
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -779,12 +795,14 @@ export function AdminSettingsPanel() {
                   onChange={(e) => setStatusInterval(e.target.value)}
                   className="w-20 text-sm"
                 />
-                <span className="text-xs text-muted-foreground">sec</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("admin.sec")}
+                </span>
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                Metrics
+                {t("admin.metrics")}
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -793,14 +811,16 @@ export function AdminSettingsPanel() {
                   onChange={(e) => setMetricsInterval(e.target.value)}
                   className="w-20 text-sm"
                 />
-                <span className="text-xs text-muted-foreground">sec</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("admin.sec")}
+                </span>
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
                   onClick={handleSaveMonitoring}
                 >
-                  Save
+                  {t("common.save")}
                 </Button>
               </div>
             </div>
@@ -808,15 +828,15 @@ export function AdminSettingsPanel() {
 
           <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
             <SettingRow
-              label="Enable Guacamole"
-              description="RDP/VNC remote desktop"
+              label={t("admin.enableGuacamole")}
+              description={t("admin.enableGuacamoleDesc")}
             >
               <AdminToggle on={guacEnabled} onToggle={handleToggleGuacamole} />
             </SettingRow>
             {guacEnabled && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  guacd URL
+                  {t("admin.guacdUrl")}
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -840,7 +860,7 @@ export function AdminSettingsPanel() {
 
           <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Log Level
+              {t("admin.logLevel")}
             </span>
             <div className="flex gap-1.5 flex-wrap">
               {["debug", "info", "warn", "error"].map((l) => (
@@ -859,19 +879,21 @@ export function AdminSettingsPanel() {
 
       {/* OIDC */}
       <AccordionSection
-        label="OIDC"
+        label={t("admin.sectionOidc")}
         icon={<Shield className="size-3.5" />}
         open={openSection === "oidc"}
         onToggle={() => toggle("oidc")}
       >
         <div className="flex flex-col gap-3 pt-3">
           <span className="text-[10px] text-muted-foreground">
-            Configure OpenID Connect for SSO. Fields marked{" "}
-            <span className="text-accent-brand">*</span> are required.
+            {t("admin.oidcDescription").split("*")[0]}
+            <span className="text-accent-brand">*</span>
+            {t("admin.oidcDescription").split("*")[1]}
           </span>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Client ID <span className="text-accent-brand">*</span>
+              {t("admin.oidcClientId")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcClientId}
@@ -882,7 +904,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Client Secret <span className="text-accent-brand">*</span>
+              {t("admin.oidcClientSecret")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               type="password"
@@ -894,7 +917,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Authorization URL <span className="text-accent-brand">*</span>
+              {t("admin.oidcAuthUrl")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcAuthUrl}
@@ -905,7 +929,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Issuer URL <span className="text-accent-brand">*</span>
+              {t("admin.oidcIssuerUrl")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcIssuerUrl}
@@ -916,7 +941,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Token URL <span className="text-accent-brand">*</span>
+              {t("admin.oidcTokenUrl")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcTokenUrl}
@@ -927,7 +953,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              User Identifier Path <span className="text-accent-brand">*</span>
+              {t("admin.oidcUserIdentifier")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcUserIdentifier}
@@ -938,7 +965,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Display Name Path <span className="text-accent-brand">*</span>
+              {t("admin.oidcDisplayName")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcDisplayName}
@@ -949,7 +977,8 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Scopes <span className="text-accent-brand">*</span>
+              {t("admin.oidcScopes")}{" "}
+              <span className="text-accent-brand">*</span>
             </label>
             <Input
               value={oidcScopes}
@@ -960,7 +989,7 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Override Userinfo URL
+              {t("admin.oidcUserinfoUrl")}
             </label>
             <Input
               value={oidcUserinfoUrl}
@@ -971,10 +1000,10 @@ export function AdminSettingsPanel() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Allowed Users
+              {t("admin.oidcAllowedUsers")}
             </label>
             <span className="text-[10px] text-muted-foreground">
-              One email per line. Leave empty to allow all.
+              {t("admin.oidcAllowedUsersDesc")}
             </span>
             <textarea
               value={oidcAllowedUsers}
@@ -992,7 +1021,7 @@ export function AdminSettingsPanel() {
               onClick={handleRemoveOidc}
             >
               <Trash2 className="size-3" />
-              Remove
+              {t("admin.removeOidc")}
             </Button>
             <Button
               variant="outline"
@@ -1002,7 +1031,7 @@ export function AdminSettingsPanel() {
               disabled={oidcSaving}
             >
               <RefreshCw className="size-3" />
-              {oidcSaving ? "Saving..." : "Save"}
+              {oidcSaving ? t("admin.saving") : t("common.save")}
             </Button>
           </div>
         </div>
@@ -1010,7 +1039,7 @@ export function AdminSettingsPanel() {
 
       {/* Users */}
       <AccordionSection
-        label="Users"
+        label={t("admin.sectionUsers")}
         icon={<User className="size-3.5" />}
         open={openSection === "users"}
         onToggle={() => toggle("users")}
@@ -1018,7 +1047,7 @@ export function AdminSettingsPanel() {
         <div className="flex flex-col pt-2">
           <div className="flex items-center justify-between py-2 border-b border-border">
             <span className="text-[10px] text-muted-foreground">
-              {users.length} users
+              {t("admin.usersCount", { count: users.length })}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -1036,17 +1065,17 @@ export function AdminSettingsPanel() {
                 onClick={() => setCreateUserOpen(true)}
               >
                 <Plus className="size-3" />
-                Create
+                {t("admin.createUser")}
               </Button>
             </div>
           </div>
           {users.map((user) => {
             const authLabel =
               user.isOidc && user.passwordHash
-                ? "Dual"
+                ? t("admin.authTypeDual")
                 : user.isOidc
-                  ? "OIDC"
-                  : "Local";
+                  ? t("admin.authTypeOidc")
+                  : t("admin.authTypeLocal");
             return (
               <div
                 key={user.id}
@@ -1063,7 +1092,7 @@ export function AdminSettingsPanel() {
                     <div className="flex items-center gap-1">
                       {user.isAdmin && (
                         <span className="text-[9px] font-semibold px-1 py-px border border-accent-brand/40 bg-accent-brand/10 text-accent-brand">
-                          ADMIN
+                          {t("admin.adminBadge")}
                         </span>
                       )}
                       <span className="text-[9px] font-semibold px-1 py-px border border-border text-muted-foreground">
@@ -1111,10 +1140,15 @@ export function AdminSettingsPanel() {
                         setUsers((prev) =>
                           prev.filter((u) => u.id !== user.id),
                         );
-                        toast.success(`User "${user.username}" deleted`);
+                        toast.success(
+                          t("admin.deleteUserSuccess", {
+                            username: user.username,
+                          }),
+                        );
                       } catch (e: any) {
                         toast.error(
-                          e?.response?.data?.error || "Failed to delete user",
+                          e?.response?.data?.error ||
+                            t("admin.deleteUserFailed"),
                         );
                       }
                     }}
@@ -1130,7 +1164,7 @@ export function AdminSettingsPanel() {
 
       {/* Sessions */}
       <AccordionSection
-        label="Sessions"
+        label={t("admin.sectionSessions")}
         icon={<Activity className="size-3.5" />}
         open={openSection === "sessions"}
         onToggle={() => toggle("sessions")}
@@ -1138,7 +1172,7 @@ export function AdminSettingsPanel() {
         <div className="flex flex-col pt-2">
           <div className="flex items-center justify-between py-2 border-b border-border">
             <span className="text-[10px] text-muted-foreground">
-              {sessions.length} active
+              {t("admin.sessionsActive", { count: sessions.length })}
             </span>
             <Button
               variant="ghost"
@@ -1161,7 +1195,7 @@ export function AdminSettingsPanel() {
                   </span>
                   {session.isCurrentSession && (
                     <span className="text-[9px] font-semibold px-1 py-px border border-accent-brand/40 bg-accent-brand/10 text-accent-brand">
-                      YOU
+                      {t("admin.youBadge")}
                     </span>
                   )}
                 </div>
@@ -1169,10 +1203,10 @@ export function AdminSettingsPanel() {
                   {session.deviceInfo}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  Active: {session.lastActiveAt}
+                  {t("admin.sessionActive", { time: session.lastActiveAt })}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  Exp: {session.expiresAt}
+                  {t("admin.sessionExpires", { time: session.expiresAt })}
                 </span>
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
@@ -1186,13 +1220,13 @@ export function AdminSettingsPanel() {
                       setSessions((prev) =>
                         prev.filter((s) => s.userId !== session.userId),
                       );
-                      toast.success("All sessions for user revoked");
+                      toast.success(t("admin.revokeAllSessionsSuccess"));
                     } catch {
-                      toast.error("Failed to revoke sessions");
+                      toast.error(t("admin.revokeAllSessionsFailed"));
                     }
                   }}
                 >
-                  All
+                  {t("admin.revokeAll")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -1205,7 +1239,7 @@ export function AdminSettingsPanel() {
                         prev.filter((s) => s.id !== session.id),
                       );
                     } catch {
-                      toast.error("Failed to revoke session");
+                      toast.error(t("admin.revokeSessionFailed"));
                     }
                   }}
                 >
@@ -1219,7 +1253,7 @@ export function AdminSettingsPanel() {
 
       {/* Roles */}
       <AccordionSection
-        label="Roles"
+        label={t("admin.sectionRoles")}
         icon={<KeyRound className="size-3.5" />}
         open={openSection === "roles"}
         onToggle={() => toggle("roles")}
@@ -1227,7 +1261,7 @@ export function AdminSettingsPanel() {
         <div className="flex flex-col pt-2">
           <div className="flex items-center justify-between py-2 border-b border-border">
             <span className="text-[10px] text-muted-foreground">
-              {roles.length} roles
+              {t("admin.rolesCount", { count: roles.length })}
             </span>
             <Button
               variant="outline"
@@ -1236,17 +1270,18 @@ export function AdminSettingsPanel() {
               onClick={() => setShowCreateRole((o) => !o)}
             >
               <Plus className="size-3" />
-              Create
+              {t("admin.createRole")}
             </Button>
           </div>
           {showCreateRole && (
             <div className="flex flex-col gap-2.5 py-3 border-b border-border">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                New Role
+                {t("admin.newRole")}
               </span>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Name <span className="text-accent-brand">*</span>
+                  {t("admin.roleName")}{" "}
+                  <span className="text-accent-brand">*</span>
                 </label>
                 <Input
                   placeholder="e.g., developer"
@@ -1257,7 +1292,8 @@ export function AdminSettingsPanel() {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Display Name <span className="text-accent-brand">*</span>
+                  {t("admin.roleDisplayName")}{" "}
+                  <span className="text-accent-brand">*</span>
                 </label>
                 <Input
                   placeholder="e.g., Developer"
@@ -1268,11 +1304,11 @@ export function AdminSettingsPanel() {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  Description
+                  {t("admin.roleDescription")}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Optional"
+                  placeholder={t("common.optional")}
                   value={newRoleDescription}
                   onChange={(e) => setNewRoleDescription(e.target.value)}
                   className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
@@ -1290,7 +1326,7 @@ export function AdminSettingsPanel() {
                     setNewRoleDescription("");
                   }}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   variant="outline"
@@ -1299,7 +1335,9 @@ export function AdminSettingsPanel() {
                   onClick={handleCreateRole}
                   disabled={createRoleLoading}
                 >
-                  {createRoleLoading ? "Creating..." : "Create"}
+                  {createRoleLoading
+                    ? t("admin.creating")
+                    : t("admin.createRole")}
                 </Button>
               </div>
             </div>
@@ -1316,11 +1354,11 @@ export function AdminSettingsPanel() {
                   </span>
                   {role.isSystem ? (
                     <span className="text-[9px] font-semibold px-1 py-px border border-border text-muted-foreground">
-                      SYS
+                      {t("admin.systemBadge")}
                     </span>
                   ) : (
                     <span className="text-[9px] font-semibold px-1 py-px border border-accent-brand/40 bg-accent-brand/10 text-accent-brand">
-                      CUSTOM
+                      {t("admin.customBadge")}
                     </span>
                   )}
                 </div>
@@ -1337,7 +1375,11 @@ export function AdminSettingsPanel() {
                     onClick={async () => {
                       await deleteRole(role.id);
                       setRoles((prev) => prev.filter((r) => r.id !== role.id));
-                      toast.success(`Role "${role.displayName}" deleted`);
+                      toast.success(
+                        t("admin.deleteRoleSuccess", {
+                          name: role.displayName,
+                        }),
+                      );
                     }}
                   >
                     <Trash2 className="size-3" />
@@ -1351,16 +1393,18 @@ export function AdminSettingsPanel() {
 
       {/* Database */}
       <AccordionSection
-        label="Database"
+        label={t("admin.sectionDatabase")}
         icon={<Database className="size-3.5" />}
         open={openSection === "database"}
         onToggle={() => toggle("database")}
       >
         <div className="flex flex-col gap-3 pt-3">
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium">Export Database</span>
+            <span className="text-xs font-medium">
+              {t("admin.exportDatabase")}
+            </span>
             <span className="text-[10px] text-muted-foreground">
-              Download a backup of all hosts, credentials, and settings
+              {t("admin.exportDatabaseDesc")}
             </span>
             <Button
               variant="outline"
@@ -1369,15 +1413,17 @@ export function AdminSettingsPanel() {
               onClick={handleExportDatabase}
               disabled={exportLoading}
             >
-              {exportLoading ? "Exporting..." : "Export"}
+              {exportLoading ? t("admin.exporting") : t("admin.export")}
             </Button>
           </div>
           <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-            <span className="text-xs font-medium">Import Database</span>
+            <span className="text-xs font-medium">
+              {t("admin.importDatabase")}
+            </span>
             <span className="text-[10px] text-muted-foreground">
               {importFile
-                ? `Selected: ${importFile.name}`
-                : "Restore from a .sqlite backup file"}
+                ? t("admin.importDatabaseSelected", { name: importFile.name })
+                : t("admin.importDatabaseDesc")}
             </span>
             <div className="flex items-center gap-2 mt-1">
               <div className="relative">
@@ -1392,7 +1438,7 @@ export function AdminSettingsPanel() {
                   size="sm"
                   className="pointer-events-none text-xs"
                 >
-                  {importFile ? "Change" : "Select File"}
+                  {importFile ? t("admin.changeFile") : t("admin.selectFile")}
                 </Button>
               </div>
               {importFile && (
@@ -1403,7 +1449,7 @@ export function AdminSettingsPanel() {
                   onClick={handleImportDatabase}
                   disabled={importLoading}
                 >
-                  {importLoading ? "Importing..." : "Import"}
+                  {importLoading ? t("admin.importing") : t("admin.import")}
                 </Button>
               )}
             </div>
@@ -1413,7 +1459,7 @@ export function AdminSettingsPanel() {
 
       {/* API Keys */}
       <AccordionSection
-        label="API Keys"
+        label={t("admin.sectionApiKeys")}
         icon={<Network className="size-3.5" />}
         open={openSection === "api-keys"}
         onToggle={() => toggle("api-keys")}
@@ -1421,7 +1467,7 @@ export function AdminSettingsPanel() {
         <div className="flex flex-col pt-2">
           <div className="flex items-center justify-between py-2 border-b border-border">
             <span className="text-[10px] text-muted-foreground">
-              {apiKeys.length} keys
+              {t("admin.apiKeysCount", { count: apiKeys.length })}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -1442,19 +1488,19 @@ export function AdminSettingsPanel() {
                 }}
               >
                 <Plus className="size-3" />
-                Create
+                {t("admin.createRole")}
               </Button>
             </div>
           </div>
           {showCreateKey && (
             <div className="flex flex-col gap-2.5 py-3 border-b border-border">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                New API Key
+                {t("admin.newApiKey")}
               </span>
               {createdKeyToken ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-[10px] text-accent-brand font-semibold">
-                    Key created — copy it now, it won't be shown again.
+                    {t("admin.apiKeyCreatedWarning")}
                   </span>
                   <div className="flex items-center gap-2 bg-muted/30 border border-border px-2 py-1.5">
                     <span className="text-[10px] font-mono flex-1 truncate">
@@ -1463,7 +1509,7 @@ export function AdminSettingsPanel() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(createdKeyToken);
-                        toast.info("Copied to clipboard");
+                        toast.info(t("admin.copiedToClipboard"));
                       }}
                       className="text-muted-foreground hover:text-accent-brand shrink-0"
                     >
@@ -1479,14 +1525,15 @@ export function AdminSettingsPanel() {
                       setCreatedKeyToken(null);
                     }}
                   >
-                    Done
+                    {t("admin.done")}
                   </Button>
                 </div>
               ) : (
                 <>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      Name <span className="text-accent-brand">*</span>
+                      {t("admin.apiKeyName")}{" "}
+                      <span className="text-accent-brand">*</span>
                     </label>
                     <Input
                       placeholder="e.g., CI Pipeline"
@@ -1497,14 +1544,15 @@ export function AdminSettingsPanel() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      User <span className="text-accent-brand">*</span>
+                      {t("admin.apiKeyUser")}{" "}
+                      <span className="text-accent-brand">*</span>
                     </label>
                     <select
                       className="px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
                       value={newKeyUserId}
                       onChange={(e) => setNewKeyUserId(e.target.value)}
                     >
-                      <option value="">Select a user...</option>
+                      <option value="">{t("admin.apiKeySelectUser")}</option>
                       {users.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.username}
@@ -1514,7 +1562,7 @@ export function AdminSettingsPanel() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      Expires At
+                      {t("admin.apiKeyExpiresAt")}
                     </label>
                     <Input
                       type="date"
@@ -1530,7 +1578,7 @@ export function AdminSettingsPanel() {
                       className="text-xs"
                       onClick={() => setShowCreateKey(false)}
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1539,7 +1587,9 @@ export function AdminSettingsPanel() {
                       onClick={handleCreateApiKey}
                       disabled={newKeyLoading}
                     >
-                      {newKeyLoading ? "Creating..." : "Create Key"}
+                      {newKeyLoading
+                        ? t("admin.creating")
+                        : t("admin.createKey")}
                     </Button>
                   </div>
                 </>
@@ -1558,19 +1608,21 @@ export function AdminSettingsPanel() {
                   </span>
                   {!key.isActive && (
                     <span className="text-[9px] font-semibold px-1 py-px border border-destructive/40 bg-destructive/10 text-destructive">
-                      REVOKED
+                      {t("admin.revokedBadge")}
                     </span>
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  User: {key.username}
+                  {t("admin.apiKeyUser")}: {key.username}
                 </span>
                 <span className="text-[10px] font-mono text-muted-foreground truncate">
                   {key.tokenPrefix}…
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   {key.createdAt.split("T")[0]} ·{" "}
-                  {key.expiresAt ? key.expiresAt.split("T")[0] : "No expiry"}
+                  {key.expiresAt
+                    ? key.expiresAt.split("T")[0]
+                    : t("admin.apiKeyNoExpiry")}
                 </span>
               </div>
               <Button
@@ -1581,9 +1633,11 @@ export function AdminSettingsPanel() {
                   try {
                     await deleteApiKey(key.id);
                     setApiKeys((prev) => prev.filter((k) => k.id !== key.id));
-                    toast.success(`Key "${key.name}" revoked`);
+                    toast.success(
+                      t("admin.revokeKeySuccess", { name: key.name }),
+                    );
                   } catch {
-                    toast.error("Failed to revoke key");
+                    toast.error(t("admin.revokeKeyFailed"));
                   }
                 }}
               >
@@ -1598,18 +1652,21 @@ export function AdminSettingsPanel() {
       <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">Create User</DialogTitle>
+            <DialogTitle className="text-lg font-bold">
+              {t("admin.createUserTitle")}
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Create a new local account.
+              {t("admin.createUserDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 mt-1">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Username <span className="text-accent-brand">*</span>
+                {t("admin.createUserUsername")}{" "}
+                <span className="text-accent-brand">*</span>
               </label>
               <Input
-                placeholder="Enter username"
+                placeholder={t("admin.createUserEnterUsername")}
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateUser()}
@@ -1617,7 +1674,8 @@ export function AdminSettingsPanel() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Password <span className="text-accent-brand">*</span>
+                {t("admin.createUserPassword")}{" "}
+                <span className="text-accent-brand">*</span>
               </label>
               <div className="relative">
                 <Input
@@ -1640,7 +1698,7 @@ export function AdminSettingsPanel() {
                 </button>
               </div>
               <span className="text-xs text-muted-foreground">
-                Minimum 6 characters.
+                {t("admin.createUserPasswordHint")}
               </span>
             </div>
           </div>
@@ -1653,7 +1711,7 @@ export function AdminSettingsPanel() {
                 setNewPassword("");
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="outline"
@@ -1661,7 +1719,9 @@ export function AdminSettingsPanel() {
               onClick={handleCreateUser}
               disabled={createUserLoading}
             >
-              {createUserLoading ? "Creating..." : "Create User"}
+              {createUserLoading
+                ? t("admin.creating")
+                : t("admin.createUserSubmit")}
             </Button>
           </div>
         </DialogContent>
@@ -1672,10 +1732,10 @@ export function AdminSettingsPanel() {
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">
-              Manage User: {editUserTarget?.username}
+              {t("admin.editUserTitle", { username: editUserTarget?.username })}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Edit roles, admin status, sessions, and account settings.
+              {t("admin.editUserDesc")}
             </DialogDescription>
           </DialogHeader>
           {editUserTarget && (
@@ -1683,7 +1743,7 @@ export function AdminSettingsPanel() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 py-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-                    Username
+                    {t("admin.editUserUsername")}
                   </span>
                   <span className="text-sm font-semibold">
                     {editUserTarget.username}
@@ -1691,27 +1751,29 @@ export function AdminSettingsPanel() {
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-                    Auth Type
+                    {t("admin.editUserAuthType")}
                   </span>
                   <span className="text-sm font-semibold">
                     {editUserTarget.isOidc && editUserTarget.passwordHash
-                      ? "Dual Auth"
+                      ? t("admin.authTypeDual")
                       : editUserTarget.isOidc
-                        ? "OIDC"
-                        : "Local"}
+                        ? t("admin.authTypeOidc")
+                        : t("admin.authTypeLocal")}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-                    Admin Status
+                    {t("admin.editUserAdminStatus")}
                   </span>
                   <span className="text-sm font-semibold">
-                    {editUserTarget.isAdmin ? "Administrator" : "Regular User"}
+                    {editUserTarget.isAdmin
+                      ? t("admin.adminStatusAdministrator")
+                      : t("admin.adminStatusRegularUser")}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-                    User ID
+                    {t("admin.editUserUserId")}
                   </span>
                   <span className="text-xs font-mono text-muted-foreground truncate">
                     {editUserTarget.id}
@@ -1720,9 +1782,11 @@ export function AdminSettingsPanel() {
               </div>
               <div className="flex items-center justify-between py-3">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">Administrator</span>
+                  <span className="text-sm font-medium">
+                    {t("admin.userAdminAccess")}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Full access to all admin settings
+                    {t("admin.userAdminAccessDesc")}
                   </span>
                 </div>
                 <AdminToggle
@@ -1731,10 +1795,12 @@ export function AdminSettingsPanel() {
                 />
               </div>
               <div className="flex flex-col gap-2 py-3">
-                <span className="text-sm font-medium">Roles</span>
+                <span className="text-sm font-medium">
+                  {t("admin.userRoles")}
+                </span>
                 {editUserRolesLoading ? (
                   <span className="text-xs text-muted-foreground">
-                    Loading...
+                    {t("newUi.sidebar.snippets.loading")}
                   </span>
                 ) : (
                   <>
@@ -1765,7 +1831,7 @@ export function AdminSettingsPanel() {
                                         ),
                                       );
                                     } catch {
-                                      toast.error("Failed to remove role");
+                                      toast.error(t("admin.removeRoleFailed"));
                                     }
                                   }}
                                   className="hover:text-destructive ml-0.5"
@@ -1785,7 +1851,7 @@ export function AdminSettingsPanel() {
                     ).length > 0 && (
                       <div className="flex flex-col gap-1">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                          Add role
+                          {t("admin.addRole")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {roles
@@ -1816,7 +1882,7 @@ export function AdminSettingsPanel() {
                                       },
                                     ]);
                                   } catch {
-                                    toast.error("Failed to assign role");
+                                    toast.error(t("admin.assignRoleFailed"));
                                   }
                                 }}
                                 className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 border border-border text-muted-foreground hover:border-accent-brand/40 hover:text-accent-brand transition-colors"
@@ -1830,7 +1896,7 @@ export function AdminSettingsPanel() {
                     {editUserRoles.length === 0 &&
                       roles.filter((r) => !r.isSystem).length === 0 && (
                         <span className="text-xs text-muted-foreground">
-                          No custom roles defined
+                          {t("admin.noCustomRoles")}
                         </span>
                       )}
                   </>
@@ -1839,10 +1905,10 @@ export function AdminSettingsPanel() {
               <div className="flex items-center justify-between py-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium">
-                    Revoke All Sessions
+                    {t("admin.revokeAllUserSessions")}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Force re-login on all devices
+                    {t("admin.revokeAllUserSessionsDesc")}
                   </span>
                 </div>
                 <Button
@@ -1852,14 +1918,14 @@ export function AdminSettingsPanel() {
                   onClick={() => handleRevokeUserSessions(editUserTarget.id)}
                   disabled={editUserLoading}
                 >
-                  Revoke
+                  {t("admin.revoke")}
                 </Button>
               </div>
               <div className="flex flex-col gap-2 py-3">
                 <div className="flex items-start gap-2.5 border border-destructive/30 bg-destructive/5 px-3 py-2.5">
                   <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
                   <span className="text-xs text-destructive">
-                    Deleting this user is permanent.
+                    {t("admin.deleteUserWarning")}
                   </span>
                 </div>
                 <Button
@@ -1870,8 +1936,10 @@ export function AdminSettingsPanel() {
                 >
                   <Trash2 className="size-3.5" />
                   {editUserLoading
-                    ? "Deleting..."
-                    : `Delete ${editUserTarget.username}`}
+                    ? t("admin.deleting")
+                    : t("admin.deleteUser", {
+                        username: editUserTarget.username,
+                      })}
                 </Button>
               </div>
             </div>
@@ -1884,44 +1952,43 @@ export function AdminSettingsPanel() {
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">
-              Link OIDC to Password Account
+              {t("admin.linkAccountTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Merge the OIDC account{" "}
-              <span className="font-semibold text-foreground">
-                {linkAccountTarget?.username}
-              </span>{" "}
-              with an existing local account.
+              {t("admin.linkAccountDesc", {
+                username: linkAccountTarget?.username,
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 mt-1">
             <div className="flex items-start gap-2.5 border border-destructive/30 bg-destructive/5 px-3 py-2.5">
               <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1 text-xs text-destructive">
-                <span>This will:</span>
+                <span>{t("admin.linkAccountWarningTitle")}</span>
                 <ul className="list-disc list-inside space-y-0.5 ml-1">
-                  <li>Delete the OIDC-only account</li>
-                  <li>Add OIDC login to the target account</li>
-                  <li>Allow both OIDC and password login</li>
+                  <li>{t("admin.linkAccountEffect1")}</li>
+                  <li>{t("admin.linkAccountEffect2")}</li>
+                  <li>{t("admin.linkAccountEffect3")}</li>
                 </ul>
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Target Username <span className="text-accent-brand">*</span>
+                {t("admin.linkAccountTargetUsername")}{" "}
+                <span className="text-accent-brand">*</span>
               </label>
-              <Input placeholder="Enter the local account username to link to" />
+              <Input placeholder={t("admin.linkAccountTargetPlaceholder")} />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => setLinkAccountOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="outline"
               className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
-              Link Accounts
+              {t("admin.linkAccounts")}
             </Button>
           </div>
         </DialogContent>
