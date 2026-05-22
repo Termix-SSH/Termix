@@ -266,6 +266,9 @@ function stripSensitiveFields(
   result.hasPassword = !!host.password;
   result.hasKey = !!host.key;
   result.hasSudoPassword = !!host.sudoPassword;
+  result.hasRdpPassword = !!host.rdpPassword;
+  result.hasVncPassword = !!host.vncPassword;
+  result.hasTelnetPassword = !!host.telnetPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }

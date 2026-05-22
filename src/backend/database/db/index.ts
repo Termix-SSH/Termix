@@ -1092,6 +1092,40 @@ const migrateSchema = () => {
     }
   }
 
+  // One-time migration: copy old generic credentials into protocol-specific fields
+  // for hosts that were created before the multi-protocol schema was introduced.
+  const credentialBackfills = [
+    {
+      protocol: "rdp",
+      sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = domain WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
+    },
+    {
+      protocol: "vnc",
+      sql: "UPDATE ssh_data SET vnc_user = username, vnc_password = password WHERE connection_type = 'vnc' AND vnc_user IS NULL AND vnc_password IS NULL",
+    },
+    {
+      protocol: "telnet",
+      sql: "UPDATE ssh_data SET telnet_user = username, telnet_password = password WHERE connection_type = 'telnet' AND telnet_user IS NULL AND telnet_password IS NULL",
+    },
+  ];
+
+  for (const backfill of credentialBackfills) {
+    try {
+      const result = sqlite.prepare(backfill.sql).run();
+      if (result.changes > 0) {
+        databaseLogger.info(
+          `Backfilled credentials for ${result.changes} ${backfill.protocol} host(s)`,
+          { operation: "credential_backfill" },
+        );
+      }
+    } catch (backfillError) {
+      databaseLogger.warn(
+        `Failed to backfill ${backfill.protocol} credentials`,
+        { operation: "credential_backfill", error: backfillError },
+      );
+    }
+  }
+
   try {
     sqlite.prepare("SELECT id FROM roles LIMIT 1").get();
   } catch {
