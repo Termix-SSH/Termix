@@ -1092,9 +1092,9 @@ const migrateSchema = () => {
     }
   }
 
-  // One-time migration: copy old generic credentials into protocol-specific fields
-  // for hosts that were created before the multi-protocol schema was introduced.
-  const credentialBackfills = [
+  // Copy unencrypted username/domain into protocol-specific columns for old guac hosts.
+  // Passwords are handled via the legacy field name fallback in lazy-field-encryption.ts.
+  const usernameDomainBackfills = [
     {
       protocol: "rdp",
       sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = domain WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
@@ -1108,21 +1108,20 @@ const migrateSchema = () => {
       sql: "UPDATE ssh_data SET telnet_user = username, telnet_password = password WHERE connection_type = 'telnet' AND telnet_user IS NULL AND telnet_password IS NULL",
     },
   ];
-
-  for (const backfill of credentialBackfills) {
+  for (const backfill of usernameDomainBackfills) {
     try {
       const result = sqlite.prepare(backfill.sql).run();
       if (result.changes > 0) {
         databaseLogger.info(
-          `Backfilled credentials for ${result.changes} ${backfill.protocol} host(s)`,
-          { operation: "credential_backfill" },
+          `Backfilled ${result.changes} ${backfill.protocol} host credential(s)`,
+          { operation: "guac_credential_backfill" },
         );
       }
-    } catch (backfillError) {
-      databaseLogger.warn(
-        `Failed to backfill ${backfill.protocol} credentials`,
-        { operation: "credential_backfill", error: backfillError },
-      );
+    } catch (e) {
+      databaseLogger.warn(`Failed to backfill ${backfill.protocol} host credentials`, {
+        operation: "guac_credential_backfill",
+        error: e,
+      });
     }
   }
 
