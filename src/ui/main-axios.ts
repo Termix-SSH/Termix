@@ -874,7 +874,7 @@ function initializeApp() {
   if (isElectron()) {
     Promise.all([getServerConfig(), getEmbeddedServerStatus()])
       .then(([config, status]) => {
-        if (status?.embedded && status?.running) {
+        if (status?.embedded && status?.running && !config?.serverUrl) {
           embeddedMode = true;
         }
         if (config?.serverUrl) {
