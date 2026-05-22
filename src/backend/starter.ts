@@ -137,7 +137,8 @@ import {
       },
     );
 
-    await import("./database/database.js");
+    const dbServer = await import("./database/database.js");
+    await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
     await import("./ssh/terminal.js");
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");

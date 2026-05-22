@@ -143,14 +143,11 @@ export function ElectronLoginForm({
               {t("serverConfig.changeServer")}
             </span>
           </button>
-          {!isEmbeddedServer && (
-            <div className="flex-1 mx-4 text-center">
-              <span className="text-muted-foreground text-sm truncate block">
-                {displayUrl}
-              </span>
-            </div>
-          )}
-          {isEmbeddedServer && <div className="flex-1" />}
+          <div className="flex-1 mx-4 text-center">
+            <span className="text-muted-foreground text-sm truncate block">
+              {isEmbeddedServer ? t("serverConfig.localServer") : displayUrl}
+            </span>
+          </div>
           <button
             onClick={handleRefresh}
             className="p-2 text-foreground hover:text-primary transition-colors"

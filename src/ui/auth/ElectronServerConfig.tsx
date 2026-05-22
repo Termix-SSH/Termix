@@ -91,7 +91,8 @@ export function ElectronServerConfig({
     setError(null);
 
     try {
-      const maxRetries = 10;
+      await new Promise((r) => setTimeout(r, 1500));
+      const maxRetries = 15;
       for (let i = 0; i < maxRetries; i++) {
         if (await probeBackend()) {
           setEmbeddedMode(true);

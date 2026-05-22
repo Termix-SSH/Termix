@@ -31,7 +31,8 @@
     "useEmbedded": "Use Local Server",
     "embeddedDesc": "Run Termix with the built-in local server (no remote server needed)",
     "embeddedConnecting": "Connecting to local server...",
-    "embeddedNotReady": "Local server is not ready yet. Please wait a moment and try again."
+    "embeddedNotReady": "Local server is not ready yet. Please wait a moment and try again.",
+    "localServer": "Local Server"
   },
   "versionCheck": {
     "error": "Version Check Error",

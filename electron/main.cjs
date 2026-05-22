@@ -423,6 +423,7 @@ app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
 let backendProcess = null;
+let backendStartFailed = false;
 let tray = null;
 let isQuitting = false;
 
@@ -657,6 +658,9 @@ function startBackendServer() {
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
+      if (!resolved && code !== 0) {
+        backendStartFailed = true;
+      }
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -1092,7 +1096,7 @@ ipcMain.handle("get-platform", () => {
 
 ipcMain.handle("get-embedded-server-status", () => {
   return {
-    running: backendProcess !== null && !backendProcess.killed,
+    running: backendProcess !== null && !backendProcess.killed && !backendStartFailed,
     embedded: !isDev,
     dataDir: isDev ? null : getBackendDataDir(),
   };
