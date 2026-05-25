@@ -851,6 +851,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         if (isEmbeddedMode()) {
           baseWsUrl = "ws://127.0.0.1:30002";
+///>>> this block of code is cut/pasted from below.  It seems this is needed only for
+///    the embedded mode case.
+          const storedJwt = localStorage.getItem("jwt");
+          if (storedJwt) {
+            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
+          }
+///<<<
         } else if (!configuredUrl) {
           console.error("No configured server URL available for Electron SSH");
           setIsConnected(false);
@@ -866,11 +873,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             .replace(/^https?:\/\//, "")
             .replace(/\/$/, "");
           baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
-          const storedJwt = localStorage.getItem("jwt");
-          if (storedJwt) {
-            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
-          }
         }
+///>>> alternatively, the moved block of code could be inserted here and it would
+///>>> apply to both the embedded and non-embedded cases.
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }

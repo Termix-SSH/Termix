@@ -869,7 +869,8 @@ function initializeApp() {
   if (isElectron()) {
     Promise.all([getServerConfig(), getEmbeddedServerStatus()])
       .then(([config, status]) => {
-        if (status?.embedded && status?.running) {
+        /// this is a port of your fix from beta branch
+        if (status?.embedded && status?.running && !config?.serverUrl) {
           embeddedMode = true;
         }
         if (config?.serverUrl) {
@@ -2856,6 +2857,16 @@ export async function loginUser(
       password,
       rememberMe,
     });
+
+    ///>>> from what I could tell, the jwt was not getting persisted to local
+    ///    storage by the existing code (ie. ElectronLoginForm.tsx line 46 was never
+    ///    getting hit).  I assume that there is a more appropriate fix
+    ///    but the flow is too complicated for me, so I stuck this here for testing
+    ///    and it seems to work. 
+    if (response.data.token) {
+      localStorage.setItem("jwt", response.data.token);
+    }
+    ///<<<
 
     const isInIframe =
       typeof window !== "undefined" && window.self !== window.top;
