@@ -10,6 +10,7 @@ interface ResolvedCredentials {
   key?: Buffer;
   keyPassword?: string;
   authType?: string;
+  certPublicKey?: string;
 }
 
 interface HostConfig {
@@ -82,6 +83,7 @@ export class SSHAuthManager {
               : undefined,
           keyPassword: (cred.keyPassword as string) || undefined,
           authType: (cred.authType as string) || "none",
+          certPublicKey: (cred.certPublicKey as string) || undefined,
         };
       }
     } else {

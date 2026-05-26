@@ -103,6 +103,27 @@ function detectKeyTypeFromContent(keyContent: string): string {
 function detectPublicKeyTypeFromContent(publicKeyContent: string): string {
   const content = publicKeyContent.trim();
 
+  // OpenSSH certificate types (must be checked before plain key types)
+  if (content.startsWith("ssh-ed25519-cert-v01@openssh.com ")) {
+    return "ssh-ed25519-cert-v01@openssh.com";
+  }
+  if (content.startsWith("ssh-rsa-cert-v01@openssh.com ")) {
+    return "ssh-rsa-cert-v01@openssh.com";
+  }
+  if (content.startsWith("ecdsa-sha2-nistp256-cert-v01@openssh.com ")) {
+    return "ecdsa-sha2-nistp256-cert-v01@openssh.com";
+  }
+  if (content.startsWith("ecdsa-sha2-nistp384-cert-v01@openssh.com ")) {
+    return "ecdsa-sha2-nistp384-cert-v01@openssh.com";
+  }
+  if (content.startsWith("ecdsa-sha2-nistp521-cert-v01@openssh.com ")) {
+    return "ecdsa-sha2-nistp521-cert-v01@openssh.com";
+  }
+  if (content.startsWith("sk-ssh-ed25519-cert-v01@openssh.com ")) {
+    return "sk-ssh-ed25519-cert-v01@openssh.com";
+  }
+
+  // Plain public keys
   if (content.startsWith("ssh-rsa ")) {
     return "ssh-rsa";
   }
