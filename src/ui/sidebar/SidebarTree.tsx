@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Box,
   Check,
@@ -344,10 +343,9 @@ export function HostItem({
                   e.stopPropagation();
                   onOpenTab("rdp");
                 }}
-                className="flex items-center gap-1.5 px-2.5 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
               >
-                <Monitor className="size-3" />
-                RDP
+                <Monitor className="size-3.5" />
               </button>
             )}
             {host.enableVnc && (
@@ -357,10 +355,9 @@ export function HostItem({
                   e.stopPropagation();
                   onOpenTab("vnc");
                 }}
-                className="flex items-center gap-1.5 px-2.5 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
               >
-                <Monitor className="size-3" />
-                VNC
+                <Monitor className="size-3.5" />
               </button>
             )}
             {host.enableTelnet && (
@@ -370,10 +367,9 @@ export function HostItem({
                   e.stopPropagation();
                   onOpenTab("telnet");
                 }}
-                className="flex items-center gap-1.5 px-2.5 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
               >
-                <Terminal className="size-3" />
-                Telnet
+                <Terminal className="size-3.5" />
               </button>
             )}
             {onEditHost && (
@@ -582,7 +578,6 @@ export function HostItem({
 export function FolderItem({
   folder,
   depth = 0,
-  flat = false,
   onOpenTab,
   onEditHost,
   onShareHost,
@@ -600,7 +595,6 @@ export function FolderItem({
 }: {
   folder: HostFolder;
   depth?: number;
-  flat?: boolean;
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost?: (host: Host) => void;
   onShareHost?: (host: Host) => void;
@@ -645,8 +639,7 @@ export function FolderItem({
           <span className="text-muted-foreground/40">/{total}</span>
         </span>
       </button>
-      {/* Children are rendered as separate virtual rows when flat=true */}
-      {!flat && isOpen && (
+      {isOpen && (
         <div className="border-l border-border/40 ml-[30px]">
           {folder.children.map((child, i) =>
             isFolder(child) ? (
@@ -716,7 +709,6 @@ export function SidebarTree({
   loading?: boolean;
 }) {
   const { t } = useTranslation();
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(
     new Set(),
@@ -790,13 +782,6 @@ export function SidebarTree({
     visibleRows.map((r, i) => [r.item, i]),
   );
 
-  const virtualizer = useVirtualizer({
-    count: visibleRows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 52,
-    overscan: 8,
-  });
-
   if (loading) {
     return (
       <div className="relative flex flex-col flex-1 min-h-0">
@@ -824,7 +809,7 @@ export function SidebarTree({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {visibleRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <Server className="size-8 text-muted-foreground/20 mb-2" />
@@ -833,78 +818,47 @@ export function SidebarTree({
             </span>
           </div>
         ) : (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              position: "relative",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((vItem) => {
-              const { item, depth } = visibleRows[vItem.index];
-              const stripeIndex = stripeMap.get(item) ?? 0;
-              const indentPx = depth * 16;
-              return (
-                <div
-                  key={vItem.key}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${vItem.start}px)`,
-                  }}
-                >
-                  <div
-                    style={
-                      depth > 0 ? { paddingLeft: `${indentPx}px` } : undefined
-                    }
-                  >
-                    {isFolder(item) ? (
-                      <FolderItem
-                        folder={item}
-                        flat={true}
-                        depth={depth}
-                        onOpenTab={onOpenTab}
-                        onEditHost={onEditHost}
-                        onShareHost={onShareHost}
-                        onDeleteHost={handleDeleteHost}
-                        onDuplicateHost={handleDuplicateHost}
-                        query={query}
-                        stripeMap={stripeMap}
-                        openFolders={openFolders}
-                        onToggleFolder={toggleFolder}
-                        selectionMode={selectionMode}
-                        selectedHostIds={selectedHostIds}
-                        onToggleSelect={toggleSelect}
-                        openMenuHostId={openMenuHostId}
-                        onMenuOpenChange={setOpenMenuHostId}
-                      />
-                    ) : (
-                      <HostItem
-                        host={item}
-                        onOpenTab={(type) => onOpenTab(item, type)}
-                        onEditHost={() => onEditHost(item)}
-                        onShareHost={
-                          onShareHost ? () => onShareHost(item) : undefined
-                        }
-                        onDelete={() => handleDeleteHost(item)}
-                        onDuplicate={() => handleDuplicateHost(item)}
-                        query={query}
-                        stripeIndex={stripeIndex}
-                        selectionMode={selectionMode}
-                        selected={selectedHostIds.has(item.id)}
-                        onToggleSelect={() => toggleSelect(item.id)}
-                        isMenuOpen={openMenuHostId === item.id}
-                        onMenuOpenChange={(open) =>
-                          setOpenMenuHostId(open ? item.id : null)
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          children.map((child, i) =>
+            isFolder(child) ? (
+              <FolderItem
+                key={i}
+                folder={child}
+                onOpenTab={onOpenTab}
+                onEditHost={onEditHost}
+                onShareHost={onShareHost}
+                onDeleteHost={handleDeleteHost}
+                onDuplicateHost={handleDuplicateHost}
+                query={query}
+                stripeMap={stripeMap}
+                openFolders={openFolders}
+                onToggleFolder={toggleFolder}
+                selectionMode={selectionMode}
+                selectedHostIds={selectedHostIds}
+                onToggleSelect={toggleSelect}
+                openMenuHostId={openMenuHostId}
+                onMenuOpenChange={setOpenMenuHostId}
+              />
+            ) : (
+              <HostItem
+                key={i}
+                host={child}
+                onOpenTab={(type) => onOpenTab(child, type)}
+                onEditHost={() => onEditHost(child)}
+                onShareHost={onShareHost ? () => onShareHost(child) : undefined}
+                onDelete={() => handleDeleteHost(child)}
+                onDuplicate={() => handleDuplicateHost(child)}
+                query={query}
+                stripeIndex={stripeMap.get(child) ?? 0}
+                selectionMode={selectionMode}
+                selected={selectedHostIds.has(child.id)}
+                onToggleSelect={() => toggleSelect(child.id)}
+                isMenuOpen={openMenuHostId === child.id}
+                onMenuOpenChange={(open) =>
+                  setOpenMenuHostId(open ? child.id : null)
+                }
+              />
+            ),
+          )
         )}
       </div>
 

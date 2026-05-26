@@ -2015,14 +2015,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       fitAddonRef.current?.fit();
-      if (terminal.cols < 10 || terminal.rows < 3) {
+      // Double-rAF ensures layout is fully settled (fonts, flexbox, etc.) before
+      // committing the fitted size, preventing the "terminal too short" glitch.
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           fitAddonRef.current?.fit();
           setIsFitted(true);
         });
-      } else {
-        setIsFitted(true);
-      }
+      });
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
@@ -2475,26 +2475,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      if (terminal.cols < 10 || terminal.rows < 3) {
+      setIsConnecting(true);
+      fitAddonRef.current?.fit();
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          fitAddonRef.current?.fit();
           if (terminal.cols > 0 && terminal.rows > 0) {
-            setIsConnecting(true);
-            fitAddonRef.current?.fit();
             scheduleNotify(terminal.cols, terminal.rows);
             connectToHost(terminal.cols, terminal.rows);
           }
         });
-        return;
-      }
-
-      setIsConnecting(true);
-      fitAddonRef.current?.fit();
-      requestAnimationFrame(() => {
-        fitAddonRef.current?.fit();
-        if (terminal.cols > 0 && terminal.rows > 0) {
-          scheduleNotify(terminal.cols, terminal.rows);
-          connectToHost(terminal.cols, terminal.rows);
-        }
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);

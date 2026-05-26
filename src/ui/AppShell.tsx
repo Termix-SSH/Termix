@@ -146,9 +146,14 @@ export function AppShell({
 
   const isMobile = useIsMobile();
 
-  // Close the sidebar when switching to mobile (it becomes a sheet overlay)
+  const sidebarOpenBeforeMobile = useRef(sidebarOpen);
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    if (isMobile) {
+      sidebarOpenBeforeMobile.current = sidebarOpen;
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(sidebarOpenBeforeMobile.current);
+    }
   }, [isMobile]);
 
   useEffect(() => {

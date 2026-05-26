@@ -94,15 +94,13 @@ export function HostShareModal({
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="size-3.5 shrink-0" />
-          <span>{t("hosts.shareHostTitle", { name: host?.name ?? "" })}</span>
-        </button>
-      </div>
+      <button
+        onClick={onClose}
+        className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+      >
+        <ArrowLeft className="size-3.5 shrink-0" />
+        <span>{t("hosts.shareHostTitle", { name: host?.name ?? "" })}</span>
+      </button>
 
       {/* Scrollable content */}
       <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-3 gap-3">
