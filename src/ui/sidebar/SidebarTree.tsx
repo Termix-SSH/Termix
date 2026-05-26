@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Box,
   Check,
   ChevronDown,
   ChevronRight,
   Copy,
+  CopyPlus,
   Cpu,
   FolderOpen,
   FolderSearch,
   Link,
+  Loader2,
   MemoryStick,
   Monitor,
   MoreHorizontal,
@@ -17,6 +20,7 @@ import {
   Pencil,
   Pin,
   Server,
+  Share2,
   Terminal,
   Trash2,
 } from "lucide-react";
@@ -31,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
-import { bulkUpdateSSHHosts, deleteSSHHost } from "@/main-axios";
+import { bulkUpdateSSHHosts, createSSHHost, deleteSSHHost } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
@@ -100,21 +104,26 @@ function folderHasMatch(folder: HostFolder, query: string): boolean {
   return false;
 }
 
+type VirtualRow = { item: Host | HostFolder; depth: number };
+
 function collectVisibleRows(
   children: (Host | HostFolder)[],
   query: string,
   openSet: Set<string>,
-  out: (Host | HostFolder)[] = [],
-): (Host | HostFolder)[] {
+  out: VirtualRow[] = [],
+  depth = 0,
+): VirtualRow[] {
   for (const child of children) {
     if (isFolder(child)) {
       const visible = query ? folderHasMatch(child, query) : true;
       if (!visible) continue;
-      out.push(child);
+      out.push({ item: child, depth });
       const childOpen = query ? true : openSet.has(child.name);
-      if (childOpen) collectVisibleRows(child.children, query, openSet, out);
+      if (childOpen)
+        collectVisibleRows(child.children, query, openSet, out, depth + 1);
     } else {
-      if (!query || hostMatchesQuery(child, query)) out.push(child);
+      if (!query || hostMatchesQuery(child, query))
+        out.push({ item: child, depth });
     }
   }
   return out;
@@ -166,7 +175,9 @@ export function HostItem({
   host,
   onOpenTab,
   onEditHost,
+  onShareHost,
   onDelete,
+  onDuplicate,
   query = "",
   stripeIndex = 0,
   selectionMode = false,
@@ -178,7 +189,9 @@ export function HostItem({
   host: Host;
   onOpenTab: (type: TabType) => void;
   onEditHost?: () => void;
+  onShareHost?: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   query?: string;
   stripeIndex?: number;
   selectionMode?: boolean;
@@ -378,6 +391,21 @@ export function HostItem({
                 </button>
               </>
             )}
+            {onShareHost && (
+              <>
+                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                <button
+                  title={t("hosts.shareHost")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShareHost();
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors"
+                >
+                  <Share2 className="size-3.5" />
+                </button>
+              </>
+            )}
             <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
               <DropdownMenuTrigger asChild>
                 <button
@@ -523,6 +551,16 @@ export function HostItem({
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicate();
+                  }}
+                >
+                  <CopyPlus className="size-3.5 mr-2" />
+                  {t("hosts.cloneHostAction")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -544,9 +582,12 @@ export function HostItem({
 export function FolderItem({
   folder,
   depth = 0,
+  flat = false,
   onOpenTab,
   onEditHost,
+  onShareHost,
   onDeleteHost,
+  onDuplicateHost,
   query = "",
   stripeMap,
   openFolders,
@@ -559,9 +600,12 @@ export function FolderItem({
 }: {
   folder: HostFolder;
   depth?: number;
+  flat?: boolean;
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost?: (host: Host) => void;
+  onShareHost?: (host: Host) => void;
   onDeleteHost: (host: Host) => void;
+  onDuplicateHost: (host: Host) => void;
   query?: string;
   stripeMap: Map<Host | HostFolder, number>;
   openFolders: Set<string>;
@@ -601,7 +645,8 @@ export function FolderItem({
           <span className="text-muted-foreground/40">/{total}</span>
         </span>
       </button>
-      {isOpen && (
+      {/* Children are rendered as separate virtual rows when flat=true */}
+      {!flat && isOpen && (
         <div className="border-l border-border/40 ml-[30px]">
           {folder.children.map((child, i) =>
             isFolder(child) ? (
@@ -611,7 +656,9 @@ export function FolderItem({
                 depth={depth + 1}
                 onOpenTab={onOpenTab}
                 onEditHost={onEditHost}
+                onShareHost={onShareHost}
                 onDeleteHost={onDeleteHost}
+                onDuplicateHost={onDuplicateHost}
                 query={query}
                 stripeMap={stripeMap}
                 openFolders={openFolders}
@@ -628,7 +675,9 @@ export function FolderItem({
                 host={child}
                 onOpenTab={(t) => onOpenTab(child, t)}
                 onEditHost={onEditHost ? () => onEditHost(child) : undefined}
+                onShareHost={onShareHost ? () => onShareHost(child) : undefined}
                 onDelete={() => onDeleteHost(child)}
+                onDuplicate={() => onDuplicateHost(child)}
                 query={query}
                 stripeIndex={stripeMap.get(child) ?? 0}
                 selectionMode={selectionMode}
@@ -651,18 +700,23 @@ export function SidebarTree({
   children,
   onOpenTab,
   onEditHost,
+  onShareHost,
   query = "",
   selectionMode,
   onToggleSelectionMode,
+  loading = false,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost: (host: Host) => void;
+  onShareHost?: (host: Host) => void;
   query?: string;
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
+  loading?: boolean;
 }) {
   const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(
     new Set(),
@@ -704,53 +758,153 @@ export function SidebarTree({
     });
   }
 
+  async function handleDuplicateHost(host: Host) {
+    try {
+      const {
+        id: _id,
+        online: _online,
+        cpu: _cpu,
+        ram: _ram,
+        lastAccess: _la,
+        hasKey: _hk,
+        hasKeyPassword: _hkp,
+        ...rest
+      } = host as any;
+      await createSSHHost({
+        ...rest,
+        name: `${host.name} (copy)`,
+        key: undefined,
+      });
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      toast.success(t("hosts.duplicatedHost", { name: host.name }));
+    } catch {
+      toast.error(t("hosts.failedToDuplicateHost"));
+    }
+  }
+
   const allHosts = collectAllHosts(children);
   const allFolders = collectAllFolders(children);
 
   const visibleRows = collectVisibleRows(children, query, openFolders);
   const stripeMap = new Map<Host | HostFolder, number>(
-    visibleRows.map((r, i) => [r, i]),
+    visibleRows.map((r, i) => [r.item, i]),
   );
+
+  const virtualizer = useVirtualizer({
+    count: visibleRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 52,
+    overscan: 8,
+  });
+
+  if (loading) {
+    return (
+      <div className="relative flex flex-col flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1.5">
+          {[28, 20, 24, 20, 28, 20].map((w, i) => (
+            <div
+              key={i}
+              className={`flex items-center gap-2 px-3 py-2 ${i % 2 === 1 ? "ml-4" : ""}`}
+            >
+              <div className="size-3 rounded-sm bg-muted/50 animate-pulse shrink-0" />
+              <div
+                className="h-3 rounded bg-muted/50 animate-pulse"
+                style={{ width: `${w * 3}px` }}
+              />
+            </div>
+          ))}
+          <div className="flex items-center justify-center gap-2 pt-4 text-muted-foreground/40">
+            <Loader2 className="size-3.5 animate-spin" />
+            <span className="text-xs">{t("hosts.loadingHosts")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {children.map((child, i) =>
-          isFolder(child) ? (
-            <FolderItem
-              key={i}
-              folder={child}
-              onOpenTab={onOpenTab}
-              onEditHost={onEditHost}
-              onDeleteHost={handleDeleteHost}
-              query={query}
-              stripeMap={stripeMap}
-              openFolders={openFolders}
-              onToggleFolder={toggleFolder}
-              selectionMode={selectionMode}
-              selectedHostIds={selectedHostIds}
-              onToggleSelect={toggleSelect}
-              openMenuHostId={openMenuHostId}
-              onMenuOpenChange={setOpenMenuHostId}
-            />
-          ) : (
-            <HostItem
-              key={i}
-              host={child}
-              onOpenTab={(type) => onOpenTab(child, type)}
-              onEditHost={() => onEditHost(child)}
-              onDelete={() => handleDeleteHost(child)}
-              query={query}
-              stripeIndex={stripeMap.get(child) ?? 0}
-              selectionMode={selectionMode}
-              selected={selectedHostIds.has(child.id)}
-              onToggleSelect={() => toggleSelect(child.id)}
-              isMenuOpen={openMenuHostId === child.id}
-              onMenuOpenChange={(open) =>
-                setOpenMenuHostId(open ? child.id : null)
-              }
-            />
-          ),
+      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
+        {visibleRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+            <Server className="size-8 text-muted-foreground/20 mb-2" />
+            <span className="text-sm font-semibold text-muted-foreground/60">
+              {query ? t("hosts.noHostsMatchSearch") : t("hosts.noHostsYet")}
+            </span>
+          </div>
+        ) : (
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((vItem) => {
+              const { item, depth } = visibleRows[vItem.index];
+              const stripeIndex = stripeMap.get(item) ?? 0;
+              const indentPx = depth * 16;
+              return (
+                <div
+                  key={vItem.key}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
+                >
+                  <div
+                    style={
+                      depth > 0 ? { paddingLeft: `${indentPx}px` } : undefined
+                    }
+                  >
+                    {isFolder(item) ? (
+                      <FolderItem
+                        folder={item}
+                        flat={true}
+                        depth={depth}
+                        onOpenTab={onOpenTab}
+                        onEditHost={onEditHost}
+                        onShareHost={onShareHost}
+                        onDeleteHost={handleDeleteHost}
+                        onDuplicateHost={handleDuplicateHost}
+                        query={query}
+                        stripeMap={stripeMap}
+                        openFolders={openFolders}
+                        onToggleFolder={toggleFolder}
+                        selectionMode={selectionMode}
+                        selectedHostIds={selectedHostIds}
+                        onToggleSelect={toggleSelect}
+                        openMenuHostId={openMenuHostId}
+                        onMenuOpenChange={setOpenMenuHostId}
+                      />
+                    ) : (
+                      <HostItem
+                        host={item}
+                        onOpenTab={(type) => onOpenTab(item, type)}
+                        onEditHost={() => onEditHost(item)}
+                        onShareHost={
+                          onShareHost ? () => onShareHost(item) : undefined
+                        }
+                        onDelete={() => handleDeleteHost(item)}
+                        onDuplicate={() => handleDuplicateHost(item)}
+                        query={query}
+                        stripeIndex={stripeIndex}
+                        selectionMode={selectionMode}
+                        selected={selectedHostIds.has(item.id)}
+                        onToggleSelect={() => toggleSelect(item.id)}
+                        isMenuOpen={openMenuHostId === item.id}
+                        onMenuOpenChange={(open) =>
+                          setOpenMenuHostId(open ? item.id : null)
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

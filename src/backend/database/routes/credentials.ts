@@ -1451,7 +1451,7 @@ router.post(
       const publicKeyString =
         typeof publicKeyPem === "string"
           ? publicKeyPem
-          : publicKeyPem.toString("utf8");
+          : (publicKeyPem as Buffer).toString("utf8");
 
       let keyType = "unknown";
       const asymmetricKeyType = privateKeyObj.asymmetricKeyType;

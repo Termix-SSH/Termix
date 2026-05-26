@@ -133,6 +133,7 @@ export function AppShell({
     Array(6).fill(null),
   );
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
+  const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -256,6 +257,8 @@ export function AppShell({
       setRealHostTree(buildHostTree(raw));
     } catch {
       // Keep empty state on error
+    } finally {
+      setHostsLoading(false);
     }
   }, []);
 
@@ -482,7 +485,9 @@ export function AppShell({
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
   const sidebarPanelContent = (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {railView === "hosts" && (
+      <div
+        className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
+      >
         <HostsPanel
           onOpenTab={(host, type) => {
             connectHost(host, type);
@@ -490,13 +495,16 @@ export function AppShell({
           }}
           onEditHost={editHostInManager}
           hostTree={realHostTree ?? undefined}
+          loading={hostsLoading}
           onEditingChange={setSidebarEditing}
         />
-      )}
+      </div>
 
-      {railView === "credentials" && (
+      <div
+        className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
+      >
         <CredentialsPanel onEditingChange={setSidebarEditing} />
-      )}
+      </div>
 
       {railView === "quick-connect" && (
         <QuickConnectPanel

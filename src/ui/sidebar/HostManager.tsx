@@ -20,53 +20,31 @@ import {
   Activity,
   ArrowLeft,
   Box,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Copy,
-  Download,
   Folder,
-  FolderOpen,
   FolderSearch,
   Globe,
   Info,
   KeyRound,
   LayoutDashboard,
-  Link,
-  ListChecks,
+  Loader2,
   Lock,
-  MoreHorizontal,
   Monitor,
   Network,
   Palette,
   Pencil,
-  Pin,
   Plus,
-  RefreshCw,
   Search,
   Server,
   Settings,
-  Share2,
   Shield,
   Tag,
   Terminal,
   Trash2,
   Upload,
-  User,
-  Users,
   X,
   Zap,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
 import { toast } from "sonner";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import { TerminalPreview } from "@/features/terminal/TerminalPreview";
@@ -75,27 +53,14 @@ import {
   getCredentials,
   createSSHHost,
   updateSSHHost,
-  deleteSSHHost,
   createCredential,
   updateCredential,
   deleteCredential,
-  getAllServerStatuses,
-  getServerMetricsById,
-  bulkImportSSHHosts,
-  bulkUpdateSSHHosts,
   generateKeyPair,
   generatePublicKeyFromPrivate,
   deployCredentialToHost,
   getSnippets,
-  getUserList,
-  getRoles,
-  shareHost,
-  getHostAccess,
-  revokeHostAccess,
-  renameFolder,
   renameCredentialFolder,
-  refreshServerPolling,
-  deleteAllHostsInFolder,
   subscribeTunnelStatuses,
   connectTunnel,
   disconnectTunnel,
@@ -201,7 +166,6 @@ const HOST_TAB_IDS = [
   "rdp",
   "vnc",
   "telnet",
-  "sharing",
 ] as const;
 const CREDENTIAL_TAB_IDS = ["general", "auth"] as const;
 
@@ -262,11 +226,6 @@ function makeHostTabs(t: (key: string) => string): HostTab[] {
       id: "telnet",
       label: t("hosts.tabTelnet"),
       icon: <Terminal className="size-3" />,
-    },
-    {
-      id: "sharing",
-      label: t("hosts.tabSharing"),
-      icon: <Share2 className="size-3" />,
     },
   ];
 }
@@ -351,471 +310,6 @@ function TabStrip({
   );
 }
 
-function HostRow({
-  host,
-  selectionMode,
-  selected,
-  onToggleSelect,
-  onEdit,
-  onDelete,
-  onClone,
-  onDragStart,
-  onDragEnd,
-  depth = 0,
-  stripeIndex = 0,
-  statusesLoading = false,
-  initialLoadComplete = true,
-}: {
-  host: Host;
-  selectionMode: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClone: () => void;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
-  depth?: number;
-  stripeIndex?: number;
-  statusesLoading?: boolean;
-  initialLoadComplete?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [hovered, setHovered] = useState(false);
-
-  const connTypeColor = "border-border/60 text-muted-foreground/60";
-
-  const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
-
-  const fireOpen = (type: string) => {
-    window.dispatchEvent(
-      new CustomEvent("termix:open-tab", { detail: { hostId: host.id, type } }),
-    );
-  };
-
-  return (
-    <div
-      draggable={!!onDragStart && !selectionMode}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={selectionMode ? onToggleSelect : undefined}
-      style={{ paddingLeft: depth > 0 ? `${depth * 12 + 8}px` : undefined }}
-      className={`relative flex flex-col border-b border-border/50 last:border-0 transition-colors select-none
-        ${selectionMode ? "cursor-pointer" : ""}
-        ${selected ? "bg-accent-brand/5" : hovered ? "bg-muted/40" : stripeIndex % 2 === 1 ? "bg-muted/20" : ""}
-        ${onDragStart && !selectionMode ? "cursor-grab active:cursor-grabbing" : ""}`}
-    >
-      {/* Main row */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        {selectionMode && (
-          <div
-            className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
-          >
-            {selected && <Check className="size-2 text-background" />}
-          </div>
-        )}
-
-        {/* Status dot */}
-        <div
-          className={`size-1.5 rounded-full shrink-0 ${
-            !initialLoadComplete || (statusesLoading && !host.online)
-              ? "bg-muted-foreground/30 animate-[blink_1s_step-start_infinite]"
-              : host.online
-                ? "bg-accent-brand"
-                : "bg-muted-foreground/25"
-          }`}
-        />
-
-        {/* Name + badges */}
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="text-[13px] font-semibold truncate leading-none">
-            {host.name}
-          </span>
-          {host.pin && (
-            <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
-          )}
-          <div className="flex items-center gap-0.5 shrink-0">
-            {host.enableSsh && (
-              <span
-                className={`text-[9px] px-1 py-0.5 font-bold border leading-none ${connTypeColor}`}
-              >
-                SSH
-              </span>
-            )}
-            {host.enableRdp && (
-              <span
-                className={`text-[9px] px-1 py-0.5 font-bold border leading-none ${connTypeColor}`}
-              >
-                RDP
-              </span>
-            )}
-            {host.enableVnc && (
-              <span
-                className={`text-[9px] px-1 py-0.5 font-bold border leading-none ${connTypeColor}`}
-              >
-                VNC
-              </span>
-            )}
-            {host.enableTelnet && (
-              <span
-                className={`text-[9px] px-1 py-0.5 font-bold border leading-none ${connTypeColor}`}
-              >
-                TELNET
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Right: last access always visible, CPU/RAM on hover */}
-        <div className="flex items-center gap-2 shrink-0">
-          {host.online &&
-            hovered &&
-            metricsEnabled &&
-            host.cpu != null &&
-            host.ram != null && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-muted-foreground/50">
-                    CPU
-                  </span>
-                  <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
-                      style={{ width: `${host.cpu}%` }}
-                    />
-                  </div>
-                  <span className="text-[9px] tabular-nums text-accent-brand font-bold">
-                    {host.cpu}%
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-muted-foreground/50">
-                    RAM
-                  </span>
-                  <div className="w-10 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
-                      style={{ width: `${host.ram}%` }}
-                    />
-                  </div>
-                  <span className="text-[9px] tabular-nums text-accent-brand font-bold">
-                    {host.ram}%
-                  </span>
-                </div>
-              </div>
-            )}
-          <span className="text-[10px] text-muted-foreground/40 tabular-nums shrink-0">
-            {host.lastAccess}
-          </span>
-        </div>
-      </div>
-
-      {/* Sub-row: address + tags */}
-      <div
-        className="flex items-center gap-2 px-3 pb-1.5 -mt-0.5"
-        style={{
-          paddingLeft:
-            depth > 0 ? `${depth * 12 + 8 + 12 + 8 + 6}px` : undefined,
-        }}
-      >
-        <span className="text-[11px] text-muted-foreground/50 font-mono break-all">
-          {host.username}@{host.ip}:{host.sshPort || host.port}
-        </span>
-        {host.tags && host.tags.length > 0 && (
-          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-            {host.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag}
-                className="text-[9px] px-1 py-px border border-border/50 bg-muted/30 text-muted-foreground/60 lowercase shrink-0 leading-none"
-              >
-                {tag}
-              </span>
-            ))}
-            {host.tags.length > 4 && (
-              <span className="text-[9px] text-muted-foreground/40 shrink-0">
-                +{host.tags.length - 4}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Hover action tray */}
-      {hovered && !selectionMode && (
-        <div
-          className="border-t border-border/40"
-          style={{ marginLeft: depth > 0 ? `-${depth * 12 + 8}px` : undefined }}
-        >
-          <div
-            className="flex items-center pt-0.5 pb-1"
-            style={{
-              paddingLeft: depth > 0 ? `${depth * 12 + 8}px` : "8px",
-              paddingRight: "8px",
-            }}
-          >
-            {host.enableSsh && host.enableTerminal && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("terminal");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Terminal className="size-3 shrink-0" />
-                <span>{t("hosts.terminal")}</span>
-              </button>
-            )}
-            {host.enableSsh && host.enableFileManager && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("files");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <FolderSearch className="size-3 shrink-0" />
-                <span>{t("hosts.fileManager")}</span>
-              </button>
-            )}
-            {host.enableSsh && host.enableDocker && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("docker");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Box className="size-3 shrink-0" />
-                <span>{t("hosts.docker")}</span>
-              </button>
-            )}
-            {host.enableSsh && host.enableTunnel && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("tunnel");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Network className="size-3 shrink-0" />
-                <span>{t("hosts.tunnel")}</span>
-              </button>
-            )}
-            {host.enableSsh && metricsEnabled && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("stats");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Server className="size-3 shrink-0" />
-                <span>{t("hosts.serverStats")}</span>
-              </button>
-            )}
-            {host.enableRdp && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("rdp");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Monitor className="size-3 shrink-0" />
-                <span>RDP</span>
-              </button>
-            )}
-            {host.enableVnc && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("vnc");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Monitor className="size-3 shrink-0" />
-                <span>VNC</span>
-              </button>
-            )}
-            {host.enableTelnet && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fireOpen("telnet");
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-              >
-                <Terminal className="size-3 shrink-0" />
-                <span>{t("hosts.telnet")}</span>
-              </button>
-            )}
-            <div className="flex-1" />
-            <button
-              title={t("hosts.editHostTooltip")}
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-            >
-              <Pencil className="size-3 shrink-0" />
-              <span>{t("common.edit")}</span>
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center justify-center size-6 text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded transition-colors"
-                >
-                  <MoreHorizontal className="size-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem onClick={() => onClone()}>
-                  <Copy className="size-3.5 mr-2" />
-                  {t("hosts.cloneHostAction")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${host.username}@${host.ip}`,
-                    );
-                    toast.success(t("hosts.copiedToClipboard"));
-                  }}
-                >
-                  <Copy className="size-3.5 mr-2" />
-                  {t("hosts.copyAddress")}
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Link className="size-3.5 mr-2" />
-                    {t("hosts.copyLink")}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {host.enableSsh && host.enableTerminal && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=terminal&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.terminalUrlCopied"));
-                        }}
-                      >
-                        <Terminal className="size-3.5 mr-2" />
-                        {t("hosts.copyTerminalUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableFileManager && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=file-manager&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.fileManagerUrlCopied"));
-                        }}
-                      >
-                        <FolderSearch className="size-3.5 mr-2" />
-                        {t("hosts.copyFileManagerUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableTunnel && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=tunnel&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.tunnelUrlCopied"));
-                        }}
-                      >
-                        <Network className="size-3.5 mr-2" />
-                        {t("hosts.copyTunnelUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableDocker && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=docker&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.dockerUrlCopied"));
-                        }}
-                      >
-                        <Box className="size-3.5 mr-2" />
-                        {t("hosts.copyDockerUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && metricsEnabled && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=server-stats&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.serverStatsUrlCopied"));
-                        }}
-                      >
-                        <Server className="size-3.5 mr-2" />
-                        {t("hosts.copyServerStatsUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableRdp && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=rdp&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.rdpUrlCopied"));
-                        }}
-                      >
-                        <Monitor className="size-3.5 mr-2" />
-                        {t("hosts.copyRdpUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableVnc && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=vnc&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.vncUrlCopied"));
-                        }}
-                      >
-                        <Monitor className="size-3.5 mr-2" />
-                        {t("hosts.copyVncUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableTelnet && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=telnet&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.telnetUrlCopied"));
-                        }}
-                      >
-                        <Terminal className="size-3.5 mr-2" />
-                        {t("hosts.copyTelnetUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={onDelete}
-                >
-                  <Trash2 className="size-3.5 mr-2" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function HostEditor({
   host,
   activeTab,
@@ -824,6 +318,7 @@ function HostEditor({
   protocols,
   onProtocolChange,
   onTabChange,
+  onCredentialChange,
   hosts,
   credentials,
 }: {
@@ -839,6 +334,7 @@ function HostEditor({
   };
   onProtocolChange: (p: Partial<typeof protocols>) => void;
   onTabChange: (tab: string) => void;
+  onCredentialChange: (credentialId: string) => void;
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
 }) {
@@ -986,19 +482,6 @@ function HostEditor({
 
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
-  const [shareType, setShareType] = useState<"user" | "role">("user");
-  const [shareGranteeId, setShareGranteeId] = useState("");
-  const [sharePermission, setSharePermission] = useState("view");
-  const [shareExpiryHours, setShareExpiryHours] = useState("");
-  const [accessList, setAccessList] = useState<any[]>([]);
-  const [shareUsers, setShareUsers] = useState<
-    { id: string; username: string }[]
-  >([]);
-  const [shareRoles, setShareRoles] = useState<{ id: string; name: string }[]>(
-    [],
-  );
-  const [sharingLoaded, setSharingLoaded] = useState(false);
-  const [sharingLoadError, setSharingLoadError] = useState(false);
   const [tunnelStatuses, setTunnelStatuses] = useState<Record<string, any>>({});
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
 
@@ -1015,39 +498,6 @@ function HostEditor({
       })
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (activeTab !== "sharing" || !host) return;
-    if (sharingLoaded) return;
-    setSharingLoaded(true);
-    Promise.all([
-      getHostAccess(Number(host.id)).catch(() => ({ access: [] })),
-      getUserList().catch(() => ({ users: [] })),
-      getRoles().catch(() => ({ roles: [] })),
-    ])
-      .then(([accessRes, usersRes, rolesRes]) => {
-        setAccessList((accessRes as any)?.access ?? []);
-        setShareUsers(
-          ((usersRes as any)?.users ?? []).map((u: any) => ({
-            id: String(u.id ?? u.userId),
-            username: u.username,
-          })),
-        );
-        setShareRoles(
-          ((rolesRes as any)?.roles ?? []).map((r: any) => ({
-            id: String(r.id),
-            name: r.name,
-          })),
-        );
-      })
-      .catch(() => setSharingLoadError(true));
-  }, [activeTab, host, sharingLoaded]);
-
-  useEffect(() => {
-    setSharingLoaded(false);
-    setSharingLoadError(false);
-    setAccessList([]);
-  }, [host?.id]);
 
   useEffect(() => {
     if (activeTab !== "tunnels") return;
@@ -1921,7 +1371,11 @@ function HostEditor({
                       (m) => (
                         <button
                           key={m}
-                          onClick={() => setField("authType", m as any)}
+                          onClick={() => {
+                            setField("authType", m as any);
+                            if (m !== "credential") onCredentialChange("");
+                            else onCredentialChange(form.credentialId);
+                          }}
                           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                         >
                           {m}
@@ -2105,6 +1559,7 @@ function HostEditor({
                           onChange={(e) => {
                             const newId = e.target.value;
                             setField("credentialId", newId);
+                            onCredentialChange(newId);
                             if (!form.overrideCredentialUsername) {
                               const cred = credentials.find(
                                 (c) => c.id === newId,
@@ -4652,234 +4107,6 @@ function HostEditor({
             </SectionCard>
           </>
         )}
-
-        {activeTab === "sharing" && (
-          <>
-            {host === null && (
-              <div className="flex items-start gap-3 p-3 border border-yellow-500/30 bg-yellow-500/5 text-xs text-yellow-500">
-                <Shield className="size-3.5 shrink-0 mt-0.5" />
-                <div>
-                  <strong>{t("hosts.guac.saveHostFirst")}</strong>{" "}
-                  {t("hosts.guac.sharingOptionsAfterSave")}
-                </div>
-              </div>
-            )}
-            {sharingLoadError && (
-              <div className="flex items-start gap-3 p-3 border border-destructive/30 bg-destructive/5 text-xs text-destructive">
-                <Shield className="size-3.5 shrink-0 mt-0.5" />
-                <div>{t("hosts.guac.sharingLoadError")}</div>
-              </div>
-            )}
-
-            {host !== null && (
-              <SectionCard
-                title={t("hosts.guac.shareHostSection")}
-                icon={<Users className="size-3.5" />}
-              >
-                <div className="flex flex-col gap-4 py-3">
-                  <div className="flex gap-2">
-                    {(["user", "role"] as const).map((shareTypeOpt) => (
-                      <button
-                        key={shareTypeOpt}
-                        onClick={() => {
-                          setShareType(shareTypeOpt);
-                          setShareGranteeId("");
-                        }}
-                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${shareType === shareTypeOpt ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                      >
-                        {shareTypeOpt === "user" ? (
-                          <>
-                            <User className="size-3 inline mr-1" />
-                            {t("hosts.guac.shareWithUser")}
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="size-3 inline mr-1" />
-                            {t("hosts.guac.shareWithRole")}
-                          </>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {shareType === "user"
-                        ? t("hosts.guac.selectUser")
-                        : t("hosts.guac.selectRole")}
-                    </label>
-                    <select
-                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      value={shareGranteeId}
-                      onChange={(e) => setShareGranteeId(e.target.value)}
-                    >
-                      <option value="">
-                        {shareType === "user"
-                          ? t("hosts.guac.selectUserOption")
-                          : t("hosts.guac.selectRoleOption")}
-                      </option>
-                      {shareType === "user"
-                        ? shareUsers.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.username}
-                            </option>
-                          ))
-                        : shareRoles.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.name}
-                            </option>
-                          ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.guac.permissionLevel")}
-                    </label>
-                    <select
-                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      value={sharePermission}
-                      onChange={(e) => setSharePermission(e.target.value)}
-                    >
-                      <option value="view">View</option>
-                      <option value="connect">Connect</option>
-                      <option value="manage">Manage</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.guac.expiresInHours")}
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder={t("hosts.guac.noExpiryPlaceholder")}
-                      value={shareExpiryHours}
-                      onChange={(e) => setShareExpiryHours(e.target.value)}
-                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                      disabled={!shareGranteeId}
-                      onClick={async () => {
-                        try {
-                          await shareHost(
-                            Number(host.id),
-                            shareType,
-                            shareGranteeId,
-                            sharePermission,
-                            shareExpiryHours
-                              ? Number(shareExpiryHours)
-                              : undefined,
-                          );
-                          const res = await getHostAccess(Number(host.id));
-                          setAccessList((res as any)?.access ?? []);
-                          setShareGranteeId("");
-                          setShareExpiryHours("");
-                          toast.success(t("hosts.hostSharedSuccessfully"));
-                        } catch {
-                          toast.error(t("hosts.failedToShareHost"));
-                        }
-                      }}
-                    >
-                      <Plus className="size-3.5 mr-1.5" />
-                      {t("hosts.guac.shareBtn")}
-                    </Button>
-                  </div>
-                </div>
-              </SectionCard>
-            )}
-
-            {host !== null && (
-              <SectionCard
-                title={t("hosts.guac.currentAccess")}
-                icon={<ListChecks className="size-3.5" />}
-              >
-                <div className="py-2">
-                  <div className="grid grid-cols-6 gap-2 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
-                    <span>{t("hosts.guac.typeHeader")}</span>
-                    <span>{t("hosts.guac.targetHeader")}</span>
-                    <span>{t("hosts.guac.permissionHeader")}</span>
-                    <span>{t("hosts.guac.grantedByHeader")}</span>
-                    <span>{t("hosts.guac.expiresHeader")}</span>
-                    <span></span>
-                  </div>
-                  {accessList.length === 0 && (
-                    <div className="px-2 py-4 text-xs text-muted-foreground/50 text-center">
-                      {t("hosts.guac.noAccessEntries")}
-                    </div>
-                  )}
-                  {accessList.map((r: any, i: number) => {
-                    const expired =
-                      r.expiresAt && new Date(r.expiresAt) < new Date();
-                    return (
-                      <div
-                        key={i}
-                        className="grid grid-cols-6 gap-2 px-2 py-2.5 border-b border-border last:border-0 items-center text-xs"
-                      >
-                        <div className="flex items-center gap-1">
-                          {r.granteeType === "user" ? (
-                            <User className="size-3 text-muted-foreground" />
-                          ) : (
-                            <Shield className="size-3 text-muted-foreground" />
-                          )}
-                          <span className="text-muted-foreground capitalize">
-                            {r.granteeType}
-                          </span>
-                        </div>
-                        <span className="font-semibold truncate">
-                          {r.granteeName ?? r.granteeId}
-                        </span>
-                        <span className="capitalize">{r.permission}</span>
-                        <span className="text-muted-foreground truncate">
-                          {r.grantedBy ?? "—"}
-                        </span>
-                        <span
-                          className={
-                            expired
-                              ? "text-destructive"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {expired ? (
-                            <span className="flex items-center gap-1">
-                              <X className="size-3" />
-                              {t("hosts.guac.expiredLabel")}
-                            </span>
-                          ) : r.expiresAt ? (
-                            new Date(r.expiresAt).toLocaleDateString()
-                          ) : (
-                            t("hosts.guac.neverLabel")
-                          )}
-                        </span>
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                              try {
-                                await revokeHostAccess(Number(host!.id), r.id);
-                                setAccessList((prev) =>
-                                  prev.filter((_, idx) => idx !== i),
-                                );
-                                toast.success(t("hosts.accessRevoked"));
-                              } catch {
-                                toast.error(t("hosts.failedToRevokeAccess"));
-                              }
-                            }}
-                          >
-                            {t("hosts.guac.revokeBtn")}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </SectionCard>
-            )}
-          </>
-        )}
       </div>
 
       <div className="flex justify-end gap-3 mt-3 mb-6">
@@ -5357,7 +4584,8 @@ function CredentialEditorView({
                     className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1 self-start"
                     onClick={() => certFileInputRef.current?.click()}
                   >
-                    <Upload className="size-3" /> {t("credentials.uploadCertFile")}
+                    <Upload className="size-3" />{" "}
+                    {t("credentials.uploadCertFile")}
                   </button>
                   <input
                     ref={certFileInputRef}
@@ -5376,7 +4604,9 @@ function CredentialEditorView({
                     placeholder={t("credentials.pasteOrUploadCert")}
                     rows={2}
                     value={credForm.certPublicKey}
-                    onChange={(e) => setCredField("certPublicKey", e.target.value)}
+                    onChange={(e) =>
+                      setCredField("certPublicKey", e.target.value)
+                    }
                     className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
                   />
                 </div>
@@ -5408,26 +4638,19 @@ function CredentialEditorView({
 }
 
 export function HostManager({
-  onCollapse,
   pendingEditId,
   pendingAction,
   onEditingChange,
-  initialSection,
   hideListHeader,
   externalSearch,
 }: {
-  onCollapse?: () => void;
   pendingEditId?: MutableRefObject<string | null>;
   pendingAction?: MutableRefObject<"add-host" | "add-credential" | null>;
   onEditingChange?: (editing: boolean) => void;
-  initialSection?: "hosts" | "credentials";
   hideListHeader?: boolean;
   externalSearch?: string;
 } = {}) {
   const { t } = useTranslation();
-  const [section, setSection] = useState<"hosts" | "credentials">(
-    initialSection ?? "hosts",
-  );
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
   const [editingCredential, setEditingCredential] = useState<
     Credential | "new" | null
@@ -5438,17 +4661,7 @@ export function HostManager({
   const effectiveSearch = externalSearch ?? searchQuery;
   const [hosts, setHosts] = useState<Host[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(),
-  );
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [editingFolderName, setEditingFolderName] = useState<string | null>(
-    null,
-  );
-  const [editingFolderValue, setEditingFolderValue] = useState("");
+  const [credentialsLoading, setCredentialsLoading] = useState(true);
   const [deployDialog, setDeployDialog] = useState<{
     cred: Credential;
     hostId: string;
@@ -5458,23 +4671,17 @@ export function HostManager({
     message: string;
     onConfirm: () => void;
   } | null>(null);
-  const [draggedHost, setDraggedHost] = useState<Host | null>(null);
-  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingProtocols, setEditingProtocols] = useState({
     enableSsh: true,
     enableRdp: false,
     enableVnc: false,
     enableTelnet: false,
   });
-  const [statusesLoading, setStatusesLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [editingHostCredentialId, setEditingHostCredentialId] = useState("");
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
   }, [hosts]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const importOverwriteRef = useRef(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [editingCredFolderName, setEditingCredFolderName] = useState<
     string | null
   >(null);
@@ -5486,7 +4693,6 @@ export function HostManager({
       pendingEditId.current = null;
       const host = hostList.find((h) => h.id === id);
       if (host) {
-        setSection("hosts");
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
@@ -5496,6 +4702,7 @@ export function HostManager({
           enableVnc: host.enableVnc,
           enableTelnet: host.enableTelnet,
         });
+        setEditingHostCredentialId(host.credentialId ?? "");
         return true;
       }
     }
@@ -5504,56 +4711,10 @@ export function HostManager({
 
   useEffect(() => {
     getSSHHosts()
-      .then(async (raw) => {
+      .then((raw) => {
         const converted = raw.map(sshHostToHost);
         setHosts(converted);
-        setExpandedFolders(
-          new Set(converted.map((h) => h.folder.split(" / ")[0])),
-        );
         applyPendingEdit(converted);
-
-        setStatusesLoading(true);
-        let statuses: Record<number, { status?: string }> = {};
-        try {
-          statuses = (await getAllServerStatuses()) as Record<
-            number,
-            { status?: string }
-          >;
-        } catch {
-          // best-effort
-        } finally {
-          setStatusesLoading(false);
-          setInitialLoadComplete(true);
-        }
-
-        const onlineHosts = converted.filter(
-          (h) => statuses[Number(h.id)]?.status === "online",
-        );
-
-        const metricsResults = await Promise.allSettled(
-          onlineHosts.map((h) => getServerMetricsById(Number(h.id))),
-        );
-
-        const metricsMap = new Map<string, { cpu: number; ram: number }>();
-        onlineHosts.forEach((h, i) => {
-          const result = metricsResults[i];
-          if (result.status === "fulfilled" && result.value) {
-            const cpu = result.value.cpu?.percent;
-            const ram = result.value.memory?.percent;
-            if (cpu != null && ram != null) {
-              metricsMap.set(h.id, { cpu, ram });
-            }
-          }
-        });
-
-        if (metricsMap.size > 0) {
-          setHosts((prev) =>
-            prev.map((h) => {
-              const m = metricsMap.get(h.id);
-              return m ? { ...h, cpu: m.cpu, ram: m.ram } : h;
-            }),
-          );
-        }
       })
       .catch(() => {});
     getCredentials()
@@ -5572,7 +4733,8 @@ export function HostManager({
           })),
         );
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCredentialsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -5580,7 +4742,6 @@ export function HostManager({
       const action = pendingAction.current;
       pendingAction.current = null;
       if (action === "add-host") {
-        setSection("hosts");
         setEditingHost("new");
         setEditingCredential(null);
         setEditingProtocols({
@@ -5589,9 +4750,9 @@ export function HostManager({
           enableVnc: false,
           enableTelnet: false,
         });
+        setEditingHostCredentialId("");
         setActiveHostTab("general");
       } else if (action === "add-credential") {
-        setSection("credentials");
         setEditingCredential("new");
         setEditingHost(null);
       }
@@ -5600,7 +4761,6 @@ export function HostManager({
 
   useEffect(() => {
     const handleAddHost = () => {
-      setSection("hosts");
       setEditingHost("new");
       setEditingCredential(null);
       setEditingProtocols({
@@ -5609,10 +4769,10 @@ export function HostManager({
         enableVnc: false,
         enableTelnet: false,
       });
+      setEditingHostCredentialId("");
       setActiveHostTab("general");
     };
     const handleAddCredential = () => {
-      setSection("credentials");
       setEditingCredential("new");
       setEditingHost(null);
     };
@@ -5620,7 +4780,6 @@ export function HostManager({
       const id = (e as CustomEvent<string>).detail;
       const host = hostsRef.current.find((h) => h.id === id);
       if (host) {
-        setSection("hosts");
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
@@ -5630,6 +4789,7 @@ export function HostManager({
           enableVnc: host.enableVnc,
           enableTelnet: host.enableTelnet,
         });
+        setEditingHostCredentialId(host.credentialId ?? "");
       }
     };
     window.addEventListener("host-manager:add-host", handleAddHost);
@@ -5646,568 +4806,22 @@ export function HostManager({
   }, []);
 
   const allHosts = hosts;
-  const filteredHosts = allHosts.filter(
-    (h) =>
-      h.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-      h.ip.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
-      h.tags?.some((tg) =>
-        tg.toLowerCase().includes(effectiveSearch.toLowerCase()),
-      ),
-  );
   const filteredCredentials = credentials.filter(
     (c) =>
       c.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
       c.username.toLowerCase().includes(effectiveSearch.toLowerCase()),
   );
 
-  const folders = Array.from(new Set(allHosts.map((h) => h.folder))).sort();
-  const pinnedHosts = filteredHosts.filter((h) => h.pin);
-  const hostsByFolder = folders.reduce<Record<string, Host[]>>(
-    (acc, folder) => {
-      acc[folder] = filteredHosts.filter((h) => h.folder === folder && !h.pin);
-      return acc;
-    },
-    {},
-  );
   const credentialFolders = Array.from(
     new Set(credentials.map((c) => c.folder || "Uncategorized")),
   ).sort();
-
-  const toggleFolder = (folder: string) => {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folder)) next.delete(folder);
-      else next.add(folder);
-      return next;
-    });
-  };
-  const toggleHostSelection = (id: string) => {
-    setSelectedHostIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-  const handleExportHosts = () => {
-    const data = JSON.stringify({ hosts: allHosts }, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "termix-hosts.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(t("hosts.hostsExported"));
-  };
-
-  const handleDownloadSample = () => {
-    const sample = JSON.stringify(
-      {
-        hosts: [
-          {
-            name: "Web Server (Production)",
-            ip: "192.168.1.100",
-            username: "admin",
-            authType: "password",
-            password: "your_secure_password_here",
-            folder: "Production",
-            tags: ["web", "production", "nginx"],
-            pin: true,
-            notes: "Main production web server running Nginx",
-            enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
-            sshPort: 22,
-            enableTerminal: true,
-            enableTunnel: false,
-            enableFileManager: true,
-            enableDocker: false,
-            defaultPath: "/var/www",
-          },
-          {
-            name: "Database Server",
-            ip: "192.168.1.101",
-            username: "dbadmin",
-            authType: "key",
-            key: "-----BEGIN OPENSSH PRIVATE KEY-----\nYour SSH private key content here\n-----END OPENSSH PRIVATE KEY-----",
-            keyPassword: "optional_key_passphrase",
-            keyType: "ssh-ed25519",
-            folder: "Production",
-            tags: ["database", "production", "postgresql"],
-            enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
-            sshPort: 22,
-            enableTerminal: true,
-            enableTunnel: true,
-            enableFileManager: false,
-            enableDocker: false,
-            tunnelConnections: [
-              {
-                sourcePort: 5432,
-                endpointPort: 5432,
-                endpointHost: "localhost",
-                maxRetries: 3,
-                retryInterval: 10,
-                autoStart: true,
-              },
-            ],
-            statsConfig: {
-              enabledWidgets: ["cpu", "memory", "disk", "network", "uptime"],
-              statusCheckEnabled: true,
-              statusCheckInterval: 30,
-              metricsEnabled: true,
-              metricsInterval: 30,
-            },
-          },
-          {
-            name: "Development Server",
-            ip: "192.168.1.102",
-            username: "developer",
-            authType: "password",
-            password: "dev_password",
-            folder: "Development",
-            tags: ["dev", "testing"],
-            enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
-            sshPort: 2222,
-            enableTerminal: true,
-            enableTunnel: false,
-            enableFileManager: true,
-            enableDocker: true,
-            defaultPath: "/home/developer",
-          },
-          {
-            name: "Windows Server 2022",
-            ip: "192.168.1.200",
-            username: "Administrator",
-            folder: "Remote Desktop",
-            tags: ["rdp", "windows", "production"],
-            enableSsh: false,
-            enableRdp: true,
-            enableVnc: false,
-            enableTelnet: false,
-            rdpPort: 3389,
-            rdpUser: "Administrator",
-            rdpPassword: "windows_password",
-            rdpDomain: "COMPANY",
-            rdpSecurity: "nla",
-            rdpIgnoreCert: false,
-          },
-          {
-            name: "Ubuntu Desktop",
-            ip: "192.168.1.201",
-            username: "vncuser",
-            folder: "Remote Desktop",
-            tags: ["vnc", "linux", "desktop"],
-            enableSsh: false,
-            enableRdp: false,
-            enableVnc: true,
-            enableTelnet: false,
-            vncPort: 5900,
-            vncPassword: "vnc_password",
-          },
-          {
-            name: "Network Switch",
-            ip: "192.168.1.254",
-            username: "admin",
-            folder: "Infrastructure",
-            tags: ["telnet", "network", "switch"],
-            enableSsh: false,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: true,
-            telnetPort: 23,
-            telnetUser: "admin",
-            telnetPassword: "switch_password",
-          },
-          {
-            name: "Server with SOCKS5 Proxy",
-            ip: "10.10.10.100",
-            username: "proxyuser",
-            authType: "password",
-            password: "secure_password",
-            folder: "Proxied Hosts",
-            tags: ["proxy", "socks5"],
-            enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
-            sshPort: 22,
-            enableTerminal: true,
-            enableFileManager: true,
-            useSocks5: true,
-            socks5Host: "proxy.example.com",
-            socks5Port: 1080,
-            socks5Username: "proxyauth",
-            socks5Password: "proxypass",
-          },
-        ],
-      },
-      null,
-      2,
-    );
-    const blob = new Blob([sample], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "termix-hosts-sample.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(t("hosts.sampleDownloaded"));
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const [raw] = await Promise.all([
-        getSSHHosts(),
-        refreshServerPolling().catch(() => {}),
-      ]);
-      const converted = raw.map(sshHostToHost);
-      setHosts(converted);
-
-      setStatusesLoading(true);
-      let statuses: Record<number, { status?: string }> = {};
-      try {
-        statuses = (await getAllServerStatuses()) as Record<
-          number,
-          { status?: string }
-        >;
-      } catch {
-        // best-effort
-      } finally {
-        setStatusesLoading(false);
-      }
-      const onlineHosts = converted.filter(
-        (h) => statuses[Number(h.id)]?.status === "online",
-      );
-      const metricsResults = await Promise.allSettled(
-        onlineHosts.map((h) => getServerMetricsById(Number(h.id))),
-      );
-      const metricsMap = new Map<string, { cpu: number; ram: number }>();
-      onlineHosts.forEach((h, i) => {
-        const result = metricsResults[i];
-        if (result.status === "fulfilled" && result.value) {
-          const cpu = result.value.cpu?.percent;
-          const ram = result.value.memory?.percent;
-          if (cpu != null && ram != null) metricsMap.set(h.id, { cpu, ram });
-        }
-      });
-      if (metricsMap.size > 0) {
-        setHosts((prev) =>
-          prev.map((h) => {
-            const m = metricsMap.get(h.id);
-            return m ? { ...h, cpu: m.cpu, ram: m.ram } : h;
-          }),
-        );
-      }
-      toast.success(t("hosts.hostStatusesRefreshed"));
-    } catch {
-      toast.error(t("hosts.failedToRefreshHosts"));
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Build a nested folder tree from flat hosts using "/" as path separator
-  type FolderNode = {
-    name: string;
-    fullPath: string;
-    children: FolderNode[];
-    hosts: Host[];
-  };
-
-  const buildFolderTree = (hostList: Host[]): FolderNode => {
-    const root: FolderNode = {
-      name: "",
-      fullPath: "",
-      children: [],
-      hosts: [],
-    };
-    const nodeMap = new Map<string, FolderNode>();
-    nodeMap.set("", root);
-
-    const ensureNode = (path: string): FolderNode => {
-      if (nodeMap.has(path)) return nodeMap.get(path)!;
-      const parts = path.split(" / ");
-      const parentPath = parts.slice(0, -1).join(" / ");
-      const parent = ensureNode(parentPath);
-      const node: FolderNode = {
-        name: parts[parts.length - 1],
-        fullPath: path,
-        children: [],
-        hosts: [],
-      };
-      parent.children.push(node);
-      nodeMap.set(path, node);
-      return node;
-    };
-
-    for (const host of hostList) {
-      const node = ensureNode(host.folder || "");
-      if (!host.pin) node.hosts.push(host);
-    }
-    return root;
-  };
-
-  const folderTree = buildFolderTree(filteredHosts);
-
-  // Global stripe counter — mutable object so renderFolderNode can increment across recursion
-  const stripeCounter = { value: 0 };
-
-  const renderFolderNode = (
-    node: FolderNode,
-    depth: number = 0,
-  ): React.ReactNode => {
-    const isExpanded = expandedFolders.has(node.fullPath);
-    const isOver = dragOverFolder === node.fullPath;
-    const totalHosts = (() => {
-      const count = (n: FolderNode): number =>
-        n.hosts.length + n.children.reduce((s, c) => s + count(c), 0);
-      return count(node);
-    })();
-    const onlineHosts = (() => {
-      const count = (n: FolderNode): number =>
-        n.hosts.filter((h) => h.online).length +
-        n.children.reduce((s, c) => s + count(c), 0);
-      return count(node);
-    })();
-
-    if (totalHosts === 0 && node.children.length === 0) return null;
-
-    const folderStripe = stripeCounter.value++ % 2 === 1;
-
-    return (
-      <div key={node.fullPath}>
-        <div
-          className={`flex items-center gap-1.5 py-1.5 border-b border-border/40 group/folder transition-colors ${isOver ? "bg-accent-brand/5" : folderStripe ? "bg-muted/20 hover:bg-muted/40" : "hover:bg-muted/30"}`}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOverFolder(node.fullPath);
-          }}
-          onDragLeave={() => setDragOverFolder(null)}
-          onDrop={async (e) => {
-            e.preventDefault();
-            setDragOverFolder(null);
-            if (draggedHost) {
-              const h = draggedHost;
-              setDraggedHost(null);
-              if (h.folder === node.fullPath) return;
-              try {
-                await updateSSHHost(Number(h.id), {
-                  ...h,
-                  folder: node.fullPath,
-                } as any);
-                setHosts((prev) =>
-                  prev.map((x) =>
-                    x.id === h.id ? { ...x, folder: node.fullPath } : x,
-                  ),
-                );
-                toast.success(
-                  t("hosts.movedHostTo", {
-                    host: h.name,
-                    folder: node.fullPath || "root",
-                  }),
-                );
-              } catch {
-                toast.error(t("hosts.failedToMoveHost"));
-              }
-            }
-          }}
-        >
-          <button
-            className="flex items-center gap-1.5 flex-1 text-left min-w-0"
-            onClick={() => toggleFolder(node.fullPath)}
-          >
-            <ChevronRight
-              className={`size-3 text-muted-foreground/40 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-            />
-            {isExpanded ? (
-              <FolderOpen className="size-3 text-accent-brand/60 shrink-0" />
-            ) : (
-              <Folder className="size-3 text-muted-foreground/50 shrink-0" />
-            )}
-            {editingFolderName === node.fullPath ? (
-              <input
-                autoFocus
-                value={editingFolderValue}
-                onChange={(e) => setEditingFolderValue(e.target.value)}
-                onBlur={async () => {
-                  const newName = editingFolderValue.trim();
-                  setEditingFolderName(null);
-                  if (newName && newName !== node.name) {
-                    try {
-                      await renameFolder(node.fullPath, newName);
-                      const raw = await getSSHHosts();
-                      setHosts(raw.map(sshHostToHost));
-                      toast.success(
-                        t("hosts.folderRenamedTo", { name: newName }),
-                      );
-                    } catch {
-                      toast.error(t("hosts.failedToRenameFolder"));
-                    }
-                  }
-                }}
-                onKeyDown={async (e) => {
-                  if (e.key === "Enter") {
-                    const newName = editingFolderValue.trim();
-                    setEditingFolderName(null);
-                    if (newName && newName !== node.name) {
-                      try {
-                        await renameFolder(node.fullPath, newName);
-                        const raw = await getSSHHosts();
-                        setHosts(raw.map(sshHostToHost));
-                        toast.success(
-                          t("hosts.folderRenamedTo", { name: newName }),
-                        );
-                      } catch {
-                        toast.error(t("hosts.failedToRenameFolder"));
-                      }
-                    }
-                  }
-                  if (e.key === "Escape") setEditingFolderName(null);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="text-[11px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
-              />
-            ) : (
-              <span className="text-[11px] font-semibold text-foreground/70 truncate">
-                {node.name}
-              </span>
-            )}
-            <span className="text-[10px] text-muted-foreground/40 shrink-0 ml-0.5 tabular-nums">
-              <span className={onlineHosts > 0 ? "text-accent-brand" : ""}>
-                {onlineHosts}
-              </span>
-              <span>/{totalHosts}</span>
-            </span>
-          </button>
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/folder:opacity-100 transition-opacity pr-2">
-            <button
-              className="size-5 flex items-center justify-center text-muted-foreground/40 hover:text-foreground rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingFolderName(node.fullPath);
-                setEditingFolderValue(node.name);
-              }}
-            >
-              <Pencil className="size-2.5" />
-            </button>
-            <button
-              className="size-5 flex items-center justify-center text-muted-foreground/40 hover:text-destructive rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmDialog({
-                  message: t("hosts.deleteAllInFolder", { name: node.name }),
-                  onConfirm: async () => {
-                    try {
-                      await deleteAllHostsInFolder(node.fullPath);
-                      const raw = await getSSHHosts();
-                      setHosts(raw.map(sshHostToHost));
-                      toast.success(
-                        t("hosts.deletedFolder", { name: node.name }),
-                      );
-                    } catch {
-                      toast.error(t("hosts.failedToDeleteFolder"));
-                    }
-                  },
-                });
-              }}
-            >
-              <Trash2 className="size-2.5" />
-            </button>
-          </div>
-        </div>
-
-        {isExpanded && (
-          <>
-            {node.children.map((child) => renderFolderNode(child, depth + 1))}
-            {node.hosts.map((host) => {
-              const stripe = stripeCounter.value++ % 2 === 1;
-              return (
-                <HostRow
-                  key={host.id}
-                  host={host}
-                  depth={depth + 1}
-                  stripeIndex={stripe ? 1 : 0}
-                  selectionMode={selectionMode}
-                  selected={selectedHostIds.has(host.id)}
-                  onToggleSelect={() => toggleHostSelection(host.id)}
-                  statusesLoading={statusesLoading}
-                  initialLoadComplete={initialLoadComplete}
-                  onEdit={() => {
-                    setEditingHost(host);
-                    setActiveHostTab("general");
-                    setEditingProtocols({
-                      enableSsh: host.enableSsh,
-                      enableRdp: host.enableRdp,
-                      enableVnc: host.enableVnc,
-                      enableTelnet: host.enableTelnet,
-                    });
-                  }}
-                  onDelete={() => {
-                    setConfirmDialog({
-                      message: t("hosts.deleteHostConfirm", {
-                        name: host.name,
-                      }),
-                      onConfirm: async () => {
-                        try {
-                          await deleteSSHHost(Number(host.id));
-                          setHosts((prev) =>
-                            prev.filter((h) => h.id !== host.id),
-                          );
-                          toast.success(
-                            t("hosts.deletedHost", { name: host.name }),
-                          );
-                        } catch {
-                          toast.error(
-                            t("hosts.failedToDeleteHost", { name: host.name }),
-                          );
-                        }
-                      },
-                    });
-                  }}
-                  onClone={async () => {
-                    try {
-                      const cloned = await createSSHHost({
-                        ...host,
-                        name: `${host.name || host.ip} (Copy)`,
-                        pin: false,
-                      } as any);
-                      setHosts((prev) => [...prev, cloned]);
-                      toast.success(`Cloned ${host.name}`);
-                    } catch {
-                      toast.error("Failed to clone host");
-                    }
-                  }}
-                  onDragStart={() => setDraggedHost(host)}
-                  onDragEnd={() => setDraggedHost(null)}
-                />
-              );
-            })}
-          </>
-        )}
-      </div>
-    );
-  };
 
   // Editor view: full-width with top tab bar instead of side nav
   const renderEditorView = () => {
     const isHost = !!editingHost;
     const tabs = isHost
       ? makeHostTabs(t).filter((tab) => {
-          if (tab.id === "general" || tab.id === "sharing") return true;
+          if (tab.id === "general") return true;
           if (["ssh", "tunnels", "docker", "files", "stats"].includes(tab.id))
             return editingProtocols.enableSsh;
           if (tab.id === "rdp") return editingProtocols.enableRdp;
@@ -6286,6 +4900,9 @@ export function HostManager({
                 setEditingProtocols((prev) => ({ ...prev, ...p }))
               }
               onTabChange={setActiveHostTab}
+              onCredentialChange={(id) => {
+                setEditingHostCredentialId(id);
+              }}
               hosts={hosts}
               credentials={credentials}
             />
@@ -6346,221 +4963,6 @@ export function HostManager({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-      {/* Top bar: section switcher + actions */}
-      {!isEditing && !hideListHeader && (
-        <div className="flex items-center gap-0 shrink-0 border-b border-border/60">
-          {/* Section tabs */}
-          <button
-            onClick={() => {
-              setSection("hosts");
-              setEditingCredential(null);
-              setSearchQuery("");
-            }}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${section === "hosts" ? "border-accent-brand text-accent-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            <Server className="size-3.5" />
-            {t("hosts.hostsTab")}
-            <span className="text-[10px] font-bold text-muted-foreground/50 ml-0.5">
-              {allHosts.length}
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              setSection("credentials");
-              setEditingHost(null);
-              setSearchQuery("");
-            }}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${section === "credentials" ? "border-accent-brand text-accent-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            <KeyRound className="size-3.5" />
-            {t("hosts.credentialsTab")}
-            <span className="text-[10px] font-bold text-muted-foreground/50 ml-0.5">
-              {credentials.length}
-            </span>
-          </button>
-
-          <div className="flex-1" />
-
-          {onCollapse && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-              title={t("hosts.collapseBtn")}
-              onClick={onCollapse}
-            >
-              <ChevronLeft className="size-3.5" />
-            </Button>
-          )}
-
-          {/* Action buttons — icon-only to save space */}
-          {section === "hosts" && (
-            <div className="flex items-center gap-0.5 pr-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  e.target.value = "";
-                  try {
-                    const text = await file.text();
-                    const parsed = JSON.parse(text);
-                    const hostsArray = Array.isArray(parsed)
-                      ? parsed
-                      : (parsed.hosts ?? []);
-                    if (!Array.isArray(hostsArray) || hostsArray.length === 0) {
-                      toast.error("No hosts found in file");
-                      return;
-                    }
-                    if (hostsArray.length > 100) {
-                      toast.error("Cannot import more than 100 hosts at once");
-                      return;
-                    }
-                    const normalized = hostsArray.map((h: any) => ({
-                      ...h,
-                      port: h.port ?? h.sshPort ?? 22,
-                      enableSsh: h.enableSsh ?? h.connectionType === "ssh",
-                      enableRdp: h.enableRdp ?? h.connectionType === "rdp",
-                      enableVnc: h.enableVnc ?? h.connectionType === "vnc",
-                      enableTelnet:
-                        h.enableTelnet ?? h.connectionType === "telnet",
-                    }));
-                    const result = await bulkImportSSHHosts(
-                      normalized,
-                      importOverwriteRef.current,
-                    );
-                    const raw = await getSSHHosts();
-                    setHosts(raw.map(sshHostToHost));
-                    window.dispatchEvent(
-                      new CustomEvent("termix:hosts-changed"),
-                    );
-                    const msg = [
-                      result.success ? `${result.success} imported` : null,
-                      result.updated ? `${result.updated} updated` : null,
-                      result.failed ? `${result.failed} failed` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(", ");
-                    toast.success(`Import complete: ${msg}`);
-                  } catch (err: any) {
-                    toast.error(err?.message ?? "Failed to import hosts");
-                  }
-                }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground"
-                title={t("hosts.refreshBtn2")}
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
-                />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    title={t("hosts.importExportBtn")}
-                  >
-                    <Upload className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="text-xs">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      importOverwriteRef.current = false;
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <Upload className="size-3.5 mr-2" />
-                    {t("hosts.importSkipExisting")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      importOverwriteRef.current = true;
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <Upload className="size-3.5 mr-2" />
-                    {t("hosts.importOverwrite")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleExportHosts}
-                    disabled={allHosts.length === 0}
-                  >
-                    <Download className="size-3.5 mr-2" />
-                    {t("hosts.exportAll")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadSample}>
-                    <Download className="size-3.5 mr-2" />
-                    {t("hosts.downloadSample")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`size-8 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
-                title={
-                  selectionMode
-                    ? t("hosts.exitSelectionTitle")
-                    : t("hosts.selectMultiple")
-                }
-                onClick={() => {
-                  setSelectionMode((s) => !s);
-                  setSelectedHostIds(new Set());
-                }}
-              >
-                <ListChecks className="size-3.5" />
-              </Button>
-              <div className="w-px h-4 bg-border mx-1" />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs px-2.5"
-                onClick={() => {
-                  setEditingHost("new");
-                  setActiveHostTab("general");
-                  setEditingProtocols({
-                    enableSsh: true,
-                    enableRdp: false,
-                    enableVnc: false,
-                    enableTelnet: false,
-                  });
-                }}
-              >
-                <Plus className="size-3.5 mr-1" />
-                {t("hosts.addHostBtn2")}
-              </Button>
-            </div>
-          )}
-          {section === "credentials" && (
-            <div className="flex items-center gap-0.5 pr-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs px-2.5"
-                onClick={() => {
-                  setEditingCredential("new");
-                  setActiveCredentialTab("general");
-                }}
-              >
-                <Plus className="size-3.5 mr-1" />
-                {t("hosts.addCredentialBtn2")}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
       {isEditing ? (
         renderEditorView()
       ) : (
@@ -6573,11 +4975,7 @@ export function HostManager({
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={
-                    section === "hosts"
-                      ? t("hosts.searchHostsPlaceholder")
-                      : t("hosts.searchCredentialsPlaceholder")
-                  }
+                  placeholder={t("hosts.searchCredentialsPlaceholder")}
                   className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
                 />
                 {searchQuery && (
@@ -6593,456 +4991,286 @@ export function HostManager({
           )}
 
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {section === "hosts" && (
-              <div className="flex flex-col">
-                {statusesLoading && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground/50 border-b border-border/30">
-                    <RefreshCw className="size-2.5 animate-spin shrink-0" />
-                    {t("hosts.checkingHostStatuses")}
-                  </div>
-                )}
-                {/* Pinned hosts */}
-                {pinnedHosts.length > 0 && (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-accent-brand/5">
-                      <Pin className="size-2.5 text-accent-brand" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-                        {t("hosts.pinnedSection")}
-                      </span>
-                      <span className="text-[10px] text-accent-brand/50 ml-0.5">
-                        {pinnedHosts.length}
-                      </span>
-                    </div>
-                    {pinnedHosts.map((host) => (
-                      <HostRow
-                        key={host.id}
-                        host={host}
-                        selectionMode={selectionMode}
-                        selected={selectedHostIds.has(host.id)}
-                        onToggleSelect={() => toggleHostSelection(host.id)}
-                        statusesLoading={statusesLoading}
-                        initialLoadComplete={initialLoadComplete}
-                        onEdit={() => {
-                          setEditingHost(host);
-                          setActiveHostTab("general");
-                          setEditingProtocols({
-                            enableSsh: host.enableSsh,
-                            enableRdp: host.enableRdp,
-                            enableVnc: host.enableVnc,
-                            enableTelnet: host.enableTelnet,
-                          });
-                        }}
-                        onDelete={() => {
-                          setConfirmDialog({
-                            message: t("hosts.deleteHostConfirm", {
-                              name: host.name,
-                            }),
-                            onConfirm: async () => {
-                              try {
-                                await deleteSSHHost(Number(host.id));
-                                setHosts((prev) =>
-                                  prev.filter((h) => h.id !== host.id),
-                                );
-                                toast.success(
-                                  t("hosts.deletedHost", { name: host.name }),
-                                );
-                              } catch {
-                                toast.error(
-                                  t("hosts.failedToDeleteHost", {
-                                    name: host.name,
-                                  }),
-                                );
-                              }
-                            },
-                          });
-                        }}
-                        onClone={async () => {
-                          try {
-                            const cloned = await createSSHHost({
-                              ...host,
-                              name: `${host.name || host.ip} (Copy)`,
-                              pin: false,
-                            } as any);
-                            setHosts((prev) => [...prev, cloned]);
-                            toast.success(`Cloned ${host.name}`);
-                          } catch {
-                            toast.error("Failed to clone host");
-                          }
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Nested folder tree */}
-                {folderTree.children.map((node) => renderFolderNode(node, 0))}
-                {/* Root-level (no folder) hosts */}
-                {folderTree.hosts.map((host) => (
-                  <HostRow
-                    key={host.id}
-                    host={host}
-                    selectionMode={selectionMode}
-                    selected={selectedHostIds.has(host.id)}
-                    onToggleSelect={() => toggleHostSelection(host.id)}
-                    statusesLoading={statusesLoading}
-                    initialLoadComplete={initialLoadComplete}
-                    onEdit={() => {
-                      setEditingHost(host);
-                      setActiveHostTab("general");
-                      setEditingProtocols({
-                        enableSsh: host.enableSsh,
-                        enableRdp: host.enableRdp,
-                        enableVnc: host.enableVnc,
-                        enableTelnet: host.enableTelnet,
-                      });
-                    }}
-                    onDelete={() => {
-                      setConfirmDialog({
-                        message: t("hosts.deleteHostConfirm", {
-                          name: host.name,
-                        }),
-                        onConfirm: async () => {
-                          try {
-                            await deleteSSHHost(Number(host.id));
-                            setHosts((prev) =>
-                              prev.filter((h) => h.id !== host.id),
-                            );
-                            toast.success(
-                              t("hosts.deletedHost", { name: host.name }),
-                            );
-                          } catch {
-                            toast.error(
-                              t("hosts.failedToDeleteHost", {
-                                name: host.name,
-                              }),
-                            );
-                          }
-                        },
-                      });
-                    }}
-                    onClone={async () => {
-                      try {
-                        const cloned = await createSSHHost({
-                          ...host,
-                          name: `${host.name || host.ip} (Copy)`,
-                          pin: false,
-                        } as any);
-                        setHosts((prev) => [...prev, cloned]);
-                        toast.success(`Cloned ${host.name}`);
-                      } catch {
-                        toast.error("Failed to clone host");
-                      }
-                    }}
-                    onDragStart={() => setDraggedHost(host)}
-                    onDragEnd={() => setDraggedHost(null)}
-                  />
-                ))}
-
-                {filteredHosts.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <Server className="size-8 text-muted-foreground/20 mb-2" />
-                    <span className="text-sm font-semibold text-muted-foreground/60">
-                      {t("hosts.noHostsFound")}
-                    </span>
-                    <span className="text-xs text-muted-foreground/40 mt-1">
-                      {searchQuery
-                        ? t("hosts.tryDifferentTerm")
-                        : t("hosts.addFirstHost")}
-                    </span>
-                    {!searchQuery && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
-                        onClick={() => {
-                          setEditingHost("new");
-                          setActiveHostTab("general");
-                          setEditingProtocols({
-                            enableSsh: true,
-                            enableRdp: false,
-                            enableVnc: false,
-                            enableTelnet: false,
-                          });
-                        }}
-                      >
-                        <Plus className="size-3 mr-1" />
-                        {t("hosts.addHostBtn2")}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {section === "credentials" && (
-              <div className="flex flex-col">
-                {credentialFolders.map((folder) => {
-                  const creds = filteredCredentials.filter(
-                    (c) => (c.folder || "Uncategorized") === folder,
-                  );
-                  if (creds.length === 0) return null;
-                  return (
-                    <div key={folder} className="group/folder">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-muted/20">
-                        <Folder className="size-3 text-muted-foreground/50 shrink-0" />
-                        {editingCredFolderName === folder ? (
-                          <>
-                            <input
-                              autoFocus
-                              value={editingCredFolderValue}
-                              onChange={(e) =>
-                                setEditingCredFolderValue(e.target.value)
-                              }
-                              onBlur={async () => {
-                                const newName = editingCredFolderValue.trim();
-                                setEditingCredFolderName(null);
-                                if (newName && newName !== folder) {
-                                  try {
-                                    await renameCredentialFolder(
-                                      folder,
-                                      newName,
-                                    );
-                                    const res = (await getCredentials()) as any;
-                                    const arr = Array.isArray(res) ? res : [];
-                                    setCredentials(
-                                      arr.map((c: any) => ({
-                                        id: String(c.id),
-                                        name: c.name,
-                                        username: c.username,
-                                        type:
-                                          c.authType === "key"
-                                            ? "key"
-                                            : "password",
-                                        description: c.description ?? "",
-                                        folder: c.folder ?? "",
-                                        tags: c.tags ?? [],
-                                        publicKey: c.publicKey ?? undefined,
-                                      })),
-                                    );
-                                    toast.success(
-                                      t("hosts.folderRenamedTo", {
-                                        name: newName,
-                                      }),
-                                    );
-                                  } catch {
-                                    toast.error(
-                                      t("hosts.failedToRenameFolder"),
-                                    );
-                                  }
+            <div className="flex flex-col">
+              {credentialFolders.map((folder) => {
+                const creds = filteredCredentials.filter(
+                  (c) => (c.folder || "Uncategorized") === folder,
+                );
+                if (creds.length === 0) return null;
+                return (
+                  <div key={folder} className="group/folder">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-muted/20">
+                      <Folder className="size-3 text-muted-foreground/50 shrink-0" />
+                      {editingCredFolderName === folder ? (
+                        <>
+                          <input
+                            autoFocus
+                            value={editingCredFolderValue}
+                            onChange={(e) =>
+                              setEditingCredFolderValue(e.target.value)
+                            }
+                            onBlur={async () => {
+                              const newName = editingCredFolderValue.trim();
+                              setEditingCredFolderName(null);
+                              if (newName && newName !== folder) {
+                                try {
+                                  await renameCredentialFolder(folder, newName);
+                                  const res = (await getCredentials()) as any;
+                                  const arr = Array.isArray(res) ? res : [];
+                                  setCredentials(
+                                    arr.map((c: any) => ({
+                                      id: String(c.id),
+                                      name: c.name,
+                                      username: c.username,
+                                      type:
+                                        c.authType === "key"
+                                          ? "key"
+                                          : "password",
+                                      description: c.description ?? "",
+                                      folder: c.folder ?? "",
+                                      tags: c.tags ?? [],
+                                      publicKey: c.publicKey ?? undefined,
+                                    })),
+                                  );
+                                  toast.success(
+                                    t("hosts.folderRenamedTo", {
+                                      name: newName,
+                                    }),
+                                  );
+                                } catch {
+                                  toast.error(t("hosts.failedToRenameFolder"));
                                 }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") e.currentTarget.blur();
-                                if (e.key === "Escape")
-                                  setEditingCredFolderName(null);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
-                            />
-                            <button
-                              onClick={() => setEditingCredFolderName(null)}
-                              className="text-muted-foreground hover:text-foreground shrink-0"
-                            >
-                              <X className="size-3" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-[10px] font-semibold text-muted-foreground/70 flex-1">
-                              {folder}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground/40">
-                              {creds.length}
-                            </span>
-                            {folder !== "Uncategorized" && (
-                              <button
-                                className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
-                                onClick={() => {
-                                  setEditingCredFolderName(folder);
-                                  setEditingCredFolderValue(folder);
-                                }}
-                              >
-                                <Pencil className="size-2.5" />
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      {creds.map((cred) => {
-                        const usedByHosts = allHosts.filter(
-                          (h) => h.credentialId === cred.id,
-                        );
-                        return (
-                          <div
-                            key={cred.id}
-                            className="flex items-center justify-between px-3 py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 group"
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") e.currentTarget.blur();
+                              if (e.key === "Escape")
+                                setEditingCredFolderName(null);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
+                          />
+                          <button
+                            onClick={() => setEditingCredFolderName(null)}
+                            className="text-muted-foreground hover:text-foreground shrink-0"
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="size-7 border border-border/60 bg-muted/30 flex items-center justify-center shrink-0">
-                                {cred.type === "key" ? (
-                                  <Shield className="size-3 text-accent-brand" />
-                                ) : (
-                                  <Lock className="size-3 text-accent-brand" />
-                                )}
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-semibold truncate">
-                                    {cred.name}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] px-1 py-px font-bold border leading-none shrink-0 ${cred.type === "key" ? "border-accent-brand/30 text-accent-brand" : "border-border/60 text-muted-foreground/60"}`}
-                                  >
-                                    {cred.type === "key" ? "KEY" : "PWD"}
-                                  </span>
-                                </div>
-                                {(cred.username || usedByHosts.length > 0) && (
-                                  <span className="text-[11px] text-muted-foreground/50 truncate">
-                                    {cred.username}
-                                    {usedByHosts.length > 0 && (
-                                      <span className="text-muted-foreground/30">
-                                        {cred.username ? " · " : ""}
-                                        {usedByHosts.length}h
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
-                                {cred.tags && cred.tags.length > 0 && (
-                                  <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
-                                    {cred.tags.slice(0, 3).map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="text-[9px] px-1 py-px border border-border/50 bg-muted/30 text-muted-foreground/60 lowercase leading-none"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                    {cred.tags.length > 3 && (
-                                      <span className="text-[9px] text-muted-foreground/40">
-                                        +{cred.tags.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              {cred.type === "key" && (
-                                <>
-                                  <button
-                                    title="Deploy key to host"
-                                    className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    onClick={() =>
-                                      setDeployDialog({ cred, hostId: "" })
-                                    }
-                                  >
-                                    <Upload className="size-3" />
-                                  </button>
-                                  <button
-                                    title="Copy deploy command"
-                                    className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    onClick={() => {
-                                      const pubKey = cred.publicKey;
-                                      if (!pubKey) {
-                                        toast.error(
-                                          "No public key available — open the credential editor first",
-                                        );
-                                        return;
-                                      }
-                                      const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${pubKey}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
-                                      navigator.clipboard.writeText(cmd);
-                                      toast.success("Deploy command copied");
-                                    }}
-                                  >
-                                    <Copy className="size-3" />
-                                  </button>
-                                </>
+                            <X className="size-3" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] font-semibold text-muted-foreground/70 flex-1">
+                            {folder}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/40">
+                            {creds.length}
+                          </span>
+                          {folder !== "Uncategorized" && (
+                            <button
+                              className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
+                              onClick={() => {
+                                setEditingCredFolderName(folder);
+                                setEditingCredFolderValue(folder);
+                              }}
+                            >
+                              <Pencil className="size-2.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {creds.map((cred) => {
+                      const usedByHosts = allHosts.filter(
+                        (h) => h.credentialId === cred.id,
+                      );
+                      return (
+                        <div
+                          key={cred.id}
+                          className="flex items-center justify-between px-3 py-2 border-b border-border/40 last:border-0 hover:bg-muted/30 group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="size-7 border border-border/60 bg-muted/30 flex items-center justify-center shrink-0">
+                              {cred.type === "key" ? (
+                                <Shield className="size-3 text-accent-brand" />
+                              ) : (
+                                <Lock className="size-3 text-accent-brand" />
                               )}
-                              <button
-                                className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                onClick={async () => {
-                                  try {
-                                    const full = await getCredentialDetails(
-                                      Number(cred.id),
-                                    );
-                                    setEditingCredential({
-                                      ...cred,
-                                      value: (full as any).hasKey
-                                        ? "existing_key"
-                                        : ((full as any).password ?? ""),
-                                      passphrase: (full as any).hasKeyPassword
-                                        ? "existing_key_password"
-                                        : "",
-                                      certPublicKey:
-                                        (full as any).certPublicKey ?? "",
-                                    });
-                                  } catch {
-                                    setEditingCredential(cred);
-                                  }
-                                  setActiveCredentialTab("general");
-                                }}
-                              >
-                                <Pencil className="size-3" />
-                              </button>
-                              <button
-                                className="size-6 flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
-                                onClick={() => {
-                                  setConfirmDialog({
-                                    message: t(
-                                      "hosts.deleteCredentialConfirm",
-                                      { name: cred.name },
-                                    ),
-                                    onConfirm: async () => {
-                                      try {
-                                        await deleteCredential(Number(cred.id));
-                                        setCredentials((prev) =>
-                                          prev.filter((c) => c.id !== cred.id),
-                                        );
-                                        toast.success(
-                                          t("hosts.deletedCredential", {
-                                            name: cred.name,
-                                          }),
-                                        );
-                                      } catch {
-                                        toast.error(
-                                          t("hosts.failedToDeleteCredential2"),
-                                        );
-                                      }
-                                    },
-                                  });
-                                }}
-                              >
-                                <Trash2 className="size-3" />
-                              </button>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-semibold truncate">
+                                  {cred.name}
+                                </span>
+                                <span
+                                  className={`text-[9px] px-1 py-px font-bold border leading-none shrink-0 ${cred.type === "key" ? "border-accent-brand/30 text-accent-brand" : "border-border/60 text-muted-foreground/60"}`}
+                                >
+                                  {cred.type === "key" ? "KEY" : "PWD"}
+                                </span>
+                              </div>
+                              {(cred.username || usedByHosts.length > 0) && (
+                                <span className="text-[11px] text-muted-foreground/50 truncate">
+                                  {cred.username}
+                                  {usedByHosts.length > 0 && (
+                                    <span className="text-muted-foreground/30">
+                                      {cred.username ? " · " : ""}
+                                      {usedByHosts.length}h
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {cred.tags && cred.tags.length > 0 && (
+                                <div className="flex items-center gap-0.5 mt-0.5 flex-wrap">
+                                  {cred.tags.slice(0, 3).map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="text-[9px] px-1 py-px border border-border/50 bg-muted/30 text-muted-foreground/60 lowercase leading-none"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {cred.tags.length > 3 && (
+                                    <span className="text-[9px] text-muted-foreground/40">
+                                      +{cred.tags.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-                {filteredCredentials.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <KeyRound className="size-8 text-muted-foreground/20 mb-2" />
-                    <span className="text-sm font-semibold text-muted-foreground/60">
-                      {t("hosts.noCredentialsFound")}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
-                      onClick={() => {
-                        setEditingCredential("new");
-                        setActiveCredentialTab("general");
-                      }}
-                    >
-                      <Plus className="size-3 mr-1" />
-                      {t("hosts.addCredentialBtn2")}
-                    </Button>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {cred.type === "key" && (
+                              <>
+                                <button
+                                  title="Deploy key to host"
+                                  className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+                                  onClick={() =>
+                                    setDeployDialog({ cred, hostId: "" })
+                                  }
+                                >
+                                  <Upload className="size-3" />
+                                </button>
+                                <button
+                                  title="Copy deploy command"
+                                  className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted rounded transition-colors"
+                                  onClick={() => {
+                                    const pubKey = cred.publicKey;
+                                    if (!pubKey) {
+                                      toast.error(
+                                        "No public key available — open the credential editor first",
+                                      );
+                                      return;
+                                    }
+                                    const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${pubKey}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+                                    navigator.clipboard.writeText(cmd);
+                                    toast.success("Deploy command copied");
+                                  }}
+                                >
+                                  <Copy className="size-3" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded transition-colors"
+                              onClick={async () => {
+                                try {
+                                  const full = await getCredentialDetails(
+                                    Number(cred.id),
+                                  );
+                                  setEditingCredential({
+                                    ...cred,
+                                    value: (full as any).hasKey
+                                      ? "existing_key"
+                                      : ((full as any).password ?? ""),
+                                    passphrase: (full as any).hasKeyPassword
+                                      ? "existing_key_password"
+                                      : "",
+                                    certPublicKey:
+                                      (full as any).certPublicKey ?? "",
+                                  });
+                                } catch {
+                                  setEditingCredential(cred);
+                                }
+                                setActiveCredentialTab("general");
+                              }}
+                            >
+                              <Pencil className="size-3" />
+                            </button>
+                            <button
+                              className="size-6 flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
+                              onClick={() => {
+                                setConfirmDialog({
+                                  message: t("hosts.deleteCredentialConfirm", {
+                                    name: cred.name,
+                                  }),
+                                  onConfirm: async () => {
+                                    try {
+                                      await deleteCredential(Number(cred.id));
+                                      setCredentials((prev) =>
+                                        prev.filter((c) => c.id !== cred.id),
+                                      );
+                                      toast.success(
+                                        t("hosts.deletedCredential", {
+                                          name: cred.name,
+                                        }),
+                                      );
+                                    } catch {
+                                      toast.error(
+                                        t("hosts.failedToDeleteCredential2"),
+                                      );
+                                    }
+                                  },
+                                });
+                              }}
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            )}
+                );
+              })}
+              {credentialsLoading && (
+                <div className="flex flex-col px-2 py-2 space-y-1.5">
+                  {[60, 45, 55, 40].map((w, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2">
+                      <div className="size-3 rounded-sm bg-muted/50 animate-pulse shrink-0" />
+                      <div
+                        className="h-3 rounded bg-muted/50 animate-pulse"
+                        style={{ width: `${w * 2}px` }}
+                      />
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-center gap-2 pt-2 text-muted-foreground/40">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span className="text-xs">
+                      {t("hosts.loadingCredentials")}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {!credentialsLoading && filteredCredentials.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <KeyRound className="size-8 text-muted-foreground/20 mb-2" />
+                  <span className="text-sm font-semibold text-muted-foreground/60">
+                    {t("hosts.noCredentialsFound")}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+                    onClick={() => {
+                      setEditingCredential("new");
+                      setActiveCredentialTab("general");
+                    }}
+                  >
+                    <Plus className="size-3 mr-1" />
+                    {t("hosts.addCredentialBtn2")}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -7149,209 +5377,6 @@ export function HostManager({
                 {deploying ? t("hosts.deployingBtn") : t("hosts.deployBtn")}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating selection bar */}
-      {selectionMode && !isEditing && (
-        <div className="absolute bottom-4 inset-x-3 z-50">
-          <div className="bg-popover border border-border shadow-xl px-2.5 py-2 flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-semibold tabular-nums shrink-0">
-              {t("hosts.nSelected", { count: selectedHostIds.size })}
-            </span>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            <button
-              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors"
-              onClick={() => {
-                if (selectedHostIds.size === allHosts.length)
-                  setSelectedHostIds(new Set());
-                else setSelectedHostIds(new Set(allHosts.map((h) => h.id)));
-              }}
-            >
-              {selectedHostIds.size === allHosts.length
-                ? t("hosts.deselectAll")
-                : t("hosts.selectAll")}
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
-                  disabled={selectedHostIds.size === 0}
-                >
-                  {t("hosts.featuresMenu")} <ChevronDown className="size-2.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="text-xs">
-                {[
-                  {
-                    labelKey: "hosts.enableTerminalFeature",
-                    field: "enableTerminal",
-                    value: true,
-                    icon: Terminal,
-                  },
-                  {
-                    labelKey: "hosts.disableTerminalFeature",
-                    field: "enableTerminal",
-                    value: false,
-                    icon: Terminal,
-                  },
-                  {
-                    labelKey: "hosts.enableFilesFeature",
-                    field: "enableFileManager",
-                    value: true,
-                    icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.disableFilesFeature",
-                    field: "enableFileManager",
-                    value: false,
-                    icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.enableTunnelsFeature",
-                    field: "enableTunnel",
-                    value: true,
-                    icon: Network,
-                  },
-                  {
-                    labelKey: "hosts.disableTunnelsFeature",
-                    field: "enableTunnel",
-                    value: false,
-                    icon: Network,
-                  },
-                  {
-                    labelKey: "hosts.enableDockerFeature",
-                    field: "enableDocker",
-                    value: true,
-                    icon: Box,
-                  },
-                  {
-                    labelKey: "hosts.disableDockerFeature",
-                    field: "enableDocker",
-                    value: false,
-                    icon: Box,
-                  },
-                ].map(({ labelKey, field, value, icon: Icon }) => (
-                  <DropdownMenuItem
-                    key={labelKey}
-                    onClick={async () => {
-                      const ids = Array.from(selectedHostIds).map(Number);
-                      try {
-                        const result = await bulkUpdateSSHHosts(ids, {
-                          [field]: value,
-                        });
-                        const raw = await getSSHHosts();
-                        setHosts(raw.map(sshHostToHost));
-                        toast.success(
-                          t("hosts.updatedCount", { count: result.updated }),
-                        );
-                      } catch {
-                        toast.error(t("hosts.bulkUpdateFailed"));
-                      }
-                    }}
-                  >
-                    <Icon className="size-3.5 mr-2" />
-                    {t(labelKey)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
-                  disabled={selectedHostIds.size === 0}
-                >
-                  {t("hosts.moveMenu")} <ChevronDown className="size-2.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="text-xs">
-                <DropdownMenuItem
-                  onClick={async () => {
-                    const ids = Array.from(selectedHostIds).map(Number);
-                    try {
-                      await bulkUpdateSSHHosts(ids, { folder: "" });
-                      const raw = await getSSHHosts();
-                      setHosts(raw.map(sshHostToHost));
-                      toast.success(t("hosts.movedToRoot"));
-                    } catch {
-                      toast.error(t("hosts.failedToMoveHosts"));
-                    }
-                  }}
-                >
-                  <FolderOpen className="size-3.5 mr-2" />
-                  {t("hosts.noFolderOption")}
-                </DropdownMenuItem>
-                {folders.filter(Boolean).map((f) => (
-                  <DropdownMenuItem
-                    key={f}
-                    onClick={async () => {
-                      const ids = Array.from(selectedHostIds).map(Number);
-                      try {
-                        await bulkUpdateSSHHosts(ids, { folder: f });
-                        const raw = await getSSHHosts();
-                        setHosts(raw.map(sshHostToHost));
-                        toast.success(t("hosts.movedToFolder", { folder: f }));
-                      } catch {
-                        toast.error(t("hosts.failedToMoveHosts"));
-                      }
-                    }}
-                  >
-                    <FolderOpen className="size-3.5 mr-2" />
-                    {f}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <button
-              className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
-              disabled={selectedHostIds.size === 0}
-              onClick={() => {
-                setConfirmDialog({
-                  message: t("hosts.deleteHostsConfirm", {
-                    count: selectedHostIds.size,
-                    plural: selectedHostIds.size !== 1 ? "s" : "",
-                  }),
-                  onConfirm: async () => {
-                    const ids = Array.from(selectedHostIds);
-                    const results = await Promise.allSettled(
-                      ids.map((id) => deleteSSHHost(Number(id))),
-                    );
-                    const succeeded = results.filter(
-                      (r) => r.status === "fulfilled",
-                    ).length;
-                    const failed = results.filter(
-                      (r) => r.status === "rejected",
-                    ).length;
-                    setHosts((prev) =>
-                      prev.filter((h) => !selectedHostIds.has(h.id)),
-                    );
-                    setSelectedHostIds(new Set());
-                    if (succeeded > 0)
-                      toast.success(
-                        t("hosts.deletedCount", { count: succeeded }),
-                      );
-                    if (failed > 0)
-                      toast.error(
-                        t("hosts.failedToDeleteCount", { count: failed }),
-                      );
-                  },
-                });
-              }}
-            >
-              {t("hosts.deleteSelected")}
-            </button>
-            <div className="flex-1" />
-            <button
-              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors"
-              onClick={() => {
-                setSelectionMode(false);
-                setSelectedHostIds(new Set());
-              }}
-            >
-              {t("hosts.cancelSelection")}
-            </button>
           </div>
         </div>
       )}

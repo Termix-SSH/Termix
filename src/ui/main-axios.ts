@@ -2771,6 +2771,10 @@ export async function loginUser(
       }
     }
 
+    if (response.data.token) {
+      localStorage.setItem("jwt", response.data.token);
+    }
+
     if (response.data.success && !response.data.requires_totp) {
       markUserAuthenticated();
     }

@@ -55,7 +55,6 @@ export function CredentialsPanel({
 
       <div className="flex flex-col flex-1 min-h-0">
         <HostManager
-          initialSection="credentials"
           hideListHeader
           externalSearch={managerEditing ? undefined : search}
           onEditingChange={handleEditingChange}

@@ -890,6 +890,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         if (isEmbeddedMode()) {
           baseWsUrl = "ws://127.0.0.1:30002";
+          const storedJwt = localStorage.getItem("jwt");
+          if (storedJwt) {
+            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
+          }
         } else if (!configuredUrl) {
           console.error("No configured server URL available for Electron SSH");
           setIsConnected(false);
@@ -1864,7 +1868,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.fontSize = config.fontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
-      terminal.options.fastScrollModifier = config.fastScrollModifier;
       terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
@@ -1934,11 +1937,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
-        windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
         rightClickSelectsWord: config.rightClickSelectsWord,
-        fastScrollModifier: config.fastScrollModifier,
         fastScrollSensitivity: config.fastScrollSensitivity,
         allowProposedApi: true,
         minimumContrastRatio: config.minimumContrastRatio,
@@ -1992,6 +1993,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+
+      terminal.attachCustomWheelEventHandler((ev) => {
+        const cfg = {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...hostConfig.terminalConfig,
+        };
+        const mod = cfg.fastScrollModifier;
+        const modHeld =
+          (mod === "alt" && ev.altKey) ||
+          (mod === "ctrl" && ev.ctrlKey) ||
+          (mod === "shift" && ev.shiftKey);
+        if (modHeld) {
+          const lines = Math.round(
+            (Math.abs(ev.deltaY) / 100) * (cfg.fastScrollSensitivity ?? 5),
+          );
+          terminal.scrollLines(ev.deltaY > 0 ? lines : -lines);
+          return false;
+        }
+        return true;
+      });
 
       fitAddonRef.current?.fit();
       if (terminal.cols < 10 || terminal.rows < 3) {
