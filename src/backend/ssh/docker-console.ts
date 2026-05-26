@@ -140,7 +140,9 @@ async function createJumpHostChain(
         const credential = credentials[0];
         resolvedCredentials = {
           password: credential.password as string | undefined,
-          sshKey: credential.privateKey as string | undefined,
+          sshKey: (credential.key || credential.privateKey) as
+            | string
+            | undefined,
           keyPassword: credential.keyPassword as string | undefined,
           authType: credential.authType as string | undefined,
         };

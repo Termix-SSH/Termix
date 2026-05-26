@@ -135,7 +135,7 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key: credential.privateKey as string | undefined,
+          key: (credential.key || credential.privateKey) as string | undefined,
           keyPassword: credential.keyPassword as string | undefined,
           keyType: credential.keyType as string | undefined,
           authType: credential.authType as string | undefined,
