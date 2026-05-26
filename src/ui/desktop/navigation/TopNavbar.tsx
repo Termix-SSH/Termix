@@ -461,8 +461,13 @@ export function TopNavbar({
                 <Tab
                   tabType={tab.type}
                   title={tab.title}
+                  customTitle={tab.customTitle}
                   isActive={isActive}
                   isSplit={isSplit}
+                  canRename={tab.type !== "home"}
+                  onRename={(newTitle) =>
+                    updateTab(tab.id, { customTitle: newTitle })
+                  }
                   onActivate={() => handleTabActivate(tab.id)}
                   onClose={
                     isTerminal ||
@@ -503,7 +508,7 @@ export function TopNavbar({
                   isDragOver={false}
                   hostConfig={tab.hostConfig}
                   onOpenFileManager={
-                    isTerminal && (tab.hostConfig as any)?.enableFileManager
+                    isTerminal && tab.hostConfig?.enableFileManager
                       ? () => tab.terminalRef?.current?.openFileManager?.()
                       : undefined
                   }

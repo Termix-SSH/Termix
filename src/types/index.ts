@@ -492,6 +492,7 @@ export interface TabContextTab {
     | "vnc"
     | "telnet";
   title: string;
+  customTitle?: string;
   hostConfig?: SSHHost;
   terminalRef?: RefObject<TerminalRefHandle | null>;
   initialTab?: string;

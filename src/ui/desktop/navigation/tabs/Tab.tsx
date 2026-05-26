@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { useTranslation } from "react-i18next";
 import { getHostPassword } from "@/ui/main-axios.ts";
@@ -26,13 +26,16 @@ import type { SSHHost } from "@/types";
 interface TabProps {
   tabType: string;
   title?: string;
+  customTitle?: string;
   isActive?: boolean;
   isSplit?: boolean;
   onActivate?: () => void;
   onClose?: () => void;
   onSplit?: () => void;
+  onRename?: (newTitle: string | undefined) => void;
   canSplit?: boolean;
   canClose?: boolean;
+  canRename?: boolean;
   disableActivate?: boolean;
   disableSplit?: boolean;
   disableClose?: boolean;
@@ -47,13 +50,16 @@ interface TabProps {
 export function Tab({
   tabType,
   title,
+  customTitle,
   isActive,
   isSplit = false,
   onActivate,
   onClose,
   onSplit,
+  onRename,
   canSplit = false,
   canClose = false,
+  canRename = false,
   disableActivate = false,
   disableSplit = false,
   disableClose = false,
@@ -65,6 +71,41 @@ export function Tab({
   onOpenFileManager,
 }: TabProps): React.ReactElement {
   const { t } = useTranslation();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const beginEdit = (initial: string) => {
+    if (!canRename || !onRename) return;
+    cancelledRef.current = false;
+    setDraftTitle(initial);
+    setIsEditing(true);
+  };
+
+  const commitEdit = () => {
+    if (!isEditing) return;
+    setIsEditing(false);
+    if (cancelledRef.current || !onRename) {
+      cancelledRef.current = false;
+      return;
+    }
+    const trimmed = draftTitle.trim();
+    onRename(trimmed.length === 0 ? undefined : trimmed);
+  };
+
+  const cancelEdit = () => {
+    cancelledRef.current = true;
+    setIsEditing(false);
+  };
 
   const handleCopyPassword = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -209,7 +250,7 @@ export function Tab({
     const isTunnel = tabType === "tunnel";
     const isDocker = tabType === "docker";
     const isUserProfile = tabType === "user_profile";
-    const displayTitle =
+    const fallbackTitle =
       title ||
       (isServer
         ? t("nav.serverStats")
@@ -224,6 +265,7 @@ export function Tab({
                 : tabType === "rdp" || tabType === "vnc" || tabType === "telnet"
                   ? tabType.toUpperCase()
                   : t("nav.terminal"));
+    const displayTitle = customTitle?.trim() || fallbackTitle;
 
     const { base, suffix } = splitTitle(displayTitle);
 
@@ -257,8 +299,43 @@ export function Tab({
           ) : (
             <TerminalIcon className="h-4 w-4 flex-shrink-0" />
           )}
-          <span className="truncate text-sm flex-1 min-w-0">{base}</span>
-          {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitEdit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelEdit();
+                }
+              }}
+              className="flex-1 min-w-0 bg-transparent border-b border-border outline-none text-sm px-0 py-0 h-5"
+            />
+          ) : (
+            <>
+              <span
+                className="truncate text-sm flex-1 min-w-0 select-none"
+                onDoubleClick={(e) => {
+                  if (!canRename || !onRename) return;
+                  e.stopPropagation();
+                  beginEdit(customTitle ?? displayTitle);
+                }}
+                title={canRename ? t("nav.doubleClickToRename") : undefined}
+              >
+                {base}
+              </span>
+              {suffix && <span className="text-sm flex-shrink-0">{suffix}</span>}
+            </>
+          )}
         </div>
 
         {hasPassword && (
