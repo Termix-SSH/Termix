@@ -1947,13 +1947,13 @@ router.get("/oidc-auto-provision", async (_req, res) => {
       .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
       .get();
     res.json({
-      enabled: row
-        ? (row as Record<string, unknown>).value === "true"
-        : false,
+      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC auto-provision setting", err);
-    res.status(500).json({ error: "Failed to get OIDC auto-provision setting" });
+    res
+      .status(500)
+      .json({ error: "Failed to get OIDC auto-provision setting" });
   }
 });
 
@@ -1973,11 +1973,15 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
       .get();
     if (existing) {
       db.$client
-        .prepare("UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'")
+        .prepare(
+          "UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'",
+        )
         .run(enabled ? "true" : "false");
     } else {
       db.$client
-        .prepare("INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)")
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)",
+        )
         .run(enabled ? "true" : "false");
     }
     res.json({ enabled });

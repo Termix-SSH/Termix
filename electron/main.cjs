@@ -1096,7 +1096,8 @@ ipcMain.handle("get-platform", () => {
 
 ipcMain.handle("get-embedded-server-status", () => {
   return {
-    running: backendProcess !== null && !backendProcess.killed && !backendStartFailed,
+    running:
+      backendProcess !== null && !backendProcess.killed && !backendStartFailed,
     embedded: !isDev,
     dataDir: isDev ? null : getBackendDataDir(),
   };
