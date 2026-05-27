@@ -76,7 +76,7 @@
     "@deadendjs/swagger-jsdoc": "^8.1.2",
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.4",
-    "@eslint/js": "^9.0.0",
+    "@eslint/js": "^10.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
