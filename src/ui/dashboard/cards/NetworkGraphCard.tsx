@@ -191,6 +191,10 @@ export function NetworkGraphCard({
   const { t } = useTranslation();
   const { addTab } = useTabsSafe();
 
+  // Gate Cytoscape mounting on the container actually having non-zero dimensions.
+  // This avoids the "bb is undefined" crash when the card is hidden via display:none.
+  const [containerReady, setContainerReady] = useState(false);
+
   const [elements, setElements] = useState<NetworkElement[]>([]);
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
   const [hostMap, setHostMap] = useState<HostMap>({});
@@ -229,6 +233,21 @@ export function NetworkGraphCard({
   });
 
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+
+  useEffect(() => {
+    if (containerReady) return;
+    const el = cyContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) {
+        setContainerReady(true);
+        ro.disconnect();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [containerReady]);
 
   const cyRef = useRef<cytoscape.Core | null>(null);
   const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -864,15 +883,17 @@ export function NetworkGraphCard({
         </div>
       )}
       {contextMenuEl}
-      <CytoscapeComponent
-        elements={elements}
-        style={{ width: "100%", height: "100%", background: "transparent" }}
-        layout={{ name: "preset" }}
-        cy={handleNodeInit}
-        wheelSensitivity={1.5}
-        minZoom={0.2}
-        maxZoom={3}
-      />
+      {containerReady && (
+        <CytoscapeComponent
+          elements={elements}
+          style={{ width: "100%", height: "100%", background: "transparent" }}
+          layout={{ name: "preset" }}
+          cy={handleNodeInit}
+          wheelSensitivity={1.5}
+          minZoom={0.2}
+          maxZoom={3}
+        />
+      )}
       {!loading && elements.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
           <Network className="size-8 text-muted-foreground/30" />

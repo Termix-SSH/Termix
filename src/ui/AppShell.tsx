@@ -4,14 +4,8 @@ import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  createRef,
-  createPortal,
-} from "react";
+import { useState, useRef, useCallback, useEffect, createRef } from "react";
+import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { CommandPalette } from "@/shell/CommandPalette";
@@ -176,6 +170,25 @@ export function AppShell({
   const [paneContentEls, setPaneContentEls] = useState<
     (HTMLDivElement | null)[]
   >(Array(6).fill(null));
+
+  // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
+  // We always portal each tab's content into its own node, then move that node between
+  // the normal-view container and the pane container via vanilla DOM so React's portal
+  // target never changes (changing the target causes a remount).
+  const tabNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const normalViewRef = useRef<HTMLDivElement>(null);
+
+  const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
+    if (!tabNodesRef.current.has(tabId)) {
+      const el = document.createElement("div");
+      el.style.position = "absolute";
+      el.style.inset = "0";
+      el.style.overflow = "hidden";
+      if (!isTerminal) el.classList.add("bg-background");
+      tabNodesRef.current.set(tabId, el);
+    }
+    return tabNodesRef.current.get(tabId)!;
+  }, []);
 
   const onPaneContentRef = useCallback(
     (paneIndex: number, el: HTMLDivElement | null) => {
@@ -528,8 +541,57 @@ export function AppShell({
     return () => cancelAnimationFrame(id);
   }, [splitMode, sidebarWidth, sidebarOpen]);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const isSplit = splitMode !== "none";
+
+  // Move each tab's stable DOM node to the right container (pane or normal-view).
+  // This is vanilla DOM so React's portal target never changes — changing the portal
+  // target causes a remount which is exactly what we're trying to avoid.
+  useEffect(() => {
+    const normalView = normalViewRef.current;
+    if (!normalView) return;
+
+    const tabIds = new Set(tabs.map((t) => t.id));
+
+    // Remove nodes for closed tabs
+    for (const [id, node] of tabNodesRef.current) {
+      if (!tabIds.has(id)) {
+        node.remove();
+        tabNodesRef.current.delete(id);
+      }
+    }
+
+    for (const tab of tabs) {
+      const isTerminal = tab.type === "terminal";
+      const node = getTabNode(tab.id, isTerminal);
+      const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+      const inPane = paneIdx !== -1;
+      const paneEl = inPane ? paneContentEls[paneIdx] : null;
+      const activeInline = !inPane && tab.id === activeTabId;
+
+      if (inPane && paneEl) {
+        if (node.parentElement !== paneEl) paneEl.appendChild(node);
+        node.style.visibility = "visible";
+        node.style.pointerEvents = "auto";
+        node.style.display = "";
+        node.style.zIndex = "";
+      } else {
+        if (node.parentElement !== normalView) normalView.appendChild(node);
+        if (isTerminal) {
+          node.style.display = "";
+          node.style.visibility = activeInline ? "visible" : "hidden";
+          node.style.pointerEvents = activeInline ? "auto" : "none";
+          node.style.zIndex = activeInline && !isSplit ? "1" : "0";
+        } else {
+          node.style.visibility = "";
+          node.style.pointerEvents = "";
+          node.style.zIndex = activeInline ? "2" : "";
+          node.style.display = activeInline ? "" : "none";
+        }
+      }
+    }
+  });
+
+  const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
@@ -740,86 +802,39 @@ export function AppShell({
                     tabs={tabs}
                     paneTabIds={paneTabIds}
                     splitMode={splitMode}
-                    onOpenSingletonTab={openSingletonTab}
-                    onOpenTab={openTab}
                     onTerminalResize={resizeAllTerminals}
                     onPaneContentRef={onPaneContentRef}
                   />
                 </div>
               )}
 
-              {/* Normal tab view — always mounted, hidden via CSS when split is active */}
+              {/* Normal-view container. Tab nodes are appended here (or to pane elements)
+                  by the DOM-placement effect above. React portals each tab's content
+                  into its stable per-tab node so the component is never remounted.
+                  Hidden when split is active — pane-assigned nodes escape via vanilla DOM
+                  appendChild to paneEl, so hiding this doesn't affect them. */}
               <div
-                className="absolute inset-0 flex flex-col"
-                style={{ display: isSplit && !isMobile ? "none" : "flex" }}
+                ref={normalViewRef}
+                className="absolute inset-0"
+                style={{ display: isSplit && !isMobile ? "none" : undefined }}
               >
-                {/* Terminal tabs: always in DOM, visibility-toggled so xterm keeps its dimensions.
-                    When split is active and this tab is assigned to a pane, portal it there. */}
-                {tabs
-                  .filter((tab) => tab.type === "terminal")
-                  .map((tab) => {
-                    const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
-                    const inPane = paneIdx !== -1;
-                    const paneEl = inPane ? paneContentEls[paneIdx] : null;
-                    const visible = inPane || tab.id === activeTabId;
-
-                    const terminalContent = renderTabContent(
+                {tabs.map((tab) => {
+                  const tabNode = getTabNode(tab.id, tab.type === "terminal");
+                  const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+                  const inPane = paneIdx !== -1;
+                  const activeInline = !inPane && tab.id === activeTabId;
+                  return createPortal(
+                    renderTabContent(
                       tab,
                       openSingletonTab,
                       openTab,
                       closeTab,
-                      visible,
-                    );
-
-                    if (inPane && paneEl) {
-                      return createPortal(
-                        <div className="absolute inset-0 overflow-hidden">
-                          {terminalContent}
-                        </div>,
-                        paneEl,
-                        tab.id,
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={tab.id}
-                        className="absolute inset-0 overflow-hidden"
-                        style={{
-                          visibility: visible ? "visible" : "hidden",
-                          pointerEvents: visible ? "auto" : "none",
-                          zIndex: tab.id === activeTabId && !isSplit ? 1 : 0,
-                        }}
-                      >
-                        {terminalContent}
-                      </div>
-                    );
-                  })}
-                {/* Non-terminal tabs */}
-                {tabs
-                  .filter((tab) => tab.type !== "terminal")
-                  .map((tab) => {
-                    const visible = tab.id === activeTabId;
-                    return (
-                      <div
-                        key={tab.id}
-                        className="flex flex-col overflow-hidden bg-background"
-                        style={
-                          visible
-                            ? { position: "absolute", inset: 0, zIndex: 2 }
-                            : { display: "none" }
-                        }
-                      >
-                        {renderTabContent(
-                          tab,
-                          openSingletonTab,
-                          openTab,
-                          closeTab,
-                          visible,
-                        )}
-                      </div>
-                    );
-                  })}
+                      inPane || activeInline,
+                    ),
+                    tabNode,
+                    tab.id,
+                  );
+                })}
               </div>
             </div>
           </div>

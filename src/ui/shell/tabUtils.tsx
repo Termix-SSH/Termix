@@ -132,6 +132,7 @@ function TerminalTabContent({
           {
             ...hostToSSHHost(host),
             sshPort: host.sshPort ?? host.port,
+            instanceId: tab.id,
           } as any
         }
         isVisible={isVisible}

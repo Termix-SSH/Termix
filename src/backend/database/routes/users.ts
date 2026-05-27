@@ -1353,6 +1353,7 @@ router.get("/oidc/callback", async (req, res) => {
     }
 
     try {
+      await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
       authLogger.error("Failed to setup OIDC user encryption", setupError, {
         operation: "oidc_user_encryption_setup_failed",
@@ -2062,6 +2063,8 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
       )
       .run(allowed ? "true" : "false");
+    const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+    await saveMemoryDatabaseToFile();
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password login allowed", err);
