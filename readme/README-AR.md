@@ -258,7 +258,7 @@ networks:
 
 <br />
 
-[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+[![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
 <sub>شاهد نظرة عامة على التحديثات على YouTube</sub>
 

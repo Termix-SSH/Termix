@@ -258,7 +258,7 @@ networks:
 
 <br />
 
-[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+[![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
 <sub>Xem tong quan cap nhat tren YouTube</sub>
 

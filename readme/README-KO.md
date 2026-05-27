@@ -258,7 +258,7 @@ networks:
 
 <br />
 
-[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+[![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
 <sub>YouTube에서 업데이트 개요 시청하기</sub>
 

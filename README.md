@@ -260,7 +260,7 @@ networks:
 
 <br />
 
-[![YouTube](./repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+[![YouTube](./repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
 <sub>Watch update overviews on YouTube</sub>
 
@@ -309,8 +309,6 @@ networks:
 See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
-
-## Sponsors
 
 ## Sponsors
 
