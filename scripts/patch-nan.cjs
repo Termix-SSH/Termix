@@ -45,7 +45,12 @@ const nanHeaderPatched = patchFile(path.join(nanDir, "nan.h"), [
 
 // cpu-features binding.cc includes <node.h> before <nan.h>, so the nan.h patch
 // above is too late. Patch binding.cc directly to inject the compat define first.
-const cpuFeaturesDir = path.join(__dirname, "..", "node_modules", "cpu-features");
+const cpuFeaturesDir = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "cpu-features",
+);
 const bindingPath = path.join(cpuFeaturesDir, "src", "binding.cc");
 const bindingPatched = patchFile(bindingPath, [
   {
@@ -70,11 +75,11 @@ if (fs.existsSync(implPath)) {
   if (!src.includes(TAG)) {
     src = src.replace(
       /v8::External::New\(v8::Isolate::GetCurrent\(\),\s*value\)/g,
-      `v8::External::New(v8::Isolate::GetCurrent(), value, ${TAG})`
+      `v8::External::New(v8::Isolate::GetCurrent(), value, ${TAG})`,
     );
     src = src.replace(
       /v8::External::New\(isolate,\s*reinterpret_cast<void \*>\(callback\)\)/g,
-      `v8::External::New(isolate, reinterpret_cast<void *>(callback), ${TAG})`
+      `v8::External::New(isolate, reinterpret_cast<void *>(callback), ${TAG})`,
     );
   }
 
@@ -97,7 +102,7 @@ if (fs.existsSync(callbacksPath)) {
     // Pattern: .As<v8::External>()->Value()) — always followed by ))
     src = src.replace(
       /\.As<v8::External>\(\)->Value\(\)\)/g,
-      `.As<v8::External>()->Value(${TAG}))`
+      `.As<v8::External>()->Value(${TAG}))`,
     );
   }
 
@@ -108,7 +113,9 @@ if (fs.existsSync(callbacksPath)) {
 }
 
 if (nanHeaderPatched || bindingPatched || implPatched || callbacksPatched) {
-  console.log("[patch-nan] Applied compatibility patches for Electron 42 / V8 13+");
+  console.log(
+    "[patch-nan] Applied compatibility patches for Electron 42 / V8 13+",
+  );
 } else {
   console.log("[patch-nan] Already patched or target code not found");
 }

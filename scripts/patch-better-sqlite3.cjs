@@ -1,7 +1,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const betterSqlite3Dir = path.join(__dirname, "..", "node_modules", "better-sqlite3");
+const betterSqlite3Dir = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "better-sqlite3",
+);
 const macrosPath = path.join(betterSqlite3Dir, "src", "util", "macros.cpp");
 const helpersPath = path.join(betterSqlite3Dir, "src", "util", "helpers.cpp");
 const entryPath = path.join(betterSqlite3Dir, "src", "better_sqlite3.cpp");
@@ -91,7 +96,11 @@ const entryPatched = patchFile(entryPath, [
 ]);
 
 if (macrosPatched || helpersPatched || entryPatched) {
-  console.log("[patch-better-sqlite3] Applied compatibility patches for newer Electron/V8");
+  console.log(
+    "[patch-better-sqlite3] Applied compatibility patches for newer Electron/V8",
+  );
 } else {
-  console.log("[patch-better-sqlite3] Already patched or target code not found");
+  console.log(
+    "[patch-better-sqlite3] Already patched or target code not found",
+  );
 }

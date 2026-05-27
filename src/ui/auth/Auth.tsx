@@ -758,7 +758,7 @@ export function Auth({ onLogin }: AuthProps) {
           </div>
         </div>
       );
-    if (currentServerUrl && !webviewAuthSuccess)
+    if (!webviewAuthSuccess && showServerConfig === false && currentServerUrl)
       return (
         <div className="w-full h-screen flex items-center justify-center p-4 bg-background">
           <div className="w-full max-w-4xl h-[90vh]">
@@ -858,453 +858,479 @@ export function Auth({ onLogin }: AuthProps) {
   ];
 
   return (
-    <div className="fixed inset-0 flex bg-background overflow-hidden">
-      {/* Left decorative panel */}
-      <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-          <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-            TERMIX
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+      {isElectron() && !isInElectronWebView() && showServerConfig === false && (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <button
+            onClick={() => setShowServerConfig(true)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="size-4" />
+            {t("serverConfig.changeServer")}
+          </button>
+          <span className="text-xs text-muted-foreground">
+            {t("serverConfig.localServer")}
           </span>
-          <div className="w-8 h-px bg-accent-brand" />
-          <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-            {t("auth.tagline")}
-          </span>
+          <div className="w-20" />
         </div>
-      </div>
+      )}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left decorative panel */}
+        <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
+            <span className="text-4xl font-bold tracking-[0.3em] font-mono">
+              TERMIX
+            </span>
+            <div className="w-8 h-px bg-accent-brand" />
+            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
+              {t("auth.tagline")}
+            </span>
+          </div>
+        </div>
 
-      {/* Right panel */}
-      <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
-        <div className="w-full max-w-sm flex flex-col gap-6">
-          {/* TOTP view */}
-          {view === "totp" && (
-            <div className="flex flex-col gap-5">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-xl font-bold">{t("auth.twoFactorAuth")}</h1>
-                <p className="text-xs text-muted-foreground">
-                  {t("auth.enterCode")}
-                </p>
-              </div>
-              <form onSubmit={handleTOTP} className="flex flex-col gap-4">
-                <Field label={t("auth.verifyCode")} htmlFor="totp-code">
-                  <Input
-                    ref={totpInputRef}
-                    id="totp-code"
-                    type="text"
-                    placeholder="000000"
-                    maxLength={6}
-                    value={totpCode}
-                    onChange={(e) =>
-                      setTotpCode(e.target.value.replace(/\D/g, ""))
-                    }
-                    disabled={loading}
-                    className="text-center text-2xl tracking-widest font-mono"
-                    autoComplete="one-time-code"
-                  />
-                </Field>
-                <Button
-                  type="submit"
-                  className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                  disabled={loading || totpCode.length !== 6}
-                >
-                  {loading ? t("common.loading") : t("auth.verifyCode")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => switchView("login")}
-                  disabled={loading}
-                >
-                  {t("common.cancel")}
-                </Button>
-              </form>
-            </div>
-          )}
-
-          {/* Reset password view */}
-          {view === "reset" && (
-            <div className="flex flex-col gap-5">
-              <button
-                onClick={() => switchView("login")}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-              >
-                <ArrowLeft className="size-3.5" />
-                {t("common.back")}
-              </button>
-              <div className="flex flex-col gap-1">
-                <h1 className="text-xl font-bold">
-                  {t("auth.forgotPassword")}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {t("auth.resetCodeDesc")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {(["email", "code", "newpass"] as ResetStep[]).map(
-                  (step, i) => {
-                    const stepIdx = ["email", "code", "newpass"].indexOf(
-                      resetStep,
-                    );
-                    const done = i < stepIdx;
-                    const active = i === stepIdx;
-                    return (
-                      <div
-                        key={step}
-                        className="flex items-center gap-2 flex-1"
-                      >
-                        <div
-                          className={`size-5 flex items-center justify-center text-[10px] font-bold border transition-colors ${done ? "bg-accent-brand border-accent-brand text-background" : active ? "border-accent-brand text-accent-brand" : "border-border text-muted-foreground"}`}
-                        >
-                          {done ? <CheckCircle2 className="size-3" /> : i + 1}
-                        </div>
-                        {i < 2 && (
-                          <div
-                            className={`h-px flex-1 transition-colors ${done ? "bg-accent-brand" : "bg-border"}`}
-                          />
-                        )}
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-              {resetStep === "email" && (
-                <form
-                  onSubmit={handleResetInitiate}
-                  className="flex flex-col gap-4"
-                >
-                  <Field label={t("common.username")} htmlFor="reset-user">
+        {/* Right panel */}
+        <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
+          <div className="w-full max-w-sm flex flex-col gap-6">
+            {/* TOTP view */}
+            {view === "totp" && (
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-bold">
+                    {t("auth.twoFactorAuth")}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {t("auth.enterCode")}
+                  </p>
+                </div>
+                <form onSubmit={handleTOTP} className="flex flex-col gap-4">
+                  <Field label={t("auth.verifyCode")} htmlFor="totp-code">
                     <Input
-                      id="reset-user"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="your_username"
-                      disabled={loading}
-                    />
-                  </Field>
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                    disabled={loading}
-                  >
-                    {loading ? t("common.loading") : t("auth.sendResetCode")}
-                  </Button>
-                </form>
-              )}
-              {resetStep === "code" && (
-                <form
-                  onSubmit={handleResetVerify}
-                  className="flex flex-col gap-4"
-                >
-                  <Field label={t("auth.resetCode")} htmlFor="reset-code">
-                    <Input
-                      id="reset-code"
-                      value={resetCode}
-                      onChange={(e) =>
-                        setResetCode(e.target.value.replace(/\D/g, ""))
-                      }
+                      ref={totpInputRef}
+                      id="totp-code"
+                      type="text"
                       placeholder="000000"
                       maxLength={6}
-                      className="text-center font-mono text-lg tracking-widest"
+                      value={totpCode}
+                      onChange={(e) =>
+                        setTotpCode(e.target.value.replace(/\D/g, ""))
+                      }
                       disabled={loading}
+                      className="text-center text-2xl tracking-widest font-mono"
+                      autoComplete="one-time-code"
                     />
                   </Field>
                   <Button
                     type="submit"
                     className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                    disabled={loading || resetCode.length !== 6}
+                    disabled={loading || totpCode.length !== 6}
                   >
-                    {loading ? t("common.loading") : t("auth.verifyCodeButton")}
+                    {loading ? t("common.loading") : t("auth.verifyCode")}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     className="w-full"
-                    onClick={() => setResetStep("email")}
+                    onClick={() => switchView("login")}
                     disabled={loading}
                   >
-                    {t("common.back")}
+                    {t("common.cancel")}
                   </Button>
                 </form>
-              )}
-              {resetStep === "newpass" && (
-                <form
-                  onSubmit={handleResetComplete}
-                  className="flex flex-col gap-4"
+              </div>
+            )}
+
+            {/* Reset password view */}
+            {view === "reset" && (
+              <div className="flex flex-col gap-5">
+                <button
+                  onClick={() => switchView("login")}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
                 >
-                  <Field label={t("auth.newPassword")} htmlFor="new-pass">
-                    <PasswordInput
-                      id="new-pass"
-                      value={newPassword}
-                      onChange={setNewPassword}
+                  <ArrowLeft className="size-3.5" />
+                  {t("common.back")}
+                </button>
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-bold">
+                    {t("auth.forgotPassword")}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {t("auth.resetCodeDesc")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(["email", "code", "newpass"] as ResetStep[]).map(
+                    (step, i) => {
+                      const stepIdx = ["email", "code", "newpass"].indexOf(
+                        resetStep,
+                      );
+                      const done = i < stepIdx;
+                      const active = i === stepIdx;
+                      return (
+                        <div
+                          key={step}
+                          className="flex items-center gap-2 flex-1"
+                        >
+                          <div
+                            className={`size-5 flex items-center justify-center text-[10px] font-bold border transition-colors ${done ? "bg-accent-brand border-accent-brand text-background" : active ? "border-accent-brand text-accent-brand" : "border-border text-muted-foreground"}`}
+                          >
+                            {done ? <CheckCircle2 className="size-3" /> : i + 1}
+                          </div>
+                          {i < 2 && (
+                            <div
+                              className={`h-px flex-1 transition-colors ${done ? "bg-accent-brand" : "bg-border"}`}
+                            />
+                          )}
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+                {resetStep === "email" && (
+                  <form
+                    onSubmit={handleResetInitiate}
+                    className="flex flex-col gap-4"
+                  >
+                    <Field label={t("common.username")} htmlFor="reset-user">
+                      <Input
+                        id="reset-user"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="your_username"
+                        disabled={loading}
+                      />
+                    </Field>
+                    <Button
+                      type="submit"
+                      className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
                       disabled={loading}
-                    />
-                  </Field>
-                  <Field
-                    label={t("auth.confirmNewPassword")}
-                    htmlFor="confirm-new-pass"
+                    >
+                      {loading ? t("common.loading") : t("auth.sendResetCode")}
+                    </Button>
+                  </form>
+                )}
+                {resetStep === "code" && (
+                  <form
+                    onSubmit={handleResetVerify}
+                    className="flex flex-col gap-4"
                   >
-                    <PasswordInput
-                      id="confirm-new-pass"
-                      value={confirmNewPassword}
-                      onChange={setConfirmNewPassword}
+                    <Field label={t("auth.resetCode")} htmlFor="reset-code">
+                      <Input
+                        id="reset-code"
+                        value={resetCode}
+                        onChange={(e) =>
+                          setResetCode(e.target.value.replace(/\D/g, ""))
+                        }
+                        placeholder="000000"
+                        maxLength={6}
+                        className="text-center font-mono text-lg tracking-widest"
+                        disabled={loading}
+                      />
+                    </Field>
+                    <Button
+                      type="submit"
+                      className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+                      disabled={loading || resetCode.length !== 6}
+                    >
+                      {loading
+                        ? t("common.loading")
+                        : t("auth.verifyCodeButton")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setResetStep("email")}
                       disabled={loading}
-                    />
-                  </Field>
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                    disabled={loading}
+                    >
+                      {t("common.back")}
+                    </Button>
+                  </form>
+                )}
+                {resetStep === "newpass" && (
+                  <form
+                    onSubmit={handleResetComplete}
+                    className="flex flex-col gap-4"
                   >
-                    {loading
-                      ? t("common.loading")
-                      : t("auth.resetPasswordButton")}
-                  </Button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* Login / Register / External */}
-          {(view === "login" || view === "register" || view === "external") && (
-            <div className="flex flex-col gap-5">
-              <div className="flex border border-border overflow-hidden">
-                {TAB_ITEMS.filter((item) => item.show).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => switchView(item.id)}
-                    className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${view === item.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                    <Field label={t("auth.newPassword")} htmlFor="new-pass">
+                      <PasswordInput
+                        id="new-pass"
+                        value={newPassword}
+                        onChange={setNewPassword}
+                        disabled={loading}
+                      />
+                    </Field>
+                    <Field
+                      label={t("auth.confirmNewPassword")}
+                      htmlFor="confirm-new-pass"
+                    >
+                      <PasswordInput
+                        id="confirm-new-pass"
+                        value={confirmNewPassword}
+                        onChange={setConfirmNewPassword}
+                        disabled={loading}
+                      />
+                    </Field>
+                    <Button
+                      type="submit"
+                      className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+                      disabled={loading}
+                    >
+                      {loading
+                        ? t("common.loading")
+                        : t("auth.resetPasswordButton")}
+                    </Button>
+                  </form>
+                )}
               </div>
+            )}
 
-              <div className="flex flex-col gap-1">
-                <h1 className="text-xl font-bold">
-                  {view === "login"
-                    ? t("auth.loginTitle")
-                    : view === "register"
-                      ? t("auth.registerTitle")
-                      : t("auth.loginWithExternal")}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {view === "login"
-                    ? t("auth.loginSubtitle", "")
-                    : view === "register"
-                      ? t("auth.registerSubtitle", "")
-                      : t("auth.loginWithExternalDesc")}
-                </p>
-              </div>
+            {/* Login / Register / External */}
+            {(view === "login" ||
+              view === "register" ||
+              view === "external") && (
+              <div className="flex flex-col gap-5">
+                <div className="flex border border-border overflow-hidden">
+                  {TAB_ITEMS.filter((item) => item.show).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => switchView(item.id)}
+                      className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${view === item.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
 
-              {view === "external" && (
-                <div className="flex flex-col gap-4">
-                  {isElectron() ? (
-                    <p className="text-xs text-muted-foreground text-center">
-                      {t("auth.externalNotSupportedInElectron")}
-                    </p>
-                  ) : (
-                    <>
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-bold">
+                    {view === "login"
+                      ? t("auth.loginTitle")
+                      : view === "register"
+                        ? t("auth.registerTitle")
+                        : t("auth.loginWithExternal")}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {view === "login"
+                      ? t("auth.loginSubtitle", "")
+                      : view === "register"
+                        ? t("auth.registerSubtitle", "")
+                        : t("auth.loginWithExternalDesc")}
+                  </p>
+                </div>
+
+                {view === "external" && (
+                  <div className="flex flex-col gap-4">
+                    {isElectron() ? (
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t("auth.externalNotSupportedInElectron")}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="rememberOIDC"
+                            checked={rememberMe}
+                            onCheckedChange={(v) => setRememberMe(v === true)}
+                          />
+                          <label
+                            htmlFor="rememberOIDC"
+                            className="text-xs text-muted-foreground cursor-pointer"
+                          >
+                            {t("auth.rememberMe")}
+                          </label>
+                        </div>
+                        <Button
+                          onClick={handleOIDCLogin}
+                          disabled={oidcLoading}
+                          className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
+                        >
+                          {oidcLoading
+                            ? t("common.loading")
+                            : t("auth.loginWithExternal")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {view === "login" && (
+                  <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                    <Field label={t("common.username")} htmlFor="login-user">
+                      <div className="relative">
+                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="login-user"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="username"
+                          className="pl-8"
+                          disabled={loading}
+                          autoFocus
+                        />
+                      </div>
+                    </Field>
+                    <Field label={t("common.password")} htmlFor="login-pass">
+                      <PasswordInput
+                        id="login-pass"
+                        value={password}
+                        onChange={setPassword}
+                        disabled={loading}
+                      />
+                    </Field>
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          id="rememberOIDC"
+                          id="rememberMe"
                           checked={rememberMe}
                           onCheckedChange={(v) => setRememberMe(v === true)}
+                          disabled={loading}
                         />
                         <label
-                          htmlFor="rememberOIDC"
+                          htmlFor="rememberMe"
                           className="text-xs text-muted-foreground cursor-pointer"
                         >
                           {t("auth.rememberMe")}
                         </label>
                       </div>
-                      <Button
-                        onClick={handleOIDCLogin}
-                        disabled={oidcLoading}
-                        className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold"
-                      >
-                        {oidcLoading
-                          ? t("common.loading")
-                          : t("auth.loginWithExternal")}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {view === "login" && (
-                <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                  <Field label={t("common.username")} htmlFor="login-user">
-                    <div className="relative">
-                      <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        id="login-user"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="username"
-                        className="pl-8"
-                        disabled={loading}
-                        autoFocus
-                      />
+                      {passwordResetAllowed && (
+                        <button
+                          type="button"
+                          onClick={() => switchView("reset")}
+                          className="text-xs text-muted-foreground hover:text-accent-brand transition-colors"
+                        >
+                          {t("auth.forgotPassword")}
+                        </button>
+                      )}
                     </div>
-                  </Field>
-                  <Field label={t("common.password")} htmlFor="login-pass">
-                    <PasswordInput
-                      id="login-pass"
-                      value={password}
-                      onChange={setPassword}
+                    <Button
+                      type="submit"
+                      className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold h-10"
                       disabled={loading}
-                    />
-                  </Field>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="rememberMe"
-                        checked={rememberMe}
-                        onCheckedChange={(v) => setRememberMe(v === true)}
+                    >
+                      {loading ? (
+                        t("common.loading")
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <KeyRound className="size-4" />
+                          {t("common.login")}
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                )}
+
+                {view === "register" && (
+                  <form
+                    onSubmit={handleRegister}
+                    className="flex flex-col gap-4"
+                  >
+                    <Field label={t("common.username")} htmlFor="reg-user">
+                      <div className="relative">
+                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="reg-user"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="choose_a_username"
+                          className="pl-8"
+                          disabled={loading}
+                          autoFocus
+                        />
+                      </div>
+                    </Field>
+                    <Field label={t("common.password")} htmlFor="reg-pass">
+                      <PasswordInput
+                        id="reg-pass"
+                        value={password}
+                        onChange={setPassword}
+                        placeholder={t("auth.minChars", {
+                          min: 6,
+                          defaultValue: "min. 6 characters",
+                        })}
                         disabled={loading}
                       />
-                      <label
-                        htmlFor="rememberMe"
-                        className="text-xs text-muted-foreground cursor-pointer"
-                      >
-                        {t("auth.rememberMe")}
-                      </label>
-                    </div>
-                    {passwordResetAllowed && (
+                    </Field>
+                    <Field
+                      label={t("common.confirmPassword")}
+                      htmlFor="reg-confirm"
+                    >
+                      <PasswordInput
+                        id="reg-confirm"
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
+                        disabled={loading}
+                      />
+                    </Field>
+                    <Button
+                      type="submit"
+                      className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold h-10"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        t("common.loading")
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Shield className="size-4" />
+                          {t("auth.signUp")}
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                )}
+
+                <Separator />
+                <p className="text-center text-xs text-muted-foreground">
+                  {view === "login" && registrationAllowed ? (
+                    <>
+                      {t("auth.noAccount", "Don't have an account?")}{" "}
                       <button
-                        type="button"
-                        onClick={() => switchView("reset")}
-                        className="text-xs text-muted-foreground hover:text-accent-brand transition-colors"
+                        onClick={() => switchView("register")}
+                        className="text-accent-brand hover:text-accent-brand/70 font-bold transition-colors"
                       >
-                        {t("auth.forgotPassword")}
+                        {t("common.register")}
                       </button>
-                    )}
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold h-10"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      t("common.loading")
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <KeyRound className="size-4" />
+                    </>
+                  ) : view === "register" &&
+                    passwordLoginAllowed &&
+                    !firstUser ? (
+                    <>
+                      {t("auth.hasAccount", "Already have an account?")}{" "}
+                      <button
+                        onClick={() => switchView("login")}
+                        className="text-accent-brand hover:text-accent-brand/70 font-bold transition-colors"
+                      >
                         {t("common.login")}
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              )}
-
-              {view === "register" && (
-                <form onSubmit={handleRegister} className="flex flex-col gap-4">
-                  <Field label={t("common.username")} htmlFor="reg-user">
-                    <div className="relative">
-                      <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        id="reg-user"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="choose_a_username"
-                        className="pl-8"
-                        disabled={loading}
-                        autoFocus
-                      />
-                    </div>
-                  </Field>
-                  <Field label={t("common.password")} htmlFor="reg-pass">
-                    <PasswordInput
-                      id="reg-pass"
-                      value={password}
-                      onChange={setPassword}
-                      placeholder={t("auth.minChars", {
-                        min: 6,
-                        defaultValue: "min. 6 characters",
-                      })}
-                      disabled={loading}
-                    />
-                  </Field>
-                  <Field
-                    label={t("common.confirmPassword")}
-                    htmlFor="reg-confirm"
+                      </button>
+                    </>
+                  ) : null}
+                </p>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {t("common.language")}
+                  </span>
+                  <select
+                    value={language}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
                   >
-                    <PasswordInput
-                      id="reg-confirm"
-                      value={confirmPassword}
-                      onChange={setConfirmPassword}
-                      disabled={loading}
-                    />
-                  </Field>
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent-brand hover:bg-accent-brand/90 text-background font-bold h-10"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      t("common.loading")
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Shield className="size-4" />
-                        {t("auth.signUp")}
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              )}
-
-              <Separator />
-              <p className="text-center text-xs text-muted-foreground">
-                {view === "login" && registrationAllowed ? (
-                  <>
-                    {t("auth.noAccount", "Don't have an account?")}{" "}
-                    <button
-                      onClick={() => switchView("register")}
-                      className="text-accent-brand hover:text-accent-brand/70 font-bold transition-colors"
-                    >
-                      {t("common.register")}
-                    </button>
-                  </>
-                ) : view === "register" &&
-                  passwordLoginAllowed &&
-                  !firstUser ? (
-                  <>
-                    {t("auth.hasAccount", "Already have an account?")}{" "}
-                    <button
-                      onClick={() => switchView("login")}
-                      className="text-accent-brand hover:text-accent-brand/70 font-bold transition-colors"
-                    >
-                      {t("common.login")}
-                    </button>
-                  </>
-                ) : null}
-              </p>
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-muted-foreground">
-                  {t("common.language")}
-                </span>
-                <select
-                  value={language}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
-                  className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.label}
-                    </option>
-                  ))}
-                </select>
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
