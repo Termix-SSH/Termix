@@ -7,6 +7,9 @@ import {
   deleteSnippet as apiDeleteSnippet,
   getSnippetFolders,
   createSnippetFolder as apiCreateSnippetFolder,
+  deleteSnippetFolder as apiDeleteSnippetFolder,
+  renameSnippetFolder as apiRenameSnippetFolder,
+  updateSnippetFolderMetadata as apiUpdateSnippetFolderMetadata,
   shareSnippet as apiShareSnippet,
   getSnippetAccess,
   revokeSnippetAccess,
@@ -43,7 +46,14 @@ import {
   Trash2,
   UserPlus,
   X,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
 import { toast } from "sonner";
 import { FOLDER_COLORS } from "@/lib/theme";
 import { FOLDER_ICONS } from "@/types/ui-types";
@@ -354,6 +364,130 @@ function CreateFolderDialog({
   );
 }
 
+function EditFolderDialog({
+  open,
+  onOpenChange,
+  folder,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  folder: SnippetFolder | null;
+  onSave: (
+    oldName: string,
+    data: { name: string; color: string; icon: FolderIconId },
+  ) => void;
+}) {
+  const { t } = useTranslation();
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(FOLDER_COLORS[0]);
+  const [icon, setIcon] = useState<FolderIconId>("folder");
+
+  useEffect(() => {
+    if (open && folder) {
+      setName(folder.name);
+      setColor(folder.color ?? FOLDER_COLORS[0]);
+      setIcon(folder.icon ?? "folder");
+    }
+  }, [open, folder]);
+
+  function handleSave() {
+    if (!name.trim() || !folder) return;
+    onSave(folder.name, { name: name.trim(), color, icon });
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t("newUi.sidebar.snippets.editFolderTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {t("newUi.sidebar.snippets.editFolderDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 mt-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold">
+              {t("newUi.sidebar.snippets.folderNameLabel")}{" "}
+              <span className="text-accent-brand">*</span>
+            </label>
+            <Input
+              placeholder={t("newUi.sidebar.snippets.folderNamePlaceholder")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold">
+              {t("newUi.sidebar.snippets.folderColorLabel")}
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {FOLDER_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={`h-10 transition-all ${color === c ? "ring-2 ring-offset-2 ring-offset-background ring-white/50" : "opacity-75 hover:opacity-100"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold">
+              {t("newUi.sidebar.snippets.folderIconLabel")}
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {FOLDER_ICONS.map((ic) => (
+                <button
+                  key={ic}
+                  onClick={() => setIcon(ic)}
+                  className={`flex items-center justify-center h-11 border transition-colors ${
+                    icon === ic
+                      ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                  }`}
+                >
+                  <FolderIconEl icon={ic} className="size-5" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold">
+              {t("newUi.sidebar.snippets.previewLabel")}
+            </label>
+            <div className="flex items-center gap-2 px-3 py-3 border border-border bg-muted/20">
+              <FolderIconEl
+                icon={icon}
+                className="size-4 shrink-0"
+                style={{ color }}
+              />
+              <span className="text-sm font-semibold">
+                {name || t("newUi.sidebar.snippets.folderNameFallback")}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("newUi.sidebar.snippets.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleSave}
+          >
+            {t("newUi.sidebar.snippets.saveFolderButton")}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type AccessRecord = {
   id: number;
   targetType: "user" | "role";
@@ -386,7 +520,6 @@ function ShareSnippetDialog({
     setLoading(true);
     Promise.all([getUserList(), getRoles(), getSnippetAccess(snippet.id)])
       .then(([usersData, rolesData, accessData]) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setUsers(
           (usersData?.users || []).map((u: any) => ({
             id: u.id,
@@ -679,6 +812,8 @@ export function SnippetsPanel({
   const [snippetFormOpen, setSnippetFormOpen] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [editFolder, setEditFolder] = useState<SnippetFolder | null>(null);
+  const [editFolderOpen, setEditFolderOpen] = useState(false);
   const [shareSnippet, setShareSnippet] = useState<Snippet | null>(null);
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
@@ -762,7 +897,6 @@ export function SnippetsPanel({
 
   async function handleCreateFolder(f: Omit<SnippetFolder, "id" | "open">) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const created = (await apiCreateSnippetFolder({
         name: f.name,
         color: f.color,
@@ -779,6 +913,54 @@ export function SnippetsPanel({
     setFolders((prev) =>
       prev.map((f) => (f.id === id ? { ...f, open: !f.open } : f)),
     );
+  }
+
+  async function handleDeleteFolder(folder: SnippetFolder) {
+    try {
+      await apiDeleteSnippetFolder(folder.name);
+      setFolders((prev) => prev.filter((f) => f.id !== folder.id));
+      setSnippets((prev) =>
+        prev.map((s) =>
+          s.folder === folder.name ? { ...s, folder: null } : s,
+        ),
+      );
+      toast.success(
+        t("newUi.sidebar.snippets.folderDeleteSuccess", { name: folder.name }),
+      );
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.folderDeleteFailed"));
+    }
+  }
+
+  async function handleSaveFolder(
+    oldName: string,
+    data: { name: string; color: string; icon: FolderIconId },
+  ) {
+    try {
+      const nameChanged = data.name !== oldName;
+      if (nameChanged) {
+        await apiRenameSnippetFolder(oldName, data.name);
+        setSnippets((prev) =>
+          prev.map((s) =>
+            s.folder === oldName ? { ...s, folder: data.name } : s,
+          ),
+        );
+      }
+      await apiUpdateSnippetFolderMetadata(nameChanged ? data.name : oldName, {
+        color: data.color,
+        icon: data.icon,
+      });
+      setFolders((prev) =>
+        prev.map((f) =>
+          f.name === oldName
+            ? { ...f, name: data.name, color: data.color, icon: data.icon }
+            : f,
+        ),
+      );
+      toast.success(t("newUi.sidebar.snippets.folderEditSuccess"));
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.folderEditFailed"));
+    }
   }
 
   async function handleDeleteSnippet(id: number) {
@@ -956,28 +1138,55 @@ export function SnippetsPanel({
             if (folderSnippets.length === 0 && snippetSearch) return null;
             return (
               <div key={folder.id} className="flex flex-col gap-2">
-                <button
-                  onClick={() => toggleFolder(folder.id)}
-                  className="flex items-center gap-1.5 w-full text-left"
-                >
-                  <ChevronDown
-                    className={`size-3 text-muted-foreground shrink-0 transition-transform ${folder.open ? "" : "-rotate-90"}`}
-                  />
-                  <FolderIconEl
-                    icon={folder.icon}
-                    className="size-3.5 shrink-0"
-                    style={{ color: folder.color }}
-                  />
-                  <span
-                    className="text-xs font-semibold flex-1 truncate"
-                    style={{ color: folder.color }}
+                <div className="flex items-center gap-1.5 w-full group">
+                  <button
+                    onClick={() => toggleFolder(folder.id)}
+                    className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
                   >
-                    {folder.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {folderSnippets.length}
-                  </span>
-                </button>
+                    <ChevronDown
+                      className={`size-3 text-muted-foreground shrink-0 transition-transform ${folder.open ? "" : "-rotate-90"}`}
+                    />
+                    <FolderIconEl
+                      icon={folder.icon}
+                      className="size-3.5 shrink-0"
+                      style={{ color: folder.color }}
+                    />
+                    <span
+                      className="text-xs font-semibold flex-1 truncate"
+                      style={{ color: folder.color }}
+                    >
+                      {folder.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0 mr-1">
+                      {folderSnippets.length}
+                    </span>
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="shrink-0 size-5 flex items-center justify-center text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="size-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="text-xs">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditFolder(folder);
+                          setEditFolderOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-3.5 mr-2" />
+                        {t("newUi.sidebar.snippets.editFolder")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteFolder(folder)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="size-3.5 mr-2" />
+                        {t("newUi.sidebar.snippets.deleteFolder")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 {folder.open && (
                   <div className="flex flex-col gap-2 ml-1">
                     {folderSnippets.map((snippet) => (
@@ -1019,6 +1228,15 @@ export function SnippetsPanel({
         open={createFolderOpen}
         onOpenChange={setCreateFolderOpen}
         onCreate={handleCreateFolder}
+      />
+      <EditFolderDialog
+        open={editFolderOpen}
+        onOpenChange={(v) => {
+          setEditFolderOpen(v);
+          if (!v) setEditFolder(null);
+        }}
+        folder={editFolder}
+        onSave={handleSaveFolder}
       />
       <ShareSnippetDialog
         snippet={shareSnippet}
