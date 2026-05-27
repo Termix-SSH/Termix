@@ -312,6 +312,8 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned fe
 
 ## Sponsors
 
+## Sponsors
+
 <div align="center">
 
 <br />
