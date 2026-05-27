@@ -131,7 +131,6 @@ jobs:
           retention-days: 30
 
   build-linux:
-#   runs-on: blacksmith-4vcpu-ubuntu-2404
     runs-on: self-hosted
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
@@ -152,7 +151,8 @@ jobs:
       - name: Install system dependencies for AppImage
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2
+          sudo apt-get install -y libfuse2 g++-10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
 
       - name: Install dependencies
         run: |
@@ -689,7 +689,6 @@ jobs:
           retention-days: 30
 
   submit-to-flatpak:
- #  runs-on: blacksmith-4vcpu-ubuntu-2404
     runs-on: self-hosted
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '')
     needs: []
@@ -846,8 +845,7 @@ jobs:
           retention-days: 30
 
   upload-to-release:
- #  runs-on: blacksmith-4vcpu-ubuntu-2404
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:

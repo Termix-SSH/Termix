@@ -6,7 +6,7 @@ on:
 jobs:
   generate-openapi:
     name: Generate OpenAPI JSON
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository

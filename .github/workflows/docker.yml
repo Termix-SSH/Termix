@@ -17,7 +17,6 @@ on:
 
 jobs:
   build:
-#   runs-on: blacksmith-8vcpu-ubuntu-2404
     runs-on: self-hosted
     steps:
       - name: Checkout repository
@@ -86,6 +85,8 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.run_id }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=registry,compression=gzip,compression-level=9
 
       - name: Cleanup Docker
