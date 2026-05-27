@@ -12,7 +12,7 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
