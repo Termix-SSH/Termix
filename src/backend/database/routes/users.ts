@@ -64,6 +64,7 @@ function getOIDCConfigFromEnv(): {
   name_path: string;
   scopes: string;
   allowed_users: string;
+  admin_group: string;
 } | null {
   const client_id = process.env.OIDC_CLIENT_ID;
   const client_secret = process.env.OIDC_CLIENT_SECRET;
@@ -92,6 +93,7 @@ function getOIDCConfigFromEnv(): {
     name_path: process.env.OIDC_NAME_PATH || "name",
     scopes: process.env.OIDC_SCOPES || "openid email profile",
     allowed_users: process.env.OIDC_ALLOWED_USERS || "",
+    admin_group: process.env.OIDC_ADMIN_GROUP || "",
   };
 }
 
