@@ -145,7 +145,8 @@ function App() {
             })
             .catch(() => {});
         }
-        setPhase("idle-app");
+        setPhase("fading-in");
+        timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
       .catch(() => {
         clearStoredAuth();

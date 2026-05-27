@@ -1,14 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { renderTabContent, tabIcon } from "@/shell/tabUtils";
 import type { Tab, TabType, Host, SplitMode } from "@/types/ui-types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── useSplitSizes ────────────────────────────────────────────────────────────
 
 type RowColSizes = number[][];
-
-// ─── useSplitSizes ────────────────────────────────────────────────────────────
 
 function defaultSizes(mode: SplitMode): {
   rowSizes: number[];
@@ -73,7 +71,6 @@ function useSplitSizes(splitMode: SplitMode) {
     splitDragState.active = true;
     setIsDragging(true);
   }
-
   function endDrag() {
     splitDragState.active = false;
     setIsDragging(false);
@@ -87,11 +84,13 @@ function useSplitSizes(splitMode: SplitMode) {
     startDrag();
     const totalH = container.getBoundingClientRect().height;
     const startY = e.clientY;
-    const a = rowSizes[rowIdx];
-    const b = rowSizes[rowIdx + 1];
+    const a = rowSizes[rowIdx],
+      b = rowSizes[rowIdx + 1];
     function onMove(ev: MouseEvent) {
-      const delta = ((ev.clientY - startY) / totalH) * 100;
-      const na = Math.max(10, Math.min(a + b - 10, a + delta));
+      const na = Math.max(
+        10,
+        Math.min(a + b - 10, a + ((ev.clientY - startY) / totalH) * 100),
+      );
       setRowSizes((prev) => {
         const n = [...prev];
         n[rowIdx] = na;
@@ -114,11 +113,16 @@ function useSplitSizes(splitMode: SplitMode) {
     startDrag();
     const totalH = container.getBoundingClientRect().height;
     const startY = e.touches[0].clientY;
-    const a = rowSizes[rowIdx];
-    const b = rowSizes[rowIdx + 1];
+    const a = rowSizes[rowIdx],
+      b = rowSizes[rowIdx + 1];
     function onMove(ev: TouchEvent) {
-      const delta = ((ev.touches[0].clientY - startY) / totalH) * 100;
-      const na = Math.max(10, Math.min(a + b - 10, a + delta));
+      const na = Math.max(
+        10,
+        Math.min(
+          a + b - 10,
+          a + ((ev.touches[0].clientY - startY) / totalH) * 100,
+        ),
+      );
       setRowSizes((prev) => {
         const n = [...prev];
         n[rowIdx] = na;
@@ -143,11 +147,13 @@ function useSplitSizes(splitMode: SplitMode) {
     const totalW = container.getBoundingClientRect().width;
     const startX = e.clientX;
     const cols = rowColSizes[rowIdx];
-    const a = cols[colIdx];
-    const b = cols[colIdx + 1];
+    const a = cols[colIdx],
+      b = cols[colIdx + 1];
     function onMove(ev: MouseEvent) {
-      const delta = ((ev.clientX - startX) / totalW) * 100;
-      const na = Math.max(10, Math.min(a + b - 10, a + delta));
+      const na = Math.max(
+        10,
+        Math.min(a + b - 10, a + ((ev.clientX - startX) / totalW) * 100),
+      );
       setRowColSizes((prev) => {
         const next = prev.map((r) => [...r]);
         next[rowIdx][colIdx] = na;
@@ -175,11 +181,16 @@ function useSplitSizes(splitMode: SplitMode) {
     const totalW = container.getBoundingClientRect().width;
     const startX = e.touches[0].clientX;
     const cols = rowColSizes[rowIdx];
-    const a = cols[colIdx];
-    const b = cols[colIdx + 1];
+    const a = cols[colIdx],
+      b = cols[colIdx + 1];
     function onMove(ev: TouchEvent) {
-      const delta = ((ev.touches[0].clientX - startX) / totalW) * 100;
-      const na = Math.max(10, Math.min(a + b - 10, a + delta));
+      const na = Math.max(
+        10,
+        Math.min(
+          a + b - 10,
+          a + ((ev.touches[0].clientX - startX) / totalW) * 100,
+        ),
+      );
       setRowColSizes((prev) => {
         const next = prev.map((r) => [...r]);
         next[rowIdx][colIdx] = na;
@@ -219,12 +230,14 @@ function ColDivider({
   onTouchStart: (e: React.TouchEvent) => void;
 }) {
   return (
-    <div
-      onMouseDown={onMouseDown}
-      onTouchStart={onTouchStart}
-      className="relative w-3 shrink-0 cursor-col-resize z-10 flex items-center justify-center group"
-    >
-      <div className="w-px h-full bg-border group-hover:bg-accent-brand/60 transition-colors" />
+    <div className="relative w-0 shrink-0 z-10">
+      <div
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        className="absolute inset-y-0 -left-2 -right-2 cursor-col-resize flex items-center justify-center group"
+      >
+        <div className="w-px h-full bg-border group-hover:bg-accent-brand/60 transition-colors pointer-events-none" />
+      </div>
     </div>
   );
 }
@@ -237,12 +250,14 @@ function RowDivider({
   onTouchStart: (e: React.TouchEvent) => void;
 }) {
   return (
-    <div
-      onMouseDown={onMouseDown}
-      onTouchStart={onTouchStart}
-      className="relative h-3 w-full shrink-0 cursor-row-resize z-10 flex flex-col items-center justify-center group"
-    >
-      <div className="h-px w-full bg-border group-hover:bg-accent-brand/60 transition-colors" />
+    <div className="relative h-0 w-full shrink-0 z-10">
+      <div
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        className="absolute inset-x-0 -top-2 -bottom-2 cursor-row-resize flex flex-col items-center justify-center group"
+      >
+        <div className="h-px w-full bg-border group-hover:bg-accent-brand/60 transition-colors pointer-events-none" />
+      </div>
     </div>
   );
 }
@@ -290,7 +305,19 @@ function EmptyPane() {
   );
 }
 
-function Pane({
+const PaneContent = memo(function PaneContent({
+  tab,
+  onOpenSingletonTab,
+  onOpenTab,
+}: {
+  tab: Tab;
+  onOpenSingletonTab: (type: TabType) => void;
+  onOpenTab: (host: Host, type: TabType) => void;
+}) {
+  return <>{renderTabContent(tab, onOpenSingletonTab, onOpenTab)}</>;
+});
+
+const Pane = memo(function Pane({
   tab,
   paneIndex,
   isDragging,
@@ -308,7 +335,12 @@ function Pane({
       <PaneHeader tab={tab} paneIndex={paneIndex} />
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab ? (
-          renderTabContent(tab, onOpenSingletonTab, onOpenTab)
+          <PaneContent
+            key={tab.id}
+            tab={tab}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+          />
         ) : (
           <EmptyPane />
         )}
@@ -318,22 +350,89 @@ function Pane({
       )}
     </div>
   );
-}
+});
+
+// ─── Row (top-level so React never sees a new component type) ─────────────────
+
+const Row = memo(function Row({
+  rowIdx,
+  paneIndices,
+  rowHeight,
+  colWidths,
+  paneTabIds,
+  tabs,
+  isDragging,
+  onOpenSingletonTab,
+  onOpenTab,
+  onColDivider,
+  onColDividerTouch,
+}: {
+  rowIdx: number;
+  paneIndices: number[];
+  rowHeight: number;
+  colWidths: number[];
+  paneTabIds: (string | null)[];
+  tabs: Tab[];
+  isDragging: boolean;
+  onOpenSingletonTab: (type: TabType) => void;
+  onOpenTab: (host: Host, type: TabType) => void;
+  onColDivider: (e: React.MouseEvent, rowIdx: number, colIdx: number) => void;
+  onColDividerTouch: (
+    e: React.TouchEvent,
+    rowIdx: number,
+    colIdx: number,
+  ) => void;
+}) {
+  const widths = colWidths ?? [];
+  return (
+    <div className="flex min-h-0 w-full" style={{ height: `${rowHeight}%` }}>
+      {paneIndices.map((pIdx, ci) => {
+        const tabId = paneTabIds[pIdx];
+        const tab =
+          tabId != null ? (tabs.find((t) => t.id === tabId) ?? null) : null;
+        return (
+          <React.Fragment key={pIdx}>
+            <div
+              className="min-w-0 min-h-0 overflow-hidden"
+              style={{ width: `${widths[ci] ?? 100 / paneIndices.length}%` }}
+            >
+              <Pane
+                tab={tab}
+                paneIndex={pIdx}
+                isDragging={isDragging}
+                onOpenSingletonTab={onOpenSingletonTab}
+                onOpenTab={onOpenTab}
+              />
+            </div>
+            {ci < paneIndices.length - 1 && (
+              <ColDivider
+                onMouseDown={(e) => onColDivider(e, rowIdx, ci)}
+                onTouchStart={(e) => onColDividerTouch(e, rowIdx, ci)}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+});
 
 // ─── SplitView ────────────────────────────────────────────────────────────────
 
-export function SplitView({
+export const SplitView = memo(function SplitView({
   tabs,
   paneTabIds,
   splitMode,
   onOpenSingletonTab,
   onOpenTab,
+  onTerminalResize,
 }: {
   tabs: Tab[];
   paneTabIds: (string | null)[];
   splitMode: SplitMode;
   onOpenSingletonTab: (type: TabType) => void;
   onOpenTab: (host: Host, type: TabType) => void;
+  onTerminalResize?: () => void;
 }) {
   const {
     rowSizes,
@@ -347,55 +446,17 @@ export function SplitView({
     onColDividerTouch,
   } = useSplitSizes(splitMode);
 
-  function pane(idx: number) {
-    const tab =
-      paneTabIds[idx] != null
-        ? (tabs.find((t) => t.id === paneTabIds[idx]) ?? null)
-        : null;
-    return (
-      <Pane
-        tab={tab}
-        paneIndex={idx}
-        isDragging={isDragging}
-        onOpenSingletonTab={onOpenSingletonTab}
-        onOpenTab={onOpenTab}
-      />
-    );
-  }
+  useEffect(() => {
+    if (!isDragging) {
+      const id = requestAnimationFrame(() => onTerminalResize?.());
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isDragging, onTerminalResize]);
 
-  function Row({
-    rowIdx,
-    paneIndices,
-  }: {
-    rowIdx: number;
-    paneIndices: number[];
-  }) {
-    const cols = rowColSizes[rowIdx] ?? [];
-    return (
-      <div
-        className="flex min-h-0 w-full"
-        style={{ height: `${rowSizes[rowIdx]}%` }}
-      >
-        {paneIndices.map((pIdx, ci) => (
-          <>
-            <div
-              key={pIdx}
-              className="min-w-0 min-h-0 overflow-hidden"
-              style={{ width: `${cols[ci]}%` }}
-            >
-              {pane(pIdx)}
-            </div>
-            {ci < paneIndices.length - 1 && (
-              <ColDivider
-                key={`cd-${rowIdx}-${ci}`}
-                onMouseDown={(e) => onColDivider(e, rowIdx, ci)}
-                onTouchStart={(e) => onColDividerTouch(e, rowIdx, ci)}
-              />
-            )}
-          </>
-        ))}
-      </div>
-    );
+  // Inline pane lookup for the non-Row layouts (3-way, 3-way-horizontal)
+  function tab(idx: number): Tab | null {
+    const tabId = paneTabIds[idx];
+    return tabId != null ? (tabs.find((t) => t.id === tabId) ?? null) : null;
   }
 
   return (
@@ -411,7 +472,21 @@ export function SplitView({
         Reset
       </button>
 
-      {splitMode === "2-way" && <Row rowIdx={0} paneIndices={[0, 1]} />}
+      {splitMode === "2-way" && (
+        <Row
+          rowIdx={0}
+          paneIndices={[0, 1]}
+          rowHeight={rowSizes[0]}
+          colWidths={rowColSizes[0] ?? []}
+          paneTabIds={paneTabIds}
+          tabs={tabs}
+          isDragging={isDragging}
+          onOpenSingletonTab={onOpenSingletonTab}
+          onOpenTab={onOpenTab}
+          onColDivider={onColDivider}
+          onColDividerTouch={onColDividerTouch}
+        />
+      )}
 
       {splitMode === "3-way" && (
         <div className="flex w-full h-full min-h-0">
@@ -419,7 +494,13 @@ export function SplitView({
             className="min-w-0 min-h-0 overflow-hidden"
             style={{ width: `${rowColSizes[0][0]}%` }}
           >
-            {pane(0)}
+            <Pane
+              tab={tab(0)}
+              paneIndex={0}
+              isDragging={isDragging}
+              onOpenSingletonTab={onOpenSingletonTab}
+              onOpenTab={onOpenTab}
+            />
           </div>
           <ColDivider
             onMouseDown={(e) => onColDivider(e, 0, 0)}
@@ -430,7 +511,13 @@ export function SplitView({
               className="min-h-0 overflow-hidden"
               style={{ height: `${rowSizes[0]}%` }}
             >
-              {pane(1)}
+              <Pane
+                tab={tab(1)}
+                paneIndex={1}
+                isDragging={isDragging}
+                onOpenSingletonTab={onOpenSingletonTab}
+                onOpenTab={onOpenTab}
+              />
             </div>
             <RowDivider
               onMouseDown={(e) => onRowDivider(e, 0)}
@@ -440,7 +527,13 @@ export function SplitView({
               className="min-h-0 overflow-hidden"
               style={{ height: `${rowSizes[1]}%` }}
             >
-              {pane(2)}
+              <Pane
+                tab={tab(2)}
+                paneIndex={2}
+                isDragging={isDragging}
+                onOpenSingletonTab={onOpenSingletonTab}
+                onOpenTab={onOpenTab}
+              />
             </div>
           </div>
         </div>
@@ -456,14 +549,26 @@ export function SplitView({
               className="min-w-0 min-h-0 overflow-hidden"
               style={{ width: `${rowColSizes[0][0]}%` }}
             >
-              {pane(0)}
+              <Pane
+                tab={tab(0)}
+                paneIndex={0}
+                isDragging={isDragging}
+                onOpenSingletonTab={onOpenSingletonTab}
+                onOpenTab={onOpenTab}
+              />
             </div>
             <ColDivider
               onMouseDown={(e) => onColDivider(e, 0, 0)}
               onTouchStart={(e) => onColDividerTouch(e, 0, 0)}
             />
             <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-              {pane(1)}
+              <Pane
+                tab={tab(1)}
+                paneIndex={1}
+                isDragging={isDragging}
+                onOpenSingletonTab={onOpenSingletonTab}
+                onOpenTab={onOpenTab}
+              />
             </div>
           </div>
           <RowDivider
@@ -471,43 +576,121 @@ export function SplitView({
             onTouchStart={(e) => onRowDividerTouch(e, 0)}
           />
           <div className="flex-1 min-h-0 overflow-hidden">
-            {pane(2)}
+            <Pane
+              tab={tab(2)}
+              paneIndex={2}
+              isDragging={isDragging}
+              onOpenSingletonTab={onOpenSingletonTab}
+              onOpenTab={onOpenTab}
+            />
           </div>
         </div>
       )}
 
       {splitMode === "4-way" && (
         <div className="flex flex-col w-full h-full min-h-0">
-          <Row rowIdx={0} paneIndices={[0, 1]} />
+          <Row
+            rowIdx={0}
+            paneIndices={[0, 1]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
             onTouchStart={(e) => onRowDividerTouch(e, 0)}
           />
-          <Row rowIdx={1} paneIndices={[2, 3]} />
+          <Row
+            rowIdx={1}
+            paneIndices={[2, 3]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
         </div>
       )}
 
       {splitMode === "5-way" && (
         <div className="flex flex-col w-full h-full min-h-0">
-          <Row rowIdx={0} paneIndices={[0, 1, 2]} />
+          <Row
+            rowIdx={0}
+            paneIndices={[0, 1, 2]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
             onTouchStart={(e) => onRowDividerTouch(e, 0)}
           />
-          <Row rowIdx={1} paneIndices={[3, 4]} />
+          <Row
+            rowIdx={1}
+            paneIndices={[3, 4]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
         </div>
       )}
 
       {splitMode === "6-way" && (
         <div className="flex flex-col w-full h-full min-h-0">
-          <Row rowIdx={0} paneIndices={[0, 1, 2]} />
+          <Row
+            rowIdx={0}
+            paneIndices={[0, 1, 2]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
             onTouchStart={(e) => onRowDividerTouch(e, 0)}
           />
-          <Row rowIdx={1} paneIndices={[3, 4, 5]} />
+          <Row
+            rowIdx={1}
+            paneIndices={[3, 4, 5]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            onOpenSingletonTab={onOpenSingletonTab}
+            onOpenTab={onOpenTab}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+          />
         </div>
       )}
     </div>
   );
-}
+});

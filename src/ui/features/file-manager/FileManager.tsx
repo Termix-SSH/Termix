@@ -2981,6 +2981,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         prompt={totpPrompt}
         onSubmit={handleTotpSubmit}
         onCancel={handleTotpCancel}
+        backgroundColor="var(--bg-canvas)"
       />
 
       <WarpgateDialog
@@ -2990,6 +2991,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         onContinue={handleWarpgateContinue}
         onCancel={handleWarpgateCancel}
         onOpenUrl={handleWarpgateOpenUrl}
+        backgroundColor="var(--bg-canvas)"
       />
 
       {currentHost && (
@@ -3004,6 +3006,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             username: currentHost.username,
             name: currentHost.name,
           }}
+          backgroundColor="var(--bg-canvas)"
         />
       )}
 

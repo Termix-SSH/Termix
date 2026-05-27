@@ -405,6 +405,11 @@ function ServerStatsInner({
 
       try {
         if (!totpVerified) {
+          addLog({
+            type: "info",
+            stage: "stats_connecting",
+            message: `Connecting to ${currentHostConfig.username}@${currentHostConfig.ip}:${currentHostConfig.port}`,
+          });
           const result = await startMetricsPolling(currentHostConfig.id);
 
           if (cancelled) return;
@@ -459,10 +464,10 @@ function ServerStatsInner({
 
         if (data) {
           setMetrics(data);
+          setServerStatus("online");
           if (!hasExistingMetrics) {
             setIsLoadingMetrics(false);
             logServerActivity();
-            setTimeout(() => clearLogs(), 1000);
           }
         }
 
@@ -567,17 +572,24 @@ function ServerStatsInner({
 
   const handleRefresh = async () => {
     if (!currentHostConfig?.id) return;
+
+    if (hasConnectionError) {
+      setHasConnectionError(false);
+      clearLogs();
+      return;
+    }
+
     try {
       setIsRefreshing(true);
       const res = await getServerStatusById(currentHostConfig.id);
       setServerStatus(res?.status === "online" ? "online" : "offline");
       const data = await getServerMetricsById(currentHostConfig.id);
-      if (data) setMetrics(data);
-      setShowStatsUI(true);
+      if (data) {
+        setMetrics(data);
+        setShowStatsUI(true);
+      }
     } catch {
       setServerStatus("offline");
-      setMetrics(null);
-      setShowStatsUI(false);
     } finally {
       setIsRefreshing(false);
     }
@@ -598,7 +610,7 @@ function ServerStatsInner({
         }}
       >
         <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-          {!totpRequired && !isLoadingMetrics && (
+          {!totpRequired && !isLoadingMetrics && !hasConnectionError && (
             <div className="mx-3 mt-3 flex items-center justify-between border border-border bg-card px-3 py-3 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="size-10 border border-border bg-muted flex items-center justify-center shrink-0">
@@ -725,16 +737,19 @@ function ServerStatsInner({
             showStatsUI &&
             !isLoadingMetrics &&
             !metrics &&
-            serverStatus === "offline" && (
+            serverStatus === "offline" &&
+            !hasConnectionError && (
               <div className="flex-1 flex items-center justify-center py-20">
-                <div className="text-center opacity-40">
-                  <Server className="size-16 mx-auto mb-4" />
-                  <p className="text-xl font-bold uppercase tracking-widest">
-                    {t("serverStats.serverOffline")}
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {t("serverStats.cannotFetchMetrics")}
-                  </p>
+                <div className="text-center">
+                  <div className="opacity-40">
+                    <Server className="size-16 mx-auto mb-4" />
+                    <p className="text-xl font-bold uppercase tracking-widest">
+                      {t("serverStats.serverOffline")}
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {t("serverStats.cannotFetchMetrics")}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -767,7 +782,7 @@ function ServerStatsInner({
       />
       <ConnectionLog
         isConnecting={isLoadingMetrics}
-        isConnected={serverStatus === "online"}
+        isConnected={serverStatus === "online" && !hasConnectionError}
         hasConnectionError={hasConnectionError}
         position={hasConnectionError ? "top" : "bottom"}
       />

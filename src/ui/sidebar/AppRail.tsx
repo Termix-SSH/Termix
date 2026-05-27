@@ -5,6 +5,7 @@ import {
   Hammer,
   KeyRound,
   LayoutPanelLeft,
+  Network,
   Play,
   Server,
   Settings,
@@ -17,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import type { SplitMode, ToolsTab } from "@/types/ui-types";
+import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 
 export type RailView =
   | "hosts"
@@ -35,6 +36,7 @@ type RailItem =
       title: string;
       dot?: boolean;
     }
+  | { kind: "tab"; tabType: TabType; icon: React.ReactNode; title: string }
   | { kind: "separator" };
 
 function buildRailButtons(
@@ -68,6 +70,13 @@ function buildRailButtons(
       dot: splitMode !== "none",
     },
     { kind: "separator" },
+    {
+      kind: "tab",
+      tabType: "network_graph" as TabType,
+      icon: <Network size={16} />,
+      title: t("nav.networkGraph"),
+    },
+    { kind: "separator" },
   ];
 }
 
@@ -84,6 +93,7 @@ export function AppRail({
   profileDropdownOpen,
   onProfileDropdownChange,
   onRailClick,
+  onOpenTab,
   onLogout,
 }: {
   railView: RailView;
@@ -94,6 +104,7 @@ export function AppRail({
   profileDropdownOpen: boolean;
   onProfileDropdownChange: (open: boolean) => void;
   onRailClick: (view: RailView) => void;
+  onOpenTab?: (type: TabType) => void;
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
@@ -116,6 +127,27 @@ export function AppRail({
               className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
               style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
             />
+          ) : item.kind === "tab" ? (
+            <button
+              key={item.tabType}
+              onClick={() => onOpenTab?.(item.tabType)}
+              style={btnStyle}
+              className={`${btnBase} text-muted-foreground hover:text-foreground hover:bg-muted/60`}
+            >
+              <span
+                className="shrink-0 flex items-center justify-center"
+                style={{ width: 16, height: 16 }}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${
+                  railExpanded ? "opacity-100 delay-75" : "opacity-0"
+                }`}
+              >
+                {item.title}
+              </span>
+            </button>
           ) : (
             <button
               key={item.view}

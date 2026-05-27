@@ -123,7 +123,8 @@ export function ConnectionLog({
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleExpanded}
+            onClick={hasConnectionError ? undefined : toggleExpanded}
+            disabled={hasConnectionError}
             className="flex items-center gap-2"
           >
             {isExpanded ? (

@@ -111,6 +111,9 @@ function resolveCssVar(varName: string, fallback: string): string {
   return resolved && resolved !== "rgba(0, 0, 0, 0)" ? resolved : fallback;
 }
 
+const NODE_W = 220;
+const NODE_H = 88;
+
 function buildNodeSvg(
   name: string,
   ip: string,
@@ -130,30 +133,50 @@ function buildNodeSvg(
   const textPrimary = resolveCssVar("--card-foreground", "#f1f5f9");
   const textSecondary = resolveCssVar("--muted-foreground", "#94a3b8");
 
-  const esc = (s: string) =>
-    s.replace(
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const W = NODE_W * dpr;
+  const H = NODE_H * dpr;
+  const s = dpr;
+
+  const esc = (str: string) =>
+    str.replace(
       /[<>&"]/g,
       (c) =>
         ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] ?? c,
     );
 
   const tagsHtml = tags
-    .slice(0, 2)
+    .slice(0, 3)
     .map(
       (tag) =>
-        `<span style="background:${statusColor};color:#fff;padding:1px 6px;border-radius:0;font-size:8px;font-weight:700;margin:0 1px;">${esc(tag)}</span>`,
+        `<span style="background:${statusColor};color:#fff;padding:${1 * s}px ${5 * s}px;border-radius:${2 * s}px;font-size:${8 * s}px;font-weight:700;margin:0 ${1 * s}px;white-space:nowrap;">${esc(tag)}</span>`,
     )
     .join("");
 
+  const serverIcon = `<path d="M${2 * s} ${2 * s} h${14 * s} a${1 * s} ${1 * s} 0 0 1 ${1 * s} ${1 * s} v${5 * s} a${1 * s} ${1 * s} 0 0 1 -${1 * s} ${1 * s} h-${14 * s} a${1 * s} ${1 * s} 0 0 1 -${1 * s} -${1 * s} v-${5 * s} a${1 * s} ${1 * s} 0 0 1 ${1 * s} -${1 * s}z" fill="none" stroke="${textSecondary}" stroke-width="${0.8 * s}" opacity="0.4"/>
+<circle cx="${14 * s}" cy="${5.5 * s}" r="${1.5 * s}" fill="${statusColor}" opacity="0.8"/>`;
+
   return (
     "data:image/svg+xml;utf8," +
-    encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="80" viewBox="0 0 180 80">
-  <rect x="0" y="0" width="180" height="80" rx="0" fill="${bg}" stroke="${border}" stroke-width="1"/>
-  <rect x="0" y="0" width="4" height="80" fill="${statusColor}"/>
-  <text x="14" y="28" font-family="monospace,sans-serif" font-size="12" font-weight="700" fill="${textPrimary}" xml:space="preserve">${esc(name).substring(0, 18)}</text>
-  <text x="14" y="46" font-family="monospace,sans-serif" font-size="10" fill="${textSecondary}" xml:space="preserve">${esc(ip)}</text>
-  ${tagsHtml ? `<foreignObject x="12" y="54" width="160" height="20"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;gap:2px;">${tagsHtml}</div></foreignObject>` : ""}
-</svg>`)
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="${1 * s}" stdDeviation="${2 * s}" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <clipPath id="nameClip">
+      <rect x="${14 * s}" y="${10 * s}" width="${175 * s}" height="${20 * s}"/>
+    </clipPath>
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${H}" rx="${3 * s}" fill="${bg}" stroke="${border}" stroke-width="${s}" filter="url(#shadow)"/>
+  <rect x="0" y="0" width="${5 * s}" height="${H}" rx="${3 * s}" fill="${statusColor}"/>
+  <rect x="0" y="0" width="${5 * s}" height="${H}" fill="${statusColor}"/>
+  <g transform="translate(${W - 20 * s} ${3 * s})">${serverIcon}</g>
+  <text x="${14 * s}" y="${28 * s}" font-family="-apple-system,BlinkMacSystemFont,system-ui,sans-serif" font-size="${13 * s}" font-weight="700" fill="${textPrimary}" xml:space="preserve" clip-path="url(#nameClip)">${esc(name)}</text>
+  <text x="${14 * s}" y="${46 * s}" font-family="ui-monospace,monospace,sans-serif" font-size="${11 * s}" fill="${textSecondary}" xml:space="preserve">${esc(ip)}</text>
+  ${tagsHtml ? `<foreignObject x="${12 * s}" y="${56 * s}" width="${196 * s}" height="${24 * s}"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;gap:${2 * s}px;flex-wrap:nowrap;overflow:hidden;">${tagsHtml}</div></foreignObject>` : ""}
+</svg>`,
+    )
   );
 }
 
@@ -225,9 +248,19 @@ export function NetworkGraphCard({
         setContextMenu((p) => (p.visible ? { ...p, visible: false } : p));
     };
     document.addEventListener("mousedown", onClickOutside, true);
+
+    const themeObserver = new MutationObserver(() => {
+      if (cyRef.current) applyStyle(cyRef.current);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"],
+    });
+
     return () => {
       if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
       document.removeEventListener("mousedown", onClickOutside, true);
+      themeObserver.disconnect();
     };
   }, []);
 
@@ -357,12 +390,14 @@ export function NetworkGraphCard({
   }, [loading]);
 
   const applyStyle = useCallback((cy: cytoscape.Core) => {
+    const edgeColor = resolveCssVar("--border", "#4a4a4e");
+    const mutedFg = resolveCssVar("--muted-foreground", "#94a3b8");
     cy.style()
       .selector("node")
       .style({
         label: "",
-        width: "180px",
-        height: "80px",
+        width: `${NODE_W}px`,
+        height: `${NODE_H}px`,
         shape: "rectangle",
         "border-width": "0px",
         "background-opacity": 0,
@@ -387,16 +422,16 @@ export function NetworkGraphCard({
         "text-valign": "top",
         "text-halign": "center",
         "text-margin-y": -6,
-        color: "#94a3b8",
+        color: mutedFg,
         "font-size": "13px",
         "font-weight": "bold",
         shape: "rectangle",
-        padding: "12px",
+        padding: "20px",
       })
       .selector("edge")
       .style({
         width: "1.5px",
-        "line-color": "#3a3a3c",
+        "line-color": edgeColor,
         "curve-style": "bezier",
         "target-arrow-shape": "none",
       })
@@ -816,18 +851,18 @@ export function NetworkGraphCard({
   const cytoscapeEl = (
     <div
       ref={cyContainerRef}
-      className="relative flex-1 min-h-0 w-full overflow-hidden bg-card"
+      className="relative flex-1 min-h-0 w-full overflow-hidden bg-background"
       onContextMenu={(e) => e.preventDefault()}
     >
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/80">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       )}
       {contextMenuEl}
       <CytoscapeComponent
         elements={elements}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", background: "transparent" }}
         layout={{ name: "preset" }}
         cy={handleNodeInit}
         wheelSensitivity={1.5}
@@ -1153,7 +1188,7 @@ export function NetworkGraphCard({
 
   if (!embedded) {
     return (
-      <div className="h-full w-full flex flex-col bg-card">
+      <div className="h-full w-full flex flex-col bg-background">
         <div className="flex items-center gap-1 px-4 py-2 border-b border-border shrink-0 flex-wrap">
           <div className="flex items-center gap-0.5">
             <Button

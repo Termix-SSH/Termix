@@ -20,6 +20,7 @@ import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
 import { SplitView } from "@/shell/SplitView";
+import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 import type {
   Tab,
@@ -111,7 +112,6 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
   return root;
 }
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
-import { renderTabContent } from "@/shell/tabUtils";
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
@@ -303,7 +303,7 @@ export function AppShell({
 
   // ─── Tab management ──────────────────────────────────────────────────────
 
-  function openTab(host: Host, type: TabType) {
+  const openTab = useCallback(function openTab(host: Host, type: TabType) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const ref = type === "terminal" ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
@@ -327,7 +327,7 @@ export function AppShell({
       return [...next, { id: tabId, type, label, host, terminalRef: ref }];
     });
     setActiveTabId(tabId);
-  }
+  }, []);
 
   function connectHost(host: Host, preferredType?: TabType) {
     const type: TabType =
@@ -344,47 +344,52 @@ export function AppShell({
     openTab(host, type);
   }
 
-  function openSingletonTab(type: TabType, pendingEvent?: string) {
-    if (type === "host-manager") {
-      if (pendingEvent === "host-manager:add-credential") {
-        setSidebarOpen(true);
-        setRailView("credentials");
-        setTimeout(
-          () =>
-            window.dispatchEvent(
-              new CustomEvent("host-manager:add-credential"),
-            ),
-          0,
-        );
-      } else {
-        setSidebarOpen(true);
-        setRailView("hosts");
-        if (pendingEvent) {
+  const openSingletonTab = useCallback(
+    function openSingletonTab(type: TabType, pendingEvent?: string) {
+      if (type === "host-manager") {
+        if (pendingEvent === "host-manager:add-credential") {
+          setSidebarOpen(true);
+          setRailView("credentials");
           setTimeout(
-            () => window.dispatchEvent(new CustomEvent(pendingEvent)),
+            () =>
+              window.dispatchEvent(
+                new CustomEvent("host-manager:add-credential"),
+              ),
             0,
           );
+        } else {
+          setSidebarOpen(true);
+          setRailView("hosts");
+          if (pendingEvent) {
+            setTimeout(
+              () => window.dispatchEvent(new CustomEvent(pendingEvent)),
+              0,
+            );
+          }
         }
+        return;
       }
-      return;
-    }
-    if (type === "user-profile" || type === "admin-settings") {
-      handleRailClick(type as RailView);
-      return;
-    }
-    const id = type;
-    setTabs((prev) => {
-      if (prev.find((t) => t.id === id)) return prev;
-      const singletonLabels: Partial<Record<TabType, string>> = {
-        "host-manager": t("nav.hostManager"),
-        docker: t("nav.docker"),
-        tunnel: t("nav.tunnels"),
-        network_graph: t("nav.networkGraph"),
-      };
-      return [...prev, { id, type, label: singletonLabels[type] ?? type }];
-    });
-    setActiveTabId(id);
-  }
+      if (type === "user-profile" || type === "admin-settings") {
+        setSidebarEditing(false);
+        setRailView(type as RailView);
+        setSidebarOpen(true);
+        return;
+      }
+      const id = type;
+      setTabs((prev) => {
+        if (prev.find((t) => t.id === id)) return prev;
+        const singletonLabels: Partial<Record<TabType, string>> = {
+          "host-manager": t("nav.hostManager"),
+          docker: t("nav.docker"),
+          tunnel: t("nav.tunnels"),
+          network_graph: t("nav.networkGraph"),
+        };
+        return [...prev, { id, type, label: singletonLabels[type] ?? type }];
+      });
+      setActiveTabId(id);
+    },
+    [t],
+  );
 
   const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
 
@@ -483,6 +488,24 @@ export function AppShell({
     [sidebarWidth],
   );
 
+  // Resize all terminals in panes + active terminal when split mode or sidebar changes
+  const resizeAllTerminals = useCallback(() => {
+    const id = requestAnimationFrame(() => {
+      tabs.forEach((tab) => {
+        if (!tab.terminalRef) return;
+        const ref = tab.terminalRef.current as any;
+        ref?.fit?.();
+        ref?.notifyResize?.();
+      });
+    });
+    return id;
+  }, [tabs]);
+
+  useEffect(() => {
+    const id = resizeAllTerminals();
+    return () => cancelAnimationFrame(id);
+  }, [splitMode, sidebarWidth, sidebarOpen]);
+
   const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const isSplit = splitMode !== "none";
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
@@ -502,13 +525,17 @@ export function AppShell({
           hostTree={realHostTree ?? undefined}
           loading={hostsLoading}
           onEditingChange={setSidebarEditing}
+          active={railView === "hosts"}
         />
       </div>
 
       <div
         className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
       >
-        <CredentialsPanel onEditingChange={setSidebarEditing} />
+        <CredentialsPanel
+          onEditingChange={setSidebarEditing}
+          active={railView === "credentials"}
+        />
       </div>
 
       {railView === "quick-connect" && (
@@ -615,6 +642,7 @@ export function AppShell({
           profileDropdownOpen={profileDropdownOpen}
           onProfileDropdownChange={setProfileDropdownOpen}
           onRailClick={handleRailClick}
+          onOpenTab={openSingletonTab}
           onLogout={onLogout}
         />
 
@@ -677,72 +705,82 @@ export function AppShell({
               onReorderTabs={setTabs}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-              {isSplit && !isMobile ? (
-                <SplitView
-                  tabs={tabs}
-                  paneTabIds={paneTabIds}
-                  splitMode={splitMode}
-                  onOpenSingletonTab={openSingletonTab}
-                  onOpenTab={openTab}
-                />
-              ) : (
-                <>
-                  {/* Terminal tabs: always in DOM, absolutely positioned so xterm always has real dimensions */}
-                  {tabs
-                    .filter((tab) => tab.type === "terminal")
-                    .map((tab) => {
-                      const visible = tab.id === activeTabId;
-                      return (
-                        <div
-                          key={tab.id}
-                          className="absolute inset-0 overflow-hidden"
-                          style={{
-                            visibility: visible ? "visible" : "hidden",
-                            pointerEvents: visible ? "auto" : "none",
-                            zIndex: visible ? 1 : 0,
-                          }}
-                        >
-                          {renderTabContent(
-                            tab,
-                            openSingletonTab,
-                            openTab,
-                            closeTab,
-                            visible,
-                          )}
-                        </div>
-                      );
-                    })}
-                  {/* Non-terminal tabs: absolutely positioned above terminals when active */}
-                  {tabs
-                    .filter((tab) => tab.type !== "terminal")
-                    .map((tab) => {
-                      const visible = tab.id === activeTabId;
-                      return (
-                        <div
-                          key={tab.id}
-                          className="flex flex-col overflow-hidden bg-background"
-                          style={
-                            visible
-                              ? {
-                                  position: "absolute",
-                                  inset: 0,
-                                  zIndex: 2,
-                                }
-                              : { display: "none" }
-                          }
-                        >
-                          {renderTabContent(
-                            tab,
-                            openSingletonTab,
-                            openTab,
-                            closeTab,
-                            visible,
-                          )}
-                        </div>
-                      );
-                    })}
-                </>
+              {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
+              {!isMobile && (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    display: isSplit ? "flex" : "none",
+                    flexDirection: "column",
+                  }}
+                >
+                  <SplitView
+                    tabs={tabs}
+                    paneTabIds={paneTabIds}
+                    splitMode={splitMode}
+                    onOpenSingletonTab={openSingletonTab}
+                    onOpenTab={openTab}
+                    onTerminalResize={resizeAllTerminals}
+                  />
+                </div>
               )}
+
+              {/* Normal tab view — always mounted, hidden via CSS when split is active */}
+              <div
+                className="absolute inset-0 flex flex-col"
+                style={{ display: isSplit && !isMobile ? "none" : "flex" }}
+              >
+                {/* Terminal tabs: always in DOM, visibility-toggled so xterm keeps its dimensions */}
+                {tabs
+                  .filter((tab) => tab.type === "terminal")
+                  .map((tab) => {
+                    const visible = tab.id === activeTabId;
+                    return (
+                      <div
+                        key={tab.id}
+                        className="absolute inset-0 overflow-hidden"
+                        style={{
+                          visibility: visible ? "visible" : "hidden",
+                          pointerEvents: visible ? "auto" : "none",
+                          zIndex: visible ? 1 : 0,
+                        }}
+                      >
+                        {renderTabContent(
+                          tab,
+                          openSingletonTab,
+                          openTab,
+                          closeTab,
+                          visible,
+                        )}
+                      </div>
+                    );
+                  })}
+                {/* Non-terminal tabs */}
+                {tabs
+                  .filter((tab) => tab.type !== "terminal")
+                  .map((tab) => {
+                    const visible = tab.id === activeTabId;
+                    return (
+                      <div
+                        key={tab.id}
+                        className="flex flex-col overflow-hidden bg-background"
+                        style={
+                          visible
+                            ? { position: "absolute", inset: 0, zIndex: 2 }
+                            : { display: "none" }
+                        }
+                      >
+                        {renderTabContent(
+                          tab,
+                          openSingletonTab,
+                          openTab,
+                          closeTab,
+                          visible,
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
           </div>
 

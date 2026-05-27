@@ -1183,6 +1183,8 @@
     "connecting": "Connecting...",
     "connectionFailed": "Failed to connect to server",
     "naCpus": "N/A CPU(s)",
+    "cpuCores_one": "{{count}} Core",
+    "cpuCores_other": "{{count}} Cores",
     "cpuUsage": "CPU Usage",
     "memoryUsage": "Memory Usage",
     "diskUsage": "Disk Usage",
@@ -1229,7 +1231,8 @@
     "loadAvg": "Load Avg",
     "swap": "Swap",
     "architecture": "Architecture",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "retry": "Retry"
   },
   "auth": {
     "tagline": "SSH SERVER MANAGER",

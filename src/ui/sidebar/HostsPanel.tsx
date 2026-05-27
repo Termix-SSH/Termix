@@ -30,12 +30,14 @@ export function HostsPanel({
   hostTree,
   loading,
   onEditingChange,
+  active = true,
 }: {
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
   onEditingChange?: (editing: boolean) => void;
+  active?: boolean;
 }) {
   const { t } = useTranslation();
   const [hostSearch, setHostSearch] = useState("");
@@ -325,7 +327,7 @@ export function HostsPanel({
       <div
         className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}
       >
-        <HostManager onEditingChange={handleEditingChange} />
+        <HostManager onEditingChange={handleEditingChange} active={active} />
       </div>
 
       <HostShareModal

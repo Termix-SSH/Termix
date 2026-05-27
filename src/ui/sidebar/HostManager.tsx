@@ -4328,16 +4328,7 @@ function CredentialEditorView({
                 {["password", "key"].map((m) => (
                   <button
                     key={m}
-                    onClick={() =>
-                      setCredForm((p) => ({
-                        ...p,
-                        type: m as any,
-                        value: "",
-                        publicKey: "",
-                        certPublicKey: "",
-                        passphrase: "",
-                      }))
-                    }
+                    onClick={() => setCredField("type", m as any)}
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                   >
                     {m === "key"
@@ -4643,12 +4634,14 @@ export function HostManager({
   onEditingChange,
   hideListHeader,
   externalSearch,
+  active = true,
 }: {
   pendingEditId?: MutableRefObject<string | null>;
   pendingAction?: MutableRefObject<"add-host" | "add-credential" | null>;
   onEditingChange?: (editing: boolean) => void;
   hideListHeader?: boolean;
   externalSearch?: string;
+  active?: boolean;
 } = {}) {
   const { t } = useTranslation();
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
@@ -4760,6 +4753,7 @@ export function HostManager({
   }, [pendingEditId, pendingAction]);
 
   useEffect(() => {
+    if (!active) return;
     const handleAddHost = () => {
       setEditingHost("new");
       setEditingCredential(null);
@@ -4803,7 +4797,7 @@ export function HostManager({
       );
       window.removeEventListener("host-manager:edit-host", handleEditHost);
     };
-  }, []);
+  }, [active]);
 
   const allHosts = hosts;
   const filteredCredentials = credentials.filter(
@@ -4958,8 +4952,8 @@ export function HostManager({
   const isEditing = !!editingHost || !!editingCredential;
 
   useEffect(() => {
-    onEditingChange?.(isEditing);
-  }, [isEditing]);
+    if (active) onEditingChange?.(isEditing);
+  }, [isEditing, active]);
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">

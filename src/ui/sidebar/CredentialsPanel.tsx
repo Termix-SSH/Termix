@@ -5,8 +5,10 @@ import { HostManager } from "@/sidebar/HostManager";
 
 export function CredentialsPanel({
   onEditingChange,
+  active = true,
 }: {
   onEditingChange?: (editing: boolean) => void;
+  active?: boolean;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -58,6 +60,7 @@ export function CredentialsPanel({
           hideListHeader
           externalSearch={managerEditing ? undefined : search}
           onEditingChange={handleEditingChange}
+          active={active}
         />
       </div>
     </div>

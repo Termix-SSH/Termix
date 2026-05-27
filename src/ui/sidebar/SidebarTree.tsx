@@ -280,7 +280,7 @@ export function HostItem({
 
         {/* Action tray — slides open on CSS hover or while menu is open */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[200px] group-hover:opacity-100 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[200px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[300px] group-hover:opacity-100 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {host.online &&
             ((host.cpu != null && host.cpu > 0) ||
@@ -317,257 +317,258 @@ export function HostItem({
               </div>
             )}
 
-          <div className="flex items-center flex-wrap gap-1 pt-1.5 pl-2 pb-1">
-            {getSshActions(host).map(({ type, icon: Icon, label }) => (
-              <button
-                key={type}
-                title={label}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenTab(type);
-                }}
-                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-              >
-                <Icon className="size-3.5" />
-              </button>
-            ))}
-            {host.enableSsh &&
-              (host.enableRdp || host.enableVnc || host.enableTelnet) &&
-              getSshActions(host).length > 0 && (
-                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+          <div className="flex flex-col gap-0.5 pt-1.5 pl-2 pb-1">
+            {/* Connection buttons — wrap naturally to a second line */}
+            <div className="flex items-center flex-wrap gap-1">
+              {getSshActions(host).map(({ type, icon: Icon, label }) => (
+                <button
+                  key={type}
+                  title={label}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab(type);
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Icon className="size-3.5" />
+                </button>
+              ))}
+              {host.enableSsh &&
+                (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+                getSshActions(host).length > 0 && (
+                  <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                )}
+              {host.enableRdp && (
+                <button
+                  title="RDP"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("rdp");
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Monitor className="size-3.5" />
+                </button>
               )}
-            {host.enableRdp && (
-              <button
-                title="RDP"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenTab("rdp");
-                }}
-                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-              >
-                <Monitor className="size-3.5" />
-              </button>
-            )}
-            {host.enableVnc && (
-              <button
-                title="VNC"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenTab("vnc");
-                }}
-                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-              >
-                <Monitor className="size-3.5" />
-              </button>
-            )}
-            {host.enableTelnet && (
-              <button
-                title="Telnet"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenTab("telnet");
-                }}
-                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-              >
-                <Terminal className="size-3.5" />
-              </button>
-            )}
-            {onEditHost && (
-              <>
-                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+              {host.enableVnc && (
+                <button
+                  title="VNC"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("vnc");
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Monitor className="size-3.5" />
+                </button>
+              )}
+              {host.enableTelnet && (
+                <button
+                  title="Telnet"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("telnet");
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Terminal className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Separator + management buttons row — always fixed position */}
+            <div className="flex items-center gap-1 pt-0.5 border-t border-border/40 mt-0.5">
+              {onEditHost && (
                 <button
                   title="Edit Host"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEditHost();
                   }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors"
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Pencil className="size-3.5" />
                 </button>
-              </>
-            )}
-            {onShareHost && (
-              <>
-                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+              )}
+              {onShareHost && (
                 <button
                   title={t("hosts.shareHost")}
                   onClick={(e) => {
                     e.stopPropagation();
                     onShareHost();
                   }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors"
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Share2 className="size-3.5" />
                 </button>
-              </>
-            )}
-            <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  title="More options"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MoreHorizontal className="size-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(
-                      `${host.username}@${host.ip}`,
-                    );
-                    toast.success(t("hosts.copiedToClipboard"));
-                  }}
-                >
-                  <Copy className="size-3.5 mr-2" />
-                  {t("hosts.copyAddress")}
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Link className="size-3.5 mr-2" />
-                    {t("hosts.copyLink")}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {host.enableSsh && host.enableTerminal && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=terminal&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.terminalUrlCopied"));
-                        }}
-                      >
-                        <Terminal className="size-3.5 mr-2" />
-                        {t("hosts.copyTerminalUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableFileManager && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=file-manager&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.fileManagerUrlCopied"));
-                        }}
-                      >
-                        <FolderSearch className="size-3.5 mr-2" />
-                        {t("hosts.copyFileManagerUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableTunnel && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=tunnel&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.tunnelUrlCopied"));
-                        }}
-                      >
-                        <Network className="size-3.5 mr-2" />
-                        {t("hosts.copyTunnelUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && host.enableDocker && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=docker&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.dockerUrlCopied"));
-                        }}
-                      >
-                        <Box className="size-3.5 mr-2" />
-                        {t("hosts.copyDockerUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableSsh && metricsEnabled && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=server-stats&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.serverStatsUrlCopied"));
-                        }}
-                      >
-                        <Server className="size-3.5 mr-2" />
-                        {t("hosts.copyServerStatsUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableRdp && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=rdp&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.rdpUrlCopied"));
-                        }}
-                      >
-                        <Monitor className="size-3.5 mr-2" />
-                        {t("hosts.copyRdpUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableVnc && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=vnc&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.vncUrlCopied"));
-                        }}
-                      >
-                        <Monitor className="size-3.5 mr-2" />
-                        {t("hosts.copyVncUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                    {host.enableTelnet && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}?view=telnet&hostId=${host.id}`,
-                          );
-                          toast.success(t("hosts.telnetUrlCopied"));
-                        }}
-                      >
-                        <Terminal className="size-3.5 mr-2" />
-                        {t("hosts.copyTelnetUrlAction")}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDuplicate();
-                  }}
-                >
-                  <CopyPlus className="size-3.5 mr-2" />
-                  {t("hosts.cloneHostAction")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                >
-                  <Trash2 className="size-3.5 mr-2" />
-                  {t("common.delete")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+              <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    title="More options"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MoreHorizontal className="size-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(
+                        `${host.username}@${host.ip}`,
+                      );
+                      toast.success(t("hosts.copiedToClipboard"));
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-2" />
+                    {t("hosts.copyAddress")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Link className="size-3.5 mr-2" />
+                      {t("hosts.copyLink")}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {host.enableSsh && host.enableTerminal && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=terminal&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.terminalUrlCopied"));
+                          }}
+                        >
+                          <Terminal className="size-3.5 mr-2" />
+                          {t("hosts.copyTerminalUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableSsh && host.enableFileManager && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=file-manager&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.fileManagerUrlCopied"));
+                          }}
+                        >
+                          <FolderSearch className="size-3.5 mr-2" />
+                          {t("hosts.copyFileManagerUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableSsh && host.enableTunnel && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=tunnel&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.tunnelUrlCopied"));
+                          }}
+                        >
+                          <Network className="size-3.5 mr-2" />
+                          {t("hosts.copyTunnelUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableSsh && host.enableDocker && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=docker&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.dockerUrlCopied"));
+                          }}
+                        >
+                          <Box className="size-3.5 mr-2" />
+                          {t("hosts.copyDockerUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableSsh && metricsEnabled && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=server-stats&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.serverStatsUrlCopied"));
+                          }}
+                        >
+                          <Server className="size-3.5 mr-2" />
+                          {t("hosts.copyServerStatsUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableRdp && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=rdp&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.rdpUrlCopied"));
+                          }}
+                        >
+                          <Monitor className="size-3.5 mr-2" />
+                          {t("hosts.copyRdpUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableVnc && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=vnc&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.vncUrlCopied"));
+                          }}
+                        >
+                          <Monitor className="size-3.5 mr-2" />
+                          {t("hosts.copyVncUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableTelnet && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}?view=telnet&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.telnetUrlCopied"));
+                          }}
+                        >
+                          <Terminal className="size-3.5 mr-2" />
+                          {t("hosts.copyTelnetUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDuplicate();
+                    }}
+                  >
+                    <CopyPlus className="size-3.5 mr-2" />
+                    {t("hosts.cloneHostAction")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                  >
+                    <Trash2 className="size-3.5 mr-2" />
+                    {t("common.delete")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>

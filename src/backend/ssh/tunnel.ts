@@ -2697,9 +2697,22 @@ app.post(
 
       res.json({ message: "Connection request received", tunnelName });
 
-      operation.finally(() => {
-        pendingTunnelOperations.delete(tunnelName);
-      });
+      operation
+        .catch((err) => {
+          tunnelLogger.error("Tunnel operation failed", err, {
+            operation: "tunnel_operation_failed",
+            tunnelName,
+          });
+          broadcastTunnelStatus(tunnelName, {
+            connected: false,
+            status: CONNECTION_STATES.FAILED,
+            reason: err instanceof Error ? err.message : "Unknown error",
+          });
+          tunnelConnecting.delete(tunnelName);
+        })
+        .finally(() => {
+          pendingTunnelOperations.delete(tunnelName);
+        });
     } catch (error) {
       tunnelLogger.error("Failed to process tunnel connect", error, {
         operation: "tunnel_connect",
