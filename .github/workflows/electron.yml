@@ -131,7 +131,8 @@ jobs:
           retention-days: 30
 
   build-linux:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+#   runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: self-hosted
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
       contents: write
@@ -688,7 +689,8 @@ jobs:
           retention-days: 30
 
   submit-to-flatpak:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+ #  runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: self-hosted
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '')
     needs: []
     permissions:
@@ -844,7 +846,8 @@ jobs:
           retention-days: 30
 
   upload-to-release:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+ #  runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: self-hosted
     if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:
