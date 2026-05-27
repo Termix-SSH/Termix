@@ -710,6 +710,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "public_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
 
+  addColumnIfNotExists("ssh_credentials", "cert_public_key", "TEXT");
+
   addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
   addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
@@ -782,6 +784,7 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("snippets", "folder", "TEXT");
   addColumnIfNotExists("snippets", "order", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("snippets", "host_filter", "TEXT");
 
   try {
     sqlite
@@ -1008,6 +1011,19 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT override_credential_id FROM host_access LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE host_access ADD COLUMN override_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add override_credential_id column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
   } catch {
     try {
@@ -1044,6 +1060,23 @@ const migrateSchema = () => {
     { column: "host_key_changed_count", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_changed_count INTEGER NOT NULL DEFAULT 0" },
     { column: "mac_address", sql: "ALTER TABLE ssh_data ADD COLUMN mac_address TEXT" },
     { column: "port_knock_sequence", sql: "ALTER TABLE ssh_data ADD COLUMN port_knock_sequence TEXT" },
+    { column: "enable_ssh", sql: "ALTER TABLE ssh_data ADD COLUMN enable_ssh INTEGER NOT NULL DEFAULT 1" },
+    { column: "enable_rdp", sql: "ALTER TABLE ssh_data ADD COLUMN enable_rdp INTEGER NOT NULL DEFAULT 0" },
+    { column: "enable_vnc", sql: "ALTER TABLE ssh_data ADD COLUMN enable_vnc INTEGER NOT NULL DEFAULT 0" },
+    { column: "enable_telnet", sql: "ALTER TABLE ssh_data ADD COLUMN enable_telnet INTEGER NOT NULL DEFAULT 0" },
+    { column: "ssh_port", sql: "ALTER TABLE ssh_data ADD COLUMN ssh_port INTEGER DEFAULT 22" },
+    { column: "rdp_port", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_port INTEGER DEFAULT 3389" },
+    { column: "vnc_port", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_port INTEGER DEFAULT 5900" },
+    { column: "telnet_port", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_port INTEGER DEFAULT 23" },
+    { column: "rdp_user", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_user TEXT" },
+    { column: "rdp_password", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_password TEXT" },
+    { column: "rdp_domain", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_domain TEXT" },
+    { column: "rdp_security", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_security TEXT" },
+    { column: "rdp_ignore_cert", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_ignore_cert INTEGER DEFAULT 0" },
+    { column: "vnc_password", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_password TEXT" },
+    { column: "vnc_user", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_user TEXT" },
+    { column: "telnet_user", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_user TEXT" },
+    { column: "telnet_password", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_password TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -1058,6 +1091,39 @@ const migrateSchema = () => {
           error: alterError,
         });
       }
+    }
+  }
+
+  // Copy unencrypted username/domain into protocol-specific columns for old guac hosts.
+  // Passwords are handled via the legacy field name fallback in lazy-field-encryption.ts.
+  const usernameDomainBackfills = [
+    {
+      protocol: "rdp",
+      sql: "UPDATE ssh_data SET rdp_user = username, rdp_password = password, rdp_domain = domain WHERE connection_type = 'rdp' AND rdp_user IS NULL AND rdp_password IS NULL",
+    },
+    {
+      protocol: "vnc",
+      sql: "UPDATE ssh_data SET vnc_user = username, vnc_password = password WHERE connection_type = 'vnc' AND vnc_user IS NULL AND vnc_password IS NULL",
+    },
+    {
+      protocol: "telnet",
+      sql: "UPDATE ssh_data SET telnet_user = username, telnet_password = password WHERE connection_type = 'telnet' AND telnet_user IS NULL AND telnet_password IS NULL",
+    },
+  ];
+  for (const backfill of usernameDomainBackfills) {
+    try {
+      const result = sqlite.prepare(backfill.sql).run();
+      if (result.changes > 0) {
+        databaseLogger.info(
+          `Backfilled ${result.changes} ${backfill.protocol} host credential(s)`,
+          { operation: "guac_credential_backfill" },
+        );
+      }
+    } catch (e) {
+      databaseLogger.warn(`Failed to backfill ${backfill.protocol} host credentials`, {
+        operation: "guac_credential_backfill",
+        error: e,
+      });
     }
   }
 

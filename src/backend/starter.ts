@@ -137,7 +137,8 @@ import {
       },
     );
 
-    await import("./database/database.js");
+    const dbServer = await import("./database/database.js");
+    await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
     await import("./ssh/terminal.js");
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");
@@ -194,29 +195,31 @@ import {
       duration: Date.now() - initStartTime,
     });
 
-    process.on("SIGINT", () => {
-      systemLogger.info(
-        "Received SIGINT signal, initiating graceful shutdown...",
-        { operation: "shutdown" },
-      );
+    const gracefulShutdown = async (signal: string) => {
+      systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
+        operation: "shutdown",
+      });
+      try {
+        const { saveMemoryDatabaseToFile } =
+          await import("./database/db/index.js");
+        await saveMemoryDatabaseToFile();
+        systemLogger.info("Database saved to disk before exit", {
+          operation: "shutdown_db_saved",
+        });
+      } catch (error) {
+        systemLogger.error("Failed to save database during shutdown", error, {
+          operation: "shutdown_db_save_failed",
+        });
+      }
       process.exit(0);
-    });
+    };
 
-    process.on("SIGTERM", () => {
-      systemLogger.info(
-        "Received SIGTERM signal, initiating graceful shutdown...",
-        { operation: "shutdown" },
-      );
-      process.exit(0);
-    });
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
     process.on("message", (msg: { type?: string }) => {
       if (msg?.type === "shutdown") {
-        systemLogger.info(
-          "Received IPC shutdown, initiating graceful shutdown...",
-          { operation: "shutdown" },
-        );
-        process.exit(0);
+        gracefulShutdown("IPC shutdown");
       }
     });
 

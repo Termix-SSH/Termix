@@ -26,5 +26,9 @@
     "allowUnusedLabels": true,
     "allowUnreachableCode": true
   },
-  "include": ["src/backend/**/*.ts"]
+  "include": [
+    "src/backend/**/*.ts",
+    "src/types/**/*.ts",
+    "src/ui/types/**/*.ts"
+  ]
 }

@@ -470,7 +470,7 @@ app.post("/dashboard/preferences", async (req, res) => {
       });
     }
 
-    const { cards } = req.body;
+    const { cards, mainWidthPct } = req.body;
 
     if (!cards || !Array.isArray(cards)) {
       return res.status(400).json({
@@ -478,7 +478,11 @@ app.post("/dashboard/preferences", async (req, res) => {
       });
     }
 
-    const layout = JSON.stringify({ cards });
+    const layoutObj: Record<string, unknown> = { cards };
+    if (typeof mainWidthPct === "number") {
+      layoutObj.mainWidthPct = mainWidthPct;
+    }
+    const layout = JSON.stringify(layoutObj);
 
     const existing = await getDb()
       .select()

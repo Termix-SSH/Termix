@@ -1,5 +1,5 @@
 import { db } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
+import { sshCredentials, sharedCredentials } from "../database/db/schema.js";
 import { eq, and, or, isNull } from "drizzle-orm";
 import { DataCrypto } from "./data-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
@@ -64,7 +64,7 @@ export class CredentialSystemEncryptionMigration {
                 cred.keyPassword,
                 userDEK,
                 cred.id.toString(),
-                "key_password",
+                "keyPassword",
               )
             : null;
 
@@ -104,6 +104,11 @@ export class CredentialSystemEncryptionMigration {
               updatedAt: new Date().toISOString(),
             })
             .where(eq(sshCredentials.id, cred.id));
+
+          await db
+            .update(sharedCredentials)
+            .set({ needsReEncryption: true })
+            .where(eq(sharedCredentials.originalCredentialId, cred.id));
 
           migrated++;
         } catch (error) {

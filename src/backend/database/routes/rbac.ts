@@ -10,6 +10,7 @@ import {
   sharedCredentials,
   snippets,
   snippetAccess,
+  sshCredentials,
 } from "../db/schema.js";
 import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Response } from "express";
@@ -128,10 +129,10 @@ router.post(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      if (!host[0].credentialId) {
+      if (!host[0].credentialId && host[0].authType !== "opkssh") {
         return res.status(400).json({
           error:
-            "Only hosts using credentials can be shared. Please create a credential and assign it to this host before sharing.",
+            "Only hosts using credentials or OPKSSH can be shared. Please create a credential and assign it to this host before sharing.",
           code: "CREDENTIAL_REQUIRED_FOR_SHARING",
         });
       }
@@ -203,23 +204,25 @@ router.post(
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
 
-        const { SharedCredentialManager } =
-          await import("../../utils/shared-credential-manager.js");
-        const sharedCredManager = SharedCredentialManager.getInstance();
-        if (targetType === "user") {
-          await sharedCredManager.createSharedCredentialForUser(
-            existing[0].id,
-            host[0].credentialId,
-            targetUserId!,
-            userId,
-          );
-        } else {
-          await sharedCredManager.createSharedCredentialsForRole(
-            existing[0].id,
-            host[0].credentialId,
-            targetRoleId!,
-            userId,
-          );
+        if (host[0].credentialId) {
+          const { SharedCredentialManager } =
+            await import("../../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          if (targetType === "user") {
+            await sharedCredManager.createSharedCredentialForUser(
+              existing[0].id,
+              host[0].credentialId,
+              targetUserId!,
+              userId,
+            );
+          } else {
+            await sharedCredManager.createSharedCredentialsForRole(
+              existing[0].id,
+              host[0].credentialId,
+              targetRoleId!,
+              userId,
+            );
+          }
         }
         databaseLogger.info("Permission granted", {
           operation: "rbac_permission_grant",
@@ -249,20 +252,22 @@ router.post(
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
-      if (targetType === "user") {
-        await sharedCredManager.createSharedCredentialForUser(
-          result.lastInsertRowid as number,
-          host[0].credentialId,
-          targetUserId!,
-          userId,
-        );
-      } else {
-        await sharedCredManager.createSharedCredentialsForRole(
-          result.lastInsertRowid as number,
-          host[0].credentialId,
-          targetRoleId!,
-          userId,
-        );
+      if (host[0].credentialId) {
+        if (targetType === "user") {
+          await sharedCredManager.createSharedCredentialForUser(
+            result.lastInsertRowid as number,
+            host[0].credentialId,
+            targetUserId!,
+            userId,
+          );
+        } else {
+          await sharedCredManager.createSharedCredentialsForRole(
+            result.lastInsertRowid as number,
+            host[0].credentialId,
+            targetRoleId!,
+            userId,
+          );
+        }
       }
       databaseLogger.success("Host shared successfully", {
         operation: "rbac_host_share_success",
@@ -1516,6 +1521,60 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to get shared snippets" });
+    }
+  },
+);
+
+router.put(
+  "/host-access/:hostId/credential",
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const userId = (req as AuthenticatedRequest).userId!;
+      const hostId = Number.parseInt(String(req.params.hostId), 10);
+      const { credentialId } = req.body;
+
+      if (!hostId || isNaN(hostId)) {
+        return res.status(400).json({ error: "Invalid host ID" });
+      }
+
+      const access = await db
+        .select()
+        .from(hostAccess)
+        .where(
+          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
+        )
+        .limit(1);
+
+      if (access.length === 0) {
+        return res.status(403).json({ error: "No access to this host" });
+      }
+
+      if (credentialId) {
+        const cred = await db
+          .select({ id: sshCredentials.id })
+          .from(sshCredentials)
+          .where(
+            and(
+              eq(sshCredentials.id, credentialId),
+              eq(sshCredentials.userId, userId),
+            ),
+          )
+          .limit(1);
+
+        if (cred.length === 0) {
+          return res.status(404).json({ error: "Credential not found" });
+        }
+      }
+
+      await db
+        .update(hostAccess)
+        .set({ overrideCredentialId: credentialId || null })
+        .where(eq(hostAccess.id, access[0].id));
+
+      res.json({ success: true });
+    } catch (error) {
+      databaseLogger.error("Failed to set override credential", error);
+      res.status(500).json({ error: "Failed to update credential" });
     }
   },
 );

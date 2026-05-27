@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
-import { clearTermixSessionStorage } from "@/ui/desktop/navigation/tabs/TabContext";
+import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type {
   SSHHost,
   SSHHostData,
@@ -18,7 +18,7 @@ import type {
   DockerLogOptions,
   DockerValidation,
   ProxyNode,
-} from "../types/index.js";
+} from "@/types/index";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -69,8 +69,8 @@ import {
   systemLogger,
   dashboardLogger,
   type LogContext,
-} from "../lib/frontend-logger.js";
-import { dbHealthMonitor } from "../lib/db-health-monitor.js";
+} from "@/lib/frontend-logger";
+import { dbHealthMonitor } from "@/lib/db-health-monitor";
 
 interface FileManagerOperation {
   name: string;
@@ -865,11 +865,16 @@ export let dockerApi: AxiosInstance;
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
 
+let _resolveAppReady!: () => void;
+export const appReadyPromise: Promise<void> = new Promise((resolve) => {
+  _resolveAppReady = resolve;
+});
+
 function initializeApp() {
   if (isElectron()) {
     Promise.all([getServerConfig(), getEmbeddedServerStatus()])
       .then(([config, status]) => {
-        if (status?.embedded && status?.running) {
+        if (status?.embedded && status?.running && !config?.serverUrl) {
           embeddedMode = true;
         }
         if (config?.serverUrl) {
@@ -895,9 +900,13 @@ function initializeApp() {
           error,
         );
         initializeApiInstances();
+      })
+      .finally(() => {
+        _resolveAppReady();
       });
   } else {
     initializeApiInstances();
+    _resolveAppReady();
   }
 }
 
@@ -1107,85 +1116,18 @@ export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
 
 export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
   try {
-    const submitData = {
-      connectionType: hostData.connectionType || "ssh",
-      name: hostData.name || "",
-      ip: hostData.ip,
-      port: parseInt(hostData.port.toString()) || 22,
-      username: hostData.username,
-      folder: hostData.folder || "",
-      tags: hostData.tags || [],
-      pin: Boolean(hostData.pin),
-      authType: hostData.authType,
-      password:
-        hostData.connectionType !== "ssh"
-          ? hostData.password || null
-          : hostData.authType === "password"
-            ? hostData.password
-            : null,
-      key: hostData.authType === "key" ? hostData.key : null,
-      keyPassword: hostData.authType === "key" ? hostData.keyPassword : null,
-      keyType: hostData.authType === "key" ? hostData.keyType : null,
-      credentialId:
-        hostData.authType === "credential" ? hostData.credentialId : null,
-      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
-      enableTerminal: Boolean(hostData.enableTerminal),
-      enableTunnel: Boolean(hostData.enableTunnel),
-      enableFileManager: Boolean(hostData.enableFileManager),
-      enableDocker: Boolean(hostData.enableDocker),
-      showTerminalInSidebar: Boolean(hostData.showTerminalInSidebar),
-      showFileManagerInSidebar: Boolean(hostData.showFileManagerInSidebar),
-      showTunnelInSidebar: Boolean(hostData.showTunnelInSidebar),
-      showDockerInSidebar: Boolean(hostData.showDockerInSidebar),
-      showServerStatsInSidebar: Boolean(hostData.showServerStatsInSidebar),
-      defaultPath: hostData.defaultPath || "/",
-      tunnelConnections: hostData.tunnelConnections || [],
-      jumpHosts: hostData.jumpHosts || [],
-      quickActions: hostData.quickActions || [],
-      sudoPassword: hostData.sudoPassword || null,
-      statsConfig: hostData.statsConfig || null,
-      dockerConfig: hostData.dockerConfig || null,
-      terminalConfig: hostData.terminalConfig || null,
-      forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
-      domain: hostData.domain || null,
-      security: hostData.security || null,
-      ignoreCert: Boolean(hostData.ignoreCert),
-      guacamoleConfig: hostData.guacamoleConfig || null,
-      notes: hostData.notes || "",
-      useSocks5: Boolean(hostData.useSocks5),
-      socks5Host: hostData.socks5Host || null,
-      socks5Port: hostData.socks5Port || null,
-      socks5Username: hostData.socks5Username || null,
-      socks5Password: hostData.socks5Password || null,
-      socks5ProxyChain: hostData.socks5ProxyChain || null,
-      macAddress: hostData.macAddress || null,
-      portKnockSequence: hostData.portKnockSequence || null,
-    };
-
-    if (!submitData.enableTunnel) {
-      submitData.tunnelConnections = [];
-    }
-
-    if (!submitData.enableFileManager) {
-      submitData.defaultPath = "";
-    }
-
     if (hostData.authType === "key" && hostData.key instanceof File) {
       const formData = new FormData();
       formData.append("key", hostData.key);
-
-      const dataWithoutFile = { ...submitData };
-      delete dataWithoutFile.key;
+      const dataWithoutFile = { ...hostData, key: undefined };
       formData.append("data", JSON.stringify(dataWithoutFile));
-
       const response = await sshHostApi.post("/db/host", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
-    } else {
-      const response = await sshHostApi.post("/db/host", submitData);
-      return response.data;
     }
+    const response = await sshHostApi.post("/db/host", hostData);
+    return response.data;
   } catch (error) {
     throw handleApiError(error, "create SSH host");
   }
@@ -1196,84 +1138,18 @@ export async function updateSSHHost(
   hostData: SSHHostData,
 ): Promise<SSHHost> {
   try {
-    const submitData = {
-      connectionType: hostData.connectionType || "ssh",
-      name: hostData.name || "",
-      ip: hostData.ip,
-      port: parseInt(hostData.port.toString()) || 22,
-      username: hostData.username,
-      folder: hostData.folder || "",
-      tags: hostData.tags || [],
-      pin: Boolean(hostData.pin),
-      authType: hostData.authType,
-      password:
-        hostData.connectionType !== "ssh"
-          ? hostData.password || null
-          : hostData.authType === "password"
-            ? hostData.password
-            : null,
-      key: hostData.authType === "key" ? hostData.key : null,
-      keyPassword: hostData.authType === "key" ? hostData.keyPassword : null,
-      keyType: hostData.authType === "key" ? hostData.keyType : null,
-      credentialId:
-        hostData.authType === "credential" ? hostData.credentialId : null,
-      overrideCredentialUsername: Boolean(hostData.overrideCredentialUsername),
-      enableTerminal: Boolean(hostData.enableTerminal),
-      enableTunnel: Boolean(hostData.enableTunnel),
-      enableFileManager: Boolean(hostData.enableFileManager),
-      enableDocker: Boolean(hostData.enableDocker),
-      showTerminalInSidebar: Boolean(hostData.showTerminalInSidebar),
-      showFileManagerInSidebar: Boolean(hostData.showFileManagerInSidebar),
-      showTunnelInSidebar: Boolean(hostData.showTunnelInSidebar),
-      showDockerInSidebar: Boolean(hostData.showDockerInSidebar),
-      showServerStatsInSidebar: Boolean(hostData.showServerStatsInSidebar),
-      defaultPath: hostData.defaultPath || "/",
-      tunnelConnections: hostData.tunnelConnections || [],
-      jumpHosts: hostData.jumpHosts || [],
-      quickActions: hostData.quickActions || [],
-      sudoPassword: hostData.sudoPassword || null,
-      statsConfig: hostData.statsConfig || null,
-      dockerConfig: hostData.dockerConfig || null,
-      terminalConfig: hostData.terminalConfig || null,
-      forceKeyboardInteractive: Boolean(hostData.forceKeyboardInteractive),
-      domain: hostData.domain || null,
-      security: hostData.security || null,
-      ignoreCert: Boolean(hostData.ignoreCert),
-      guacamoleConfig: hostData.guacamoleConfig || null,
-      notes: hostData.notes || "",
-      useSocks5: Boolean(hostData.useSocks5),
-      socks5Host: hostData.socks5Host || null,
-      socks5Port: hostData.socks5Port || null,
-      socks5Username: hostData.socks5Username || null,
-      socks5Password: hostData.socks5Password || null,
-      socks5ProxyChain: hostData.socks5ProxyChain || null,
-      macAddress: hostData.macAddress || null,
-      portKnockSequence: hostData.portKnockSequence || null,
-    };
-
-    if (!submitData.enableTunnel) {
-      submitData.tunnelConnections = [];
-    }
-    if (!submitData.enableFileManager) {
-      submitData.defaultPath = "";
-    }
-
     if (hostData.authType === "key" && hostData.key instanceof File) {
       const formData = new FormData();
       formData.append("key", hostData.key);
-
-      const dataWithoutFile = { ...submitData };
-      delete dataWithoutFile.key;
+      const dataWithoutFile = { ...hostData, key: undefined };
       formData.append("data", JSON.stringify(dataWithoutFile));
-
       const response = await sshHostApi.put(`/db/host/${hostId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
-    } else {
-      const response = await sshHostApi.put(`/db/host/${hostId}`, submitData);
-      return response.data;
     }
+    const response = await sshHostApi.put(`/db/host/${hostId}`, hostData);
+    return response.data;
   } catch (error) {
     throw handleApiError(error, "update SSH host");
   }
@@ -2046,6 +1922,25 @@ export async function downloadSSHFile(
   } catch (error) {
     handleApiError(error, "download SSH file");
   }
+}
+
+export async function downloadSSHFileStream(
+  sessionId: string,
+  filePath: string,
+): Promise<void> {
+  const response = await fileManagerApi.post(
+    "/ssh/downloadFileStream",
+    { sessionId, path: filePath },
+    { responseType: "blob" },
+  );
+  const blob = response.data as Blob;
+  const fileName = filePath.split("/").pop() || "download";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function createSSHFile(
@@ -2876,6 +2771,10 @@ export async function loginUser(
       }
     }
 
+    if (response.data.token) {
+      localStorage.setItem("jwt", response.data.token);
+    }
+
     if (response.data.success && !response.data.requires_totp) {
       markUserAuthenticated();
     }
@@ -3087,10 +2986,11 @@ export async function changePassword(oldPassword: string, newPassword: string) {
 
 export async function getOIDCAuthorizeUrl(
   rememberMe = false,
+  desktopCallbackPort?: number,
 ): Promise<OIDCAuthorize> {
   try {
     const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe },
+      params: { rememberMe, desktopCallbackPort },
     });
     return response.data;
   } catch (error) {
@@ -3269,6 +3169,28 @@ export async function updateRegistrationAllowed(
     return response.data;
   } catch (error) {
     handleApiError(error, "update registration allowed");
+  }
+}
+
+export async function getOidcAutoProvision(): Promise<{ enabled: boolean }> {
+  try {
+    const response = await authApi.get("/users/oidc-auto-provision");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check OIDC auto-provision status");
+  }
+}
+
+export async function updateOidcAutoProvision(
+  enabled: boolean,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.patch("/users/oidc-auto-provision", {
+      enabled,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update OIDC auto-provision");
   }
 }
 
@@ -4447,6 +4369,13 @@ export async function getGuacamoleTokenFromHost(
   }
 }
 
+export async function getGuacdStatus(): Promise<{
+  guacd: { status: string };
+}> {
+  const response = await authApi.get("/guacamole/status");
+  return response.data;
+}
+
 // ============================================================================
 // RBAC MANAGEMENT
 // ============================================================================
@@ -4974,7 +4903,14 @@ export async function getContainerStats(
 }
 
 export interface DashboardLayout {
-  cards: Array<{ id: string; enabled: boolean; order: number }>;
+  cards: Array<{
+    id: string;
+    enabled: boolean;
+    order: number;
+    panel?: "main" | "side";
+    height?: number | null;
+  }>;
+  mainWidthPct?: number;
 }
 
 export async function getDashboardPreferences(): Promise<DashboardLayout> {

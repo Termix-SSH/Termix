@@ -35,7 +35,8 @@
     "!public/icons/**/*"
   ],
   "extraMetadata": {
-    "main": "electron/main.cjs"
+    "main": "electron/main.cjs",
+    "type": "commonjs"
   },
   "buildDependenciesFromSource": false,
   "nodeGypRebuild": false,

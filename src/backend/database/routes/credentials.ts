@@ -147,6 +147,7 @@ router.post(
       key,
       keyPassword,
       keyType,
+      certPublicKey,
     } = req.body;
 
     if (!isNonEmptyString(userId) || !isNonEmptyString(name)) {
@@ -230,6 +231,8 @@ router.post(
         keyPassword: plainKeyPassword,
         keyType: keyType || null,
         detectedKeyType: keyInfo?.keyType || null,
+        certPublicKey:
+          authType === "key" && certPublicKey ? certPublicKey.trim() : null,
         usageCount: 0,
         lastUsed: null,
       };
@@ -431,14 +434,13 @@ router.get(
       if (credential.password) {
         output.password = credential.password;
       }
-      if (credential.key) {
-        output.key = credential.key;
-      }
-      if (credential.privateKey) {
-        output.privateKey = credential.privateKey;
-      }
+      output.hasKey = !!credential.key;
+      output.hasKeyPassword = !!credential.keyPassword;
       if (credential.publicKey) {
         output.publicKey = credential.publicKey;
+      }
+      if (credential.certPublicKey) {
+        output.certPublicKey = credential.certPublicKey;
       }
       if (credential.keyPassword) {
         output.keyPassword = credential.keyPassword;
@@ -571,6 +573,9 @@ router.put(
       }
       if (updateData.keyPassword !== undefined) {
         updateFields.keyPassword = updateData.keyPassword || null;
+      }
+      if (updateData.certPublicKey !== undefined) {
+        updateFields.certPublicKey = updateData.certPublicKey?.trim() || null;
       }
 
       if (Object.keys(updateFields).length === 0) {
@@ -947,6 +952,7 @@ function formatCredentialOutput(
     authType: credential.authType,
     username: credential.username || null,
     publicKey: credential.publicKey,
+    hasCertPublicKey: !!credential.certPublicKey,
     keyType: credential.keyType,
     detectedKeyType: credential.detectedKeyType,
     usageCount: credential.usageCount || 0,
@@ -1445,7 +1451,7 @@ router.post(
       const publicKeyString =
         typeof publicKeyPem === "string"
           ? publicKeyPem
-          : publicKeyPem.toString("utf8");
+          : (publicKeyPem as Buffer).toString("utf8");
 
       let keyType = "unknown";
       const asymmetricKeyType = privateKeyObj.asymmetricKeyType;
@@ -1617,9 +1623,12 @@ async function deploySSHKeyToHost(
           const escapedKey = actualPublicKey
             .replace(/\\/g, "\\\\")
             .replace(/'/g, "'\\''");
+          const escapedName = credData.name
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "'\\''");
 
           conn.exec(
-            `printf '%s\n' '${escapedKey} ${credData.name}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
+            `printf '%s\n' '${escapedKey} ${escapedName}@Termix' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
             (err, stream) => {
               if (err) {
                 clearTimeout(addTimeout);

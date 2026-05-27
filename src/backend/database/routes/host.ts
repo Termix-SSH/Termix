@@ -43,6 +43,8 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+const STATS_SERVER_URL = "http://localhost:30005";
+
 function notifyStatsHostUpdated(
   hostId: number,
   headers: Pick<Request["headers"], "authorization" | "cookie">,
@@ -50,7 +52,7 @@ function notifyStatsHostUpdated(
 ): void {
   axios
     .post(
-      "http://localhost:30005/host-updated",
+      `${STATS_SERVER_URL}/host-updated`,
       { hostId },
       {
         headers: {
@@ -244,23 +246,18 @@ function normalizeImportedHost(
 }
 
 const SENSITIVE_FIELDS = [
-  "password",
   "key",
   "keyPassword",
-  "sudoPassword",
-  "autostartPassword",
   "autostartKey",
   "autostartKeyPassword",
-  "socks5Password",
 ];
 
 function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...host };
-  result.hasPassword = !!host.password;
   result.hasKey = !!host.key;
-  result.hasSudoPassword = !!host.sudoPassword;
+  result.hasKeyPassword = !!host.keyPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
@@ -288,6 +285,33 @@ function transformHostResponse(
     showTunnelInSidebar: !!host.showTunnelInSidebar,
     showDockerInSidebar: !!host.showDockerInSidebar,
     showServerStatsInSidebar: !!host.showServerStatsInSidebar,
+    // Old hosts only had connection_type set; the per-protocol enable flags didn't exist yet.
+    // The schema defaults (enableSsh=true, others=false) wrongly mark every old host as SSH.
+    // Detect this migration case: if no non-SSH protocol is explicitly enabled AND
+    // connectionType is set to a non-SSH value, fall back to inferring from connectionType.
+    ...(() => {
+      const ct = host.connectionType;
+      const rdp = !!host.enableRdp;
+      const vnc = !!host.enableVnc;
+      const tel = !!host.enableTelnet;
+      const isMigratedNonSsh = !rdp && !vnc && !tel && ct && ct !== "ssh";
+      return {
+        enableSsh: isMigratedNonSsh ? false : !!host.enableSsh,
+        enableRdp: isMigratedNonSsh ? ct === "rdp" : rdp,
+        enableVnc: isMigratedNonSsh ? ct === "vnc" : vnc,
+        enableTelnet: isMigratedNonSsh ? ct === "telnet" : tel,
+      };
+    })(),
+    sshPort: host.sshPort ?? host.port ?? 22,
+    rdpPort: host.rdpPort ?? 3389,
+    vncPort: host.vncPort ?? 5900,
+    telnetPort: host.telnetPort ?? 23,
+    rdpUser: host.rdpUser || undefined,
+    rdpDomain: host.rdpDomain || undefined,
+    rdpSecurity: host.rdpSecurity || undefined,
+    rdpIgnoreCert: !!host.rdpIgnoreCert,
+    vncUser: host.vncUser || undefined,
+    telnetUser: host.telnetUser || undefined,
     tunnelConnections: host.tunnelConnections
       ? JSON.parse(host.tunnelConnections as string)
       : [],
@@ -593,6 +617,23 @@ router.post(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      enableSsh,
+      enableRdp,
+      enableVnc,
+      enableTelnet,
+      sshPort,
+      rdpPort,
+      vncPort,
+      telnetPort,
+      rdpUser,
+      rdpPassword,
+      rdpDomain,
+      rdpSecurity,
+      rdpIgnoreCert,
+      vncPassword,
+      vncUser,
+      telnetUser,
+      telnetPassword,
     } = hostData;
     databaseLogger.info("Creating SSH host", {
       operation: "host_create",
@@ -621,15 +662,19 @@ router.post(
       authType ||
       authMethod ||
       (effectiveConnectionType !== "ssh" ? "password" : undefined);
+    const effectiveUsername =
+      username || rdpUser || vncUser || telnetUser || "";
+    const effectiveName =
+      name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
       userId: userId,
       connectionType: effectiveConnectionType,
-      name,
+      name: effectiveName,
       folder: folder || null,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
-      username,
+      username: effectiveUsername,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -685,6 +730,20 @@ router.post(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
+      enableSsh: enableSsh ? 1 : 0,
+      enableRdp: enableRdp ? 1 : 0,
+      enableVnc: enableVnc ? 1 : 0,
+      enableTelnet: enableTelnet ? 1 : 0,
+      sshPort: sshPort || port || 22,
+      rdpPort: rdpPort || 3389,
+      vncPort: vncPort || 5900,
+      telnetPort: telnetPort || 23,
+      rdpUser: rdpUser || null,
+      rdpDomain: rdpDomain || null,
+      rdpSecurity: rdpSecurity || null,
+      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncUser: vncUser || null,
+      telnetUser: telnetUser || null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -742,6 +801,10 @@ router.post(
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
+
+    sshDataObj.rdpPassword = rdpPassword || null;
+    sshDataObj.vncPassword = vncPassword || null;
+    sshDataObj.telnetPassword = telnetPassword || null;
 
     try {
       const result = await SimpleDBOps.insert(
@@ -1092,6 +1155,23 @@ router.put(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      enableSsh,
+      enableRdp,
+      enableVnc,
+      enableTelnet,
+      sshPort,
+      rdpPort,
+      vncPort,
+      telnetPort,
+      rdpUser,
+      rdpPassword,
+      rdpDomain,
+      rdpSecurity,
+      rdpIgnoreCert,
+      vncPassword,
+      vncUser,
+      telnetUser,
+      telnetPassword,
     } = hostData;
     databaseLogger.info("Updating SSH host", {
       operation: "host_update",
@@ -1118,14 +1198,18 @@ router.put(
     }
 
     const effectiveAuthType = authType || authMethod;
+    const effectiveUsername =
+      username || rdpUser || vncUser || telnetUser || "";
+    const effectiveName =
+      name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
       connectionType: connectionType || "ssh",
-      name,
+      name: effectiveName,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
-      username,
+      username: effectiveUsername,
       authType: effectiveAuthType,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -1181,6 +1265,20 @@ router.put(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
+      enableSsh: enableSsh ? 1 : 0,
+      enableRdp: enableRdp ? 1 : 0,
+      enableVnc: enableVnc ? 1 : 0,
+      enableTelnet: enableTelnet ? 1 : 0,
+      sshPort: sshPort || port || 22,
+      rdpPort: rdpPort || 3389,
+      vncPort: vncPort || 5900,
+      telnetPort: telnetPort || 23,
+      rdpUser: rdpUser || null,
+      rdpDomain: rdpDomain || null,
+      rdpSecurity: rdpSecurity || null,
+      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncUser: vncUser || null,
+      telnetUser: telnetUser || null,
     };
 
     // For non-SSH hosts (RDP, VNC, Telnet), always save password if provided
@@ -1248,6 +1346,11 @@ router.put(
       sshDataObj.keyPassword = null;
       sshDataObj.keyType = null;
     }
+
+    if (rdpPassword !== undefined) sshDataObj.rdpPassword = rdpPassword || null;
+    if (vncPassword !== undefined) sshDataObj.vncPassword = vncPassword || null;
+    if (telnetPassword !== undefined)
+      sshDataObj.telnetPassword = telnetPassword || null;
 
     try {
       const accessInfo = await permissionManager.canAccessHost(
@@ -1475,6 +1578,23 @@ router.get(
           guacamoleConfig: hosts.guacamoleConfig,
           macAddress: hosts.macAddress,
           dockerConfig: hosts.dockerConfig,
+          enableSsh: hosts.enableSsh,
+          enableRdp: hosts.enableRdp,
+          enableVnc: hosts.enableVnc,
+          enableTelnet: hosts.enableTelnet,
+          sshPort: hosts.sshPort,
+          rdpPort: hosts.rdpPort,
+          vncPort: hosts.vncPort,
+          telnetPort: hosts.telnetPort,
+          rdpUser: hosts.rdpUser,
+          rdpPassword: hosts.rdpPassword,
+          rdpDomain: hosts.rdpDomain,
+          rdpSecurity: hosts.rdpSecurity,
+          rdpIgnoreCert: hosts.rdpIgnoreCert,
+          vncUser: hosts.vncUser,
+          vncPassword: hosts.vncPassword,
+          telnetUser: hosts.telnetUser,
+          telnetPassword: hosts.telnetPassword,
 
           ownerId: hosts.userId,
           isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,
@@ -1800,9 +1920,21 @@ router.get(
       const exportData = isRemoteDesktop
         ? {
             ...baseExportData,
-            domain: resolvedHost.domain || null,
-            security: resolvedHost.security || null,
-            ignoreCert: !!resolvedHost.ignoreCert,
+            enableRdp: !!resolvedHost.enableRdp,
+            enableVnc: !!resolvedHost.enableVnc,
+            enableTelnet: !!resolvedHost.enableTelnet,
+            rdpPort: resolvedHost.rdpPort || 3389,
+            vncPort: resolvedHost.vncPort || 5900,
+            telnetPort: resolvedHost.telnetPort || 23,
+            rdpUser: resolvedHost.rdpUser || null,
+            rdpPassword: resolvedHost.rdpPassword || null,
+            rdpDomain: resolvedHost.rdpDomain || null,
+            rdpSecurity: resolvedHost.rdpSecurity || null,
+            rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
+            vncUser: resolvedHost.vncUser || null,
+            vncPassword: resolvedHost.vncPassword || null,
+            telnetUser: resolvedHost.telnetUser || null,
+            telnetPassword: resolvedHost.telnetPassword || null,
             guacamoleConfig: resolvedHost.guacamoleConfig
               ? JSON.parse(resolvedHost.guacamoleConfig as string)
               : null,
@@ -2126,9 +2258,8 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = 30005;
         await axios.post(
-          `http://localhost:${statsPort}/host-deleted`,
+          `${STATS_SERVER_URL}/host-deleted`,
           { hostId: numericHostId },
           {
             headers: {
@@ -3303,11 +3434,10 @@ router.delete(
 
       try {
         const axios = (await import("axios")).default;
-        const statsPort = 30005;
         for (const host of hostsToDelete) {
           try {
             await axios.post(
-              `http://localhost:${statsPort}/host-deleted`,
+              `${STATS_SERVER_URL}/host-deleted`,
               { hostId: host.id },
               {
                 headers: {
@@ -3713,6 +3843,10 @@ router.post(
           overrideCredentialUsername: hostData.overrideCredentialUsername
             ? 1
             : 0,
+          enableSsh: hostData.enableSsh ?? false,
+          enableRdp: hostData.enableRdp ?? false,
+          enableVnc: hostData.enableVnc ?? false,
+          enableTelnet: hostData.enableTelnet ?? false,
           updatedAt: new Date().toISOString(),
         };
 
@@ -3723,9 +3857,21 @@ router.post(
           sshDataObj.key = null;
           sshDataObj.keyPassword = null;
           sshDataObj.keyType = null;
-          sshDataObj.domain = hostData.domain || null;
-          sshDataObj.security = hostData.security || null;
-          sshDataObj.ignoreCert = hostData.ignoreCert ? 1 : 0;
+          sshDataObj.rdpUser = hostData.rdpUser || null;
+          sshDataObj.rdpPassword = hostData.rdpPassword || null;
+          sshDataObj.rdpDomain = hostData.rdpDomain || null;
+          sshDataObj.rdpSecurity = hostData.rdpSecurity || null;
+          sshDataObj.rdpIgnoreCert = hostData.rdpIgnoreCert ? 1 : 0;
+          sshDataObj.rdpPort = hostData.rdpPort || 3389;
+          sshDataObj.vncUser = hostData.vncUser || null;
+          sshDataObj.vncPassword = hostData.vncPassword || null;
+          sshDataObj.vncPort = hostData.vncPort || 5900;
+          sshDataObj.telnetUser = hostData.telnetUser || null;
+          sshDataObj.telnetPassword = hostData.telnetPassword || null;
+          sshDataObj.telnetPort = hostData.telnetPort || 23;
+          sshDataObj.enableRdp = hostData.enableRdp ? 1 : 0;
+          sshDataObj.enableVnc = hostData.enableVnc ? 1 : 0;
+          sshDataObj.enableTelnet = hostData.enableTelnet ? 1 : 0;
           sshDataObj.guacamoleConfig = hostData.guacamoleConfig
             ? JSON.stringify(hostData.guacamoleConfig)
             : null;

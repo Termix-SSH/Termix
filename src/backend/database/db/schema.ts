@@ -129,6 +129,28 @@ export const hosts = sqliteTable("ssh_data", {
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
+  enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
+  enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
+  enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
+  enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
+
+  sshPort: integer("ssh_port").default(22),
+  rdpPort: integer("rdp_port").default(3389),
+  vncPort: integer("vnc_port").default(5900),
+  telnetPort: integer("telnet_port").default(23),
+
+  rdpUser: text("rdp_user"),
+  rdpPassword: text("rdp_password"),
+  rdpDomain: text("rdp_domain"),
+  rdpSecurity: text("rdp_security"),
+  rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
+
+  vncPassword: text("vnc_password"),
+  vncUser: text("vnc_user"),
+
+  telnetUser: text("telnet_user"),
+  telnetPassword: text("telnet_password"),
+
   domain: text("domain"),
   security: text("security"),
   ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
@@ -234,6 +256,8 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
 
+  certPublicKey: text("cert_public_key", { length: 8192 }),
+
   systemPassword: text("system_password"),
   systemKey: text("system_key", { length: 16384 }),
   systemKeyPassword: text("system_key_password"),
@@ -280,6 +304,7 @@ export const snippets = sqliteTable("snippets", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  hostFilter: text("host_filter"),
 });
 
 export const snippetFolders = sqliteTable("snippet_folders", {
@@ -439,6 +464,10 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
+  overrideCredentialId: integer("override_credential_id").references(
+    () => sshCredentials.id,
+    { onDelete: "set null" },
+  ),
 });
 
 export const sharedCredentials = sqliteTable("shared_credentials", {

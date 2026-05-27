@@ -88,12 +88,28 @@ export interface Host {
   ignoreCert?: boolean;
   guacamoleConfig?: string | Record<string, unknown>;
 
+  enableSsh?: boolean;
+  enableRdp?: boolean;
+  enableVnc?: boolean;
+  enableTelnet?: boolean;
+  sshPort?: number;
+  rdpPort?: number;
+  vncPort?: number;
+  telnetPort?: number;
+  rdpUser?: string;
+  rdpPassword?: string;
+  rdpDomain?: string;
+  rdpSecurity?: string;
+  rdpIgnoreCert?: boolean;
+  vncPassword?: string;
+  vncUser?: string;
+  telnetUser?: string;
+  telnetPassword?: string;
   createdAt: string;
   updatedAt: string;
 
-  hasPassword?: boolean;
   hasKey?: boolean;
-  hasSudoPassword?: boolean;
+  hasKeyPassword?: boolean;
 
   isShared?: boolean;
   permissionLevel?: "view";
@@ -171,6 +187,24 @@ export interface HostData {
   ignoreCert?: boolean;
   guacamoleConfig?: Record<string, unknown> | null;
   dockerConfig?: Record<string, unknown> | null;
+
+  enableSsh?: boolean;
+  enableRdp?: boolean;
+  enableVnc?: boolean;
+  enableTelnet?: boolean;
+  sshPort?: number;
+  rdpPort?: number;
+  vncPort?: number;
+  telnetPort?: number;
+  rdpUser?: string;
+  rdpPassword?: string;
+  rdpDomain?: string;
+  rdpSecurity?: string;
+  rdpIgnoreCert?: boolean;
+  vncPassword?: string;
+  vncUser?: string;
+  telnetUser?: string;
+  telnetPassword?: string;
 }
 
 export type SSHHost = Host;
@@ -201,6 +235,10 @@ export interface Credential {
   password?: string;
   key?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string;
+  /** True when a cert is stored but certPublicKey content is redacted in list responses */
+  hasCertPublicKey?: boolean;
   keyPassword?: string;
   keyType?: string;
   usageCount: number;
@@ -222,6 +260,8 @@ export interface CredentialBackend {
   key: string;
   privateKey?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string;
   keyPassword: string | null;
   keyType?: string;
   detectedKeyType: string;
@@ -241,6 +281,8 @@ export interface CredentialData {
   password?: string;
   key?: string;
   publicKey?: string;
+  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
+  certPublicKey?: string | null;
   keyPassword?: string;
   keyType?: string;
 }

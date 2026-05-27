@@ -103,6 +103,7 @@ const TMUX_OPTS =
   `set -gq mouse on` +
   ` \\; set -gq history-limit 50000` +
   ` \\; set -gq set-clipboard on` +
+  ` \\; set -gq aggressive-resize on` +
   ` \\; set -gq mode-keys vi` +
   ` \\; bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X stop-selection` +
   ` \\; bind-key -T copy-mode-vi Enter send-keys -X copy-selection-and-cancel` +
@@ -111,18 +112,46 @@ const TMUX_OPTS =
   ` "display-message -d 2500 \\"Adjust selection and press Enter to copy\\""'`;
 
 /**
+ * Wait for a tmux session to appear by polling via exec channel.
+ * Returns the session name once found, or null on timeout.
+ */
+export async function waitForTmuxSession(
+  conn: Client,
+  sessionName: string,
+  timeoutMs = 5000,
+  intervalMs = 100,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await execCommand(
+        conn,
+        `tmux has-session -t ${shellEscape(sessionName)} 2>/dev/null`,
+      );
+      return sessionName;
+    } catch {
+      // session not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return null;
+}
+
+/**
  * Write tmux attach or new-session command to the interactive shell stream.
  * Uses && exit so the shell only closes if tmux started successfully.
  */
 export function attachOrCreateTmuxSession(
   stream: ClientChannel,
   existingSessionName?: string,
+  newSessionName?: string,
 ): void {
   let command: string;
   if (existingSessionName) {
     command = `tmux ${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)} && exit\r`;
   } else {
-    command = `tmux ${TMUX_OPTS} \\; new-session && exit\r`;
+    const nameFlag = newSessionName ? ` -s ${shellEscape(newSessionName)}` : "";
+    command = `tmux ${TMUX_OPTS} \\; new-session${nameFlag} && exit\r`;
   }
 
   sshLogger.info("Writing tmux command to shell", {

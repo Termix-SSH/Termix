@@ -1,0 +1,3054 @@
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { cn } from "@/lib/utils.ts";
+import { FileManagerGrid } from "./FileManagerGrid.tsx";
+import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
+import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";
+import { useFileSelection } from "./hooks/useFileSelection.ts";
+import { useDragAndDrop } from "./hooks/useDragAndDrop.ts";
+import {
+  WindowManager,
+  useWindowManager,
+} from "./components/WindowManager.tsx";
+import { FileWindow } from "./components/FileWindow.tsx";
+import { DiffWindow } from "./components/DiffWindow.tsx";
+import { useDragToDesktop } from "@/features/file-manager/hooks/useDragToDesktop";
+import { useDragToSystemDesktop } from "@/features/file-manager/hooks/useDragToSystemDesktop";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { Button } from "@/components/button.tsx";
+import { Input } from "@/components/input.tsx";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
+import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
+import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
+import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
+import { CompressDialog } from "./components/CompressDialog.tsx";
+import { SudoPasswordDialog } from "./SudoPasswordDialog.tsx";
+import {
+  Upload,
+  FolderPlus,
+  FilePlus,
+  RefreshCw,
+  Search,
+  Grid3X3,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
+  Plus,
+  Folder,
+  Trash2,
+  Copy,
+  Layout,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu.tsx";
+import { TerminalWindow } from "./components/TerminalWindow.tsx";
+import type { SSHHost, FileItem } from "@/types/index";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
+import type { LogEntry } from "@/types/connection-log.ts";
+import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import {
+  listSSHFiles,
+  resolveSSHPath,
+  uploadSSHFile,
+  createSSHFile,
+  createSSHFolder,
+  deleteSSHItem,
+  copySSHItem,
+  renameSSHItem,
+  moveSSHItem,
+  connectSSH,
+  verifySSHTOTP,
+  verifySSHWarpgate,
+  getSSHStatus,
+  keepSSHAlive,
+  identifySSHSymlink,
+  addRecentFile,
+  addPinnedFile,
+  removePinnedFile,
+  removeRecentFile,
+  addFolderShortcut,
+  getPinnedFiles,
+  logActivity,
+  changeSSHPermissions,
+  extractSSHArchive,
+  compressSSHFiles,
+  setSudoPassword,
+  getServerMetricsById,
+} from "@/main-axios.ts";
+import type { SidebarItem } from "./FileManagerSidebar.tsx";
+
+interface FileManagerProps {
+  initialHost?: SSHHost | null;
+  onClose?: () => void;
+}
+
+type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
+
+type SSHConnectionError = Error & {
+  connectionLogs?: ConnectionLogPayload[];
+  requires_totp?: boolean;
+  requires_warpgate?: boolean;
+  sessionId?: string;
+  prompt?: string;
+  url?: string;
+  securityKey?: string;
+  status?: string;
+  reason?: "no_keyboard" | "auth_failed" | "timeout";
+};
+
+interface CreateIntent {
+  id: string;
+  type: "file" | "directory";
+  defaultName: string;
+  currentName: string;
+}
+
+function formatFileSize(bytes?: number): string {
+  if (bytes === undefined || bytes === null) return "-";
+  if (bytes === 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  const formattedSize =
+    size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
+  return `${formattedSize} ${units[unitIndex]}`;
+}
+
+function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
+  const { openWindow } = useWindowManager();
+  const { t } = useTranslation();
+  const { confirmWithToast } = useConfirmation();
+  const {
+    addLog,
+    clearLogs,
+    isExpanded: isConnectionLogExpanded,
+  } = useConnectionLog();
+
+  const [currentHost] = useState<SSHHost | null>(initialHost || null);
+  const [currentPath, setCurrentPath] = useState(
+    initialHost?.defaultPath || "/",
+  );
+  const [navHistory, setNavHistory] = useState<string[]>([
+    initialHost?.defaultPath || "/",
+  ]);
+  const [navIndex, setNavIndex] = useState(0);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sshSessionId, setSshSessionId] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("fileManagerViewMode");
+    return saved === "grid" || saved === "list" ? saved : "grid";
+  });
+  const [sortBy, setSortBy] = useState<"name" | "modified" | "size">(() => {
+    const saved = localStorage.getItem("fileManagerSortBy");
+    return saved === "name" || saved === "modified" || saved === "size"
+      ? saved
+      : "name";
+  });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => {
+    const saved = localStorage.getItem("fileManagerSortOrder");
+    return saved === "asc" || saved === "desc" ? saved : "asc";
+  });
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
+  const [totpPrompt, setTotpPrompt] = useState<string>("");
+  const [warpgateRequired, setWarpgateRequired] = useState(false);
+  const [warpgateSessionId, setWarpgateSessionId] = useState<string | null>(
+    null,
+  );
+  const [warpgateUrl, setWarpgateUrl] = useState<string>("");
+  const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authDialogReason, setAuthDialogReason] = useState<
+    "no_keyboard" | "auth_failed" | "timeout"
+  >("no_keyboard");
+  const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [diskInfo, setDiskInfo] = useState<{
+    usedHuman: string;
+    totalHuman: string;
+    percent: number;
+  } | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    isVisible: boolean;
+    files: FileItem[];
+  }>({
+    x: 0,
+    y: 0,
+    isVisible: false,
+    files: [],
+  });
+
+  const [clipboard, setClipboard] = useState<{
+    files: FileItem[];
+    operation: "copy" | "cut";
+  } | null>(null);
+
+  interface UndoAction {
+    type: "copy" | "cut" | "delete";
+    description: string;
+    data: {
+      operation: "copy" | "cut";
+      copiedFiles?: {
+        originalPath: string;
+        targetPath: string;
+        targetName: string;
+      }[];
+      deletedFiles?: { path: string; name: string }[];
+      targetDirectory?: string;
+    };
+    timestamp: number;
+  }
+
+  const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
+
+  const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
+  const [editingFile, setEditingFile] = useState<FileItem | null>(null);
+  const [permissionsDialogFile, setPermissionsDialogFile] =
+    useState<FileItem | null>(null);
+  const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>(
+    [],
+  );
+
+  const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
+  const [pendingSudoOperation, setPendingSudoOperation] = useState<
+    | { type: "delete"; files: FileItem[] }
+    | { type: "navigate"; path: string }
+    | null
+  >(null);
+
+  const { selectedFiles, clearSelection, setSelection } = useFileSelection();
+
+  const { dragHandlers } = useDragAndDrop({
+    onFilesDropped: handleFilesDropped,
+    onItemsDropped: handleItemsDropped,
+    onError: (error) => toast.error(error),
+    maxFileSize: 5120,
+  });
+
+  const dragToDesktop = useDragToDesktop({
+    sshSessionId: sshSessionId || "",
+    sshHost: currentHost!,
+  });
+
+  const systemDrag = useDragToSystemDesktop({
+    sshSessionId: sshSessionId || "",
+    sshHost: currentHost!,
+  });
+
+  const startKeepalive = useCallback(() => {
+    if (!sshSessionId) return;
+
+    if (keepaliveTimerRef.current) {
+      clearInterval(keepaliveTimerRef.current);
+    }
+
+    keepaliveTimerRef.current = setInterval(async () => {
+      if (sshSessionId) {
+        try {
+          await keepSSHAlive(sshSessionId);
+        } catch (error) {
+          console.error("SSH keepalive failed:", error);
+        }
+      }
+    }, 30 * 1000);
+  }, [sshSessionId]);
+
+  const stopKeepalive = useCallback(() => {
+    if (keepaliveTimerRef.current) {
+      clearInterval(keepaliveTimerRef.current);
+      keepaliveTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCloseWithError = useCallback(
+    (errorMessage: string) => {
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        stage: "connection",
+        message: errorMessage,
+      });
+    },
+    [addLog],
+  );
+
+  useEffect(() => {
+    if (currentHost) {
+      initializeSSHConnection();
+    }
+  }, [currentHost]);
+
+  useEffect(() => {
+    if (sshSessionId) {
+      startKeepalive();
+    } else {
+      stopKeepalive();
+    }
+
+    return () => {
+      stopKeepalive();
+    };
+  }, [sshSessionId, startKeepalive, stopKeepalive]);
+
+  const initialLoadDoneRef = useRef(false);
+  const lastPathChangeRef = useRef<string>("");
+  const pathChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentLoadingPathRef = useRef<string>("");
+  const keepaliveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activityLoggedRef = useRef(false);
+  const activityLoggingRef = useRef(false);
+
+  const logFileManagerActivity = useCallback(async () => {
+    if (
+      !currentHost?.id ||
+      activityLoggedRef.current ||
+      activityLoggingRef.current
+    ) {
+      return;
+    }
+
+    activityLoggingRef.current = true;
+    activityLoggedRef.current = true;
+
+    try {
+      const hostName =
+        currentHost.name || `${currentHost.username}@${currentHost.ip}`;
+      await logActivity("file_manager", currentHost.id, hostName);
+    } catch (err) {
+      console.warn("Failed to log file manager activity:", err);
+      activityLoggedRef.current = false;
+    } finally {
+      activityLoggingRef.current = false;
+    }
+  }, [currentHost]);
+
+  const handleFileDragStart = useCallback(
+    (files: FileItem[]) => {
+      systemDrag.startDragToSystem(files, {
+        enableToast: true,
+        onSuccess: () => {
+          clearSelection();
+        },
+        onError: (error) => {
+          console.error("Drag failed:", error);
+        },
+      });
+    },
+    [systemDrag, clearSelection],
+  );
+
+  const handleFileDragEnd = useCallback(
+    (e: DragEvent, draggedFiles: FileItem[]) => {
+      const isOutside =
+        e.clientX < 0 ||
+        e.clientX > window.innerWidth ||
+        e.clientY < 0 ||
+        e.clientY > window.innerHeight;
+
+      if (isOutside) {
+        if (draggedFiles.length === 0) {
+          console.error("No files to drag - this should not happen");
+          return;
+        }
+
+        systemDrag.startDragToSystem(draggedFiles, {
+          enableToast: true,
+          onSuccess: () => {
+            clearSelection();
+          },
+          onError: (error) => {
+            console.error("Drag failed:", error);
+          },
+        });
+        systemDrag.handleDragEnd(e);
+      } else {
+        systemDrag.cancelDragToSystem();
+      }
+    },
+    [systemDrag, clearSelection],
+  );
+
+  const isConnectingRef = useRef(false);
+
+  async function initializeSSHConnection() {
+    if (!currentHost || isConnectingRef.current) return;
+
+    if (currentHost.enableSsh === false) {
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        message: t("fileManager.sshRequiredForFileManager"),
+        timestamp: new Date().toISOString(),
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    isConnectingRef.current = true;
+
+    try {
+      setIsLoading(true);
+      initialLoadDoneRef.current = false;
+      setHasConnectionError(false);
+      clearLogs();
+
+      const sessionId = currentHost.id.toString();
+
+      const result = await connectSSH(sessionId, {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        password: currentHost.password,
+        sshKey: currentHost.key,
+        keyPassword: currentHost.keyPassword,
+        authType: currentHost.authType,
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId,
+        forceKeyboardInteractive: currentHost.forceKeyboardInteractive,
+        jumpHosts: currentHost.jumpHosts,
+        useSocks5: currentHost.useSocks5,
+        socks5Host: currentHost.socks5Host,
+        socks5Port: currentHost.socks5Port,
+        socks5Username: currentHost.socks5Username,
+        socks5Password: currentHost.socks5Password,
+        socks5ProxyChain: currentHost.socks5ProxyChain,
+      });
+
+      if (result?.requires_warpgate) {
+        setWarpgateRequired(true);
+        setWarpgateSessionId(sessionId);
+        setWarpgateUrl(result.url || "");
+        setWarpgateSecurityKey(result.securityKey || "N/A");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.requires_totp) {
+        setTotpRequired(true);
+        setTotpSessionId(sessionId);
+        setTotpPrompt(result.prompt || t("fileManager.verificationCodePrompt"));
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.status === "auth_required") {
+        setAuthDialogReason(result.reason || "no_keyboard");
+        setShowAuthDialog(true);
+        setIsLoading(false);
+        return;
+      }
+
+      setSshSessionId(sessionId);
+
+      try {
+        const response = await listSSHFiles(sessionId, currentPath);
+        const files = Array.isArray(response)
+          ? response
+          : response?.files || [];
+        setFiles(files);
+        clearSelection();
+        initialLoadDoneRef.current = true;
+
+        if (!result?.requires_totp) {
+          logFileManagerActivity();
+        }
+      } catch (dirError: unknown) {
+        console.error("Failed to load initial directory:", dirError);
+      }
+    } catch (error: unknown) {
+      const sshError = error as SSHConnectionError;
+      console.error("SSH connection failed:", error);
+
+      if (sshError.connectionLogs) {
+        sshError.connectionLogs.forEach((log) => {
+          addLog({
+            type: log.type,
+            stage: log.stage,
+            message: log.message,
+            details: log.details,
+          });
+        });
+        if (sshError.requires_totp) {
+          setTotpRequired(true);
+          setTotpSessionId(sshError.sessionId || currentHost.id.toString());
+          setTotpPrompt(
+            sshError.prompt || t("fileManager.verificationCodePrompt"),
+          );
+          setIsLoading(false);
+          return;
+        }
+        if (sshError.requires_warpgate) {
+          setWarpgateRequired(true);
+          setWarpgateSessionId(sshError.sessionId || currentHost.id.toString());
+          setWarpgateUrl(sshError.url || "");
+          setWarpgateSecurityKey(sshError.securityKey || "N/A");
+          setIsLoading(false);
+          return;
+        }
+        if (sshError.status === "auth_required") {
+          setAuthDialogReason(sshError.reason || "no_keyboard");
+          setShowAuthDialog(true);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        addLog({
+          type: "error",
+          stage: "connection",
+          message:
+            error instanceof Error
+              ? error.message
+              : t("fileManager.failedToConnect"),
+        });
+      }
+
+      handleCloseWithError(
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    } finally {
+      setIsLoading(false);
+      isConnectingRef.current = false;
+    }
+  }
+
+  const loadDirectory = useCallback(
+    async (path: string): Promise<boolean> => {
+      if (!sshSessionId) {
+        console.error("Cannot load directory: no SSH session ID");
+        return false;
+      }
+
+      let resolvedPath = path;
+      if (path.includes("$") || path.startsWith("~")) {
+        resolvedPath = await resolveSSHPath(sshSessionId, path);
+        if (resolvedPath !== path) {
+          setCurrentPath(resolvedPath);
+          lastPathChangeRef.current = resolvedPath;
+        }
+      }
+
+      currentLoadingPathRef.current = resolvedPath;
+      setIsLoading(true);
+
+      try {
+        const response = await listSSHFiles(sshSessionId, resolvedPath);
+
+        if (currentLoadingPathRef.current !== resolvedPath) {
+          return false;
+        }
+
+        const files = Array.isArray(response)
+          ? response
+          : response?.files || [];
+
+        setFiles(files);
+        clearSelection();
+        return true;
+      } catch (error: unknown) {
+        if (currentLoadingPathRef.current === resolvedPath) {
+          // ApiError has .status directly; raw axios errors have .response.status
+          const apiError = error as {
+            status?: number;
+            code?: string;
+            response?: {
+              status?: number;
+              data?: {
+                needsSudo?: boolean;
+                error?: string;
+                sudoFailed?: boolean;
+                disconnected?: boolean;
+              };
+            };
+            message?: string;
+          };
+
+          const httpStatus = apiError.status ?? apiError.response?.status;
+
+          // 409 = concurrent request already in flight — silently drop
+          if (httpStatus === 409) {
+            return false;
+          }
+
+          if (apiError.response?.data?.needsSudo) {
+            if (!sudoDialogOpen) {
+              setPendingSudoOperation({ type: "navigate", path: resolvedPath });
+              setSudoDialogOpen(true);
+            }
+
+            if (apiError.response.data.sudoFailed) {
+              toast.error(t("fileManager.sudoAuthFailed"));
+            } else {
+              toast.error(t("fileManager.permissionDenied"));
+            }
+            return false;
+          }
+
+          console.error("Failed to load directory:", error);
+
+          const errorMessage =
+            apiError.response?.data?.error || apiError.message || String(error);
+
+          const isConnectionError =
+            // 500s from the file manager are SSH channel/session errors
+            httpStatus === 500 ||
+            httpStatus === 503 ||
+            apiError.response?.data?.disconnected === true ||
+            errorMessage?.includes("channel open failure") ||
+            errorMessage?.includes("open failed") ||
+            errorMessage?.includes("SSH connection not established") ||
+            errorMessage?.includes("SSH session") ||
+            errorMessage?.toLowerCase().includes("not connected");
+
+          if (isConnectionError && sshSessionId && currentHost) {
+            setIsReconnecting(true);
+            setIsLoading(false);
+            setFiles([]);
+            currentLoadingPathRef.current = "";
+
+            void (async () => {
+              const delays = [1000, 2000, 3000, 5000, 5000];
+              for (let attempt = 0; attempt < delays.length; attempt++) {
+                await new Promise((r) => setTimeout(r, delays[attempt]));
+                try {
+                  await ensureSSHConnection();
+                  setIsReconnecting(false);
+                  loadDirectory(resolvedPath);
+                  return;
+                } catch {
+                  // keep retrying
+                }
+              }
+              setIsReconnecting(false);
+              handleCloseWithError(
+                t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
+              );
+            })();
+
+            return false;
+          } else if (initialLoadDoneRef.current) {
+            const isPermissionDenied =
+              httpStatus === 403 ||
+              errorMessage?.toLowerCase().includes("permission denied") ||
+              errorMessage?.toLowerCase().includes("eacces");
+            if (isPermissionDenied) {
+              toast.error(t("fileManager.permissionDenied"));
+            } else {
+              toast.error(
+                t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
+              );
+            }
+          }
+        }
+        return false;
+      } finally {
+        if (currentLoadingPathRef.current === resolvedPath) {
+          setIsLoading(false);
+          currentLoadingPathRef.current = "";
+        }
+      }
+    },
+    [sshSessionId, isLoading, clearSelection, t, sudoDialogOpen, currentHost],
+  );
+
+  const debouncedLoadDirectory = useCallback(
+    (path: string, force?: boolean) => {
+      if (pathChangeTimerRef.current) {
+        clearTimeout(pathChangeTimerRef.current);
+      }
+
+      pathChangeTimerRef.current = setTimeout(() => {
+        if ((force || path !== lastPathChangeRef.current) && sshSessionId) {
+          lastPathChangeRef.current = path;
+          loadDirectory(path);
+        }
+      }, 150);
+    },
+    [sshSessionId, loadDirectory],
+  );
+
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (sshSessionId) setIsLoading(true);
+      setCurrentPath(path);
+      setNavHistory((prev) => {
+        const next = [...prev.slice(0, navIndex + 1), path];
+        setNavIndex(next.length - 1);
+        return next;
+      });
+    },
+    [navIndex, sshSessionId],
+  );
+
+  const goBack = useCallback(() => {
+    if (navIndex > 0) {
+      if (sshSessionId) setIsLoading(true);
+      const newIndex = navIndex - 1;
+      setNavIndex(newIndex);
+      setCurrentPath(navHistory[newIndex]);
+    }
+  }, [navIndex, navHistory, sshSessionId]);
+
+  const goForward = useCallback(() => {
+    if (navIndex < navHistory.length - 1) {
+      if (sshSessionId) setIsLoading(true);
+      const newIndex = navIndex + 1;
+      setNavIndex(newIndex);
+      setCurrentPath(navHistory[newIndex]);
+    }
+  }, [navIndex, navHistory, sshSessionId]);
+
+  const goUp = useCallback(() => {
+    if (currentPath === "/") return;
+    const parent =
+      currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+    navigateTo(parent);
+  }, [currentPath, navigateTo]);
+
+  useEffect(() => {
+    if (sshSessionId && currentPath) {
+      if (!initialLoadDoneRef.current) {
+        initialLoadDoneRef.current = true;
+        lastPathChangeRef.current = currentPath;
+        return;
+      }
+
+      debouncedLoadDirectory(currentPath);
+    }
+
+    return () => {
+      if (pathChangeTimerRef.current) {
+        clearTimeout(pathChangeTimerRef.current);
+      }
+    };
+  }, [sshSessionId, currentPath, debouncedLoadDirectory]);
+
+  const handleRefreshDirectory = useCallback(() => {
+    const now = Date.now();
+    const DEBOUNCE_MS = 500;
+
+    if (now - lastRefreshTime < DEBOUNCE_MS) {
+      return;
+    }
+
+    setLastRefreshTime(now);
+    // Force reset loading state to ensure refresh is not blocked
+    setIsLoading(false);
+    currentLoadingPathRef.current = "";
+    loadDirectory(currentPath);
+  }, [currentPath, lastRefreshTime, loadDirectory]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.contentEditable === "true")
+      ) {
+        return;
+      }
+
+      if (event.key === "T" && event.ctrlKey && event.shiftKey) {
+        event.preventDefault();
+        handleOpenTerminal(currentPath);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [currentPath]);
+
+  async function handleItemsDropped(items: DataTransferItemList) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    const entries: FileSystemEntry[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry?.();
+      if (entry) entries.push(entry);
+    }
+
+    const files: { file: File; relativePath: string }[] = [];
+
+    async function readEntry(
+      entry: FileSystemEntry,
+      path: string,
+    ): Promise<void> {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) =>
+          (entry as FileSystemFileEntry).file(resolve, reject),
+        );
+        files.push({ file, relativePath: path });
+      } else if (entry.isDirectory) {
+        const reader = (entry as FileSystemDirectoryEntry).createReader();
+        const dirEntries = await new Promise<FileSystemEntry[]>(
+          (resolve, reject) => reader.readEntries(resolve, reject),
+        );
+        for (const child of dirEntries) {
+          await readEntry(child, `${path}/${child.name}`);
+        }
+      }
+    }
+
+    for (const entry of entries) {
+      await readEntry(entry, entry.name);
+    }
+
+    if (files.length === 0) return;
+
+    const progressToast = toast.loading(
+      `Uploading ${files.length} file(s)...`,
+      { duration: Infinity },
+    );
+
+    try {
+      await ensureSSHConnection();
+
+      const dirs = new Set<string>();
+      for (const { relativePath } of files) {
+        const parts = relativePath.split("/");
+        for (let i = 1; i < parts.length; i++) {
+          dirs.add(parts.slice(0, i).join("/"));
+        }
+      }
+
+      const sortedDirs = Array.from(dirs).sort();
+      for (const dir of sortedDirs) {
+        const parentPath = currentPath.endsWith("/")
+          ? currentPath + dir.split("/").slice(0, -1).join("/")
+          : currentPath + "/" + dir.split("/").slice(0, -1).join("/");
+        const folderName = dir.split("/").pop()!;
+        const targetPath = parentPath.endsWith("/")
+          ? parentPath
+          : parentPath + "/";
+        try {
+          await createSSHFolder(
+            sshSessionId,
+            targetPath,
+            folderName,
+            currentHost?.id,
+          );
+        } catch {
+          // directory may already exist
+        }
+      }
+
+      for (const { file, relativePath } of files) {
+        const dirPart = relativePath.includes("/")
+          ? relativePath.substring(0, relativePath.lastIndexOf("/"))
+          : "";
+        const uploadPath = dirPart
+          ? (currentPath.endsWith("/") ? currentPath : currentPath + "/") +
+            dirPart +
+            "/"
+          : currentPath;
+
+        const fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error);
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result.split(",")[1] || "");
+            } else {
+              reject(new Error("Failed to read file"));
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+
+        await uploadSSHFile(
+          sshSessionId,
+          uploadPath,
+          file.name,
+          fileContent,
+          currentHost?.id,
+        );
+      }
+
+      toast.dismiss(progressToast);
+      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      handleRefreshDirectory();
+    } catch (error) {
+      toast.dismiss(progressToast);
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Folder upload failed:", error);
+    }
+  }
+
+  function handleFilesDropped(fileList: FileList) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    Array.from(fileList).forEach((file) => {
+      handleUploadFile(file);
+    });
+  }
+
+  async function handleUploadFile(file: File) {
+    if (!sshSessionId) return;
+
+    const progressToast = toast.loading(
+      t("fileManager.uploadingFile", {
+        name: file.name,
+        size: formatFileSize(file.size),
+      }),
+      { duration: Infinity },
+    );
+
+    try {
+      await ensureSSHConnection();
+
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            const base64 = reader.result.split(",")[1] || "";
+            resolve(base64);
+          } else {
+            reject(new Error("Failed to read file"));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      await uploadSSHFile(
+        sshSessionId,
+        currentPath,
+        file.name,
+        fileContent,
+        currentHost?.id,
+        undefined,
+      );
+
+      toast.dismiss(progressToast);
+
+      toast.success(
+        t("fileManager.fileUploadedSuccessfully", { name: file.name }),
+      );
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      toast.dismiss(progressToast);
+      const uploadErr = error instanceof Error ? error : null;
+      if (
+        uploadErr?.message?.includes("connection") ||
+        uploadErr?.message?.includes("established")
+      ) {
+        toast.error(
+          t("fileManager.sshConnectionFailed", {
+            name: currentHost?.name,
+            ip: currentHost?.ip,
+            port: currentHost?.port,
+          }),
+        );
+      } else {
+        toast.error(t("fileManager.failedToUploadFile"));
+      }
+      console.error("Upload failed:", error);
+    }
+  }
+
+  async function handleDownloadFile(file: FileItem) {
+    if (!sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      const { downloadSSHFileStream } = await import("@/main-axios.ts");
+      await downloadSSHFileStream(sshSessionId, file.path);
+
+      toast.success(
+        t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+      );
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : null;
+      if (
+        err?.message?.includes("connection") ||
+        err?.message?.includes("established")
+      ) {
+        toast.error(
+          t("fileManager.sshConnectionFailed", {
+            name: currentHost?.name,
+            ip: currentHost?.ip,
+            port: currentHost?.port,
+          }),
+        );
+      } else {
+        toast.error(t("fileManager.failedToDownloadFile"));
+      }
+      console.error("Download failed:", error);
+    }
+  }
+
+  async function handleDeleteFiles(files: FileItem[]) {
+    if (!sshSessionId || files.length === 0) return;
+
+    let confirmMessage: string;
+    if (files.length === 1) {
+      const file = files[0];
+      if (file.type === "directory") {
+        confirmMessage = t("fileManager.confirmDeleteFolder", {
+          name: file.name,
+        });
+      } else {
+        confirmMessage = t("fileManager.confirmDeleteSingleItem", {
+          name: file.name,
+        });
+      }
+    } else {
+      const hasDirectory = files.some((file) => file.type === "directory");
+      const translationKey = hasDirectory
+        ? "fileManager.confirmDeleteMultipleItemsWithFolders"
+        : "fileManager.confirmDeleteMultipleItems";
+
+      confirmMessage = t(translationKey, {
+        count: files.length,
+      });
+    }
+
+    const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
+
+    confirmWithToast(
+      fullMessage,
+      async () => {
+        try {
+          await ensureSSHConnection();
+
+          for (const file of files) {
+            await deleteSSHItem(
+              sshSessionId,
+              file.path,
+              file.type === "directory",
+              currentHost?.id,
+              currentHost?.userId?.toString(),
+            );
+          }
+
+          const deletedFiles = files.map((file) => ({
+            path: file.path,
+            name: file.name,
+          }));
+
+          const undoAction: UndoAction = {
+            type: "delete",
+            description: t("fileManager.deletedItems", { count: files.length }),
+            data: {
+              operation: "cut",
+              deletedFiles,
+              targetDirectory: currentPath,
+            },
+            timestamp: Date.now(),
+          };
+          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
+
+          toast.success(
+            t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
+          );
+          handleRefreshDirectory();
+          clearSelection();
+        } catch (error: unknown) {
+          const axiosError = error as {
+            response?: {
+              data?: { needsSudo?: boolean; error?: string };
+              status?: number;
+            };
+            message?: string;
+          };
+          if (axiosError.response?.data?.needsSudo) {
+            setPendingSudoOperation({ type: "delete", files });
+            setSudoDialogOpen(true);
+            return;
+          }
+          if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else if (
+            axiosError.message?.includes("connection") ||
+            axiosError.message?.includes("established")
+          ) {
+            toast.error(
+              t("fileManager.sshConnectionFailed", {
+                name: currentHost?.name,
+                ip: currentHost?.ip,
+                port: currentHost?.port,
+              }),
+            );
+          } else {
+            toast.error(t("fileManager.failedToDeleteItems"));
+          }
+          console.error("Delete failed:", error);
+        }
+      },
+      "destructive",
+    );
+  }
+
+  async function handleSudoPasswordSubmit(password: string) {
+    if (!sshSessionId || !pendingSudoOperation) return;
+
+    try {
+      await setSudoPassword(sshSessionId, password);
+      setSudoDialogOpen(false);
+
+      if (pendingSudoOperation.type === "delete") {
+        for (const file of pendingSudoOperation.files) {
+          await deleteSSHItem(
+            sshSessionId,
+            file.path,
+            file.type === "directory",
+            currentHost?.id,
+            currentHost?.userId?.toString(),
+          );
+        }
+        toast.success(
+          t("fileManager.itemsDeletedSuccessfully", {
+            count: pendingSudoOperation.files.length,
+          }),
+        );
+        handleRefreshDirectory();
+        clearSelection();
+      } else if (pendingSudoOperation.type === "navigate") {
+        const success = await loadDirectory(pendingSudoOperation.path);
+        if (success) {
+          setCurrentPath(pendingSudoOperation.path);
+          setPendingSudoOperation(null);
+        }
+        return;
+      }
+
+      setPendingSudoOperation(null);
+    } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { data?: { needsSudo?: boolean; sudoFailed?: boolean } };
+        message?: string;
+      };
+
+      if (axiosError.response?.data?.sudoFailed) {
+        toast.error(t("fileManager.sudoAuthFailed"));
+        setSudoDialogOpen(true);
+        return;
+      }
+
+      toast.error(axiosError.message || t("fileManager.sudoOperationFailed"));
+      setPendingSudoOperation(null);
+    }
+  }
+
+  function handleCreateNewFolder() {
+    const defaultName = generateUniqueName(
+      t("fileManager.newFolderDefault"),
+      "directory",
+    );
+    setCreateIntent({
+      id: Date.now().toString(),
+      type: "directory" as const,
+      defaultName,
+      currentName: defaultName,
+    });
+  }
+
+  function handleCreateNewFile() {
+    const defaultName = generateUniqueName(
+      t("fileManager.newFileDefault"),
+      "file",
+    );
+    setCreateIntent({
+      id: Date.now().toString(),
+      type: "file" as const,
+      defaultName,
+      currentName: defaultName,
+    });
+  }
+
+  const handleSymlinkClick = async (file: FileItem) => {
+    if (!currentHost || !sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      const currentSessionId = sshSessionId;
+      const status = await getSSHStatus(currentSessionId);
+      if (!status.connected) {
+        const result = await connectSSH(currentSessionId, {
+          hostId: currentHost.id,
+          ip: currentHost.ip,
+          port: currentHost.port,
+          username: currentHost.username,
+          authType: currentHost.authType,
+          password: currentHost.password,
+          sshKey: currentHost.key,
+          keyPassword: currentHost.keyPassword,
+          credentialId: currentHost.credentialId,
+          jumpHosts: currentHost.jumpHosts,
+          useSocks5: currentHost.useSocks5,
+          socks5Host: currentHost.socks5Host,
+          socks5Port: currentHost.socks5Port,
+          socks5Username: currentHost.socks5Username,
+          socks5Password: currentHost.socks5Password,
+          socks5ProxyChain: currentHost.socks5ProxyChain,
+        });
+
+        if (!result.success) {
+          throw new Error(t("fileManager.failedToReconnectSSH"));
+        }
+      }
+
+      const symlinkInfo = await identifySSHSymlink(currentSessionId, file.path);
+
+      if (symlinkInfo.type === "directory") {
+        setCurrentPath(symlinkInfo.target);
+      } else if (symlinkInfo.type === "file") {
+        const windowCount = Date.now() % 10;
+        const offsetX = 120 + windowCount * 30;
+        const offsetY = 120 + windowCount * 30;
+
+        const targetFile: FileItem = {
+          ...file,
+          path: symlinkInfo.target,
+        };
+
+        const createWindowComponent = (windowId: string) => (
+          <FileWindow
+            windowId={windowId}
+            file={targetFile}
+            sshSessionId={currentSessionId}
+            sshHost={currentHost}
+            initialX={offsetX}
+            initialY={offsetY}
+          />
+        );
+
+        openWindow({
+          title: file.name,
+          x: offsetX,
+          y: offsetY,
+          width: 800,
+          height: 600,
+          isMaximized: false,
+          isMinimized: false,
+          component: createWindowComponent,
+        });
+      }
+    } catch (error: unknown) {
+      toast.error(
+        error?.response?.data?.error ||
+          error?.message ||
+          t("fileManager.failedToResolveSymlink"),
+      );
+    }
+  };
+
+  async function handleFileOpen(file: FileItem) {
+    if (file.type === "directory") {
+      if (sshSessionId) setIsLoading(true);
+      setCurrentPath(file.path);
+    } else if (file.type === "link") {
+      await handleSymlinkClick(file);
+    } else {
+      if (!sshSessionId) {
+        toast.error(t("fileManager.noSSHConnection"));
+        return;
+      }
+
+      await recordRecentFile(file);
+
+      const windowCount = Date.now() % 10;
+      const baseOffsetX = 120 + windowCount * 30;
+      const baseOffsetY = 120 + windowCount * 30;
+
+      const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
+      const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
+
+      const offsetX = Math.min(baseOffsetX, maxOffsetX);
+      const offsetY = Math.min(baseOffsetY, maxOffsetY);
+
+      const windowTitle = file.name;
+
+      const createWindowComponent = (windowId: string) => (
+        <FileWindow
+          windowId={windowId}
+          file={file}
+          sshSessionId={sshSessionId}
+          sshHost={currentHost}
+          initialX={offsetX}
+          initialY={offsetY}
+          onFileNotFound={handleFileNotFound}
+        />
+      );
+
+      openWindow({
+        title: windowTitle,
+        x: offsetX,
+        y: offsetY,
+        width: 800,
+        height: 600,
+        isMaximized: false,
+        isMinimized: false,
+        component: createWindowComponent,
+      });
+    }
+  }
+
+  function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
+    event.preventDefault();
+
+    let files: FileItem[];
+    if (file) {
+      const isFileSelected = selectedFiles.some((f) => f.path === file.path);
+      files = isFileSelected ? selectedFiles : [file];
+    } else {
+      files = selectedFiles;
+    }
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      isVisible: true,
+      files,
+    });
+  }
+
+  function handleCopyFiles(files: FileItem[]) {
+    setClipboard({ files, operation: "copy" });
+    toast.success(
+      t("fileManager.filesCopiedToClipboard", { count: files.length }),
+    );
+  }
+
+  function handleCutFiles(files: FileItem[]) {
+    setClipboard({ files, operation: "cut" });
+    toast.success(
+      t("fileManager.filesCutToClipboard", { count: files.length }),
+    );
+  }
+
+  function handleCopyPath(files: FileItem[]) {
+    if (files.length === 0) return;
+
+    const paths = files.map((file) => file.path).join("\n");
+
+    navigator.clipboard.writeText(paths).then(
+      () => {
+        toast.success(
+          files.length === 1
+            ? t("fileManager.pathCopiedToClipboard")
+            : t("fileManager.pathsCopiedToClipboard", { count: files.length }),
+        );
+      },
+      (err) => {
+        console.error("Failed to copy path to clipboard:", err);
+        toast.error(t("fileManager.failedToCopyPath"));
+      },
+    );
+  }
+
+  async function handlePasteFiles() {
+    if (!clipboard || !sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      const { files, operation } = clipboard;
+
+      let successCount = 0;
+      const copiedItems: string[] = [];
+
+      for (const file of files) {
+        try {
+          if (operation === "copy") {
+            const result = await copySSHItem(
+              sshSessionId,
+              file.path,
+              currentPath,
+              currentHost?.id,
+              currentHost?.userId?.toString(),
+            );
+            copiedItems.push(result.uniqueName || file.name);
+            successCount++;
+          } else {
+            const targetPath = currentPath.endsWith("/")
+              ? `${currentPath}${file.name}`
+              : `${currentPath}/${file.name}`;
+
+            if (file.path !== targetPath) {
+              await moveSSHItem(
+                sshSessionId,
+                file.path,
+                targetPath,
+                currentHost?.id,
+                currentHost?.userId?.toString(),
+              );
+              successCount++;
+            }
+          }
+        } catch (error: unknown) {
+          console.error(`Failed to ${operation} file ${file.name}:`, error);
+          const axiosError = error as {
+            response?: { status?: number; data?: { error?: string } };
+          };
+          if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else {
+            toast.error(
+              t("fileManager.operationFailed", {
+                operation:
+                  operation === "copy"
+                    ? t("fileManager.copy")
+                    : t("fileManager.move"),
+                name: file.name,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          }
+        }
+      }
+
+      if (successCount > 0) {
+        if (operation === "copy") {
+          const copiedFiles = files
+            .slice(0, successCount)
+            .map((file, index) => ({
+              originalPath: file.path,
+              targetPath: `${currentPath}/${copiedItems[index] || file.name}`,
+              targetName: copiedItems[index] || file.name,
+            }));
+
+          const undoAction: UndoAction = {
+            type: "copy",
+            description: t("fileManager.copiedItems", { count: successCount }),
+            data: {
+              operation: "copy",
+              copiedFiles,
+              targetDirectory: currentPath,
+            },
+            timestamp: Date.now(),
+          };
+          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
+        } else if (operation === "cut") {
+          const movedFiles = files.slice(0, successCount).map((file) => {
+            const targetPath = currentPath.endsWith("/")
+              ? `${currentPath}${file.name}`
+              : `${currentPath}/${file.name}`;
+            return {
+              originalPath: file.path,
+              targetPath: targetPath,
+              targetName: file.name,
+            };
+          });
+
+          const undoAction: UndoAction = {
+            type: "cut",
+            description: t("fileManager.movedItems", { count: successCount }),
+            data: {
+              operation: "cut",
+              copiedFiles: movedFiles,
+              targetDirectory: currentPath,
+            },
+            timestamp: Date.now(),
+          };
+          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
+        }
+      }
+
+      if (successCount > 0) {
+        const operationText =
+          operation === "copy" ? t("fileManager.copy") : t("fileManager.move");
+        if (operation === "copy" && copiedItems.length > 0) {
+          const hasRenamed = copiedItems.some(
+            (name) => !files.some((file) => file.name === name),
+          );
+
+          if (hasRenamed) {
+            toast.success(
+              t("fileManager.operationCompletedSuccessfully", {
+                operation: operationText,
+                count: successCount,
+              }),
+            );
+          } else {
+            toast.success(
+              t("fileManager.operationCompleted", {
+                operation: operationText,
+                count: successCount,
+              }),
+            );
+          }
+        } else {
+          toast.success(
+            t("fileManager.operationCompleted", {
+              operation: operationText,
+              count: successCount,
+            }),
+          );
+        }
+      }
+
+      handleRefreshDirectory();
+      clearSelection();
+
+      if (operation === "cut") {
+        setClipboard(null);
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
+    }
+  }
+
+  async function handleExtractArchive(file: FileItem) {
+    if (!sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      toast.info(t("fileManager.extractingArchive", { name: file.name }));
+
+      await extractSSHArchive(
+        sshSessionId,
+        file.path,
+        undefined,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(
+        t("fileManager.archiveExtractedSuccessfully", { name: file.name }),
+      );
+
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
+    }
+  }
+
+  function handleOpenCompressDialog(files: FileItem[]) {
+    setCompressDialogFiles(files);
+  }
+
+  async function handleCompress(archiveName: string, format: string) {
+    if (!sshSessionId || compressDialogFiles.length === 0) return;
+
+    try {
+      await ensureSSHConnection();
+
+      const paths = compressDialogFiles.map((f) => f.path);
+      const fileNames = compressDialogFiles.map((f) => f.name);
+
+      toast.info(
+        t("fileManager.compressingFiles", {
+          count: fileNames.length,
+          name: archiveName,
+        }),
+      );
+
+      await compressSSHFiles(
+        sshSessionId,
+        paths,
+        archiveName,
+        format,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(
+        t("fileManager.filesCompressedSuccessfully", {
+          name: archiveName,
+        }),
+      );
+
+      handleRefreshDirectory();
+      clearSelection();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
+    }
+  }
+
+  async function handleUndo() {
+    if (undoHistory.length === 0) {
+      toast.info(t("fileManager.noUndoableActions"));
+      return;
+    }
+
+    const lastAction = undoHistory[undoHistory.length - 1];
+
+    try {
+      await ensureSSHConnection();
+
+      switch (lastAction.type) {
+        case "copy":
+          if (lastAction.data.copiedFiles) {
+            let successCount = 0;
+            for (const copiedFile of lastAction.data.copiedFiles) {
+              try {
+                const isDirectory =
+                  files.find((f) => f.path === copiedFile.targetPath)?.type ===
+                  "directory";
+                await deleteSSHItem(
+                  sshSessionId!,
+                  copiedFile.targetPath,
+                  isDirectory,
+                  currentHost?.id,
+                  currentHost?.userId?.toString(),
+                );
+                successCount++;
+              } catch (error: unknown) {
+                console.error(
+                  `Failed to delete copied file ${copiedFile.targetName}:`,
+                  error,
+                );
+                toast.error(
+                  t("fileManager.deleteCopiedFileFailed", {
+                    name: copiedFile.targetName,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  }),
+                );
+              }
+            }
+
+            if (successCount > 0) {
+              setUndoHistory((prev) => prev.slice(0, -1));
+              toast.success(
+                t("fileManager.undoCopySuccess", { count: successCount }),
+              );
+            } else {
+              toast.error(t("fileManager.undoCopyFailedDelete"));
+              return;
+            }
+          } else {
+            toast.error(t("fileManager.undoCopyFailedNoInfo"));
+            return;
+          }
+          break;
+
+        case "cut":
+          if (lastAction.data.copiedFiles) {
+            let successCount = 0;
+            for (const movedFile of lastAction.data.copiedFiles) {
+              try {
+                await moveSSHItem(
+                  sshSessionId!,
+                  movedFile.targetPath,
+                  movedFile.originalPath,
+                  currentHost?.id,
+                  currentHost?.userId?.toString(),
+                );
+                successCount++;
+              } catch (error: unknown) {
+                console.error(
+                  `Failed to move back file ${movedFile.targetName}:`,
+                  error,
+                );
+                toast.error(
+                  t("fileManager.moveBackFileFailed", {
+                    name: movedFile.targetName,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  }),
+                );
+              }
+            }
+
+            if (successCount > 0) {
+              setUndoHistory((prev) => prev.slice(0, -1));
+              toast.success(
+                t("fileManager.undoMoveSuccess", { count: successCount }),
+              );
+            } else {
+              toast.error(t("fileManager.undoMoveFailedMove"));
+              return;
+            }
+          } else {
+            toast.error(t("fileManager.undoMoveFailedNoInfo"));
+            return;
+          }
+          break;
+
+        case "delete":
+          toast.info(t("fileManager.undoDeleteNotSupported"));
+          setUndoHistory((prev) => prev.slice(0, -1));
+          return;
+
+        default:
+          toast.error(t("fileManager.undoTypeNotSupported"));
+          return;
+      }
+
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
+      console.error("Undo failed:", error);
+    }
+  }
+
+  function handleRenameFile(file: FileItem) {
+    setEditingFile(file);
+  }
+
+  function handleOpenPermissionsDialog(file: FileItem) {
+    setPermissionsDialogFile(file);
+  }
+
+  async function handleSavePermissions(file: FileItem, permissions: string) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      await changeSSHPermissions(
+        sshSessionId,
+        file.path,
+        permissions,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(t("fileManager.permissionsChangedSuccessfully"));
+      await handleRefreshDirectory();
+    } catch (error: unknown) {
+      console.error("Failed to change permissions:", error);
+      toast.error(t("fileManager.failedToChangePermissions"));
+      throw error;
+    }
+  }
+
+  async function ensureSSHConnection() {
+    if (!sshSessionId || !currentHost) return;
+
+    const status = await getSSHStatus(sshSessionId);
+
+    if (!status.connected) {
+      await connectSSH(sshSessionId, {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        password: currentHost.password,
+        sshKey: currentHost.key,
+        keyPassword: currentHost.keyPassword,
+        authType: currentHost.authType,
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId,
+        jumpHosts: currentHost.jumpHosts,
+        useSocks5: currentHost.useSocks5,
+        socks5Host: currentHost.socks5Host,
+        socks5Port: currentHost.socks5Port,
+        socks5Username: currentHost.socks5Username,
+        socks5Password: currentHost.socks5Password,
+        socks5ProxyChain: currentHost.socks5ProxyChain,
+      });
+    }
+  }
+
+  async function handleConfirmCreate(name: string) {
+    if (!createIntent || !sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      if (createIntent.type === "file") {
+        await createSSHFile(
+          sshSessionId,
+          currentPath,
+          name,
+          "",
+          currentHost?.id,
+          currentHost?.userId?.toString(),
+        );
+        toast.success(t("fileManager.fileCreatedSuccessfully", { name }));
+      } else {
+        await createSSHFolder(
+          sshSessionId,
+          currentPath,
+          name,
+          currentHost?.id,
+          currentHost?.userId?.toString(),
+        );
+        toast.success(t("fileManager.folderCreatedSuccessfully", { name }));
+      }
+
+      setCreateIntent(null);
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToCreateItem"));
+      }
+      console.error("Create failed:", error);
+    }
+  }
+
+  function handleCancelCreate() {
+    setCreateIntent(null);
+  }
+
+  async function handleRenameConfirm(file: FileItem, newName: string) {
+    if (!sshSessionId) return;
+
+    try {
+      await ensureSSHConnection();
+
+      await renameSSHItem(
+        sshSessionId,
+        file.path,
+        newName,
+        currentHost?.id,
+        currentHost?.userId?.toString(),
+      );
+
+      toast.success(
+        t("fileManager.itemRenamedSuccessfully", { name: newName }),
+      );
+      setEditingFile(null);
+      handleRefreshDirectory();
+    } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToRenameItem"));
+      }
+      console.error("Rename failed:", error);
+    }
+  }
+
+  function handleStartEdit(file: FileItem) {
+    setEditingFile(file);
+  }
+
+  function handleCancelEdit() {
+    setEditingFile(null);
+  }
+
+  async function handleTotpSubmit(code: string) {
+    if (!totpSessionId || !code) return;
+
+    try {
+      setIsLoading(true);
+      const result = await verifySSHTOTP(totpSessionId, code);
+
+      if (result?.status === "success") {
+        setTotpRequired(false);
+        setTotpPrompt("");
+        setSshSessionId(totpSessionId);
+        setTotpSessionId(null);
+
+        try {
+          const response = await listSSHFiles(totpSessionId, currentPath);
+          const files = Array.isArray(response)
+            ? response
+            : response?.files || [];
+          setFiles(files);
+          clearSelection();
+          initialLoadDoneRef.current = true;
+          toast.success(t("fileManager.connectedSuccessfully"));
+
+          logFileManagerActivity();
+        } catch (dirError: unknown) {
+          console.error("Failed to load initial directory:", dirError);
+        }
+      }
+    } catch (error: unknown) {
+      console.error("TOTP verification failed:", error);
+      toast.error(t("fileManager.totpVerificationFailed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleTotpCancel() {
+    setTotpRequired(false);
+    setTotpPrompt("");
+    setTotpSessionId(null);
+    if (onClose) onClose();
+  }
+
+  async function handleWarpgateContinue() {
+    if (!warpgateSessionId) return;
+
+    try {
+      setIsLoading(true);
+      const result = await verifySSHWarpgate(warpgateSessionId);
+
+      if (result?.status === "success") {
+        setWarpgateRequired(false);
+        setWarpgateUrl("");
+        setWarpgateSecurityKey("");
+        setSshSessionId(warpgateSessionId);
+        setWarpgateSessionId(null);
+
+        try {
+          const response = await listSSHFiles(warpgateSessionId, currentPath);
+          const files = Array.isArray(response)
+            ? response
+            : response?.files || [];
+          setFiles(files);
+          clearSelection();
+          initialLoadDoneRef.current = true;
+          toast.success(t("fileManager.connectedSuccessfully"));
+
+          logFileManagerActivity();
+        } catch (dirError: unknown) {
+          console.error("Failed to load initial directory:", dirError);
+        }
+      }
+    } catch (error: unknown) {
+      console.error("Warpgate verification failed:", error);
+      toast.error(t("fileManager.warpgateVerificationFailed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleWarpgateCancel() {
+    setWarpgateRequired(false);
+    setWarpgateUrl("");
+    setWarpgateSecurityKey("");
+    setWarpgateSessionId(null);
+    if (onClose) onClose();
+  }
+
+  function handleWarpgateOpenUrl() {
+    if (warpgateUrl) {
+      window.open(warpgateUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  async function handleAuthDialogSubmit(credentials: {
+    password?: string;
+    sshKey?: string;
+    keyPassword?: string;
+  }) {
+    if (!currentHost) return;
+
+    try {
+      setIsLoading(true);
+      setShowAuthDialog(false);
+
+      const sessionId = currentHost.id.toString();
+
+      const result = await connectSSH(sessionId, {
+        hostId: currentHost.id,
+        ip: currentHost.ip,
+        port: currentHost.port,
+        username: currentHost.username,
+        password: credentials.password,
+        sshKey: credentials.sshKey,
+        keyPassword: credentials.keyPassword,
+        authType: credentials.password ? "password" : "key",
+        credentialId: currentHost.credentialId,
+        userId: currentHost.userId,
+        jumpHosts: currentHost.jumpHosts,
+        useSocks5: currentHost.useSocks5,
+        socks5Host: currentHost.socks5Host,
+        socks5Port: currentHost.socks5Port,
+        socks5Username: currentHost.socks5Username,
+        socks5Password: currentHost.socks5Password,
+        socks5ProxyChain: currentHost.socks5ProxyChain,
+      });
+
+      if (result?.requires_warpgate) {
+        setWarpgateRequired(true);
+        setWarpgateSessionId(sessionId);
+        setWarpgateUrl(result.url || "");
+        setWarpgateSecurityKey(result.securityKey || "N/A");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.requires_totp) {
+        setTotpRequired(true);
+        setTotpSessionId(sessionId);
+        setTotpPrompt(result.prompt || t("fileManager.verificationCodePrompt"));
+        setIsLoading(false);
+        return;
+      }
+
+      if (result?.status === "auth_required") {
+        setAuthDialogReason(result.reason || "auth_failed");
+        setShowAuthDialog(true);
+        setIsLoading(false);
+        toast.error(t("fileManager.authenticationFailed"));
+        return;
+      }
+
+      setSshSessionId(sessionId);
+
+      try {
+        const response = await listSSHFiles(sessionId, currentPath);
+        const files = Array.isArray(response)
+          ? response
+          : response?.files || [];
+        setFiles(files);
+        clearSelection();
+        initialLoadDoneRef.current = true;
+        toast.success(t("fileManager.connectedSuccessfully"));
+        logFileManagerActivity();
+      } catch (dirError: unknown) {
+        console.error("Failed to load initial directory:", dirError);
+      }
+    } catch (error: unknown) {
+      console.error("SSH connection with credentials failed:", error);
+      setAuthDialogReason("auth_failed");
+      setShowAuthDialog(true);
+      toast.error(
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleAuthDialogCancel() {
+    setShowAuthDialog(false);
+    if (onClose) onClose();
+  }
+
+  function generateUniqueName(
+    baseName: string,
+    type: "file" | "directory",
+  ): string {
+    const existingNames = files.map((f) => f.name.toLowerCase());
+    let candidateName = baseName;
+    let counter = 1;
+
+    while (existingNames.includes(candidateName.toLowerCase())) {
+      if (type === "file" && baseName.includes(".")) {
+        const lastDotIndex = baseName.lastIndexOf(".");
+        const nameWithoutExt = baseName.substring(0, lastDotIndex);
+        const extension = baseName.substring(lastDotIndex);
+        candidateName = `${nameWithoutExt}${counter}${extension}`;
+      } else {
+        candidateName = `${baseName}${counter}`;
+      }
+      counter++;
+    }
+
+    return candidateName;
+  }
+
+  async function handleFileDrop(
+    draggedFiles: FileItem[],
+    targetFolder: FileItem,
+  ) {
+    if (!sshSessionId || targetFolder.type !== "directory") return;
+
+    try {
+      await ensureSSHConnection();
+
+      let successCount = 0;
+      const movedItems: string[] = [];
+
+      for (const file of draggedFiles) {
+        try {
+          const targetPath = targetFolder.path.endsWith("/")
+            ? `${targetFolder.path}${file.name}`
+            : `${targetFolder.path}/${file.name}`;
+
+          if (file.path !== targetPath) {
+            await moveSSHItem(
+              sshSessionId,
+              file.path,
+              targetPath,
+              currentHost?.id,
+              currentHost?.userId?.toString(),
+            );
+            movedItems.push(file.name);
+            successCount++;
+          }
+        } catch (error: unknown) {
+          console.error(`Failed to move file ${file.name}:`, error);
+          toast.error(
+            t("fileManager.moveFileFailed", { name: file.name }) +
+              ": " +
+              (error instanceof Error ? error.message : String(error)),
+          );
+        }
+      }
+
+      if (successCount > 0) {
+        const movedFiles = draggedFiles.slice(0, successCount).map((file) => {
+          const targetPath = targetFolder.path.endsWith("/")
+            ? `${targetFolder.path}${file.name}`
+            : `${targetFolder.path}/${file.name}`;
+          return {
+            originalPath: file.path,
+            targetPath: targetPath,
+            targetName: file.name,
+          };
+        });
+
+        const undoAction: UndoAction = {
+          type: "cut",
+          description: t("fileManager.dragMovedItems", {
+            count: successCount,
+            target: targetFolder.name,
+          }),
+          data: {
+            operation: "cut",
+            copiedFiles: movedFiles,
+            targetDirectory: targetFolder.path,
+          },
+          timestamp: Date.now(),
+        };
+        setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
+
+        toast.success(
+          t("fileManager.successfullyMovedItems", {
+            count: successCount,
+            target: targetFolder.name,
+          }),
+        );
+        handleRefreshDirectory();
+        clearSelection();
+      }
+    } catch (error: unknown) {
+      console.error("Drag move operation failed:", error);
+      toast.error(
+        t("fileManager.moveOperationFailed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+  }
+
+  function handleFileDiff(file1: FileItem, file2: FileItem) {
+    if (file1.type !== "file" || file2.type !== "file") {
+      toast.error(t("fileManager.canOnlyCompareFiles"));
+      return;
+    }
+
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    const offsetX = 100;
+    const offsetY = 80;
+
+    const windowId = `diff-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const createWindowComponent = (windowId: string) => (
+      <DiffWindow
+        windowId={windowId}
+        file1={file1}
+        file2={file2}
+        sshSessionId={sshSessionId}
+        sshHost={currentHost}
+        initialX={offsetX}
+        initialY={offsetY}
+      />
+    );
+
+    openWindow({
+      id: windowId,
+      type: "diff",
+      title: t("fileManager.fileComparison", {
+        file1: file1.name,
+        file2: file2.name,
+      }),
+      isMaximized: false,
+      component: createWindowComponent,
+      zIndex: Date.now(),
+    });
+
+    toast.success(
+      t("fileManager.comparingFiles", { file1: file1.name, file2: file2.name }),
+    );
+  }
+
+  async function handleDragToDesktop(files: FileItem[]) {
+    if (!currentHost || !sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    try {
+      if (systemDrag.isFileSystemAPISupported) {
+        await systemDrag.handleDragToSystem(files, {
+          enableToast: true,
+          onError: (error) => {
+            console.error("System-level drag failed:", error);
+          },
+        });
+      } else {
+        if (files.length === 1) {
+          await dragToDesktop.dragFileToDesktop(files[0]);
+        } else if (files.length > 1) {
+          await dragToDesktop.dragFilesToDesktop(files);
+        }
+      }
+    } catch (error: unknown) {
+      console.error("Drag to desktop failed:", error);
+      toast.error(
+        t("fileManager.dragFailed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+  }
+
+  function handleOpenTerminal(path: string) {
+    if (!currentHost) {
+      toast.error(t("fileManager.noHostSelected"));
+      return;
+    }
+
+    const windowCount = Date.now() % 10;
+    const offsetX = 200 + windowCount * 40;
+    const offsetY = 150 + windowCount * 40;
+
+    const createTerminalComponent = (windowId: string) => (
+      <TerminalWindow
+        windowId={windowId}
+        hostConfig={currentHost}
+        initialPath={path}
+        initialX={offsetX}
+        initialY={offsetY}
+      />
+    );
+
+    openWindow({
+      title: t("fileManager.terminal", { host: currentHost.name, path }),
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 500,
+      isMaximized: false,
+      isMinimized: false,
+      component: createTerminalComponent,
+    });
+
+    toast.success(
+      t("terminal.terminalWithPath", { host: currentHost.name, path }),
+    );
+  }
+
+  function handleRunExecutable(file: FileItem) {
+    if (!currentHost) {
+      toast.error(t("fileManager.noHostSelected"));
+      return;
+    }
+
+    if (file.type !== "file" || !file.executable) {
+      toast.error(t("fileManager.onlyRunExecutableFiles"));
+      return;
+    }
+
+    const fileDir = file.path.substring(0, file.path.lastIndexOf("/"));
+    const fileName = file.name;
+    const executeCmd = `./${fileName}`;
+
+    const windowCount = Date.now() % 10;
+    const offsetX = 250 + windowCount * 40;
+    const offsetY = 200 + windowCount * 40;
+
+    const createExecutionTerminal = (windowId: string) => (
+      <TerminalWindow
+        windowId={windowId}
+        hostConfig={currentHost}
+        initialPath={fileDir}
+        initialX={offsetX}
+        initialY={offsetY}
+        executeCommand={executeCmd}
+      />
+    );
+
+    openWindow({
+      title: t("fileManager.runningFile", { file: file.name }),
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 500,
+      isMaximized: false,
+      isMinimized: false,
+      component: createExecutionTerminal,
+    });
+
+    toast.success(t("fileManager.runningFile", { file: file.name }));
+  }
+
+  async function loadPinnedFiles() {
+    if (!currentHost?.id) return;
+
+    try {
+      const pinnedData = await getPinnedFiles(currentHost.id);
+      const pinnedPaths = new Set(
+        pinnedData.map((item: Record<string, unknown>) => item.path),
+      );
+      setPinnedFiles(pinnedPaths);
+    } catch (error) {
+      console.error("Failed to load pinned files:", error);
+    }
+  }
+
+  async function handlePinFile(file: FileItem) {
+    if (!currentHost?.id) return;
+
+    try {
+      await addPinnedFile(currentHost.id, file.path, file.name);
+      setPinnedFiles((prev) => new Set([...prev, file.path]));
+      setSidebarRefreshTrigger((prev) => prev + 1);
+      toast.success(
+        t("fileManager.filePinnedSuccessfully", { name: file.name }),
+      );
+    } catch (error) {
+      console.error("Failed to pin file:", error);
+      toast.error(t("fileManager.pinFileFailed"));
+    }
+  }
+
+  async function handleUnpinFile(file: FileItem) {
+    if (!currentHost?.id) return;
+
+    try {
+      await removePinnedFile(currentHost.id, file.path);
+      setPinnedFiles((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(file.path);
+        return newSet;
+      });
+      setSidebarRefreshTrigger((prev) => prev + 1);
+      toast.success(
+        t("fileManager.fileUnpinnedSuccessfully", { name: file.name }),
+      );
+    } catch (error) {
+      console.error("Failed to unpin file:", error);
+      toast.error(t("fileManager.unpinFileFailed"));
+    }
+  }
+
+  async function handleAddShortcut(path: string) {
+    if (!currentHost?.id) return;
+
+    try {
+      const folderName = path.split("/").pop() || path;
+      await addFolderShortcut(currentHost.id, path, folderName);
+      setSidebarRefreshTrigger((prev) => prev + 1);
+      toast.success(
+        t("fileManager.shortcutAddedSuccessfully", { name: folderName }),
+      );
+    } catch (error) {
+      console.error("Failed to add shortcut:", error);
+      toast.error(t("fileManager.addShortcutFailed"));
+    }
+  }
+
+  function isPinnedFile(file: FileItem): boolean {
+    return pinnedFiles.has(file.path);
+  }
+
+  async function recordRecentFile(file: FileItem) {
+    if (!currentHost?.id || file.type === "directory") return;
+
+    try {
+      await addRecentFile(currentHost.id, file.path, file.name);
+      setSidebarRefreshTrigger((prev) => prev + 1);
+    } catch (error) {
+      console.error("Failed to record recent file:", error);
+    }
+  }
+
+  async function handleSidebarFileOpen(sidebarItem: SidebarItem) {
+    const file: FileItem = {
+      name: sidebarItem.name,
+      path: sidebarItem.path,
+      type: "file",
+    };
+
+    await handleFileOpen(file);
+  }
+
+  async function handleFileNotFound(file: FileItem) {
+    if (!currentHost) return;
+
+    try {
+      await removeRecentFile(currentHost.id, file.path);
+
+      await removePinnedFile(currentHost.id, file.path);
+
+      setSidebarRefreshTrigger((prev) => prev + 1);
+    } catch (error) {
+      console.error("Failed to cleanup missing file:", error);
+    }
+  }
+
+  useEffect(() => {
+    setCreateIntent(null);
+  }, [currentPath]);
+
+  useEffect(() => {
+    if (currentHost?.id) {
+      loadPinnedFiles();
+      getServerMetricsById(currentHost.id)
+        .then((metrics) => {
+          if (
+            metrics?.disk?.percent != null &&
+            metrics.disk.usedHuman &&
+            metrics.disk.totalHuman
+          ) {
+            setDiskInfo({
+              usedHuman: metrics.disk.usedHuman,
+              totalHuman: metrics.disk.totalHuman,
+              percent: metrics.disk.percent,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentHost?.id]);
+
+  useEffect(() => {
+    localStorage.setItem("fileManagerViewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem("fileManagerSortBy", sortBy);
+    localStorage.setItem("fileManagerSortOrder", sortOrder);
+  }, [sortBy, sortOrder]);
+
+  const filteredFiles = useMemo(
+    () =>
+      files
+        .filter((file) =>
+          file.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .sort((a, b) => {
+          if (a.type === "directory" && b.type !== "directory") return -1;
+          if (a.type !== "directory" && b.type === "directory") return 1;
+
+          let result = 0;
+          switch (sortBy) {
+            case "name":
+              result = a.name.localeCompare(b.name, undefined, {
+                numeric: true,
+                sensitivity: "base",
+              });
+              break;
+            case "modified":
+              result = (a.modified || "").localeCompare(b.modified || "");
+              break;
+            case "size":
+              result = (a.size || 0) - (b.size || 0);
+              break;
+          }
+          return sortOrder === "desc" ? -result : result;
+        }),
+    [files, searchQuery, sortBy, sortOrder],
+  );
+
+  if (!currentHost) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground mb-4">
+            {t("fileManager.selectHostToStart")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if ((isLoading || isReconnecting) && !sshSessionId) {
+    return (
+      <div className="h-full w-full flex flex-col bg-background relative">
+        <div className="flex-1 overflow-hidden min-h-0 relative">
+          <SimpleLoader
+            visible={!isConnectionLogExpanded}
+            message={t("fileManager.connecting")}
+          />
+        </div>
+        <ConnectionLog
+          isConnecting={isLoading || isReconnecting}
+          isConnected={false}
+          hasConnectionError={hasConnectionError}
+          position={hasConnectionError ? "top" : "bottom"}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
+      <div
+        className="h-full w-full flex flex-col min-h-0"
+        style={{
+          visibility: isConnectionLogExpanded ? "hidden" : "visible",
+        }}
+      >
+        <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
+          <div className="flex flex-row items-center justify-between px-3 py-2 gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileSidebarOpen((o) => !o)}
+                className="md:hidden size-8 rounded-none"
+                title={t("fileManager.toggleSidebar")}
+              >
+                <Layout className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goBack}
+                disabled={navIndex <= 0}
+                className="size-8 rounded-none"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goForward}
+                disabled={navIndex >= navHistory.length - 1}
+                className="size-8 rounded-none"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goUp}
+                disabled={currentPath === "/"}
+                className="size-8 rounded-none"
+              >
+                <ArrowUp className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRefreshDirectory}
+                className="size-8 rounded-none"
+              >
+                <RefreshCw
+                  className={`size-4 ${isLoading && !!sshSessionId ? "animate-spin [animation-duration:0.5s]" : ""}`}
+                />
+              </Button>
+            </div>
+
+            <div className="hidden md:flex flex-1 items-center px-3 h-8 bg-muted/50 border border-border rounded-none gap-2 overflow-hidden">
+              <Folder className="size-3.5 text-accent-brand shrink-0" />
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+                {currentPath.split("/").map((part, i, arr) => (
+                  <React.Fragment key={i}>
+                    {part === "" && i === 0 ? (
+                      <button
+                        onClick={() => navigateTo("/")}
+                        className="hover:text-accent-brand transition-colors"
+                      >
+                        {t("fileManager.root")}
+                      </button>
+                    ) : part !== "" ? (
+                      <button
+                        onClick={() =>
+                          navigateTo(arr.slice(0, i + 1).join("/") || "/")
+                        }
+                        className="hover:text-accent-brand transition-colors"
+                      >
+                        {part}
+                      </button>
+                    ) : null}
+                    {i < arr.length - 1 && part !== "" && (
+                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                    {i === 0 && arr.length > 1 && part === "" && (
+                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedFiles.length > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-accent-brand/10 border border-accent-brand/20 text-accent-brand text-[10px] font-black uppercase tracking-tighter">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-accent-brand hover:bg-accent-brand/20 rounded-none"
+                    onClick={() => handleDeleteFiles(selectedFiles)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-accent-brand hover:bg-accent-brand/20 rounded-none"
+                    onClick={() => handleCopyFiles(selectedFiles)}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="relative w-28 md:w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={t("fileManager.searchFiles")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 text-xs bg-muted/50 border-border rounded-none focus:ring-1 focus:ring-accent-brand/50"
+                />
+              </div>
+
+              <div className="flex items-center border border-border rounded-none overflow-hidden">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  className={`size-8 rounded-none border-y-0 border-l-0 border-r border-border ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+                >
+                  <Grid3X3 className="size-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className={`size-8 rounded-none border-y-0 border-r-0 border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+                >
+                  <List className="size-4" />
+                </Button>
+              </div>
+
+              <label
+                className="hidden md:block cursor-pointer"
+                title={t("fileManager.upload")}
+              >
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) handleFilesDropped(files);
+                  }}
+                />
+                <div className="h-8 px-3 flex items-center gap-1.5 border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-[10px] font-bold uppercase tracking-widest">
+                  <Upload className="size-3.5" /> {t("fileManager.upload")}
+                </div>
+              </label>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none font-bold uppercase tracking-widest text-[10px]"
+                  >
+                    <Plus className="size-3.5" />
+                    {t("fileManager.new")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-44 rounded-none border-border bg-card"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFolder(), 0);
+                    }}
+                    className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
+                  >
+                    <FolderPlus className="size-4 text-accent-brand" />
+                    {t("fileManager.newFolder")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFile(), 0);
+                    }}
+                    className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
+                  >
+                    <FilePlus className="size-4 text-muted-foreground" />
+                    {t("fileManager.newFile")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground py-1">
+                    {t("fileManager.sortBy")}
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={sortBy}
+                    onValueChange={(v) =>
+                      setSortBy(v as "name" | "modified" | "size")
+                    }
+                  >
+                    <DropdownMenuRadioItem
+                      value="name"
+                      className="rounded-none text-xs"
+                    >
+                      {t("fileManager.sortByName")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="modified"
+                      className="rounded-none text-xs"
+                    >
+                      {t("fileManager.sortByDate")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="size"
+                      className="rounded-none text-xs"
+                    >
+                      {t("fileManager.sortBySize")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={sortOrder}
+                    onValueChange={(v) => setSortOrder(v as "asc" | "desc")}
+                  >
+                    <DropdownMenuRadioItem
+                      value="asc"
+                      className="rounded-none text-xs"
+                    >
+                      {t("fileManager.ascending")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      value="desc"
+                      className="rounded-none text-xs"
+                    >
+                      {t("fileManager.descending")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Mobile breadcrumb row */}
+          <div className="md:hidden flex items-center px-3 pb-2 gap-2">
+            <div className="flex-1 flex items-center px-3 h-8 bg-muted/50 border border-border gap-2 overflow-hidden">
+              <Folder className="size-3.5 text-accent-brand shrink-0" />
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+                {currentPath.split("/").map((part, i, arr) => (
+                  <React.Fragment key={i}>
+                    {part === "" && i === 0 ? (
+                      <button
+                        onClick={() => navigateTo("/")}
+                        className="hover:text-accent-brand transition-colors"
+                      >
+                        {t("fileManager.root")}
+                      </button>
+                    ) : part !== "" ? (
+                      <button
+                        onClick={() =>
+                          navigateTo(arr.slice(0, i + 1).join("/") || "/")
+                        }
+                        className="hover:text-accent-brand transition-colors"
+                      >
+                        {part}
+                      </button>
+                    ) : null}
+                    {i < arr.length - 1 && part !== "" && (
+                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                    {i === 0 && arr.length > 1 && part === "" && (
+                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
+          {...dragHandlers}
+        >
+          {/* Mobile sidebar backdrop */}
+          {mobileSidebarOpen && (
+            <div
+              className="fixed inset-0 z-20 bg-black/40 md:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+
+          {/* Sidebar — fixed overlay on mobile, static on desktop */}
+          <div
+            className={cn(
+              "w-56 flex-shrink-0 h-full flex flex-col",
+              "md:flex",
+              mobileSidebarOpen
+                ? "fixed left-0 top-0 bottom-0 w-64 z-30 flex"
+                : "hidden md:flex",
+            )}
+          >
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
+              <FileManagerSidebar
+                currentHost={currentHost}
+                currentPath={currentPath}
+                onPathChange={navigateTo}
+                onLoadDirectory={loadDirectory}
+                onFileOpen={handleSidebarFileOpen}
+                sshSessionId={sshSessionId}
+                refreshTrigger={sidebarRefreshTrigger}
+                diskInfo={diskInfo ?? undefined}
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
+            <div className="flex-1 relative min-h-0 h-full">
+              <FileManagerGrid
+                files={filteredFiles}
+                selectedFiles={selectedFiles}
+                onFileSelect={() => {}}
+                onFileOpen={handleFileOpen}
+                onSelectionChange={setSelection}
+                currentPath={currentPath}
+                onPathChange={navigateTo}
+                onRefresh={handleRefreshDirectory}
+                onUpload={handleFilesDropped}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortChange={(field) => {
+                  if (field === sortBy) {
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy(field);
+                    setSortOrder("asc");
+                  }
+                }}
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
+                onContextMenu={handleContextMenu}
+                viewMode={viewMode}
+                onRename={handleRenameConfirm}
+                editingFile={editingFile}
+                onStartEdit={handleStartEdit}
+                onCancelEdit={handleCancelEdit}
+                onDelete={handleDeleteFiles}
+                onCopy={handleCopyFiles}
+                onCut={handleCutFiles}
+                onPaste={handlePasteFiles}
+                onUndo={handleUndo}
+                hasClipboard={!!clipboard}
+                onFileDrop={handleFileDrop}
+                onFileDiff={handleFileDiff}
+                onSystemDragStart={handleFileDragStart}
+                onSystemDragEnd={handleFileDragEnd}
+                createIntent={createIntent}
+                onConfirmCreate={handleConfirmCreate}
+                onCancelCreate={handleCancelCreate}
+                onNewFile={handleCreateNewFile}
+                onNewFolder={handleCreateNewFolder}
+              />
+
+              <FileManagerContextMenu
+                x={contextMenu.x}
+                y={contextMenu.y}
+                files={contextMenu.files}
+                isVisible={contextMenu.isVisible}
+                onClose={() =>
+                  setContextMenu((prev) => ({ ...prev, isVisible: false }))
+                }
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
+                onPreview={handleFileOpen}
+                onRename={handleRenameFile}
+                onCopy={handleCopyFiles}
+                onCut={handleCutFiles}
+                onPaste={handlePasteFiles}
+                onDelete={handleDeleteFiles}
+                onUpload={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.multiple = true;
+                  input.onchange = (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files) handleFilesDropped(files);
+                  };
+                  input.click();
+                }}
+                onNewFolder={handleCreateNewFolder}
+                onNewFile={handleCreateNewFile}
+                onRefresh={handleRefreshDirectory}
+                hasClipboard={!!clipboard}
+                onDragToDesktop={() => handleDragToDesktop(contextMenu.files)}
+                onOpenTerminal={(path) => handleOpenTerminal(path)}
+                onRunExecutable={(file) => handleRunExecutable(file)}
+                onPinFile={handlePinFile}
+                onUnpinFile={handleUnpinFile}
+                onAddShortcut={handleAddShortcut}
+                isPinned={isPinnedFile}
+                currentPath={currentPath}
+                onProperties={handleOpenPermissionsDialog}
+                onExtractArchive={handleExtractArchive}
+                onCompress={handleOpenCompressDialog}
+                onCopyPath={handleCopyPath}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <CompressDialog
+        open={compressDialogFiles.length > 0}
+        onOpenChange={(open) => !open && setCompressDialogFiles([])}
+        fileNames={compressDialogFiles.map((f) => f.name)}
+        onCompress={handleCompress}
+      />
+
+      <TOTPDialog
+        isOpen={totpRequired}
+        prompt={totpPrompt}
+        onSubmit={handleTotpSubmit}
+        onCancel={handleTotpCancel}
+        backgroundColor="var(--bg-canvas)"
+      />
+
+      <WarpgateDialog
+        isOpen={warpgateRequired}
+        url={warpgateUrl}
+        securityKey={warpgateSecurityKey}
+        onContinue={handleWarpgateContinue}
+        onCancel={handleWarpgateCancel}
+        onOpenUrl={handleWarpgateOpenUrl}
+        backgroundColor="var(--bg-canvas)"
+      />
+
+      {currentHost && (
+        <SSHAuthDialog
+          isOpen={showAuthDialog}
+          reason={authDialogReason}
+          onSubmit={handleAuthDialogSubmit}
+          onCancel={handleAuthDialogCancel}
+          hostInfo={{
+            ip: currentHost.ip,
+            port: currentHost.port,
+            username: currentHost.username,
+            name: currentHost.name,
+          }}
+          backgroundColor="var(--bg-canvas)"
+        />
+      )}
+
+      <PermissionsDialog
+        file={permissionsDialogFile}
+        open={permissionsDialogFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setPermissionsDialogFile(null);
+        }}
+        onSave={handleSavePermissions}
+      />
+
+      <SudoPasswordDialog
+        open={sudoDialogOpen}
+        onOpenChange={(open) => {
+          setSudoDialogOpen(open);
+          if (!open) setPendingSudoOperation(null);
+        }}
+        onSubmit={handleSudoPasswordSubmit}
+      />
+      <ConnectionLog
+        isConnecting={isReconnecting || isLoading}
+        isConnected={!!sshSessionId}
+        hasConnectionError={hasConnectionError}
+        position={hasConnectionError ? "top" : "bottom"}
+      />
+    </div>
+  );
+}
+
+function FileManagerInner({ initialHost, onClose }: FileManagerProps) {
+  return (
+    <WindowManager>
+      <FileManagerContent initialHost={initialHost} onClose={onClose} />
+    </WindowManager>
+  );
+}
+
+export function FileManager(props: FileManagerProps) {
+  return (
+    <ConnectionLogProvider>
+      <FileManagerInner {...props} />
+    </ConnectionLogProvider>
+  );
+}
