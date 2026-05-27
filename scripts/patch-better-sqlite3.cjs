@@ -58,18 +58,18 @@ const macrosPatched = patchFile(macrosPath, [
 
 const helpersPatched = patchFile(helpersPath, [
   {
-    original: `\t\trecv->InstanceTemplate()->SetNativeDataProperty(
-\t\t\tInternalizedFromLatin1(isolate, name),
-\t\t\tfunc,
-\t\t\t0,
-\t\t\tdata
-\t\t);`,
-    patched: `\t\trecv->InstanceTemplate()->SetNativeDataProperty(
-\t\t\tInternalizedFromLatin1(isolate, name),
-\t\t\tfunc,
-\t\t\tstatic_cast<v8::AccessorNameSetterCallback>(nullptr),
-\t\t\tdata
-\t\t);`,
+    original: `\trecv->InstanceTemplate()->SetNativeDataProperty(
+\t\tInternalizedFromLatin1(isolate, name),
+\t\tfunc,
+\t\t0,
+\t\tdata
+\t);`,
+    patched: `\trecv->InstanceTemplate()->SetNativeDataProperty(
+\t\tInternalizedFromLatin1(isolate, name),
+\t\tfunc,
+\t\tstatic_cast<v8::AccessorNameSetterCallback>(nullptr),
+\t\tdata
+\t);`,
   },
 ]);
 
