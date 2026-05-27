@@ -391,7 +391,7 @@ export function NetworkGraphCard({
 
   const applyStyle = useCallback((cy: cytoscape.Core) => {
     const edgeColor = resolveCssVar("--border", "#4a4a4e");
-    const mutedFg = resolveCssVar("--muted-foreground", "#94a3b8");
+    const foreground = resolveCssVar("--foreground", "#f1f5f9");
     cy.style()
       .selector("node")
       .style({
@@ -422,7 +422,7 @@ export function NetworkGraphCard({
         "text-valign": "top",
         "text-halign": "center",
         "text-margin-y": -6,
-        color: mutedFg,
+        color: foreground,
         "font-size": "13px",
         "font-weight": "bold",
         shape: "rectangle",

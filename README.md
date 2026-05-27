@@ -47,13 +47,13 @@
 
 <br />
 
-<img src="./repo-images/header-overview.svg" alt="Overview" />
+## Overview
 
 Termix is an open-source, forever-free, self-hosted all-in-one server management platform. It provides a multi-platform solution for managing your servers and infrastructure through a single, intuitive interface. Termix offers SSH terminal access, remote desktop control (RDP, VNC, Telnet), SSH tunneling capabilities, remote SSH file management, and many other tools. Termix is the perfect free and self-hosted alternative to Termius available for all platforms.
 
 <br />
 
-<img src="./repo-images/header-features.svg" alt="Features" />
+## Features
 
 <table>
 <tr>
@@ -176,7 +176,7 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 
 <br />
 
-<img src="./repo-images/header-platform-support.svg" alt="Platform Support" />
+## Platform Support
 
 <table align="center">
 <tr>
@@ -211,7 +211,7 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 
 <br />
 
-<img src="./repo-images/header-installation.svg" alt="Installation" />
+## Installation
 
 Visit the [Termix Docs](https://docs.termix.site/install) for full installation instructions across all platforms.
 
@@ -254,7 +254,7 @@ networks:
 
 <br />
 
-<img src="./repo-images/header-screenshots.svg" alt="Screenshots" />
+## Screenshots
 
 <div align="center">
 
@@ -300,13 +300,13 @@ networks:
 
 <br />
 
-<img src="./repo-images/header-planned-features.svg" alt="Planned Features" />
+## Planned Features
 
 See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned features. If you are looking to contribute, see [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 
-<img src="./repo-images/header-sponsors.svg" alt="Sponsors" />
+## Sponsors
 
 <div align="center">
 
@@ -344,12 +344,12 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/2) for all planned fe
 
 <br />
 
-<img src="./repo-images/header-support.svg" alt="Support" />
+## Support
 
 If you need help or want to request a feature with Termix, visit the [Issues](https://github.com/Termix-SSH/Support/issues) page, log in, and press `New Issue`. Please be as detailed as possible in your issue, preferably written in English. You can also join the [Discord](https://discord.gg/jVQGdvHDrf) server and visit the support channel, however, response times may be longer.
 
 <br />
 
-<img src="./repo-images/header-license.svg" alt="License" />
+## License
 
 Distributed under the Apache License Version 2.0. See `LICENSE` for more information.

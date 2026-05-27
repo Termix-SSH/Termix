@@ -1080,7 +1080,11 @@
     "disk": "Disk",
     "used": "Used",
     "of": "of",
-    "toggleSidebar": "Toggle Sidebar"
+    "toggleSidebar": "Toggle Sidebar",
+    "cannotLoadPdf": "Cannot load PDF",
+    "pdfLoadError": "There was an error loading this PDF file.",
+    "loadingPdf": "Loading PDF...",
+    "loadingPage": "Loading page..."
   },
   "tunnels": {
     "noSshTunnels": "No SSH Tunnels",
