@@ -13,6 +13,7 @@ import {
   Link,
   Loader2,
   MemoryStick,
+  MessagesSquare,
   Monitor,
   MoreHorizontal,
   Network,
@@ -371,7 +372,7 @@ export function HostItem({
                   }}
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
-                  <Terminal className="size-3.5" />
+                  <MessagesSquare className="size-3.5" />
                 </button>
               )}
             </div>

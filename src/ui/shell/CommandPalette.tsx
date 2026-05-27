@@ -47,7 +47,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   server_stats: <Activity className="size-3.5" />,
   tunnel: <Network className="size-3.5" />,
   docker: <Box className="size-3.5" />,
-  telnet: <Terminal className="size-3.5" />,
+  telnet: <MessagesSquare className="size-3.5" />,
   vnc: <Monitor className="size-3.5" />,
   rdp: <Monitor className="size-3.5" />,
 };

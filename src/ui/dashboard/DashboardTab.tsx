@@ -10,6 +10,7 @@ import {
   GripVertical,
   KeyRound,
   LayoutDashboard,
+  MessagesSquare,
   Network,
   Plus,
   Server,
@@ -540,7 +541,7 @@ function RecentActivityCard({
     docker: <Server className="size-2.5" />,
     rdp: <Server className="size-2.5" />,
     vnc: <Server className="size-2.5" />,
-    telnet: <Terminal className="size-2.5" />,
+    telnet: <MessagesSquare className="size-2.5" />,
   };
   const typeToTab: Record<RecentActivityItem["type"], TabType> = {
     terminal: "terminal",
