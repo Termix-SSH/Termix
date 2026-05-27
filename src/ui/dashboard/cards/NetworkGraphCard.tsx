@@ -94,7 +94,6 @@ interface NetworkGraphCardProps {
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
 
-// Resolve a CSS variable to its actual computed color string for use in SVG
 function resolveCssVar(varName: string, fallback: string): string {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue(varName)
@@ -107,8 +106,13 @@ function resolveCssVar(varName: string, fallback: string): string {
   document.body.appendChild(tmp);
   const resolved = getComputedStyle(tmp).backgroundColor;
   document.body.removeChild(tmp);
-  // getComputedStyle returns "" or "rgba(0,0,0,0)" if unresolvable
-  return resolved && resolved !== "rgba(0, 0, 0, 0)" ? resolved : fallback;
+  if (
+    !resolved ||
+    resolved === "rgba(0, 0, 0, 0)" ||
+    resolved.includes("oklch")
+  )
+    return fallback;
+  return resolved;
 }
 
 const NODE_W = 220;
