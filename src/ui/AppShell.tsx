@@ -4,7 +4,14 @@ import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect, createRef } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  createRef,
+  createPortal,
+} from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { CommandPalette } from "@/shell/CommandPalette";
@@ -165,6 +172,21 @@ export function AppShell({
   const lastShiftTime = useRef(0);
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
+  );
+  const [paneContentEls, setPaneContentEls] = useState<
+    (HTMLDivElement | null)[]
+  >(Array(6).fill(null));
+
+  const onPaneContentRef = useCallback(
+    (paneIndex: number, el: HTMLDivElement | null) => {
+      setPaneContentEls((prev) => {
+        if (prev[paneIndex] === el) return prev;
+        const next = [...prev];
+        next[paneIndex] = el;
+        return next;
+      });
+    },
+    [],
   );
 
   const sidebarTitle: Record<RailView, string> = {
@@ -721,6 +743,7 @@ export function AppShell({
                     onOpenSingletonTab={openSingletonTab}
                     onOpenTab={openTab}
                     onTerminalResize={resizeAllTerminals}
+                    onPaneContentRef={onPaneContentRef}
                   />
                 </div>
               )}
@@ -730,11 +753,34 @@ export function AppShell({
                 className="absolute inset-0 flex flex-col"
                 style={{ display: isSplit && !isMobile ? "none" : "flex" }}
               >
-                {/* Terminal tabs: always in DOM, visibility-toggled so xterm keeps its dimensions */}
+                {/* Terminal tabs: always in DOM, visibility-toggled so xterm keeps its dimensions.
+                    When split is active and this tab is assigned to a pane, portal it there. */}
                 {tabs
                   .filter((tab) => tab.type === "terminal")
                   .map((tab) => {
-                    const visible = tab.id === activeTabId;
+                    const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+                    const inPane = paneIdx !== -1;
+                    const paneEl = inPane ? paneContentEls[paneIdx] : null;
+                    const visible = inPane || tab.id === activeTabId;
+
+                    const terminalContent = renderTabContent(
+                      tab,
+                      openSingletonTab,
+                      openTab,
+                      closeTab,
+                      visible,
+                    );
+
+                    if (inPane && paneEl) {
+                      return createPortal(
+                        <div className="absolute inset-0 overflow-hidden">
+                          {terminalContent}
+                        </div>,
+                        paneEl,
+                        tab.id,
+                      );
+                    }
+
                     return (
                       <div
                         key={tab.id}
@@ -742,16 +788,10 @@ export function AppShell({
                         style={{
                           visibility: visible ? "visible" : "hidden",
                           pointerEvents: visible ? "auto" : "none",
-                          zIndex: visible ? 1 : 0,
+                          zIndex: tab.id === activeTabId && !isSplit ? 1 : 0,
                         }}
                       >
-                        {renderTabContent(
-                          tab,
-                          openSingletonTab,
-                          openTab,
-                          closeTab,
-                          visible,
-                        )}
+                        {terminalContent}
                       </div>
                     );
                   })}

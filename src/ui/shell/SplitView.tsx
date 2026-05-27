@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, memo } from "react";
+import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { renderTabContent, tabIcon } from "@/shell/tabUtils";
@@ -323,24 +323,39 @@ const Pane = memo(function Pane({
   isDragging,
   onOpenSingletonTab,
   onOpenTab,
+  onPaneContentRef,
 }: {
   tab: Tab | null;
   paneIndex: number;
   isDragging: boolean;
   onOpenSingletonTab: (type: TabType) => void;
   onOpenTab: (host: Host, type: TabType) => void;
+  onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
 }) {
+  const isTerminal = tab?.type === "terminal";
+  const contentRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      onPaneContentRef?.(paneIndex, el);
+    },
+    [paneIndex, onPaneContentRef],
+  );
+
   return (
     <div className="relative flex flex-col w-full h-full min-w-0 min-h-0 overflow-hidden">
       <PaneHeader tab={tab} paneIndex={paneIndex} />
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden relative">
         {tab ? (
-          <PaneContent
-            key={tab.id}
-            tab={tab}
-            onOpenSingletonTab={onOpenSingletonTab}
-            onOpenTab={onOpenTab}
-          />
+          isTerminal ? (
+            // Terminal tabs are portaled in from AppShell to avoid remounting
+            <div ref={contentRef} className="absolute inset-0" />
+          ) : (
+            <PaneContent
+              key={tab.id}
+              tab={tab}
+              onOpenSingletonTab={onOpenSingletonTab}
+              onOpenTab={onOpenTab}
+            />
+          )
         ) : (
           <EmptyPane />
         )}
@@ -366,6 +381,7 @@ const Row = memo(function Row({
   onOpenTab,
   onColDivider,
   onColDividerTouch,
+  onPaneContentRef,
 }: {
   rowIdx: number;
   paneIndices: number[];
@@ -382,6 +398,7 @@ const Row = memo(function Row({
     rowIdx: number,
     colIdx: number,
   ) => void;
+  onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
 }) {
   const widths = colWidths ?? [];
   return (
@@ -402,6 +419,7 @@ const Row = memo(function Row({
                 isDragging={isDragging}
                 onOpenSingletonTab={onOpenSingletonTab}
                 onOpenTab={onOpenTab}
+                onPaneContentRef={onPaneContentRef}
               />
             </div>
             {ci < paneIndices.length - 1 && (
@@ -426,6 +444,7 @@ export const SplitView = memo(function SplitView({
   onOpenSingletonTab,
   onOpenTab,
   onTerminalResize,
+  onPaneContentRef,
 }: {
   tabs: Tab[];
   paneTabIds: (string | null)[];
@@ -433,6 +452,7 @@ export const SplitView = memo(function SplitView({
   onOpenSingletonTab: (type: TabType) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   onTerminalResize?: () => void;
+  onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
 }) {
   const {
     rowSizes,
@@ -485,6 +505,7 @@ export const SplitView = memo(function SplitView({
           onOpenTab={onOpenTab}
           onColDivider={onColDivider}
           onColDividerTouch={onColDividerTouch}
+          onPaneContentRef={onPaneContentRef}
         />
       )}
 
@@ -500,6 +521,7 @@ export const SplitView = memo(function SplitView({
               isDragging={isDragging}
               onOpenSingletonTab={onOpenSingletonTab}
               onOpenTab={onOpenTab}
+              onPaneContentRef={onPaneContentRef}
             />
           </div>
           <ColDivider
@@ -517,6 +539,7 @@ export const SplitView = memo(function SplitView({
                 isDragging={isDragging}
                 onOpenSingletonTab={onOpenSingletonTab}
                 onOpenTab={onOpenTab}
+                onPaneContentRef={onPaneContentRef}
               />
             </div>
             <RowDivider
@@ -533,6 +556,7 @@ export const SplitView = memo(function SplitView({
                 isDragging={isDragging}
                 onOpenSingletonTab={onOpenSingletonTab}
                 onOpenTab={onOpenTab}
+                onPaneContentRef={onPaneContentRef}
               />
             </div>
           </div>
@@ -555,6 +579,7 @@ export const SplitView = memo(function SplitView({
                 isDragging={isDragging}
                 onOpenSingletonTab={onOpenSingletonTab}
                 onOpenTab={onOpenTab}
+                onPaneContentRef={onPaneContentRef}
               />
             </div>
             <ColDivider
@@ -568,6 +593,7 @@ export const SplitView = memo(function SplitView({
                 isDragging={isDragging}
                 onOpenSingletonTab={onOpenSingletonTab}
                 onOpenTab={onOpenTab}
+                onPaneContentRef={onPaneContentRef}
               />
             </div>
           </div>
@@ -582,6 +608,7 @@ export const SplitView = memo(function SplitView({
               isDragging={isDragging}
               onOpenSingletonTab={onOpenSingletonTab}
               onOpenTab={onOpenTab}
+              onPaneContentRef={onPaneContentRef}
             />
           </div>
         </div>
@@ -601,6 +628,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -618,6 +646,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
         </div>
       )}
@@ -636,6 +665,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -653,6 +683,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
         </div>
       )}
@@ -671,6 +702,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -688,6 +720,7 @@ export const SplitView = memo(function SplitView({
             onOpenTab={onOpenTab}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
           />
         </div>
       )}

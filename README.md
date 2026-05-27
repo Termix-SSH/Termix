@@ -292,6 +292,10 @@ networks:
 <td><img src="./repo-images/Image 11.png" alt="Termix Screenshot 11" width="400" /></td>
 <td><img src="./repo-images/Image 12.png" alt="Termix Screenshot 12" width="400" /></td>
 </tr>
+<tr>
+<td><img src="./repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
+<td><img src="./repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
+</tr>
 </table>
 
 <sub>Some videos and images may be out of date or may not perfectly showcase features.</sub>
