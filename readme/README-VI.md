@@ -10,7 +10,7 @@
 <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
 
 <p align="center">
-  <img src="../repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
+  <img src="../repo-images/Repo%20of%20the%20Day.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
   <br>
   <small style="color: #666;">Đạt được vào ngày 1 tháng 9 năm 2025</small>
 </p>

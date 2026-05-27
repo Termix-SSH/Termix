@@ -32,13 +32,13 @@
 
 <br />
 
-<img src="./repo-images/HeaderImage.png" alt="Termix Banner" width="900" />
+<img src="./repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
 <br />
 
 <p>
-  <img src="./repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" width="280" />
+  <img src="repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
   <br />
   <sub>Achieved on September 1st, 2025</sub>
 </p>
