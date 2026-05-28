@@ -26,7 +26,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2025
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
       contents: write
@@ -131,7 +131,7 @@ jobs:
           retention-days: 30
 
   build-linux:
-    runs-on: self-hosted
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
       contents: write
@@ -151,11 +151,7 @@ jobs:
       - name: Install system dependencies for AppImage
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install -y libfuse2 g++-12
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
+          sudo apt-get install -y libfuse2
 
       - name: Install dependencies
         run: |
@@ -357,7 +353,7 @@ jobs:
           retention-days: 30
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: (github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all') && github.event.inputs.artifact_destination != 'submit'
     needs: []
     permissions:
@@ -587,7 +583,7 @@ jobs:
           security delete-keychain $RUNNER_TEMP/dev-signing.keychain-db || true
 
   submit-to-chocolatey:
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2025
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == '')
     permissions:
       contents: read
@@ -692,7 +688,7 @@ jobs:
           retention-days: 30
 
   submit-to-flatpak:
-    runs-on: self-hosted
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '')
     needs: []
     permissions:
@@ -779,7 +775,7 @@ jobs:
           retention-days: 30
 
   submit-to-homebrew:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
@@ -848,7 +844,7 @@ jobs:
           retention-days: 30
 
   upload-to-release:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:
@@ -884,7 +880,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   submit-to-testflight:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
