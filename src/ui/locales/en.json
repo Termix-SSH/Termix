@@ -1239,7 +1239,7 @@
     "retry": "Retry"
   },
   "auth": {
-    "tagline": "SSH SERVER MANAGER",
+    "tagline": "Self-hosted SSH and remote desktop management",
     "loginTitle": "Login to Termix",
     "registerTitle": "Create Account",
     "forgotPassword": "Forgot Password?",
