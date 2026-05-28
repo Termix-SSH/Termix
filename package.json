@@ -2,7 +2,7 @@
   "name": "termix",
   "private": true,
   "version": "2.3.0",
-  "description": "A web-based server management platform with SSH terminal, tunneling, and file editing capabilities",
+  "description": "Self-hosted SSH and remote desktop management.",
   "author": "Karmaa",
   "main": "electron/main.cjs",
   "engines": {
