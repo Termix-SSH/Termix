@@ -356,7 +356,7 @@ function HostEditor({
       name: host?.name ?? "",
       ip: host?.ip ?? "",
       username: host?.username ?? "",
-      sshPort: host?.sshPort ?? 22,
+      sshPort: host?.sshPort ?? host?.port ?? 22,
       rdpPort: host?.rdpPort ?? 3389,
       vncPort: host?.vncPort ?? 5900,
       telnetPort: host?.telnetPort ?? 23,

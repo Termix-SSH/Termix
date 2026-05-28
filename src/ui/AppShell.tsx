@@ -217,6 +217,11 @@ export function AppShell({
   }, []);
 
   const lastShiftTime = useRef(0);
+  const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
+    useState<boolean>(() => {
+      const v = localStorage.getItem("commandPaletteShortcutEnabled");
+      return v !== null ? v === "true" : true;
+    });
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
   );
@@ -271,15 +276,28 @@ export function AppShell({
   // Double-shift opens command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "ShiftLeft") {
+      if (e.code === "ShiftLeft" && !e.repeat) {
         const now = Date.now();
-        if (now - lastShiftTime.current < 300)
+        if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
           setCommandPaletteOpen((prev) => !prev);
         lastShiftTime.current = now;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [commandPaletteShortcutEnabled]);
+
+  useEffect(() => {
+    const handler = () => {
+      const v = localStorage.getItem("commandPaletteShortcutEnabled");
+      setCommandPaletteShortcutEnabled(v !== null ? v === "true" : true);
+    };
+    window.addEventListener("commandPaletteShortcutEnabledChanged", handler);
+    return () =>
+      window.removeEventListener(
+        "commandPaletteShortcutEnabledChanged",
+        handler,
+      );
   }, []);
 
   useEffect(() => {

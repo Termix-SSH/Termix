@@ -452,9 +452,6 @@ export function UserProfilePanel({
   );
 
   // Settings toggles — all backed by localStorage
-  const [fileColorCoding, setFileColorCoding] = useState(
-    () => localStorage.getItem("fileColorCoding") !== "false",
-  );
   const [commandAutocomplete, setCommandAutocomplete] = useState(
     () => localStorage.getItem("commandAutocomplete") === "true",
   );
@@ -474,6 +471,9 @@ export function UserProfilePanel({
   });
   const [hostTrayOnClick, setHostTrayOnClick] = useState(
     () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+  const [pinAppRail, setPinAppRail] = useState(
+    () => localStorage.getItem("pinAppRail") === "true",
   );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
@@ -911,25 +911,6 @@ export function UserProfilePanel({
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsFileManager")}
-            </span>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.fileColorCoding")}
-              description={t("newUi.sidebar.userProfile.fileColorCodingDesc")}
-            >
-              <FakeSwitch
-                checked={fileColorCoding}
-                onChange={(v) => {
-                  setFileColorCoding(v);
-                  localStorage.setItem("fileColorCoding", v.toString());
-                  window.dispatchEvent(new Event("fileColorCodingChanged"));
-                }}
-              />
-            </SettingRow>
-          </div>
-
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
               {t("newUi.sidebar.userProfile.settingsTerminal")}
             </span>
             <SettingRow
@@ -994,6 +975,9 @@ export function UserProfilePanel({
                     "commandPaletteShortcutEnabled",
                     v.toString(),
                   );
+                  window.dispatchEvent(
+                    new Event("commandPaletteShortcutEnabledChanged"),
+                  );
                 }}
               />
             </SettingRow>
@@ -1052,6 +1036,19 @@ export function UserProfilePanel({
                   setHostTrayOnClick(v);
                   localStorage.setItem("hostTrayOnClick", v.toString());
                   window.dispatchEvent(new Event("hostTrayOnClickChanged"));
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.pinAppRail")}
+              description={t("newUi.sidebar.userProfile.pinAppRailDesc")}
+            >
+              <FakeSwitch
+                checked={pinAppRail}
+                onChange={(v) => {
+                  setPinAppRail(v);
+                  localStorage.setItem("pinAppRail", v.toString());
+                  window.dispatchEvent(new Event("pinAppRailChanged"));
                 }}
               />
             </SettingRow>

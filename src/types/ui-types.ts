@@ -289,6 +289,7 @@ export type Snippet = {
   description?: string;
   content: string;
   folder: string | null;
+  order: number;
 };
 
 export const FOLDER_ICONS = [

@@ -217,6 +217,10 @@ export function HostItem({
   const [trayOnClick, setTrayOnClick] = useState(
     () => localStorage.getItem("hostTrayOnClick") === "true",
   );
+  const [showHostTags, setShowHostTags] = useState<boolean>(() => {
+    const v = localStorage.getItem("showHostTags");
+    return v !== null ? v === "true" : true;
+  });
 
   useEffect(() => {
     const handler = () =>
@@ -226,6 +230,19 @@ export function HostItem({
     return () => {
       window.removeEventListener("storage", handler);
       window.removeEventListener("hostTrayOnClickChanged", handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      const v = localStorage.getItem("showHostTags");
+      setShowHostTags(v !== null ? v === "true" : true);
+    };
+    window.addEventListener("storage", handler);
+    window.addEventListener("showHostTagsChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("showHostTagsChanged", handler);
     };
   }, []);
 
@@ -248,7 +265,7 @@ export function HostItem({
         // On touch devices open the action tray instead of immediately launching a tab
         if (window.matchMedia("(hover: none)").matches) {
           e.stopPropagation();
-          onMenuOpenChange?.(!isMenuOpen);
+          onTrayOpenChange?.(!isTrayOpen);
           return;
         }
         if (trayOnClick) {
@@ -296,7 +313,7 @@ export function HostItem({
         </span>
 
         {/* Tag pills */}
-        {host.tags && host.tags.length > 0 && (
+        {showHostTags && host.tags && host.tags.length > 0 && (
           <div className="flex items-center gap-1 min-w-0 overflow-hidden pl-3">
             {host.tags.slice(0, 4).map((tag) => (
               <span

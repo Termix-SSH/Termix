@@ -251,9 +251,47 @@ async function createJumpHostChain(
           host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
-          tryKeyboard: true,
-          readyTimeout: 30000,
+          tryKeyboard: jumpHostConfig.authType !== "none",
+          readyTimeout: 60000,
           hostVerifier: jumpHostVerifier,
+          algorithms: {
+            kex: [
+              "curve25519-sha256",
+              "curve25519-sha256@libssh.org",
+              "ecdh-sha2-nistp521",
+              "ecdh-sha2-nistp384",
+              "ecdh-sha2-nistp256",
+              "diffie-hellman-group-exchange-sha256",
+              "diffie-hellman-group18-sha512",
+              "diffie-hellman-group17-sha512",
+              "diffie-hellman-group16-sha512",
+              "diffie-hellman-group15-sha512",
+              "diffie-hellman-group14-sha256",
+              "diffie-hellman-group14-sha1",
+              "diffie-hellman-group-exchange-sha1",
+              "diffie-hellman-group1-sha1",
+            ],
+            serverHostKey: [
+              "ssh-ed25519",
+              "ecdsa-sha2-nistp521",
+              "ecdsa-sha2-nistp384",
+              "ecdsa-sha2-nistp256",
+              "rsa-sha2-512",
+              "rsa-sha2-256",
+              "ssh-rsa",
+              "ssh-dss",
+            ],
+            cipher: SSH_ALGORITHMS.cipher,
+            hmac: [
+              "hmac-sha2-512-etm@openssh.com",
+              "hmac-sha2-256-etm@openssh.com",
+              "hmac-sha2-512",
+              "hmac-sha2-256",
+              "hmac-sha1",
+              "hmac-md5",
+            ],
+            compress: ["none", "zlib@openssh.com", "zlib"],
+          },
         };
 
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
@@ -268,6 +306,25 @@ async function createJumpHostChain(
             connectConfig.passphrase = jumpHostConfig.keyPassword;
           }
         }
+
+        jumpClient.on(
+          "keyboard-interactive",
+          (
+            _name: string,
+            _instructions: string,
+            _lang: string,
+            prompts: Array<{ prompt: string; echo: boolean }>,
+            finish: (responses: string[]) => void,
+          ) => {
+            const responses = prompts.map((p) => {
+              if (/password/i.test(p.prompt) && jumpHostConfig.password) {
+                return jumpHostConfig.password as string;
+              }
+              return "";
+            });
+            finish(responses);
+          },
+        );
 
         if (currentClient) {
           currentClient.forwardOut(

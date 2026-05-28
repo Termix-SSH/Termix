@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Clock,
@@ -120,7 +120,18 @@ export function AppRail({
 }) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
-  const railExpanded = hovered || profileDropdownOpen;
+  const [pinned, setPinned] = useState(
+    () => localStorage.getItem("pinAppRail") === "true",
+  );
+
+  useEffect(() => {
+    const handler = () =>
+      setPinned(localStorage.getItem("pinAppRail") === "true");
+    window.addEventListener("pinAppRailChanged", handler);
+    return () => window.removeEventListener("pinAppRailChanged", handler);
+  }, []);
+
+  const railExpanded = pinned || hovered || profileDropdownOpen;
   const railButtons = buildRailButtons(splitMode, t, connectionCount);
 
   return (

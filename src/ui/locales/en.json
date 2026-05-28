@@ -1919,6 +1919,8 @@
         "folderDeleteFailed": "Failed to delete folder",
         "folderEditSuccess": "Folder updated successfully",
         "folderEditFailed": "Failed to update folder",
+        "confirmRunMessage": "Run \"{{name}}\"?",
+        "confirmRunButton": "Run",
         "runSuccess": "Ran \"{{name}}\" in {{count}} terminal(s)",
         "copySuccess": "Copied \"{{name}}\" to clipboard",
         "shareTitle": "Share Snippet",
@@ -1933,7 +1935,8 @@
         "currentAccess": "Current Access",
         "shareLoadError": "Failed to load share data",
         "loading": "Loading...",
-        "close": "Close"
+        "close": "Close",
+        "reorderFailed": "Failed to save snippet order"
       },
       "userProfile": {
         "sectionAccount": "Account",
@@ -1960,9 +1963,6 @@
         "themeLabel": "Theme",
         "fontSizeLabel": "Font Size",
         "accentColorLabel": "Accent Color",
-        "settingsFileManager": "File Manager",
-        "fileColorCoding": "File Color Coding",
-        "fileColorCodingDesc": "Color-code files by type",
         "settingsTerminal": "Terminal",
         "commandAutocomplete": "Command Autocomplete",
         "commandAutocompleteDesc": "Show autocomplete while typing",
@@ -1981,6 +1981,8 @@
         "showHostTagsDesc": "Display tags in host list",
         "hostTrayOnClick": "Click to Expand Host Actions",
         "hostTrayOnClickDesc": "Require a click to expand host actions instead of hover",
+        "pinAppRail": "Pin App Rail",
+        "pinAppRailDesc": "Keep the left sidebar app rail always expanded instead of expanding on hover",
         "settingsSnippets": "Snippets",
         "foldersCollapsed": "Folders Collapsed",
         "foldersCollapsedDesc": "Collapse folders by default",

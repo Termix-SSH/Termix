@@ -985,7 +985,7 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <p
-                          className="text-[11px] font-bold uppercase tracking-tight text-center truncate w-full px-1"
+                          className="text-[11px] font-bold tracking-tight text-center truncate w-full px-1"
                           title={file.name}
                         >
                           {file.name}
@@ -1108,7 +1108,7 @@ export function FileManagerGrid({
                         />
                       ) : (
                         <span
-                          className="font-bold truncate uppercase tracking-tight"
+                          className="font-bold truncate tracking-tight"
                           title={file.name}
                         >
                           {file.name}
