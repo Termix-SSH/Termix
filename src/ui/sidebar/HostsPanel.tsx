@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowUpDown,
+  Check,
   Download,
   ListChecks,
   Plus,
@@ -10,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { SidebarTree } from "@/sidebar/SidebarTree";
+import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { Button } from "@/components/button";
@@ -18,11 +20,59 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { getSSHHosts, bulkImportSSHHosts } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
+
+type SortKey =
+  | "default"
+  | "name-asc"
+  | "name-desc"
+  | "ip-asc"
+  | "ip-desc"
+  | "status-online"
+  | "status-offline"
+  | "pinned";
+
+function sortHostTree(folder: HostFolder, key: SortKey): HostFolder {
+  if (key === "default") return folder;
+
+  const comparator = (a: Host | HostFolder, b: Host | HostFolder): number => {
+    const aIsFolder = isFolder(a);
+    const bIsFolder = isFolder(b);
+    if (aIsFolder && !bIsFolder) return -1;
+    if (!aIsFolder && bIsFolder) return 1;
+    if (aIsFolder && bIsFolder)
+      return (a as HostFolder).name.localeCompare((b as HostFolder).name);
+    const ha = a as Host,
+      hb = b as Host;
+    switch (key) {
+      case "name-asc":
+        return ha.name.localeCompare(hb.name);
+      case "name-desc":
+        return hb.name.localeCompare(ha.name);
+      case "ip-asc":
+        return ha.ip.localeCompare(hb.ip);
+      case "ip-desc":
+        return hb.ip.localeCompare(ha.ip);
+      case "status-online":
+        return (hb.online ? 1 : 0) - (ha.online ? 1 : 0);
+      case "status-offline":
+        return (ha.online ? 1 : 0) - (hb.online ? 1 : 0);
+      case "pinned":
+        return (hb.pin ? 1 : 0) - (ha.pin ? 1 : 0);
+    }
+    return 0;
+  };
+
+  const sortedChildren = [...folder.children]
+    .sort(comparator)
+    .map((child) => (isFolder(child) ? sortHostTree(child, key) : child));
+  return { ...folder, children: sortedChildren };
+}
 
 export function HostsPanel({
   onOpenTab,
@@ -46,8 +96,16 @@ export function HostsPanel({
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>(
+    () => (localStorage.getItem("hostSortKey") as SortKey) ?? "default",
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
+
+  function handleSortChange(key: SortKey) {
+    setSortKey(key);
+    localStorage.setItem("hostSortKey", key);
+  }
 
   useEffect(() => {
     getSSHHosts()
@@ -294,6 +352,89 @@ export function HostsPanel({
               >
                 <ListChecks className="size-3.5" />
               </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`size-7 ${sortKey !== "default" ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                    title={t("hosts.sortHosts")}
+                  >
+                    <ArrowUpDown className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs min-w-[160px]"
+                >
+                  <DropdownMenuItem
+                    onClick={() => handleSortChange("default")}
+                    className="flex items-center gap-1.5"
+                  >
+                    {sortKey === "default" ? (
+                      <Check className="size-3 shrink-0 text-accent-brand" />
+                    ) : (
+                      <span className="size-3 shrink-0 inline-block" />
+                    )}
+                    {t("hosts.sortDefault")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {(["name-asc", "name-desc"] as const).map((key) => (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleSortChange(key)}
+                      className="flex items-center gap-1.5"
+                    >
+                      {sortKey === key ? (
+                        <Check className="size-3 shrink-0 text-accent-brand" />
+                      ) : (
+                        <span className="size-3 shrink-0 inline-block" />
+                      )}
+                      {t(
+                        `hosts.sort${key === "name-asc" ? "NameAsc" : "NameDesc"}`,
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  {(["ip-asc", "ip-desc"] as const).map((key) => (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleSortChange(key)}
+                      className="flex items-center gap-1.5"
+                    >
+                      {sortKey === key ? (
+                        <Check className="size-3 shrink-0 text-accent-brand" />
+                      ) : (
+                        <span className="size-3 shrink-0 inline-block" />
+                      )}
+                      {t(`hosts.sort${key === "ip-asc" ? "IpAsc" : "IpDesc"}`)}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  {(["status-online", "status-offline", "pinned"] as const).map(
+                    (key) => (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => handleSortChange(key)}
+                        className="flex items-center gap-1.5"
+                      >
+                        {sortKey === key ? (
+                          <Check className="size-3 shrink-0 text-accent-brand" />
+                        ) : (
+                          <span className="size-3 shrink-0 inline-block" />
+                        )}
+                        {t(
+                          key === "status-online"
+                            ? "hosts.sortOnlineFirst"
+                            : key === "status-offline"
+                              ? "hosts.sortOfflineFirst"
+                              : "hosts.sortPinnedFirst",
+                        )}
+                      </DropdownMenuItem>
+                    ),
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <button
               onClick={() =>
@@ -313,7 +454,7 @@ export function HostsPanel({
         className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
       >
         <SidebarTree
-          children={hostTree?.children ?? []}
+          children={hostTree ? sortHostTree(hostTree, sortKey).children : []}
           onOpenTab={onOpenTab}
           onEditHost={onEditHost}
           onShareHost={(host) => setShareModalHost(host)}
