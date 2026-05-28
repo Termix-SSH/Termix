@@ -119,53 +119,46 @@ export function AlertManager({
     return null;
   }
 
-  const priorityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
-  alerts.forEach((alert) => {
-    const priority = alert.priority || "low";
-    priorityCounts[priority as keyof typeof priorityCounts]++;
-  });
   const hasMultipleAlerts = alerts.length > 1;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[99999]">
-      <div className="relative w-full max-w-2xl mx-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-background/80 z-[99999]">
+      <div className="w-full max-w-2xl mx-4 flex flex-col gap-2">
+        {hasMultipleAlerts && (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-muted-foreground">
+              {currentAlertIndex + 1} {t("common.of")} {alerts.length}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousAlert}
+                disabled={currentAlertIndex === 0}
+              >
+                {t("common.previous")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextAlert}
+                disabled={currentAlertIndex === alerts.length - 1}
+              >
+                {t("common.next")}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <AlertCard
           alert={currentAlert}
           onDismiss={handleDismissAlert}
           onClose={handleCloseCurrentAlert}
         />
 
-        {hasMultipleAlerts && (
-          <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousAlert}
-              disabled={currentAlertIndex === 0}
-              className="h-8 px-3"
-            >
-              {t("common.previous")}
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {currentAlertIndex + 1} {t("common.of")} {alerts.length}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextAlert}
-              disabled={currentAlertIndex === alerts.length - 1}
-              className="h-8 px-3"
-            >
-              {t("common.next")}
-            </Button>
-          </div>
-        )}
-
         {error && (
-          <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2">
-            <div className="bg-destructive text-destructive-foreground px-3 py-1 rounded text-sm">
-              {error}
-            </div>
+          <div className="border border-destructive/50 rounded-md px-3 py-2 text-destructive text-xs">
+            {error}
           </div>
         )}
       </div>

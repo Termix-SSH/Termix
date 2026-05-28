@@ -179,9 +179,16 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(266);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("termix_sidebarWidth");
+    return saved ? parseInt(saved, 10) : 266;
+  });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("termix_sidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
 
   useEffect(() => {
     localStorage.setItem("termix_splitMode", splitMode);
