@@ -974,6 +974,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     authType,
     sudoPassword: undefined as string | undefined,
   };
+  let hostKeepaliveInterval: number | undefined;
+  let hostKeepaliveCountMax: number | undefined;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -986,6 +988,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
+        hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
+        hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -1014,6 +1018,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
+        hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
+        hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -1037,8 +1043,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     port,
     username,
     tryKeyboard: true,
-    keepaliveInterval: 60000,
-    keepaliveCountMax: 5,
+    keepaliveInterval:
+      typeof hostKeepaliveInterval === "number"
+        ? hostKeepaliveInterval * 1000
+        : 60000,
+    keepaliveCountMax:
+      typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,

@@ -685,6 +685,13 @@ app.post("/docker/ssh/connect", async (req, res) => {
         host.jumpHosts = [];
       }
     }
+    if (typeof host.terminalConfig === "string" && host.terminalConfig) {
+      try {
+        host.terminalConfig = JSON.parse(host.terminalConfig as string);
+      } catch {
+        host.terminalConfig = undefined;
+      }
+    }
 
     if (!host.enableDocker) {
       sshLogger.warn("Docker not enabled for host", {
@@ -815,8 +822,14 @@ app.post("/docker/ssh/connect", async (req, res) => {
       port: host.port || 22,
       username: host.username,
       tryKeyboard: true,
-      keepaliveInterval: 60000,
-      keepaliveCountMax: 5,
+      keepaliveInterval:
+        typeof host.terminalConfig?.keepaliveInterval === "number"
+          ? host.terminalConfig.keepaliveInterval * 1000
+          : 60000,
+      keepaliveCountMax:
+        typeof host.terminalConfig?.keepaliveCountMax === "number"
+          ? host.terminalConfig.keepaliveCountMax
+          : 5,
       readyTimeout: 60000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
