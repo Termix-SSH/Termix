@@ -27,6 +27,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Monitor,
+  MousePointerClick,
   Clock,
   Folder,
   Pencil,
@@ -48,7 +49,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   tunnel: <Network className="size-3.5" />,
   docker: <Box className="size-3.5" />,
   telnet: <MessagesSquare className="size-3.5" />,
-  vnc: <Monitor className="size-3.5" />,
+  vnc: <MousePointerClick className="size-3.5" />,
   rdp: <Monitor className="size-3.5" />,
 };
 
@@ -424,7 +425,7 @@ export function CommandPalette({
                               }}
                               className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
                             >
-                              <Monitor className="size-3" />
+                              <MousePointerClick className="size-3" />
                               VNC
                             </button>
                           )}

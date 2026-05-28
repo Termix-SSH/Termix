@@ -144,6 +144,17 @@ router.post("/token", async (req, res) => {
  *         schema:
  *           type: integer
  *         description: Host ID to connect to
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               protocol:
+ *                 type: string
+ *                 enum: [rdp, vnc, telnet]
+ *                 description: Override the host's default connection type
  *     responses:
  *       200:
  *         description: Connection token generated successfully
@@ -205,10 +216,24 @@ router.post(
         }
       }
 
-      const connectionType = (host.connectionType as string) || "ssh";
+      const requestedProtocol = req.body?.protocol as string | undefined;
+      const connectionType =
+        requestedProtocol || (host.connectionType as string);
+
       if (!["rdp", "vnc", "telnet"].includes(connectionType)) {
         return res.status(400).json({
           error: `Connection type '${connectionType}' is not supported for remote desktop. Only RDP, VNC, and Telnet are supported.`,
+        });
+      }
+
+      const protocolEnabledMap: Record<string, boolean> = {
+        rdp: !!host.enableRdp,
+        vnc: !!host.enableVnc,
+        telnet: !!host.enableTelnet,
+      };
+      if (!protocolEnabledMap[connectionType]) {
+        return res.status(400).json({
+          error: `${connectionType.toUpperCase()} is not enabled for this host.`,
         });
       }
 

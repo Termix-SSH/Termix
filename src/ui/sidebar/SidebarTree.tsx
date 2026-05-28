@@ -16,6 +16,7 @@ import {
   MessagesSquare,
   Monitor,
   MoreHorizontal,
+  MousePointerClick,
   Network,
   Pencil,
   Pin,
@@ -215,9 +216,15 @@ export function HostItem({
             ? "bg-muted/20"
             : ""
       } ${isMenuOpen ? "bg-muted/40" : ""}`}
-      onClick={() => {
+      onClick={(e) => {
         if (selectionMode) {
           onToggleSelect?.();
+          return;
+        }
+        // On touch devices open the action tray instead of immediately launching a tab
+        if (window.matchMedia("(hover: none)").matches) {
+          e.stopPropagation();
+          onMenuOpenChange?.(!isMenuOpen);
           return;
         }
         if (host.enableSsh) onOpenTab("terminal");
@@ -360,7 +367,7 @@ export function HostItem({
                   }}
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
-                  <Monitor className="size-3.5" />
+                  <MousePointerClick className="size-3.5" />
                 </button>
               )}
               {host.enableTelnet && (
@@ -526,7 +533,7 @@ export function HostItem({
                             toast.success(t("hosts.vncUrlCopied"));
                           }}
                         >
-                          <Monitor className="size-3.5 mr-2" />
+                          <MousePointerClick className="size-3.5 mr-2" />
                           {t("hosts.copyVncUrlAction")}
                         </DropdownMenuItem>
                       )}

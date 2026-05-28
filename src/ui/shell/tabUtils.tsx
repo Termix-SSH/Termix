@@ -230,7 +230,13 @@ export function renderTabContent(
         return (
           <EmptyState icon={Monitor} messageKey="guacamole.noHostSelected" />
         );
-      return <GuacamoleApp hostId={host.id} tabId={tab.id} />;
+      return (
+        <GuacamoleApp
+          hostId={host.id}
+          tabId={tab.id}
+          protocol={tab.type as "rdp" | "vnc" | "telnet"}
+        />
+      );
 
     case "network_graph":
       return <NetworkGraphCard embedded={false} />;

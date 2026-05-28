@@ -15,9 +15,14 @@ import type { SSHHost } from "@/types";
 interface GuacamoleAppProps {
   hostId?: string;
   tabId?: string;
+  protocol?: "rdp" | "vnc" | "telnet";
 }
 
-const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId, tabId }) => {
+const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
+  hostId,
+  tabId,
+  protocol,
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -76,6 +81,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({ hostId, tabId }) => {
             hostId={parseInt(hostId, 10)}
             hostConfig={hostConfig}
             tabId={tabId}
+            protocol={protocol}
           />
         );
       }}
@@ -87,12 +93,14 @@ interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<SSHHost, "connectionType">;
   tabId?: string;
+  protocol?: "rdp" | "vnc" | "telnet";
 }
 
 const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   hostId,
   hostConfig,
   tabId,
+  protocol,
 }) => {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
@@ -110,7 +118,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
           setError(t("guacamole.guacdUnavailable"));
           return;
         }
-        return getGuacamoleTokenFromHost(hostId);
+        return getGuacamoleTokenFromHost(hostId, protocol);
       })
       .then((result) => {
         if (result) setToken(result.token);
@@ -172,14 +180,21 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
         <SimpleLoader
           visible={true}
           message={t("guacamole.connecting", {
-            type: (hostConfig.connectionType || "remote").toUpperCase(),
+            type: (
+              protocol ||
+              hostConfig.connectionType ||
+              "remote"
+            ).toUpperCase(),
           })}
         />
       </div>
     );
   }
 
-  const protocol = hostConfig.connectionType as "rdp" | "vnc" | "telnet";
+  const resolvedProtocol = (protocol ?? hostConfig.connectionType) as
+    | "rdp"
+    | "vnc"
+    | "telnet";
 
   return (
     <div className="relative w-full h-full">
@@ -213,13 +228,17 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
       <GuacamoleDisplay
         key={token}
         ref={displayRef}
-        connectionConfig={{ token, protocol, type: protocol }}
+        connectionConfig={{
+          token,
+          protocol: resolvedProtocol,
+          type: resolvedProtocol,
+        }}
         isVisible={true}
         onError={(err) => setConnectionError(err)}
       />
       <GuacamoleToolbar
         displayRef={displayRef}
-        protocol={protocol}
+        protocol={resolvedProtocol}
         onReconnect={handleReconnect}
       />
     </div>

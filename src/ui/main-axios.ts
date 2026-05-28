@@ -4360,9 +4360,13 @@ export async function getGuacamoleToken(
 
 export async function getGuacamoleTokenFromHost(
   hostId: number,
+  protocol?: "rdp" | "vnc" | "telnet",
 ): Promise<GuacamoleTokenResponse> {
   try {
-    const response = await authApi.post(`/guacamole/connect-host/${hostId}`);
+    const response = await authApi.post(
+      `/guacamole/connect-host/${hostId}`,
+      protocol ? { protocol } : {},
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get guacamole token from host");

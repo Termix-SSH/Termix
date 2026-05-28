@@ -31,6 +31,7 @@ import {
   Lock,
   Monitor,
   Network,
+  MousePointerClick,
   Palette,
   Pencil,
   Plus,
@@ -220,7 +221,7 @@ function makeHostTabs(t: (key: string) => string): HostTab[] {
     {
       id: "vnc",
       label: t("hosts.tabVnc"),
-      icon: <Monitor className="size-3" />,
+      icon: <MousePointerClick className="size-3" />,
     },
     {
       id: "telnet",
@@ -687,7 +688,7 @@ function HostEditor({
                     proto: "enableVnc" as const,
                     label: t("hosts.tabVnc"),
                     desc: t("hosts.virtualNetwork"),
-                    icon: <Monitor className="size-4" />,
+                    icon: <MousePointerClick className="size-4" />,
                     portField: "vncPort" as const,
                   },
                   {
