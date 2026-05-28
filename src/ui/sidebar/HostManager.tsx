@@ -430,8 +430,8 @@ function HostEditor({
       autoTmux: host?.terminalConfig?.autoTmux ?? false,
       sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
       sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
-      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 30,
-      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 3,
+      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
+      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
       environmentVariables:
         host?.terminalConfig?.environmentVariables ??
         ([] as { key: string; value: string }[]),

@@ -80,6 +80,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
       name: a.name,
       snippetId: String(a.snippetId),
     })),
+    jumpHosts: (h.jumpHosts ?? []).map((j) => ({
+      hostId: String(j.hostId),
+    })),
     serverTunnels: [],
     defaultPath: h.defaultPath,
     terminalConfig: h.terminalConfig as Host["terminalConfig"],
@@ -88,6 +91,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Port: h.socks5Port,
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
+    socks5ProxyChain: h.socks5ProxyChain ?? [],
   };
 }
 

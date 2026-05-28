@@ -24,6 +24,7 @@ import {
   Share2,
   Terminal,
   Trash2,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,7 +37,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
-import { bulkUpdateSSHHosts, createSSHHost, deleteSSHHost } from "@/main-axios";
+import {
+  bulkUpdateSSHHosts,
+  createSSHHost,
+  deleteSSHHost,
+  wakeOnLan,
+} from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
@@ -402,6 +408,25 @@ export function HostItem({
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <MessagesSquare className="size-3.5" />
+                </button>
+              )}
+              {host.macAddress && (
+                <button
+                  title={t("hosts.wakeOnLanAction")}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await wakeOnLan(host.id);
+                      toast.success(
+                        t("hosts.wakeOnLanSuccess", { name: host.name }),
+                      );
+                    } catch {
+                      toast.error(t("hosts.wakeOnLanError"));
+                    }
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Zap className="size-3.5" />
                 </button>
               )}
             </div>
@@ -802,12 +827,16 @@ export function SidebarTree({
         lastAccess: _la,
         hasKey: _hk,
         hasKeyPassword: _hkp,
+        jumpHosts: _jumpHosts,
         ...rest
       } = host as any;
       await createSSHHost({
         ...rest,
         name: `${host.name} (copy)`,
         key: undefined,
+        jumpHosts: (host.jumpHosts ?? []).map((j: { hostId: string }) => ({
+          hostId: Number(j.hostId),
+        })),
       });
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));

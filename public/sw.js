@@ -1,10 +1,11 @@
 const CACHE_NAME = "termix-static-v2";
+const BASE_PATH = "__TERMIX_SW_BASE_PATH__";
 const STATIC_ASSETS = [
-  "/favicon.ico",
-  "/icons/48x48.png",
-  "/icons/128x128.png",
-  "/icons/256x256.png",
-  "/icons/512x512.png",
+  `${BASE_PATH}/favicon.ico`,
+  `${BASE_PATH}/icons/48x48.png`,
+  `${BASE_PATH}/icons/128x128.png`,
+  `${BASE_PATH}/icons/256x256.png`,
+  `${BASE_PATH}/icons/512x512.png`,
 ];
 
 self.addEventListener("install", (event) => {

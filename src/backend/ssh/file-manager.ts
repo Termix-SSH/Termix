@@ -980,11 +980,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     port,
     username,
     tryKeyboard: true,
-    keepaliveInterval: 10000,
+    keepaliveInterval: 60000,
     keepaliveCountMax: 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 5000,
+    tcpKeepAliveInitialDelay: 30000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
       hostId,
       ip,

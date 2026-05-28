@@ -85,6 +85,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
       name: a.name,
       snippetId: String(a.snippetId),
     })),
+    jumpHosts: (h.jumpHosts ?? []).map((j) => ({
+      hostId: String(j.hostId),
+    })),
     serverTunnels: [],
     defaultPath: h.defaultPath,
     terminalConfig: h.terminalConfig as Host["terminalConfig"],
@@ -93,6 +96,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Port: h.socks5Port,
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
+    socks5ProxyChain: h.socks5ProxyChain ?? [],
   };
 }
 
@@ -138,10 +142,18 @@ export function AppShell({
 }) {
   const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: "dashboard", instanceId: "dashboard", type: "dashboard", label: t("nav.dashboard"), openedAt: Date.now() },
+    {
+      id: "dashboard",
+      instanceId: "dashboard",
+      type: "dashboard",
+      label: t("nav.dashboard"),
+      openedAt: Date.now(),
+    },
   ]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
-  const [userPrefs, setUserPrefs] = useState<UserPreferences>({ reopenTabsOnLogin: false });
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>({
+    reopenTabsOnLogin: false,
+  });
   const [userPrefsLoaded, setUserPrefsLoaded] = useState(false);
   const [hostsLoaded, setHostsLoaded] = useState(false);
   // Flips to true once the initial DB read (restore or skip) is done — sync must not fire before this
@@ -160,7 +172,9 @@ export function AppShell({
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [backgroundTabRecords, setBackgroundTabRecords] = useState<OpenTabRecord[]>([]);
+  const [backgroundTabRecords, setBackgroundTabRecords] = useState<
+    OpenTabRecord[]
+  >([]);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
@@ -377,7 +391,16 @@ export function AppShell({
     return () => window.removeEventListener("termix:open-tab", handle);
   }, [allHosts]);
 
-  const PERSISTENT_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet", "files", "docker", "stats", "tunnel"];
+  const PERSISTENT_TAB_TYPES: TabType[] = [
+    "terminal",
+    "rdp",
+    "vnc",
+    "telnet",
+    "files",
+    "docker",
+    "stats",
+    "tunnel",
+  ];
 
   // On load: always read saved tabs from DB so background sessions are preserved across refreshes.
   // If reopenTabsOnLogin is on, also restore them as open tabs in the tab bar.
@@ -403,7 +426,9 @@ export function AppShell({
         );
 
         if (userPrefs.reopenTabsOnLogin) {
-          const hasPersistentTabs = tabs.some((t) => PERSISTENT_TAB_TYPES.includes(t.type));
+          const hasPersistentTabs = tabs.some((t) =>
+            PERSISTENT_TAB_TYPES.includes(t.type),
+          );
           if (!hasPersistentTabs) {
             const restoredTabs: Tab[] = [];
             for (const saved of savedTabs as OpenTabRecord[]) {
@@ -411,14 +436,16 @@ export function AppShell({
                 ? allHosts.find((h) => h.id === String(saved.hostId))
                 : undefined;
               const hostlessTypes: TabType[] = ["dashboard", "tunnel"];
-              if (!host && !hostlessTypes.includes(saved.tabType as TabType)) continue;
+              if (!host && !hostlessTypes.includes(saved.tabType as TabType))
+                continue;
 
               // Singleton tabs use their type as the stable ID; host-bound tabs get a unique ID
               const tabId = host
                 ? `${host.name}-${saved.tabType}-${Date.now()}-${saved.tabOrder}`
                 : saved.id;
               const liveSession = sessionByInstanceId.get(saved.id);
-              const restoredSessionId = liveSession?.sessionId ?? saved.backendSessionId ?? null;
+              const restoredSessionId =
+                liveSession?.sessionId ?? saved.backendSessionId ?? null;
 
               restoredTabs.push({
                 id: tabId,
@@ -428,14 +455,17 @@ export function AppShell({
                 host,
                 openedAt: new Date(saved.createdAt).getTime(),
                 restoredSessionId,
-                terminalRef: saved.tabType === "terminal" ? createRef() : undefined,
+                terminalRef:
+                  saved.tabType === "terminal" ? createRef() : undefined,
               });
             }
 
             if (restoredTabs.length > 0) {
               setTabs((prev) => {
                 const existingIds = new Set(prev.map((t) => t.id));
-                const newTabs = restoredTabs.filter((t) => !existingIds.has(t.id));
+                const newTabs = restoredTabs.filter(
+                  (t) => !existingIds.has(t.id),
+                );
                 return newTabs.length > 0 ? [...prev, ...newTabs] : prev;
               });
               setActiveTabId(restoredTabs[0].id);
@@ -454,15 +484,19 @@ export function AppShell({
     }
 
     loadSavedTabs();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostsLoaded, userPrefsLoaded]);
 
   // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
-  const orderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const prevTabOrderRef = useRef<string>("");
   useEffect(() => {
     if (!tabsReady) return;
-    const persistable = tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type));
+    const persistable = tabs.filter((t) =>
+      PERSISTENT_TAB_TYPES.includes(t.type),
+    );
     const orderKey = persistable.map((t) => t.instanceId).join(",");
     if (orderKey === prevTabOrderRef.current) return;
     prevTabOrderRef.current = orderKey;
@@ -475,7 +509,8 @@ export function AppShell({
     }, 500);
 
     return () => {
-      if (orderSyncTimeoutRef.current) clearTimeout(orderSyncTimeoutRef.current);
+      if (orderSyncTimeoutRef.current)
+        clearTimeout(orderSyncTimeoutRef.current);
     };
   }, [tabs, tabsReady]);
 
@@ -498,7 +533,8 @@ export function AppShell({
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      finalLabel = same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
+      finalLabel =
+        same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
 
       // Retrofit the first duplicate's label to "(1)" if needed
       const next =
@@ -508,16 +544,19 @@ export function AppShell({
             )
           : prev;
 
-      return [...next, {
-        id: tabId,
-        instanceId,
-        type,
-        label: finalLabel,
-        host,
-        openedAt,
-        terminalRef: ref,
-        restoredSessionId: restore?.restoredSessionId ?? null,
-      }];
+      return [
+        ...next,
+        {
+          id: tabId,
+          instanceId,
+          type,
+          label: finalLabel,
+          host,
+          openedAt,
+          terminalRef: ref,
+          restoredSessionId: restore?.restoredSessionId ?? null,
+        },
+      ];
     });
     setActiveTabId(tabId);
 
@@ -587,7 +626,16 @@ export function AppShell({
       };
       setTabs((prev) => {
         if (prev.find((t) => t.id === id)) return prev;
-        return [...prev, { id, instanceId: id, type, label: singletonLabels[type] ?? type, openedAt: Date.now() }];
+        return [
+          ...prev,
+          {
+            id,
+            instanceId: id,
+            type,
+            label: singletonLabels[type] ?? type,
+            openedAt: Date.now(),
+          },
+        ];
       });
       setActiveTabId(id);
       if (PERSISTENT_TAB_TYPES.includes(type)) {
@@ -607,7 +655,10 @@ export function AppShell({
 
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
-    if (tabToClose?.instanceId && PERSISTENT_TAB_TYPES.includes(tabToClose.type)) {
+    if (
+      tabToClose?.instanceId &&
+      PERSISTENT_TAB_TYPES.includes(tabToClose.type)
+    ) {
       deleteOpenTab(tabToClose.instanceId).catch(() => {});
     }
 
@@ -623,7 +674,13 @@ export function AppShell({
       const next = prev.filter((t) => t.id !== id);
       if (next.length === 0)
         return [
-          { id: "dashboard", instanceId: "dashboard", type: "dashboard", label: t("nav.dashboard"), openedAt: Date.now() },
+          {
+            id: "dashboard",
+            instanceId: "dashboard",
+            type: "dashboard",
+            label: t("nav.dashboard"),
+            openedAt: Date.now(),
+          },
         ];
       return next;
     });
@@ -911,20 +968,31 @@ export function AppShell({
             }}
             onCloseTab={closeTab}
             onReopenTab={(record, restoredSessionId) => {
-              const host = record.hostId ? allHosts.find((h) => h.id === String(record.hostId)) : undefined;
+              const host = record.hostId
+                ? allHosts.find((h) => h.id === String(record.hostId))
+                : undefined;
               const hostlessTypes: TabType[] = ["tunnel"];
-              if (!host && !hostlessTypes.includes(record.tabType as TabType)) return;
-              setBackgroundTabRecords((prev) => prev.filter((r) => r.id !== record.id));
+              if (!host && !hostlessTypes.includes(record.tabType as TabType))
+                return;
+              setBackgroundTabRecords((prev) =>
+                prev.filter((r) => r.id !== record.id),
+              );
               if (host) {
-                const effectiveSessionId = restoredSessionId ?? record.backendSessionId ?? null;
-                openTab(host, record.tabType as TabType, { instanceId: record.id, restoredSessionId: effectiveSessionId });
+                const effectiveSessionId =
+                  restoredSessionId ?? record.backendSessionId ?? null;
+                openTab(host, record.tabType as TabType, {
+                  instanceId: record.id,
+                  restoredSessionId: effectiveSessionId,
+                });
               } else {
                 openSingletonTab(record.tabType as TabType);
               }
               if (isMobile) setSidebarOpen(false);
             }}
             onForgetBackground={(recordId) => {
-              setBackgroundTabRecords((prev) => prev.filter((r) => r.id !== recordId));
+              setBackgroundTabRecords((prev) =>
+                prev.filter((r) => r.id !== recordId),
+              );
             }}
           />
         </div>
@@ -932,7 +1000,12 @@ export function AppShell({
 
       {railView === "user-profile" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <UserProfilePanel username={username} onLogout={onLogout} userPrefs={userPrefs} onPrefsChange={setUserPrefs} />
+          <UserProfilePanel
+            username={username}
+            onLogout={onLogout}
+            userPrefs={userPrefs}
+            onPrefsChange={setUserPrefs}
+          />
         </div>
       )}
 
@@ -984,7 +1057,10 @@ export function AppShell({
           railView={railView}
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
-          connectionCount={tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type)).length + backgroundTabRecords.length}
+          connectionCount={
+            tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type)).length +
+            backgroundTabRecords.length
+          }
           username={username}
           isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
