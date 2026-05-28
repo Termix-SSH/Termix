@@ -40,9 +40,6 @@ interface TabContextType {
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
 
-type ElectronWindow = Window & {
-  electronAPI?: unknown;
-};
 
 export function useTabs() {
   const context = useContext(TabContext);
@@ -79,110 +76,18 @@ interface TabProviderProps {
 export function clearTermixSessionStorage() {
   localStorage.removeItem("termix_tabs");
   localStorage.removeItem("termix_currentTab");
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith("termix_session_")) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach((k) => localStorage.removeItem(k));
 }
 
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>(() => {
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-    const isElectron =
-      typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
-    const persistenceEnabled =
-      localStorage.getItem("enableTerminalSessionPersistence") !== "false";
-    const shouldRestore = isMobile || isElectron || persistenceEnabled;
-
-    if (!shouldRestore) {
-      return [{ id: 1, type: "home", title: "Home" }];
-    }
-
-    try {
-      const saved = localStorage.getItem("termix_tabs");
-      if (saved) {
-        const parsed = JSON.parse(saved) as Tab[];
-        const restored: Tab[] = [{ id: 1, type: "home", title: "Home" }];
-        let maxId = 1;
-        for (const tab of parsed) {
-          if (tab.type === "home") continue;
-          const restoredTab: Tab = {
-            ...tab,
-            instanceId: tab.instanceId,
-            terminalRef:
-              tab.type === "terminal"
-                ? React.createRef<TerminalRefHandle>()
-                : undefined,
-            hostConfig: tab.hostConfig
-              ? {
-                  ...tab.hostConfig,
-                  instanceId: tab.instanceId,
-                }
-              : undefined,
-          };
-          restored.push(restoredTab);
-          if (tab.id > maxId) maxId = tab.id;
-        }
-        if (restored.length > 1) return restored;
-      }
-    } catch {
-      /* ignore corrupt data */
-    }
-    return [{ id: 1, type: "home", title: "Home" }];
-  });
-  const [currentTab, setCurrentTab] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("termix_currentTab");
-      if (saved) {
-        const parsed = parseInt(saved, 10);
-        if (parsed && tabs.some((t) => t.id === parsed)) return parsed;
-      }
-    } catch {
-      /* ignore */
-    }
-    return 1;
-  });
+  const [tabs, setTabs] = useState<Tab[]>([{ id: 1, type: "home", title: "Home" }]);
+  const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
     string | null
   >(null);
-  const [initialMaxId] = useState(() => {
-    let maxId = 1;
-    tabs.forEach((tab) => {
-      if (tab.id > maxId) maxId = tab.id;
-    });
-    return maxId + 1;
-  });
+  const [initialMaxId] = useState(2);
   const nextTabId = useRef(initialMaxId);
-
-  useEffect(() => {
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-    const isElectron =
-      typeof window !== "undefined" && !!(window as ElectronWindow).electronAPI;
-    const persistenceEnabled =
-      localStorage.getItem("enableTerminalSessionPersistence") !== "false";
-    const shouldSave = isMobile || isElectron || persistenceEnabled;
-
-    if (shouldSave) {
-      const serializable = tabs
-        .filter((t) => t.type !== "home")
-        .map((tab) => {
-          const rest = { ...tab };
-          delete rest.terminalRef;
-          return rest;
-        });
-      localStorage.setItem("termix_tabs", JSON.stringify(serializable));
-      localStorage.setItem("termix_currentTab", String(currentTab));
-    } else {
-      localStorage.removeItem("termix_tabs");
-      localStorage.removeItem("termix_currentTab");
-    }
-  }, [tabs, currentTab]);
 
   // Safety net: if currentTab points to a tab that no longer exists, fall back to home
   useEffect(() => {

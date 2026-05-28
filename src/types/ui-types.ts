@@ -182,9 +182,12 @@ export type Tunnel = {
 
 export type Tab = {
   id: string;
+  instanceId: string;
   type: TabType;
   label: string;
   host?: Host;
+  openedAt: number;
+  restoredSessionId?: string | null;
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
     reconnect?: () => void;

@@ -1380,6 +1380,37 @@ wss.on("connection", async (ws: WebSocket, req) => {
         tabInstanceId,
       );
 
+      // If createSession returned an existing live session (duplicate tabInstanceId),
+      // close the newly-established SSH connection and attach this WS to the live session instead.
+      const existingSession = sessionManager.getSession(currentSessionId);
+      if (existingSession && existingSession.sshStream && !existingSession.sshStream.destroyed && existingSession.sshConn !== sshConn) {
+        sshLogger.info("Reusing existing live session after duplicate connectToHost, closing new SSH conn", {
+          operation: "terminal_reuse_existing_session",
+          sessionId: currentSessionId,
+          tabInstanceId,
+          userId,
+        });
+        try { sshConn?.end(); } catch { /* ignore */ }
+        sshConn = null;
+
+        sshStream = existingSession.sshStream;
+        sshConn = existingSession.sshConn;
+        isConnecting = false;
+        isConnected = true;
+        sessionManager.attachWs(currentSessionId, userId, ws, tabInstanceId);
+
+        const buffered = sessionManager.getBuffer(existingSession);
+        if (buffered) {
+          ws.send(JSON.stringify({ type: "data", data: buffered }));
+        }
+        ws.send(JSON.stringify({ type: "sessionCreated", sessionId: currentSessionId }));
+        ws.send(JSON.stringify({ type: "sessionAttached", sessionId: currentSessionId }));
+        ws.send(JSON.stringify({ type: "connected", message: "Session reattached" }));
+
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
+
       sshLogger.info("Terminal session created after SSH ready", {
         operation: "terminal_session_created",
         sessionId: currentSessionId,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -186,6 +186,8 @@ export function HostItem({
   onToggleSelect,
   isMenuOpen = false,
   onMenuOpenChange,
+  isTrayOpen = false,
+  onTrayOpenChange,
 }: {
   host: Host;
   onOpenTab: (type: TabType) => void;
@@ -200,10 +202,26 @@ export function HostItem({
   onToggleSelect?: () => void;
   isMenuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  isTrayOpen?: boolean;
+  onTrayOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const metricsEnabled =
     host.enableSsh && host.statsConfig?.metricsEnabled !== false;
+  const [trayOnClick, setTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+
+  useEffect(() => {
+    const handler = () =>
+      setTrayOnClick(localStorage.getItem("hostTrayOnClick") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("hostTrayOnClickChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("hostTrayOnClickChanged", handler);
+    };
+  }, []);
 
   if (query && !hostMatchesQuery(host, query)) return null;
 
@@ -225,6 +243,10 @@ export function HostItem({
         if (window.matchMedia("(hover: none)").matches) {
           e.stopPropagation();
           onMenuOpenChange?.(!isMenuOpen);
+          return;
+        }
+        if (trayOnClick) {
+          onTrayOpenChange?.(!isTrayOpen);
           return;
         }
         if (host.enableSsh) onOpenTab("terminal");
@@ -260,9 +282,9 @@ export function HostItem({
           )}
         </div>
 
-        {/* Address — only visible on hover or while menu is open */}
+        {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
         <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 group-hover:opacity-100 group-hover:h-auto ${isMenuOpen ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
+          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!trayOnClick ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (trayOnClick && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
         >
           {host.username}@{host.ip}
         </span>
@@ -286,9 +308,9 @@ export function HostItem({
           </div>
         )}
 
-        {/* Action tray — slides open on CSS hover or while menu is open */}
+        {/* Action tray — slides open on CSS hover, on click (when trayOnClick), or while menu is open */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[300px] group-hover:opacity-100 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!trayOnClick ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (trayOnClick && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {host.online &&
             ((host.cpu != null && host.cpu > 0) ||
@@ -601,6 +623,8 @@ export function FolderItem({
   onToggleSelect,
   openMenuHostId,
   onMenuOpenChange,
+  openTrayHostId,
+  onTrayOpenChange,
 }: {
   folder: HostFolder;
   depth?: number;
@@ -618,6 +642,8 @@ export function FolderItem({
   onToggleSelect: (id: string) => void;
   openMenuHostId: string | null;
   onMenuOpenChange: (hostId: string | null) => void;
+  openTrayHostId: string | null;
+  onTrayOpenChange: (hostId: string | null) => void;
 }) {
   const { total, online } = folderHostCount(folder);
 
@@ -670,6 +696,8 @@ export function FolderItem({
                 onToggleSelect={onToggleSelect}
                 openMenuHostId={openMenuHostId}
                 onMenuOpenChange={onMenuOpenChange}
+                openTrayHostId={openTrayHostId}
+                onTrayOpenChange={onTrayOpenChange}
               />
             ) : (
               <HostItem
@@ -688,6 +716,10 @@ export function FolderItem({
                 isMenuOpen={openMenuHostId === child.id}
                 onMenuOpenChange={(open) =>
                   onMenuOpenChange(open ? child.id : null)
+                }
+                isTrayOpen={openTrayHostId === child.id}
+                onTrayOpenChange={(open) =>
+                  onTrayOpenChange(open ? child.id : null)
                 }
               />
             ),
@@ -723,6 +755,7 @@ export function SidebarTree({
     new Set(),
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
+  const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -846,6 +879,8 @@ export function SidebarTree({
                 onToggleSelect={toggleSelect}
                 openMenuHostId={openMenuHostId}
                 onMenuOpenChange={setOpenMenuHostId}
+                openTrayHostId={openTrayHostId}
+                onTrayOpenChange={setOpenTrayHostId}
               />
             ) : (
               <HostItem
@@ -864,6 +899,10 @@ export function SidebarTree({
                 isMenuOpen={openMenuHostId === child.id}
                 onMenuOpenChange={(open) =>
                   setOpenMenuHostId(open ? child.id : null)
+                }
+                isTrayOpen={openTrayHostId === child.id}
+                onTrayOpenChange={(open) =>
+                  setOpenTrayHostId(open ? child.id : null)
                 }
               />
             ),

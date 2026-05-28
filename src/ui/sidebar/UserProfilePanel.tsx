@@ -377,9 +377,13 @@ function PasswordChangeSection({
 export function UserProfilePanel({
   username,
   onLogout,
+  userPrefs,
+  onPrefsChange,
 }: {
   username?: string;
   onLogout?: () => void;
+  userPrefs?: { reopenTabsOnLogin: boolean };
+  onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
 }) {
   const { t } = useTranslation();
   const themeLabel: Record<ThemeId, string> = {
@@ -464,13 +468,13 @@ export function UserProfilePanel({
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
   });
-  const [sessionPersistence, setSessionPersistence] = useState(
-    () => localStorage.getItem("enableTerminalSessionPersistence") !== "false",
-  );
   const [showHostTags, setShowHostTags] = useState(() => {
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const [hostTrayOnClick, setHostTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
@@ -994,20 +998,16 @@ export function UserProfilePanel({
               />
             </SettingRow>
             <SettingRow
-              label={t("newUi.sidebar.userProfile.sessionPersistence")}
-              description={t(
-                "newUi.sidebar.userProfile.sessionPersistenceDesc",
-              )}
-              badge="BETA"
+              label={t("newUi.sidebar.userProfile.reopenTabsOnLogin")}
+              description={t("newUi.sidebar.userProfile.reopenTabsOnLoginDesc")}
             >
               <FakeSwitch
-                checked={sessionPersistence}
+                checked={userPrefs?.reopenTabsOnLogin ?? false}
                 onChange={(v) => {
-                  setSessionPersistence(v);
-                  localStorage.setItem(
-                    "enableTerminalSessionPersistence",
-                    v.toString(),
-                  );
+                  onPrefsChange?.({ reopenTabsOnLogin: v });
+                  import("@/main-axios").then(({ saveUserPreferences }) => {
+                    saveUserPreferences({ reopenTabsOnLogin: v }).catch(() => {});
+                  });
                 }}
               />
             </SettingRow>
@@ -1039,6 +1039,19 @@ export function UserProfilePanel({
                   setShowHostTags(v);
                   localStorage.setItem("showHostTags", v.toString());
                   window.dispatchEvent(new Event("showHostTagsChanged"));
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.hostTrayOnClick")}
+              description={t("newUi.sidebar.userProfile.hostTrayOnClickDesc")}
+            >
+              <FakeSwitch
+                checked={hostTrayOnClick}
+                onChange={(v) => {
+                  setHostTrayOnClick(v);
+                  localStorage.setItem("hostTrayOnClick", v.toString());
+                  window.dispatchEvent(new Event("hostTrayOnClickChanged"));
                 }}
               />
             </SettingRow>

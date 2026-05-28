@@ -632,3 +632,33 @@ export const apiKeys = sqliteTable("api_keys", {
   lastUsedAt: text("last_used_at"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 });
+
+export const userOpenTabs = sqliteTable("user_open_tabs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tabType: text("tab_type").notNull(),
+  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  tabOrder: integer("tab_order").notNull().default(0),
+  backendSessionId: text("backend_session_id"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const userPreferences = sqliteTable("user_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  reopenTabsOnLogin: integer("reopen_tabs_on_login", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

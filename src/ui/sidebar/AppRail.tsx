@@ -7,6 +7,7 @@ import {
   LayoutPanelLeft,
   Network,
   Play,
+  Plug,
   Server,
   Settings,
   User,
@@ -25,6 +26,7 @@ export type RailView =
   | "credentials"
   | "quick-connect"
   | ToolsTab
+  | "connections"
   | "user-profile"
   | "admin-settings";
 
@@ -42,6 +44,7 @@ type RailItem =
 function buildRailButtons(
   splitMode: SplitMode,
   t: (key: string) => string,
+  connectionCount: number,
 ): RailItem[] {
   return [
     { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
@@ -49,6 +52,12 @@ function buildRailButtons(
       view: "credentials",
       icon: <KeyRound size={16} />,
       title: t("nav.credentials"),
+    },
+    { kind: "separator" },
+    {
+      view: "connections",
+      icon: <Plug size={16} />,
+      title: t("nav.connections"),
     },
     { kind: "separator" },
     {
@@ -88,6 +97,7 @@ export function AppRail({
   railView,
   sidebarOpen,
   splitMode,
+  connectionCount,
   username,
   isAdmin,
   profileDropdownOpen,
@@ -99,6 +109,7 @@ export function AppRail({
   railView: RailView;
   sidebarOpen: boolean;
   splitMode: SplitMode;
+  connectionCount: number;
   username: string;
   isAdmin: boolean;
   profileDropdownOpen: boolean;
@@ -110,7 +121,7 @@ export function AppRail({
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const railExpanded = hovered || profileDropdownOpen;
-  const railButtons = buildRailButtons(splitMode, t);
+  const railButtons = buildRailButtons(splitMode, t, connectionCount);
 
   return (
     <div
