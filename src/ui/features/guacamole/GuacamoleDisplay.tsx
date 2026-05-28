@@ -373,6 +373,7 @@ export const GuacamoleDisplay = forwardRef<
             const h = Math.round(rect.height);
             if (w > 0 && h > 0) client.sendSize(w, h);
           }
+          rescaleDisplay(false);
           break;
         case 4:
           break;
@@ -517,7 +518,10 @@ export const GuacamoleDisplay = forwardRef<
           const rect = containerRef.current.getBoundingClientRect();
           const w = Math.round(rect.width);
           const h = Math.round(rect.height);
-          if (w > 0 && h > 0) clientRef.current.sendSize(w, h);
+          if (w > 0 && h > 0) {
+            clientRef.current.sendSize(w, h);
+            rescaleDisplay(true);
+          }
         }
       }, 150);
     });
@@ -527,7 +531,7 @@ export const GuacamoleDisplay = forwardRef<
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [rescaleDisplay]);
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;

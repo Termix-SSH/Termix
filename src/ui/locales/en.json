@@ -750,7 +750,8 @@
   },
   "splitScreen": {
     "paneEmpty": "Pane {{index}} - empty",
-    "noTabAssigned": "No tab assigned"
+    "noTabAssigned": "No tab assigned",
+    "focusedPane": "Active pane"
   },
   "guacamole": {
     "connecting": "Connecting to {{type}} session...",
@@ -1807,11 +1808,17 @@
         "selectLayoutHint": "Choose how many panes to display",
         "panesTitle": "Panes",
         "openTabsTitle": "Open Tabs",
-        "dragTabsHint": "Drag tabs into panes above",
+        "dragTabsHint": "Drag tabs into panes above, or use Quick Assign",
         "dropHere": "Drop here",
         "emptyPane": "Empty",
         "dashboard": "Dashboard",
-        "clearSplitScreen": "Clear Split Screen"
+        "clearSplitScreen": "Clear Split Screen",
+        "quickAssign": "Quick Assign",
+        "alreadyAssigned": "Pane {{index}}",
+        "splitTab": "Split Tab",
+        "addToSplit": "Add to Split",
+        "removeFromSplit": "Remove from Split",
+        "assignToPane": "Assign to pane"
       },
       "snippets": {
         "createSnippetTitle": "Create Snippet",

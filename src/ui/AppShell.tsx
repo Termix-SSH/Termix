@@ -30,6 +30,7 @@ import type {
   SplitMode,
   HostFolder,
 } from "@/types/ui-types";
+import { PANE_COUNTS } from "@/lib/theme";
 import { getSSHHosts, getUserInfo } from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
@@ -129,10 +130,15 @@ export function AppShell({
   ]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [splitMode, setSplitMode] = useState<SplitMode>("none");
-  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
-    Array(6).fill(null),
+  const [splitMode, setSplitMode] = useState<SplitMode>(
+    () => (localStorage.getItem("termix_splitMode") as SplitMode) ?? "none",
   );
+  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
+    () =>
+      JSON.parse(localStorage.getItem("termix_paneTabIds") ?? "null") ??
+      Array(6).fill(null),
+  );
+  const [focusedPaneIndex, setFocusedPaneIndex] = useState<number | null>(null);
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
@@ -144,6 +150,14 @@ export function AppShell({
   const [sidebarWidth, setSidebarWidth] = useState(266);
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("termix_splitMode", splitMode);
+  }, [splitMode]);
+
+  useEffect(() => {
+    localStorage.setItem("termix_paneTabIds", JSON.stringify(paneTabIds));
+  }, [paneTabIds]);
 
   const isMobile = useIsMobile();
 
@@ -436,6 +450,7 @@ export function AppShell({
         remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
       );
     }
+    setPaneTabIds((prev) => prev.map((p) => (p === id ? null : p)));
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (next.length === 0)
@@ -477,6 +492,53 @@ export function AppShell({
       return;
     }
     doCloseTab(id);
+  }
+
+  function splitTabQuick(tabId: string, mode: SplitMode) {
+    setSplitMode(mode);
+    setPaneTabIds(() => {
+      const count = PANE_COUNTS[mode];
+      const next: (string | null)[] = Array(6).fill(null);
+      next[0] = tabId;
+      // Fill remaining panes with other non-dashboard tabs in order
+      let slot = 1;
+      for (const tab of tabs) {
+        if (slot >= count) break;
+        if (tab.id !== tabId && tab.type !== "dashboard") {
+          next[slot] = tab.id;
+          slot++;
+        }
+      }
+      return next;
+    });
+  }
+
+  function addTabToSplit(tabId: string) {
+    setPaneTabIds((prev) => {
+      // Remove from any current slot first
+      const next = prev.map((p) => (p === tabId ? null : p));
+      // Find first empty slot within the current pane count
+      const count = PANE_COUNTS[splitMode];
+      for (let i = 0; i < count; i++) {
+        if (!next[i]) {
+          next[i] = tabId;
+          break;
+        }
+      }
+      return next;
+    });
+  }
+
+  function removeTabFromSplit(tabId: string) {
+    setPaneTabIds((prev) => prev.map((p) => (p === tabId ? null : p)));
+  }
+
+  function assignPane(paneIndex: number, tabId: string) {
+    setPaneTabIds((prev) => {
+      const next = prev.map((p) => (p === tabId ? null : p));
+      next[paneIndex] = tabId;
+      return next;
+    });
   }
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
@@ -663,6 +725,7 @@ export function AppShell({
             setSplitMode={setSplitMode}
             paneTabIds={paneTabIds}
             setPaneTabIds={setPaneTabIds}
+            onAssignPane={assignPane}
           />
         </div>
       )}
@@ -783,10 +846,16 @@ export function AppShell({
             <TabBar
               tabs={tabs}
               activeTabId={activeTabId}
+              splitMode={splitMode}
+              paneTabIds={paneTabIds}
+              focusedPaneIndex={focusedPaneIndex}
               onSetActiveTab={setActiveTabId}
               onCloseTab={closeTab}
               onRefreshTab={refreshTab}
               onReorderTabs={setTabs}
+              onSplitTab={splitTabQuick}
+              onAddToSplit={addTabToSplit}
+              onRemoveFromSplit={removeTabFromSplit}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
@@ -802,8 +871,11 @@ export function AppShell({
                     tabs={tabs}
                     paneTabIds={paneTabIds}
                     splitMode={splitMode}
+                    focusedPaneIndex={focusedPaneIndex}
                     onTerminalResize={resizeAllTerminals}
                     onPaneContentRef={onPaneContentRef}
+                    onPaneClick={setFocusedPaneIndex}
+                    onAssignPane={assignPane}
                   />
                 </div>
               )}
