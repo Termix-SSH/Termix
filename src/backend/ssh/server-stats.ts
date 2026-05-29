@@ -991,11 +991,19 @@ class PollingManager {
     }
 
     try {
-      const isOnline = await tcpPing(
-        refreshedHost.ip,
-        refreshedHost.port,
-        5000,
-      );
+      let pingHost = refreshedHost.ip;
+      let pingPort = refreshedHost.port;
+      if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
+        const firstJump = await fetchHostById(
+          refreshedHost.jumpHosts[0].hostId,
+          userId,
+        );
+        if (firstJump) {
+          pingHost = firstJump.ip;
+          pingPort = firstJump.port;
+        }
+      }
+      const isOnline = await tcpPing(pingHost, pingPort, 5000);
       const statusEntry: StatusEntry = {
         status: isOnline ? "online" : "offline",
         lastChecked: new Date().toISOString(),
@@ -2753,7 +2761,51 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         }
       });
 
-      if (
+      const hasJumpHosts =
+        host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
+
+      if (hasJumpHosts) {
+        connectionLogs.push(
+          createConnectionLog("info", "proxy", "Connecting via jump host chain"),
+        );
+        createJumpHostChain(host.jumpHosts!, host.userId!)
+          .then((jumpClient) => {
+            jumpClient.forwardOut(
+              "127.0.0.1",
+              0,
+              host.ip,
+              host.port,
+              (err, stream) => {
+                if (err || !stream) {
+                  if (!isResolved) {
+                    isResolved = true;
+                    clearTimeout(timeout);
+                    reject(err || new Error("Jump host forward failed"));
+                  }
+                  return;
+                }
+                config.sock = stream;
+                delete config.host;
+                delete config.port;
+                client.connect(config);
+              },
+            );
+          })
+          .catch((error) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeout);
+              connectionLogs.push(
+                createConnectionLog(
+                  "error",
+                  "proxy",
+                  `Jump host connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                ),
+              );
+              reject(error);
+            }
+          });
+      } else if (
         host.useSocks5 &&
         (host.socks5Host ||
           (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
