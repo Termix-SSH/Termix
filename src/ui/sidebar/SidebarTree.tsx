@@ -303,6 +303,46 @@ export function HostItem({
           {host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
+          {!selectionMode && (
+            <div className="ml-auto flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {host.enableSsh && host.enableTerminal && (
+                <button
+                  title="Terminal"
+                  onClick={(e) => { e.stopPropagation(); onOpenTab("terminal"); }}
+                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Terminal className="size-3" />
+                </button>
+              )}
+              {host.enableSsh && host.enableFileManager && (
+                <button
+                  title="Files"
+                  onClick={(e) => { e.stopPropagation(); onOpenTab("files"); }}
+                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <FolderOpen className="size-3" />
+                </button>
+              )}
+              {host.enableRdp && (
+                <button
+                  title="RDP"
+                  onClick={(e) => { e.stopPropagation(); onOpenTab("rdp"); }}
+                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Monitor className="size-3" />
+                </button>
+              )}
+              {host.enableVnc && (
+                <button
+                  title="VNC"
+                  onClick={(e) => { e.stopPropagation(); onOpenTab("vnc"); }}
+                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <MousePointerClick className="size-3" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
