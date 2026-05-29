@@ -40,7 +40,6 @@ interface TabContextType {
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
 
-
 export function useTabs() {
   const context = useContext(TabContext);
   if (context === undefined) {
@@ -80,7 +79,9 @@ export function clearTermixSessionStorage() {
 
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>([{ id: 1, type: "home", title: "Home" }]);
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: 1, type: "home", title: "Home" },
+  ]);
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const [previewTerminalTheme, setPreviewTerminalTheme] = useState<

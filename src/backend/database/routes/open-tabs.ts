@@ -32,12 +32,20 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
     const tabs = db
       .select()
       .from(userOpenTabs)
-      .where(and(eq(userOpenTabs.userId, userId), sql`${userOpenTabs.updatedAt} > ${cutoff}`))
+      .where(
+        and(
+          eq(userOpenTabs.userId, userId),
+          sql`${userOpenTabs.updatedAt} > ${cutoff}`,
+        ),
+      )
       .orderBy(userOpenTabs.tabOrder)
       .all();
     return res.json(tabs);
   } catch (e) {
-    databaseLogger.error("Failed to get open tabs", e, { operation: "get_open_tabs", userId });
+    databaseLogger.error("Failed to get open tabs", e, {
+      operation: "get_open_tabs",
+      userId,
+    });
     return res.status(500).json({ error: "Failed to get open tabs" });
   }
 });
@@ -77,35 +85,67 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  */
 router.post("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { id, tabType, hostId, label, tabOrder, backendSessionId } = req.body as {
-    id: string;
-    tabType: string;
-    hostId?: number | null;
-    label: string;
-    tabOrder: number;
-    backendSessionId?: string | null;
-  };
+  const { id, tabType, hostId, label, tabOrder, backendSessionId } =
+    req.body as {
+      id: string;
+      tabType: string;
+      hostId?: number | null;
+      label: string;
+      tabOrder: number;
+      backendSessionId?: string | null;
+    };
 
   if (!id || !tabType || !label) {
-    return res.status(400).json({ error: "id, tabType, and label are required" });
+    return res
+      .status(400)
+      .json({ error: "id, tabType, and label are required" });
   }
 
   try {
     const now = new Date().toISOString();
-    const existing = db.select().from(userOpenTabs).where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId))).all();
+    const existing = db
+      .select()
+      .from(userOpenTabs)
+      .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)))
+      .all();
     if (existing.length > 0) {
       // Preserve existing backendSessionId when not explicitly provided
-      const sessionId = backendSessionId !== undefined ? backendSessionId : existing[0].backendSessionId;
+      const sessionId =
+        backendSessionId !== undefined
+          ? backendSessionId
+          : existing[0].backendSessionId;
       db.update(userOpenTabs)
-        .set({ tabType, hostId: hostId ?? null, label, tabOrder, backendSessionId: sessionId ?? null, updatedAt: now })
+        .set({
+          tabType,
+          hostId: hostId ?? null,
+          label,
+          tabOrder,
+          backendSessionId: sessionId ?? null,
+          updatedAt: now,
+        })
         .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)))
         .run();
     } else {
-      db.insert(userOpenTabs).values({ id, userId, tabType, hostId: hostId ?? null, label, tabOrder, backendSessionId: backendSessionId ?? null, updatedAt: now }).run();
+      db.insert(userOpenTabs)
+        .values({
+          id,
+          userId,
+          tabType,
+          hostId: hostId ?? null,
+          label,
+          tabOrder,
+          backendSessionId: backendSessionId ?? null,
+          updatedAt: now,
+        })
+        .run();
     }
     return res.json({ success: true });
   } catch (e) {
-    databaseLogger.error("Failed to upsert open tab", e, { operation: "upsert_open_tab", userId, id });
+    databaseLogger.error("Failed to upsert open tab", e, {
+      operation: "upsert_open_tab",
+      userId,
+      id,
+    });
     return res.status(500).json({ error: "Failed to upsert open tab" });
   }
 });
@@ -151,22 +191,27 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId)).run();
     if (tabs.length > 0) {
       const now = new Date().toISOString();
-      db.insert(userOpenTabs).values(
-        tabs.map((t) => ({
-          id: t.id,
-          userId,
-          tabType: t.tabType,
-          hostId: t.hostId ?? null,
-          label: t.label,
-          tabOrder: t.tabOrder,
-          backendSessionId: t.backendSessionId ?? null,
-          updatedAt: now,
-        })),
-      ).run();
+      db.insert(userOpenTabs)
+        .values(
+          tabs.map((t) => ({
+            id: t.id,
+            userId,
+            tabType: t.tabType,
+            hostId: t.hostId ?? null,
+            label: t.label,
+            tabOrder: t.tabOrder,
+            backendSessionId: t.backendSessionId ?? null,
+            updatedAt: now,
+          })),
+        )
+        .run();
     }
     return res.json({ success: true });
   } catch (e) {
-    databaseLogger.error("Failed to sync open tabs", e, { operation: "sync_open_tabs", userId });
+    databaseLogger.error("Failed to sync open tabs", e, {
+      operation: "sync_open_tabs",
+      userId,
+    });
     return res.status(500).json({ error: "Failed to sync open tabs" });
   }
 });
@@ -211,7 +256,11 @@ router.patch("/:id", authenticateJWT, async (req: Request, res: Response) => {
     }
     return res.json({ success: true });
   } catch (e) {
-    databaseLogger.error("Failed to update open tab", e, { operation: "update_open_tab", userId, id });
+    databaseLogger.error("Failed to update open tab", e, {
+      operation: "update_open_tab",
+      userId,
+      id,
+    });
     return res.status(500).json({ error: "Failed to update open tab" });
   }
 });
@@ -243,7 +292,11 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
       .run();
     return res.json({ success: true });
   } catch (e) {
-    databaseLogger.error("Failed to delete open tab", e, { operation: "delete_open_tab", userId, id });
+    databaseLogger.error("Failed to delete open tab", e, {
+      operation: "delete_open_tab",
+      userId,
+      id,
+    });
     return res.status(500).json({ error: "Failed to delete open tab" });
   }
 });
@@ -279,24 +332,31 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
  *                   createdAt:
  *                     type: number
  */
-router.get("/active-sessions", authenticateJWT, async (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  try {
-    const sessions = sessionManager.getUserSessions(userId);
-    return res.json(
-      sessions.map((s) => ({
-        sessionId: s.id,
-        hostId: s.hostId,
-        hostName: s.hostName,
-        tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
-        isConnected: s.isConnected,
-        createdAt: s.createdAt,
-      })),
-    );
-  } catch (e) {
-    databaseLogger.error("Failed to get active sessions", e, { operation: "get_active_sessions", userId });
-    return res.status(500).json({ error: "Failed to get active sessions" });
-  }
-});
+router.get(
+  "/active-sessions",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const sessions = sessionManager.getUserSessions(userId);
+      return res.json(
+        sessions.map((s) => ({
+          sessionId: s.id,
+          hostId: s.hostId,
+          hostName: s.hostName,
+          tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
+          isConnected: s.isConnected,
+          createdAt: s.createdAt,
+        })),
+      );
+    } catch (e) {
+      databaseLogger.error("Failed to get active sessions", e, {
+        operation: "get_active_sessions",
+        userId,
+      });
+      return res.status(500).json({ error: "Failed to get active sessions" });
+    }
+  },
+);
 
 export default router;

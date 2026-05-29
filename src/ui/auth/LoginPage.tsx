@@ -143,54 +143,51 @@ export function Auth({
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
-  const handleElectronAuthSuccess = useCallback(
-    async () => {
-      try {
-        // token was stored in localStorage by ElectronLoginForm before this runs,
-        // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.
-        let retries = 5;
-        let meRes = null;
-        while (retries-- > 0) {
-          try {
-            meRes = await getUserInfo();
-            break;
-          } catch (err: unknown) {
-            const isNoServer =
-              (err as { code?: string })?.code === "NO_SERVER_CONFIGURED" ||
-              (err as Error)?.message?.includes("no-server-configured");
-            if (isNoServer && retries > 0) {
-              await new Promise((r) => setTimeout(r, 500));
-            } else {
-              throw err;
-            }
+  const handleElectronAuthSuccess = useCallback(async () => {
+    try {
+      // token was stored in localStorage by ElectronLoginForm before this runs,
+      // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.
+      let retries = 5;
+      let meRes = null;
+      while (retries-- > 0) {
+        try {
+          meRes = await getUserInfo();
+          break;
+        } catch (err: unknown) {
+          const isNoServer =
+            (err as { code?: string })?.code === "NO_SERVER_CONFIGURED" ||
+            (err as Error)?.message?.includes("no-server-configured");
+          if (isNoServer && retries > 0) {
+            await new Promise((r) => setTimeout(r, 500));
+          } else {
+            throw err;
           }
         }
-        if (!meRes) throw new Error("Failed to get user info");
-        setInternalLoggedIn(true);
-        setLoggedIn(true);
-        setIsAdmin(!!meRes.is_admin);
-        setUsername(meRes.username || null);
-        setUserId(meRes.userId || null);
-        onAuthSuccess({
-          isAdmin: !!meRes.is_admin,
-          username: meRes.username || null,
-          userId: meRes.userId || null,
-        });
-        toast.success(t("messages.loginSuccess"));
-      } catch {
-        toast.error(t("errors.failedUserInfo"));
       }
-    },
-    [
-      onAuthSuccess,
-      setLoggedIn,
-      setIsAdmin,
-      setUsername,
-      setUserId,
-      t,
-      setInternalLoggedIn,
-    ],
-  );
+      if (!meRes) throw new Error("Failed to get user info");
+      setInternalLoggedIn(true);
+      setLoggedIn(true);
+      setIsAdmin(!!meRes.is_admin);
+      setUsername(meRes.username || null);
+      setUserId(meRes.userId || null);
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
+      toast.success(t("messages.loginSuccess"));
+    } catch {
+      toast.error(t("errors.failedUserInfo"));
+    }
+  }, [
+    onAuthSuccess,
+    setLoggedIn,
+    setIsAdmin,
+    setUsername,
+    setUserId,
+    t,
+    setInternalLoggedIn,
+  ]);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);

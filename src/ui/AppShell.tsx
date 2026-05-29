@@ -1189,8 +1189,14 @@ export function AppShell({
                 ref={normalViewRef}
                 className="absolute inset-0"
                 style={{
-                  display: isSplit && !isMobile && paneTabIds.includes(activeTabId) ? "none" : undefined,
-                  zIndex: isSplit && !paneTabIds.includes(activeTabId) ? 10 : undefined,
+                  display:
+                    isSplit && !isMobile && paneTabIds.includes(activeTabId)
+                      ? "none"
+                      : undefined,
+                  zIndex:
+                    isSplit && !paneTabIds.includes(activeTabId)
+                      ? 10
+                      : undefined,
                 }}
               >
                 {tabs.map((tab) => {

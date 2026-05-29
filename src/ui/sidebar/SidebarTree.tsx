@@ -308,7 +308,10 @@ export function HostItem({
               {host.enableSsh && host.enableTerminal && (
                 <button
                   title="Terminal"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("terminal"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("terminal");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Terminal className="size-3" />
@@ -317,7 +320,10 @@ export function HostItem({
               {host.enableSsh && host.enableFileManager && (
                 <button
                   title="Files"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("files"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("files");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <FolderOpen className="size-3" />
@@ -326,7 +332,10 @@ export function HostItem({
               {host.enableRdp && (
                 <button
                   title="RDP"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("rdp"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("rdp");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Monitor className="size-3" />
@@ -335,7 +344,10 @@ export function HostItem({
               {host.enableVnc && (
                 <button
                   title="VNC"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("vnc"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("vnc");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <MousePointerClick className="size-3" />

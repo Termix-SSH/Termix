@@ -994,7 +994,9 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   onPrefsChange?.({ reopenTabsOnLogin: v });
                   import("@/main-axios").then(({ saveUserPreferences }) => {
-                    saveUserPreferences({ reopenTabsOnLogin: v }).catch(() => {});
+                    saveUserPreferences({ reopenTabsOnLogin: v }).catch(
+                      () => {},
+                    );
                   });
                 }}
               />

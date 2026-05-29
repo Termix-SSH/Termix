@@ -4985,7 +4985,9 @@ export async function deleteOpenTab(instanceId: string): Promise<void> {
 
 export async function patchOpenTab(
   instanceId: string,
-  updates: Partial<Pick<OpenTabRecord, "label" | "tabOrder" | "backendSessionId">>,
+  updates: Partial<
+    Pick<OpenTabRecord, "label" | "tabOrder" | "backendSessionId">
+  >,
 ): Promise<void> {
   await authApi.patch(`/open-tabs/${instanceId}`, updates);
 }

@@ -423,10 +423,10 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
               if (!sshHost) return null;
               const name = tunnelName(sshHost, index, tunnel);
               return (
-                  <TunnelCard
-                    key={name}
-                    host={sshHost}
-                    tunnel={tunnel}
+                <TunnelCard
+                  key={name}
+                  host={sshHost}
+                  tunnel={tunnel}
                   status={tunnelStatuses[name]}
                   isActing={tunnelActions[name] ?? false}
                   onAction={(action) => handleAction(action, index)}

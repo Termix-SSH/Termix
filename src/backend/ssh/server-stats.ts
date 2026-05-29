@@ -2766,7 +2766,11 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
       if (hasJumpHosts) {
         connectionLogs.push(
-          createConnectionLog("info", "proxy", "Connecting via jump host chain"),
+          createConnectionLog(
+            "info",
+            "proxy",
+            "Connecting via jump host chain",
+          ),
         );
         createJumpHostChain(host.jumpHosts!, host.userId!)
           .then((jumpClient) => {

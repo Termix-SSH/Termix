@@ -126,7 +126,9 @@ export function FileWindow({
 
         if (response.encoding === "base64") {
           try {
-            const bytes = Uint8Array.from(atob(fileContent), (c) => c.charCodeAt(0));
+            const bytes = Uint8Array.from(atob(fileContent), (c) =>
+              c.charCodeAt(0),
+            );
             const decoded = new TextDecoder("utf-8").decode(bytes);
             if (isDisplayableText(decoded)) {
               fileContent = decoded;

@@ -232,7 +232,8 @@ router.post(
       const rdpRaw = !!host.enableRdp;
       const vncRaw = !!host.enableVnc;
       const telRaw = !!host.enableTelnet;
-      const isMigratedNonSsh = !rdpRaw && !vncRaw && !telRaw && ct && ct !== "ssh";
+      const isMigratedNonSsh =
+        !rdpRaw && !vncRaw && !telRaw && ct && ct !== "ssh";
       const protocolEnabledMap: Record<string, boolean> = {
         rdp: isMigratedNonSsh ? ct === "rdp" : rdpRaw,
         vnc: isMigratedNonSsh ? ct === "vnc" : vncRaw,

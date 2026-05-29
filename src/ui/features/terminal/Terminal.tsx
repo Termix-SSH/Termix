@@ -232,7 +232,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
     // Consumed on first connectToHost call so retries don't re-attempt a stale session
-    const pendingRestoredSessionIdRef = useRef<string | null>(hostConfig.restoredSessionId ?? null);
+    const pendingRestoredSessionIdRef = useRef<string | null>(
+      hostConfig.restoredSessionId ?? null,
+    );
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -1483,7 +1485,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             sessionIdRef.current = msg.sessionId;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: msg.sessionId }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: msg.sessionId,
+                }).catch(() => {});
               });
             }
           } else if (msg.type === "sessionAttached") {
@@ -1519,7 +1523,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             wasSessionExpiredRef.current = true;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: null }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: null,
+                }).catch(() => {});
               });
             }
             if (webSocketRef.current) {
