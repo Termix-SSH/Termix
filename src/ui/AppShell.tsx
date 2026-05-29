@@ -896,7 +896,7 @@ export function AppShell({
           node.style.display = "";
           node.style.visibility = activeInline ? "visible" : "hidden";
           node.style.pointerEvents = activeInline ? "auto" : "none";
-          node.style.zIndex = activeInline && !isSplit ? "1" : "0";
+          node.style.zIndex = activeInline ? "1" : "0";
         } else {
           node.style.visibility = "";
           node.style.pointerEvents = "";
@@ -1189,12 +1189,14 @@ export function AppShell({
               {/* Normal-view container. Tab nodes are appended here (or to pane elements)
                   by the DOM-placement effect above. React portals each tab's content
                   into its stable per-tab node so the component is never remounted.
-                  Hidden when split is active — pane-assigned nodes escape via vanilla DOM
-                  appendChild to paneEl, so hiding this doesn't affect them. */}
+                  When split is active, shown on top only if the active tab is not in a pane. */}
               <div
                 ref={normalViewRef}
                 className="absolute inset-0"
-                style={{ display: isSplit && !isMobile ? "none" : undefined }}
+                style={{
+                  display: isSplit && !isMobile && paneTabIds.includes(activeTabId) ? "none" : undefined,
+                  zIndex: isSplit && !paneTabIds.includes(activeTabId) ? 10 : undefined,
+                }}
               >
                 {tabs.map((tab) => {
                   const tabNode = getTabNode(tab.id, tab.type === "terminal");
