@@ -2352,9 +2352,7 @@ async function killRemoteTunnelByMarker(
 
   try {
     await withConnection(poolKey, factory, async (client) => {
-      const tunnelType = tunnelConfig.tunnelType || "remote";
-      const tunnelFlag = tunnelType === "local" ? "-L" : "-R";
-      const checkCmd = `ps aux | grep -E '(${tunnelMarker}|ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}|sshpass.*ssh.*${tunnelFlag})' | grep -v grep`;
+      const checkCmd = `ps aux | grep -F '${tunnelMarker}' | grep -v grep`;
 
       const checkOutput = await execCommand(client, checkCmd);
       if (!checkOutput) {
@@ -2378,8 +2376,6 @@ async function killRemoteTunnelByMarker(
 
       const killCmds = [
         `pkill -TERM -f '${tunnelMarker}'`,
-        `sleep 1 && pkill -f 'ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}:.*:${tunnelConfig.sourcePort}.*${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}'`,
-        `sleep 1 && pkill -f 'sshpass.*ssh.*${tunnelFlag}.*${tunnelConfig.endpointPort}'`,
         `sleep 2 && pkill -9 -f '${tunnelMarker}'`,
       ];
 

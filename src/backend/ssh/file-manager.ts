@@ -696,6 +696,21 @@ function verifySessionOwnership(session: SSHSession, userId: string): boolean {
   return !session.userId || session.userId === userId;
 }
 
+app.use("/ssh/file_manager/ssh", (req, res, next) => {
+  if (req.path === "/connect" || req.path === "/connect-totp" || req.path === "/connect-warpgate") {
+    return next();
+  }
+  const sessionId = (req.query.sessionId as string) || req.body?.sessionId;
+  if (!sessionId) return next();
+  const session = sshSessions[sessionId];
+  if (!session) return next();
+  const userId = (req as AuthenticatedRequest).userId;
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+  next();
+});
+
 function getMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
