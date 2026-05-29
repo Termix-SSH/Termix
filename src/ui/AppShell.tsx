@@ -547,7 +547,11 @@ export function AppShell({
     restore?: { instanceId: string; restoredSessionId: string | null },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
-    const instanceId = restore?.instanceId ?? crypto.randomUUID();
+    const instanceId =
+      restore?.instanceId ??
+      (typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
     const openedAt = Date.now();
     const ref = type === "terminal" ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
