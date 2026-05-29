@@ -132,7 +132,8 @@ function TerminalTabContent({
           {
             ...hostToSSHHost(host),
             sshPort: host.sshPort ?? host.port,
-            instanceId: tab.id,
+            instanceId: tab.instanceId ?? tab.id,
+            restoredSessionId: tab.restoredSessionId ?? null,
           } as any
         }
         isVisible={isVisible}

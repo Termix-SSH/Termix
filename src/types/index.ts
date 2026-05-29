@@ -365,6 +365,9 @@ export interface TunnelConfig {
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
+
+  keepaliveInterval?: number;
+  keepaliveCountMax?: number;
 }
 
 export interface C2STunnelPreset {

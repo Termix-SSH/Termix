@@ -182,9 +182,12 @@ export type Tunnel = {
 
 export type Tab = {
   id: string;
+  instanceId: string;
   type: TabType;
   label: string;
   host?: Host;
+  openedAt: number;
+  restoredSessionId?: string | null;
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
     reconnect?: () => void;
@@ -286,6 +289,7 @@ export type Snippet = {
   description?: string;
   content: string;
   folder: string | null;
+  order: number;
 };
 
 export const FOLDER_ICONS = [

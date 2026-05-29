@@ -356,7 +356,7 @@ function HostEditor({
       name: host?.name ?? "",
       ip: host?.ip ?? "",
       username: host?.username ?? "",
-      sshPort: host?.sshPort ?? 22,
+      sshPort: host?.sshPort ?? host?.port ?? 22,
       rdpPort: host?.rdpPort ?? 3389,
       vncPort: host?.vncPort ?? 5900,
       telnetPort: host?.telnetPort ?? 23,
@@ -430,8 +430,8 @@ function HostEditor({
       autoTmux: host?.terminalConfig?.autoTmux ?? false,
       sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
       sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
-      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 30,
-      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 3,
+      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
+      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
       environmentVariables:
         host?.terminalConfig?.environmentVariables ??
         ([] as { key: string; value: string }[]),
@@ -4703,7 +4703,7 @@ export function HostManager({
     return false;
   };
 
-  useEffect(() => {
+  const reloadHosts = () => {
     getSSHHosts()
       .then((raw) => {
         const converted = raw.map(sshHostToHost);
@@ -4711,6 +4711,10 @@ export function HostManager({
         applyPendingEdit(converted);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    reloadHosts();
     getCredentials()
       .then((res: any) => {
         const arr = Array.isArray(res) ? res : [];
@@ -4729,6 +4733,10 @@ export function HostManager({
       })
       .catch(() => {})
       .finally(() => setCredentialsLoading(false));
+
+    window.addEventListener("termix:hosts-changed", reloadHosts);
+    return () =>
+      window.removeEventListener("termix:hosts-changed", reloadHosts);
   }, []);
 
   useEffect(() => {
@@ -4749,6 +4757,7 @@ export function HostManager({
       } else if (action === "add-credential") {
         setEditingCredential("new");
         setEditingHost(null);
+        setActiveCredentialTab("general");
       }
     }
   }, [pendingEditId, pendingAction]);
@@ -4770,6 +4779,7 @@ export function HostManager({
     const handleAddCredential = () => {
       setEditingCredential("new");
       setEditingHost(null);
+      setActiveCredentialTab("general");
     };
     const handleEditHost = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;

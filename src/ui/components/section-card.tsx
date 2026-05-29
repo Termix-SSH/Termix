@@ -38,21 +38,23 @@ export function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0">
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium leading-snug">{label}</span>
           {badge && (
-            <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1">
+            <span className="text-[10px] font-bold text-yellow-500 border border-yellow-500/40 px-1 shrink-0">
               {badge}
             </span>
           )}
         </div>
         {description && (
-          <span className="text-xs text-muted-foreground">{description}</span>
+          <span className="text-xs text-muted-foreground leading-snug">
+            {description}
+          </span>
         )}
       </div>
-      <div className="shrink-0 ml-4 md:ml-8">{children}</div>
+      <div className="shrink-0">{children}</div>
     </div>
   );
 }

@@ -377,9 +377,13 @@ function PasswordChangeSection({
 export function UserProfilePanel({
   username,
   onLogout,
+  userPrefs,
+  onPrefsChange,
 }: {
   username?: string;
   onLogout?: () => void;
+  userPrefs?: { reopenTabsOnLogin: boolean };
+  onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
 }) {
   const { t } = useTranslation();
   const themeLabel: Record<ThemeId, string> = {
@@ -448,9 +452,6 @@ export function UserProfilePanel({
   );
 
   // Settings toggles — all backed by localStorage
-  const [fileColorCoding, setFileColorCoding] = useState(
-    () => localStorage.getItem("fileColorCoding") !== "false",
-  );
   const [commandAutocomplete, setCommandAutocomplete] = useState(
     () => localStorage.getItem("commandAutocomplete") === "true",
   );
@@ -464,13 +465,16 @@ export function UserProfilePanel({
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
   });
-  const [sessionPersistence, setSessionPersistence] = useState(
-    () => localStorage.getItem("enableTerminalSessionPersistence") !== "false",
-  );
   const [showHostTags, setShowHostTags] = useState(() => {
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const [hostTrayOnClick, setHostTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+  const [pinAppRail, setPinAppRail] = useState(
+    () => localStorage.getItem("pinAppRail") === "true",
+  );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
@@ -907,25 +911,6 @@ export function UserProfilePanel({
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsFileManager")}
-            </span>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.fileColorCoding")}
-              description={t("newUi.sidebar.userProfile.fileColorCodingDesc")}
-            >
-              <FakeSwitch
-                checked={fileColorCoding}
-                onChange={(v) => {
-                  setFileColorCoding(v);
-                  localStorage.setItem("fileColorCoding", v.toString());
-                  window.dispatchEvent(new Event("fileColorCodingChanged"));
-                }}
-              />
-            </SettingRow>
-          </div>
-
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
               {t("newUi.sidebar.userProfile.settingsTerminal")}
             </span>
             <SettingRow
@@ -990,24 +975,23 @@ export function UserProfilePanel({
                     "commandPaletteShortcutEnabled",
                     v.toString(),
                   );
+                  window.dispatchEvent(
+                    new Event("commandPaletteShortcutEnabledChanged"),
+                  );
                 }}
               />
             </SettingRow>
             <SettingRow
-              label={t("newUi.sidebar.userProfile.sessionPersistence")}
-              description={t(
-                "newUi.sidebar.userProfile.sessionPersistenceDesc",
-              )}
-              badge="BETA"
+              label={t("newUi.sidebar.userProfile.reopenTabsOnLogin")}
+              description={t("newUi.sidebar.userProfile.reopenTabsOnLoginDesc")}
             >
               <FakeSwitch
-                checked={sessionPersistence}
+                checked={userPrefs?.reopenTabsOnLogin ?? false}
                 onChange={(v) => {
-                  setSessionPersistence(v);
-                  localStorage.setItem(
-                    "enableTerminalSessionPersistence",
-                    v.toString(),
-                  );
+                  onPrefsChange?.({ reopenTabsOnLogin: v });
+                  import("@/main-axios").then(({ saveUserPreferences }) => {
+                    saveUserPreferences({ reopenTabsOnLogin: v }).catch(() => {});
+                  });
                 }}
               />
             </SettingRow>
@@ -1039,6 +1023,32 @@ export function UserProfilePanel({
                   setShowHostTags(v);
                   localStorage.setItem("showHostTags", v.toString());
                   window.dispatchEvent(new Event("showHostTagsChanged"));
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.hostTrayOnClick")}
+              description={t("newUi.sidebar.userProfile.hostTrayOnClickDesc")}
+            >
+              <FakeSwitch
+                checked={hostTrayOnClick}
+                onChange={(v) => {
+                  setHostTrayOnClick(v);
+                  localStorage.setItem("hostTrayOnClick", v.toString());
+                  window.dispatchEvent(new Event("hostTrayOnClickChanged"));
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.pinAppRail")}
+              description={t("newUi.sidebar.userProfile.pinAppRailDesc")}
+            >
+              <FakeSwitch
+                checked={pinAppRail}
+                onChange={(v) => {
+                  setPinAppRail(v);
+                  localStorage.setItem("pinAppRail", v.toString());
+                  window.dispatchEvent(new Event("pinAppRailChanged"));
                 }}
               />
             </SettingRow>

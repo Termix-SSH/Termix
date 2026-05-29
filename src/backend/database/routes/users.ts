@@ -31,6 +31,8 @@ import {
   dashboardPreferences,
   opksshTokens,
   apiKeys,
+  userOpenTabs,
+  userPreferences,
 } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -284,6 +286,8 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
       .delete(dashboardPreferences)
       .where(eq(dashboardPreferences.userId, userId));
     await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
+    await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
+    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
 
     db.$client
       .prepare("DELETE FROM settings WHERE key LIKE ?")
