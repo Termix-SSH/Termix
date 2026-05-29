@@ -4703,7 +4703,7 @@ export function HostManager({
     return false;
   };
 
-  useEffect(() => {
+  const reloadHosts = () => {
     getSSHHosts()
       .then((raw) => {
         const converted = raw.map(sshHostToHost);
@@ -4711,6 +4711,10 @@ export function HostManager({
         applyPendingEdit(converted);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    reloadHosts();
     getCredentials()
       .then((res: any) => {
         const arr = Array.isArray(res) ? res : [];
@@ -4729,6 +4733,10 @@ export function HostManager({
       })
       .catch(() => {})
       .finally(() => setCredentialsLoading(false));
+
+    window.addEventListener("termix:hosts-changed", reloadHosts);
+    return () =>
+      window.removeEventListener("termix:hosts-changed", reloadHosts);
   }, []);
 
   useEffect(() => {

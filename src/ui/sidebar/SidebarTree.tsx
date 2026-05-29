@@ -836,25 +836,64 @@ export function SidebarTree({
 
   async function handleDuplicateHost(host: Host) {
     try {
-      const {
-        id: _id,
-        online: _online,
-        cpu: _cpu,
-        ram: _ram,
-        lastAccess: _la,
-        hasKey: _hk,
-        hasKeyPassword: _hkp,
-        jumpHosts: _jumpHosts,
-        ...rest
-      } = host as any;
       await createSSHHost({
-        ...rest,
         name: `${host.name} (copy)`,
-        key: undefined,
-        jumpHosts: (host.jumpHosts ?? []).map((j: { hostId: string }) => ({
+        ip: host.ip,
+        port: host.port,
+        username: host.username,
+        folder: host.folder,
+        tags: host.tags ?? [],
+        pin: host.pin ?? false,
+        notes: host.notes,
+        macAddress: host.macAddress,
+        authType: host.authType,
+        password: host.password ?? null,
+        keyPassword: host.keyPassword ?? null,
+        keyType: host.keyType ?? null,
+        credentialId: host.credentialId ? Number(host.credentialId) : null,
+        overrideCredentialUsername: host.overrideCredentialUsername ?? false,
+        enableSsh: host.enableSsh,
+        enableRdp: host.enableRdp,
+        enableVnc: host.enableVnc,
+        enableTelnet: host.enableTelnet,
+        enableTerminal: host.enableTerminal,
+        enableTunnel: host.enableTunnel,
+        enableFileManager: host.enableFileManager,
+        enableDocker: host.enableDocker,
+        sshPort: host.sshPort,
+        rdpPort: host.rdpPort,
+        vncPort: host.vncPort,
+        telnetPort: host.telnetPort,
+        rdpUser: host.rdpUser ?? null,
+        rdpPassword: host.rdpPassword ?? null,
+        rdpDomain: host.domain ?? null,
+        rdpSecurity: host.security ?? null,
+        rdpIgnoreCert: host.ignoreCert ?? false,
+        vncPassword: host.vncPassword ?? null,
+        vncUser: host.vncUser ?? null,
+        telnetUser: host.telnetUser ?? null,
+        telnetPassword: host.telnetPassword ?? null,
+        defaultPath: host.defaultPath ?? "/",
+        forceKeyboardInteractive: host.forceKeyboardInteractive ?? false,
+        useSocks5: host.useSocks5,
+        socks5Host: host.socks5Host ?? null,
+        socks5Port: host.socks5Port ?? null,
+        socks5Username: host.socks5Username ?? null,
+        socks5Password: host.socks5Password ?? null,
+        socks5ProxyChain: host.socks5ProxyChain ?? null,
+        jumpHosts: (host.jumpHosts ?? []).map((j) => ({
           hostId: Number(j.hostId),
         })),
-      });
+        portKnockSequence: host.portKnockSequence ?? [],
+        tunnelConnections: host.serverTunnels ?? [],
+        quickActions: (host.quickActions ?? []).map((a) => ({
+          name: a.name,
+          snippetId: Number(a.snippetId),
+        })),
+        statsConfig: host.statsConfig,
+        guacamoleConfig: host.guacamoleConfig ?? null,
+        terminalConfig: host.terminalConfig ?? null,
+      } as any);
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {
