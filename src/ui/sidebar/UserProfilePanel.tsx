@@ -137,6 +137,8 @@ function AccordionSection({
     <div className="border border-border bg-card overflow-hidden">
       <button
         onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`${id}-content`}
         className="flex items-center gap-2 w-full px-3 py-2.5 text-left hover:bg-muted/40 transition-colors"
       >
         <span className="text-muted-foreground shrink-0">{icon}</span>
@@ -148,7 +150,9 @@ function AccordionSection({
         />
       </button>
       {open && (
-        <div className="border-t border-border px-3 pb-3">{children}</div>
+        <div id={`${id}-content`} className="border-t border-border px-3 pb-3">
+          {children}
+        </div>
       )}
     </div>
   );

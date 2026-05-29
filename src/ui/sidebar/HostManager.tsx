@@ -157,26 +157,25 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
   };
 }
 
-const HOST_TAB_IDS = [
-  "general",
-  "ssh",
-  "tunnels",
-  "docker",
-  "files",
-  "stats",
-  "rdp",
-  "vnc",
-  "telnet",
-] as const;
-const CREDENTIAL_TAB_IDS = ["general", "auth"] as const;
+type HostTabId =
+  | "general"
+  | "ssh"
+  | "tunnels"
+  | "docker"
+  | "files"
+  | "stats"
+  | "rdp"
+  | "vnc"
+  | "telnet";
+type CredentialTabId = "general" | "auth";
 
 type HostTab = {
-  id: (typeof HOST_TAB_IDS)[number];
+  id: HostTabId;
   label: string;
   icon: React.ReactNode;
 };
 type CredentialTab = {
-  id: (typeof CREDENTIAL_TAB_IDS)[number];
+  id: CredentialTabId;
   label: string;
   icon: React.ReactNode;
 };
@@ -319,7 +318,6 @@ function HostEditor({
   protocols,
   onProtocolChange,
   onTabChange,
-  onCredentialChange,
   hosts,
   credentials,
 }: {
@@ -335,7 +333,6 @@ function HostEditor({
   };
   onProtocolChange: (p: Partial<typeof protocols>) => void;
   onTabChange: (tab: string) => void;
-  onCredentialChange: (credentialId: string) => void;
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
 }) {
@@ -698,7 +695,7 @@ function HostEditor({
                     icon: <Terminal className="size-4" />,
                     portField: "telnetPort" as const,
                   },
-                ].map(({ proto, label, desc, icon, portField }) => {
+                ].map(({ proto, label, desc, icon }) => {
                   const enabled = protocols[proto];
                   return (
                     <div
@@ -1374,8 +1371,6 @@ function HostEditor({
                           key={m}
                           onClick={() => {
                             setField("authType", m as any);
-                            if (m !== "credential") onCredentialChange("");
-                            else onCredentialChange(form.credentialId);
                           }}
                           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                         >
@@ -1560,7 +1555,6 @@ function HostEditor({
                           onChange={(e) => {
                             const newId = e.target.value;
                             setField("credentialId", newId);
-                            onCredentialChange(newId);
                             if (!form.overrideCredentialUsername) {
                               const cred = credentials.find(
                                 (c) => c.id === newId,
@@ -4671,7 +4665,6 @@ export function HostManager({
     enableVnc: false,
     enableTelnet: false,
   });
-  const [editingHostCredentialId, setEditingHostCredentialId] = useState("");
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
@@ -4696,7 +4689,6 @@ export function HostManager({
           enableVnc: host.enableVnc,
           enableTelnet: host.enableTelnet,
         });
-        setEditingHostCredentialId(host.credentialId ?? "");
         return true;
       }
     }
@@ -4752,7 +4744,6 @@ export function HostManager({
           enableVnc: false,
           enableTelnet: false,
         });
-        setEditingHostCredentialId("");
         setActiveHostTab("general");
       } else if (action === "add-credential") {
         setEditingCredential("new");
@@ -4773,7 +4764,6 @@ export function HostManager({
         enableVnc: false,
         enableTelnet: false,
       });
-      setEditingHostCredentialId("");
       setActiveHostTab("general");
     };
     const handleAddCredential = () => {
@@ -4794,7 +4784,6 @@ export function HostManager({
           enableVnc: host.enableVnc,
           enableTelnet: host.enableTelnet,
         });
-        setEditingHostCredentialId(host.credentialId ?? "");
       }
     };
     window.addEventListener("host-manager:add-host", handleAddHost);
@@ -4905,9 +4894,6 @@ export function HostManager({
                 setEditingProtocols((prev) => ({ ...prev, ...p }))
               }
               onTabChange={setActiveHostTab}
-              onCredentialChange={(id) => {
-                setEditingHostCredentialId(id);
-              }}
               hosts={hosts}
               credentials={credentials}
             />

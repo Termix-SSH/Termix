@@ -51,47 +51,6 @@ type Phase =
   | "idle-app"
   | "fading-out";
 
-function useWindowWidth() {
-  const [width, setWidth] = useState(window.innerWidth);
-  const lastSwitchTime = useRef(0);
-  const isCurrentlyMobile = useRef(window.innerWidth < 768);
-  const hasSwitchedOnce = useRef(false);
-
-  useEffect(() => {
-    let timeoutId: number;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const newWidth = window.innerWidth;
-        const newIsMobile = newWidth < 768;
-        const now = Date.now();
-        if (hasSwitchedOnce.current && now - lastSwitchTime.current < 10000) {
-          setWidth(newWidth);
-          return;
-        }
-        if (
-          newIsMobile !== isCurrentlyMobile.current &&
-          now - lastSwitchTime.current > 5000
-        ) {
-          lastSwitchTime.current = now;
-          isCurrentlyMobile.current = newIsMobile;
-          hasSwitchedOnce.current = true;
-          setWidth(newWidth);
-        } else {
-          setWidth(newWidth);
-        }
-      }, 2000);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return width;
-}
-
 function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
@@ -246,18 +205,10 @@ function App() {
 }
 
 function RootApp() {
-  const width = useWindowWidth();
-  const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
   useServiceWorker();
 
-  const userAgent =
-    navigator.userAgent ||
-    navigator.vendor ||
-    (window as Window & { opera?: string }).opera ||
-    "";
-  const isTermixMobile = /Termix-Mobile/.test(userAgent);
   const searchParams = new URLSearchParams(window.location.search);
   const isFullscreen = searchParams.has("view");
 

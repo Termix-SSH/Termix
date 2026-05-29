@@ -545,8 +545,6 @@ function createApiInstance(
             return Promise.reject(error);
           }
 
-          const wasAuthenticated = userWasAuthenticated;
-
           if (isElectron()) {
             const electronAPI = (
               window as unknown as {

@@ -203,8 +203,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       "no_keyboard" | "auth_failed" | "timeout"
     >("no_keyboard");
     const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
-    const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
-      useState(false);
+    const [, setKeyboardInteractiveDetected] = useState(false);
     const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
     const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
     const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
@@ -2139,8 +2138,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isMountedRef.current = true;
 
       const currentHostId = hostConfig.id;
-      const currentInstanceId = hostConfig.instanceId;
-
       return () => {
         if (!isMountedRef.current) {
           return;

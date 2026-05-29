@@ -36,17 +36,6 @@ import {
   shouldTriggerSilentSignin,
 } from "./silent-signin";
 
-function isMissingServerConfigError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return (
-    (error as Error & { code?: string }).code === "NO_SERVER_CONFIGURED" ||
-    error.message.includes("no-server-configured")
-  );
-}
-
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
 }
@@ -155,7 +144,7 @@ export function Auth({
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
   const handleElectronAuthSuccess = useCallback(
-    async (token: string | null) => {
+    async () => {
       try {
         // token was stored in localStorage by ElectronLoginForm before this runs,
         // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.

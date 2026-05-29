@@ -44,7 +44,6 @@ type RailItem =
 function buildRailButtons(
   splitMode: SplitMode,
   t: (key: string) => string,
-  connectionCount: number,
 ): RailItem[] {
   return [
     { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
@@ -97,7 +96,6 @@ export function AppRail({
   railView,
   sidebarOpen,
   splitMode,
-  connectionCount,
   username,
   isAdmin,
   profileDropdownOpen,
@@ -109,7 +107,6 @@ export function AppRail({
   railView: RailView;
   sidebarOpen: boolean;
   splitMode: SplitMode;
-  connectionCount: number;
   username: string;
   isAdmin: boolean;
   profileDropdownOpen: boolean;
@@ -132,7 +129,7 @@ export function AppRail({
   }, []);
 
   const railExpanded = pinned || hovered || profileDropdownOpen;
-  const railButtons = buildRailButtons(splitMode, t, connectionCount);
+  const railButtons = buildRailButtons(splitMode, t);
 
   return (
     <div

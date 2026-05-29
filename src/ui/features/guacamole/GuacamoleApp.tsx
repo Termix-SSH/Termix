@@ -239,7 +239,6 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
       <GuacamoleToolbar
         displayRef={displayRef}
         protocol={resolvedProtocol}
-        onReconnect={handleReconnect}
       />
     </div>
   );
