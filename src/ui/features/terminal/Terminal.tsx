@@ -1052,7 +1052,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               terminal.write(outputData);
               const sudoPasswordPattern =
-                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
+                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required|password for [^\n]*:\s*$|Password:\s*$)/i;
               const hasSudoPw =
                 hostConfig.terminalConfig?.sudoPassword ||
                 hostConfig.password ||
