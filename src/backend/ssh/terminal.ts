@@ -848,9 +848,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
         cwdPending = true;
         cwdBuffer = "";
-        // Split the sentinel across shell variables so the echoed command
-        // itself never contains "TERMIX_CWD:" — only the output line does.
-        activeStream.write('a=TERMIX_CWD; echo "$a:$(pwd)"\r');
+        activeStream.write('\x15a=TERMIX_CWD; echo "$a:$(pwd)"\r');
         break;
       }
 
@@ -1787,7 +1785,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
               if (initialPath && initialPath.trim() !== "") {
-                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
+                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
                 stream.write(cdCommand);
               }
               if (executeCommand && executeCommand.trim() !== "") {
