@@ -1993,6 +1993,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+      document.fonts.ready.then(() => {
+        terminal.refresh(0, terminal.rows - 1);
+        fitAddon.fit();
+      });
 
       terminal.attachCustomWheelEventHandler((ev) => {
         const cfg = {
