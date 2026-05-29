@@ -38,7 +38,6 @@ import {
   Search,
   Grid3X3,
   List,
-  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ArrowUp,
@@ -48,8 +47,6 @@ import {
   Copy,
   Layout,
 } from "lucide-react";
-import { Card } from "@/components/card.tsx";
-import { Separator } from "@/components/separator.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +70,6 @@ import {
   listSSHFiles,
   resolveSSHPath,
   uploadSSHFile,
-  downloadSSHFile,
   createSSHFile,
   createSSHFolder,
   deleteSSHItem,
@@ -260,6 +256,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const { dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
+    onItemsDropped: handleItemsDropped,
     onError: (error) => toast.error(error),
     maxFileSize: 5120,
   });
@@ -412,6 +409,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   async function initializeSSHConnection() {
     if (!currentHost || isConnectingRef.current) return;
 
+    if (currentHost.enableSsh === false) {
+      setHasConnectionError(true);
+      addLog({
+        type: "error",
+        message: t("fileManager.sshRequiredForFileManager"),
+        timestamp: new Date().toISOString(),
+      });
+      setIsLoading(false);
+      return;
+    }
+
     isConnectingRef.current = true;
 
     try {
@@ -532,7 +540,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
 
       handleCloseWithError(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -547,10 +557,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return false;
       }
 
-      if (isLoading && currentLoadingPathRef.current !== path) {
-        return false;
-      }
-
       let resolvedPath = path;
       if (path.includes("$") || path.startsWith("~")) {
         resolvedPath = await resolveSSHPath(sshSessionId, path);
@@ -562,8 +568,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       currentLoadingPathRef.current = resolvedPath;
       setIsLoading(true);
-
-      setCreateIntent(null);
 
       try {
         const response = await listSSHFiles(sshSessionId, resolvedPath);
@@ -661,9 +665,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
             return false;
           } else if (initialLoadDoneRef.current) {
-            toast.error(
-              t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
-            );
+            const isPermissionDenied =
+              httpStatus === 403 ||
+              errorMessage?.toLowerCase().includes("permission denied") ||
+              errorMessage?.toLowerCase().includes("eacces");
+            if (isPermissionDenied) {
+              toast.error(t("fileManager.permissionDenied"));
+            } else {
+              toast.error(
+                t("fileManager.failedToLoadDirectory") + ": " + errorMessage,
+              );
+            }
           }
         }
         return false;
@@ -695,6 +707,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const navigateTo = useCallback(
     (path: string) => {
+      if (sshSessionId) setIsLoading(true);
       setCurrentPath(path);
       setNavHistory((prev) => {
         const next = [...prev.slice(0, navIndex + 1), path];
@@ -702,24 +715,26 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         return next;
       });
     },
-    [navIndex],
+    [navIndex, sshSessionId],
   );
 
   const goBack = useCallback(() => {
     if (navIndex > 0) {
+      if (sshSessionId) setIsLoading(true);
       const newIndex = navIndex - 1;
       setNavIndex(newIndex);
       setCurrentPath(navHistory[newIndex]);
     }
-  }, [navIndex, navHistory]);
+  }, [navIndex, navHistory, sshSessionId]);
 
   const goForward = useCallback(() => {
     if (navIndex < navHistory.length - 1) {
+      if (sshSessionId) setIsLoading(true);
       const newIndex = navIndex + 1;
       setNavIndex(newIndex);
       setCurrentPath(navHistory[newIndex]);
     }
-  }, [navIndex, navHistory]);
+  }, [navIndex, navHistory, sshSessionId]);
 
   const goUp = useCallback(() => {
     if (currentPath === "/") return;
@@ -783,6 +798,125 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [currentPath]);
 
+  async function handleItemsDropped(items: DataTransferItemList) {
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    const entries: FileSystemEntry[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry?.();
+      if (entry) entries.push(entry);
+    }
+
+    const files: { file: File; relativePath: string }[] = [];
+
+    async function readEntry(
+      entry: FileSystemEntry,
+      path: string,
+    ): Promise<void> {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) =>
+          (entry as FileSystemFileEntry).file(resolve, reject),
+        );
+        files.push({ file, relativePath: path });
+      } else if (entry.isDirectory) {
+        const reader = (entry as FileSystemDirectoryEntry).createReader();
+        const dirEntries = await new Promise<FileSystemEntry[]>(
+          (resolve, reject) => reader.readEntries(resolve, reject),
+        );
+        for (const child of dirEntries) {
+          await readEntry(child, `${path}/${child.name}`);
+        }
+      }
+    }
+
+    for (const entry of entries) {
+      await readEntry(entry, entry.name);
+    }
+
+    if (files.length === 0) return;
+
+    const progressToast = toast.loading(
+      `Uploading ${files.length} file(s)...`,
+      { duration: Infinity },
+    );
+
+    try {
+      await ensureSSHConnection();
+
+      const dirs = new Set<string>();
+      for (const { relativePath } of files) {
+        const parts = relativePath.split("/");
+        for (let i = 1; i < parts.length; i++) {
+          dirs.add(parts.slice(0, i).join("/"));
+        }
+      }
+
+      const sortedDirs = Array.from(dirs).sort();
+      for (const dir of sortedDirs) {
+        const parentPath = currentPath.endsWith("/")
+          ? currentPath + dir.split("/").slice(0, -1).join("/")
+          : currentPath + "/" + dir.split("/").slice(0, -1).join("/");
+        const folderName = dir.split("/").pop()!;
+        const targetPath = parentPath.endsWith("/")
+          ? parentPath
+          : parentPath + "/";
+        try {
+          await createSSHFolder(
+            sshSessionId,
+            targetPath,
+            folderName,
+            currentHost?.id,
+          );
+        } catch {
+          // directory may already exist
+        }
+      }
+
+      for (const { file, relativePath } of files) {
+        const dirPart = relativePath.includes("/")
+          ? relativePath.substring(0, relativePath.lastIndexOf("/"))
+          : "";
+        const uploadPath = dirPart
+          ? (currentPath.endsWith("/") ? currentPath : currentPath + "/") +
+            dirPart +
+            "/"
+          : currentPath;
+
+        const fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error);
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result.split(",")[1] || "");
+            } else {
+              reject(new Error("Failed to read file"));
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+
+        await uploadSSHFile(
+          sshSessionId,
+          uploadPath,
+          file.name,
+          fileContent,
+          currentHost?.id,
+        );
+      }
+
+      toast.dismiss(progressToast);
+      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      handleRefreshDirectory();
+    } catch (error) {
+      toast.dismiss(progressToast);
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Folder upload failed:", error);
+    }
+  }
+
   function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
@@ -840,10 +974,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       handleRefreshDirectory();
     } catch (error: unknown) {
       toast.dismiss(progressToast);
-
+      const uploadErr = error instanceof Error ? error : null;
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        uploadErr?.message?.includes("connection") ||
+        uploadErr?.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -865,38 +999,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     try {
       await ensureSSHConnection();
 
-      const response = await downloadSSHFile(sshSessionId, file.path);
+      const { downloadSSHFileStream } = await import("@/main-axios.ts");
+      await downloadSSHFileStream(sshSessionId, file.path);
 
-      if (response?.content) {
-        const byteCharacters = atob(response.content);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {
-          type: response.mimeType || "application/octet-stream",
-        });
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = response.fileName || file.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        toast.success(
-          t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
-        );
-      } else {
-        toast.error(t("fileManager.failedToDownloadFile"));
-      }
+      toast.success(
+        t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+      );
     } catch (error: unknown) {
+      const err = error instanceof Error ? error : null;
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("established")
+        err?.message?.includes("connection") ||
+        err?.message?.includes("established")
       ) {
         toast.error(
           t("fileManager.sshConnectionFailed", {
@@ -980,7 +1093,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           clearSelection();
         } catch (error: unknown) {
           const axiosError = error as {
-            response?: { data?: { needsSudo?: boolean; error?: string } };
+            response?: {
+              data?: { needsSudo?: boolean; error?: string };
+              status?: number;
+            };
             message?: string;
           };
           if (axiosError.response?.data?.needsSudo) {
@@ -989,11 +1105,22 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             return;
           }
           if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else if (
             axiosError.message?.includes("connection") ||
             axiosError.message?.includes("established")
           ) {
             toast.error(
-              `SSH connection failed. Please check your connection to ${currentHost?.name} (${currentHost?.ip}:${currentHost?.port})`,
+              t("fileManager.sshConnectionFailed", {
+                name: currentHost?.name,
+                ip: currentHost?.ip,
+                port: currentHost?.port,
+              }),
             );
           } else {
             toast.error(t("fileManager.failedToDeleteItems"));
@@ -1061,14 +1188,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       t("fileManager.newFolderDefault"),
       "directory",
     );
-    const newCreateIntent = {
+    setCreateIntent({
       id: Date.now().toString(),
       type: "directory" as const,
       defaultName,
       currentName: defaultName,
-    };
-
-    setCreateIntent(newCreateIntent);
+    });
   }
 
   function handleCreateNewFile() {
@@ -1076,13 +1201,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       t("fileManager.newFileDefault"),
       "file",
     );
-    const newCreateIntent = {
+    setCreateIntent({
       id: Date.now().toString(),
       type: "file" as const,
       defaultName,
       currentName: defaultName,
-    };
-    setCreateIntent(newCreateIntent);
+    });
   }
 
   const handleSymlinkClick = async (file: FileItem) => {
@@ -1166,6 +1290,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
+      if (sshSessionId) setIsLoading(true);
       setCurrentPath(file.path);
     } else if (file.type === "link") {
       await handleSymlinkClick(file);
@@ -1308,16 +1433,28 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           }
         } catch (error: unknown) {
           console.error(`Failed to ${operation} file ${file.name}:`, error);
-          toast.error(
-            t("fileManager.operationFailed", {
-              operation:
-                operation === "copy"
-                  ? t("fileManager.copy")
-                  : t("fileManager.move"),
-              name: file.name,
-              error: error.message,
-            }),
-          );
+          const axiosError = error as {
+            response?: { status?: number; data?: { error?: string } };
+          };
+          if (
+            axiosError.response?.status === 403 ||
+            axiosError.response?.data?.error
+              ?.toLowerCase()
+              .includes("permission denied")
+          ) {
+            toast.error(t("fileManager.permissionDenied"));
+          } else {
+            toast.error(
+              t("fileManager.operationFailed", {
+                operation:
+                  operation === "copy"
+                    ? t("fileManager.copy")
+                    : t("fileManager.move"),
+                name: file.name,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          }
         }
       }
 
@@ -1408,9 +1545,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         setClipboard(null);
       }
     } catch (error: unknown) {
-      toast.error(
-        `${t("fileManager.pasteFailed")}: ${error.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1436,10 +1573,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(
-        `${t("fileManager.extractFailed")}: ${err.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1481,10 +1617,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      toast.error(
-        `${t("fileManager.compressFailed")}: ${err.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
     }
   }
 
@@ -1524,7 +1659,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 toast.error(
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
-                    error: error.message,
+                    error:
+                      error instanceof Error ? error.message : String(error),
                   }),
                 );
               }
@@ -1566,7 +1702,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 toast.error(
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
-                    error: error.message,
+                    error:
+                      error instanceof Error ? error.message : String(error),
                   }),
                 );
               }
@@ -1599,9 +1736,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      toast.error(
-        `${t("fileManager.undoOperationFailed")}: ${error.message || t("fileManager.unknownError")}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
       console.error("Undo failed:", error);
     }
   }
@@ -1696,8 +1833,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setCreateIntent(null);
       handleRefreshDirectory();
     } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToCreateItem"));
+      }
       console.error("Create failed:", error);
-      toast.error(t("fileManager.failedToCreateItem"));
     }
   }
 
@@ -1725,8 +1874,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setEditingFile(null);
       handleRefreshDirectory();
     } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { status?: number; data?: { error?: string } };
+      };
+      if (
+        axiosError.response?.status === 403 ||
+        axiosError.response?.data?.error
+          ?.toLowerCase()
+          .includes("permission denied")
+      ) {
+        toast.error(t("fileManager.permissionDenied"));
+      } else {
+        toast.error(t("fileManager.failedToRenameItem"));
+      }
       console.error("Rename failed:", error);
-      toast.error(t("fileManager.failedToRenameItem"));
     }
   }
 
@@ -1910,7 +2071,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       setAuthDialogReason("auth_failed");
       setShowAuthDialog(true);
       toast.error(
-        t("fileManager.failedToConnect") + ": " + (error.message || error),
+        t("fileManager.failedToConnect") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -1979,7 +2142,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              error.message,
+              (error instanceof Error ? error.message : String(error)),
           );
         }
       }
@@ -2022,7 +2185,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       }
     } catch (error: unknown) {
       console.error("Drag move operation failed:", error);
-      toast.error(t("fileManager.moveOperationFailed") + ": " + error.message);
+      toast.error(
+        t("fileManager.moveOperationFailed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+      );
     }
   }
 
@@ -2096,7 +2263,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (error.message || t("fileManager.unknownError")),
+          (error instanceof Error ? error.message : String(error)),
       );
     }
   }
@@ -2362,15 +2529,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     );
   }
 
+  if ((isLoading || isReconnecting) && !sshSessionId) {
+    return (
+      <div className="h-full w-full flex flex-col bg-background relative">
+        <div className="flex-1 overflow-hidden min-h-0 relative">
+          <SimpleLoader
+            visible={!isConnectionLogExpanded}
+            message={t("fileManager.connecting")}
+          />
+        </div>
+        <ConnectionLog
+          isConnecting={isLoading || isReconnecting}
+          isConnected={false}
+          hasConnectionError={hasConnectionError}
+          position={hasConnectionError ? "top" : "bottom"}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col bg-background relative">
+    <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
       <div
-        className="h-full w-full flex flex-col"
+        className="h-full w-full flex flex-col min-h-0"
         style={{
           visibility: isConnectionLogExpanded ? "hidden" : "visible",
         }}
       >
-        <Card className="flex flex-col shrink-0 mx-3 mt-3 rounded-none shadow-none border-border">
+        <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
           <div className="flex flex-row items-center justify-between px-3 py-2 gap-2">
             <div className="flex items-center gap-1">
               <Button
@@ -2413,11 +2599,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 variant="ghost"
                 size="icon"
                 onClick={handleRefreshDirectory}
-                disabled={isLoading}
                 className="size-8 rounded-none"
               >
                 <RefreshCw
-                  className={`size-4 ${isLoading ? "animate-spin" : ""}`}
+                  className={`size-4 ${isLoading && !!sshSessionId ? "animate-spin [animation-duration:0.5s]" : ""}`}
                 />
               </Button>
             </div>
@@ -2538,16 +2723,21 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 <DropdownMenuContent
                   align="end"
                   className="w-44 rounded-none border-border bg-card"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                   <DropdownMenuItem
-                    onClick={handleCreateNewFolder}
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFolder(), 0);
+                    }}
                     className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
                   >
                     <FolderPlus className="size-4 text-accent-brand" />
                     {t("fileManager.newFolder")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={handleCreateNewFile}
+                    onSelect={() => {
+                      setTimeout(() => handleCreateNewFile(), 0);
+                    }}
                     className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
                   >
                     <FilePlus className="size-4 text-muted-foreground" />
@@ -2640,7 +2830,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         <div
           className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
@@ -2664,7 +2854,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 : "hidden md:flex",
             )}
           >
-            <Card className="flex-1 flex flex-col rounded-none shadow-none p-0 gap-0 overflow-hidden border-border">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
               <FileManagerSidebar
                 currentHost={currentHost}
                 currentPath={currentPath}
@@ -2675,10 +2865,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 refreshTrigger={sidebarRefreshTrigger}
                 diskInfo={diskInfo ?? undefined}
               />
-            </Card>
+            </div>
           </div>
 
-          <Card className="flex-1 relative overflow-hidden rounded-none shadow-none p-0 gap-0 min-h-0 flex flex-col border-border">
+          <div className="flex-1 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
             <div className="flex-1 relative min-h-0 h-full">
               <FileManagerGrid
                 files={filteredFiles}
@@ -2687,7 +2877,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onFileOpen={handleFileOpen}
                 onSelectionChange={setSelection}
                 currentPath={currentPath}
-                isLoading={isLoading}
                 onPathChange={navigateTo}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
@@ -2701,7 +2890,11 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                     setSortOrder("asc");
                   }
                 }}
-                onDownload={(files) => files.forEach(handleDownloadFile)}
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
                 onContextMenu={handleContextMenu}
                 viewMode={viewMode}
                 onRename={handleRenameConfirm}
@@ -2733,7 +2926,12 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onClose={() =>
                   setContextMenu((prev) => ({ ...prev, isVisible: false }))
                 }
-                onDownload={(files) => files.forEach(handleDownloadFile)}
+                onDownload={(files) =>
+                  files
+                    .filter((f) => f.type === "file")
+                    .forEach(handleDownloadFile)
+                }
+                onPreview={handleFileOpen}
                 onRename={handleRenameFile}
                 onCopy={handleCopyFiles}
                 onCut={handleCutFiles}
@@ -2767,7 +2965,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onCopyPath={handleCopyPath}
               />
             </div>
-          </Card>
+          </div>
         </div>
       </div>
 
@@ -2783,6 +2981,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         prompt={totpPrompt}
         onSubmit={handleTotpSubmit}
         onCancel={handleTotpCancel}
+        backgroundColor="var(--bg-canvas)"
       />
 
       <WarpgateDialog
@@ -2792,6 +2991,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         onContinue={handleWarpgateContinue}
         onCancel={handleWarpgateCancel}
         onOpenUrl={handleWarpgateOpenUrl}
+        backgroundColor="var(--bg-canvas)"
       />
 
       {currentHost && (
@@ -2806,6 +3006,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
             username: currentHost.username,
             name: currentHost.name,
           }}
+          backgroundColor="var(--bg-canvas)"
         />
       )}
 
@@ -2825,10 +3026,6 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           if (!open) setPendingSudoOperation(null);
         }}
         onSubmit={handleSudoPasswordSubmit}
-      />
-      <SimpleLoader
-        visible={(isReconnecting || isLoading) && !isConnectionLogExpanded}
-        message={t("fileManager.connecting")}
       />
       <ConnectionLog
         isConnecting={isReconnecting || isLoading}

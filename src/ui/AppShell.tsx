@@ -1,8 +1,11 @@
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, createRef } from "react";
+import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { CommandPalette } from "@/shell/CommandPalette";
@@ -16,7 +19,9 @@ import { HistoryPanel } from "@/sidebar/HistoryPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
+import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
 import { SplitView } from "@/shell/SplitView";
+import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 import type {
   Tab,
@@ -25,7 +30,8 @@ import type {
   SplitMode,
   HostFolder,
 } from "@/types/ui-types";
-import { getSSHHosts } from "@/main-axios";
+import { getSSHHosts, getUserInfo } from "@/main-axios";
+import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
@@ -50,14 +56,14 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
+    enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
-    enableSsh: h.connectionType === "ssh" || !h.connectionType,
-    enableRdp: h.connectionType === "rdp",
-    enableVnc: h.connectionType === "vnc",
-    enableTelnet: h.connectionType === "telnet",
+    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
+    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
+    enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
     sshPort: h.port,
     rdpPort: 3389,
     vncPort: 5900,
@@ -107,19 +113,6 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
   return root;
 }
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
-import { renderTabContent } from "@/shell/tabUtils";
-
-const DASHBOARD_TAB: Tab = {
-  id: "dashboard",
-  type: "dashboard",
-  label: "Dashboard",
-};
-
-const SINGLETON_TAB_LABELS: Partial<Record<TabType, string>> = {
-  "host-manager": "Host Manager",
-  docker: "Docker",
-  tunnel: "Tunnels",
-};
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
@@ -130,7 +123,10 @@ export function AppShell({
   username: string;
   onLogout: () => void;
 }) {
-  const [tabs, setTabs] = useState<Tab[]>([DASHBOARD_TAB]);
+  const { t } = useTranslation();
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+  ]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [splitMode, setSplitMode] = useState<SplitMode>("none");
@@ -138,30 +134,77 @@ export function AppShell({
     Array(6).fill(null),
   );
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
+  const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [hostManagerExpanded, setHostManagerExpanded] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarWidth, setSidebarWidth] = useState(266);
   const [sidebarDragging, setSidebarDragging] = useState(false);
+  const [sidebarEditing, setSidebarEditing] = useState(false);
 
   const isMobile = useIsMobile();
 
-  // Close the sidebar when switching to mobile (it becomes a sheet overlay)
+  const sidebarOpenBeforeMobile = useRef(sidebarOpen);
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    if (isMobile) {
+      sidebarOpenBeforeMobile.current = sidebarOpen;
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(sidebarOpenBeforeMobile.current);
+    }
   }, [isMobile]);
 
-  const pendingHostManagerEditId = useRef<string | null>(null);
-  const pendingHostManagerAction = useRef<"add-host" | "add-credential" | null>(
-    null,
-  );
+  useEffect(() => {
+    getUserInfo()
+      .then((info) => setIsAdmin(info.is_admin))
+      .catch(() => setIsAdmin(false));
+  }, []);
+
   const lastShiftTime = useRef(0);
+  const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
+    new Map(),
+  );
+  const [paneContentEls, setPaneContentEls] = useState<
+    (HTMLDivElement | null)[]
+  >(Array(6).fill(null));
+
+  // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
+  // We always portal each tab's content into its own node, then move that node between
+  // the normal-view container and the pane container via vanilla DOM so React's portal
+  // target never changes (changing the target causes a remount).
+  const tabNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const normalViewRef = useRef<HTMLDivElement>(null);
+
+  const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
+    if (!tabNodesRef.current.has(tabId)) {
+      const el = document.createElement("div");
+      el.style.position = "absolute";
+      el.style.inset = "0";
+      el.style.overflow = "hidden";
+      if (!isTerminal) el.classList.add("bg-background");
+      tabNodesRef.current.set(tabId, el);
+    }
+    return tabNodesRef.current.get(tabId)!;
+  }, []);
+
+  const onPaneContentRef = useCallback(
+    (paneIndex: number, el: HTMLDivElement | null) => {
+      setPaneContentEls((prev) => {
+        if (prev[paneIndex] === el) return prev;
+        const next = [...prev];
+        next[paneIndex] = el;
+        return next;
+      });
+    },
+    [],
+  );
 
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
+    credentials: "Credentials",
     "quick-connect": "Quick Connect",
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
@@ -191,6 +234,60 @@ export function AppShell({
     return () => window.removeEventListener("termix:logout", handle);
   }, [onLogout]);
 
+  useEffect(() => {
+    const handleSessionExpired = () => onLogout();
+    dbHealthMonitor.on("session-expired", handleSessionExpired);
+    return () => dbHealthMonitor.off("session-expired", handleSessionExpired);
+  }, [onLogout]);
+
+  useEffect(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (!activeTab?.terminalRef) return;
+    let innerRafId: number;
+    const outerRafId = requestAnimationFrame(() => {
+      innerRafId = requestAnimationFrame(() => {
+        const ref = activeTab.terminalRef?.current;
+        ref?.fit?.();
+        ref?.notifyResize?.();
+        ref?.refresh?.();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outerRafId);
+      cancelAnimationFrame(innerRafId);
+    };
+  }, [activeTabId]);
+
+  useEffect(() => {
+    const handleDegraded = () => {
+      toast.loading(t("common.connectionDegraded"), {
+        id: "db-connection-degraded",
+        duration: Infinity,
+        dismissible: false,
+        action: {
+          label: t("common.reload"),
+          onClick: () => window.location.reload(),
+        },
+      });
+    };
+
+    const handleRestored = () => {
+      toast.dismiss("db-connection-degraded");
+      toast.success(t("common.backendReconnected"), { duration: 3000 });
+    };
+
+    dbHealthMonitor.on("database-connection-degraded", handleDegraded);
+    dbHealthMonitor.on("database-connection-degraded-cleared", handleRestored);
+
+    return () => {
+      dbHealthMonitor.off("database-connection-degraded", handleDegraded);
+      dbHealthMonitor.off(
+        "database-connection-degraded-cleared",
+        handleRestored,
+      );
+    };
+  }, [t]);
+
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
@@ -200,11 +297,18 @@ export function AppShell({
       setRealHostTree(buildHostTree(raw));
     } catch {
       // Keep empty state on error
+    } finally {
+      setHostsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadHosts();
+  }, [loadHosts]);
+
+  useEffect(() => {
+    window.addEventListener("termix:hosts-changed", loadHosts);
+    return () => window.removeEventListener("termix:hosts-changed", loadHosts);
   }, [loadHosts]);
 
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
@@ -230,41 +334,35 @@ export function AppShell({
     };
     window.addEventListener("termix:open-tab", handle);
     return () => window.removeEventListener("termix:open-tab", handle);
-  }, [tabs, allHosts]);
+  }, [allHosts]);
 
   // ─── Tab management ──────────────────────────────────────────────────────
 
-  function openTab(host: Host, type: TabType) {
+  const openTab = useCallback(function openTab(host: Host, type: TabType) {
+    const tabId = `${host.name}-${type}-${Date.now()}`;
+    const ref = type === "terminal" ? createRef() : undefined;
+    if (ref) terminalRefs.current.set(tabId, ref);
+
     setTabs((prev) => {
       const same = prev.filter(
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      if (same.length === 0) {
-        const tab = {
-          id: `${host.name}-${type}`,
-          type,
-          label: host.name,
-          host,
-        };
-        setActiveTabId(tab.id);
-        return [...prev, tab];
-      }
-      const next = prev.map((t) =>
-        t.id === same[0].id && !/\(\d+\)$/.test(t.label)
-          ? { ...t, label: `${host.name} (1)`, host }
-          : t,
-      );
-      const tab = {
-        id: `${host.name}-${type}-${Date.now()}`,
-        type,
-        label: `${host.name} (${same.length + 1})`,
-        host,
-      };
-      setActiveTabId(tab.id);
-      return [...next, tab];
+      const label =
+        same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
+
+      // Retrofit the first duplicate's label to "(1)" if needed
+      const next =
+        same.length === 1 && !/\(\d+\)$/.test(same[0].label)
+          ? prev.map((t) =>
+              t.id === same[0].id ? { ...t, label: `${host.name} (1)` } : t,
+            )
+          : prev;
+
+      return [...next, { id: tabId, type, label, host, terminalRef: ref }];
     });
-  }
+    setActiveTabId(tabId);
+  }, []);
 
   function connectHost(host: Host, preferredType?: TabType) {
     const type: TabType =
@@ -281,44 +379,104 @@ export function AppShell({
     openTab(host, type);
   }
 
-  function openSingletonTab(type: TabType, pendingEvent?: string) {
-    if (type === "host-manager") {
-      if (pendingEvent === "host-manager:add-host")
-        pendingHostManagerAction.current = "add-host";
-      else if (pendingEvent === "host-manager:add-credential")
-        pendingHostManagerAction.current = "add-credential";
-
-      setHostManagerExpanded(true);
-      setSidebarOpen(true);
-      setRailView("hosts");
-
-      if (pendingEvent) {
-        // Use a small delay to ensure HostManager is mounted if it wasn't already,
-        // and to allow the current render cycle to complete.
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent(pendingEvent));
-        }, 0);
+  const openSingletonTab = useCallback(
+    function openSingletonTab(type: TabType, pendingEvent?: string) {
+      if (type === "host-manager") {
+        if (pendingEvent === "host-manager:add-credential") {
+          setSidebarOpen(true);
+          setRailView("credentials");
+          setTimeout(
+            () =>
+              window.dispatchEvent(
+                new CustomEvent("host-manager:add-credential"),
+              ),
+            0,
+          );
+        } else {
+          setSidebarOpen(true);
+          setRailView("hosts");
+          if (pendingEvent) {
+            setTimeout(
+              () => window.dispatchEvent(new CustomEvent(pendingEvent)),
+              0,
+            );
+          }
+        }
+        return;
       }
-      return;
+      if (type === "user-profile" || type === "admin-settings") {
+        setSidebarEditing(false);
+        setRailView(type as RailView);
+        setSidebarOpen(true);
+        return;
+      }
+      const id = type;
+      setTabs((prev) => {
+        if (prev.find((t) => t.id === id)) return prev;
+        const singletonLabels: Partial<Record<TabType, string>> = {
+          "host-manager": t("nav.hostManager"),
+          docker: t("nav.docker"),
+          tunnel: t("nav.tunnels"),
+          network_graph: t("nav.networkGraph"),
+        };
+        return [...prev, { id, type, label: singletonLabels[type] ?? type }];
+      });
+      setActiveTabId(id);
+    },
+    [t],
+  );
+
+  const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+
+  function doCloseTab(id: string) {
+    terminalRefs.current.delete(id);
+    if (id === activeTabId) {
+      const remaining = tabs.filter((t) => t.id !== id);
+      setActiveTabId(
+        remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
+      );
     }
-    if (type === "user-profile" || type === "admin-settings") {
-      handleRailClick(type as RailView);
-      return;
-    }
-    const id = type;
     setTabs((prev) => {
-      if (prev.find((t) => t.id === id)) return prev;
-      return [...prev, { id, type, label: SINGLETON_TAB_LABELS[type] ?? type }];
+      const next = prev.filter((t) => t.id !== id);
+      if (next.length === 0)
+        return [
+          { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+        ];
+      return next;
     });
-    setActiveTabId(id);
+  }
+
+  function refreshTab(id: string) {
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    if (tab.type === "terminal") {
+      const ref = tab.terminalRef?.current;
+      ref?.reconnect?.();
+    } else if (["rdp", "vnc", "telnet"].includes(tab.type)) {
+      window.dispatchEvent(
+        new CustomEvent("termix:refresh-guacamole", { detail: { tabId: id } }),
+      );
+    }
   }
 
   function closeTab(id: string) {
-    setTabs((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      if (id === activeTabId) setActiveTabId(next[next.length - 1].id);
-      return next;
-    });
+    const tab = tabs.find((t) => t.id === id);
+    const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
+    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
+      toast(t("nav.confirmClose"), {
+        duration: 5000,
+        action: {
+          label: t("nav.close"),
+          onClick: () => doCloseTab(id),
+        },
+        cancel: {
+          label: t("nav.cancel"),
+          onClick: () => {},
+        },
+      });
+      return;
+    }
+    doCloseTab(id);
   }
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
@@ -327,16 +485,20 @@ export function AppShell({
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
+      if (view !== railView) setSidebarEditing(false);
       setRailView(view);
       setSidebarOpen(true);
     }
   }
 
   function editHostInManager(host: Host) {
-    pendingHostManagerEditId.current = host.id;
-    setHostManagerExpanded(true);
     setSidebarOpen(true);
     setRailView("hosts");
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("host-manager:edit-host", { detail: host.id }),
+      );
+    }, 0);
   }
 
   const onSidebarMouseDown = useCallback(
@@ -361,33 +523,113 @@ export function AppShell({
     [sidebarWidth],
   );
 
-  const activeTab = tabs.find((t) => t.id === activeTabId)!;
+  // Resize all terminals in panes + active terminal when split mode or sidebar changes
+  const resizeAllTerminals = useCallback(() => {
+    const id = requestAnimationFrame(() => {
+      tabs.forEach((tab) => {
+        if (!tab.terminalRef) return;
+        const ref = tab.terminalRef.current as any;
+        ref?.fit?.();
+        ref?.notifyResize?.();
+      });
+    });
+    return id;
+  }, [tabs]);
+
+  useEffect(() => {
+    const id = resizeAllTerminals();
+    return () => cancelAnimationFrame(id);
+  }, [splitMode, sidebarWidth, sidebarOpen]);
+
   const isSplit = splitMode !== "none";
+
+  // Move each tab's stable DOM node to the right container (pane or normal-view).
+  // This is vanilla DOM so React's portal target never changes — changing the portal
+  // target causes a remount which is exactly what we're trying to avoid.
+  useEffect(() => {
+    const normalView = normalViewRef.current;
+    if (!normalView) return;
+
+    const tabIds = new Set(tabs.map((t) => t.id));
+
+    // Remove nodes for closed tabs
+    for (const [id, node] of tabNodesRef.current) {
+      if (!tabIds.has(id)) {
+        node.remove();
+        tabNodesRef.current.delete(id);
+      }
+    }
+
+    for (const tab of tabs) {
+      const isTerminal = tab.type === "terminal";
+      const node = getTabNode(tab.id, isTerminal);
+      const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+      const inPane = paneIdx !== -1;
+      const paneEl = inPane ? paneContentEls[paneIdx] : null;
+      const activeInline = !inPane && tab.id === activeTabId;
+
+      if (inPane && paneEl) {
+        if (node.parentElement !== paneEl) paneEl.appendChild(node);
+        node.style.visibility = "visible";
+        node.style.pointerEvents = "auto";
+        node.style.display = "";
+        node.style.zIndex = "";
+      } else {
+        if (node.parentElement !== normalView) normalView.appendChild(node);
+        if (isTerminal) {
+          node.style.display = "";
+          node.style.visibility = activeInline ? "visible" : "hidden";
+          node.style.pointerEvents = activeInline ? "auto" : "none";
+          node.style.zIndex = activeInline && !isSplit ? "1" : "0";
+        } else {
+          node.style.visibility = "";
+          node.style.pointerEvents = "";
+          node.style.zIndex = activeInline ? "2" : "";
+          node.style.display = activeInline ? "" : "none";
+        }
+      }
+    }
+  });
+
+  const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
   const sidebarPanelContent = (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      {railView === "hosts" && (
+      <div
+        className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
+      >
         <HostsPanel
-          expanded={hostManagerExpanded}
-          onExpand={() => setHostManagerExpanded(true)}
-          onCollapse={() => {
-            setHostManagerExpanded(false);
-            loadHosts();
-          }}
-          pendingEditId={pendingHostManagerEditId}
-          pendingAction={pendingHostManagerAction}
           onOpenTab={(host, type) => {
             connectHost(host, type);
             if (isMobile) setSidebarOpen(false);
           }}
           onEditHost={editHostInManager}
           hostTree={realHostTree ?? undefined}
+          loading={hostsLoading}
+          onEditingChange={setSidebarEditing}
+          active={railView === "hosts"}
+        />
+      </div>
+
+      <div
+        className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
+      >
+        <CredentialsPanel
+          onEditingChange={setSidebarEditing}
+          active={railView === "credentials"}
+        />
+      </div>
+
+      {railView === "quick-connect" && (
+        <QuickConnectPanel
+          onConnect={(host, type) => {
+            openTab(host, type);
+            if (isMobile) setSidebarOpen(false);
+          }}
         />
       )}
-
-      {railView === "quick-connect" && <QuickConnectPanel />}
 
       {railView === "ssh-tools" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -431,7 +673,7 @@ export function AppShell({
         </div>
       )}
 
-      {railView === "admin-settings" && (
+      {railView === "admin-settings" && isAdmin && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <AdminSettingsPanel />
         </div>
@@ -445,15 +687,15 @@ export function AppShell({
       <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
         {sidebarTitle[railView]}
       </span>
-      {!hostManagerExpanded && !isMobile && (
+      {!isMobile && (
         <>
           <Separator orientation="vertical" />
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
-            onClick={() => setSidebarWidth(256)}
+            onClick={() => setSidebarWidth(266)}
           >
             <Maximize2 className="size-3.5" />
           </Button>
@@ -464,10 +706,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          setSidebarOpen(false);
-          setHostManagerExpanded(false);
-        }}
+        onClick={() => setSidebarOpen(false)}
       >
         <ChevronLeft className="size-4" />
       </Button>
@@ -483,9 +722,11 @@ export function AppShell({
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
           username={username}
+          isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
           onProfileDropdownChange={setProfileDropdownOpen}
           onRailClick={handleRailClick}
+          onOpenTab={openSingletonTab}
           onLogout={onLogout}
         />
 
@@ -494,18 +735,14 @@ export function AppShell({
           <div
             className={`relative flex flex-col bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
             style={{
-              width: sidebarOpen
-                ? hostManagerExpanded && railView === "hosts"
-                  ? 720
-                  : sidebarWidth
-                : 0,
+              width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
               transition: sidebarDragging ? "none" : "width 0.2s",
             }}
           >
             {sidebarHeader}
             {sidebarPanelContent}
 
-            {sidebarOpen && !(hostManagerExpanded && railView === "hosts") && (
+            {sidebarOpen && !sidebarEditing && (
               <div
                 onMouseDown={onSidebarMouseDown}
                 className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
@@ -516,13 +753,7 @@ export function AppShell({
 
         {/* Mobile: sidebar as overlay sheet */}
         {isMobile && (
-          <Sheet
-            open={sidebarOpen}
-            onOpenChange={(open) => {
-              setSidebarOpen(open);
-              if (!open) setHostManagerExpanded(false);
-            }}
-          >
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetContent
               side="left"
               showCloseButton={false}
@@ -554,20 +785,57 @@ export function AppShell({
               activeTabId={activeTabId}
               onSetActiveTab={setActiveTabId}
               onCloseTab={closeTab}
+              onRefreshTab={refreshTab}
               onReorderTabs={setTabs}
             />
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              {isSplit && !isMobile ? (
-                <SplitView
-                  tabs={tabs}
-                  paneTabIds={paneTabIds}
-                  splitMode={splitMode}
-                  onOpenSingletonTab={openSingletonTab}
-                  onOpenTab={openTab}
-                />
-              ) : activeTab ? (
-                renderTabContent(activeTab, openSingletonTab, openTab)
-              ) : null}
+            <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
+              {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
+              {!isMobile && (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    display: isSplit ? "flex" : "none",
+                    flexDirection: "column",
+                  }}
+                >
+                  <SplitView
+                    tabs={tabs}
+                    paneTabIds={paneTabIds}
+                    splitMode={splitMode}
+                    onTerminalResize={resizeAllTerminals}
+                    onPaneContentRef={onPaneContentRef}
+                  />
+                </div>
+              )}
+
+              {/* Normal-view container. Tab nodes are appended here (or to pane elements)
+                  by the DOM-placement effect above. React portals each tab's content
+                  into its stable per-tab node so the component is never remounted.
+                  Hidden when split is active — pane-assigned nodes escape via vanilla DOM
+                  appendChild to paneEl, so hiding this doesn't affect them. */}
+              <div
+                ref={normalViewRef}
+                className="absolute inset-0"
+                style={{ display: isSplit && !isMobile ? "none" : undefined }}
+              >
+                {tabs.map((tab) => {
+                  const tabNode = getTabNode(tab.id, tab.type === "terminal");
+                  const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+                  const inPane = paneIdx !== -1;
+                  const activeInline = !inPane && tab.id === activeTabId;
+                  return createPortal(
+                    renderTabContent(
+                      tab,
+                      openSingletonTab,
+                      openTab,
+                      closeTab,
+                      inPane || activeInline,
+                    ),
+                    tabNode,
+                    tab.id,
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -592,8 +860,6 @@ export function AppShell({
               "host-manager",
               "user-profile",
               "admin-settings",
-              "docker",
-              "tunnel",
             ].includes(type)
           ) {
             openSingletonTab(type, pendingEvent);

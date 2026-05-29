@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
-import { Label } from "@/components/label.tsx";
-import { Shield, Copy, ExternalLink } from "lucide-react";
+import { Shield, Copy, ExternalLink, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -42,79 +41,85 @@ export function WarpgateDialog({
   };
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
+    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200 overflow-y-auto">
       <div
         className="absolute inset-0 bg-canvas rounded-md"
         style={{ backgroundColor: backgroundColor || undefined }}
       />
-      <div className="bg-elevated border-2 border-edge rounded-lg p-6 max-w-xl w-full mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="mb-4 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold">
-            {t("terminal.warpgateAuthRequired")}
-          </h3>
+      <div className="bg-card border border-border w-full max-w-md mx-4 my-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Shield className="size-4 text-accent-brand" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">
+              {t("terminal.warpgateAuthRequired")}
+            </h3>
+          </div>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <Label className="text-base font-semibold mb-2 block">
+        <div className="p-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("terminal.warpgateSecurityKey")}
-            </Label>
-            <div className="bg-base border-2 border-accent rounded-md p-4 text-center">
-              <div className="text-3xl font-mono font-bold tracking-wider text-primary">
+            </p>
+            <div className="border border-border bg-muted/10 p-4 text-center">
+              <div className="text-2xl font-mono font-bold tracking-wider text-accent-brand">
                 {securityKey}
               </div>
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="warpgateUrl" className="text-base font-semibold">
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("terminal.warpgateAuthUrl")}
-            </Label>
-            <div className="flex gap-2 mt-2">
+            </p>
+            <div className="flex gap-2">
               <Input
-                id="warpgateUrl"
                 type="text"
                 value={url}
                 readOnly
-                className="flex-1 font-mono text-xs"
+                className="rounded-none bg-muted/50 border-border text-xs font-mono flex-1"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={handleCopyUrl}
+                className="rounded-none border-border shrink-0"
                 title={t("common.copy")}
               >
-                <Copy className={`w-4 h-4 ${copied ? "text-success" : ""}`} />
+                {copied ? (
+                  <Check className="size-4 text-accent-brand" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <div className="flex flex-wrap justify-end gap-2 pt-1">
             <Button
               type="button"
-              onClick={onOpenUrl}
-              className="flex-1 flex items-center justify-center gap-2"
+              variant="ghost"
+              onClick={onCancel}
+              className="rounded-none text-[10px] font-bold uppercase tracking-widest sm:mr-auto"
             >
-              <ExternalLink className="w-4 h-4" />
-              {t("terminal.warpgateOpenBrowser")}
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={onContinue}
-              className="flex-1"
+              className="rounded-none text-[10px] font-bold uppercase tracking-widest"
             >
               {t("terminal.warpgateContinue")}
             </Button>
             <Button
               type="button"
               variant="outline"
-              onClick={onCancel}
-              className="sm:w-auto"
+              onClick={onOpenUrl}
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
             >
-              {t("common.cancel")}
+              <ExternalLink className="size-3.5" />
+              {t("terminal.warpgateOpenBrowser")}
             </Button>
           </div>
         </div>

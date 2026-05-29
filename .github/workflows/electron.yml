@@ -26,7 +26,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2025
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
       contents: write
@@ -44,22 +44,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: |
-          $maxAttempts = 3
-          $attempt = 1
-          while ($attempt -le $maxAttempts) {
-            try {
-              npm ci
-              break
-            } catch {
-              if ($attempt -eq $maxAttempts) {
-                Write-Error "npm ci failed after $maxAttempts attempts"
-                exit 1
-              }
-              Start-Sleep -Seconds 10
-              $attempt++
-            }
-          }
+        run: npm ci
 
       - name: Get version
         id: package-version
@@ -131,7 +116,7 @@ jobs:
           retention-days: 30
 
   build-linux:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '') && github.event.inputs.artifact_destination != 'submit'
     permissions:
       contents: write
@@ -148,24 +133,14 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
 
-      - name: Install system dependencies for AppImage
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfuse2
+          sudo apt-get install -y libfuse2 flatpak flatpak-builder imagemagick
 
       - name: Install dependencies
         run: |
-          for i in 1 2 3;
-          do
-            if npm ci; then
-              break
-            else
-              if [ $i -eq 3 ]; then
-                exit 1
-              fi
-              sleep 10
-            fi
-          done
+          npm ci
           npm install --force @rollup/rollup-linux-x64-gnu
           npm install --force @rollup/rollup-linux-arm64-gnu
           npm install --force @rollup/rollup-linux-arm-gnueabihf
@@ -267,11 +242,6 @@ jobs:
           path: release/termix_linux_armv7l_portable.tar.gz
           retention-days: 30
 
-      - name: Install Flatpak builder and dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder imagemagick
-
       - name: Add Flathub repository
         run: |
           sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -353,7 +323,7 @@ jobs:
           retention-days: 30
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: (github.event.inputs.build_type == 'macos' || github.event.inputs.build_type == 'all') && github.event.inputs.artifact_destination != 'submit'
     needs: []
     permissions:
@@ -373,17 +343,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          for i in 1 2 3;
-          do
-            if npm ci; then
-              break
-            else
-              if [ $i -eq 3 ]; then
-                exit 1
-              fi
-              sleep 10
-            fi
-          done
+          npm ci
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
 
@@ -490,11 +450,11 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NODE_OPTIONS: --max-old-space-size=4096
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
             npm run build
           fi
-          export GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
 
       - name: Upload macOS MAS PKG
@@ -583,7 +543,7 @@ jobs:
           security delete-keychain $RUNNER_TEMP/dev-signing.keychain-db || true
 
   submit-to-chocolatey:
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2025
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows' || github.event.inputs.build_type == '')
     permissions:
       contents: read
@@ -688,7 +648,7 @@ jobs:
           retention-days: 30
 
   submit-to-flatpak:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux' || github.event.inputs.build_type == '')
     needs: []
     permissions:
@@ -735,7 +695,7 @@ jobs:
           echo "appimage_arm64_name=$APPIMAGE_ARM64_NAME" >> $GITHUB_OUTPUT
           echo "checksum_arm64=$CHECKSUM_ARM64" >> $GITHUB_OUTPUT
 
-      - name: Install ImageMagick for icon generation
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
@@ -775,7 +735,7 @@ jobs:
           retention-days: 30
 
   submit-to-homebrew:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
@@ -844,7 +804,7 @@ jobs:
           retention-days: 30
 
   upload-to-release:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     if: github.event.inputs.artifact_destination == 'release'
     needs: [build-windows, build-linux, build-macos]
     permissions:
@@ -880,7 +840,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   submit-to-testflight:
-    runs-on: macos-latest
+    runs-on: blacksmith-6vcpu-macos-latest
     if: github.event.inputs.artifact_destination == 'submit' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'macos')
     needs: []
     permissions:
@@ -900,17 +860,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          for i in 1 2 3;
-          do
-            if npm ci; then
-              break
-            else
-              if [ $i -eq 3 ]; then
-                exit 1
-              fi
-              sleep 10
-            fi
-          done
+          npm ci
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
 

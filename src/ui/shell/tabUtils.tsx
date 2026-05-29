@@ -20,8 +20,10 @@ import { ServerStats } from "@/features/server-stats/ServerStats";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
+import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
+import { useTabsSafe } from "@/shell/TabContext";
 
 function hostToSSHHost(h: Host): SSHHost {
   return {
@@ -103,13 +105,53 @@ export function tabIcon(type: TabType) {
       return <Box className="size-3.5" />;
     case "tunnel":
       return <Network className="size-3.5" />;
+    case "network_graph":
+      return <Network className="size-3.5" />;
   }
+}
+
+function TerminalTabContent({
+  tab,
+  host,
+  label,
+  isVisible,
+  onCloseTab,
+}: {
+  tab: Tab;
+  host: Host;
+  label: string;
+  isVisible: boolean;
+  onCloseTab?: (id: string) => void;
+}) {
+  const { previewTerminalTheme } = useTabsSafe();
+  return (
+    <CommandHistoryProvider>
+      <TerminalFeature
+        ref={tab.terminalRef as any}
+        hostConfig={
+          {
+            ...hostToSSHHost(host),
+            sshPort: host.sshPort ?? host.port,
+            instanceId: tab.id,
+          } as any
+        }
+        isVisible={isVisible}
+        title={label}
+        showTitle={false}
+        splitScreen={false}
+        onClose={() => onCloseTab?.(tab.id)}
+        previewTheme={previewTerminalTheme}
+      />
+    </CommandHistoryProvider>
+  );
 }
 
 export function renderTabContent(
   tab: Tab,
   onOpenSingletonTab?: (type: TabType) => void,
   onOpenTab?: (host: Host, type: TabType) => void,
+  onCloseTab?: (id: string) => void,
+  isVisible = true,
 ) {
   const { host, label } = tab;
 
@@ -131,21 +173,13 @@ export function renderTabContent(
           />
         );
       return (
-        <CommandHistoryProvider>
-          <TerminalFeature
-            hostConfig={
-              {
-                ...hostToSSHHost(host),
-                sshPort: host.sshPort ?? host.port,
-              } as any
-            }
-            isVisible={true}
-            title={label}
-            showTitle={false}
-            splitScreen={false}
-            onClose={() => {}}
-          />
-        </CommandHistoryProvider>
+        <TerminalTabContent
+          tab={tab}
+          host={host}
+          label={label}
+          isVisible={isVisible}
+          onCloseTab={onCloseTab}
+        />
       );
 
     case "files":
@@ -165,7 +199,7 @@ export function renderTabContent(
         <DockerManager
           hostConfig={hostToSSHHost(host)}
           title={label}
-          isVisible={true}
+          isVisible={isVisible}
           isTopbarOpen={false}
           embedded={true}
         />
@@ -180,7 +214,7 @@ export function renderTabContent(
         <ServerStats
           hostConfig={hostToSSHHost(host) as any}
           title={label}
-          isVisible={true}
+          isVisible={isVisible}
           isTopbarOpen={false}
           embedded={true}
         />
@@ -196,7 +230,16 @@ export function renderTabContent(
         return (
           <EmptyState icon={Monitor} messageKey="guacamole.noHostSelected" />
         );
-      return <GuacamoleApp hostId={host.id} />;
+      return (
+        <GuacamoleApp
+          hostId={host.id}
+          tabId={tab.id}
+          protocol={tab.type as "rdp" | "vnc" | "telnet"}
+        />
+      );
+
+    case "network_graph":
+      return <NetworkGraphCard embedded={false} />;
 
     case "host-manager":
     case "user-profile":

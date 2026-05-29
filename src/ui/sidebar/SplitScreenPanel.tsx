@@ -24,6 +24,15 @@ const LAYOUT_PREVIEWS: Record<SplitMode, React.ReactNode> = {
       </div>
     </div>
   ),
+  "3-way-horizontal": (
+    <div className="flex flex-col gap-0.5 size-full">
+      <div className="flex gap-0.5 flex-1">
+        <div className="flex-1 border-2 border-current" />
+        <div className="flex-1 border-2 border-current" />
+      </div>
+      <div className="flex-1 border-2 border-current" />
+    </div>
+  ),
   "4-way": (
     <div className="grid grid-cols-2 grid-rows-2 gap-0.5 size-full">
       <div className="border-2 border-current" />

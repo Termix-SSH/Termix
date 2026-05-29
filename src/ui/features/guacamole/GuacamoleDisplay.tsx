@@ -65,6 +65,7 @@ export const GuacamoleDisplay = forwardRef<
     typeof document === "undefined" ? true : document.hasFocus(),
   );
   const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useImperativeHandle(ref, () => ({
     disconnect: () => {
@@ -267,13 +268,20 @@ export const GuacamoleDisplay = forwardRef<
     if (isConnectingRef.current) return;
     isConnectingRef.current = true;
     setIsReady(false);
+    setHasError(false);
 
-    let containerWidth = containerRef.current?.clientWidth || 0;
-    let containerHeight = containerRef.current?.clientHeight || 0;
+    // Wait two frames so the container is fully laid out before measuring.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    let containerWidth = rect?.width || 0;
+    let containerHeight = rect?.height || 0;
 
     if (containerWidth < 100 || containerHeight < 100) {
-      containerWidth = 1280;
-      containerHeight = 720;
+      containerWidth = window.innerWidth || 1280;
+      containerHeight = window.innerHeight || 720;
     }
 
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
@@ -302,6 +310,11 @@ export const GuacamoleDisplay = forwardRef<
       rescaleDisplay(true);
       setIsReady(true);
     };
+
+    const protocol = connectionConfig.protocol ?? connectionConfig.type;
+    if (protocol === "telnet") {
+      setIsReady(true);
+    }
 
     const mouse = new Guacamole.Mouse(displayElement);
     const sendMouseState = (state: Guacamole.Mouse.State) => {
@@ -351,8 +364,15 @@ export const GuacamoleDisplay = forwardRef<
         case 2:
           break;
         case 3:
+          isConnectingRef.current = false;
           setIsReady(true);
           onConnect?.();
+          if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const w = Math.round(rect.width);
+            const h = Math.round(rect.height);
+            if (w > 0 && h > 0) client.sendSize(w, h);
+          }
           break;
         case 4:
           break;
@@ -366,8 +386,10 @@ export const GuacamoleDisplay = forwardRef<
     };
 
     client.onerror = (error: Guacamole.Status) => {
-      const errorMessage = error.message || "Connection error";
+      const errorMessage = error.message || t("guacamole.connectionError");
       setIsReady(false);
+      setHasError(true);
+      isConnectingRef.current = false;
       onError?.(errorMessage);
     };
 
@@ -386,6 +408,24 @@ export const GuacamoleDisplay = forwardRef<
 
     client.onaudio = (stream: Guacamole.InputStream, mimetype: string) => {
       Guacamole.AudioPlayer.getInstance(stream, mimetype);
+    };
+
+    client.onfile = (
+      stream: Guacamole.InputStream,
+      mimetype: string,
+      filename: string,
+    ) => {
+      const reader = new Guacamole.BlobReader(stream, mimetype);
+      reader.onend = () => {
+        const blob = reader.getBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      stream.sendAck("OK", Guacamole.Status.Code.SUCCESS);
     };
 
     client.connect();
@@ -407,11 +447,7 @@ export const GuacamoleDisplay = forwardRef<
 
     if (isVisible && !hasInitiatedRef.current) {
       hasInitiatedRef.current = true;
-      requestAnimationFrame(() => {
-        if (isMountedRef.current) {
-          connect();
-        }
-      });
+      connect();
     }
   }, [isVisible, connect]);
 
@@ -475,26 +511,23 @@ export const GuacamoleDisplay = forwardRef<
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      rescaleDisplay(false);
       if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
       resizeTimeoutRef.current = setTimeout(() => {
         if (clientRef.current && containerRef.current) {
-          const w = containerRef.current.clientWidth;
-          const h = containerRef.current.clientHeight;
+          const rect = containerRef.current.getBoundingClientRect();
+          const w = Math.round(rect.width);
+          const h = Math.round(rect.height);
           if (w > 0 && h > 0) clientRef.current.sendSize(w, h);
         }
-      }, 200);
+      }, 150);
     });
 
     resizeObserver.observe(containerRef.current);
 
-    const initialTimeout = setTimeout(() => rescaleDisplay(true), 100);
-
     return () => {
       resizeObserver.disconnect();
-      clearTimeout(initialTimeout);
     };
-  }, [rescaleDisplay]);
+  }, []);
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
@@ -553,7 +586,10 @@ export const GuacamoleDisplay = forwardRef<
         }}
       />
 
-      <SimpleLoader visible={!isReady} message={connectingMessage} />
+      <SimpleLoader
+        visible={!isReady && !hasError}
+        message={connectingMessage}
+      />
     </div>
   );
 });

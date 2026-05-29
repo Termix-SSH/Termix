@@ -30,3 +30,4 @@ dist-ssr
 electron/build-info.cjs
 /.mcp.json
 /CLAUDE.md
+/old_db/

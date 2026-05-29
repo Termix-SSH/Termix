@@ -1,7 +1,9 @@
 import crypto from "crypto";
 import type { ConnectConfig, CipherAlgorithm } from "ssh2";
 
-// Maps SSH cipher names to their OpenSSL equivalents (as used by ssh2 internally)
+const availableCiphers = new Set(crypto.getCiphers());
+
+// Maps SSH cipher names to their OpenSSL equivalents
 const SSH_CIPHER_SSL_NAME: Partial<Record<CipherAlgorithm, string>> = {
   "chacha20-poly1305@openssh.com": "chacha20",
   "aes256-gcm@openssh.com": "aes-256-gcm",
@@ -15,12 +17,31 @@ const SSH_CIPHER_SSL_NAME: Partial<Record<CipherAlgorithm, string>> = {
   "3des-cbc": "des-ede3-cbc",
 };
 
-const availableCiphers = new Set(crypto.getCiphers());
+// Check if ssh2's native crypto binding is available (needed for chacha20-poly1305)
+let ssh2BindingAvailable = false;
+try {
+  require("ssh2/lib/protocol/crypto/build/Release/sshcrypto.node");
+  ssh2BindingAvailable = true;
+} catch {
+  try {
+    // ESM fallback: check if chacha20 works via OpenSSL createCipheriv
+    crypto.createCipheriv("chacha20", Buffer.alloc(32), Buffer.alloc(16));
+    ssh2BindingAvailable = true;
+  } catch {
+    ssh2BindingAvailable = false;
+  }
+}
 
 function filterCiphers(list: CipherAlgorithm[]): CipherAlgorithm[] {
   return list.filter((name) => {
     const sslName = SSH_CIPHER_SSL_NAME[name];
-    return !sslName || availableCiphers.has(sslName);
+    if (!sslName) return true;
+    if (!availableCiphers.has(sslName)) return false;
+    // chacha20-poly1305 requires either native binding or working OpenSSL chacha20
+    if (name === "chacha20-poly1305@openssh.com" && !ssh2BindingAvailable) {
+      return false;
+    }
+    return true;
   });
 }
 

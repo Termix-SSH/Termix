@@ -1,93 +1,219 @@
-# Estadísticas del Repositorio
+<div align="center">
 
-<p align="center">
-<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · 🇪🇸 Español · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · <a href="README-VI.md">🇻🇳 Tiếng Việt</a> · <a href="README-IT.md">🇮🇹 Italiano</a>
+<img src="../public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Termix</h1>
+
+<p>Gestion SSH autoalojada y acceso a escritorio remoto</p>
+
+<p>
+  <a href="../README.md">English</a> ·
+  <a href="README-CN.md">中文</a> ·
+  <a href="README-JA.md">日本語</a> ·
+  <a href="README-KO.md">한국어</a> ·
+  <a href="README-FR.md">Français</a> ·
+  <a href="README-DE.md">Deutsch</a> ·
+  Español ·
+  <a href="README-PT.md">Português</a> ·
+  <a href="README-RU.md">Русский</a> ·
+  <a href="README-AR.md">العربية</a> ·
+  <a href="README-HI.md">हिन्दी</a> ·
+  <a href="README-TR.md">Türkçe</a> ·
+  <a href="README-VI.md">Tiếng Việt</a> ·
+  <a href="README-IT.md">Italiano</a>
 </p>
 
-![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
-![GitHub forks](https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks)
-![GitHub Release](https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release)
-<a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
-
-<p align="center">
-  <img src="../repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
-  <br>
-  <small style="color: #666;">Logrado el 1 de septiembre de 2025</small>
+<p>
+  <img src="https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars&color=F39044&labelColor=1a1a1a" />
+  <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
+  <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
+  <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
 <br />
-<p align="center">
-  <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
+
+<img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
+
+<br />
+<br />
+
+<p>
+  <img src="../repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
+  <br />
+  <sub>Logrado el 1 de septiembre de 2025</sub>
 </p>
 
-# Descripción General
+</div>
 
-<p align="center">
-  <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
-</p>
+<br />
 
-Termix es una plataforma de gestión de servidores todo en uno, de código abierto, siempre gratuita y autoalojada. Proporciona una solución multiplataforma para gestionar sus servidores e infraestructura a través de una interfaz única e intuitiva. Termix ofrece acceso a terminal SSH, control de escritorio remoto (RDP, VNC, Telnet), capacidades de túneles SSH, gestión remota de archivos SSH y muchas otras herramientas. Termix es la alternativa perfecta, gratuita y autoalojada a Termius, disponible para todas las plataformas.
+## Descripcion General
 
-# Características
+Termix es una plataforma de gestion de servidores todo en uno, de codigo abierto, siempre gratuita y autoalojada. Proporciona una solucion multiplataforma para gestionar sus servidores e infraestructura a traves de una interfaz unica e intuitiva. Termix ofrece acceso a terminal SSH, control de escritorio remoto (RDP, VNC, Telnet), capacidades de tuneles SSH, gestion remota de archivos SSH y muchas otras herramientas. Termix es la alternativa perfecta, gratuita y autoalojada a Termius, disponible para todas las plataformas.
 
-- **Acceso a Terminal SSH** - Terminal completo con soporte de pantalla dividida (hasta 4 paneles) con un sistema de pestañas similar al navegador. Incluye soporte para personalizar el terminal incluyendo temas comunes de terminal, fuentes y otros componentes.
-- **Acceso a Escritorio Remoto** - Soporte RDP, VNC y Telnet a través del navegador con personalización completa y pantalla dividida.
-- **Gestión de Túneles SSH** - Cree y gestione túneles SSH de servidor a servidor con reconexión automática, monitoreo de estado y reenvío local, remoto o dinámico SOCKS. La configuración de túneles de cliente de escritorio a servidor se almacena localmente por instalación de escritorio; los snapshots de presets C2S opcionales pueden guardarse en el servidor, renombrarse, cargarse o eliminarse para mover una configuración de túnel local entre clientes.
-- **Gestor Remoto de Archivos** - Gestione archivos directamente en servidores remotos con soporte para visualizar y editar código, imágenes, audio y video. Suba, descargue, renombre, elimine y mueva archivos sin problemas con soporte sudo.
-- **Gestión de Docker** - Inicie, detenga, pause, elimine contenedores. Vea estadísticas de contenedores. Controle contenedores usando el terminal docker exec. No fue creado para reemplazar Portainer o Dockge, sino para simplemente gestionar sus contenedores en lugar de crearlos.
-- **Gestor de Hosts SSH** - Guarde, organice y gestione sus conexiones SSH con etiquetas y carpetas, y guarde fácilmente información de inicio de sesión reutilizable con la capacidad de automatizar el despliegue de claves SSH.
-- **Estadísticas del Servidor** - Vea el uso de CPU, memoria y disco junto con red, tiempo de actividad, información del sistema, firewall, monitor de puertos en la mayoría de los servidores basados en Linux.
-- **Dashboard** - Vea la información del servidor de un vistazo en su dashboard.
-- **RBAC** - Cree roles y comparta hosts entre usuarios/roles.
-- **Autenticación de Usuarios** - Gestión segura de usuarios con controles de administrador y soporte para OIDC (con control de acceso) y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permisos. Vincule sus cuentas OIDC/Locales entre sí.
-- **Cifrado de Base de Datos** - Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentación](https://docs.termix.site/security) para más información.
-- **Claves API** - Cree claves API con ámbito de usuario y fechas de vencimiento para usar en automatización/CI.
-- **Exportación/Importación de Datos** - Exporte e importe hosts SSH, credenciales y datos del gestor de archivos.
-- **Configuración Automática de SSL** - Generación y gestión integrada de certificados SSL con redirecciones HTTPS.
-- **Interfaz Moderna** - Interfaz limpia compatible con escritorio/móvil construida con React, Tailwind CSS y Shadcn. Elija entre muchos temas de UI diferentes, incluyendo claro, oscuro, Dracula, etc. Use rutas URL para abrir cualquier conexión en pantalla completa.
-- **Idiomas** - Soporte integrado para ~30 idiomas (gestionado por [Crowdin](https://docs.termix.site/translations)).
-- **Soporte de Plataformas** - Disponible como aplicación web, aplicación de escritorio (Windows, Linux y macOS, se puede ejecutar de forma independiente sin el backend de Termix), PWA y aplicación dedicada para móviles/tablets en iOS y Android.
-- **Herramientas SSH** - Cree fragmentos de comandos reutilizables que se ejecutan con un solo clic. Ejecute un comando simultáneamente en múltiples terminales abiertos.
-- **Historial de Comandos** - Autocompletado y visualización de comandos SSH ejecutados anteriormente.
-- **Conexión Rápida** - Conéctese a un servidor sin necesidad de guardar los datos de conexión.
-- **Paleta de Comandos** - Pulse dos veces la tecla Shift izquierda para acceder rápidamente a las conexiones SSH con su teclado.
-- **SSH Rico en Funciones** - Soporta jump hosts, Warpgate, conexiones basadas en TOTP, SOCKS5, verificación de clave de host, autocompletado de contraseñas, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
-- **Gráfico de Red** - Personalice su Dashboard para visualizar su homelab basado en sus conexiones SSH con soporte de estado.
-- **Pestañas Persistentes** - Las sesiones SSH y pestañas permanecen abiertas entre dispositivos/actualizaciones si está habilitado en el perfil de usuario.
+<br />
 
-# Características Planeadas
+## Caracteristicas
 
-Consulte [Proyectos](https://github.com/orgs/Termix-SSH/projects/2) para todas las características planeadas. Si desea contribuir, consulte [Contribuir](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+<table>
+<tr>
+<td width="50%" valign="top">
 
-# Instalación
+**Acceso a Terminal SSH:**
+Terminal completo con soporte de pantalla dividida (hasta 4 paneles) con un sistema de pestanas similar al navegador. Incluye soporte para personalizar el terminal incluyendo temas comunes de terminal, fuentes y otros componentes.
 
-Dispositivos soportados:
+</td>
+<td width="50%" valign="top">
 
-- Sitio web (cualquier navegador moderno en cualquier plataforma como Chrome, Safari y Firefox) (incluye soporte PWA)
-- Windows (x64/ia32)
-  - Portable
-  - Instalador MSI
-  - Gestor de paquetes Chocolatey
-- Linux (x64/ia32)
-  - Portable
-  - AUR
-  - AppImage
-  - Deb
-  - Flatpak
-- macOS (x64/ia32 en v12.0+)
-  - Apple App Store
-  - DMG
-  - Homebrew
-- iOS/iPadOS (v15.1+)
-  - Apple App Store
-  - IPA
-- Android (v7.0+)
-  - Google Play Store
-  - APK
+**Acceso a Escritorio Remoto:**
+Soporte RDP, VNC y Telnet a traves del navegador con personalizacion completa y pantalla dividida.
 
-Visite la [documentación](https://docs.termix.site/install) de Termix para más información sobre cómo instalar Termix en todas las plataformas. De lo contrario, vea un archivo Docker Compose de ejemplo aquí (puede omitir guacd y la red si no planea usar funciones de escritorio remoto):
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Gestion de Tuneles SSH:**
+Cree y gestione tuneles SSH de servidor a servidor con reconexion automatica, monitoreo de estado y reenvio local, remoto o dinamico SOCKS. La configuracion de tuneles de cliente de escritorio a servidor se almacena localmente por instalacion de escritorio; los snapshots de presets C2S opcionales pueden guardarse en el servidor, renombrarse, cargarse o eliminarse para mover una configuracion de tunel local entre clientes.
+
+</td>
+<td width="50%" valign="top">
+
+**Gestor Remoto de Archivos:**
+Gestione archivos directamente en servidores remotos con soporte para visualizar y editar codigo, imagenes, audio y video. Suba, descargue, renombre, elimine y mueva archivos sin problemas con soporte sudo.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Gestion de Docker:**
+Inicie, detenga, pause, elimine contenedores. Vea estadisticas de contenedores. Controle contenedores usando el terminal docker exec. No fue creado para reemplazar Portainer o Dockge, sino para simplemente gestionar sus contenedores en lugar de crearlos.
+
+</td>
+<td width="50%" valign="top">
+
+**Gestor de Hosts SSH:**
+Guarde, organice y gestione sus conexiones SSH con etiquetas y carpetas, y guarde facilmente informacion de inicio de sesion reutilizable con la capacidad de automatizar el despliegue de claves SSH.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Estadisticas del Servidor:**
+Vea el uso de CPU, memoria y disco junto con red, tiempo de actividad, informacion del sistema, firewall, monitor de puertos en la mayoria de los servidores basados en Linux.
+
+</td>
+<td width="50%" valign="top">
+
+**Autenticacion de Usuarios:**
+Gestion segura de usuarios con controles de administrador y soporte para OIDC (con control de acceso) y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permisos. Vincule sus cuentas OIDC/Locales entre si.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**RBAC:**
+Cree roles y comparta hosts entre usuarios/roles.
+
+</td>
+<td width="50%" valign="top">
+
+**Cifrado de Base de Datos:**
+Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site/security) para mas informacion.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Grafico de Red:**
+Personalice su Dashboard para visualizar su homelab basado en sus conexiones SSH con soporte de estado.
+
+</td>
+<td width="50%" valign="top">
+
+**Herramientas SSH:**
+Cree fragmentos de comandos reutilizables que se ejecutan con un solo clic. Ejecute un comando simultaneamente en multiples terminales abiertos.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Pestanas Persistentes:**
+Las sesiones SSH y pestanas permanecen abiertas entre dispositivos/actualizaciones si esta habilitado en el perfil de usuario.
+
+</td>
+<td width="50%" valign="top">
+
+**Idiomas:**
+Soporte integrado para aproximadamente 30 idiomas (gestionado por [Crowdin](https://docs.termix.site/translations)).
+
+</td>
+</tr>
+</table>
+
+<br />
+
+<details>
+<summary><b>Mas caracteristicas</b></summary>
+<br />
+
+- **Dashboard** - Vea la informacion del servidor de un vistazo en su dashboard
+- **Claves API** - Cree claves API con ambito de usuario y fechas de vencimiento para usar en automatizacion/CI
+- **Exportacion/Importacion de Datos** - Exporte e importe hosts SSH, credenciales y datos del gestor de archivos
+- **Configuracion Automatica de SSL** - Generacion y gestion integrada de certificados SSL con redirecciones HTTPS
+- **Interfaz Moderna** - Interfaz limpia compatible con escritorio/movil construida con React, Tailwind CSS y Shadcn. Elija entre muchos temas de UI diferentes, incluyendo claro, oscuro, Dracula, etc. Use rutas URL para abrir cualquier conexion en pantalla completa.
+- **Historial de Comandos** - Autocompletado y visualizacion de comandos SSH ejecutados anteriormente
+- **Conexion Rapida** - Conectese a un servidor sin necesidad de guardar los datos de conexion
+- **Paleta de Comandos** - Pulse dos veces la tecla Shift izquierda para acceder rapidamente a las conexiones SSH con su teclado
+- **SSH Rico en Funciones** - Soporta jump hosts, Warpgate, conexiones basadas en TOTP, SOCKS5, verificacion de clave de host, autocompletado de contrasenas, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
+
+</details>
+
+<br />
+
+## Soporte de Plataformas
+
+<table align="center">
+<tr>
+<th align="center">Plataforma</th>
+<th align="center">Distribucion</th>
+</tr>
+<tr>
+<td align="center"><b>Web</b></td>
+<td>Cualquier navegador moderno (Chrome, Safari, Firefox) · Soporte PWA</td>
+</tr>
+<tr>
+<td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
+<td>Portable · Instalador MSI · Chocolatey</td>
+</tr>
+<tr>
+<td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
+<td>Portable · AUR · AppImage · Deb · Flatpak</td>
+</tr>
+<tr>
+<td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
+<td>Apple App Store · DMG · Homebrew</td>
+</tr>
+<tr>
+<td align="center"><b>iOS/iPadOS</b> <sub>v15.1+</sub></td>
+<td>Apple App Store · IPA</td>
+</tr>
+<tr>
+<td align="center"><b>Android</b> <sub>v7.0+</sub></td>
+<td>Google Play Store · APK</td>
+</tr>
+</table>
+
+<br />
+
+## Instalacion
+
+Visite la [documentacion](https://docs.termix.site/install) de Termix para mas informacion sobre como instalar Termix en todas las plataformas. De lo contrario, vea un archivo Docker Compose de ejemplo aqui (puede omitir guacd y la red si no planea usar funciones de escritorio remoto):
 
 ```yaml
 services:
@@ -124,79 +250,108 @@ networks:
     driver: bridge
 ```
 
-# Patrocinadores
+<br />
 
-<p align="left">
-  <a href="https://www.digitalocean.com/">
-    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://crowdin.com/">
-    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://tailscale.com/">
-    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://akamai.com/">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://aws.amazon.com/">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
-  </a>
-</p>
+## Capturas de Pantalla
 
-# Soporte
+<div align="center">
 
-Si necesita ayuda o desea solicitar una función para Termix, visite la página de [Issues](https://github.com/Termix-SSH/Support/issues), inicie sesión y pulse `New Issue`.
-Por favor, sea lo más detallado posible en su reporte, preferiblemente escrito en inglés. También puede unirse al servidor de [Discord](https://discord.gg/jVQGdvHDrf) y visitar el canal de soporte, sin embargo, los tiempos de respuesta pueden ser más largos.
+<br />
 
-# Capturas de Pantalla
+[![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+<sub>Ver resúmenes de actualizaciones en YouTube</sub>
 
-<p align="center">
-  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
-  <img src="../repo-images/Image%202.png" width="400" alt="Termix Demo 2"/>
-</p>
+<br />
+<br />
 
-<p align="center">
-  <img src="../repo-images/Image%203.png" width="400" alt="Termix Demo 3"/>
-  <img src="../repo-images/Image%204.png" width="400" alt="Termix Demo 4"/>
-</p>
+<table>
+<tr>
+<td><img src="../repo-images/Image 1.png" alt="Termix Screenshot 1" width="400" /></td>
+<td><img src="../repo-images/Image 2.png" alt="Termix Screenshot 2" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 3.png" alt="Termix Screenshot 3" width="400" /></td>
+<td><img src="../repo-images/Image 4.png" alt="Termix Screenshot 4" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 5.png" alt="Termix Screenshot 5" width="400" /></td>
+<td><img src="../repo-images/Image 6.png" alt="Termix Screenshot 6" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 7.png" alt="Termix Screenshot 7" width="400" /></td>
+<td><img src="../repo-images/Image 8.png" alt="Termix Screenshot 8" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 9.png" alt="Termix Screenshot 9" width="400" /></td>
+<td><img src="../repo-images/Image 10.png" alt="Termix Screenshot 10" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 11.png" alt="Termix Screenshot 11" width="400" /></td>
+<td><img src="../repo-images/Image 12.png" alt="Termix Screenshot 12" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
+<td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
+</tr>
+</table>
 
-<p align="center">
-  <img src="../repo-images/Image%205.png" width="400" alt="Termix Demo 5"/>
-  <img src="../repo-images/Image%206.png" width="400" alt="Termix Demo 6"/>
-</p>
+<sub>Algunos videos e imagenes pueden estar desactualizados o no mostrar perfectamente las caracteristicas.</sub>
 
-<p align="center">
-  <img src="../repo-images/Image%207.png" width="400" alt="Termix Demo 7"/>
-  <img src="../repo-images/Image%208.png" width="400" alt="Termix Demo 8"/>
-</p>
+</div>
 
-<p align="center">
-  <img src="../repo-images/Image%209.png" width="400" alt="Termix Demo 9"/>
-  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
-</p>
+<br />
 
-<p align="center">
-  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
-  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
-</p>
+## Caracteristicas Planeadas
 
-Algunos videos e imágenes pueden estar desactualizados o no mostrar perfectamente las características.
+Consulte [Proyectos](https://github.com/orgs/Termix-SSH/projects/2) para todas las caracteristicas planeadas. Si desea contribuir, consulte [Contribuir](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
-# Licencia
+<br />
 
-Distribuido bajo la Licencia Apache Versión 2.0. Consulte LICENSE para más información.
+## Patrocinadores
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+
+</div>
+
+<br />
+
+## Soporte
+
+Si necesita ayuda o desea solicitar una funcion para Termix, visite la pagina de [Issues](https://github.com/Termix-SSH/Support/issues), inicie sesion y pulse `New Issue`. Por favor, sea lo mas detallado posible en su reporte, preferiblemente escrito en ingles. Tambien puede unirse al servidor de [Discord](https://discord.gg/jVQGdvHDrf) y visitar el canal de soporte, sin embargo, los tiempos de respuesta pueden ser mas largos.
+
+<br />
+
+## Licencia
+
+Distribuido bajo la Licencia Apache Version 2.0. Consulte `LICENSE` para mas informacion.

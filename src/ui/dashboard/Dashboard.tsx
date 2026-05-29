@@ -129,6 +129,31 @@ export function Dashboard({
     [mainWidthPct, layout, updateLayout],
   );
 
+  const handleCardHeightMouseDown = useCallback(
+    (e: React.MouseEvent, cardId: string, currentHeight: number) => {
+      e.preventDefault();
+      const startY = e.clientY;
+      const startH = currentHeight;
+      const onMove = (ev: MouseEvent) => {
+        const newH = Math.max(180, startH + (ev.clientY - startY));
+        if (!layout) return;
+        updateLayout({
+          ...layout,
+          cards: layout.cards.map((c) =>
+            c.id === cardId ? { ...c, height: Math.round(newH) } : c,
+          ),
+        });
+      };
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [layout, updateLayout],
+  );
+
   let sidebarState: "expanded" | "collapsed" = "expanded";
   try {
     const sidebar = useSidebar();
@@ -385,7 +410,7 @@ export function Dashboard({
             name: string;
             cpu: number | null;
             ram: number | null;
-          } => server !== null && server.cpu !== null && server.ram !== null,
+          } => server !== null,
         );
         setServerStats(validServerStats);
         setServerStatsLoading(false);
@@ -788,24 +813,40 @@ export function Dashboard({
                     return null;
                   };
 
+                  const renderCardWithHandle = (
+                    card: (typeof enabledCards)[0],
+                  ) => {
+                    const currentHeight = card.height ?? 280;
+                    return (
+                      <div
+                        key={card.id}
+                        className="flex flex-col"
+                        style={
+                          card.height
+                            ? { height: card.height, flexShrink: 0 }
+                            : { flex: 1, minHeight: 280 }
+                        }
+                      >
+                        <div className="flex-1 min-h-0">{renderCard(card)}</div>
+                        <div
+                          className="flex-shrink-0 h-2 my-0.5 flex items-center justify-center cursor-row-resize group"
+                          onMouseDown={(e) =>
+                            handleCardHeightMouseDown(e, card.id, currentHeight)
+                          }
+                        >
+                          <div className="w-16 h-0.5 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+                        </div>
+                      </div>
+                    );
+                  };
+
                   return (
                     <>
                       <div
-                        className="flex flex-col gap-4 overflow-auto min-h-0"
+                        className="flex flex-col gap-2 overflow-auto min-h-0"
                         style={{ width: `${mainWidthPct}%`, minWidth: 0 }}
                       >
-                        {mainCards.map((card) => (
-                          <div
-                            key={card.id}
-                            style={
-                              card.height
-                                ? { height: card.height, flexShrink: 0 }
-                                : { flex: 1, minHeight: 280 }
-                            }
-                          >
-                            {renderCard(card)}
-                          </div>
-                        ))}
+                        {mainCards.map((card) => renderCardWithHandle(card))}
                       </div>
 
                       <div
@@ -816,21 +857,10 @@ export function Dashboard({
                       </div>
 
                       <div
-                        className="flex flex-col gap-4 overflow-auto min-h-0"
+                        className="flex flex-col gap-2 overflow-auto min-h-0"
                         style={{ flex: 1, minWidth: 0 }}
                       >
-                        {sideCards.map((card) => (
-                          <div
-                            key={card.id}
-                            style={
-                              card.height
-                                ? { height: card.height, flexShrink: 0 }
-                                : { flex: 1, minHeight: 280 }
-                            }
-                          >
-                            {renderCard(card)}
-                          </div>
-                        ))}
+                        {sideCards.map((card) => renderCardWithHandle(card))}
                       </div>
                     </>
                   );

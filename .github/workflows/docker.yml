@@ -79,13 +79,14 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.ALL_TAGS }}
           build-args: |
-            BUILDKIT_INLINE_CACHE=1
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.run_id }}
-          outputs: type=registry,compression=gzip,compression-level=9
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=registry,compression=zstd
 
       - name: Cleanup Docker
         if: always()

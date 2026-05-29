@@ -37,6 +37,11 @@ const PRIMARY_ITEMS: {
 ];
 
 const MORE_ITEMS: { view: RailView; icon: React.ReactNode; title: string }[] = [
+  {
+    view: "credentials",
+    icon: <KeyRound className="size-4" />,
+    title: "Credentials",
+  },
   { view: "history", icon: <Clock className="size-4" />, title: "History" },
   {
     view: "split-screen",

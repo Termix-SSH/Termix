@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
 import { Terminal } from "lucide-react";
 import type { Tab } from "@/types/ui-types";
+import { getCookie, setCookie } from "@/main-axios";
 
 export function SshToolsPanel({
   terminalTabs,
@@ -14,7 +15,9 @@ export function SshToolsPanel({
 }) {
   const { t } = useTranslation();
   const [keyRecording, setKeyRecording] = useState(false);
-  const [rightClickPaste, setRightClickPaste] = useState(false);
+  const [rightClickPaste, setRightClickPaste] = useState(
+    () => getCookie("rightClickCopyPaste") !== "false",
+  );
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -23,6 +26,11 @@ export function SshToolsPanel({
           : [],
       ),
   );
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (keyRecording) inputRef.current?.focus();
+  }, [keyRecording]);
 
   function toggleTab(id: string) {
     setSelectedTabIds((prev) => {
@@ -38,6 +46,89 @@ export function SshToolsPanel({
 
   function deselectAll() {
     setSelectedTabIds(new Set());
+  }
+
+  function broadcast(data: string) {
+    for (const tabId of selectedTabIds) {
+      const tab = terminalTabs.find((t) => t.id === tabId);
+      (tab?.terminalRef?.current as any)?.sendInput?.(data);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const ctrl = e.ctrlKey;
+    const { key } = e;
+
+    if (ctrl) {
+      const ctrlMap: Record<string, string> = {
+        c: "\x03",
+        d: "\x04",
+        l: "\x0C",
+        u: "\x15",
+        k: "\x0B",
+        a: "\x01",
+        e: "\x05",
+        w: "\x17",
+        z: "\x1A",
+        r: "\x12",
+      };
+      const seq = ctrlMap[key.toLowerCase()];
+      if (seq) {
+        broadcast(seq);
+        return;
+      }
+    }
+
+    const specialMap: Record<string, string> = {
+      Enter: "\r",
+      Backspace: "\x7F",
+      Delete: "\x1B[3~",
+      Tab: "\t",
+      Escape: "\x1B",
+      ArrowUp: "\x1B[A",
+      ArrowDown: "\x1B[B",
+      ArrowRight: "\x1B[C",
+      ArrowLeft: "\x1B[D",
+      Home: "\x1B[H",
+      End: "\x1B[F",
+      PageUp: "\x1B[5~",
+      PageDown: "\x1B[6~",
+      Insert: "\x1B[2~",
+      F1: "\x1BOP",
+      F2: "\x1BOQ",
+      F3: "\x1BOR",
+      F4: "\x1BOS",
+      F5: "\x1B[15~",
+      F6: "\x1B[17~",
+      F7: "\x1B[18~",
+      F8: "\x1B[19~",
+      F9: "\x1B[20~",
+      F10: "\x1B[21~",
+      F11: "\x1B[23~",
+      F12: "\x1B[24~",
+    };
+
+    const seq = specialMap[key];
+    if (seq) {
+      broadcast(seq);
+      return;
+    }
+
+    if (!ctrl && !e.altKey && !e.metaKey && key.length === 1) {
+      broadcast(key);
+    }
+  }
+
+  function toggleRecording() {
+    const next = !keyRecording;
+    if (!next) {
+      // clear the phantom text when stopping
+      if (inputRef.current) inputRef.current.value = "";
+    }
+    setKeyRecording(next);
   }
 
   return (
@@ -114,14 +205,24 @@ export function SshToolsPanel({
           variant="outline"
           disabled={selectedTabIds.size === 0}
           className={`w-full ${keyRecording ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10 hover:bg-accent-brand/20 hover:text-accent-brand" : ""}`}
-          onClick={() => setKeyRecording((o) => !o)}
+          onClick={toggleRecording}
         >
           {keyRecording
-            ? `Stop Recording (${selectedTabIds.size})`
+            ? `${t("newUi.sidebar.sshTools.stopRecording")} (${selectedTabIds.size})`
             : selectedTabIds.size === 0
               ? t("newUi.sidebar.sshTools.selectTerminalsAbove")
-              : `Start Recording (${selectedTabIds.size})`}
+              : `${t("newUi.sidebar.sshTools.startRecording")} (${selectedTabIds.size})`}
         </Button>
+
+        {keyRecording && (
+          <input
+            ref={inputRef}
+            readOnly
+            onKeyDown={handleKeyDown}
+            placeholder={t("newUi.sidebar.sshTools.broadcastInputPlaceholder")}
+            className="w-full px-2.5 py-2 text-xs bg-background border border-accent-brand/40 text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-accent-brand/70 caret-transparent"
+          />
+        )}
       </div>
 
       <Separator />
@@ -135,7 +236,11 @@ export function SshToolsPanel({
             {t("newUi.sidebar.sshTools.enableRightClickCopyPaste")}
           </span>
           <button
-            onClick={() => setRightClickPaste((o) => !o)}
+            onClick={() => {
+              const next = !rightClickPaste;
+              setRightClickPaste(next);
+              setCookie("rightClickCopyPaste", next ? "true" : "false");
+            }}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${
               rightClickPaste
                 ? "bg-accent-brand border-accent-brand"

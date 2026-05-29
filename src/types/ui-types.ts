@@ -6,13 +6,16 @@ export type Host = {
   port: number;
   folder: string;
   online: boolean;
-  cpu: number;
-  ram: number;
+  cpu: number | null;
+  ram: number | null;
   lastAccess: string;
   tags?: string[];
   authType: "password" | "key" | "credential" | "none" | "opkssh";
   credentialId?: string;
+  overrideCredentialUsername?: boolean;
   password?: string;
+  hasKey?: boolean;
+  hasKeyPassword?: boolean;
   key?: string;
   keyPassword?: string;
   keyType?: string;
@@ -45,6 +48,7 @@ export type Host = {
     keepaliveInterval?: number;
     keepaliveCountMax?: number;
     environmentVariables: { key: string; value: string }[];
+    startupSnippetId?: number | null;
   };
 
   useSocks5?: boolean;
@@ -55,7 +59,7 @@ export type Host = {
   socks5ProxyChain?: {
     host: string;
     port: number;
-    type: 4 | 5 | "http";
+    type: 4 | 5 | "http" | string;
     username?: string;
     password?: string;
   }[];
@@ -118,6 +122,7 @@ export type Host = {
   telnetPassword?: string;
 
   guacamoleConfig?: Record<string, any>;
+  forceKeyboardInteractive?: boolean;
 };
 
 export type Credential = {
@@ -150,7 +155,8 @@ export type TabType =
   | "user-profile"
   | "admin-settings"
   | "docker"
-  | "tunnel";
+  | "tunnel"
+  | "network_graph";
 
 export type TunnelStatusValue =
   | "CONNECTED"
@@ -179,6 +185,10 @@ export type Tab = {
   type: TabType;
   label: string;
   host?: Host;
+  terminalRef?: import("react").RefObject<{
+    sendInput?: (data: string) => void;
+    reconnect?: () => void;
+  } | null>;
 };
 
 export type DockerContainerStatus =
@@ -265,6 +275,7 @@ export type SplitMode =
   | "none"
   | "2-way"
   | "3-way"
+  | "3-way-horizontal"
   | "4-way"
   | "5-way"
   | "6-way";
@@ -273,8 +284,8 @@ export type Snippet = {
   id: number;
   name: string;
   description?: string;
-  command: string;
-  folderId: number | null;
+  content: string;
+  folder: string | null;
 };
 
 export const FOLDER_ICONS = [

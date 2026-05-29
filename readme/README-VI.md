@@ -1,93 +1,219 @@
-# Thống Kê Repo
+<div align="center">
 
-<p align="center">
-<a href="../README.md">🇺🇸 English</a> · <a href="README-CN.md">🇨🇳 中文</a> · <a href="README-JA.md">🇯🇵 日本語</a> · <a href="README-KO.md">🇰🇷 한국어</a> · <a href="README-FR.md">🇫🇷 Français</a> · <a href="README-DE.md">🇩🇪 Deutsch</a> · <a href="README-ES.md">🇪🇸 Español</a> · <a href="README-PT.md">🇧🇷 Português</a> · <a href="README-RU.md">🇷🇺 Русский</a> · <a href="README-AR.md">🇸🇦 العربية</a> · <a href="README-HI.md">🇮🇳 हिन्दी</a> · <a href="README-TR.md">🇹🇷 Türkçe</a> · 🇻🇳 Tiếng Việt · <a href="README-IT.md">🇮🇹 Italiano</a>
+<img src="../public/icon.svg" width="120" height="120" alt="Termix Logo" />
+
+<h1>Termix</h1>
+
+<p>Quan ly SSH tu luu tru va truy cap may tinh tu xa</p>
+
+<p>
+  <a href="../README.md">English</a> ·
+  <a href="README-CN.md">中文</a> ·
+  <a href="README-JA.md">日本語</a> ·
+  <a href="README-KO.md">한국어</a> ·
+  <a href="README-FR.md">Français</a> ·
+  <a href="README-DE.md">Deutsch</a> ·
+  <a href="README-ES.md">Español</a> ·
+  <a href="README-PT.md">Português</a> ·
+  <a href="README-RU.md">Русский</a> ·
+  <a href="README-AR.md">العربية</a> ·
+  <a href="README-HI.md">हिन्दी</a> ·
+  <a href="README-TR.md">Türkçe</a> ·
+  Tiếng Việt ·
+  <a href="README-IT.md">Italiano</a>
 </p>
 
-![GitHub Repo stars](https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars)
-![GitHub forks](https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks)
-![GitHub Release](https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release)
-<a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720"></a>
-
-<p align="center">
-  <img src="../repo-images/RepoOfTheDay.png" alt="Repo of the Day Achievement" style="width: 300px; height: auto;">
-  <br>
-  <small style="color: #666;">Đạt được vào ngày 1 tháng 9 năm 2025</small>
+<p>
+  <img src="https://img.shields.io/github/stars/Termix-SSH/Termix?style=flat&label=Stars&color=F39044&labelColor=1a1a1a" />
+  <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
+  <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
+  <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
 </p>
 
 <br />
-<p align="center">
-  <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=../repo-images/HeaderImage.png style="width: auto; height: auto;">  </a>
+
+<img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
+
+<br />
+<br />
+
+<p>
+  <img src="../repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
+  <br />
+  <sub>Dat duoc vao ngay 1 thang 9 nam 2025</sub>
 </p>
 
-# Tổng Quan
+</div>
 
-<p align="center">
-  <a href="https://github.com/Termix-SSH/Termix">
-    <img alt="Termix Banner" src=../public/icon.svg style="width: 250px; height: 250px;">  </a>
-</p>
+<br />
 
-Termix là nền tảng quản lý máy chủ tất cả trong một, mã nguồn mở, miễn phí vĩnh viễn, tự lưu trữ. Nó cung cấp giải pháp đa nền tảng để quản lý máy chủ và cơ sở hạ tầng của bạn thông qua một giao diện trực quan duy nhất. Termix cung cấp quyền truy cập terminal SSH, điều khiển máy tính từ xa (RDP, VNC, Telnet), khả năng tạo đường hầm SSH, quản lý tệp SSH từ xa và nhiều công cụ khác. Termix là giải pháp thay thế miễn phí và tự lưu trữ hoàn hảo cho Termius, khả dụng trên tất cả các nền tảng.
+## Tong Quan
 
-# Tính Năng
+Termix la nen tang quan ly may chu tat ca trong mot, ma nguon mo, mien phi vinh vien, tu luu tru. No cung cap giai phap da nen tang de quan ly may chu va co so ha tang cua ban thong qua mot giao dien truc quan duy nhat. Termix cung cap quyen truy cap terminal SSH, dieu khien may tinh tu xa (RDP, VNC, Telnet), kha nang tao duong ham SSH, quan ly tep SSH tu xa va nhieu cong cu khac. Termix la giai phap thay the mien phi va tu luu tru hoan hao cho Termius, kha dung tren tat ca cac nen tang.
 
-- **Truy Cập Terminal SSH** - Terminal đầy đủ tính năng với hỗ trợ chia màn hình (lên đến 4 bảng) với hệ thống tab kiểu trình duyệt. Bao gồm hỗ trợ tùy chỉnh terminal bao gồm các chủ đề terminal phổ biến, phông chữ và các thành phần khác.
-- **Truy Cập Màn Hình Từ Xa** - Hỗ trợ RDP, VNC và Telnet qua trình duyệt với đầy đủ tùy chỉnh và chia màn hình
-- **Quản Lý Đường Hầm SSH** - Tạo và quản lý đường hầm SSH giữa các máy chủ với tự động kết nối lại, giám sát sức khỏe và chuyển tiếp cục bộ, từ xa hoặc SOCKS động. Cài đặt đường hầm từ máy khách desktop đến máy chủ được lưu trữ cục bộ cho mỗi bản cài đặt desktop; các snapshot C2S preset tùy chọn có thể được lưu trên máy chủ, đổi tên, tải hoặc xóa để di chuyển cấu hình đường hầm cục bộ giữa các máy khách.
-- **Trình Quản Lý Tệp Từ Xa** - Quản lý tệp trực tiếp trên máy chủ từ xa với hỗ trợ xem và chỉnh sửa mã, hình ảnh, âm thanh và video. Tải lên, tải xuống, đổi tên, xóa và di chuyển tệp liền mạch với hỗ trợ sudo.
-- **Quản Lý Docker** - Khởi động, dừng, tạm dừng, xóa container. Xem thống kê container. Điều khiển container bằng terminal docker exec. Không được tạo ra để thay thế Portainer hay Dockge mà đơn giản là để quản lý container của bạn thay vì tạo mới chúng.
-- **Trình Quản Lý Máy Chủ SSH** - Lưu, sắp xếp và quản lý các kết nối SSH của bạn với thẻ và thư mục, dễ dàng lưu thông tin đăng nhập có thể tái sử dụng đồng thời có thể tự động hóa việc triển khai khóa SSH
-- **Thống Kê Máy Chủ** - Xem mức sử dụng CPU, bộ nhớ và ổ đĩa cùng với mạng, thời gian hoạt động, thông tin hệ thống, tường lửa, giám sát cổng trên hầu hết các máy chủ chạy Linux
-- **Bảng Điều Khiển** - Xem thông tin máy chủ trong nháy mắt trên bảng điều khiển của bạn
-- **RBAC** - Tạo vai trò và chia sẻ máy chủ giữa người dùng/vai trò
-- **Xác Thực Người Dùng** - Quản lý người dùng an toàn với quyền quản trị và hỗ trợ OIDC (có kiểm soát truy cập) và 2FA (TOTP). Xem phiên hoạt động của người dùng trên tất cả các nền tảng và thu hồi quyền. Liên kết tài khoản OIDC/Nội bộ của bạn với nhau.
-- **Mã Hóa Cơ Sở Dữ Liệu** - Backend được lưu trữ dưới dạng tệp cơ sở dữ liệu SQLite được mã hóa. Xem [tài liệu](https://docs.termix.site/security) để biết thêm.
-- **Khóa API** - Tạo khóa API theo phạm vi người dùng với ngày hết hạn để sử dụng cho tự động hóa/CI.
-- **Xuất/Nhập Dữ Liệu** - Xuất và nhập máy chủ SSH, thông tin xác thực và dữ liệu trình quản lý tệp
-- **Thiết Lập SSL Tự Động** - Tạo và quản lý chứng chỉ SSL tích hợp với chuyển hướng HTTPS
-- **Giao Diện Hiện Đại** - Giao diện sạch sẽ, thân thiện với máy tính/di động được xây dựng bằng React, Tailwind CSS và Shadcn. Chọn giữa nhiều chủ đề UI khác nhau bao gồm sáng, tối, Dracula, v.v. Sử dụng đường dẫn URL để mở bất kỳ kết nối nào ở chế độ toàn màn hình.
-- **Ngôn Ngữ** - Hỗ trợ tích hợp ~30 ngôn ngữ (được quản lý bởi [Crowdin](https://docs.termix.site/translations))
-- **Hỗ Trợ Nền Tảng** - Khả dụng dưới dạng ứng dụng web, ứng dụng máy tính (Windows, Linux và macOS, có thể chạy độc lập mà không cần backend Termix), PWA và ứng dụng di động/máy tính bảng chuyên dụng cho iOS và Android.
-- **Công Cụ SSH** - Tạo đoạn lệnh có thể tái sử dụng, thực thi chỉ với một cú nhấp chuột. Chạy một lệnh đồng thời trên nhiều terminal đang mở.
-- **Lịch Sử Lệnh** - Tự động hoàn thành và xem các lệnh SSH đã chạy trước đó
-- **Kết Nối Nhanh** - Kết nối đến máy chủ mà không cần lưu dữ liệu kết nối
-- **Bảng Lệnh** - Nhấn đúp phím shift trái để truy cập nhanh các kết nối SSH bằng bàn phím
-- **SSH Giàu Tính Năng** - Hỗ trợ jump host, Warpgate, kết nối dựa trên TOTP, SOCKS5, xác minh khóa máy chủ, tự động điền mật khẩu, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, v.v.
-- **Biểu Đồ Mạng** - Tùy chỉnh Bảng Điều Khiển để trực quan hóa homelab của bạn dựa trên các kết nối SSH với hỗ trợ trạng thái
-- **Tab Liên Tục** - Các phiên SSH và tab vẫn mở trên các thiết bị/lần làm mới nếu được bật trong hồ sơ người dùng
+<br />
 
-# Tính Năng Dự Kiến
+## Tinh Nang
 
-Xem [Dự Án](https://github.com/orgs/Termix-SSH/projects/2) để biết tất cả các tính năng dự kiến. Nếu bạn muốn đóng góp, xem [Đóng Góp](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+<table>
+<tr>
+<td width="50%" valign="top">
 
-# Cài Đặt
+**Truy Cap Terminal SSH:**
+Terminal day du tinh nang voi ho tro chia man hinh (len den 4 bang) voi he thong tab kieu trinh duyet. Bao gom ho tro tuy chinh terminal bao gom cac chu de terminal pho bien, phong chu va cac thanh phan khac.
 
-Thiết Bị Được Hỗ Trợ:
+</td>
+<td width="50%" valign="top">
 
-- Trang web (bất kỳ trình duyệt hiện đại nào trên bất kỳ nền tảng nào như Chrome, Safari và Firefox) (bao gồm hỗ trợ PWA)
-- Windows (x64/ia32)
-  - Portable
-  - MSI Installer
-  - Chocolatey Package Manager
-- Linux (x64/ia32)
-  - Portable
-  - AUR
-  - AppImage
-  - Deb
-  - Flatpak
-- macOS (x64/ia32 trên v12.0+)
-  - Apple App Store
-  - DMG
-  - Homebrew
-- iOS/iPadOS (v15.1+)
-  - Apple App Store
-  - IPA
-- Android (v7.0+)
-  - Google Play Store
-  - APK
+**Truy Cap Man Hinh Tu Xa:**
+Ho tro RDP, VNC va Telnet qua trinh duyet voi day du tuy chinh va chia man hinh.
 
-Truy cập [Tài Liệu](https://docs.termix.site/install) Termix để biết thêm thông tin về cách cài đặt Termix trên tất cả các nền tảng. Ngoài ra, xem tệp Docker Compose mẫu tại đây (bạn có thể bỏ qua guacd và mạng nếu không có ý định sử dụng các tính năng điều khiển máy tính từ xa):
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Quan Ly Duong Ham SSH:**
+Tao va quan ly duong ham SSH giua cac may chu voi tu dong ket noi lai, giam sat suc khoe va chuyen tiep cuc bo, tu xa hoac SOCKS dong. Cai dat duong ham tu may khach desktop den may chu duoc luu tru cuc bo cho moi ban cai dat desktop; cac snapshot C2S preset tuy chon co the duoc luu tren may chu, doi ten, tai hoac xoa de di chuyen cau hinh duong ham cuc bo giua cac may khach.
+
+</td>
+<td width="50%" valign="top">
+
+**Trinh Quan Ly Tep Tu Xa:**
+Quan ly tep truc tiep tren may chu tu xa voi ho tro xem va chinh sua ma, hinh anh, am thanh va video. Tai len, tai xuong, doi ten, xoa va di chuyen tep lien mach voi ho tro sudo.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Quan Ly Docker:**
+Khoi dong, dung, tam dung, xoa container. Xem thong ke container. Dieu khien container bang terminal docker exec. Khong duoc tao ra de thay the Portainer hay Dockge ma don gian la de quan ly container cua ban thay vi tao moi chung.
+
+</td>
+<td width="50%" valign="top">
+
+**Trinh Quan Ly May Chu SSH:**
+Luu, sap xep va quan ly cac ket noi SSH cua ban voi the va thu muc, de dang luu thong tin dang nhap co the tai su dung dong thoi co the tu dong hoa viec trien khai khoa SSH.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Thong Ke May Chu:**
+Xem muc su dung CPU, bo nho va o dia cung voi mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong tren hau het cac may chu chay Linux.
+
+</td>
+<td width="50%" valign="top">
+
+**Xac Thuc Nguoi Dung:**
+Quan ly nguoi dung an toan voi quyen quan tri va ho tro OIDC (co kiem soat truy cap) va 2FA (TOTP). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**RBAC:**
+Tao vai tro va chia se may chu giua nguoi dung/vai tro.
+
+</td>
+<td width="50%" valign="top">
+
+**Ma Hoa Co So Du Lieu:**
+Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Bieu Do Mang:**
+Tuy chinh Bang Dieu Khien de truc quan hoa homelab cua ban dua tren cac ket noi SSH voi ho tro trang thai.
+
+</td>
+<td width="50%" valign="top">
+
+**Cong Cu SSH:**
+Tao doan lenh co the tai su dung, thuc thi chi voi mot cu nhap chuot. Chay mot lenh dong thoi tren nhieu terminal dang mo.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Tab Lien Tuc:**
+Cac phien SSH va tab van mo tren cac thiet bi/lan lam moi neu duoc bat trong ho so nguoi dung.
+
+</td>
+<td width="50%" valign="top">
+
+**Ngon Ngu:**
+Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.termix.site/translations)).
+
+</td>
+</tr>
+</table>
+
+<br />
+
+<details>
+<summary><b>Them tinh nang</b></summary>
+<br />
+
+- **Bang Dieu Khien** - Xem thong tin may chu trong nháy mat tren bang dieu khien cua ban
+- **Khoa API** - Tao khoa API theo pham vi nguoi dung voi ngay het han de su dung cho tu dong hoa/CI
+- **Xuat/Nhap Du Lieu** - Xuat va nhap may chu SSH, thong tin xac thuc va du lieu trinh quan ly tep
+- **Thiet Lap SSL Tu Dong** - Tao va quan ly chung chi SSL tich hop voi chuyen huong HTTPS
+- **Giao Dien Hien Dai** - Giao dien sach se, than thien voi may tinh/di dong duoc xay dung bang React, Tailwind CSS va Shadcn. Chon giua nhieu chu de UI khac nhau bao gom sang, toi, Dracula, v.v. Su dung duong dan URL de mo bat ky ket noi nao o che do toan man hinh.
+- **Lich Su Lenh** - Tu dong hoan thanh va xem cac lenh SSH da chay truoc do
+- **Ket Noi Nhanh** - Ket noi den may chu ma khong can luu du lieu ket noi
+- **Bang Lenh** - Nhan dup phim shift trai de truy cap nhanh cac ket noi SSH bang ban phim
+- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, v.v.
+
+</details>
+
+<br />
+
+## Ho Tro Nen Tang
+
+<table align="center">
+<tr>
+<th align="center">Nen tang</th>
+<th align="center">Phan phoi</th>
+</tr>
+<tr>
+<td align="center"><b>Web</b></td>
+<td>Bat ky trinh duyet hien dai nao (Chrome, Safari, Firefox) · Ho tro PWA</td>
+</tr>
+<tr>
+<td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
+<td>Portable · MSI Installer · Chocolatey</td>
+</tr>
+<tr>
+<td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
+<td>Portable · AUR · AppImage · Deb · Flatpak</td>
+</tr>
+<tr>
+<td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
+<td>Apple App Store · DMG · Homebrew</td>
+</tr>
+<tr>
+<td align="center"><b>iOS/iPadOS</b> <sub>v15.1+</sub></td>
+<td>Apple App Store · IPA</td>
+</tr>
+<tr>
+<td align="center"><b>Android</b> <sub>v7.0+</sub></td>
+<td>Google Play Store · APK</td>
+</tr>
+</table>
+
+<br />
+
+## Cai Dat
+
+Truy cap [Tai Lieu](https://docs.termix.site/install) Termix de biet them thong tin ve cach cai dat Termix tren tat ca cac nen tang. Ngoai ra, xem tep Docker Compose mau tai day (ban co the bo qua guacd va mang neu khong co y dinh su dung cac tinh nang dieu khien may tinh tu xa):
 
 ```yaml
 services:
@@ -124,79 +250,108 @@ networks:
     driver: bridge
 ```
 
-# Nhà Tài Trợ
+<br />
 
-<p align="left">
-  <a href="https://www.digitalocean.com/">
-    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="50" alt="DigitalOcean">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://crowdin.com/">
-    <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="50" alt="Crowdin">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.blacksmith.sh/">
-    <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="50" alt="Blacksmith">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.cloudflare.com/">
-    <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="50" alt="Cloudflare">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://tailscale.com/">
-    <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="50" alt="TailScale">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://akamai.com/">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="50" alt="Akamai">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://aws.amazon.com/">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="50" alt="AWS">
-  </a>
-</p>
+## Anh Chup Man Hinh
 
-# Hỗ Trợ
+<div align="center">
 
-Nếu bạn cần trợ giúp hoặc muốn yêu cầu tính năng với Termix, hãy truy cập trang [Vấn Đề](https://github.com/Termix-SSH/Support/issues), đăng nhập và nhấn `New Issue`.
-Vui lòng mô tả vấn đề càng chi tiết càng tốt, ưu tiên viết bằng tiếng Anh. Bạn cũng có thể tham gia máy chủ [Discord](https://discord.gg/jVQGdvHDrf) và truy cập kênh hỗ trợ, tuy nhiên thời gian phản hồi có thể lâu hơn.
+<br />
 
-# Ảnh Chụp Màn Hình
+[![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-[![YouTube](../repo-images/YouTube.jpg)](https://www.youtube.com/@TermixSSH/videos)
+<sub>Xem tong quan cap nhat tren YouTube</sub>
 
-<p align="center">
-  <img src="../repo-images/Image%201.png" width="400" alt="Termix Demo 1"/>
-  <img src="../repo-images/Image 2.png" width="400" alt="Termix Demo 2"/>
-</p>
+<br />
+<br />
 
-<p align="center">
-  <img src="../repo-images/Image 3.png" width="400" alt="Termix Demo 3"/>
-  <img src="../repo-images/Image 4.png" width="400" alt="Termix Demo 4"/>
-</p>
+<table>
+<tr>
+<td><img src="../repo-images/Image 1.png" alt="Termix Screenshot 1" width="400" /></td>
+<td><img src="../repo-images/Image 2.png" alt="Termix Screenshot 2" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 3.png" alt="Termix Screenshot 3" width="400" /></td>
+<td><img src="../repo-images/Image 4.png" alt="Termix Screenshot 4" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 5.png" alt="Termix Screenshot 5" width="400" /></td>
+<td><img src="../repo-images/Image 6.png" alt="Termix Screenshot 6" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 7.png" alt="Termix Screenshot 7" width="400" /></td>
+<td><img src="../repo-images/Image 8.png" alt="Termix Screenshot 8" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 9.png" alt="Termix Screenshot 9" width="400" /></td>
+<td><img src="../repo-images/Image 10.png" alt="Termix Screenshot 10" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 11.png" alt="Termix Screenshot 11" width="400" /></td>
+<td><img src="../repo-images/Image 12.png" alt="Termix Screenshot 12" width="400" /></td>
+</tr>
+<tr>
+<td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
+<td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
+</tr>
+</table>
 
-<p align="center">
-  <img src="../repo-images/Image 5.png" width="400" alt="Termix Demo 5"/>
-  <img src="../repo-images/Image 6.png" width="400" alt="Termix Demo 6"/>
-</p>
+<sub>Mot so video va hinh anh co the da loi thoi hoac khong the hien chinh xac hoan toan cac tinh nang.</sub>
 
-<p align="center">
-  <img src="../repo-images/Image 7.png" width="400" alt="Termix Demo 7"/>
-  <img src="../repo-images/Image 8.png" width="400" alt="Termix Demo 8"/>
-</p>
+</div>
 
-<p align="center">
-  <img src="../repo-images/Image 9.png" width="400" alt="Termix Demo 9"/>
-  <img src="../repo-images/Image%2010.png" width="400" alt="Termix Demo 10"/>
-</p>
+<br />
 
-<p align="center">
-  <img src="../repo-images/Image%2011.png" width="400" alt="Termix Demo 11"/>
-  <img src="../repo-images/Image%2012.png" width="400" alt="Termix Demo 12"/>
-</p>
+## Tinh Nang Du Kien
 
-Một số video và hình ảnh có thể đã lỗi thời hoặc không thể hiện chính xác hoàn toàn các tính năng.
+Xem [Du An](https://github.com/orgs/Termix-SSH/projects/2) de biet tat ca cac tinh nang du kien. Neu ban muon dong gop, xem [Dong Gop](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
-# Giấy Phép
+<br />
 
-Được phân phối theo Giấy Phép Apache Phiên Bản 2.0. Xem LICENSE để biết thêm thông tin.
+## Nha Tai Tro
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+
+</div>
+
+<br />
+
+## Ho Tro
+
+Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang [Van De](https://github.com/Termix-SSH/Support/issues), dang nhap va nhan `New Issue`. Vui long mo ta van de cang chi tiet cang tot, uu tien viet bang tieng Anh. Ban cung co the tham gia may chu [Discord](https://discord.gg/jVQGdvHDrf) va truy cap kenh ho tro, tuy nhien thoi gian phan hoi co the lau hon.
+
+<br />
+
+## Giay Phep
+
+Duoc phan phoi theo Giay Phep Apache Phien Ban 2.0. Xem `LICENSE` de biet them thong tin.

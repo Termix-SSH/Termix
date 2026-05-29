@@ -20,6 +20,12 @@ import type { SSHHost } from "@/types";
 import { isElectron } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
+import {
+  TERMINAL_THEMES,
+  DEFAULT_TERMINAL_CONFIG,
+  TERMINAL_FONTS,
+} from "@/lib/terminal-themes";
+import { useTheme } from "@/components/theme-provider";
 
 interface ConsoleTerminalProps {
   containerId: string;
@@ -35,7 +41,35 @@ export function ConsoleTerminal({
   hostConfig,
 }: ConsoleTerminalProps): React.ReactElement {
   const { t } = useTranslation();
+  const { theme: appTheme } = useTheme();
   const { instance: terminal, ref: xtermRef } = useXTerm();
+
+  const terminalConfig = React.useMemo(
+    () => ({ ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig }),
+    [hostConfig.terminalConfig],
+  );
+
+  const isDarkMode =
+    appTheme === "dark" ||
+    appTheme === "dracula" ||
+    appTheme === "gentlemansChoice" ||
+    appTheme === "midnightEspresso" ||
+    appTheme === "catppuccinMocha" ||
+    (appTheme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const themeColors = React.useMemo(() => {
+    const activeTheme = terminalConfig.theme;
+    if (activeTheme === "termix") {
+      return isDarkMode
+        ? TERMINAL_THEMES.termixDark.colors
+        : TERMINAL_THEMES.termixLight.colors;
+    }
+    return (
+      TERMINAL_THEMES[activeTheme]?.colors ?? TERMINAL_THEMES.termixDark.colors
+    );
+  }, [terminalConfig.theme, isDarkMode]);
+
   const [isConnected, setIsConnected] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [selectedShell, setSelectedShell] = React.useState<string>("bash");
@@ -57,9 +91,18 @@ export function ConsoleTerminal({
     terminal.loadAddon(clipboardAddon);
     terminal.loadAddon(webLinksAddon);
 
-    terminal.options.cursorBlink = true;
-    terminal.options.fontSize = 14;
-    terminal.options.fontFamily = "monospace";
+    const fontConfig = TERMINAL_FONTS.find(
+      (f) => f.value === terminalConfig.fontFamily,
+    );
+    const fontFamily = fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
+
+    terminal.options.cursorBlink = terminalConfig.cursorBlink;
+    terminal.options.cursorStyle = terminalConfig.cursorStyle;
+    terminal.options.fontSize = terminalConfig.fontSize;
+    terminal.options.fontFamily = fontFamily;
+    terminal.options.scrollback = terminalConfig.scrollback;
+    terminal.options.letterSpacing = terminalConfig.letterSpacing;
+    terminal.options.lineHeight = terminalConfig.lineHeight;
 
     const readTextFromClipboard = async (): Promise<string> => {
       if (window.electronClipboard) {
@@ -157,16 +200,29 @@ export function ConsoleTerminal({
       return true;
     });
 
-    const backgroundColor = getComputedStyle(document.documentElement)
-      .getPropertyValue("--bg-elevated")
-      .trim();
-    const foregroundColor = getComputedStyle(document.documentElement)
-      .getPropertyValue("--foreground")
-      .trim();
-
     terminal.options.theme = {
-      background: backgroundColor || "var(--bg-elevated)",
-      foreground: foregroundColor || "var(--foreground)",
+      background: themeColors.background,
+      foreground: themeColors.foreground,
+      cursor: themeColors.cursor,
+      cursorAccent: themeColors.cursorAccent,
+      selectionBackground: themeColors.selectionBackground,
+      selectionForeground: themeColors.selectionForeground,
+      black: themeColors.black,
+      red: themeColors.red,
+      green: themeColors.green,
+      yellow: themeColors.yellow,
+      blue: themeColors.blue,
+      magenta: themeColors.magenta,
+      cyan: themeColors.cyan,
+      white: themeColors.white,
+      brightBlack: themeColors.brightBlack,
+      brightRed: themeColors.brightRed,
+      brightGreen: themeColors.brightGreen,
+      brightYellow: themeColors.brightYellow,
+      brightBlue: themeColors.brightBlue,
+      brightMagenta: themeColors.brightMagenta,
+      brightCyan: themeColors.brightCyan,
+      brightWhite: themeColors.brightWhite,
     };
 
     setTimeout(() => {
@@ -207,7 +263,7 @@ export function ConsoleTerminal({
 
       terminal.dispose();
     };
-  }, [terminal, t]);
+  }, [terminal, t, terminalConfig, themeColors]);
 
   const disconnect = React.useCallback(() => {
     if (wsRef.current) {
@@ -498,7 +554,10 @@ export function ConsoleTerminal({
         </CardContent>
       </Card>
 
-      <Card className="flex-1 overflow-hidden pt-1 pb-0">
+      <Card
+        className="flex-1 overflow-hidden pt-1 pb-0"
+        style={{ background: themeColors.background }}
+      >
         <CardContent className="p-0 h-full relative">
           <div
             ref={xtermRef}

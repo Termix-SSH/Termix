@@ -256,6 +256,8 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   keyType: text("key_type"),
   detectedKeyType: text("detected_key_type"),
 
+  certPublicKey: text("cert_public_key", { length: 8192 }),
+
   systemPassword: text("system_password"),
   systemKey: text("system_key", { length: 16384 }),
   systemKeyPassword: text("system_key_password"),
@@ -302,6 +304,7 @@ export const snippets = sqliteTable("snippets", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  hostFilter: text("host_filter"),
 });
 
 export const snippetFolders = sqliteTable("snippet_folders", {
@@ -461,6 +464,10 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
+  overrideCredentialId: integer("override_credential_id").references(
+    () => sshCredentials.id,
+    { onDelete: "set null" },
+  ),
 });
 
 export const sharedCredentials = sqliteTable("shared_credentials", {

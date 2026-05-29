@@ -3,8 +3,9 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { AlertCircle, Download } from "lucide-react";
 import { Button } from "@/components/button.tsx";
 import { useTranslation } from "react-i18next";
+import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 interface PdfPreviewProps {
   content: string;
@@ -85,10 +86,10 @@ export function PdfPreview({
           {pdfError ? (
             <div className="text-center text-muted-foreground p-8">
               <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-2">Cannot load PDF</h3>
-              <p className="text-sm mb-4">
-                There was an error loading this PDF file.
-              </p>
+              <h3 className="text-lg font-medium mb-2">
+                {t("fileManager.cannotLoadPdf")}
+              </h3>
+              <p className="text-sm mb-4">{t("fileManager.pdfLoadError")}</p>
               {onDownload && (
                 <Button
                   variant="outline"
@@ -120,7 +121,7 @@ export function PdfPreview({
                 <div className="text-center p-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
                   <p className="text-sm text-muted-foreground">
-                    Loading PDF...
+                    {t("fileManager.loadingPdf")}
                   </p>
                 </div>
               }
@@ -133,7 +134,7 @@ export function PdfPreview({
                   <div className="text-center p-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
                     <p className="text-xs text-muted-foreground">
-                      Loading page...
+                      {t("fileManager.loadingPage")}
                     </p>
                   </div>
                 }

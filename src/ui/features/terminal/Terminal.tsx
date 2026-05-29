@@ -53,6 +53,46 @@ import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 
+// Background/foreground per UI theme for "Termix Default" — must match index.css
+const TERMIX_DEFAULT_COLORS: Record<
+  string,
+  { background: string; foreground: string }
+> = {
+  dark: { background: "#0c0d0b", foreground: "#fafafa" },
+  light: { background: "#ffffff", foreground: "#111210" },
+  dracula: { background: "#282a36", foreground: "#f8f8f2" },
+  catppuccin: { background: "#1e1e2e", foreground: "#cdd6f4" },
+  nord: { background: "#2e3440", foreground: "#eceff4" },
+  solarized: { background: "#002b36", foreground: "#839496" },
+  "tokyo-night": { background: "#1a1b26", foreground: "#a9b1d6" },
+  "one-dark": { background: "#282c34", foreground: "#abb2bf" },
+  gruvbox: { background: "#282828", foreground: "#ebdbb2" },
+};
+
+function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
+  if (activeTheme !== "termix") {
+    return (
+      TERMINAL_THEMES[activeTheme]?.colors || TERMINAL_THEMES.termixDark.colors
+    );
+  }
+  let resolvedUiTheme = appTheme;
+  if (appTheme === "system") {
+    resolvedUiTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  const uiColors =
+    TERMIX_DEFAULT_COLORS[resolvedUiTheme] ?? TERMIX_DEFAULT_COLORS.dark;
+  const base = TERMINAL_THEMES.termixDark.colors;
+  return {
+    ...base,
+    background: uiColors.background,
+    foreground: uiColors.foreground,
+    cursor: uiColors.foreground,
+    cursorAccent: uiColors.background,
+  };
+}
+
 interface HostConfig {
   id?: number;
   instanceId?: string;
@@ -130,27 +170,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         DEFAULT_TERMINAL_CONFIG.theme,
     };
 
-    const isDarkMode =
-      appTheme === "dark" ||
-      appTheme === "dracula" ||
-      appTheme === "gentlemansChoice" ||
-      appTheme === "midnightEspresso" ||
-      appTheme === "catppuccinMocha" ||
-      (appTheme === "system" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    let themeColors;
     const activeTheme = previewTheme || config.theme;
-
-    if (activeTheme === "termix") {
-      themeColors = isDarkMode
-        ? TERMINAL_THEMES.termixDark.colors
-        : TERMINAL_THEMES.termixLight.colors;
-    } else {
-      themeColors =
-        TERMINAL_THEMES[activeTheme]?.colors ||
-        TERMINAL_THEMES.termixDark.colors;
-    }
+    const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
     const backgroundColor = themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
@@ -220,6 +241,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }>;
     } | null>(null);
     const tmuxSessionNameRef = useRef<string | null>(null);
+    const [isTmuxAttached, setIsTmuxAttached] = useState(false);
     const tmuxCopyModeHintShownRef = useRef(false);
 
     const isVisibleRef = useRef<boolean>(false);
@@ -688,9 +710,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
         fit: () => {
-          fitAddonRef.current?.fit();
-          if (terminal) scheduleNotify(terminal.cols, terminal.rows);
-          hardRefresh();
+          if (!fitAddonRef.current || !terminal || isFittingRef.current) return;
+          isFittingRef.current = true;
+          try {
+            fitAddonRef.current.fit();
+            if (terminal.cols > 0 && terminal.rows > 0) {
+              const lastSize = lastFittedSizeRef.current;
+              if (
+                !lastSize ||
+                lastSize.cols !== terminal.cols ||
+                lastSize.rows !== terminal.rows
+              ) {
+                scheduleNotify(terminal.cols, terminal.rows);
+                lastFittedSizeRef.current = {
+                  cols: terminal.cols,
+                  rows: terminal.rows,
+                };
+              }
+            }
+            setIsFitted(true);
+          } finally {
+            isFittingRef.current = false;
+          }
         },
         sendInput: (data: string) => {
           if (webSocketRef.current?.readyState === 1) {
@@ -849,6 +890,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         if (isEmbeddedMode()) {
           baseWsUrl = "ws://127.0.0.1:30002";
+          const storedJwt = localStorage.getItem("jwt");
+          if (storedJwt) {
+            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
+          }
         } else if (!configuredUrl) {
           console.error("No configured server URL available for Electron SSH");
           setIsConnected(false);
@@ -864,6 +909,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             .replace(/^https?:\/\//, "")
             .replace(/\/$/, "");
           baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
+          const storedJwt = localStorage.getItem("jwt");
+          if (storedJwt) {
+            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
+          }
         }
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
@@ -935,7 +984,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         currentHostConfigRef.current = hostConfig;
 
         const persistenceEnabled =
-          localStorage.getItem("enableTerminalSessionPersistence") === "true";
+          localStorage.getItem("enableTerminalSessionPersistence") !== "false";
         const tabId = hostConfig.instanceId
           ? `${hostConfig.id}_${hostConfig.instanceId}`
           : `${hostConfig.id}_${Date.now()}`;
@@ -1206,7 +1255,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             shouldNotReconnectRef.current = true;
             setIsConnected(false);
             setIsConnecting(false);
-            if (wasConnectedRef.current) {
+            if (msg.graceful) {
+              wasConnectedRef.current = false;
+              if (onClose) onClose();
+            } else if (wasConnectedRef.current) {
               wasConnectedRef.current = false;
               setShowDisconnectedOverlay(true);
             } else if (!connectionErrorRef.current) {
@@ -1433,8 +1485,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
             const persistenceEnabled =
-              localStorage.getItem("enableTerminalSessionPersistence") ===
-              "true";
+              localStorage.getItem("enableTerminalSessionPersistence") !==
+              "false";
             if (persistenceEnabled && hostConfig.instanceId) {
               const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
               localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
@@ -1511,6 +1563,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             const sessionName =
               typeof msg.sessionName === "string" ? msg.sessionName : "";
             tmuxSessionNameRef.current = sessionName || "(active)";
+            setIsTmuxAttached(true);
             addLog({
               type: "info",
               stage: "connection",
@@ -1534,6 +1587,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               stage: "connection",
               message: t("terminal.tmuxUnavailable"),
             });
+          } else if (msg.type === "tmux_detached") {
+            tmuxSessionNameRef.current = null;
+            setIsTmuxAttached(false);
+            toast.info(t("terminal.tmuxDetached"), { duration: 3000 });
           } else if (msg.type === "connection_log") {
             if (msg.data) {
               addLog({
@@ -1558,6 +1615,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         setIsConnected(false);
         isConnectingRef.current = false;
+
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
 
         if (pongTimeoutRef.current) {
           clearTimeout(pongTimeoutRef.current);
@@ -1648,6 +1710,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           terminal.clear();
         }
         setIsConnecting(false);
+
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
+        }
 
         if (totpTimeoutRef.current) {
           clearTimeout(totpTimeoutRef.current);
@@ -1786,18 +1853,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      let themeColors;
       const activeTheme = previewTheme || config.theme;
-
-      if (activeTheme === "termix") {
-        themeColors = isDarkMode
-          ? TERMINAL_THEMES.termixDark.colors
-          : TERMINAL_THEMES.termixLight.colors;
-      } else {
-        themeColors =
-          TERMINAL_THEMES[activeTheme]?.colors ||
-          TERMINAL_THEMES.termixDark.colors;
-      }
+      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
 
       const fontConfig = TERMINAL_FONTS.find(
         (f) => f.value === config.fontFamily,
@@ -1811,7 +1868,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.fontSize = config.fontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
-      terminal.options.fastScrollModifier = config.fastScrollModifier;
       terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
@@ -1854,13 +1910,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [
-      terminal,
-      hostConfig.terminalConfig,
-      previewTheme,
-      isDarkMode,
-      isFitted,
-    ]);
+    }, [terminal, hostConfig.terminalConfig, previewTheme, appTheme, isFitted]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1875,18 +1925,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
-      let themeColors;
       const activeTheme = previewTheme || config.theme;
-
-      if (activeTheme === "termix") {
-        themeColors = isDarkMode
-          ? TERMINAL_THEMES.termixDark.colors
-          : TERMINAL_THEMES.termixLight.colors;
-      } else {
-        themeColors =
-          TERMINAL_THEMES[activeTheme]?.colors ||
-          TERMINAL_THEMES.termixDark.colors;
-      }
+      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
 
       // Set initial options before opening the terminal
       terminal.options = {
@@ -1897,11 +1937,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
-        windowsMode: false,
         macOptionIsMeta: false,
         macOptionClickForcesSelection: false,
         rightClickSelectsWord: config.rightClickSelectsWord,
-        fastScrollModifier: config.fastScrollModifier,
         fastScrollSensitivity: config.fastScrollSensitivity,
         allowProposedApi: true,
         minimumContrastRatio: config.minimumContrastRatio,
@@ -1938,7 +1976,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const clipboardProvider = new RobustClipboardProvider();
       const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
-      const webLinksAddon = new WebLinksAddon();
+      const webLinksAddon = new WebLinksAddon((_event, uri) => {
+        const url =
+          uri.startsWith("http://") || uri.startsWith("https://")
+            ? uri
+            : `https://${uri}`;
+        window.open(url, "_blank");
+      });
 
       fitAddonRef.current = fitAddon;
       terminal.loadAddon(fitAddon);
@@ -1950,15 +1994,35 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.open(xtermRef.current);
 
+      terminal.attachCustomWheelEventHandler((ev) => {
+        const cfg = {
+          ...DEFAULT_TERMINAL_CONFIG,
+          ...hostConfig.terminalConfig,
+        };
+        const mod = cfg.fastScrollModifier;
+        const modHeld =
+          (mod === "alt" && ev.altKey) ||
+          (mod === "ctrl" && ev.ctrlKey) ||
+          (mod === "shift" && ev.shiftKey);
+        if (modHeld) {
+          const lines = Math.round(
+            (Math.abs(ev.deltaY) / 100) * (cfg.fastScrollSensitivity ?? 5),
+          );
+          terminal.scrollLines(ev.deltaY > 0 ? lines : -lines);
+          return false;
+        }
+        return true;
+      });
+
       fitAddonRef.current?.fit();
-      if (terminal.cols < 10 || terminal.rows < 3) {
+      // Double-rAF ensures layout is fully settled (fonts, flexbox, etc.) before
+      // committing the fitted size, preventing the "terminal too short" glitch.
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           fitAddonRef.current?.fit();
           setIsFitted(true);
         });
-      } else {
-        setIsFitted(true);
-      }
+      });
 
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
@@ -2101,7 +2165,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           const persistenceEnabled =
-            localStorage.getItem("enableTerminalSessionPersistence") === "true";
+            localStorage.getItem("enableTerminalSessionPersistence") !==
+            "false";
           if (
             !persistenceEnabled &&
             sessionIdRef.current &&
@@ -2410,32 +2475,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
-      if (terminal.cols < 10 || terminal.rows < 3) {
+      setIsConnecting(true);
+      fitAddonRef.current?.fit();
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          fitAddonRef.current?.fit();
           if (terminal.cols > 0 && terminal.rows > 0) {
-            setIsConnecting(true);
-            fitAddonRef.current?.fit();
             scheduleNotify(terminal.cols, terminal.rows);
             connectToHost(terminal.cols, terminal.rows);
           }
         });
-        return;
-      }
-
-      setIsConnecting(true);
-      fitAddonRef.current?.fit();
-      requestAnimationFrame(() => {
-        fitAddonRef.current?.fit();
-        if (terminal.cols > 0 && terminal.rows > 0) {
-          scheduleNotify(terminal.cols, terminal.rows);
-          connectToHost(terminal.cols, terminal.rows);
-        }
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {
-      if (!terminal || !fitAddonRef.current || !isVisible) return;
+      if (!terminal || !fitAddonRef.current) return;
+
+      if (!isVisible) {
+        lastFittedSizeRef.current = null;
+        lastSentSizeRef.current = null;
+        return;
+      }
 
       const fitTimeoutId = setTimeout(() => {
         if (!isFittingRef.current && terminal.cols > 0 && terminal.rows > 0) {
@@ -2444,7 +2505,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             requestAnimationFrame(() => terminal.focus());
           }
         }
-      }, 0);
+      }, 50);
 
       return () => clearTimeout(fitTimeoutId);
     }, [terminal, isVisible, splitScreen, isConnecting]);
@@ -2470,6 +2531,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
+        {isTmuxAttached && isConnected && (
+          <button
+            onClick={() => {
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "tmux_detach" }),
+                );
+              }
+            }}
+            title={t("terminal.tmuxDetach")}
+            className="absolute top-2 right-2 z-[110] px-2 py-1 text-xs rounded bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+          >
+            tmux:detach
+          </button>
+        )}
+
         <SimpleLoader
           visible={isConnecting && !isConnectionLogExpanded}
           message={t("terminal.connecting")}
@@ -2478,9 +2555,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         {showDisconnectedOverlay && !isConnecting && (
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-[120]"
             style={{ backgroundColor }}
           >
+            <p className="text-sm text-muted-foreground">
+              {t("terminal.connectionLost")}
+            </p>
             <div className="flex gap-2">
               <Button
                 onClick={() => {
@@ -2502,7 +2582,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 {t("terminal.reconnect")}
               </Button>
               {onClose && (
-                <Button variant="secondary" onClick={onClose}>
+                <Button variant="outline" onClick={onClose}>
                   {t("terminal.closeTab")}
                 </Button>
               )}
@@ -2513,7 +2593,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         <ConnectionLog
           isConnecting={isConnecting}
           isConnected={isConnected}
-          hasConnectionError={hasConnectionError}
+          hasConnectionError={hasConnectionError && !showDisconnectedOverlay}
           position={hasConnectionError ? "top" : "bottom"}
         />
 

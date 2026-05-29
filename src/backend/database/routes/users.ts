@@ -521,6 +521,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
       name_path,
       scopes,
       allowed_users,
+      admin_group,
     } = req.body;
 
     const isDisableRequest =
@@ -579,6 +580,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         name_path,
         scopes: scopes || "openid email profile",
         allowed_users: allowed_users || "",
+        admin_group: admin_group || "",
       };
 
       let encryptedConfig;
@@ -817,7 +819,7 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
-    const { rememberMe } = req.query;
+    const { rememberMe, desktopCallbackPort } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
     const backendCallbackUri = `${origin}/users/oidc/callback`;
 
@@ -840,7 +842,9 @@ router.get("/oidc/authorize", async (req, res) => {
 
     const referer = req.get("Referer");
     let frontendOrigin;
-    if (referer) {
+    if (desktopCallbackPort) {
+      frontendOrigin = `http://127.0.0.1:${desktopCallbackPort}/oidc-callback`;
+    } else if (referer) {
       const refererUrl = new URL(referer);
       frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
     } else {
@@ -949,6 +953,18 @@ router.get("/oidc/callback", async (req, res) => {
       config = JSON.parse(
         (configRow as Record<string, unknown>).value as string,
       );
+
+      if (config.client_secret?.startsWith("encrypted:")) {
+        config.client_secret = Buffer.from(
+          config.client_secret.substring(10),
+          "base64",
+        ).toString("utf8");
+      } else if (config.client_secret?.startsWith("encoded:")) {
+        config.client_secret = Buffer.from(
+          config.client_secret.substring(8),
+          "base64",
+        ).toString("utf8");
+      }
     }
 
     const tokenResponse = await fetch(config.token_url, {
@@ -1150,11 +1166,28 @@ router.get("/oidc/callback", async (req, res) => {
         }
       }
 
-      const oidcAllowRegistration =
-        (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
-        "true";
+      let oidcAutoProvision = false;
+      try {
+        const oidcProvRow = db.$client
+          .prepare(
+            "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
+          )
+          .get();
+        if (oidcProvRow) {
+          oidcAutoProvision =
+            (oidcProvRow as Record<string, unknown>).value === "true";
+        }
+      } catch {
+        // fall through to env var check
+      }
 
-      if (!isFirstUser && !oidcAllowRegistration) {
+      if (!oidcAutoProvision) {
+        oidcAutoProvision =
+          (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
+          "true";
+      }
+
+      if (!isFirstUser && !oidcAutoProvision) {
         try {
           const regRow = db.$client
             .prepare(
@@ -1300,6 +1333,25 @@ router.get("/oidc/callback", async (req, res) => {
 
     const userRecord = user[0];
 
+    // Sync admin status based on OIDC group membership
+    if (config.admin_group) {
+      const groups = (userInfo.groups || userInfo.roles || []) as string[];
+      const shouldBeAdmin = groups.includes(config.admin_group);
+      if (!!userRecord.isAdmin !== shouldBeAdmin) {
+        await db
+          .update(users)
+          .set({ isAdmin: shouldBeAdmin })
+          .where(eq(users.id, userRecord.id));
+        userRecord.isAdmin = shouldBeAdmin;
+        authLogger.info("OIDC admin status synced", {
+          operation: "oidc_admin_group_sync",
+          userId: userRecord.id,
+          group: config.admin_group,
+          isAdmin: shouldBeAdmin,
+        });
+      }
+    }
+
     try {
       await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
     } catch (setupError) {
@@ -1333,6 +1385,8 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
+    const isDesktopCallback = frontendOrigin.startsWith("http://127.0.0.1:");
+
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
         ? 30 * 24 * 60 * 60 * 1000
@@ -1341,6 +1395,11 @@ router.get("/oidc/callback", async (req, res) => {
           : 24 * 60 * 60 * 1000;
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
+
+    if (isDesktopCallback) {
+      redirectUrl.searchParams.set("token", token);
+      return res.redirect(redirectUrl.toString());
+    }
 
     return res
       .cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge))
@@ -1883,6 +1942,56 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
+router.get("/oidc-auto-provision", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
+      .get();
+    res.json({
+      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get OIDC auto-provision setting", err);
+    res
+      .status(500)
+      .json({ error: "Failed to get OIDC auto-provision setting" });
+  }
+});
+
+router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || user.length === 0 || !user[0].isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "Invalid value for enabled" });
+    }
+    const existing = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
+      .get();
+    if (existing) {
+      db.$client
+        .prepare(
+          "UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'",
+        )
+        .run(enabled ? "true" : "false");
+    } else {
+      db.$client
+        .prepare(
+          "INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)",
+        )
+        .run(enabled ? "true" : "false");
+    }
+    res.json({ enabled });
+  } catch (err) {
+    authLogger.error("Failed to set OIDC auto-provision", err);
+    res.status(500).json({ error: "Failed to set OIDC auto-provision" });
+  }
+});
+
 /**
  * @openapi
  * /users/password-login-allowed:
@@ -1954,6 +2063,8 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
       )
       .run(allowed ? "true" : "false");
+    const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+    await saveMemoryDatabaseToFile();
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password login allowed", err);

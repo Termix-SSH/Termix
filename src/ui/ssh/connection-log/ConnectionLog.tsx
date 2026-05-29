@@ -51,7 +51,7 @@ export function ConnectionLog({
   }, [logs, isExpanded]);
 
   const shouldShow =
-    isConnecting || hasConnectionError || (logs.length > 0 && !isConnected);
+    !isConnected && (isConnecting || hasConnectionError || logs.length > 0);
 
   if (!shouldShow) {
     return null;
@@ -105,8 +105,8 @@ export function ConnectionLog({
 
   const borderClass =
     position === "bottom" && !isExpanded
-      ? "border-t-2 border-border"
-      : "border-b-2 border-border";
+      ? "border-t-1 border-border"
+      : "border-b-1 border-border";
 
   return (
     <div
@@ -117,13 +117,14 @@ export function ConnectionLog({
       )}
 
       <div
-        className={`relative z-10 bg-bg-subtle pointer-events-auto ${isExpanded ? "flex flex-col h-full" : ""} ${!isExpanded ? borderClass : ""}`}
+        className={`relative z-10 bg-bg-base pointer-events-auto ${isExpanded ? "flex flex-col h-full" : ""} ${!isExpanded ? borderClass : ""}`}
       >
         <div className="flex items-center justify-between px-3 py-2 shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleExpanded}
+            onClick={hasConnectionError ? undefined : toggleExpanded}
+            disabled={hasConnectionError}
             className="flex items-center gap-2"
           >
             {isExpanded ? (
@@ -152,13 +153,13 @@ export function ConnectionLog({
         {isExpanded && (
           <div
             ref={logContainerRef}
-            className="flex-1 h-0 overflow-y-auto overflow-x-hidden thin-scrollbar border-t-2 border-border bg-bg-base"
+            className="flex-1 h-0 overflow-y-auto overflow-x-hidden thin-scrollbar border-t-1 border-border bg-bg-base"
           >
             <div className="px-3 py-2">
               {logs.length === 0 ? (
                 <div className="py-4 text-center text-sm text-muted-foreground">
                   {isConnecting
-                    ? t("terminal.connectionLogConnecting")
+                    ? t("terminal.connectionLogWaiting")
                     : t("terminal.connectionLogEmpty")}
                 </div>
               ) : (

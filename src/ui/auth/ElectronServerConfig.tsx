@@ -12,7 +12,6 @@ import {
   type ServerConfig,
 } from "@/main-axios.ts";
 import { Server, Monitor, Loader2 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 
 interface ServerConfigProps {
   onServerConfigured: (serverUrl: string) => void;
@@ -28,7 +27,6 @@ export function ElectronServerConfig({
   isFirstTime = false,
 }: ServerConfigProps) {
   const { t } = useTranslation();
-  const { theme } = useTheme();
   const [serverUrl, setServerUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [embeddedLoading, setEmbeddedLoading] = useState(false);
@@ -36,16 +34,6 @@ export function ElectronServerConfig({
   const [embeddedAvailable, setEmbeddedAvailable] = useState<boolean | null>(
     null,
   );
-
-  const isDarkMode =
-    theme === "dark" ||
-    theme === "dracula" ||
-    theme === "gentlemansChoice" ||
-    theme === "midnightEspresso" ||
-    theme === "catppuccinMocha" ||
-    (theme === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
   useEffect(() => {
     loadServerConfig();
@@ -103,7 +91,8 @@ export function ElectronServerConfig({
     setError(null);
 
     try {
-      const maxRetries = 10;
+      await new Promise((r) => setTimeout(r, 1500));
+      const maxRetries = 15;
       for (let i = 0; i < maxRetries; i++) {
         if (await probeBackend()) {
           setEmbeddedMode(true);
@@ -174,62 +163,45 @@ export function ElectronServerConfig({
   };
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center"
-      style={{
-        background: "var(--bg-elevated)",
-        backgroundImage: `repeating-linear-gradient(
-          45deg,
-          transparent,
-          transparent 35px,
-          ${lineColor} 35px,
-          ${lineColor} 37px
-        )`,
-      }}
-    >
-      <div className="w-[420px] max-w-full p-8 flex flex-col backdrop-blur-sm bg-card/50 rounded-2xl shadow-xl border-2 border-edge overflow-y-auto thin-scrollbar my-2 animate-in fade-in zoom-in-95 duration-300">
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-              <Server className="w-6 h-6 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold">{t("serverConfig.title")}</h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              {t("serverConfig.description")}
-            </p>
+    <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
+      <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-md w-full">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2.5">
+            <Server className="size-4 text-accent-brand shrink-0" />
+            <p className="font-bold">{t("serverConfig.title")}</p>
           </div>
+          <p className="text-sm text-muted-foreground">
+            {t("serverConfig.description")}
+          </p>
+        </div>
 
-          {embeddedAvailable !== false && (
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleUseEmbedded}
-                disabled={embeddedLoading || loading}
-              >
-                {embeddedLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{t("serverConfig.embeddedConnecting")}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Monitor className="w-4 h-4" />
-                    <span>{t("serverConfig.useEmbedded")}</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded border border-yellow-500/30">
-                      BETA
-                    </span>
-                  </div>
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                {t("serverConfig.embeddedDesc")}
-              </p>
-            </div>
-          )}
-
-          {embeddedAvailable !== false && (
+        {embeddedAvailable !== false && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleUseEmbedded}
+              disabled={embeddedLoading || loading}
+            >
+              {embeddedLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  {t("serverConfig.embeddedConnecting")}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Monitor className="size-4" />
+                  {t("serverConfig.useEmbedded")}
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/30">
+                    BETA
+                  </span>
+                </span>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground -mt-3">
+              {t("serverConfig.embeddedDesc")}
+            </p>
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground">
@@ -237,63 +209,61 @@ export function ElectronServerConfig({
               </span>
               <div className="h-px flex-1 bg-border" />
             </div>
+          </>
+        )}
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
+            <Input
+              id="server-url"
+              type="text"
+              placeholder="https://your-server.com"
+              value={serverUrl}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              disabled={loading || embeddedLoading}
+            />
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>{t("common.error")}</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="server-url">{t("serverConfig.serverUrl")}</Label>
-              <Input
-                id="server-url"
-                type="text"
-                placeholder="https://your-server.com"
-                value={serverUrl}
-                onChange={(e) => handleUrlChange(e.target.value)}
-                className="w-full h-10"
-                disabled={loading || embeddedLoading}
-              />
-            </div>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertTitle>{t("common.error")}</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex space-x-2">
-              {onCancel && !isFirstTime && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={onCancel}
-                  disabled={loading || embeddedLoading}
-                >
-                  Cancel
-                </Button>
-              )}
+          <div className="flex gap-2">
+            {onCancel && !isFirstTime && (
               <Button
                 type="button"
                 variant="outline"
-                className={onCancel && !isFirstTime ? "flex-1" : "w-full"}
-                onClick={handleSaveConfig}
-                disabled={loading || embeddedLoading || !serverUrl.trim()}
+                className="flex-1"
+                onClick={onCancel}
+                disabled={loading || embeddedLoading}
               >
-                {loading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>{t("serverConfig.saving")}</span>
-                  </div>
-                ) : (
-                  t("serverConfig.saveConfig")
-                )}
+                {t("common.cancel")}
               </Button>
-            </div>
-
-            <div className="text-xs text-muted-foreground text-center">
-              {t("serverConfig.helpText")}
-            </div>
+            )}
+            <Button
+              type="button"
+              className={`bg-accent-brand hover:bg-accent-brand/90 text-background font-bold ${onCancel && !isFirstTime ? "flex-1" : "w-full"}`}
+              onClick={handleSaveConfig}
+              disabled={loading || embeddedLoading || !serverUrl.trim()}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                  {t("serverConfig.saving")}
+                </span>
+              ) : (
+                t("serverConfig.saveConfig")
+              )}
+            </Button>
           </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            {t("serverConfig.helpText")}
+          </p>
         </div>
       </div>
     </div>

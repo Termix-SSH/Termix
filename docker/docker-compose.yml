@@ -9,6 +9,7 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+      GUACD_HOST: "guacd"
     depends_on:
       - guacd
     networks:
@@ -18,8 +19,6 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
-    ports:
-      - "4822:4822"
     networks:
       - termix-net
 

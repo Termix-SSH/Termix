@@ -1,7 +1,7 @@
 {
   "name": "Termix",
   "short_name": "Termix",
-  "description": "A web-based server management platform with SSH terminal, tunneling, and file editing capabilities",
+  "description": "Self-hosted SSH and remote desktop management.",
   "theme_color": "#09090b",
   "background_color": "#09090b",
   "display": "standalone",

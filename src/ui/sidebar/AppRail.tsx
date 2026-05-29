@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Clock,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
+  Network,
   Play,
   Server,
   Settings,
@@ -16,10 +18,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import type { SplitMode, ToolsTab } from "@/types/ui-types";
+import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 
 export type RailView =
   | "hosts"
+  | "credentials"
   | "quick-connect"
   | ToolsTab
   | "user-profile"
@@ -33,25 +36,45 @@ type RailItem =
       title: string;
       dot?: boolean;
     }
+  | { kind: "tab"; tabType: TabType; icon: React.ReactNode; title: string }
   | { kind: "separator" };
 
-function buildRailButtons(splitMode: SplitMode): RailItem[] {
+function buildRailButtons(
+  splitMode: SplitMode,
+  t: (key: string) => string,
+): RailItem[] {
   return [
-    { view: "hosts", icon: <Server size={16} />, title: "Hosts" },
+    { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
+    {
+      view: "credentials",
+      icon: <KeyRound size={16} />,
+      title: t("nav.credentials"),
+    },
     { kind: "separator" },
-    { view: "quick-connect", icon: <Zap size={16} />, title: "Quick Connect" },
+    {
+      view: "quick-connect",
+      icon: <Zap size={16} />,
+      title: t("nav.quickConnect"),
+    },
     { kind: "separator" },
-    { view: "ssh-tools", icon: <Hammer size={16} />, title: "SSH Tools" },
+    { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
     { kind: "separator" },
-    { view: "snippets", icon: <Play size={16} />, title: "Snippets" },
+    { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
     { kind: "separator" },
-    { view: "history", icon: <Clock size={16} />, title: "History" },
+    { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
     { kind: "separator" },
     {
       view: "split-screen",
       icon: <LayoutPanelLeft size={16} />,
-      title: "Split Screen",
+      title: t("nav.splitScreen"),
       dot: splitMode !== "none",
+    },
+    { kind: "separator" },
+    {
+      kind: "tab",
+      tabType: "network_graph" as TabType,
+      icon: <Network size={16} />,
+      title: t("nav.networkGraph"),
     },
     { kind: "separator" },
   ];
@@ -66,23 +89,28 @@ export function AppRail({
   sidebarOpen,
   splitMode,
   username,
+  isAdmin,
   profileDropdownOpen,
   onProfileDropdownChange,
   onRailClick,
+  onOpenTab,
   onLogout,
 }: {
   railView: RailView;
   sidebarOpen: boolean;
   splitMode: SplitMode;
   username: string;
+  isAdmin: boolean;
   profileDropdownOpen: boolean;
   onProfileDropdownChange: (open: boolean) => void;
   onRailClick: (view: RailView) => void;
+  onOpenTab?: (type: TabType) => void;
   onLogout: () => void;
 }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const railExpanded = hovered || profileDropdownOpen;
-  const railButtons = buildRailButtons(splitMode);
+  const railButtons = buildRailButtons(splitMode, t);
 
   return (
     <div
@@ -99,6 +127,27 @@ export function AppRail({
               className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
               style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
             />
+          ) : item.kind === "tab" ? (
+            <button
+              key={item.tabType}
+              onClick={() => onOpenTab?.(item.tabType)}
+              style={btnStyle}
+              className={`${btnBase} text-muted-foreground hover:text-foreground hover:bg-muted/60`}
+            >
+              <span
+                className="shrink-0 flex items-center justify-center"
+                style={{ width: 16, height: 16 }}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${
+                  railExpanded ? "opacity-100 delay-75" : "opacity-0"
+                }`}
+              >
+                {item.title}
+              </span>
+            </button>
           ) : (
             <button
               key={item.view}
@@ -132,20 +181,22 @@ export function AppRail({
       </div>
 
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
-        {(
-          [
-            {
-              view: "user-profile" as RailView,
-              icon: <User size={16} />,
-              title: "Profile",
-            },
-            {
-              view: "admin-settings" as RailView,
-              icon: <Settings size={16} />,
-              title: "Admin",
-            },
-          ] as const
-        ).map((item) => (
+        {[
+          {
+            view: "user-profile" as RailView,
+            icon: <User size={16} />,
+            title: t("nav.userProfile"),
+          },
+          ...(isAdmin
+            ? [
+                {
+                  view: "admin-settings" as RailView,
+                  icon: <Settings size={16} />,
+                  title: t("nav.admin"),
+                },
+              ]
+            : []),
+        ].map((item) => (
           <button
             key={item.view}
             onClick={() => onRailClick(item.view)}
@@ -196,7 +247,7 @@ export function AppRail({
                   {username || "User"}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
-                  Administrator
+                  {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
                 </span>
               </div>
             </button>

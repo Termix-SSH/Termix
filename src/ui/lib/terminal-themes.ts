@@ -34,7 +34,7 @@ export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
     colors: {
       background: "#0c0d0b",
       foreground: "#f7f7f7",
-      cursor: "#fb923c",
+      cursor: "#f7f7f7",
       cursorAccent: "#0c0d0b",
       selectionBackground: "#3a3a3d",
       black: "#2e3436",
@@ -62,7 +62,7 @@ export const TERMINAL_THEMES: Record<string, TerminalTheme> = {
     colors: {
       background: "#0c0d0b",
       foreground: "#f7f7f7",
-      cursor: "#fb923c",
+      cursor: "#f7f7f7",
       cursorAccent: "#0c0d0b",
       selectionBackground: "#3a3a3d",
       black: "#2e3436",

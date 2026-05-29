@@ -103,6 +103,27 @@ export class LazyFieldEncryption {
           }
         }
 
+        // Guac hosts migrated from single-protocol: rdpPassword/vncPassword/telnetPassword
+        // columns were populated by copying the encrypted `password` blob. Try decrypting
+        // under the original field name before giving up.
+        if (
+          fieldName === "rdpPassword" ||
+          fieldName === "vncPassword" ||
+          fieldName === "telnetPassword"
+        ) {
+          try {
+            const decrypted = FieldCrypto.decryptField(
+              fieldValue,
+              userKEK,
+              recordId,
+              "password",
+            );
+            return decrypted;
+          } catch {
+            // not encrypted as "password" either
+          }
+        }
+
         const sensitiveFields = [
           "totpSecret",
           "totpBackupCodes",

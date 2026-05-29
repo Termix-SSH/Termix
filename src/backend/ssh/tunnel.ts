@@ -1674,7 +1674,9 @@ async function connectSSHTunnel(
           const credential = credentials[0];
           resolvedEndpointCredentials = {
             password: credential.password as string | undefined,
-            sshKey: credential.privateKey as string | undefined,
+            sshKey: (credential.key || credential.privateKey) as
+              | string
+              | undefined,
             keyPassword: credential.keyPassword as string | undefined,
             keyType: credential.keyType as string | undefined,
             authMethod: credential.authType as string,
@@ -2695,9 +2697,22 @@ app.post(
 
       res.json({ message: "Connection request received", tunnelName });
 
-      operation.finally(() => {
-        pendingTunnelOperations.delete(tunnelName);
-      });
+      operation
+        .catch((err) => {
+          tunnelLogger.error("Tunnel operation failed", err, {
+            operation: "tunnel_operation_failed",
+            tunnelName,
+          });
+          broadcastTunnelStatus(tunnelName, {
+            connected: false,
+            status: CONNECTION_STATES.FAILED,
+            reason: err instanceof Error ? err.message : "Unknown error",
+          });
+          tunnelConnecting.delete(tunnelName);
+        })
+        .finally(() => {
+          pendingTunnelOperations.delete(tunnelName);
+        });
     } catch (error) {
       tunnelLogger.error("Failed to process tunnel connect", error, {
         operation: "tunnel_connect",

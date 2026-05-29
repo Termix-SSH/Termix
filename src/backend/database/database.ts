@@ -1251,6 +1251,7 @@ app.post(
       };
 
       try {
+        mainDb.$client.exec("PRAGMA foreign_keys = OFF");
         try {
           const importedHosts = importDb
             .prepare("SELECT * FROM ssh_data")
@@ -1561,6 +1562,7 @@ app.post(
           );
         }
 
+        mainDb.$client.exec("PRAGMA foreign_keys = ON");
         result.success = true;
 
         try {
@@ -2019,12 +2021,15 @@ httpServer.on("error", (err: NodeJS.ErrnoException) => {
   throw err;
 });
 
-httpServer.listen(HTTP_PORT, async () => {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+export const serverReady = new Promise<void>((resolve) => {
+  httpServer.listen(HTTP_PORT, async () => {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
-  await initializeSecurity();
+    await initializeSecurity();
+    resolve();
+  });
 });
 
 const sslConfig = AutoSSLSetup.getSSLConfig();

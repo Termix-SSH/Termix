@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Copy, Search, Terminal, Trash2 } from "lucide-react";
-import { getCommandHistory, deleteCommandFromHistory } from "@/main-axios";
+import {
+  getCommandHistory,
+  deleteCommandFromHistory,
+  clearCommandHistory,
+} from "@/main-axios";
 import type { Tab } from "@/types/ui-types";
 
 export function HistoryPanel({
@@ -16,20 +20,51 @@ export function HistoryPanel({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [commands, setCommands] = useState<string[]>([]);
+  const [trackingEnabled, setTrackingEnabled] = useState(
+    () => localStorage.getItem("commandHistoryTracking") === "true",
+  );
 
   const activeTab = terminalTabs.find((t) => t.id === activeTabId);
   const activeIsTerminal = !!activeTab;
   const hostId = activeTab?.host?.id ? parseInt(activeTab.host.id, 10) : null;
 
   useEffect(() => {
-    if (!hostId) {
+    const handler = () =>
+      setTrackingEnabled(
+        localStorage.getItem("commandHistoryTracking") === "true",
+      );
+    window.addEventListener("commandHistoryTrackingChanged", handler);
+    return () =>
+      window.removeEventListener("commandHistoryTrackingChanged", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!hostId || !trackingEnabled) {
       setCommands([]);
       return;
     }
     getCommandHistory(hostId)
       .then(setCommands)
       .catch(() => setCommands([]));
-  }, [hostId]);
+  }, [hostId, trackingEnabled]);
+
+  if (activeIsTerminal && !trackingEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center">
+        <div className="size-10 rounded-full bg-muted/40 flex items-center justify-center">
+          <Terminal className="size-5 text-muted-foreground/30" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-semibold text-muted-foreground/60">
+            {t("newUi.sidebar.history.trackingDisabled")}
+          </span>
+          <span className="text-xs text-muted-foreground/40">
+            {t("newUi.sidebar.history.trackingDisabledHint")}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeIsTerminal) {
     return (
@@ -85,7 +120,15 @@ export function HistoryPanel({
           {filtered.length} command{filtered.length !== 1 ? "s" : ""}
         </span>
         <button
-          onClick={() => setCommands([])}
+          onClick={async () => {
+            if (!hostId) return;
+            try {
+              await clearCommandHistory(hostId);
+            } catch {
+              /* ignore */
+            }
+            setCommands([]);
+          }}
           className="text-xs text-accent-brand hover:text-accent-brand/70"
         >
           {t("newUi.sidebar.history.clearAll")}

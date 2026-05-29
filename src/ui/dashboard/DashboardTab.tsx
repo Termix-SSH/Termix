@@ -10,9 +10,9 @@ import {
   GripVertical,
   KeyRound,
   LayoutDashboard,
+  MessagesSquare,
   Network,
   Plus,
-  RefreshCw,
   Server,
   Settings,
   Terminal,
@@ -20,26 +20,34 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import CytoscapeComponent from "react-cytoscapejs";
 import { Kbd } from "@/components/kbd";
 import { DASHBOARD_CARDS } from "@/lib/theme";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
   getUptime,
+  getVersionInfo,
+  getDatabaseHealth,
   getRecentActivity,
   getTunnelStatuses,
   getCredentials,
   resetRecentActivity,
+  getAllServerStatuses,
+  getServerMetricsById,
+  registerMetricsViewer,
+  sendMetricsHeartbeat,
+  getUserInfo,
 } from "@/main-axios";
 import type { RecentActivityItem, SSHHostWithStatus } from "@/main-axios";
+import { useTranslation } from "react-i18next";
+import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
     id: String(h.id),
     name: h.name,
-    user: h.username,
-    address: h.ip,
+    username: h.username,
+    ip: h.ip,
     port: h.port,
     folder: h.folder ?? "",
     online: h.status === "online",
@@ -110,15 +118,6 @@ const DEFAULT_SLOTS: CardSlot[] = [
   { id: "recent_activity", panel: "side", order: 0, height: null },
 ];
 
-const CARD_META: Record<DashboardCardId, { label: string }> = {
-  stats_bar: { label: "Status Bar" },
-  counters_bar: { label: "Counters" },
-  quick_actions: { label: "Quick Actions" },
-  host_status: { label: "Host Status" },
-  recent_activity: { label: "Recent Activity" },
-  network_graph: { label: "Network Graph" },
-};
-
 // ─── useColumnResize ──────────────────────────────────────────────────────────
 
 function useColumnResize(
@@ -166,27 +165,48 @@ function useColumnResize(
 function StatsBarCard({
   hosts,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
 }: {
   hosts: Host[];
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
 }) {
+  const { t } = useTranslation();
   const online = hosts.filter((h) => h.online).length;
+  const statusLabel =
+    versionStatus === "beta"
+      ? t("dashboard.beta").toUpperCase()
+      : versionStatus === "requires_update"
+        ? t("dashboard.updateAvailable").toUpperCase()
+        : t("dashboardTab.stable");
+  const statusColor =
+    versionStatus === "beta"
+      ? "bg-blue-500/20 text-blue-400"
+      : versionStatus === "requires_update"
+        ? "bg-yellow-500/20 text-yellow-400"
+        : "bg-accent-brand/20 text-accent-brand";
   return (
     <Card className="grid grid-cols-4 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Version
+          {t("dashboard.version")}
         </span>
         <span className="text-xl font-bold text-accent-brand leading-none">
-          v2.2.0
+          {versionText || "—"}
         </span>
-        <span className="text-[10px] bg-accent-brand/20 text-accent-brand px-1.5 py-0.5 w-fit font-semibold leading-none">
-          STABLE
+        <span
+          className={`text-[10px] px-1.5 py-0.5 w-fit font-semibold leading-none ${statusColor}`}
+        >
+          {statusLabel}
         </span>
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Uptime
+          {t("dashboard.uptime")}
         </span>
         <span className="text-xl font-bold leading-none">
           {uptimeFormatted || "—"}
@@ -194,15 +214,19 @@ function StatsBarCard({
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Database
+          {t("dashboard.database")}
         </span>
-        <span className="text-xl font-bold text-accent-brand leading-none">
-          Healthy
+        <span
+          className={`text-xl font-bold leading-none ${dbHealth === "healthy" ? "text-accent-brand" : "text-red-400"}`}
+        >
+          {dbHealth === "healthy"
+            ? t("dashboard.healthy")
+            : t("dashboard.error")}
         </span>
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Hosts Online
+          {t("dashboardTab.hostsOnline")}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-xl font-bold leading-none">{online}</span>
@@ -224,27 +248,28 @@ function CountersBarCard({
   credentialCount: number;
   activeTunnelCount: number;
 }) {
+  const { t } = useTranslation();
   return (
     <Card className="grid grid-cols-3 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <Server className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{hosts.length}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Total Hosts
+          {t("dashboard.totalHosts")}
         </span>
       </div>
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <KeyRound className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{credentialCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Credentials
+          {t("dashboard.totalCredentials")}
         </span>
       </div>
       <div className="flex items-center gap-2.5 px-4 py-2.5">
         <Network className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{activeTunnelCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          Active Tunnels
+          {t("dashboardTab.activeTunnels")}
         </span>
       </div>
     </Card>
@@ -253,15 +278,23 @@ function CountersBarCard({
 
 function QuickActionsCard({
   onOpenSingletonTab,
+  hosts,
+  onOpenTab,
+  isAdmin,
 }: {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
+  hosts: Host[];
+  onOpenTab: (host: Host, type: TabType) => void;
+  isAdmin: boolean;
 }) {
+  const { t } = useTranslation();
+  const pinnedHosts = hosts.filter((h) => h.pin);
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
         <Zap className="size-3.5 text-muted-foreground" />
         <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-          Quick Actions
+          {t("dashboard.quickActions")}
         </span>
       </div>
       <div className="flex flex-1 min-h-0">
@@ -276,9 +309,11 @@ function QuickActionsCard({
               <Plus className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Add Host</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.addHost")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Register a new server
+                {t("dashboardTab.registerNewServer")}
               </span>
             </div>
           </button>
@@ -292,42 +327,76 @@ function QuickActionsCard({
               <KeyRound className="size-3 text-accent-brand" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Add Credential</span>
+              <span className="text-xs font-semibold">
+                {t("dashboard.addCredential")}
+              </span>
               <span className="text-[10px] text-muted-foreground">
-                Store SSH keys or passwords
+                {t("dashboardTab.storeSshKeysOrPasswords")}
               </span>
             </div>
           </button>
         </div>
         <div className="flex flex-col flex-1">
-          <button
-            onClick={() => onOpenSingletonTab("admin-settings")}
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <Settings className="size-3 text-accent-brand" />
+          {pinnedHosts.length > 0 ? (
+            <div className="flex flex-col flex-1 overflow-y-auto thin-scrollbar">
+              {pinnedHosts.slice(0, 4).map((host) => (
+                <button
+                  key={host.id}
+                  onClick={() => onOpenTab(host, "terminal")}
+                  className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
+                >
+                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                    <Terminal className="size-3 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col items-start text-left min-w-0">
+                    <span className="text-xs font-semibold truncate w-full">
+                      {host.name || host.ip}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate w-full">
+                      {host.ip}:{host.sshPort}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">Admin Settings</span>
-              <span className="text-[10px] text-muted-foreground">
-                Manage users and roles
-              </span>
-            </div>
-          </button>
-          <button
-            onClick={() => onOpenSingletonTab("user-profile")}
-            className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
-          >
-            <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-              <User className="size-3 text-accent-brand" />
-            </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-xs font-semibold">User Profile</span>
-              <span className="text-[10px] text-muted-foreground">
-                Manage your account
-              </span>
-            </div>
-          </button>
+          ) : (
+            <>
+              {isAdmin && (
+                <button
+                  onClick={() => onOpenSingletonTab("admin-settings")}
+                  className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer border-b border-border flex-1"
+                >
+                  <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                    <Settings className="size-3 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xs font-semibold">
+                      {t("dashboard.adminSettings")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("dashboardTab.manageUsersAndRoles")}
+                    </span>
+                  </div>
+                </button>
+              )}
+              <button
+                onClick={() => onOpenSingletonTab("user-profile")}
+                className="group/btn flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer flex-1"
+              >
+                <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
+                  <User className="size-3 text-accent-brand" />
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-xs font-semibold">
+                    {t("dashboard.userProfile")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("dashboardTab.manageYourAccount")}
+                  </span>
+                </div>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Card>
@@ -336,11 +405,14 @@ function QuickActionsCard({
 
 function HostStatusCard({
   hosts,
+  hostMetrics,
   onOpenTab,
 }: {
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
+  const { t } = useTranslation();
   const online = hosts.filter((h) => h.online).length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -348,90 +420,102 @@ function HostStatusCard({
         <div className="flex items-center gap-2">
           <Database className="size-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Host Status
+            {t("dashboardTab.hostStatus")}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length} online
+          {online}/{hosts.length} {t("dashboardTab.onlineLower")}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
         {hosts.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            No hosts configured
+            {t("dashboardTab.noHostsConfigured")}
           </div>
         )}
-        {hosts.map((host, i) => (
-          <div
-            key={i}
-            onClick={() => onOpenTab(host, "stats")}
-            className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <span
-                className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold">{host.name}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {host.ip}
+        {hosts.map((host, i) => {
+          const metrics = hostMetrics.get(host.id);
+          const cpu = metrics?.cpu ?? null;
+          const ram = metrics?.ram ?? null;
+          const hasMetrics = cpu !== null || ram !== null;
+          return (
+            <div
+              key={i}
+              onClick={() => onOpenTab(host, "stats")}
+              className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold">{host.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {host.ip}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {host.online && hasMetrics ? (
+                  <div className="flex items-center gap-3">
+                    {cpu !== null && (
+                      <div className="flex flex-col gap-0.5 w-16">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("dashboard.cpu")}
+                          </span>
+                          <span className="text-[10px] font-bold text-accent-brand">
+                            {cpu.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-0.5 bg-muted w-full">
+                          <div
+                            className="h-full bg-accent-brand"
+                            style={{ width: `${cpu}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {ram !== null && (
+                      <div className="flex flex-col gap-0.5 w-16">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("dashboard.ram")}
+                          </span>
+                          <span className="text-[10px] font-bold text-accent-brand">
+                            {ram.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-0.5 bg-muted w-full">
+                          <div
+                            className="h-full bg-accent-brand"
+                            style={{ width: `${ram}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-muted-foreground w-16 text-center">
+                      —
+                    </span>
+                    <span className="text-[10px] text-muted-foreground w-16 text-center">
+                      —
+                    </span>
+                  </div>
+                )}
+                <span
+                  className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
+                >
+                  {host.online
+                    ? t("dashboardTab.online")
+                    : t("dashboardTab.offline")}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {host.online ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col gap-0.5 w-16">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">
-                        CPU
-                      </span>
-                      <span className="text-[10px] font-bold text-accent-brand">
-                        {host.cpu ?? 0}%
-                      </span>
-                    </div>
-                    <div className="h-0.5 bg-muted w-full">
-                      <div
-                        className="h-full bg-accent-brand"
-                        style={{ width: `${host.cpu ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-0.5 w-16">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">
-                        RAM
-                      </span>
-                      <span className="text-[10px] font-bold text-accent-brand">
-                        {host.ram ?? 0}%
-                      </span>
-                    </div>
-                    <div className="h-0.5 bg-muted w-full">
-                      <div
-                        className="h-full bg-accent-brand"
-                        style={{ width: `${host.ram ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-muted-foreground w-16 text-center">
-                    —
-                  </span>
-                  <span className="text-[10px] text-muted-foreground w-16 text-center">
-                    —
-                  </span>
-                </div>
-              )}
-              <span
-                className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
-              >
-                {host.online ? "ONLINE" : "OFFLINE"}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -448,6 +532,7 @@ function RecentActivityCard({
   onOpenTab: (host: Host, type: TabType) => void;
   onClear: () => void;
 }) {
+  const { t } = useTranslation();
   const typeIcon: Record<RecentActivityItem["type"], React.ReactNode> = {
     terminal: <Terminal className="size-2.5" />,
     file_manager: <Server className="size-2.5" />,
@@ -456,7 +541,7 @@ function RecentActivityCard({
     docker: <Server className="size-2.5" />,
     rdp: <Server className="size-2.5" />,
     vnc: <Server className="size-2.5" />,
-    telnet: <Terminal className="size-2.5" />,
+    telnet: <MessagesSquare className="size-2.5" />,
   };
   const typeToTab: Record<RecentActivityItem["type"], TabType> = {
     terminal: "terminal",
@@ -468,12 +553,24 @@ function RecentActivityCard({
     vnc: "vnc",
     telnet: "telnet",
   };
+  const typeLabel: Record<RecentActivityItem["type"], string> = {
+    terminal: t("networkGraph.terminal"),
+    file_manager: t("networkGraph.fileManager"),
+    server_stats: t("networkGraph.serverStats"),
+    tunnel: t("networkGraph.tunnel"),
+    docker: t("networkGraph.docker"),
+    rdp: "RDP",
+    vnc: "VNC",
+    telnet: "Telnet",
+  };
   function formatTime(ts: string) {
-    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    const diffMs = Date.now() - new Date(ts).getTime();
+    if (diffMs < 0) return t("dashboard.justNow");
+    const diff = Math.floor(diffMs / 1000);
+    if (diff < 60) return t("dashboard.justNow");
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
   }
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -481,7 +578,7 @@ function RecentActivityCard({
         <div className="flex items-center gap-2">
           <Activity className="size-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Recent Activity
+            {t("dashboard.recentActivity")}
           </span>
         </div>
         <Button
@@ -490,13 +587,13 @@ function RecentActivityCard({
           className="text-xs text-accent-brand h-auto py-0.5 px-2"
           onClick={onClear}
         >
-          Clear
+          {t("dashboardTab.clear")}
         </Button>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
         {activity.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-8">
-            No recent activity
+            {t("dashboard.noRecentActivity")}
           </div>
         )}
         {activity.map((item) => {
@@ -519,9 +616,7 @@ function RecentActivityCard({
                   </span>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     {typeIcon[item.type]}
-                    <span className="text-[10px] capitalize">
-                      {item.type.replace("_", " ")}
-                    </span>
+                    <span className="text-[10px]">{typeLabel[item.type]}</span>
                   </div>
                 </div>
               </div>
@@ -531,187 +626,6 @@ function RecentActivityCard({
             </div>
           );
         })}
-      </div>
-    </Card>
-  );
-}
-
-function NetworkGraphCard({ hosts }: { hosts: Host[] }) {
-  const cyRef = useRef<any>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    node: any;
-  } | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-
-  const elements = hosts.map((h, i) => ({
-    data: {
-      id: h.id,
-      label: h.name,
-      ip: `${h.ip}:${h.port ?? 22}`,
-      status: h.online ? "online" : "offline",
-    },
-    position: { x: 120 + (i % 4) * 160, y: 80 + Math.floor(i / 4) * 100 },
-  }));
-
-  const buildNodeStyle = useCallback((ele: any) => {
-    const isOnline = ele.data("status") === "online";
-    const name = ele.data("label") || "";
-    const ip = ele.data("ip") || "";
-    const statusColor = isOnline ? "rgb(251,146,60)" : "rgb(100,116,139)";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="72" viewBox="0 0 160 72">
-      <defs><filter id="sh" x="-15%" y="-15%" width="130%" height="130%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
-      </filter></defs>
-      <rect x="2" y="2" width="156" height="68" rx="4" fill="#09090b" stroke="${statusColor}" stroke-width="1.5" filter="url(#sh)"/>
-      <circle cx="18" cy="36" r="4" fill="${statusColor}" opacity="0.9"/>
-      <text x="32" y="30" font-family="monospace" font-size="12" font-weight="700" fill="#f1f5f9">${name}</text>
-      <text x="32" y="48" font-family="monospace" font-size="10" fill="#64748b">${ip}</text>
-    </svg>`;
-    return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-  }, []);
-
-  const handleCyInit = useCallback(
-    (cy: any) => {
-      cyRef.current = cy;
-      cy.style()
-        .selector("node")
-        .style({
-          label: "",
-          width: "160px",
-          height: "72px",
-          shape: "round-rectangle",
-          "border-width": "0px",
-          "background-opacity": 0,
-          "background-image": buildNodeStyle,
-          "background-fit": "contain",
-        })
-        .selector("edge")
-        .style({
-          width: "1.5px",
-          "line-color": "#2a2a2c",
-          "curve-style": "bezier",
-          "target-arrow-shape": "none",
-        })
-        .selector("node:selected")
-        .style({
-          "overlay-color": "#fb923c",
-          "overlay-opacity": 0.08,
-          "overlay-padding": "4px",
-        })
-        .update();
-      cy.nodes().ungrabify();
-      cy.on("tap", (evt: any) => {
-        if (evt.target === cy) setContextMenu(null);
-      });
-      cy.on("cxttap tap", "node", (evt: any) => {
-        evt.stopPropagation();
-        const node = evt.target;
-        setContextMenu({
-          visible: true,
-          x: evt.originalEvent.clientX,
-          y: evt.originalEvent.clientY,
-          node: node.data(),
-        });
-      });
-      cy.on("zoom pan", () => setContextMenu(null));
-    },
-    [buildNodeStyle],
-  );
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(e.target as Node)
-      )
-        setContextMenu(null);
-    };
-    document.addEventListener("mousedown", handler, true);
-    return () => document.removeEventListener("mousedown", handler, true);
-  }, []);
-
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Network className="size-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-            Network Graph
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {hosts.length} nodes
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-auto py-0.5 px-2"
-            onClick={() => cyRef.current?.fit()}
-          >
-            <RefreshCw className="size-3" />
-          </Button>
-        </div>
-      </div>
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        {contextMenu?.visible && (
-          <div
-            ref={contextMenuRef}
-            className="fixed z-[200] min-w-[160px] shadow-2xl p-1 flex flex-col gap-0.5 bg-card border border-border"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-          >
-            <div className="px-3 py-1.5 border-b border-border mb-0.5">
-              <span className="text-xs font-bold font-mono">
-                {contextMenu.node.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground block">
-                {contextMenu.node.ip}
-              </span>
-            </div>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
-              <Terminal className="size-3" />
-              Terminal
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left w-full">
-              <Server className="size-3" />
-              Server Stats
-            </button>
-          </div>
-        )}
-        {hosts.length > 0 ? (
-          <CytoscapeComponent
-            elements={elements}
-            style={{ width: "100%", height: "100%" }}
-            layout={
-              { name: "grid", rows: Math.ceil(Math.sqrt(hosts.length)) } as any
-            }
-            cy={handleCyInit}
-            wheelSensitivity={1.5}
-            minZoom={0.3}
-            maxZoom={2.5}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 h-full">
-            No hosts to display
-          </div>
-        )}
-        <div className="absolute bottom-2 left-3 flex items-center gap-3 pointer-events-none">
-          <div className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-accent-brand inline-block" />
-            <span className="text-[10px] text-muted-foreground font-mono">
-              Online
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-muted-foreground/50 inline-block" />
-            <span className="text-[10px] text-muted-foreground font-mono">
-              Offline
-            </span>
-          </div>
-        </div>
       </div>
     </Card>
   );
@@ -731,11 +645,16 @@ function CardItem({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
+  hostMetrics,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
   credentialCount,
   activeTunnelCount,
   activity,
   onClearActivity,
+  isAdmin,
 }: {
   slot: CardSlot;
   editMode: boolean;
@@ -748,11 +667,16 @@ function CardItem({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
+  isAdmin: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -776,15 +700,6 @@ function CardItem({
   );
 
   const isFlex = slot.height === null;
-  const cardProps = {
-    hosts,
-    uptimeFormatted,
-    credentialCount,
-    activeTunnelCount,
-    activity,
-    onOpenTab,
-    onOpenSingletonTab,
-  };
 
   return (
     <div
@@ -815,36 +730,48 @@ function CardItem({
       <div className="flex-1 min-h-0 overflow-hidden">
         {slot.id === "stats_bar" && (
           <StatsBarCard
-            hosts={cardProps.hosts}
-            uptimeFormatted={cardProps.uptimeFormatted}
+            hosts={hosts}
+            uptimeFormatted={uptimeFormatted}
+            versionText={versionText}
+            versionStatus={versionStatus}
+            dbHealth={dbHealth}
           />
         )}
         {slot.id === "counters_bar" && (
           <CountersBarCard
-            hosts={cardProps.hosts}
-            credentialCount={cardProps.credentialCount}
-            activeTunnelCount={cardProps.activeTunnelCount}
+            hosts={hosts}
+            credentialCount={credentialCount}
+            activeTunnelCount={activeTunnelCount}
           />
         )}
         {slot.id === "quick_actions" && (
-          <QuickActionsCard onOpenSingletonTab={cardProps.onOpenSingletonTab} />
+          <QuickActionsCard
+            onOpenSingletonTab={onOpenSingletonTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
+          />
         )}
         {slot.id === "host_status" && (
           <HostStatusCard
-            hosts={cardProps.hosts}
-            onOpenTab={cardProps.onOpenTab}
+            hosts={hosts}
+            hostMetrics={hostMetrics}
+            onOpenTab={onOpenTab}
+            isAdmin={isAdmin}
           />
         )}
         {slot.id === "recent_activity" && (
           <RecentActivityCard
             activity={activity}
-            hosts={cardProps.hosts}
-            onOpenTab={cardProps.onOpenTab}
+            hosts={hosts}
+            onOpenTab={onOpenTab}
             onClear={onClearActivity}
           />
         )}
         {slot.id === "network_graph" && (
-          <NetworkGraphCard hosts={cardProps.hosts} />
+          <NetworkGraphCard
+            embedded={true}
+            onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+          />
         )}
       </div>
       {editMode && !isFlex && (
@@ -898,16 +825,19 @@ function DropZone({
 function AddCardTray({
   activeIds,
   onAdd,
+  cardLabels,
 }: {
   activeIds: DashboardCardId[];
   onAdd: (id: DashboardCardId) => void;
+  cardLabels: Record<DashboardCardId, string>;
 }) {
+  const { t } = useTranslation();
   const available = DASHBOARD_CARDS.filter((c) => !activeIds.includes(c.id));
   if (available.length === 0) return null;
   return (
     <div className="flex items-center gap-2 px-1 py-2 flex-wrap shrink-0">
       <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold shrink-0">
-        Add:
+        {t("dashboardTab.add")}
       </span>
       {available.map((card) => (
         <button
@@ -916,7 +846,7 @@ function AddCardTray({
           className="flex items-center gap-1.5 px-2.5 py-1 border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-accent-brand/60 hover:bg-accent-brand/5 transition-colors"
         >
           <Plus className="size-3 text-accent-brand" />
-          {CARD_META[card.id].label}
+          {cardLabels[card.id]}
         </button>
       ))}
     </div>
@@ -939,11 +869,17 @@ type PanelColumnProps = {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
+  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
   uptimeFormatted: string;
+  versionText: string;
+  versionStatus: "up_to_date" | "requires_update" | "beta";
+  dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
+  cardLabels: Record<DashboardCardId, string>;
+  isAdmin: boolean;
 };
 
 function PanelColumn({
@@ -960,12 +896,19 @@ function PanelColumn({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
+  hostMetrics,
   uptimeFormatted,
+  versionText,
+  versionStatus,
+  dbHealth,
   credentialCount,
   activeTunnelCount,
   activity,
   onClearActivity,
+  cardLabels,
+  isAdmin,
 }: PanelColumnProps) {
+  const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
   const allIds = slots.map((s) => s.id);
 
@@ -1006,11 +949,16 @@ function PanelColumn({
             onOpenSingletonTab={onOpenSingletonTab}
             onOpenTab={onOpenTab}
             hosts={hosts}
+            hostMetrics={hostMetrics}
             uptimeFormatted={uptimeFormatted}
+            versionText={versionText}
+            versionStatus={versionStatus}
+            dbHealth={dbHealth}
             credentialCount={credentialCount}
             activeTunnelCount={activeTunnelCount}
             activity={activity}
             onClearActivity={onClearActivity}
+            isAdmin={isAdmin}
           />
         </div>
       ))}
@@ -1022,11 +970,15 @@ function PanelColumn({
         active={!!dragState}
       />
       {editMode && (
-        <AddCardTray activeIds={allIds} onAdd={(id) => onAdd(id, panel)} />
+        <AddCardTray
+          activeIds={allIds}
+          onAdd={(id) => onAdd(id, panel)}
+          cardLabels={cardLabels}
+        />
       )}
       {sorted.length === 0 && !editMode && (
         <div className="flex-1 flex items-center justify-center text-muted-foreground/20 text-xs border border-dashed border-border/30">
-          Empty
+          {t("dashboardTab.empty")}
         </div>
       )}
     </div>
@@ -1061,24 +1013,145 @@ export function DashboardTab({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
-  const [slots, setSlots] = useState<CardSlot[]>(DEFAULT_SLOTS);
+  const { t, i18n } = useTranslation();
+
+  const [slots, setSlots] = useState<CardSlot[]>(() => {
+    try {
+      const saved = localStorage.getItem("dashboardTab.slots");
+      if (saved) return JSON.parse(saved) as CardSlot[];
+    } catch {
+      /* ignore */
+    }
+    return DEFAULT_SLOTS;
+  });
+
   const [editMode, setEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
-  const [mainWidthPct, setMainWidthPct] = useState(68);
+
+  const [mainWidthPct, setMainWidthPct] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dashboardTab.mainWidthPct");
+      if (saved) return Number(saved);
+    } catch {
+      /* ignore */
+    }
+    return 68;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dashboardTab.slots", JSON.stringify(slots));
+    } catch {
+      /* ignore */
+    }
+  }, [slots]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dashboardTab.mainWidthPct", String(mainWidthPct));
+    } catch {
+      /* ignore */
+    }
+  }, [mainWidthPct]);
 
   const [hosts, setHosts] = useState<Host[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [uptimeFormatted, setUptimeFormatted] = useState("");
+  const [versionText, setVersionText] = useState("");
+  const [versionStatus, setVersionStatus] = useState<
+    "up_to_date" | "requires_update" | "beta"
+  >("up_to_date");
+  const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
+  const [hostMetrics, setHostMetrics] = useState<
+    Map<string, { cpu: number | null; ram: number | null }>
+  >(new Map());
+  const viewerSessionsRef = useRef<Map<number, string>>(new Map());
+
+  const fetchMetrics = useCallback(async (hostList: Host[]) => {
+    let statuses: Record<number, { status?: string }> = {};
+    try {
+      statuses = (await getAllServerStatuses()) as Record<
+        number,
+        { status?: string }
+      >;
+    } catch {
+      /* best-effort */
+    }
+
+    const newSessions = new Map<number, string>(viewerSessionsRef.current);
+    const results = await Promise.all(
+      hostList.map(async (host) => {
+        const hostId = Number(host.id);
+        const knownStatus = statuses?.[hostId]?.status;
+        if (knownStatus === "offline") return null;
+        if (host.authType === "none" || host.authType === "opkssh") return null;
+
+        try {
+          const existing = newSessions.get(hostId);
+          if (!existing) {
+            const reg = await registerMetricsViewer(hostId);
+            if (reg.skipped) return null;
+            if (reg.success && reg.viewerSessionId) {
+              newSessions.set(hostId, reg.viewerSessionId);
+            }
+          }
+          const metrics = await getServerMetricsById(hostId);
+          if (!metrics) return null;
+          return {
+            id: host.id,
+            cpu: metrics.cpu?.percent ?? null,
+            ram: metrics.memory?.percent ?? null,
+          };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    viewerSessionsRef.current = newSessions;
+    const map = new Map<string, { cpu: number | null; ram: number | null }>();
+    for (const r of results) {
+      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram });
+    }
+    setHostMetrics(map);
+  }, []);
 
   useEffect(() => {
-    getSSHHosts()
-      .then((raw) => setHosts(raw.map(sshHostToHost)))
+    let mounted = true;
+    const load = async () => {
+      const raw = await getSSHHosts().catch(() => []);
+      const mapped = raw.map(sshHostToHost);
+      if (mounted) setHosts(mapped);
+      fetchMetrics(mapped).catch(() => {});
+    };
+    load();
+
+    getUserInfo()
+      .then((info) => setIsAdmin(!!info.is_admin))
       .catch(() => {});
     getUptime()
       .then((u) => setUptimeFormatted(u.formatted))
       .catch(() => {});
+    getVersionInfo()
+      .then((info) => {
+        setVersionText(info.localVersion ?? "");
+        setVersionStatus(info.status ?? "up_to_date");
+      })
+      .catch(() => {});
+    getDatabaseHealth()
+      .then((health) => {
+        setDbHealth(
+          health.status === "ok" || health.status === "healthy"
+            ? "healthy"
+            : "error",
+        );
+      })
+      .catch(() => {
+        setDbHealth("error");
+      });
     getRecentActivity(50)
       .then(setActivity)
       .catch(() => {});
@@ -1097,7 +1170,29 @@ export function DashboardTab({
         setActiveTunnelCount(active);
       })
       .catch(() => {});
-  }, []);
+
+    const metricsInterval = setInterval(async () => {
+      const raw = await getSSHHosts().catch(() => []);
+      const mapped = raw.map(sshHostToHost);
+      if (mounted) setHosts(mapped);
+      fetchMetrics(mapped).catch(() => {});
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(metricsInterval);
+    };
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    if (viewerSessionsRef.current.size === 0) return;
+    const heartbeat = setInterval(async () => {
+      for (const [, sessionId] of viewerSessionsRef.current) {
+        sendMetricsHeartbeat(sessionId).catch(() => {});
+      }
+    }, 30000);
+    return () => clearInterval(heartbeat);
+  }, [hostMetrics]);
 
   const handleClearActivity = async () => {
     try {
@@ -1108,7 +1203,7 @@ export function DashboardTab({
     }
   };
 
-  const todayLabel = new Date().toLocaleDateString("en-US", {
+  const todayLabel = new Date().toLocaleDateString(i18n.language, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -1123,6 +1218,15 @@ export function DashboardTab({
     .filter((s) => s.panel === "side")
     .sort((a, b) => a.order - b.order);
   const hasSide = sideSlots.length > 0;
+
+  const cardLabels: Record<DashboardCardId, string> = {
+    stats_bar: t("dashboard.serverOverview"),
+    counters_bar: t("dashboard.serverStats"),
+    quick_actions: t("dashboard.quickActions"),
+    host_status: t("dashboardTab.hostStatus"),
+    recent_activity: t("dashboard.recentActivity"),
+    network_graph: t("dashboard.networkGraph"),
+  };
 
   const onColumnDividerMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -1190,11 +1294,11 @@ export function DashboardTab({
           ? Math.max(...panelSlots.map((s) => s.order)) + 1
           : 0;
       const defaultHeight: number | null =
-        id === "host_status" ||
-        id === "recent_activity" ||
         id === "network_graph"
-          ? null
-          : 150;
+          ? 350
+          : id === "host_status" || id === "recent_activity"
+            ? null
+            : 150;
       return [...prev, { id, panel, order: maxOrder, height: defaultHeight }];
     });
   };
@@ -1204,19 +1308,31 @@ export function DashboardTab({
     );
   const handleReset = () => {
     setSlots(DEFAULT_SLOTS);
-    setMainWidthPct(72);
+    setMainWidthPct(68);
     setEditMode(false);
+    try {
+      localStorage.removeItem("dashboardTab.slots");
+      localStorage.removeItem("dashboardTab.mainWidthPct");
+    } catch {
+      /* ignore */
+    }
   };
 
   const columnProps = {
     hosts,
+    hostMetrics,
     uptimeFormatted,
+    versionText,
+    versionStatus,
+    dbHealth,
     credentialCount,
     activeTunnelCount,
     activity,
     onClearActivity: handleClearActivity,
     onOpenSingletonTab,
     onOpenTab,
+    cardLabels,
+    isAdmin,
   };
 
   const isMobile = useIsMobile();
@@ -1228,7 +1344,9 @@ export function DashboardTab({
         <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-3 flex flex-col gap-3">
           <Card className="flex-row items-center justify-between px-4 py-3 shrink-0 gap-0">
             <div>
-              <h1 className="text-base font-bold leading-tight">Dashboard</h1>
+              <h1 className="text-base font-bold leading-tight">
+                {t("dashboard.title")}
+              </h1>
               <p className="text-xs text-muted-foreground">{todayLabel}</p>
             </div>
             <div className="flex items-center gap-1">
@@ -1243,7 +1361,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  GitHub
+                  {t("dashboard.github")}
                 </a>
               </Button>
               <Button
@@ -1257,7 +1375,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Support
+                  {t("dashboard.support")}
                 </a>
               </Button>
               <Button
@@ -1271,7 +1389,7 @@ export function DashboardTab({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Discord
+                  {t("dashboard.discord")}
                 </a>
               </Button>
             </div>
@@ -1282,7 +1400,13 @@ export function DashboardTab({
               className={`shrink-0 ${slot.id === "host_status" || slot.id === "recent_activity" ? "max-h-72 flex flex-col overflow-hidden" : ""}`}
             >
               {slot.id === "stats_bar" && (
-                <StatsBarCard hosts={hosts} uptimeFormatted={uptimeFormatted} />
+                <StatsBarCard
+                  hosts={hosts}
+                  uptimeFormatted={uptimeFormatted}
+                  versionText={versionText}
+                  versionStatus={versionStatus}
+                  dbHealth={dbHealth}
+                />
               )}
               {slot.id === "counters_bar" && (
                 <CountersBarCard
@@ -1292,10 +1416,19 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "quick_actions" && (
-                <QuickActionsCard onOpenSingletonTab={onOpenSingletonTab} />
+                <QuickActionsCard
+                  onOpenSingletonTab={onOpenSingletonTab}
+                  hosts={hosts}
+                  onOpenTab={onOpenTab}
+                />
               )}
               {slot.id === "host_status" && (
-                <HostStatusCard hosts={hosts} onOpenTab={onOpenTab} />
+                <HostStatusCard
+                  hosts={hosts}
+                  hostMetrics={hostMetrics}
+                  onOpenTab={onOpenTab}
+                  isAdmin={isAdmin}
+                />
               )}
               {slot.id === "recent_activity" && (
                 <RecentActivityCard
@@ -1306,7 +1439,10 @@ export function DashboardTab({
                 />
               )}
               {slot.id === "network_graph" && (
-                <NetworkGraphCard hosts={hosts} />
+                <NetworkGraphCard
+                  embedded={true}
+                  onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+                />
               )}
             </div>
           ))}
@@ -1319,13 +1455,15 @@ export function DashboardTab({
     <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
       <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
         <div>
-          <h1 className="text-lg font-bold leading-tight">Dashboard</h1>
+          <h1 className="text-lg font-bold leading-tight">
+            {t("dashboard.title")}
+          </h1>
           <p className="text-xs text-muted-foreground">{todayLabel}</p>
         </div>
         <div className="flex items-center gap-1">
           <div className="hidden sm:flex items-center gap-2 mr-2 bg-muted/50 px-2.5 py-1 rounded-sm border border-border">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              Command Palette
+              {t("dashboardTab.commandPalette")}
             </span>
             <div className="flex items-center gap-1">
               <Kbd className="h-5 px-1.5 bg-background text-[10px]">Shift</Kbd>
@@ -1344,7 +1482,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              GitHub
+              {t("dashboard.github")}
             </a>
           </Button>
           <Button
@@ -1358,7 +1496,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              Support
+              {t("dashboard.support")}
             </a>
           </Button>
           <Button
@@ -1372,7 +1510,7 @@ export function DashboardTab({
               target="_blank"
               rel="noreferrer"
             >
-              Discord
+              {t("dashboard.discord")}
             </a>
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5" />
@@ -1384,14 +1522,14 @@ export function DashboardTab({
                 className="text-xs text-muted-foreground"
                 onClick={handleReset}
               >
-                Reset
+                {t("dashboard.reset")}
               </Button>
               <Button
                 size="sm"
                 className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white"
                 onClick={() => setEditMode(false)}
               >
-                Done
+                {t("dashboardTab.done")}
               </Button>
             </>
           ) : (
@@ -1399,7 +1537,7 @@ export function DashboardTab({
               variant="ghost"
               size="icon"
               onClick={() => setEditMode(true)}
-              title="Customize Dashboard"
+              title={t("dashboard.customizeLayout")}
             >
               <LayoutDashboard className="size-4 text-accent-brand" />
             </Button>
@@ -1411,9 +1549,7 @@ export function DashboardTab({
         <div className="mx-5 mt-4 px-4 py-2 border border-dashed border-accent-brand/40 bg-accent-brand/5 shrink-0 flex items-center gap-2">
           <LayoutDashboard className="size-3.5 text-accent-brand shrink-0" />
           <span className="text-xs text-accent-brand font-semibold">
-            Drag cards to reorder · Drag the column divider to resize columns ·
-            Drag the bottom edge of a card to resize its height · Trash to
-            remove
+            {t("dashboardTab.editModeInstructions")}
           </span>
         </div>
       )}

@@ -88,28 +88,28 @@ export function TunnelInlineControls({
 
   const statusClass =
     kind === "connected"
-      ? "text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/20"
+      ? "text-accent-brand border-accent-brand/40 bg-accent-brand/10"
       : kind === "connecting"
-        ? "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
+        ? "text-blue-400 border-blue-400/40 bg-blue-400/10"
         : kind === "error"
-          ? "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20"
-          : "text-muted-foreground bg-muted/30 border-border";
+          ? "text-destructive border-destructive/40 bg-destructive/10"
+          : "text-muted-foreground border-border bg-muted/30";
 
   const statusIcon =
     kind === "connected" ? (
-      <Wifi className="h-3 w-3" />
+      <Wifi className="size-3" />
     ) : kind === "connecting" ? (
-      <Loader2 className="h-3 w-3 animate-spin" />
+      <Loader2 className="size-3 animate-spin" />
     ) : kind === "error" ? (
-      <AlertCircle className="h-3 w-3" />
+      <AlertCircle className="size-3" />
     ) : (
-      <WifiOff className="h-3 w-3" />
+      <WifiOff className="size-3" />
     );
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <span
-        className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs font-medium ${statusClass}`}
+        className={`inline-flex h-8 items-center gap-1.5 border px-2 text-[10px] font-bold uppercase tracking-wide ${statusClass}`}
         title={title}
       >
         {statusIcon}
@@ -123,7 +123,7 @@ export function TunnelInlineControls({
           disabled
           className="h-8 px-3 text-xs text-muted-foreground border-border"
         >
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          <Loader2 className="size-3 mr-1 animate-spin" />
           {isDisconnected ? t("tunnels.start") : t("tunnels.stop")}
         </Button>
       ) : isDisconnected ? (
@@ -134,9 +134,9 @@ export function TunnelInlineControls({
           onClick={onStart}
           disabled={startDisabled}
           title={startDisabled ? startDisabledReason : undefined}
-          className="h-8 px-3 text-xs text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-400/30 hover:bg-green-500/10 dark:hover:bg-green-400/10 hover:border-green-500/50 dark:hover:border-green-400/50"
+          className="h-8 px-3 text-xs text-accent-brand border-accent-brand/40 hover:bg-accent-brand/10 hover:text-accent-brand"
         >
-          <Play className="h-3 w-3 mr-1" />
+          <Play className="size-3 mr-1" />
           {t("tunnels.start")}
         </Button>
       ) : (
@@ -145,9 +145,9 @@ export function TunnelInlineControls({
           size="sm"
           variant="outline"
           onClick={onStop}
-          className="h-8 px-3 text-xs text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-400/30 hover:bg-red-500/10 dark:hover:bg-red-400/10 hover:border-red-500/50 dark:hover:border-red-400/50"
+          className="h-8 px-3 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
         >
-          <Square className="h-3 w-3 mr-1" />
+          <Square className="size-3 mr-1" />
           {t("tunnels.stop")}
         </Button>
       )}

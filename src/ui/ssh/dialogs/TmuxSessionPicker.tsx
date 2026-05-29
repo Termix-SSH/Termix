@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Terminal, Monitor, Users, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -56,34 +57,32 @@ export function TmuxSessionPicker({
         className="absolute inset-0 bg-canvas rounded-md"
         style={{ backgroundColor: backgroundColor || undefined }}
       />
-      <div className="bg-elevated border-2 border-edge rounded-lg p-6 max-w-md w-full mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="mb-4">
+      <div className="bg-card border border-border w-full max-w-sm mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold">
+            <Terminal className="size-4 text-accent-brand" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">
               {t("terminal.tmuxSessionPickerTitle")}
             </h3>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground mt-1">
             {t("terminal.tmuxSessionPickerDesc")}
           </p>
         </div>
-        <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+        <div className="flex flex-col max-h-60 overflow-y-auto">
           {sessions.map((session) => (
             <button
               key={session.name}
               onClick={() => onSelect(session.name)}
-              className="w-full text-left px-3 py-3 rounded-md border border-edge hover:bg-muted transition-colors"
+              className="w-full text-left px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors last:border-b-0"
             >
-              <div className="font-mono text-sm font-medium">
-                {session.name}
-              </div>
-              <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+              <div className="font-mono text-xs font-bold">{session.name}</div>
+              <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
                 <span
                   className="flex items-center gap-1"
                   title={t("terminal.tmuxWindows")}
                 >
-                  <Monitor className="w-3 h-3" />
+                  <Monitor className="size-3" />
                   {t("terminal.tmuxWindowCount", { count: session.windows })}
                 </span>
                 {session.attachedClients > 0 && (
@@ -91,7 +90,7 @@ export function TmuxSessionPicker({
                     className="flex items-center gap-1"
                     title={t("terminal.tmuxAttached")}
                   >
-                    <Users className="w-3 h-3" />
+                    <Users className="size-3" />
                     {t("terminal.tmuxAttachedCount", {
                       count: session.attachedClients,
                     })}
@@ -101,19 +100,27 @@ export function TmuxSessionPicker({
                   className="flex items-center gap-1"
                   title={t("terminal.tmuxLastActivity")}
                 >
-                  <Clock className="w-3 h-3" />
+                  <Clock className="size-3" />
                   {formatTimestamp(session.lastActivity, t)}
                 </span>
               </div>
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
-          <Button onClick={onCreateNew} variant="outline" className="flex-1">
-            {t("terminal.tmuxCreateNew")}
-          </Button>
-          <Button onClick={onCancel} variant="outline" className="flex-1">
+        <div className="p-4 border-t border-border flex justify-end gap-2">
+          <Button
+            onClick={onCancel}
+            variant="ghost"
+            className="rounded-none text-[10px] font-bold uppercase tracking-widest"
+          >
             {t("common.cancel")}
+          </Button>
+          <Button
+            onClick={onCreateNew}
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
+          >
+            {t("terminal.tmuxCreateNew")}
           </Button>
         </div>
       </div>

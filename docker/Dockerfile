@@ -65,8 +65,6 @@ COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
 
 COPY --chown=node:node --from=frontend-builder /app/dist /app/html
-COPY --chown=node:node --from=frontend-builder /app/src/locales /app/html/locales
-COPY --chown=node:node --from=frontend-builder /app/public/fonts /app/html/fonts
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend

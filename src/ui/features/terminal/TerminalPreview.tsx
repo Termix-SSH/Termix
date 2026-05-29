@@ -1,5 +1,5 @@
-import { TERMINAL_THEMES, TERMINAL_FONTS } from "@/lib/terminal-themes.ts";
-import { useTheme } from "@/components/theme-provider.tsx";
+import { useTheme } from "@/components/theme-provider";
+import { TERMINAL_THEMES, TERMINAL_FONTS } from "@/lib/terminal-themes";
 
 interface TerminalPreviewProps {
   theme: string;
@@ -18,7 +18,7 @@ export function TerminalPreview({
   cursorStyle = "bar",
   cursorBlink = true,
   letterSpacing = 0,
-  lineHeight = 1.2,
+  lineHeight = 1.0,
 }: TerminalPreviewProps) {
   const { theme: appTheme } = useTheme();
 
@@ -31,80 +31,79 @@ export function TerminalPreview({
         : "termixLight"
       : theme;
 
+  const colors = TERMINAL_THEMES[resolvedTheme]?.colors;
+  const fontFallback =
+    TERMINAL_FONTS.find((f) => f.value === fontFamily)?.fallback ||
+    TERMINAL_FONTS[0].fallback;
+
   return (
-    <div className="border border-input rounded-md overflow-hidden">
+    <div className="border border-input overflow-hidden">
       <div
-        className="p-4 font-mono text-sm"
+        className="p-3 font-mono"
         style={{
           fontSize: `${fontSize}px`,
-          fontFamily:
-            TERMINAL_FONTS.find((f) => f.value === fontFamily)?.fallback ||
-            TERMINAL_FONTS[0].fallback,
+          fontFamily: fontFallback,
           letterSpacing: `${letterSpacing}px`,
           lineHeight,
-          background:
-            TERMINAL_THEMES[resolvedTheme]?.colors.background ||
-            "var(--bg-base)",
-          color:
-            TERMINAL_THEMES[resolvedTheme]?.colors.foreground ||
-            "var(--foreground)",
+          background: colors?.background || "var(--bg-base)",
+          color: colors?.foreground || "var(--foreground)",
         }}
       >
         <div>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.green }}>
-            user@termix
+          <span style={{ color: colors?.green }}>deploy@web-01</span>
+          <span style={{ color: colors?.brightBlack }}>:</span>
+          <span style={{ color: colors?.blue }}>~</span>
+          <span style={{ color: colors?.brightBlack }}>$</span>
+          <span> ls -la</span>
+        </div>
+        <div style={{ color: colors?.brightBlack }}>total 48</div>
+        <div>
+          <span style={{ color: colors?.cyan }}>drwxr-xr-x</span>
+          <span style={{ color: colors?.brightBlack }}>
+            {" "}
+            5 deploy deploy 4096 May 1 09:12{" "}
           </span>
-          <span>:</span>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.blue }}>
-            ~
-          </span>
-          <span>$ ls -la</span>
+          <span style={{ color: colors?.blue }}>.</span>
         </div>
         <div>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.blue }}>
-            drwxr-xr-x
+          <span style={{ color: colors?.cyan }}>drwxr-xr-x</span>
+          <span style={{ color: colors?.brightBlack }}>
+            {" "}
+            3 root root 4096 Apr 15 18:44{" "}
           </span>
-          <span> 5 user </span>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.cyan }}>
-            docs
-          </span>
+          <span style={{ color: colors?.blue }}>..</span>
         </div>
         <div>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.green }}>
-            -rwxr-xr-x
+          <span style={{ color: colors?.cyan }}>-rw-r--r--</span>
+          <span style={{ color: colors?.brightBlack }}>
+            {" "}
+            1 deploy deploy 220 Apr 15 18:44{" "}
           </span>
-          <span> 1 user </span>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.green }}>
-            script.sh
-          </span>
+          <span>.bash_logout</span>
         </div>
         <div>
-          <span>-rw-r--r--</span>
-          <span> 1 user </span>
-          <span>README.md</span>
+          <span style={{ color: colors?.cyan }}>-rwxr-xr-x</span>
+          <span style={{ color: colors?.brightBlack }}>
+            {" "}
+            1 deploy deploy 8192 May 1 08:55{" "}
+          </span>
+          <span style={{ color: colors?.green }}>deploy.sh</span>
         </div>
-        <div>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.green }}>
-            user@termix
-          </span>
-          <span>:</span>
-          <span style={{ color: TERMINAL_THEMES[resolvedTheme]?.colors.blue }}>
-            ~
-          </span>
-          <span>$ </span>
+        <div className="flex items-center gap-0.5 mt-0.5">
+          <span style={{ color: colors?.green }}>deploy@web-01</span>
+          <span style={{ color: colors?.brightBlack }}>:</span>
+          <span style={{ color: colors?.blue }}>~</span>
+          <span style={{ color: colors?.brightBlack }}>$</span>
+          <span> </span>
           <span
             className="inline-block"
             style={{
-              width: cursorStyle === "block" ? "0.6em" : "0.1em",
-              height:
-                cursorStyle === "underline"
-                  ? "0.15em"
-                  : cursorStyle === "bar"
-                    ? `${fontSize}px`
-                    : `${fontSize}px`,
-              background:
-                TERMINAL_THEMES[resolvedTheme]?.colors.cursor || "#f7f7f7",
-              animation: cursorBlink ? "blink 1s step-end infinite" : "none",
+              width: cursorStyle === "block" ? "0.6em" : "0.12em",
+              height: cursorStyle === "underline" ? "0.12em" : `${fontSize}px`,
+              background: colors?.cursor || colors?.foreground || "#f7f7f7",
+              animation: cursorBlink
+                ? "termPreviewBlink 1s step-end infinite"
+                : "none",
               verticalAlign:
                 cursorStyle === "underline" ? "bottom" : "text-bottom",
             }}
@@ -112,7 +111,7 @@ export function TerminalPreview({
         </div>
       </div>
       <style>{`
-        @keyframes blink {
+        @keyframes termPreviewBlink {
           0%, 49% { opacity: 1; }
           50%, 100% { opacity: 0; }
         }

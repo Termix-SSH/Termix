@@ -151,10 +151,7 @@ async function resolveJumpHost(
 ): Promise<JumpHostConfig | null> {
   try {
     const hostResults = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
+      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
       "ssh_data",
       userId,
     );
@@ -164,8 +161,37 @@ async function resolveJumpHost(
     }
 
     const host = hostResults[0];
+    const ownerId = (host.userId || userId) as string;
 
     if (host.credentialId) {
+      if (userId !== ownerId) {
+        try {
+          const { SharedCredentialManager } =
+            await import("../utils/shared-credential-manager.js");
+          const sharedCredManager = SharedCredentialManager.getInstance();
+          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
+            hostId,
+            userId,
+          );
+          if (sharedCred) {
+            return {
+              ...host,
+              password: sharedCred.password,
+              key: sharedCred.key,
+              keyPassword: sharedCred.keyPassword,
+              keyType: sharedCred.keyType,
+              authType: sharedCred.key
+                ? "key"
+                : sharedCred.password
+                  ? "password"
+                  : "none",
+            } as JumpHostConfig;
+          }
+        } catch {
+          // fall through to owner credential lookup
+        }
+      }
+
       const credentials = await SimpleDBOps.select(
         getDb()
           .select()
@@ -173,11 +199,11 @@ async function resolveJumpHost(
           .where(
             and(
               eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, userId),
+              eq(sshCredentials.userId, ownerId),
             ),
           ),
         "ssh_credentials",
-        userId,
+        ownerId,
       );
 
       if (credentials.length > 0) {
@@ -185,7 +211,7 @@ async function resolveJumpHost(
         return {
           ...host,
           password: credential.password as string | undefined,
-          key: credential.privateKey as string | undefined,
+          key: (credential.key || credential.privateKey) as string | undefined,
           keyPassword: credential.keyPassword as string | undefined,
           keyType: credential.keyType as string | undefined,
           authType: credential.authType as string | undefined,
@@ -428,21 +454,33 @@ function execWithSudo(
   command: string,
   sudoPassword: string,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
+  return execWithSudoBuffer(session, command, sudoPassword).then((result) => ({
+    stdout: result.stdout.toString("utf8"),
+    stderr: result.stderr,
+    code: result.code,
+  }));
+}
+
+function execWithSudoBuffer(
+  session: SSHSession,
+  command: string,
+  sudoPassword: string,
+): Promise<{ stdout: Buffer; stderr: string; code: number }> {
   return new Promise((resolve) => {
     const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
     const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
 
     execChannel(session, sudoCommand, (err, stream) => {
       if (err) {
-        resolve({ stdout: "", stderr: err.message, code: 1 });
+        resolve({ stdout: Buffer.alloc(0), stderr: err.message, code: 1 });
         return;
       }
 
-      let stdout = "";
+      const stdoutChunks: Buffer[] = [];
       let stderr = "";
 
       stream.on("data", (chunk: Buffer) => {
-        stdout += chunk.toString();
+        stdoutChunks.push(chunk);
       });
 
       stream.stderr.on("data", (chunk: Buffer) => {
@@ -450,12 +488,22 @@ function execWithSudo(
       });
 
       stream.on("close", (code: number) => {
-        stdout = stdout.replace(/\[sudo\] password for .+?:\s*/g, "");
+        let stdout = Buffer.concat(stdoutChunks);
+        const sudoPromptMatch = stdout
+          .toString("utf8", 0, Math.min(stdout.length, 256))
+          .match(/^\[sudo\] password for .+?:\s*/);
+        if (sudoPromptMatch) {
+          stdout = stdout.subarray(Buffer.byteLength(sudoPromptMatch[0]));
+        }
         resolve({ stdout, stderr, code: code || 0 });
       });
 
       stream.on("error", (streamErr: Error) => {
-        resolve({ stdout, stderr: streamErr.message, code: 1 });
+        resolve({
+          stdout: Buffer.concat(stdoutChunks),
+          stderr: streamErr.message,
+          code: 1,
+        });
       });
     });
   });
@@ -862,7 +910,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   );
 
   // Resolve credentials server-side when frontend doesn't provide them
-  let resolvedCredentials = { password, sshKey, keyPassword, authType };
+  let resolvedCredentials = {
+    password,
+    sshKey,
+    keyPassword,
+    authType,
+    sudoPassword: undefined as string | undefined,
+  };
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -873,6 +927,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sshKey: resolvedHost.key,
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
+          sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         connectionLogs.push(
           createConnectionLog(
@@ -900,6 +955,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sshKey: resolvedHost.key,
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
+          sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         connectionLogs.push(
           createConnectionLog(
@@ -1194,6 +1250,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
       channelOpener: new ChannelOpenSerializer(),
       userId,
+      sudoPassword: resolvedCredentials.sudoPassword,
     };
     scheduleSessionCleanup(sessionId);
     res.json({
@@ -3058,6 +3115,42 @@ app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
 
           stream.on("close", (code) => {
             if (code !== 0) {
+              const isPermissionDenied = errorData
+                .toLowerCase()
+                .includes("permission denied");
+
+              if (isPermissionDenied && sshConn.sudoPassword) {
+                execWithSudoBuffer(
+                  sshConn,
+                  `cat '${escapedPath}'`,
+                  sshConn.sudoPassword,
+                )
+                  .then((result) => {
+                    if (result.code !== 0) {
+                      return res.status(403).json({
+                        error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
+                        needsSudo: true,
+                      });
+                    }
+
+                    const sudoData = result.stdout;
+                    const isBinary = detectBinary(sudoData);
+                    res.json({
+                      content: isBinary
+                        ? sudoData.toString("base64")
+                        : sudoData.toString("utf8"),
+                      isBinary,
+                      size: sudoData.length,
+                    });
+                  })
+                  .catch(() => {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  });
+                return;
+              }
+
               fileLogger.error(
                 `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
               );
@@ -3490,12 +3583,47 @@ app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
               }
             });
           } else {
+            const isPermDenied = errorData
+              .toLowerCase()
+              .includes("permission denied");
+            if (isPermDenied && sshConn.sudoPassword) {
+              execWithSudo(
+                sshConn,
+                `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
+                sshConn.sudoPassword,
+              )
+                .then(({ stdout, code: sudoCode }) => {
+                  if (sudoCode === 0 && stdout.includes("SUCCESS")) {
+                    restoreOriginalMode(null, () => {
+                      if (!res.headersSent) {
+                        res.json({
+                          message: "File written successfully",
+                          path: filePath,
+                        });
+                      }
+                    });
+                  } else if (!res.headersSent) {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  }
+                })
+                .catch(() => {
+                  if (!res.headersSent) {
+                    res
+                      .status(403)
+                      .json({ error: "Permission denied", needsSudo: true });
+                  }
+                });
+              return;
+            }
             fileLogger.error(
               `Fallback write failed with code ${code}: ${errorData}`,
             );
             if (!res.headersSent) {
               res.status(500).json({
                 error: `Write failed: ${errorData}`,
+                needsSudo: isPermDenied,
                 toast: { type: "error", message: `Write failed: ${errorData}` },
               });
             }
@@ -4868,6 +4996,64 @@ app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
       fileLogger.error("SFTP connection failed for download:", err);
       return res.status(500).json({ error: "SFTP connection failed" });
     });
+});
+
+app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
+  const { sessionId, path: filePath } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (!sessionId || !filePath) {
+    return res.status(400).json({ error: "Missing download parameters" });
+  }
+
+  const sshConn = sshSessions[sessionId];
+  if (!sshConn?.isConnected) {
+    return res
+      .status(400)
+      .json({ error: "SSH session not found or not connected" });
+  }
+  if (!verifySessionOwnership(sshConn, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  sshConn.lastActive = Date.now();
+
+  try {
+    const sftp = await getSessionSftp(sshConn);
+    const stats = await new Promise<{ size: number; isFile: () => boolean }>(
+      (resolve, reject) => {
+        sftp.stat(filePath, (err, s) => (err ? reject(err) : resolve(s)));
+      },
+    );
+
+    if (!stats.isFile()) {
+      return res.status(400).json({ error: "Cannot download directories" });
+    }
+
+    const fileName = filePath.split("/").pop() || "download";
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(fileName)}"`,
+    );
+    res.setHeader("Content-Length", String(stats.size));
+
+    const readStream = sftp.createReadStream(filePath);
+    readStream.on("error", (err) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: `Download failed: ${err.message}` });
+      } else {
+        res.destroy();
+      }
+    });
+    readStream.pipe(res);
+  } catch (err) {
+    if (!res.headersSent) {
+      res
+        .status(500)
+        .json({ error: `Download failed: ${(err as Error).message}` });
+    }
+  }
 });
 
 /**

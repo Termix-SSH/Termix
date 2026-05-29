@@ -1,15 +1,7 @@
 import React, { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/card.tsx";
 import { Button } from "@/components/button.tsx";
 import { PasswordInput } from "@/components/password-input.tsx";
 import { Label } from "@/components/label.tsx";
-import { Alert, AlertDescription, AlertTitle } from "@/components/alert.tsx";
 import {
   Tabs,
   TabsContent,
@@ -46,7 +38,7 @@ export function SSHAuthDialog({
   onSubmit,
   onCancel,
   hostInfo,
-  backgroundColor = "var(--bg-base)",
+  backgroundColor,
 }: SSHAuthDialogProps) {
   const { t } = useTranslation();
   const [authTab, setAuthTab] = useState<"password" | "key">("password");
@@ -56,6 +48,10 @@ export function SSHAuthDialog({
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  const hostDisplay = hostInfo.name
+    ? `${hostInfo.name} (${hostInfo.username}@${hostInfo.ip}:${hostInfo.port})`
+    : `${hostInfo.username}@${hostInfo.ip}:${hostInfo.port}`;
 
   const getReasonMessage = () => {
     switch (reason) {
@@ -83,30 +79,26 @@ export function SSHAuthDialog({
     }
   };
 
+  const canSubmit = () =>
+    authTab === "password" ? password !== "" : sshKey.trim() !== "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const credentials: {
         password?: string;
         sshKey?: string;
         keyPassword?: string;
       } = {};
-
       if (authTab === "password") {
-        if (password !== "") {
-          credentials.password = password;
-        }
+        if (password !== "") credentials.password = password;
       } else {
         if (sshKey.trim()) {
           credentials.sshKey = sshKey;
-          if (keyPassword.trim()) {
-            credentials.keyPassword = keyPassword;
-          }
+          if (keyPassword.trim()) credentials.keyPassword = keyPassword;
         }
       }
-
       onSubmit(credentials);
     } finally {
       setLoading(false);
@@ -119,110 +111,128 @@ export function SSHAuthDialog({
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const fileContent = await file.text();
-        setSshKey(fileContent);
+        setSshKey(await file.text());
       } catch (error) {
         console.error("Failed to read SSH key file:", error);
       }
     }
   };
 
-  const canSubmit = () => {
-    if (authTab === "password") {
-      return password !== "";
-    } else {
-      return sshKey.trim() !== "";
-    }
-  };
-
-  const hostDisplay = hostInfo.name
-    ? `${hostInfo.name} (${hostInfo.username}@${hostInfo.ip}:${hostInfo.port})`
-    : `${hostInfo.username}@${hostInfo.ip}:${hostInfo.port}`;
-
   return (
-    <div
-      className="absolute inset-0 z-9999 flex items-center justify-center bg-canvas animate-in fade-in duration-200"
-      style={{ backgroundColor }}
-    >
-      <Card className="w-full max-w-2xl mx-4 border-2 animate-in fade-in zoom-in-95 duration-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            {t("auth.sshAuthenticationRequired")}
-          </CardTitle>
-          <CardDescription>{hostDisplay}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert variant={reason === "auth_failed" ? "destructive" : "default"}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{getReasonMessage()}</AlertTitle>
-            <AlertDescription>{getReasonDescription()}</AlertDescription>
-          </Alert>
+    <div className="absolute inset-0 flex items-center justify-center z-500 animate-in fade-in duration-200">
+      <div
+        className="absolute inset-0 bg-canvas rounded-md"
+        style={{ backgroundColor: backgroundColor || undefined }}
+      />
+      <div className="bg-card border border-border w-full max-w-xl mx-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Shield className="size-4 text-accent-brand" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">
+              {t("auth.sshAuthenticationRequired")}
+            </h3>
+          </div>
+          <p className="text-[10px] font-mono font-bold tracking-tight text-muted-foreground mt-1">
+            {hostDisplay}
+          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 flex flex-col gap-4">
+            <div
+              className={`flex items-start gap-3 p-3 border ${
+                reason === "auth_failed"
+                  ? "border-destructive/20 bg-destructive/10"
+                  : "border-border bg-muted/10"
+              }`}
+            >
+              <AlertCircle
+                className={`size-4 shrink-0 mt-0.5 ${reason === "auth_failed" ? "text-destructive" : "text-accent-brand"}`}
+              />
+              <div>
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest ${reason === "auth_failed" ? "text-destructive" : ""}`}
+                >
+                  {getReasonMessage()}
+                </p>
+                <p
+                  className={`text-xs mt-1 ${reason === "auth_failed" ? "text-destructive/80" : "text-muted-foreground"}`}
+                >
+                  {getReasonDescription()}
+                </p>
+              </div>
+            </div>
+
             <Tabs
               value={authTab}
               onValueChange={(v) => setAuthTab(v as "password" | "key")}
             >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">
+              <TabsList className="w-full rounded-none">
+                <TabsTrigger
+                  value="password"
+                  className="flex-1 rounded-none text-[10px] font-bold uppercase tracking-widest"
+                >
                   {t("credentials.password")}
                 </TabsTrigger>
-                <TabsTrigger value="key">{t("credentials.sshKey")}</TabsTrigger>
+                <TabsTrigger
+                  value="key"
+                  className="flex-1 rounded-none text-[10px] font-bold uppercase tracking-widest"
+                >
+                  {t("credentials.sshKey")}
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="password" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ssh-password">
-                    {t("credentials.password")}
-                  </Label>
-                  <PasswordInput
-                    id="ssh-password"
-                    placeholder={t("placeholders.enterPassword")}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoFocus
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {t("auth.sshPasswordDescription")}
-                  </p>
-                </div>
+              <TabsContent
+                value="password"
+                className="mt-3 flex flex-col gap-2"
+              >
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("credentials.password")}
+                </Label>
+                <PasswordInput
+                  placeholder={t("placeholders.enterPassword")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoFocus
+                  className="rounded-none bg-muted/50 border-border text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  {t("auth.sshPasswordDescription")}
+                </p>
               </TabsContent>
 
-              <TabsContent value="key" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ssh-key">
+              <TabsContent value="key" className="mt-3 flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("credentials.sshPrivateKey")}
                   </Label>
-                  <div className="mb-2">
-                    <div className="relative inline-block w-full">
-                      <input
-                        id="key-upload"
-                        type="file"
-                        accept="*,.pem,.key,.txt,.ppk"
-                        onChange={handleKeyFileUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        <span className="truncate">
-                          {t("credentials.uploadPrivateKeyFile")}
-                        </span>
-                      </Button>
-                    </div>
+                  <div className="relative">
+                    <input
+                      id="key-upload"
+                      type="file"
+                      accept="*,.pem,.key,.txt,.ppk"
+                      onChange={handleKeyFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-start rounded-none text-[10px] font-bold uppercase tracking-widest border-border"
+                    >
+                      <Upload className="size-3.5 mr-2" />
+                      <span className="truncate">
+                        {t("credentials.uploadPrivateKeyFile")}
+                      </span>
+                    </Button>
                   </div>
                   <CodeMirror
                     value={sshKey}
                     onChange={(value) => setSshKey(value)}
                     placeholder={t("placeholders.pastePrivateKey")}
                     theme={oneDark}
-                    className="border border-input rounded-md"
-                    minHeight="200px"
-                    maxHeight="300px"
+                    className="border border-border text-xs"
+                    minHeight="160px"
+                    maxHeight="260px"
                     basicSetup={{
                       lineNumbers: true,
                       foldGutter: false,
@@ -245,44 +255,45 @@ export function SSHAuthDialog({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ssh-key-password">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t("credentials.keyPassword")} ({t("common.optional")})
                   </Label>
                   <PasswordInput
-                    id="ssh-key-password"
                     placeholder={t("placeholders.keyPassword")}
                     value={keyPassword}
                     onChange={(e) => setKeyPassword(e.target.value)}
+                    className="rounded-none bg-muted/50 border-border text-xs"
                   />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground">
                     {t("auth.sshKeyPasswordDescription")}
                   </p>
                 </div>
               </TabsContent>
             </Tabs>
+          </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={loading}
-                className="flex-1"
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={!canSubmit() || loading}
-                className="flex-1"
-              >
-                {loading ? t("common.connecting") : t("common.connect")}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          <div className="p-4 border-t border-border flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={loading}
+              className="rounded-none text-[10px] font-bold uppercase tracking-widest"
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={!canSubmit() || loading}
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
+            >
+              {loading ? t("common.connecting") : t("common.connect")}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

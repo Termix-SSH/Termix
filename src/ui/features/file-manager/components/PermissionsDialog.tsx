@@ -168,35 +168,40 @@ export function PermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md rounded-none border-border bg-card">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg rounded-none border-border bg-card">
         <DialogHeader>
           <DialogTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
             <Lock className="size-4 text-accent-brand" />
             {t("fileManager.changePermissions")}
           </DialogTitle>
-          <DialogDescription className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground font-mono">
+          <DialogDescription className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground font-mono break-all">
             {file.path}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-3 flex flex-col gap-4">
-          <div className="grid grid-cols-4 gap-0 border border-border overflow-hidden">
-            <div className="px-3 py-2 bg-muted/50 border-b border-r border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground" />
-            {[
-              t("fileManager.read"),
-              t("fileManager.write"),
-              t("fileManager.execute"),
-            ].map((h) => (
-              <div
-                key={h}
-                className="px-3 py-2 bg-muted/50 border-b border-r border-border last:border-r-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center"
-              >
-                {h}
-              </div>
-            ))}
+          <div className="border border-border overflow-hidden">
+            <div className="grid grid-cols-[1fr_64px_64px_64px] bg-muted/50 border-b border-border">
+              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground" />
+              {[
+                t("fileManager.read"),
+                t("fileManager.write"),
+                t("fileManager.execute"),
+              ].map((h) => (
+                <div
+                  key={h}
+                  className="py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center border-l border-border"
+                >
+                  {h}
+                </div>
+              ))}
+            </div>
             {rows.map((row, i) => (
-              <React.Fragment key={i}>
-                <div className="px-3 py-2.5 border-b border-r border-border last:border-b-0 text-xs font-semibold truncate">
+              <div
+                key={i}
+                className={`grid grid-cols-[1fr_64px_64px_64px] ${i < rows.length - 1 ? "border-b border-border" : ""}`}
+              >
+                <div className="px-3 py-3 text-xs font-semibold">
                   {row.label}
                 </div>
                 {[
@@ -206,29 +211,28 @@ export function PermissionsDialog({
                 ].map((perm, j) => (
                   <div
                     key={j}
-                    className="flex items-center justify-center border-b border-r border-border last:border-r-0 py-2.5"
+                    className="flex items-center justify-center border-l border-border py-3"
                   >
                     <input
                       type="checkbox"
                       checked={perm.val}
                       onChange={(e) => perm.set(e.target.checked)}
-                      className="accent-[var(--accent-brand)] size-3.5 cursor-pointer"
+                      className="accent-[var(--accent-brand)] size-4 cursor-pointer"
                     />
                   </div>
                 ))}
-              </React.Fragment>
+              </div>
             ))}
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground shrink-0">
               {t("fileManager.octal")}
             </span>
             <Input
               value={octal}
               readOnly
               className="w-20 rounded-none bg-muted/50 border-border text-xs font-mono text-center h-8"
-              maxLength={3}
             />
             <span className="text-[10px] text-muted-foreground font-mono">
               {t("fileManager.currentPermissions")}: {file.permissions || "—"}

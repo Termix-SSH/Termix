@@ -551,7 +551,7 @@ export function FileManagerSidebar({
 
   return (
     <>
-      <div className="h-full flex flex-col bg-card border-r border-border overflow-hidden">
+      <div className="h-full flex flex-col bg-card overflow-hidden">
         <div className="flex-1 overflow-y-auto thin-scrollbar">
           {/* ── Recent files ──────────────────────────────────────── */}
           {renderSection(t("fileManager.recent"), recentItems, (item) =>

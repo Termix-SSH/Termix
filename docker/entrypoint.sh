@@ -135,6 +135,12 @@ fi
 echo "Starting nginx..."
 nginx -c /tmp/nginx/nginx.conf
 
+# Inject runtime BASE_PATH into frontend if configured
+if [ -n "$BASE_PATH" ]; then
+    echo "Injecting BASE_PATH: $BASE_PATH"
+    find /app/html -name "index.html" -exec sed -i "s|window.__TERMIX_BASE_PATH__ = \"\"|window.__TERMIX_BASE_PATH__ = \"$BASE_PATH\"|g" {} \;
+fi
+
 echo "Starting backend services..."
 cd /app
 export NODE_ENV=production

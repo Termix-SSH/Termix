@@ -3,20 +3,8 @@ import { DraggableWindow } from "./DraggableWindow.tsx";
 import { Terminal } from "@/features/terminal/Terminal.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
-
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  authType: "password" | "key";
-  credentialId?: number;
-  userId?: number;
-}
+import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
+import type { SSHHost } from "@/types/index.ts";
 
 interface TerminalWindowProps {
   windowId: string;
@@ -96,29 +84,31 @@ export function TerminalWindow({
       : t("terminal.terminalTitle", { host: hostConfig.name });
 
   return (
-    <DraggableWindow
-      title={terminalTitle}
-      initialX={initialX}
-      initialY={initialY}
-      initialWidth={800}
-      initialHeight={500}
-      minWidth={600}
-      minHeight={400}
-      onClose={handleClose}
-      onMaximize={handleMaximize}
-      onFocus={handleFocus}
-      onResize={handleResize}
-      isMaximized={currentWindow.isMaximized}
-      zIndex={currentWindow.zIndex}
-    >
-      <Terminal
-        ref={terminalRef}
-        hostConfig={hostConfig}
-        isVisible={!currentWindow.isMinimized}
-        initialPath={initialPath}
-        executeCommand={executeCommand}
+    <CommandHistoryProvider>
+      <DraggableWindow
+        title={terminalTitle}
+        initialX={initialX}
+        initialY={initialY}
+        initialWidth={800}
+        initialHeight={500}
+        minWidth={600}
+        minHeight={400}
         onClose={handleClose}
-      />
-    </DraggableWindow>
+        onMaximize={handleMaximize}
+        onFocus={handleFocus}
+        onResize={handleResize}
+        isMaximized={currentWindow.isMaximized}
+        zIndex={currentWindow.zIndex}
+      >
+        <Terminal
+          ref={terminalRef as any}
+          hostConfig={hostConfig as any}
+          isVisible={!currentWindow.isMinimized}
+          initialPath={initialPath}
+          executeCommand={executeCommand}
+          onClose={handleClose}
+        />
+      </DraggableWindow>
+    </CommandHistoryProvider>
   );
 }

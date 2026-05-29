@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils.ts";
 import {
   Download,
@@ -143,14 +143,6 @@ export function FileManagerContextMenu({
 
     setIsMounted(true);
 
-    const adjustPosition = () => {
-      const menuWidth = menuRef.current?.offsetWidth ?? 260;
-      const menuHeight = menuRef.current?.offsetHeight ?? 400;
-      setMenuPosition(getClampedMenuPosition(x, y, menuWidth, menuHeight));
-    };
-
-    adjustPosition();
-
     let cleanupFn: (() => void) | null = null;
 
     const timeoutId = setTimeout(() => {
@@ -205,6 +197,21 @@ export function FileManagerContextMenu({
       }
     };
   }, [isVisible, x, y, onClose]);
+
+  useLayoutEffect(() => {
+    if (!isVisible || !menuRef.current) return;
+    const menuWidth = menuRef.current.offsetWidth;
+    const menuHeight = menuRef.current.offsetHeight;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    let adjustedX = x;
+    let adjustedY = y;
+    if (x + menuWidth > viewportWidth)
+      adjustedX = viewportWidth - menuWidth - 10;
+    if (y + menuHeight > viewportHeight)
+      adjustedY = Math.max(10, viewportHeight - menuHeight - 10);
+    setMenuPosition({ x: adjustedX, y: adjustedY });
+  }, [isVisible, x, y, files.length]);
 
   const isFileContext = files.length > 0;
   const isSingleFile = files.length === 1;
@@ -528,9 +535,8 @@ export function FileManagerContextMenu({
       <div
         ref={menuRef}
         data-context-menu
-<<<<<<< HEAD:src/ui/desktop/apps/features/file-manager/FileManagerContextMenu.tsx
         className={cn(
-          "fixed bg-canvas border border-edge rounded-lg shadow-xl min-w-[180px] max-w-[250px] z-[99995] overflow-x-hidden overflow-y-auto",
+          "fixed bg-card border border-border rounded-none shadow-md min-w-[220px] max-w-[300px] z-[99995] overflow-x-hidden overflow-y-auto py-1",
         )}
         style={{
           left: menuPosition.x,
@@ -543,7 +549,7 @@ export function FileManagerContextMenu({
             return (
               <div
                 key={`separator-${index}`}
-                className="border-t border-border"
+                className="my-1 border-t border-border"
               />
             );
           }
@@ -552,10 +558,10 @@ export function FileManagerContextMenu({
             <button
               key={index}
               className={cn(
-                "w-full px-3 h-9 text-left text-[10px] font-bold uppercase tracking-widest flex items-center justify-between",
-                "hover:bg-accent-brand/10 hover:text-accent-brand transition-colors cursor-pointer rounded-none",
+                "w-full px-3 min-h-8 py-1.5 text-left text-xs font-semibold flex items-center justify-between gap-3 rounded-none transition-colors cursor-pointer",
+                "hover:bg-accent-brand/10 hover:text-accent-brand",
                 item.disabled &&
-                  "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-current",
+                  "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-current",
                 item.danger &&
                   "text-destructive hover:bg-destructive/10 hover:text-destructive",
               )}
@@ -567,12 +573,14 @@ export function FileManagerContextMenu({
               }}
               disabled={item.disabled}
             >
-              <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <div className="flex-shrink-0">{item.icon}</div>
-                <span className="flex-1 truncate">{item.label}</span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {item.icon}
+                </div>
+                <span className="flex-1 leading-tight">{item.label}</span>
               </div>
               {item.shortcut && (
-                <div className="ml-2 flex-shrink-0">
+                <div className="ml-auto flex-shrink-0 opacity-50">
                   {renderShortcut(item.shortcut)}
                 </div>
               )}

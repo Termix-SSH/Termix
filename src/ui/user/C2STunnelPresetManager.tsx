@@ -1,17 +1,7 @@
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
-import { Label } from "@/components/label.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select.tsx";
-import { Switch } from "@/components/switch.tsx";
-import { TunnelInlineControls } from "@/features/tunnel/TunnelInlineControls.tsx";
-import { TunnelModeSelector } from "@/features/tunnel/TunnelModeSelector.tsx";
+import { FakeSwitch } from "@/components/section-card.tsx";
 import {
   getTunnelModeDescription,
   getTunnelPortLabels,
@@ -28,9 +18,21 @@ import type {
   C2STunnelPreset,
   SSHHost,
   TunnelConnection,
+  TunnelMode,
   TunnelStatus,
 } from "@/types/index.js";
-import { Activity, Download, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+  Download,
+  Loader2,
+  Pencil,
+  Play,
+  Plus,
+  Save,
+  Square,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -134,6 +136,44 @@ function stripClientTunnelDiagnostics(tunnel: ClientTunnel): TunnelConnection {
   return presetTunnel;
 }
 
+function getStatusKind(status?: TunnelStatus) {
+  const value = status?.status?.toUpperCase() || "DISCONNECTED";
+  if (value === "CONNECTED") return "connected";
+  if (value === "ERROR" || value === "FAILED") return "error";
+  if (
+    value === "CONNECTING" ||
+    value === "DISCONNECTING" ||
+    value === "RETRYING" ||
+    value === "WAITING"
+  ) {
+    return "connecting";
+  }
+  return "disconnected";
+}
+
+function getStatusTitle(
+  status: TunnelStatus | undefined,
+  statusText: string,
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  if (!status) return statusText;
+  const details = [];
+  if (status.reason) details.push(status.reason);
+  if (status.retryCount && status.maxRetries) {
+    details.push(
+      t("tunnels.attempt", {
+        current: status.retryCount,
+        max: status.maxRetries,
+      }),
+    );
+  }
+  if (status.nextRetryIn) {
+    details.push(t("tunnels.nextRetryIn", { seconds: status.nextRetryIn }));
+  }
+  if (status.errorType && !status.reason) details.push(status.errorType);
+  return details.length > 0 ? details.join("\n") : statusText;
+}
+
 export function C2STunnelPresetManager(): React.ReactElement {
   const { t } = useTranslation();
   const [localConfig, setLocalConfig] = React.useState<ClientTunnel[]>([]);
@@ -156,6 +196,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
   );
   const [selectedPresetId, setSelectedPresetId] = React.useState("");
   const [presetName, setPresetName] = React.useState("");
+  const [openTunnels, setOpenTunnels] = React.useState<Set<number>>(new Set());
   const isElectron =
     typeof window !== "undefined" && window.electronAPI?.isElectron === true;
 
@@ -185,6 +226,14 @@ export function C2STunnelPresetManager(): React.ReactElement {
     [savedLocalConfig, localConfig],
   );
   const hasPresets = presets.length > 0;
+
+  function toggleTunnel(index: number) {
+    setOpenTunnels((current) => {
+      const next = new Set(current);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+  }
 
   const getTunnelName = React.useCallback(
     (tunnel: ClientTunnel, index: number) =>
@@ -216,7 +265,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const getTunnelDisplayName = React.useCallback(
     (tunnel: ClientTunnel, index: number) => {
       if (tunnel.displayName?.trim()) return tunnel.displayName.trim();
-
       const mode = getTunnelMode(tunnel);
       const endpointName = getEndpointName(tunnel);
       if (mode === "remote") {
@@ -256,7 +304,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
       const mode = getTunnelMode(tunnel);
       const bindHost = getEffectiveBindHost(tunnel.bindHost);
       const endpointName = getEndpointName(tunnel);
-
       if (mode === "remote") {
         return t("tunnels.summaryClientRemote", {
           endpoint: endpointName,
@@ -289,7 +336,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   const refreshLocalConfig = React.useCallback(async () => {
     if (!isElectron) return;
-
     const [config, defaultName, nextHosts] = await Promise.all([
       window.electronAPI.getC2STunnelConfig(),
       window.electronAPI.getC2STunnelPresetDefaultName(),
@@ -308,7 +354,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   React.useEffect(() => {
     if (!isElectron) return;
-
     Promise.all([refreshLocalConfig(), refreshPresets()]).catch(() => {
       setPresets([]);
     });
@@ -316,37 +361,26 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   React.useEffect(() => {
     if (!isElectron) return;
-
     const refreshStatuses = async () => {
       const statuses = await window.electronAPI.getC2STunnelStatuses();
       setTunnelStatuses(statuses as Record<string, TunnelStatus>);
     };
-
     refreshStatuses().catch(() => {});
     const unsubscribe = window.electronAPI.onC2STunnelStatuses?.((statuses) => {
       setTunnelStatuses(statuses as Record<string, TunnelStatus>);
     });
-
     return () => unsubscribe?.();
   }, [isElectron]);
 
   React.useEffect(() => {
     const previousStatuses = previousTunnelStatusesRef.current;
-
     for (const [tunnelName, status] of Object.entries(tunnelStatuses)) {
       const previous = previousStatuses[tunnelName];
       const statusChanged =
         previous?.status !== status.status ||
         previous?.reason !== status.reason ||
         previous?.retryCount !== status.retryCount;
-
       if (!statusChanged) continue;
-
-      console.info("[tunnels] Client tunnel status changed", {
-        tunnelName,
-        status,
-      });
-
       const statusValue = status.status?.toUpperCase();
       const hasFailureDetail =
         statusValue === "ERROR" ||
@@ -354,29 +388,19 @@ export function C2STunnelPresetManager(): React.ReactElement {
         (Boolean(status.errorType) &&
           Boolean(status.reason) &&
           previous?.reason !== status.reason);
-
       if (hasFailureDetail) {
         const message = status.reason || t("tunnels.manualControlError");
-        console.error("[tunnels] Client tunnel failed", {
-          tunnelName,
-          status,
-        });
-        toast.error(message, {
-          id: `client-tunnel-error-${tunnelName}`,
-        });
+        toast.error(message, { id: `client-tunnel-error-${tunnelName}` });
       }
     }
-
     previousTunnelStatusesRef.current = tunnelStatuses;
   }, [t, tunnelStatuses]);
 
   const validateLocalConfig = (config: ClientTunnel[]) => {
     const autoStartListeners = new Set<string>();
-
     for (const tunnel of config) {
       const bindHost = getEffectiveBindHost(tunnel.bindHost);
       const mode = getTunnelMode(tunnel);
-
       if (!isValidIPv4(bindHost)) {
         return mode === "remote"
           ? t("tunnels.invalidLocalTargetIp")
@@ -411,22 +435,17 @@ export function C2STunnelPresetManager(): React.ReactElement {
         autoStartListeners.add(listenerKey);
       }
     }
-
     return null;
   };
 
   const saveLocalConfig = async (config: ClientTunnel[]) => {
     const normalizedConfig = config.map(normalizeClientTunnel);
     const validationError = validateLocalConfig(normalizedConfig);
-    if (validationError) {
-      throw new Error(validationError);
-    }
-
+    if (validationError) throw new Error(validationError);
     const result =
       await window.electronAPI.saveC2STunnelConfig(normalizedConfig);
-    if (!result.success) {
+    if (!result.success)
       throw new Error(result.error || t("tunnels.localSaveError"));
-    }
     setLocalConfig(normalizedConfig);
     setSavedLocalConfig(normalizedConfig);
   };
@@ -447,7 +466,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const handleEndpointChange = (index: number, hostId: string) => {
     const host = sshHosts.find((item) => String(item.id) === hostId);
     if (!host) return;
-
     updateTunnel(index, {
       sourceHostId: host.id,
       sourceHostName: host.name,
@@ -492,22 +510,14 @@ export function C2STunnelPresetManager(): React.ReactElement {
       setTunnelMetadata(index, { lastError: validationError });
       return;
     }
-
     setTunnelTests((current) => ({ ...current, [tunnelName]: true }));
-    console.info("[tunnels] Testing client tunnel", {
-      tunnelName,
-      tunnel: normalizedTunnel,
-    });
-
     try {
       const result = await window.electronAPI.testC2STunnel(
         normalizedTunnel,
         index,
       );
-      if (!result.success) {
+      if (!result.success)
         throw new Error(result.error || t("tunnels.tunnelTestFailed"));
-      }
-
       setTunnelMetadata(index, {
         lastTestedAt: new Date().toISOString(),
         lastError: "",
@@ -516,10 +526,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t("tunnels.tunnelTestFailed");
-      console.error("[tunnels] Client tunnel test failed", {
-        tunnelName,
-        error,
-      });
       setTunnelMetadata(index, { lastError: message });
       toast.error(message);
     } finally {
@@ -539,21 +545,14 @@ export function C2STunnelPresetManager(): React.ReactElement {
       setTunnelMetadata(index, { lastError: validationError });
       return;
     }
-
     setTunnelActions((current) => ({ ...current, [tunnelName]: true }));
-    console.info("[tunnels] Starting client tunnel", {
-      tunnelName,
-      tunnel: normalizedTunnel,
-    });
-
     try {
       const result = await window.electronAPI.startC2STunnel(
         normalizedTunnel,
         index,
       );
-      if (!result.success) {
+      if (!result.success)
         throw new Error(result.error || t("tunnels.manualControlError"));
-      }
       const statuses = await window.electronAPI.getC2STunnelStatuses();
       setTunnelStatuses(statuses as Record<string, TunnelStatus>);
       setTunnelMetadata(index, {
@@ -566,10 +565,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
         error instanceof Error
           ? error.message
           : t("tunnels.manualControlError");
-      console.error("[tunnels] Failed to start client tunnel", {
-        tunnelName,
-        error,
-      });
       setTunnelMetadata(index, { lastError: message });
       toast.error(message);
     } finally {
@@ -580,12 +575,10 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const handleTunnelStop = async (tunnel: ClientTunnel, index: number) => {
     const tunnelName = getTunnelName(tunnel, index);
     setTunnelActions((current) => ({ ...current, [tunnelName]: true }));
-
     try {
       const result = await window.electronAPI.stopC2STunnel(tunnelName);
-      if (!result.success) {
+      if (!result.success)
         throw new Error(result.error || t("tunnels.manualControlError"));
-      }
       const statuses = await window.electronAPI.getC2STunnelStatuses();
       setTunnelStatuses(statuses as Record<string, TunnelStatus>);
       toast.success(t("tunnels.clientTunnelStopped"));
@@ -602,7 +595,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   const handleSavePreset = async () => {
     if (!presetName.trim()) return;
-
     try {
       await saveLocalConfig(localConfig);
       await createC2STunnelPreset({
@@ -620,7 +612,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   const handleLoadPreset = async () => {
     if (!selectedPreset || selectedMatchesCurrent) return;
-
     try {
       await saveLocalConfig(selectedPreset.config.map(normalizeClientTunnel));
       toast.success(t("profile.c2sPresetLoaded"));
@@ -635,7 +626,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   const handleRenamePreset = async () => {
     if (!selectedPreset || !presetName.trim()) return;
-
     try {
       await updateC2STunnelPreset(selectedPreset.id, {
         name: presetName.trim(),
@@ -649,7 +639,6 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   const handleDeletePreset = async () => {
     if (!selectedPreset) return;
-
     try {
       await deleteC2STunnelPreset(selectedPreset.id);
       setSelectedPresetId("");
@@ -662,11 +651,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
 
   if (!isElectron) {
     return (
-      <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-        <h3 className="text-lg font-semibold mb-2">
-          {t("profile.c2sTunnelPresets")}
-        </h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="pt-2">
+        <p className="text-xs text-muted-foreground">
           {t("profile.c2sTunnelPresetsUnavailable")}
         </p>
       </div>
@@ -674,419 +660,538 @@ export function C2STunnelPresetManager(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">
-              {t("tunnels.clientTunnels")}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("profile.c2sTunnelConfigDesc")}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                setLocalConfig((current) => [...current, createClientTunnel()])
-              }
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t("tunnels.addClientTunnel")}
-            </Button>
-            {hasUnsavedLocalChanges && (
-              <span className="self-center text-xs text-muted-foreground">
-                {t("common.unsavedChanges")}
-              </span>
-            )}
-            <Button type="button" onClick={handleSaveLocal}>
-              <Save className="w-4 h-4 mr-2" />
-              {t("common.save")}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {localConfig.length > 0 ? (
-            localConfig.map((tunnel, index) => {
-              const mode = getTunnelMode(tunnel);
-              const modeDescription = getTunnelModeDescription(
-                "client",
-                mode,
-                {
-                  sourcePort: tunnel.sourcePort,
-                  endpointPort: tunnel.endpointPort,
-                },
-                t,
-              );
-              const tunnelName = getTunnelName(tunnel, index);
-              const tunnelStatus = tunnelStatuses[tunnelName];
-              const isTunnelActionLoading = Boolean(tunnelActions[tunnelName]);
-              const isTunnelTestLoading = Boolean(tunnelTests[tunnelName]);
-              const startDisabled = !tunnel.sourceHostId;
-              const startDisabledReason = t("tunnels.endpointSshHostRequired");
-              const { sourcePortLabel, endpointPortLabel } =
-                getTunnelPortLabels("client", mode, t);
-              const tunnelSummary = getTunnelSummary(tunnel);
-              const statusError =
-                tunnelStatus?.reason ||
-                (tunnelStatus?.errorType ? String(tunnelStatus.errorType) : "");
-              const lastError = statusError || tunnel.lastError || "";
-              const lastStarted = formatDateTime(tunnel.lastStartedAt);
-              const lastTested = formatDateTime(tunnel.lastTestedAt);
-
-              return (
-                <div key={index} className="p-4 border rounded-lg bg-muted/50">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-[240px] flex-1 space-y-1">
-                      <Label className="text-xs text-muted-foreground">
-                        {t("tunnels.tunnelName")}
-                      </Label>
-                      <Input
-                        value={tunnel.displayName || ""}
-                        onChange={(event) =>
-                          updateTunnel(index, {
-                            displayName: event.target.value,
-                          })
-                        }
-                        placeholder={getTunnelDisplayName(tunnel, index)}
-                        className="h-8 max-w-md bg-background"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={startDisabled || isTunnelTestLoading}
-                        title={startDisabled ? startDisabledReason : undefined}
-                        onClick={() => handleTunnelTest(tunnel, index)}
-                        className="h-8 px-3 text-xs"
-                      >
-                        <Activity
-                          className={`h-3 w-3 mr-1 ${
-                            isTunnelTestLoading ? "animate-pulse" : ""
-                          }`}
-                        />
-                        {t("tunnels.test")}
-                      </Button>
-                      <TunnelInlineControls
-                        status={tunnelStatus}
-                        loading={isTunnelActionLoading}
-                        onStart={() => handleTunnelStart(tunnel, index)}
-                        onStop={() => handleTunnelStop(tunnel, index)}
-                        startDisabled={startDisabled}
-                        startDisabledReason={startDisabledReason}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setLocalConfig((current) =>
-                            current.filter(
-                              (_, tunnelIndex) => tunnelIndex !== index,
-                            ),
-                          )
-                        }
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        {t("common.delete")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 mb-4 mt-4">
-                    <div>
-                      <Label>{t("tunnels.type")}</Label>
-                      <div className="mt-2">
-                        <TunnelModeSelector
-                          mode={mode}
-                          scope="client"
-                          onChange={(mode) =>
-                            updateTunnel(index, {
-                              mode,
-                              tunnelType: getTunnelTypeForMode(mode),
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{t("tunnels.endpointSshConfig")}</Label>
-                      <Select
-                        value={
-                          tunnel.sourceHostId
-                            ? String(tunnel.sourceHostId)
-                            : undefined
-                        }
-                        onValueChange={(value) =>
-                          handleEndpointChange(index, value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={t(
-                              "tunnels.endpointSshHostPlaceholder",
-                            )}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sshHosts.map((host) => (
-                            <SelectItem key={host.id} value={String(host.id)}>
-                              {host.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {tunnel.mode !== "dynamic" && (
-                      <div className="col-span-12 md:col-span-6 space-y-2">
-                        <Label>{endpointPortLabel}</Label>
-                        <Input
-                          value={tunnel.endpointPort}
-                          onChange={(event) =>
-                            updateTunnel(index, {
-                              endpointPort: Number(event.target.value),
-                            })
-                          }
-                          placeholder={t("placeholders.defaultEndpointPort")}
-                        />
-                      </div>
-                    )}
-                    {tunnel.mode === "dynamic" && (
-                      <div className="hidden md:block md:col-span-6" />
-                    )}
-
-                    <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{t("tunnels.bindIp")}</Label>
-                      <Input
-                        value={tunnel.bindHost}
-                        onChange={(event) =>
-                          updateTunnel(index, {
-                            bindHost: event.target.value.trim(),
-                          })
-                        }
-                        placeholder={getBindPlaceholder(mode)}
-                      />
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{sourcePortLabel}</Label>
-                      <Input
-                        value={tunnel.sourcePort}
-                        onChange={(event) =>
-                          updateTunnel(index, {
-                            sourcePort: Number(event.target.value),
-                          })
-                        }
-                        placeholder={t("placeholders.defaultPort")}
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {modeDescription}
-                  </p>
-                  <div
-                    className="mt-2 rounded-md border bg-canvasX px-3 py-2 text-xs text-muted-foreground"
-                    title={tunnelSummary}
-                  >
-                    <span className="font-medium text-foreground">
-                      {t("tunnels.route")}
-                    </span>{" "}
-                    {tunnelSummary}
-                  </div>
-                  {mode === "remote" && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {t("tunnels.clientRemoteServerNote")}
-                    </p>
-                  )}
-                  {(lastError || lastStarted || lastTested) && (
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      {lastStarted && (
-                        <span>
-                          {t("tunnels.lastStarted")}: {lastStarted}
-                        </span>
-                      )}
-                      {lastTested && (
-                        <span>
-                          {t("tunnels.lastTested")}: {lastTested}
-                        </span>
-                      )}
-                      {lastError && (
-                        <span
-                          className="text-red-600 dark:text-red-400"
-                          title={lastError}
-                        >
-                          {t("tunnels.lastError")}: {lastError}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-12 gap-4 mt-4">
-                    <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{t("tunnels.maxRetries")}</Label>
-                      <Input
-                        value={tunnel.maxRetries}
-                        onChange={(event) =>
-                          updateTunnel(index, {
-                            maxRetries: Number(event.target.value),
-                          })
-                        }
-                        placeholder={t("placeholders.maxRetries")}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t("tunnels.maxRetriesDescription")}
-                      </p>
-                    </div>
-
-                    <div className="col-span-12 md:col-span-6 space-y-2">
-                      <Label>{t("tunnels.retryInterval")}</Label>
-                      <Input
-                        value={tunnel.retryInterval}
-                        onChange={(event) =>
-                          updateTunnel(index, {
-                            retryInterval: Number(event.target.value),
-                          })
-                        }
-                        placeholder={t("placeholders.retryInterval")}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t("tunnels.retryIntervalDescription")}
-                      </p>
-                    </div>
-
-                    <div className="col-span-12 space-y-2">
-                      <div className="flex items-center justify-between gap-3 rounded-md border bg-canvas p-3">
-                        <Label>{t("tunnels.autoStart")}</Label>
-                        <Switch
-                          checked={tunnel.autoStart}
-                          onCheckedChange={(checked) =>
-                            updateTunnel(index, { autoStart: checked })
-                          }
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t(
-                          tunnel.autoStart
-                            ? "tunnels.clientAutoStartDesc"
-                            : "tunnels.clientManualStartDesc",
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-sm text-muted-foreground rounded-md border border-dashed p-3">
-              {t("tunnels.noClientTunnels")}
-            </p>
+    <div className="flex flex-col gap-0 pt-2">
+      {/* Tunnel list header */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("tunnels.clientTunnels")}
+        </span>
+        <div className="flex items-center gap-1.5">
+          {hasUnsavedLocalChanges && (
+            <span className="text-[10px] text-muted-foreground">
+              {t("common.unsavedChanges")}
+            </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-accent-brand hover:bg-accent-brand/10"
+            onClick={() => {
+              setOpenTunnels(
+                (current) => new Set([...current, localConfig.length]),
+              );
+              setLocalConfig((current) => [...current, createClientTunnel()]);
+            }}
+          >
+            <Plus className="size-3" />
+          </Button>
         </div>
       </div>
 
-      <div className="rounded-lg border-2 border-edge bg-elevated p-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">
-            {t("profile.c2sTunnelPresets")}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("profile.c2sTunnelPresetsDesc")}
-          </p>
+      {/* Tunnel items */}
+      <div className="flex flex-col gap-1.5">
+        {localConfig.length === 0 ? (
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            {t("tunnels.noClientTunnels")}
+          </div>
+        ) : (
+          localConfig.map((tunnel, index) => {
+            const mode = getTunnelMode(tunnel);
+            const tunnelName = getTunnelName(tunnel, index);
+            const tunnelStatus = tunnelStatuses[tunnelName];
+            const isTunnelActionLoading = Boolean(tunnelActions[tunnelName]);
+            const isTunnelTestLoading = Boolean(tunnelTests[tunnelName]);
+            const startDisabled = !tunnel.sourceHostId;
+            const { sourcePortLabel, endpointPortLabel } = getTunnelPortLabels(
+              "client",
+              mode,
+              t,
+            );
+            const tunnelSummary = getTunnelSummary(tunnel);
+            const modeDescription = getTunnelModeDescription(
+              "client",
+              mode,
+              {
+                sourcePort: tunnel.sourcePort,
+                endpointPort: tunnel.endpointPort,
+              },
+              t,
+            );
+            const statusError =
+              tunnelStatus?.reason ||
+              (tunnelStatus?.errorType ? String(tunnelStatus.errorType) : "");
+            const lastError = statusError || tunnel.lastError || "";
+            const lastStarted = formatDateTime(tunnel.lastStartedAt);
+            const lastTested = formatDateTime(tunnel.lastTestedAt);
+            const isOpen = openTunnels.has(index);
+
+            const kind = getStatusKind(tunnelStatus);
+            const isDisconnected = kind === "disconnected";
+            const statusText =
+              kind === "connected"
+                ? t("tunnels.connected")
+                : kind === "connecting"
+                  ? t("tunnels.connecting")
+                  : kind === "error"
+                    ? t("tunnels.error")
+                    : t("tunnels.disconnected");
+            const statusTitle = getStatusTitle(tunnelStatus, statusText, t);
+            const statusClass =
+              kind === "connected"
+                ? "text-accent-brand border-accent-brand/40 bg-accent-brand/10"
+                : kind === "connecting"
+                  ? "text-blue-400 border-blue-400/40 bg-blue-400/10"
+                  : kind === "error"
+                    ? "text-destructive border-destructive/40 bg-destructive/10"
+                    : "text-muted-foreground border-border bg-muted/30";
+
+            return (
+              <div key={index} className="border border-border bg-muted/10">
+                {/* Always-visible header */}
+                <button
+                  className="flex items-center gap-1.5 w-full px-2 py-1.5 text-left hover:bg-muted/30 transition-colors"
+                  onClick={() => toggleTunnel(index)}
+                >
+                  <ChevronDown
+                    className={`size-3 text-muted-foreground shrink-0 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
+                  />
+                  <span className="text-xs font-medium flex-1 min-w-0 truncate">
+                    {getTunnelDisplayName(tunnel, index)}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-1 py-px border uppercase shrink-0 ${statusClass}`}
+                    title={statusTitle}
+                  >
+                    {statusText}
+                  </span>
+                </button>
+
+                {/* Expanded body */}
+                {isOpen && (
+                  <div className="border-t border-border px-2 pb-2 flex flex-col gap-2 pt-2">
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest border-border text-muted-foreground hover:text-foreground"
+                        disabled={startDisabled || isTunnelTestLoading}
+                        title={
+                          startDisabled
+                            ? t("tunnels.endpointSshHostRequired")
+                            : undefined
+                        }
+                        onClick={() => handleTunnelTest(tunnel, index)}
+                      >
+                        <Activity
+                          className={`size-3 ${isTunnelTestLoading ? "animate-pulse" : ""}`}
+                        />
+                        {t("tunnels.test")}
+                      </Button>
+
+                      {isTunnelActionLoading ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-border"
+                          disabled
+                        >
+                          <Loader2 className="size-3 animate-spin" />
+                          {isDisconnected
+                            ? t("tunnels.start")
+                            : t("tunnels.stop")}
+                        </Button>
+                      ) : isDisconnected ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                          disabled={startDisabled}
+                          title={
+                            startDisabled
+                              ? t("tunnels.endpointSshHostRequired")
+                              : undefined
+                          }
+                          onClick={() => handleTunnelStart(tunnel, index)}
+                        >
+                          <Play className="size-3" />
+                          {t("tunnels.start")}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleTunnelStop(tunnel, index)}
+                        >
+                          <Square className="size-3" />
+                          {t("tunnels.stop")}
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 text-muted-foreground hover:text-destructive ml-auto"
+                        onClick={() => {
+                          setLocalConfig((current) =>
+                            current.filter((_, idx) => idx !== index),
+                          );
+                          setOpenTunnels((current) => {
+                            const next = new Set<number>();
+                            for (const idx of current) {
+                              if (idx < index) next.add(idx);
+                              else if (idx > index) next.add(idx - 1);
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </div>
+
+                    {/* Display name */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("tunnels.tunnelName")}
+                      </label>
+                      <Input
+                        value={tunnel.displayName || ""}
+                        onChange={(e) =>
+                          updateTunnel(index, { displayName: e.target.value })
+                        }
+                        placeholder={getTunnelDisplayName(tunnel, index)}
+                        className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                      />
+                    </div>
+
+                    {/* Mode */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("tunnels.type")}
+                      </label>
+                      <select
+                        value={mode}
+                        onChange={(e) =>
+                          updateTunnel(index, {
+                            mode: e.target.value as TunnelMode,
+                            tunnelType: getTunnelTypeForMode(
+                              e.target.value as TunnelMode,
+                            ),
+                          })
+                        }
+                        className="px-2 py-1 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full h-7"
+                      >
+                        <option value="local">{t("tunnels.typeLocal")}</option>
+                        <option value="remote">
+                          {t("tunnels.typeRemote")}
+                        </option>
+                        <option value="dynamic">
+                          {t("tunnels.typeDynamic")}
+                        </option>
+                      </select>
+                      <span className="text-[10px] text-muted-foreground">
+                        {modeDescription}
+                      </span>
+                    </div>
+
+                    {/* SSH host */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("tunnels.endpointSshConfig")}
+                      </label>
+                      <select
+                        value={
+                          tunnel.sourceHostId ? String(tunnel.sourceHostId) : ""
+                        }
+                        onChange={(e) =>
+                          handleEndpointChange(index, e.target.value)
+                        }
+                        className="px-2 py-1 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full h-7"
+                      >
+                        <option value="">
+                          {t("tunnels.endpointSshHostPlaceholder")}
+                        </option>
+                        {sshHosts.map((host) => (
+                          <option key={host.id} value={String(host.id)}>
+                            {host.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Ports */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {sourcePortLabel}
+                        </label>
+                        <Input
+                          type="number"
+                          value={tunnel.sourcePort}
+                          onChange={(e) =>
+                            updateTunnel(index, {
+                              sourcePort: Number(e.target.value),
+                            })
+                          }
+                          placeholder={t("placeholders.defaultPort")}
+                          className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                        />
+                      </div>
+                      {mode !== "dynamic" && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {endpointPortLabel}
+                          </label>
+                          <Input
+                            type="number"
+                            value={tunnel.endpointPort}
+                            onChange={(e) =>
+                              updateTunnel(index, {
+                                endpointPort: Number(e.target.value),
+                              })
+                            }
+                            placeholder={t("placeholders.defaultEndpointPort")}
+                            className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bind IP */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("tunnels.bindIp")}
+                      </label>
+                      <Input
+                        value={tunnel.bindHost}
+                        onChange={(e) =>
+                          updateTunnel(index, {
+                            bindHost: e.target.value.trim(),
+                          })
+                        }
+                        placeholder={getBindPlaceholder(mode)}
+                        className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                      />
+                    </div>
+
+                    {/* Route summary */}
+                    <div
+                      className="border border-border bg-muted/30 px-2 py-1 text-[10px] font-mono text-muted-foreground"
+                      title={tunnelSummary}
+                    >
+                      <span className="font-bold text-foreground">
+                        {t("tunnels.route")}
+                      </span>{" "}
+                      {tunnelSummary}
+                    </div>
+
+                    {mode === "remote" && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("tunnels.clientRemoteServerNote")}
+                      </p>
+                    )}
+
+                    {/* Last activity */}
+                    {(lastError || lastStarted || lastTested) && (
+                      <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
+                        {lastStarted && (
+                          <span>
+                            {t("tunnels.lastStarted")}: {lastStarted}
+                          </span>
+                        )}
+                        {lastTested && (
+                          <span>
+                            {t("tunnels.lastTested")}: {lastTested}
+                          </span>
+                        )}
+                        {lastError && (
+                          <span
+                            className="text-destructive truncate"
+                            title={lastError}
+                          >
+                            {t("tunnels.lastError")}: {lastError}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Retries */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("tunnels.maxRetries")}
+                        </label>
+                        <Input
+                          type="number"
+                          value={tunnel.maxRetries}
+                          onChange={(e) =>
+                            updateTunnel(index, {
+                              maxRetries: Number(e.target.value),
+                            })
+                          }
+                          placeholder={t("placeholders.maxRetries")}
+                          className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("tunnels.retryInterval")}
+                        </label>
+                        <Input
+                          type="number"
+                          value={tunnel.retryInterval}
+                          onChange={(e) =>
+                            updateTunnel(index, {
+                              retryInterval: Number(e.target.value),
+                            })
+                          }
+                          placeholder={t("placeholders.retryInterval")}
+                          className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Auto-start */}
+                    <div className="flex items-center justify-between border border-border bg-muted/20 px-2 py-1.5">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-medium">
+                          {t("tunnels.autoStart")}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {t(
+                            tunnel.autoStart
+                              ? "tunnels.clientAutoStartDesc"
+                              : "tunnels.clientManualStartDesc",
+                          )}
+                        </span>
+                      </div>
+                      <FakeSwitch
+                        checked={tunnel.autoStart}
+                        onChange={(checked) =>
+                          updateTunnel(index, { autoStart: checked })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Save local config button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className={`mt-2 w-full h-7 text-[10px] font-bold uppercase tracking-widest rounded-none ${
+          hasUnsavedLocalChanges
+            ? "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+            : "border-border text-muted-foreground"
+        }`}
+        onClick={handleSaveLocal}
+      >
+        <Save className="size-3" />
+        {t("common.save")}
+      </Button>
+
+      {/* Presets section */}
+      <div className="border-t border-border pt-3 mt-3 flex flex-col gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("profile.c2sTunnelPresets")}
+        </span>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("profile.c2sPresetName")}
+          </label>
+          <div className="flex gap-1.5">
+            <Input
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder={t("profile.c2sPresetNamePlaceholder")}
+              className="h-7 text-xs bg-muted/50 border-border rounded-none flex-1 min-w-0"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 text-[10px] font-bold uppercase tracking-widest rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+              disabled={!presetName.trim()}
+              onClick={handleSavePreset}
+            >
+              <Save className="size-3" />
+              {t("common.save")}
+            </Button>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {t("profile.c2sCurrentLocalConfig", { count: localConfig.length })}
+          </span>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(260px,1fr)_minmax(260px,1fr)]">
-          <div className="space-y-2">
-            <Label>{t("profile.c2sPresetName")}</Label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={presetName}
-                onChange={(event) => setPresetName(event.target.value)}
-                placeholder={t("profile.c2sPresetNamePlaceholder")}
-              />
-              <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
-                <Save className="w-4 h-4 mr-2" />
-                {t("common.save")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("profile.c2sCurrentLocalConfig", {
-                count: localConfig.length,
-              })}
-            </p>
-          </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("profile.c2sPresetToLoad")}
+          </label>
+          <select
+            value={selectedPresetId}
+            disabled={!hasPresets}
+            onChange={(e) => {
+              setSelectedPresetId(e.target.value);
+              const preset = presets.find(
+                (p) => String(p.id) === e.target.value,
+              );
+              if (preset) setPresetName(preset.name);
+            }}
+            className="px-2 py-1 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full h-7 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {hasPresets
+                ? t("profile.c2sNoPresetSelected")
+                : t("profile.c2sNoPresets")}
+            </option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={String(preset.id)}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-[10px] text-muted-foreground">
+            {t("profile.c2sPresetSyncNote")}
+          </span>
+        </div>
 
-          <div className="space-y-2">
-            <Label>{t("profile.c2sPresetToLoad")}</Label>
-            <div className="flex flex-col lg:flex-row gap-2">
-              <Select
-                value={selectedPresetId}
-                disabled={!hasPresets}
-                onValueChange={(value) => {
-                  setSelectedPresetId(value);
-                  const preset = presets.find(
-                    (item) => String(item.id) === value,
-                  );
-                  if (preset) setPresetName(preset.name);
-                }}
-              >
-                <SelectTrigger className="min-w-0 lg:w-[260px]">
-                  <SelectValue
-                    placeholder={
-                      hasPresets
-                        ? t("profile.c2sNoPresetSelected")
-                        : t("profile.c2sNoPresets")
-                    }
-                  />
-                </SelectTrigger>
-                {hasPresets && (
-                  <SelectContent>
-                    {presets.map((preset) => (
-                      <SelectItem key={preset.id} value={String(preset.id)}>
-                        {preset.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                )}
-              </Select>
-              <Button
-                variant="outline"
-                onClick={handleLoadPreset}
-                disabled={!selectedPreset || selectedMatchesCurrent}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {t("profile.c2sLoadPreset")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleRenamePreset}
-                disabled={!selectedPreset || !presetName.trim()}
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                {t("common.rename")}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={handleDeletePreset}
-                disabled={!selectedPreset}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {t("common.delete")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("profile.c2sPresetSyncNote")}
-            </p>
-          </div>
+        <div className="flex gap-1 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest rounded-none border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+            disabled={!selectedPreset || selectedMatchesCurrent}
+            onClick={handleLoadPreset}
+          >
+            <Download className="size-3" />
+            {t("profile.c2sLoadPreset")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[10px] font-bold uppercase tracking-widest rounded-none border-border text-muted-foreground hover:text-foreground"
+            disabled={!selectedPreset || !presetName.trim()}
+            onClick={handleRenamePreset}
+          >
+            <Pencil className="size-3" />
+            {t("common.rename")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground hover:text-destructive ml-auto"
+            disabled={!selectedPreset}
+            onClick={handleDeletePreset}
+          >
+            <Trash2 className="size-3" />
+          </Button>
         </div>
       </div>
     </div>

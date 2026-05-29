@@ -6,7 +6,6 @@ import {
   Activity,
   ArrowLeft,
   Box,
-  Info,
   List,
   Settings,
   Terminal,
