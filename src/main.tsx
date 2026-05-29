@@ -19,16 +19,24 @@ const AppShell = lazy(() =>
 );
 
 // Full-screen apps opened via query params (e.g. from external links or Electron)
-const TerminalApp = lazy(() => import("@/features/terminal/TerminalApp"));
-const FileManagerApp = lazy(
-  () => import("@/features/file-manager/FileManagerApp"),
+const TerminalApp = lazy(() =>
+  import("@/features/terminal/TerminalApp").then((m) => ({ default: m.default })),
 );
-const TunnelApp = lazy(() => import("@/features/tunnel/TunnelApp"));
-const ServerStatsApp = lazy(
-  () => import("@/features/server-stats/ServerStatsApp"),
+const FileManagerApp = lazy(() =>
+  import("@/features/file-manager/FileManagerApp").then((m) => ({ default: m.default })),
 );
-const DockerApp = lazy(() => import("@/features/docker/DockerApp"));
-const GuacamoleApp = lazy(() => import("@/features/guacamole/GuacamoleApp"));
+const TunnelApp = lazy(() =>
+  import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
+);
+const ServerStatsApp = lazy(() =>
+  import("@/features/server-stats/ServerStatsApp").then((m) => ({ default: m.default })),
+);
+const DockerApp = lazy(() =>
+  import("@/features/docker/DockerApp").then((m) => ({ default: m.default })),
+);
+const GuacamoleApp = lazy(() =>
+  import("@/features/guacamole/GuacamoleApp").then((m) => ({ default: m.default })),
+);
 
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
