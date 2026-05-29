@@ -30,7 +30,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Determine tags
         id: tags
@@ -71,7 +71,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push multi-arch image
-        uses: docker/build-push-action@v7
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: ./docker/Dockerfile

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -24,6 +24,7 @@ import {
   Share2,
   Terminal,
   Trash2,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,7 +37,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
-import { bulkUpdateSSHHosts, createSSHHost, deleteSSHHost } from "@/main-axios";
+import {
+  bulkUpdateSSHHosts,
+  createSSHHost,
+  deleteSSHHost,
+  wakeOnLan,
+} from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
@@ -186,6 +192,8 @@ export function HostItem({
   onToggleSelect,
   isMenuOpen = false,
   onMenuOpenChange,
+  isTrayOpen = false,
+  onTrayOpenChange,
 }: {
   host: Host;
   onOpenTab: (type: TabType) => void;
@@ -200,10 +208,43 @@ export function HostItem({
   onToggleSelect?: () => void;
   isMenuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  isTrayOpen?: boolean;
+  onTrayOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const metricsEnabled =
     host.enableSsh && host.statsConfig?.metricsEnabled !== false;
+  const [trayOnClick, setTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+  const [showHostTags, setShowHostTags] = useState<boolean>(() => {
+    const v = localStorage.getItem("showHostTags");
+    return v !== null ? v === "true" : true;
+  });
+
+  useEffect(() => {
+    const handler = () =>
+      setTrayOnClick(localStorage.getItem("hostTrayOnClick") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("hostTrayOnClickChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("hostTrayOnClickChanged", handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      const v = localStorage.getItem("showHostTags");
+      setShowHostTags(v !== null ? v === "true" : true);
+    };
+    window.addEventListener("storage", handler);
+    window.addEventListener("showHostTagsChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("showHostTagsChanged", handler);
+    };
+  }, []);
 
   if (query && !hostMatchesQuery(host, query)) return null;
 
@@ -224,7 +265,11 @@ export function HostItem({
         // On touch devices open the action tray instead of immediately launching a tab
         if (window.matchMedia("(hover: none)").matches) {
           e.stopPropagation();
-          onMenuOpenChange?.(!isMenuOpen);
+          onTrayOpenChange?.(!isTrayOpen);
+          return;
+        }
+        if (trayOnClick) {
+          onTrayOpenChange?.(!isTrayOpen);
           return;
         }
         if (host.enableSsh) onOpenTab("terminal");
@@ -260,15 +305,15 @@ export function HostItem({
           )}
         </div>
 
-        {/* Address — only visible on hover or while menu is open */}
+        {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
         <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 group-hover:opacity-100 group-hover:h-auto ${isMenuOpen ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
+          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!trayOnClick ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (trayOnClick && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
         >
           {host.username}@{host.ip}
         </span>
 
         {/* Tag pills */}
-        {host.tags && host.tags.length > 0 && (
+        {showHostTags && host.tags && host.tags.length > 0 && (
           <div className="flex items-center gap-1 min-w-0 overflow-hidden pl-3">
             {host.tags.slice(0, 4).map((tag) => (
               <span
@@ -286,9 +331,9 @@ export function HostItem({
           </div>
         )}
 
-        {/* Action tray — slides open on CSS hover or while menu is open */}
+        {/* Action tray — slides open on CSS hover, on click (when trayOnClick), or while menu is open */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[300px] group-hover:opacity-100 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!trayOnClick ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (trayOnClick && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {host.online &&
             ((host.cpu != null && host.cpu > 0) ||
@@ -380,6 +425,25 @@ export function HostItem({
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <MessagesSquare className="size-3.5" />
+                </button>
+              )}
+              {host.macAddress && (
+                <button
+                  title={t("hosts.wakeOnLanAction")}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await wakeOnLan(host.id);
+                      toast.success(
+                        t("hosts.wakeOnLanSuccess", { name: host.name }),
+                      );
+                    } catch {
+                      toast.error(t("hosts.wakeOnLanError"));
+                    }
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Zap className="size-3.5" />
                 </button>
               )}
             </div>
@@ -601,6 +665,8 @@ export function FolderItem({
   onToggleSelect,
   openMenuHostId,
   onMenuOpenChange,
+  openTrayHostId,
+  onTrayOpenChange,
 }: {
   folder: HostFolder;
   depth?: number;
@@ -618,6 +684,8 @@ export function FolderItem({
   onToggleSelect: (id: string) => void;
   openMenuHostId: string | null;
   onMenuOpenChange: (hostId: string | null) => void;
+  openTrayHostId: string | null;
+  onTrayOpenChange: (hostId: string | null) => void;
 }) {
   const { total, online } = folderHostCount(folder);
 
@@ -670,6 +738,8 @@ export function FolderItem({
                 onToggleSelect={onToggleSelect}
                 openMenuHostId={openMenuHostId}
                 onMenuOpenChange={onMenuOpenChange}
+                openTrayHostId={openTrayHostId}
+                onTrayOpenChange={onTrayOpenChange}
               />
             ) : (
               <HostItem
@@ -688,6 +758,10 @@ export function FolderItem({
                 isMenuOpen={openMenuHostId === child.id}
                 onMenuOpenChange={(open) =>
                   onMenuOpenChange(open ? child.id : null)
+                }
+                isTrayOpen={openTrayHostId === child.id}
+                onTrayOpenChange={(open) =>
+                  onTrayOpenChange(open ? child.id : null)
                 }
               />
             ),
@@ -723,6 +797,7 @@ export function SidebarTree({
     new Set(),
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
+  const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -761,21 +836,64 @@ export function SidebarTree({
 
   async function handleDuplicateHost(host: Host) {
     try {
-      const {
-        id: _id,
-        online: _online,
-        cpu: _cpu,
-        ram: _ram,
-        lastAccess: _la,
-        hasKey: _hk,
-        hasKeyPassword: _hkp,
-        ...rest
-      } = host as any;
       await createSSHHost({
-        ...rest,
         name: `${host.name} (copy)`,
-        key: undefined,
-      });
+        ip: host.ip,
+        port: host.port,
+        username: host.username,
+        folder: host.folder,
+        tags: host.tags ?? [],
+        pin: host.pin ?? false,
+        notes: host.notes,
+        macAddress: host.macAddress,
+        authType: host.authType,
+        password: host.password ?? null,
+        keyPassword: host.keyPassword ?? null,
+        keyType: host.keyType ?? null,
+        credentialId: host.credentialId ? Number(host.credentialId) : null,
+        overrideCredentialUsername: host.overrideCredentialUsername ?? false,
+        enableSsh: host.enableSsh,
+        enableRdp: host.enableRdp,
+        enableVnc: host.enableVnc,
+        enableTelnet: host.enableTelnet,
+        enableTerminal: host.enableTerminal,
+        enableTunnel: host.enableTunnel,
+        enableFileManager: host.enableFileManager,
+        enableDocker: host.enableDocker,
+        sshPort: host.sshPort,
+        rdpPort: host.rdpPort,
+        vncPort: host.vncPort,
+        telnetPort: host.telnetPort,
+        rdpUser: host.rdpUser ?? null,
+        rdpPassword: host.rdpPassword ?? null,
+        rdpDomain: host.domain ?? null,
+        rdpSecurity: host.security ?? null,
+        rdpIgnoreCert: host.ignoreCert ?? false,
+        vncPassword: host.vncPassword ?? null,
+        vncUser: host.vncUser ?? null,
+        telnetUser: host.telnetUser ?? null,
+        telnetPassword: host.telnetPassword ?? null,
+        defaultPath: host.defaultPath ?? "/",
+        forceKeyboardInteractive: host.forceKeyboardInteractive ?? false,
+        useSocks5: host.useSocks5,
+        socks5Host: host.socks5Host ?? null,
+        socks5Port: host.socks5Port ?? null,
+        socks5Username: host.socks5Username ?? null,
+        socks5Password: host.socks5Password ?? null,
+        socks5ProxyChain: host.socks5ProxyChain ?? null,
+        jumpHosts: (host.jumpHosts ?? []).map((j) => ({
+          hostId: Number(j.hostId),
+        })),
+        portKnockSequence: host.portKnockSequence ?? [],
+        tunnelConnections: host.serverTunnels ?? [],
+        quickActions: (host.quickActions ?? []).map((a) => ({
+          name: a.name,
+          snippetId: Number(a.snippetId),
+        })),
+        statsConfig: host.statsConfig,
+        guacamoleConfig: host.guacamoleConfig ?? null,
+        terminalConfig: host.terminalConfig ?? null,
+      } as any);
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {
@@ -846,6 +964,8 @@ export function SidebarTree({
                 onToggleSelect={toggleSelect}
                 openMenuHostId={openMenuHostId}
                 onMenuOpenChange={setOpenMenuHostId}
+                openTrayHostId={openTrayHostId}
+                onTrayOpenChange={setOpenTrayHostId}
               />
             ) : (
               <HostItem
@@ -864,6 +984,10 @@ export function SidebarTree({
                 isMenuOpen={openMenuHostId === child.id}
                 onMenuOpenChange={(open) =>
                   setOpenMenuHostId(open ? child.id : null)
+                }
+                isTrayOpen={openTrayHostId === child.id}
+                onTrayOpenChange={(open) =>
+                  setOpenTrayHostId(open ? child.id : null)
                 }
               />
             ),

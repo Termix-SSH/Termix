@@ -943,8 +943,8 @@ async function connectEndpointThroughSource(
     sock: endpointSock,
     username: tunnelConfig.endpointUsername,
     tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
+    keepaliveInterval: tunnelConfig.keepaliveInterval ?? 60000,
+    keepaliveCountMax: tunnelConfig.keepaliveCountMax ?? 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
@@ -1150,6 +1150,14 @@ async function resolveC2STunnelSource(
     socks5Username: resolvedHost.socks5Username,
     socks5Password: resolvedHost.socks5Password,
     socks5ProxyChain: resolvedHost.socks5ProxyChain,
+    keepaliveInterval:
+      typeof resolvedHost.terminalConfig?.keepaliveInterval === "number"
+        ? resolvedHost.terminalConfig.keepaliveInterval * 1000
+        : 60000,
+    keepaliveCountMax:
+      typeof resolvedHost.terminalConfig?.keepaliveCountMax === "number"
+        ? resolvedHost.terminalConfig.keepaliveCountMax
+        : 5,
   };
 }
 
@@ -1162,8 +1170,8 @@ async function connectC2SSourceClient(
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
     tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
+    keepaliveInterval: tunnelConfig.keepaliveInterval ?? 60000,
+    keepaliveCountMax: tunnelConfig.keepaliveCountMax ?? 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
@@ -1609,6 +1617,18 @@ async function connectSSHTunnel(
           keyType: resolvedHost.keyType,
           authMethod: resolvedHost.authType,
         };
+        if (tunnelConfig.keepaliveInterval === undefined) {
+          tunnelConfig.keepaliveInterval =
+            typeof resolvedHost.terminalConfig?.keepaliveInterval === "number"
+              ? resolvedHost.terminalConfig.keepaliveInterval * 1000
+              : 60000;
+        }
+        if (tunnelConfig.keepaliveCountMax === undefined) {
+          tunnelConfig.keepaliveCountMax =
+            typeof resolvedHost.terminalConfig?.keepaliveCountMax === "number"
+              ? resolvedHost.terminalConfig.keepaliveCountMax
+              : 5;
+        }
       }
     } catch (error) {
       tunnelLogger.warn("Failed to resolve source host credentials", {
@@ -1936,8 +1956,8 @@ async function connectSSHTunnel(
     port: tunnelConfig.sourceSSHPort,
     username: tunnelConfig.sourceUsername,
     tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
+    keepaliveInterval: tunnelConfig.keepaliveInterval ?? 60000,
+    keepaliveCountMax: tunnelConfig.keepaliveCountMax ?? 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
@@ -2192,11 +2212,11 @@ async function killRemoteTunnelByMarker(
         tunnelConfig.sourceIP?.replace(/^\[|\]$/g, "") || tunnelConfig.sourceIP,
       port: tunnelConfig.sourceSSHPort,
       username: tunnelConfig.sourceUsername,
-      keepaliveInterval: 30000,
-      keepaliveCountMax: 3,
+      keepaliveInterval: tunnelConfig.keepaliveInterval ?? 60000,
+      keepaliveCountMax: tunnelConfig.keepaliveCountMax ?? 5,
       readyTimeout: 60000,
       tcpKeepAlive: true,
-      tcpKeepAliveInitialDelay: 15000,
+      tcpKeepAliveInitialDelay: 30000,
       algorithms: {
         kex: [
           "diffie-hellman-group14-sha256",

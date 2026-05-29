@@ -96,6 +96,7 @@ function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
 interface HostConfig {
   id?: number;
   instanceId?: string;
+  restoredSessionId?: string | null;
   ip: string;
   port: number;
   username: string;
@@ -231,6 +232,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
+    // Consumed on first connectToHost call so retries don't re-attempt a stale session
+    const pendingRestoredSessionIdRef = useRef<string | null>(hostConfig.restoredSessionId ?? null);
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -254,6 +257,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const isReconnectingRef = useRef(false);
     const isConnectingRef = useRef(false);
     const wasConnectedRef = useRef(false);
+    const wasSessionExpiredRef = useRef(false);
 
     useEffect(() => {
       isUnmountingRef.current = false;
@@ -685,8 +689,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (webSocketRef.current?.readyState === WebSocket.OPEN) {
             webSocketRef.current.send(JSON.stringify({ type: "disconnect" }));
           }
-          const tabId = hostConfig.id ?? "default";
-          localStorage.removeItem(`termix_session_${tabId}`);
           sessionIdRef.current = null;
           webSocketRef.current?.close();
           setIsConnected(false);
@@ -983,23 +985,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         currentHostIdRef.current = hostConfig.id;
         currentHostConfigRef.current = hostConfig;
 
-        const persistenceEnabled =
-          localStorage.getItem("enableTerminalSessionPersistence") !== "false";
-        const tabId = hostConfig.instanceId
-          ? `${hostConfig.id}_${hostConfig.instanceId}`
-          : `${hostConfig.id}_${Date.now()}`;
-        const savedSessionId = persistenceEnabled
-          ? localStorage.getItem(`termix_session_${tabId}`)
-          : null;
-        if (savedSessionId) {
-          sessionIdRef.current = savedSessionId;
+        // Consume the pending restored session ID once; retries get null so they create fresh connections
+        const restoredSessionId = pendingRestoredSessionIdRef.current;
+        pendingRestoredSessionIdRef.current = null;
+
+        if (restoredSessionId) {
+          sessionIdRef.current = restoredSessionId;
           isAttachingSessionRef.current = true;
 
           ws.send(
             JSON.stringify({
               type: "attachSession",
               data: {
-                sessionId: savedSessionId,
+                sessionId: restoredSessionId,
                 cols,
                 rows,
                 tabInstanceId: hostConfig.instanceId,
@@ -1484,12 +1482,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
-            const persistenceEnabled =
-              localStorage.getItem("enableTerminalSessionPersistence") !==
-              "false";
-            if (persistenceEnabled && hostConfig.instanceId) {
-              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
-              localStorage.setItem(`termix_session_${tabId}`, msg.sessionId);
+            if (hostConfig.instanceId) {
+              import("@/main-axios").then(({ patchOpenTab }) => {
+                patchOpenTab(hostConfig.instanceId!, { backendSessionId: msg.sessionId }).catch(() => {});
+              });
             }
           } else if (msg.type === "sessionAttached") {
             isAttachingSessionRef.current = false;
@@ -1520,22 +1516,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             });
           } else if (msg.type === "sessionExpired") {
             isAttachingSessionRef.current = false;
-            shouldNotReconnectRef.current = false;
-            if (hostConfig.instanceId) {
-              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
-              localStorage.removeItem(`termix_session_${tabId}`);
-            }
             sessionIdRef.current = null;
-
+            wasSessionExpiredRef.current = true;
+            if (hostConfig.instanceId) {
+              import("@/main-axios").then(({ patchOpenTab }) => {
+                patchOpenTab(hostConfig.instanceId!, { backendSessionId: null }).catch(() => {});
+              });
+            }
             if (webSocketRef.current) {
               webSocketRef.current.close();
             }
           } else if (msg.type === "sessionTakenOver") {
-            if (sessionIdRef.current && hostConfig.instanceId) {
-              const tabId = `${hostConfig.id}_${hostConfig.instanceId}`;
-              localStorage.removeItem(`termix_session_${tabId}`);
-              sessionIdRef.current = null;
-            }
+            sessionIdRef.current = null;
 
             if (terminal) {
               terminal.clear();
@@ -1629,6 +1621,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         if (totpTimeoutRef.current) {
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
+        }
+
+        if (wasSessionExpiredRef.current) {
+          wasSessionExpiredRef.current = false;
+          const cols = terminal?.cols || 80;
+          const rows = terminal?.rows || 24;
+          connectToHost(cols, rows);
+          return;
         }
 
         if (event.code === 1006) {
@@ -2162,18 +2162,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (pongTimeoutRef.current) {
             clearTimeout(pongTimeoutRef.current);
             pongTimeoutRef.current = null;
-          }
-
-          const persistenceEnabled =
-            localStorage.getItem("enableTerminalSessionPersistence") !==
-            "false";
-          if (
-            !persistenceEnabled &&
-            sessionIdRef.current &&
-            currentInstanceId
-          ) {
-            const tabId = `${currentHostId}_${currentInstanceId}`;
-            localStorage.removeItem(`termix_session_${tabId}`);
           }
 
           if (webSocketRef.current) {

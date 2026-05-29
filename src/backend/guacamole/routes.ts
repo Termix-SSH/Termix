@@ -226,10 +226,17 @@ router.post(
         });
       }
 
+      // Old hosts only had connectionType set; enableRdp/enableVnc/enableTelnet defaulted to false.
+      // Apply the same migration fallback used in host.ts GET routes.
+      const ct = host.connectionType as string;
+      const rdpRaw = !!host.enableRdp;
+      const vncRaw = !!host.enableVnc;
+      const telRaw = !!host.enableTelnet;
+      const isMigratedNonSsh = !rdpRaw && !vncRaw && !telRaw && ct && ct !== "ssh";
       const protocolEnabledMap: Record<string, boolean> = {
-        rdp: !!host.enableRdp,
-        vnc: !!host.enableVnc,
-        telnet: !!host.enableTelnet,
+        rdp: isMigratedNonSsh ? ct === "rdp" : rdpRaw,
+        vnc: isMigratedNonSsh ? ct === "vnc" : vncRaw,
+        telnet: isMigratedNonSsh ? ct === "telnet" : telRaw,
       };
       if (!protocolEnabledMap[connectionType]) {
         return res.status(400).json({

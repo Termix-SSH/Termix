@@ -79,13 +79,27 @@ class TerminalSessionManager {
       const tabSessions = userSessions.filter(
         (s) => s.tabInstanceId === tabInstanceId,
       );
-      if (tabSessions.length > 0) {
+      for (const existing of tabSessions) {
+        const isLiveSession =
+          existing.isConnected &&
+          existing.sshStream != null &&
+          !existing.sshStream.destroyed;
+        if (isLiveSession) {
+          // Don't destroy a live session (even if detached) — the caller should attach instead
+          sshLogger.warn("Tab instance has live session, skipping duplicate create", {
+            operation: "session_tab_duplicate_skip",
+            existingSessionId: existing.id,
+            tabInstanceId,
+            hasAttachedWs: existing.attachedWs !== null,
+          });
+          return existing.id;
+        }
         sshLogger.warn("Tab instance already has session, destroying old", {
           operation: "session_tab_duplicate_cleanup",
-          existingSessionId: tabSessions[0].id,
+          existingSessionId: existing.id,
           tabInstanceId,
         });
-        this.destroySession(tabSessions[0].id);
+        this.destroySession(existing.id);
       }
     }
 
@@ -179,7 +193,7 @@ class TerminalSessionManager {
 
     const isDetached =
       !session.attachedWs || session.attachedWs.readyState !== WebSocket.OPEN;
-    const isOriginalTab = session.tabInstanceId === tabInstanceId;
+    const isOriginalTab = (session.attachedTabInstanceId ?? session.tabInstanceId) === tabInstanceId;
 
     if (
       !isDetached &&

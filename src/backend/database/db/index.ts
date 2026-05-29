@@ -450,7 +450,40 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS user_open_tabs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        tab_type TEXT NOT NULL,
+        host_id INTEGER,
+        label TEXT NOT NULL,
+        tab_order INTEGER NOT NULL DEFAULT 0,
+        backend_session_id TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        user_id TEXT PRIMARY KEY,
+        reopen_tabs_on_login INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
 `);
+
+  try {
+    sqlite.prepare("DELETE FROM user_open_tabs").run();
+    databaseLogger.info("Open tabs cleared on startup", {
+      operation: "db_init_open_tabs_cleanup",
+    });
+  } catch (e) {
+    databaseLogger.warn("Could not clear open tabs on startup", {
+      operation: "db_init_open_tabs_cleanup_failed",
+      error: e,
+    });
+  }
 
   try {
     const result = sqlite

@@ -267,17 +267,32 @@ function RowDivider({
 function PaneHeader({
   tab,
   paneIndex,
+  isFocused,
 }: {
   tab: Tab | null;
   paneIndex: number;
+  isFocused: boolean;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-1.5 px-2.5 h-7 shrink-0 bg-sidebar border-b border-border text-xs font-medium text-muted-foreground select-none">
+    <div
+      className={`flex items-center gap-1.5 px-2.5 h-7 shrink-0 border-b text-xs font-medium select-none transition-colors ${
+        isFocused
+          ? "bg-accent-brand/10 border-accent-brand/40 text-accent-brand"
+          : "bg-sidebar border-border text-muted-foreground"
+      }`}
+    >
+      {isFocused && (
+        <span className="w-1 h-3.5 rounded-full bg-accent-brand shrink-0" />
+      )}
       {tab ? (
         <>
-          <span className="opacity-60">{tabIcon(tab.type)}</span>
-          <span className="truncate text-foreground">
+          <span className={isFocused ? "text-accent-brand" : "opacity-60"}>
+            {tabIcon(tab.type)}
+          </span>
+          <span
+            className={`truncate ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
+          >
             {tab.type === "dashboard" ? "Dashboard" : tab.label}
           </span>
         </>
@@ -309,13 +324,21 @@ const Pane = memo(function Pane({
   tab,
   paneIndex,
   isDragging,
+  isFocused,
   onPaneContentRef,
+  onPaneClick,
+  onAssignPane,
 }: {
   tab: Tab | null;
   paneIndex: number;
   isDragging: boolean;
+  isFocused: boolean;
   onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
+  onPaneClick?: (paneIndex: number) => void;
+  onAssignPane?: (paneIndex: number, tabId: string) => void;
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const contentRef = useCallback(
     (el: HTMLDivElement | null) => {
       onPaneContentRef?.(paneIndex, el);
@@ -324,13 +347,36 @@ const Pane = memo(function Pane({
   );
 
   return (
-    <div className="relative flex flex-col w-full h-full min-w-0 min-h-0 overflow-hidden">
-      <PaneHeader tab={tab} paneIndex={paneIndex} />
+    <div
+      className={`relative flex flex-col w-full h-full min-w-0 min-h-0 overflow-hidden transition-colors ${
+        isFocused ? "ring-1 ring-inset ring-accent-brand/30" : ""
+      } ${isDragOver ? "ring-2 ring-inset ring-accent-brand" : ""}`}
+      onClick={() => onPaneClick?.(paneIndex)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const tabId = e.dataTransfer.getData("text/plain");
+        if (tabId) onAssignPane?.(paneIndex, tabId);
+      }}
+    >
+      <PaneHeader tab={tab} paneIndex={paneIndex} isFocused={isFocused} />
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {tab ? (
           <div ref={contentRef} className="absolute inset-0" />
         ) : (
           <EmptyPane />
+        )}
+        {isDragOver && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-accent-brand/10 border-2 border-dashed border-accent-brand pointer-events-none">
+            <span className="text-xs font-medium text-accent-brand">
+              Drop to assign
+            </span>
+          </div>
         )}
       </div>
       {isDragging && (
@@ -350,9 +396,12 @@ const Row = memo(function Row({
   paneTabIds,
   tabs,
   isDragging,
+  focusedPaneIndex,
   onColDivider,
   onColDividerTouch,
   onPaneContentRef,
+  onPaneClick,
+  onAssignPane,
 }: {
   rowIdx: number;
   paneIndices: number[];
@@ -361,6 +410,7 @@ const Row = memo(function Row({
   paneTabIds: (string | null)[];
   tabs: Tab[];
   isDragging: boolean;
+  focusedPaneIndex: number | null;
   onColDivider: (e: React.MouseEvent, rowIdx: number, colIdx: number) => void;
   onColDividerTouch: (
     e: React.TouchEvent,
@@ -368,6 +418,8 @@ const Row = memo(function Row({
     colIdx: number,
   ) => void;
   onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
+  onPaneClick?: (paneIndex: number) => void;
+  onAssignPane?: (paneIndex: number, tabId: string) => void;
 }) {
   const widths = colWidths ?? [];
   return (
@@ -386,7 +438,10 @@ const Row = memo(function Row({
                 tab={tab}
                 paneIndex={pIdx}
                 isDragging={isDragging}
+                isFocused={focusedPaneIndex === pIdx}
                 onPaneContentRef={onPaneContentRef}
+                onPaneClick={onPaneClick}
+                onAssignPane={onAssignPane}
               />
             </div>
             {ci < paneIndices.length - 1 && (
@@ -408,14 +463,20 @@ export const SplitView = memo(function SplitView({
   tabs,
   paneTabIds,
   splitMode,
+  focusedPaneIndex,
   onTerminalResize,
   onPaneContentRef,
+  onPaneClick,
+  onAssignPane,
 }: {
   tabs: Tab[];
   paneTabIds: (string | null)[];
   splitMode: SplitMode;
+  focusedPaneIndex?: number | null;
   onTerminalResize?: () => void;
   onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
+  onPaneClick?: (paneIndex: number) => void;
+  onAssignPane?: (paneIndex: number, tabId: string) => void;
 }) {
   const {
     rowSizes,
@@ -464,9 +525,12 @@ export const SplitView = memo(function SplitView({
           paneTabIds={paneTabIds}
           tabs={tabs}
           isDragging={isDragging}
+          focusedPaneIndex={focusedPaneIndex ?? null}
           onColDivider={onColDivider}
           onColDividerTouch={onColDividerTouch}
           onPaneContentRef={onPaneContentRef}
+          onPaneClick={onPaneClick}
+          onAssignPane={onAssignPane}
         />
       )}
 
@@ -480,7 +544,10 @@ export const SplitView = memo(function SplitView({
               tab={tab(0)}
               paneIndex={0}
               isDragging={isDragging}
+              isFocused={focusedPaneIndex === 0}
               onPaneContentRef={onPaneContentRef}
+              onPaneClick={onPaneClick}
+              onAssignPane={onAssignPane}
             />
           </div>
           <ColDivider
@@ -496,7 +563,10 @@ export const SplitView = memo(function SplitView({
                 tab={tab(1)}
                 paneIndex={1}
                 isDragging={isDragging}
+                isFocused={focusedPaneIndex === 1}
                 onPaneContentRef={onPaneContentRef}
+                onPaneClick={onPaneClick}
+                onAssignPane={onAssignPane}
               />
             </div>
             <RowDivider
@@ -511,7 +581,10 @@ export const SplitView = memo(function SplitView({
                 tab={tab(2)}
                 paneIndex={2}
                 isDragging={isDragging}
+                isFocused={focusedPaneIndex === 2}
                 onPaneContentRef={onPaneContentRef}
+                onPaneClick={onPaneClick}
+                onAssignPane={onAssignPane}
               />
             </div>
           </div>
@@ -532,7 +605,10 @@ export const SplitView = memo(function SplitView({
                 tab={tab(0)}
                 paneIndex={0}
                 isDragging={isDragging}
+                isFocused={focusedPaneIndex === 0}
                 onPaneContentRef={onPaneContentRef}
+                onPaneClick={onPaneClick}
+                onAssignPane={onAssignPane}
               />
             </div>
             <ColDivider
@@ -544,7 +620,10 @@ export const SplitView = memo(function SplitView({
                 tab={tab(1)}
                 paneIndex={1}
                 isDragging={isDragging}
+                isFocused={focusedPaneIndex === 1}
                 onPaneContentRef={onPaneContentRef}
+                onPaneClick={onPaneClick}
+                onAssignPane={onAssignPane}
               />
             </div>
           </div>
@@ -557,7 +636,10 @@ export const SplitView = memo(function SplitView({
               tab={tab(2)}
               paneIndex={2}
               isDragging={isDragging}
+              isFocused={focusedPaneIndex === 2}
               onPaneContentRef={onPaneContentRef}
+              onPaneClick={onPaneClick}
+              onAssignPane={onAssignPane}
             />
           </div>
         </div>
@@ -573,9 +655,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -589,9 +674,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
         </div>
       )}
@@ -606,9 +694,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -622,9 +713,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
         </div>
       )}
@@ -639,9 +733,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
           <RowDivider
             onMouseDown={(e) => onRowDivider(e, 0)}
@@ -655,9 +752,12 @@ export const SplitView = memo(function SplitView({
             paneTabIds={paneTabIds}
             tabs={tabs}
             isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
             onColDivider={onColDivider}
             onColDividerTouch={onColDividerTouch}
             onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
           />
         </div>
       )}

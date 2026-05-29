@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getSnippets,
   createSnippet as apiCreateSnippet,
@@ -15,6 +16,7 @@ import {
   revokeSnippetAccess,
   getUserList,
   getRoles,
+  reorderSnippets,
 } from "@/main-axios";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -34,6 +36,7 @@ import {
   Database,
   Folder,
   Globe,
+  GripVertical,
   Network,
   Pencil,
   Play,
@@ -122,7 +125,7 @@ function SnippetFormDialog({
   onOpenChange: (v: boolean) => void;
   folders: SnippetFolder[];
   snippet: Snippet | null;
-  onSave: (data: Omit<Snippet, "id">, id?: number) => void;
+  onSave: (data: Omit<Snippet, "id" | "order">, id?: number) => void;
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -685,6 +688,12 @@ function SnippetCard({
   onDelete,
   onEdit,
   onShare,
+  onConfirmRun,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  dropIndicator,
+  isDragging,
   t,
 }: {
   snippet: Snippet;
@@ -693,9 +702,15 @@ function SnippetCard({
   onDelete: (id: number) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
+  onConfirmRun: (snippet: Snippet, execute: () => void) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  dropIndicator: "above" | "below" | null;
+  isDragging: boolean;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
-  function handleRun() {
+  function executeRun() {
     const targets = terminalTabs.filter((tab) => selectedTabIds.has(tab.id));
     if (targets.length > 0) {
       targets.forEach((tab) => {
@@ -723,6 +738,10 @@ function SnippetCard({
     }
   }
 
+  function handleRun() {
+    onConfirmRun(snippet, executeRun);
+  }
+
   function handleCopy() {
     navigator.clipboard.writeText(snippet.content);
     toast.success(
@@ -731,69 +750,80 @@ function SnippetCard({
   }
 
   return (
-    <div className="border border-border bg-background p-2.5 flex flex-col gap-2">
-      <div className="flex items-start gap-2">
-        <div className="grid grid-cols-2 gap-px mt-0.5 shrink-0 opacity-30">
-          <div className="size-1 bg-muted-foreground rounded-full" />
-          <div className="size-1 bg-muted-foreground rounded-full" />
-          <div className="size-1 bg-muted-foreground rounded-full" />
-          <div className="size-1 bg-muted-foreground rounded-full" />
+    <div className="relative" onDragOver={onDragOver}>
+      {dropIndicator === "above" && (
+        <div className="absolute -top-1 left-0 right-0 h-0.5 bg-accent-brand z-10 pointer-events-none" />
+      )}
+      <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        className={`border bg-background p-2.5 flex flex-col gap-2 group/card transition-opacity ${isDragging ? "opacity-40" : "opacity-100"} border-border`}
+      >
+        <div className="flex items-start gap-2">
+          <GripVertical className="size-3.5 mt-0.5 shrink-0 text-muted-foreground/30 group-hover/card:text-muted-foreground/60 cursor-grab active:cursor-grabbing transition-colors" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold">{snippet.name}</span>
+            {snippet.description && (
+              <span className="text-xs text-muted-foreground">
+                {snippet.description}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs font-semibold">{snippet.name}</span>
-          {snippet.description && (
-            <span className="text-xs text-muted-foreground">
-              {snippet.description}
-            </span>
-          )}
+        <span className="text-xs text-muted-foreground font-mono px-1">
+          {snippet.content}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs h-7 gap-1.5"
+            onClick={handleRun}
+          >
+            <Play className="size-3" />
+            {t("newUi.sidebar.snippets.run")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+            onClick={handleCopy}
+          >
+            <Copy className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+            onClick={() => onEdit(snippet)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+            onClick={() => onDelete(snippet.id)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground shrink-0"
+            onClick={() => onShare(snippet)}
+          >
+            <Share2 className="size-3.5" />
+          </Button>
         </div>
       </div>
-      <span className="text-xs text-muted-foreground font-mono px-1">
-        {snippet.content}
-      </span>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-xs h-7 gap-1.5"
-          onClick={handleRun}
-        >
-          <Play className="size-3" />
-          {t("newUi.sidebar.snippets.run")}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-          onClick={handleCopy}
-        >
-          <Copy className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-          onClick={() => onEdit(snippet)}
-        >
-          <Pencil className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-muted-foreground hover:text-destructive shrink-0"
-          onClick={() => onDelete(snippet.id)}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 text-muted-foreground hover:text-foreground shrink-0"
-          onClick={() => onShare(snippet)}
-        >
-          <Share2 className="size-3.5" />
-        </Button>
-      </div>
+      {dropIndicator === "below" && (
+        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-accent-brand z-10 pointer-events-none" />
+      )}
     </div>
   );
 }
@@ -806,9 +836,11 @@ export function SnippetsPanel({
   activeTabId: string;
 }) {
   const { t } = useTranslation();
+  const { confirmWithToast } = useConfirmation();
   const [snippetSearch, setSnippetSearch] = useState("");
   const [folders, setFolders] = useState<SnippetFolder[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const snippetsRef = useRef<Snippet[]>([]);
   const [snippetFormOpen, setSnippetFormOpen] = useState(false);
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
@@ -823,9 +855,123 @@ export function SnippetsPanel({
           : [],
       ),
   );
-  const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
+
+  function updateSnippets(next: Snippet[] | ((prev: Snippet[]) => Snippet[])) {
+    setSnippets((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      snippetsRef.current = resolved;
+      return resolved;
+    });
+  }
+
+  const getFoldersCollapsed = () =>
+    localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
+
+  const [uncategorizedOpen, setUncategorizedOpen] = useState(
+    () => !getFoldersCollapsed(),
+  );
 
   useEffect(() => {
+    const handler = () => {
+      const collapsed = getFoldersCollapsed();
+      setUncategorizedOpen(!collapsed);
+      setFolders((prev) => prev.map((f) => ({ ...f, open: !collapsed })));
+    };
+    window.addEventListener("defaultSnippetFoldersCollapsedChanged", handler);
+    return () =>
+      window.removeEventListener(
+        "defaultSnippetFoldersCollapsedChanged",
+        handler,
+      );
+  }, []);
+
+  const [draggedSnippet, setDraggedSnippet] = useState<Snippet | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    id: number;
+    position: "above" | "below";
+  } | null>(null);
+
+  function handleDragStart(snippet: Snippet) {
+    setDraggedSnippet(snippet);
+  }
+
+  function handleDragOver(e: React.DragEvent, snippetId: number) {
+    e.preventDefault();
+    if (!draggedSnippet || draggedSnippet.id === snippetId) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const position = e.clientY < rect.top + rect.height / 2 ? "above" : "below";
+    setDropTarget((prev) =>
+      prev?.id === snippetId && prev?.position === position
+        ? prev
+        : { id: snippetId, position },
+    );
+  }
+
+  async function handleDrop(folder: string | null) {
+    const dragged = draggedSnippet;
+    const target = dropTarget;
+    setDraggedSnippet(null);
+    setDropTarget(null);
+
+    if (!dragged || !target || dragged.id === target.id) return;
+
+    const group = snippetsRef.current.filter((s) => s.folder === folder);
+    const draggedIdx = group.findIndex((s) => s.id === dragged.id);
+    const targetIdx = group.findIndex((s) => s.id === target.id);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    const reordered = [...group];
+    reordered.splice(draggedIdx, 1);
+    const insertAt =
+      target.position === "below"
+        ? reordered.findIndex((s) => s.id === target.id) + 1
+        : reordered.findIndex((s) => s.id === target.id);
+    reordered.splice(insertAt, 0, dragged);
+
+    const rest = snippetsRef.current.filter((s) => s.folder !== folder);
+    const next = [...rest, ...reordered];
+    snippetsRef.current = next;
+    setSnippets(next);
+
+    const payload = reordered.map((s, idx) => ({
+      id: s.id,
+      order: idx,
+      folder: folder ?? undefined,
+    }));
+    try {
+      await reorderSnippets(payload);
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.reorderFailed"));
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggedSnippet(null);
+    setDropTarget(null);
+  }
+
+  const handleConfirmRun = useCallback(
+    (snippet: Snippet, execute: () => void) => {
+      const shouldConfirm =
+        localStorage.getItem("confirmSnippetExecution") === "true";
+      if (!shouldConfirm) {
+        execute();
+        return;
+      }
+      confirmWithToast(
+        t("newUi.sidebar.snippets.confirmRunMessage", { name: snippet.name }),
+        execute,
+        t("newUi.sidebar.snippets.confirmRunButton"),
+        t("newUi.sidebar.snippets.cancel"),
+        { confirmOnEnter: true, duration: 6000 },
+      );
+    },
+    [confirmWithToast, t],
+  );
+
+  useEffect(() => {
+    const collapsed = getFoldersCollapsed();
+
     getSnippets()
       .then((data) => {
         const arr = Array.isArray(data) ? data : [];
@@ -836,8 +982,9 @@ export function SnippetsPanel({
           description: s.description,
           content: s.content,
           folder: s.folder ?? null,
+          order: s.order ?? 0,
         }));
-        setSnippets(mapped);
+        updateSnippets(mapped);
       })
       .catch(() => {});
 
@@ -850,7 +997,7 @@ export function SnippetsPanel({
           name: f.name,
           color: f.color ?? FOLDER_COLORS[0],
           icon: (f.icon as FolderIconId) ?? "folder",
-          open: true,
+          open: !collapsed,
         }));
         setFolders(mapped);
       })
@@ -865,23 +1012,27 @@ export function SnippetsPanel({
     });
   }
 
-  async function handleSaveSnippet(data: Omit<Snippet, "id">, id?: number) {
+  async function handleSaveSnippet(
+    data: Omit<Snippet, "id" | "order">,
+    id?: number,
+  ) {
     try {
       if (id !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await apiUpdateSnippet(id, data as any);
-        setSnippets((prev) =>
+        updateSnippets((prev) =>
           prev.map((s) => (s.id === id ? { ...s, ...data } : s)),
         );
         toast.success(t("newUi.sidebar.snippets.updateSuccess"));
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const created = (await apiCreateSnippet(data as any)) as any;
-        setSnippets((prev) => [
+        updateSnippets((prev) => [
           ...prev,
           {
             ...data,
             id: created.id ?? Math.max(0, ...prev.map((x) => x.id)) + 1,
+            order: created.order ?? prev.length,
           },
         ]);
         toast.success(t("newUi.sidebar.snippets.createSuccess"));
@@ -919,7 +1070,7 @@ export function SnippetsPanel({
     try {
       await apiDeleteSnippetFolder(folder.name);
       setFolders((prev) => prev.filter((f) => f.id !== folder.id));
-      setSnippets((prev) =>
+      updateSnippets((prev) =>
         prev.map((s) =>
           s.folder === folder.name ? { ...s, folder: null } : s,
         ),
@@ -940,7 +1091,7 @@ export function SnippetsPanel({
       const nameChanged = data.name !== oldName;
       if (nameChanged) {
         await apiRenameSnippetFolder(oldName, data.name);
-        setSnippets((prev) =>
+        updateSnippets((prev) =>
           prev.map((s) =>
             s.folder === oldName ? { ...s, folder: data.name } : s,
           ),
@@ -966,7 +1117,7 @@ export function SnippetsPanel({
   async function handleDeleteSnippet(id: number) {
     try {
       await apiDeleteSnippet(id);
-      setSnippets((prev) => prev.filter((s) => s.id !== id));
+      updateSnippets((prev) => prev.filter((s) => s.id !== id));
     } catch {
       toast.error(t("newUi.sidebar.snippets.deleteFailed"));
     }
@@ -1109,7 +1260,11 @@ export function SnippetsPanel({
                 </span>
               </button>
               {uncategorizedOpen && (
-                <div className="flex flex-col gap-2 ml-1">
+                <div
+                  className="flex flex-col gap-2 ml-1"
+                  onDrop={() => handleDrop(null)}
+                  onDragOver={(e) => e.preventDefault()}
+                >
                   {uncategorizedSnippets.map((snippet) => (
                     <SnippetCard
                       key={snippet.id}
@@ -1119,6 +1274,16 @@ export function SnippetsPanel({
                       onDelete={handleDeleteSnippet}
                       onEdit={handleEditSnippet}
                       onShare={setShareSnippet}
+                      onConfirmRun={handleConfirmRun}
+                      onDragStart={() => handleDragStart(snippet)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, snippet.id)}
+                      dropIndicator={
+                        dropTarget?.id === snippet.id
+                          ? dropTarget.position
+                          : null
+                      }
+                      isDragging={draggedSnippet?.id === snippet.id}
                       t={t}
                     />
                   ))}
@@ -1188,7 +1353,11 @@ export function SnippetsPanel({
                   </DropdownMenu>
                 </div>
                 {folder.open && (
-                  <div className="flex flex-col gap-2 ml-1">
+                  <div
+                    className="flex flex-col gap-2 ml-1"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDrop(folder.name)}
+                  >
                     {folderSnippets.map((snippet) => (
                       <SnippetCard
                         key={snippet.id}
@@ -1198,6 +1367,16 @@ export function SnippetsPanel({
                         onDelete={handleDeleteSnippet}
                         onEdit={handleEditSnippet}
                         onShare={setShareSnippet}
+                        onConfirmRun={handleConfirmRun}
+                        onDragStart={() => handleDragStart(snippet)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => handleDragOver(e, snippet.id)}
+                        dropIndicator={
+                          dropTarget?.id === snippet.id
+                            ? dropTarget.position
+                            : null
+                        }
+                        isDragging={draggedSnippet?.id === snippet.id}
                         t={t}
                       />
                     ))}

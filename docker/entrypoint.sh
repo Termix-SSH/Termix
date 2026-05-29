@@ -138,7 +138,14 @@ nginx -c /tmp/nginx/nginx.conf
 # Inject runtime BASE_PATH into frontend if configured
 if [ -n "$BASE_PATH" ]; then
     echo "Injecting BASE_PATH: $BASE_PATH"
-    find /app/html -name "index.html" -exec sed -i "s|window.__TERMIX_BASE_PATH__ = \"\"|window.__TERMIX_BASE_PATH__ = \"$BASE_PATH\"|g" {} \;
+    # Strip trailing slash for use as a path prefix
+    CLEAN_BASE_PATH="${BASE_PATH%/}"
+    find /app/html -name "index.html" -exec sed -i "s|window.__TERMIX_BASE_PATH__ = \"\"|window.__TERMIX_BASE_PATH__ = \"$CLEAN_BASE_PATH\"|g" {} \;
+    # Patch sw.js static asset paths with the base path prefix
+    find /app/html -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__|$CLEAN_BASE_PATH|g" {} \;
+else
+    # No base path - replace placeholder with empty string so paths stay absolute from root
+    find /app/html -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__||g" {} \;
 fi
 
 echo "Starting backend services..."

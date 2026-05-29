@@ -30,9 +30,22 @@ import type {
   SplitMode,
   HostFolder,
 } from "@/types/ui-types";
-import { getSSHHosts, getUserInfo } from "@/main-axios";
+import { PANE_COUNTS } from "@/lib/theme";
+import {
+  getSSHHosts,
+  getUserInfo,
+  getOpenTabs,
+  addOpenTab,
+  deleteOpenTab,
+  patchOpenTab,
+  getActiveSessions,
+  getUserPreferences,
+  type UserPreferences,
+  type OpenTabRecord,
+} from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
+import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
@@ -72,6 +85,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
       name: a.name,
       snippetId: String(a.snippetId),
     })),
+    jumpHosts: (h.jumpHosts ?? []).map((j) => ({
+      hostId: String(j.hostId),
+    })),
     serverTunnels: [],
     defaultPath: h.defaultPath,
     terminalConfig: h.terminalConfig as Host["terminalConfig"],
@@ -80,6 +96,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Port: h.socks5Port,
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
+    socks5ProxyChain: h.socks5ProxyChain ?? [],
   };
 }
 
@@ -125,25 +142,61 @@ export function AppShell({
 }) {
   const { t } = useTranslation();
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+    {
+      id: "dashboard",
+      instanceId: "dashboard",
+      type: "dashboard",
+      label: t("nav.dashboard"),
+      openedAt: Date.now(),
+    },
   ]);
   const [activeTabId, setActiveTabId] = useState("dashboard");
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>({
+    reopenTabsOnLogin: false,
+  });
+  const [userPrefsLoaded, setUserPrefsLoaded] = useState(false);
+  const [hostsLoaded, setHostsLoaded] = useState(false);
+  // Flips to true once the initial DB read (restore or skip) is done — sync must not fire before this
+  const [tabsReady, setTabsReady] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [splitMode, setSplitMode] = useState<SplitMode>("none");
-  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
-    Array(6).fill(null),
+  const [splitMode, setSplitMode] = useState<SplitMode>(
+    () => (localStorage.getItem("termix_splitMode") as SplitMode) ?? "none",
   );
+  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
+    () =>
+      JSON.parse(localStorage.getItem("termix_paneTabIds") ?? "null") ??
+      Array(6).fill(null),
+  );
+  const [focusedPaneIndex, setFocusedPaneIndex] = useState<number | null>(null);
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [backgroundTabRecords, setBackgroundTabRecords] = useState<
+    OpenTabRecord[]
+  >([]);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(266);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("termix_sidebarWidth");
+    return saved ? parseInt(saved, 10) : 266;
+  });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("termix_sidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    localStorage.setItem("termix_splitMode", splitMode);
+  }, [splitMode]);
+
+  useEffect(() => {
+    localStorage.setItem("termix_paneTabIds", JSON.stringify(paneTabIds));
+  }, [paneTabIds]);
 
   const isMobile = useIsMobile();
 
@@ -164,6 +217,11 @@ export function AppShell({
   }, []);
 
   const lastShiftTime = useRef(0);
+  const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
+    useState<boolean>(() => {
+      const v = localStorage.getItem("commandPaletteShortcutEnabled");
+      return v !== null ? v === "true" : true;
+    });
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
   );
@@ -210,6 +268,7 @@ export function AppShell({
     snippets: "Snippets",
     history: "History",
     "split-screen": "Split Screen",
+    connections: t("nav.connections"),
     "user-profile": "User Profile",
     "admin-settings": "Admin Settings",
   };
@@ -217,15 +276,28 @@ export function AppShell({
   // Double-shift opens command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "ShiftLeft") {
+      if (e.code === "ShiftLeft" && !e.repeat) {
         const now = Date.now();
-        if (now - lastShiftTime.current < 300)
+        if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
           setCommandPaletteOpen((prev) => !prev);
         lastShiftTime.current = now;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [commandPaletteShortcutEnabled]);
+
+  useEffect(() => {
+    const handler = () => {
+      const v = localStorage.getItem("commandPaletteShortcutEnabled");
+      setCommandPaletteShortcutEnabled(v !== null ? v === "true" : true);
+    };
+    window.addEventListener("commandPaletteShortcutEnabledChanged", handler);
+    return () =>
+      window.removeEventListener(
+        "commandPaletteShortcutEnabledChanged",
+        handler,
+      );
   }, []);
 
   useEffect(() => {
@@ -288,6 +360,13 @@ export function AppShell({
     };
   }, [t]);
 
+  useEffect(() => {
+    getUserPreferences()
+      .then((prefs) => setUserPrefs(prefs))
+      .catch(() => {})
+      .finally(() => setUserPrefsLoaded(true));
+  }, []);
+
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
@@ -299,6 +378,7 @@ export function AppShell({
       // Keep empty state on error
     } finally {
       setHostsLoading(false);
+      setHostsLoaded(true);
     }
   }, []);
 
@@ -336,19 +416,149 @@ export function AppShell({
     return () => window.removeEventListener("termix:open-tab", handle);
   }, [allHosts]);
 
+  const PERSISTENT_TAB_TYPES: TabType[] = [
+    "terminal",
+    "rdp",
+    "vnc",
+    "telnet",
+    "files",
+    "docker",
+    "stats",
+    "tunnel",
+  ];
+
+  // On load: always read saved tabs from DB so background sessions are preserved across refreshes.
+  // If reopenTabsOnLogin is on, also restore them as open tabs in the tab bar.
+  const tabRestoreAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!hostsLoaded || !userPrefsLoaded) return;
+    if (tabRestoreAttemptedRef.current) return;
+    tabRestoreAttemptedRef.current = true;
+
+    async function loadSavedTabs() {
+      try {
+        const [savedTabs, activeSessions] = await Promise.all([
+          getOpenTabs(),
+          getActiveSessions(),
+        ]);
+
+        if (!Array.isArray(savedTabs) || savedTabs.length === 0) return;
+
+        const sessionByInstanceId = new Map(
+          (Array.isArray(activeSessions) ? activeSessions : [])
+            .filter((s) => s.tabInstanceId != null)
+            .map((s) => [s.tabInstanceId, s]),
+        );
+
+        if (userPrefs.reopenTabsOnLogin) {
+          const hasPersistentTabs = tabs.some((t) =>
+            PERSISTENT_TAB_TYPES.includes(t.type),
+          );
+          if (!hasPersistentTabs) {
+            const restoredTabs: Tab[] = [];
+            for (const saved of savedTabs as OpenTabRecord[]) {
+              const host = saved.hostId
+                ? allHosts.find((h) => h.id === String(saved.hostId))
+                : undefined;
+              const hostlessTypes: TabType[] = ["dashboard", "tunnel"];
+              if (!host && !hostlessTypes.includes(saved.tabType as TabType))
+                continue;
+
+              // Singleton tabs use their type as the stable ID; host-bound tabs get a unique ID
+              const tabId = host
+                ? `${host.name}-${saved.tabType}-${Date.now()}-${saved.tabOrder}`
+                : saved.id;
+              const liveSession = sessionByInstanceId.get(saved.id);
+              const restoredSessionId =
+                liveSession?.sessionId ?? saved.backendSessionId ?? null;
+
+              restoredTabs.push({
+                id: tabId,
+                instanceId: saved.id,
+                type: saved.tabType as TabType,
+                label: saved.label,
+                host,
+                openedAt: new Date(saved.createdAt).getTime(),
+                restoredSessionId,
+                terminalRef:
+                  saved.tabType === "terminal" ? createRef() : undefined,
+              });
+            }
+
+            if (restoredTabs.length > 0) {
+              setTabs((prev) => {
+                const existingIds = new Set(prev.map((t) => t.id));
+                const newTabs = restoredTabs.filter(
+                  (t) => !existingIds.has(t.id),
+                );
+                return newTabs.length > 0 ? [...prev, ...newTabs] : prev;
+              });
+              setActiveTabId(restoredTabs[0].id);
+            }
+            // Restored tabs are in the tab bar, not in background records
+          }
+        } else {
+          // Not restoring to tab bar — keep as background records for ConnectionsPanel
+          setBackgroundTabRecords(savedTabs as OpenTabRecord[]);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setTabsReady(true);
+      }
+    }
+
+    loadSavedTabs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hostsLoaded, userPrefsLoaded]);
+
+  // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
+  const orderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const prevTabOrderRef = useRef<string>("");
+  useEffect(() => {
+    if (!tabsReady) return;
+    const persistable = tabs.filter((t) =>
+      PERSISTENT_TAB_TYPES.includes(t.type),
+    );
+    const orderKey = persistable.map((t) => t.instanceId).join(",");
+    if (orderKey === prevTabOrderRef.current) return;
+    prevTabOrderRef.current = orderKey;
+
+    if (orderSyncTimeoutRef.current) clearTimeout(orderSyncTimeoutRef.current);
+    orderSyncTimeoutRef.current = setTimeout(() => {
+      persistable.forEach((t, i) => {
+        patchOpenTab(t.instanceId, { tabOrder: i }).catch(() => {});
+      });
+    }, 500);
+
+    return () => {
+      if (orderSyncTimeoutRef.current)
+        clearTimeout(orderSyncTimeoutRef.current);
+    };
+  }, [tabs, tabsReady]);
+
   // ─── Tab management ──────────────────────────────────────────────────────
 
-  const openTab = useCallback(function openTab(host: Host, type: TabType) {
+  const openTab = useCallback(function openTab(
+    host: Host,
+    type: TabType,
+    restore?: { instanceId: string; restoredSessionId: string | null },
+  ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
+    const instanceId = restore?.instanceId ?? crypto.randomUUID();
+    const openedAt = Date.now();
     const ref = type === "terminal" ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
 
+    let finalLabel = host.name;
     setTabs((prev) => {
       const same = prev.filter(
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      const label =
+      finalLabel =
         same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
 
       // Retrofit the first duplicate's label to "(1)" if needed
@@ -359,9 +569,31 @@ export function AppShell({
             )
           : prev;
 
-      return [...next, { id: tabId, type, label, host, terminalRef: ref }];
+      return [
+        ...next,
+        {
+          id: tabId,
+          instanceId,
+          type,
+          label: finalLabel,
+          host,
+          openedAt,
+          terminalRef: ref,
+          restoredSessionId: restore?.restoredSessionId ?? null,
+        },
+      ];
     });
     setActiveTabId(tabId);
+
+    if (PERSISTENT_TAB_TYPES.includes(type)) {
+      addOpenTab({
+        id: instanceId,
+        tabType: type,
+        hostId: host ? parseInt(host.id) : null,
+        label: finalLabel,
+        tabOrder: 0,
+      }).catch(() => {});
+    }
   }, []);
 
   function connectHost(host: Host, preferredType?: TabType) {
@@ -411,17 +643,35 @@ export function AppShell({
         return;
       }
       const id = type;
+      const singletonLabels: Partial<Record<TabType, string>> = {
+        "host-manager": t("nav.hostManager"),
+        docker: t("nav.docker"),
+        tunnel: t("nav.tunnels"),
+        network_graph: t("nav.networkGraph"),
+      };
       setTabs((prev) => {
         if (prev.find((t) => t.id === id)) return prev;
-        const singletonLabels: Partial<Record<TabType, string>> = {
-          "host-manager": t("nav.hostManager"),
-          docker: t("nav.docker"),
-          tunnel: t("nav.tunnels"),
-          network_graph: t("nav.networkGraph"),
-        };
-        return [...prev, { id, type, label: singletonLabels[type] ?? type }];
+        return [
+          ...prev,
+          {
+            id,
+            instanceId: id,
+            type,
+            label: singletonLabels[type] ?? type,
+            openedAt: Date.now(),
+          },
+        ];
       });
       setActiveTabId(id);
+      if (PERSISTENT_TAB_TYPES.includes(type)) {
+        addOpenTab({
+          id,
+          tabType: type,
+          hostId: null,
+          label: singletonLabels[type] ?? type,
+          tabOrder: 0,
+        }).catch(() => {});
+      }
     },
     [t],
   );
@@ -429,6 +679,14 @@ export function AppShell({
   const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
 
   function doCloseTab(id: string) {
+    const tabToClose = tabs.find((t) => t.id === id);
+    if (
+      tabToClose?.instanceId &&
+      PERSISTENT_TAB_TYPES.includes(tabToClose.type)
+    ) {
+      deleteOpenTab(tabToClose.instanceId).catch(() => {});
+    }
+
     terminalRefs.current.delete(id);
     if (id === activeTabId) {
       const remaining = tabs.filter((t) => t.id !== id);
@@ -436,11 +694,18 @@ export function AppShell({
         remaining.length > 0 ? remaining[remaining.length - 1].id : "dashboard",
       );
     }
+    setPaneTabIds((prev) => prev.map((p) => (p === id ? null : p)));
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (next.length === 0)
         return [
-          { id: "dashboard", type: "dashboard", label: t("nav.dashboard") },
+          {
+            id: "dashboard",
+            instanceId: "dashboard",
+            type: "dashboard",
+            label: t("nav.dashboard"),
+            openedAt: Date.now(),
+          },
         ];
       return next;
     });
@@ -477,6 +742,53 @@ export function AppShell({
       return;
     }
     doCloseTab(id);
+  }
+
+  function splitTabQuick(tabId: string, mode: SplitMode) {
+    setSplitMode(mode);
+    setPaneTabIds(() => {
+      const count = PANE_COUNTS[mode];
+      const next: (string | null)[] = Array(6).fill(null);
+      next[0] = tabId;
+      // Fill remaining panes with other non-dashboard tabs in order
+      let slot = 1;
+      for (const tab of tabs) {
+        if (slot >= count) break;
+        if (tab.id !== tabId && tab.type !== "dashboard") {
+          next[slot] = tab.id;
+          slot++;
+        }
+      }
+      return next;
+    });
+  }
+
+  function addTabToSplit(tabId: string) {
+    setPaneTabIds((prev) => {
+      // Remove from any current slot first
+      const next = prev.map((p) => (p === tabId ? null : p));
+      // Find first empty slot within the current pane count
+      const count = PANE_COUNTS[splitMode];
+      for (let i = 0; i < count; i++) {
+        if (!next[i]) {
+          next[i] = tabId;
+          break;
+        }
+      }
+      return next;
+    });
+  }
+
+  function removeTabFromSplit(tabId: string) {
+    setPaneTabIds((prev) => prev.map((p) => (p === tabId ? null : p)));
+  }
+
+  function assignPane(paneIndex: number, tabId: string) {
+    setPaneTabIds((prev) => {
+      const next = prev.map((p) => (p === tabId ? null : p));
+      next[paneIndex] = tabId;
+      return next;
+    });
   }
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
@@ -663,13 +975,62 @@ export function AppShell({
             setSplitMode={setSplitMode}
             paneTabIds={paneTabIds}
             setPaneTabIds={setPaneTabIds}
+            onAssignPane={assignPane}
+          />
+        </div>
+      )}
+
+      {railView === "connections" && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <ConnectionsPanel
+            tabs={tabs}
+            activeTabId={activeTabId}
+            allHosts={allHosts}
+            backgroundTabRecords={backgroundTabRecords}
+            onSwitchToTab={(tabId) => {
+              setActiveTabId(tabId);
+              if (isMobile) setSidebarOpen(false);
+            }}
+            onCloseTab={closeTab}
+            onReopenTab={(record, restoredSessionId) => {
+              const host = record.hostId
+                ? allHosts.find((h) => h.id === String(record.hostId))
+                : undefined;
+              const hostlessTypes: TabType[] = ["tunnel"];
+              if (!host && !hostlessTypes.includes(record.tabType as TabType))
+                return;
+              setBackgroundTabRecords((prev) =>
+                prev.filter((r) => r.id !== record.id),
+              );
+              if (host) {
+                const effectiveSessionId =
+                  restoredSessionId ?? record.backendSessionId ?? null;
+                openTab(host, record.tabType as TabType, {
+                  instanceId: record.id,
+                  restoredSessionId: effectiveSessionId,
+                });
+              } else {
+                openSingletonTab(record.tabType as TabType);
+              }
+              if (isMobile) setSidebarOpen(false);
+            }}
+            onForgetBackground={(recordId) => {
+              setBackgroundTabRecords((prev) =>
+                prev.filter((r) => r.id !== recordId),
+              );
+            }}
           />
         </div>
       )}
 
       {railView === "user-profile" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <UserProfilePanel username={username} onLogout={onLogout} />
+          <UserProfilePanel
+            username={username}
+            onLogout={onLogout}
+            userPrefs={userPrefs}
+            onPrefsChange={setUserPrefs}
+          />
         </div>
       )}
 
@@ -721,6 +1082,10 @@ export function AppShell({
           railView={railView}
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
+          connectionCount={
+            tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type)).length +
+            backgroundTabRecords.length
+          }
           username={username}
           isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
@@ -783,10 +1148,16 @@ export function AppShell({
             <TabBar
               tabs={tabs}
               activeTabId={activeTabId}
+              splitMode={splitMode}
+              paneTabIds={paneTabIds}
+              focusedPaneIndex={focusedPaneIndex}
               onSetActiveTab={setActiveTabId}
               onCloseTab={closeTab}
               onRefreshTab={refreshTab}
               onReorderTabs={setTabs}
+              onSplitTab={splitTabQuick}
+              onAddToSplit={addTabToSplit}
+              onRemoveFromSplit={removeTabFromSplit}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
@@ -802,8 +1173,11 @@ export function AppShell({
                     tabs={tabs}
                     paneTabIds={paneTabIds}
                     splitMode={splitMode}
+                    focusedPaneIndex={focusedPaneIndex}
                     onTerminalResize={resizeAllTerminals}
                     onPaneContentRef={onPaneContentRef}
+                    onPaneClick={setFocusedPaneIndex}
+                    onAssignPane={assignPane}
                   />
                 </div>
               )}
