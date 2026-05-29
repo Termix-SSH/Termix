@@ -4749,6 +4749,7 @@ export function HostManager({
       } else if (action === "add-credential") {
         setEditingCredential("new");
         setEditingHost(null);
+        setActiveCredentialTab("general");
       }
     }
   }, [pendingEditId, pendingAction]);
@@ -4770,6 +4771,7 @@ export function HostManager({
     const handleAddCredential = () => {
       setEditingCredential("new");
       setEditingHost(null);
+      setActiveCredentialTab("general");
     };
     const handleEditHost = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;

@@ -96,11 +96,6 @@ interface FileManagerGridProps {
 }
 
 const getFileTypeColor = (file: FileItem): string => {
-  const colorEnabled = localStorage.getItem("fileColorCoding") !== "false";
-  if (!colorEnabled) {
-    return "text-muted-foreground";
-  }
-
   if (file.type === "directory") {
     return "text-red-400";
   }
