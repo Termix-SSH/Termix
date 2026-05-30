@@ -44,6 +44,7 @@ import {
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
+import type { SSHHostData } from "@/types/index";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
@@ -308,7 +309,10 @@ export function HostItem({
               {host.enableSsh && host.enableTerminal && (
                 <button
                   title="Terminal"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("terminal"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("terminal");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Terminal className="size-3" />
@@ -317,7 +321,10 @@ export function HostItem({
               {host.enableSsh && host.enableFileManager && (
                 <button
                   title="Files"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("files"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("files");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <FolderOpen className="size-3" />
@@ -326,7 +333,10 @@ export function HostItem({
               {host.enableRdp && (
                 <button
                   title="RDP"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("rdp"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("rdp");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <Monitor className="size-3" />
@@ -335,7 +345,10 @@ export function HostItem({
               {host.enableVnc && (
                 <button
                   title="VNC"
-                  onClick={(e) => { e.stopPropagation(); onOpenTab("vnc"); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenTab("vnc");
+                  }}
                   className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
                   <MousePointerClick className="size-3" />
@@ -846,7 +859,11 @@ export function SidebarTree({
   function toggleFolder(name: string) {
     setOpenFolders((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
       return next;
     });
   }
@@ -854,7 +871,11 @@ export function SidebarTree({
   function toggleSelect(id: string) {
     setSelectedHostIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -876,7 +897,7 @@ export function SidebarTree({
 
   async function handleDuplicateHost(host: Host) {
     try {
-      await createSSHHost({
+      const duplicateHost: SSHHostData = {
         name: `${host.name} (copy)`,
         ip: host.ip,
         port: host.port,
@@ -933,7 +954,8 @@ export function SidebarTree({
         statsConfig: host.statsConfig,
         guacamoleConfig: host.guacamoleConfig ?? null,
         terminalConfig: host.terminalConfig ?? null,
-      } as any);
+      };
+      await createSSHHost(duplicateHost);
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {

@@ -25,9 +25,12 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
   const interfaces = metricsWithNetwork?.network?.interfaces ?? [];
 
   const ifaceIcon = (name: string) => {
-    if (/^(wl|wlan|wifi|ath)/.test(name)) return <Wifi className="size-3 text-muted-foreground/50" />;
-    if (/^(eth|en|enp|eno|ens)/.test(name)) return <Cable className="size-3 text-muted-foreground/50" />;
-    if (/^(docker|br-|veth|virbr|vlan|bond|tun|tap|wg|lo)/.test(name)) return <Container className="size-3 text-muted-foreground/50" />;
+    if (/^(wl|wlan|wifi|ath)/.test(name))
+      return <Wifi className="size-3 text-muted-foreground/50" />;
+    if (/^(eth|en|enp|eno|ens)/.test(name))
+      return <Cable className="size-3 text-muted-foreground/50" />;
+    if (/^(docker|br-|veth|virbr|vlan|bond|tun|tap|wg|lo)/.test(name))
+      return <Container className="size-3 text-muted-foreground/50" />;
     return <Network className="size-3 text-muted-foreground/50" />;
   };
 

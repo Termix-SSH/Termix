@@ -236,11 +236,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
         isVisible={true}
         onError={(err) => setConnectionError(err)}
       />
-      <GuacamoleToolbar
-        displayRef={displayRef}
-        protocol={resolvedProtocol}
-        onReconnect={handleReconnect}
-      />
+      <GuacamoleToolbar displayRef={displayRef} protocol={resolvedProtocol} />
     </div>
   );
 };

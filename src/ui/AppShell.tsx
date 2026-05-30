@@ -907,7 +907,6 @@ export function AppShell({
     }
   });
 
-  const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
@@ -1086,10 +1085,6 @@ export function AppShell({
           railView={railView}
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
-          connectionCount={
-            tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type)).length +
-            backgroundTabRecords.length
-          }
           username={username}
           isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
@@ -1194,8 +1189,14 @@ export function AppShell({
                 ref={normalViewRef}
                 className="absolute inset-0"
                 style={{
-                  display: isSplit && !isMobile && paneTabIds.includes(activeTabId) ? "none" : undefined,
-                  zIndex: isSplit && !paneTabIds.includes(activeTabId) ? 10 : undefined,
+                  display:
+                    isSplit && !isMobile && paneTabIds.includes(activeTabId)
+                      ? "none"
+                      : undefined,
+                  zIndex:
+                    isSplit && !paneTabIds.includes(activeTabId)
+                      ? 10
+                      : undefined,
                 }}
               >
                 {tabs.map((tab) => {

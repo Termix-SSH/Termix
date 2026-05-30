@@ -76,29 +76,6 @@ interface MenuItem {
   danger?: boolean;
 }
 
-const VIEWPORT_PADDING = 10;
-
-function getClampedMenuPosition(
-  x: number,
-  y: number,
-  menuWidth: number,
-  menuHeight: number,
-) {
-  const maxX = Math.max(
-    VIEWPORT_PADDING,
-    window.innerWidth - menuWidth - VIEWPORT_PADDING,
-  );
-  const maxY = Math.max(
-    VIEWPORT_PADDING,
-    window.innerHeight - menuHeight - VIEWPORT_PADDING,
-  );
-
-  return {
-    x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
-    y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
-  };
-}
-
 export function FileManagerContextMenu({
   x,
   y,

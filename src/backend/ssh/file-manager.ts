@@ -697,7 +697,11 @@ function verifySessionOwnership(session: SSHSession, userId: string): boolean {
 }
 
 app.use("/ssh/file_manager/ssh", (req, res, next) => {
-  if (req.path === "/connect" || req.path === "/connect-totp" || req.path === "/connect-warpgate") {
+  if (
+    req.path === "/connect" ||
+    req.path === "/connect-totp" ||
+    req.path === "/connect-warpgate"
+  ) {
     return next();
   }
   const sessionId = (req.query.sessionId as string) || req.body?.sessionId;

@@ -1830,8 +1830,7 @@ router.get(
           return res.status(404).json({ error: "Host not found" });
         }
         const host = ownerDecrypted[0];
-        const resolved =
-          (await resolveHostCredentials(host, ownerId)) || host;
+        const resolved = (await resolveHostCredentials(host, ownerId)) || host;
         const value = resolved[field];
         if (!value) {
           return res.status(404).json({ error: "No password set" });

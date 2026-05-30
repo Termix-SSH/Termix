@@ -87,7 +87,11 @@ export function AlertCard({
 
   return (
     <div className="w-full border border-edge rounded-md !bg-elevated overflow-hidden">
-      <div className={"h-1 w-full " + getAccentBarClass(alert.priority, alert.type)} />
+      <div
+        className={
+          "h-1 w-full " + getAccentBarClass(alert.priority, alert.type)
+        }
+      />
 
       <div className="flex items-start justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-3">
@@ -109,7 +113,9 @@ export function AlertCard({
           {alert.type && (
             <Badge
               variant={getTypeBadgeVariant(alert.type)}
-              className={alert.type === "success" ? "text-green-400" : undefined}
+              className={
+                alert.type === "success" ? "text-green-400" : undefined
+              }
             >
               {alert.type}
             </Badge>

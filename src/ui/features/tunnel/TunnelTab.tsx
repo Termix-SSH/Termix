@@ -48,14 +48,12 @@ function statusLabel(status: TunnelStatus | undefined): string {
 
 function TunnelCard({
   host,
-  index,
   tunnel,
   status,
   isActing,
   onAction,
 }: {
   host: SSHHost;
-  index: number;
   tunnel: TunnelConnection;
   status: TunnelStatus | undefined;
   isActing: boolean;
@@ -428,7 +426,6 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
                 <TunnelCard
                   key={name}
                   host={sshHost}
-                  index={index}
                   tunnel={tunnel}
                   status={tunnelStatuses[name]}
                   isActing={tunnelActions[name] ?? false}

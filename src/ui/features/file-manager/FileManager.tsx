@@ -2873,11 +2873,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               <FileManagerGrid
                 files={filteredFiles}
                 selectedFiles={selectedFiles}
-                onFileSelect={() => {}}
                 onFileOpen={handleFileOpen}
                 onSelectionChange={setSelection}
-                currentPath={currentPath}
-                onPathChange={navigateTo}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
                 sortBy={sortBy}

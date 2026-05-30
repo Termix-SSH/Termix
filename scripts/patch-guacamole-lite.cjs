@@ -30,7 +30,9 @@ let patched = false;
 
 if (!content.includes(newVersionCheck)) {
   if (!content.includes(oldVersionCheck)) {
-    console.log("[patch-guacamole-lite] Version check target not found, skipping");
+    console.log(
+      "[patch-guacamole-lite] Version check target not found, skipping",
+    );
     process.exit(0);
   }
   content = content.replace(oldVersionCheck, newVersionCheck);

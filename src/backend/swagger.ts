@@ -1,13 +1,15 @@
-import swaggerJSDoc from "swagger-jsdoc";
+import swaggerJSDoc from "@deadendjs/swagger-jsdoc";
 import path from "path";
 import { fileURLToPath } from "url";
 import { promises as fs } from "fs";
 import { systemLogger } from "./utils/logger.js";
 
+type SwaggerJSDocOptions = Parameters<typeof swaggerJSDoc>[0];
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const swaggerOptions: swaggerJSDoc.Options = {
+const swaggerOptions: SwaggerJSDocOptions = {
   definition: {
     openapi: "3.0.3",
     info: {
@@ -129,7 +131,7 @@ async function generateOpenAPISpec() {
       operation: "openapi_generate_start",
     });
 
-    const swaggerSpec = swaggerJSDoc(swaggerOptions);
+    const swaggerSpec = await swaggerJSDoc(swaggerOptions);
 
     const outputPath = path.join(__dirname, "..", "..", "..", "openapi.json");
 

@@ -43,7 +43,10 @@ router.get("/", authenticateJWT, (req: Request, res: Response) => {
     }
     return res.json({ reopenTabsOnLogin: rows[0].reopenTabsOnLogin });
   } catch (e) {
-    databaseLogger.error("Failed to get user preferences", e, { operation: "get_user_preferences", userId });
+    databaseLogger.error("Failed to get user preferences", e, {
+      operation: "get_user_preferences",
+      userId,
+    });
     return res.status(500).json({ error: "Failed to get user preferences" });
   }
 });
@@ -73,7 +76,9 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
   const { reopenTabsOnLogin } = req.body as { reopenTabsOnLogin?: boolean };
 
   if (typeof reopenTabsOnLogin !== "boolean") {
-    return res.status(400).json({ error: "reopenTabsOnLogin must be a boolean" });
+    return res
+      .status(400)
+      .json({ error: "reopenTabsOnLogin must be a boolean" });
   }
 
   try {
@@ -84,11 +89,13 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
       .all();
 
     if (existing.length === 0) {
-      db.insert(userPreferences).values({
-        userId,
-        reopenTabsOnLogin,
-        updatedAt: new Date().toISOString(),
-      }).run();
+      db.insert(userPreferences)
+        .values({
+          userId,
+          reopenTabsOnLogin,
+          updatedAt: new Date().toISOString(),
+        })
+        .run();
     } else {
       db.update(userPreferences)
         .set({ reopenTabsOnLogin, updatedAt: new Date().toISOString() })
@@ -98,7 +105,10 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
 
     return res.json({ success: true, reopenTabsOnLogin });
   } catch (e) {
-    databaseLogger.error("Failed to update user preferences", e, { operation: "update_user_preferences", userId });
+    databaseLogger.error("Failed to update user preferences", e, {
+      operation: "update_user_preferences",
+      userId,
+    });
     return res.status(500).json({ error: "Failed to update user preferences" });
   }
 });

@@ -524,15 +524,13 @@ function ShareSnippetDialog({
     Promise.all([getUserList(), getRoles(), getSnippetAccess(snippet.id)])
       .then(([usersData, rolesData, accessData]) => {
         setUsers(
-          (usersData?.users || []).map((u: any) => ({
+          (usersData?.users || []).map((u) => ({
             id: u.id,
             username: u.username,
           })),
         );
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setRoles((rolesData?.roles || []).map((r: any) => r));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAccessList((accessData as any).accessList || []);
+        setRoles(rolesData?.roles || []);
+        setAccessList(accessData.accessList || []);
       })
       .catch(() => toast.error(t("newUi.sidebar.snippets.shareLoadError")))
       .finally(() => setLoading(false));
@@ -1007,7 +1005,11 @@ export function SnippetsPanel({
   function toggleTab(id: string) {
     setSelectedTabIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -1048,12 +1050,14 @@ export function SnippetsPanel({
 
   async function handleCreateFolder(f: Omit<SnippetFolder, "id" | "open">) {
     try {
-      const created = (await apiCreateSnippetFolder({
+      const created = await apiCreateSnippetFolder({
         name: f.name,
         color: f.color,
         icon: f.icon,
-      })) as any;
-      setFolders((prev) => [...prev, { ...f, id: created.id, open: true }]);
+      });
+      const id =
+        typeof created.id === "number" ? created.id : Number(created.id);
+      setFolders((prev) => [...prev, { ...f, id, open: true }]);
       toast.success(t("newUi.sidebar.snippets.folderCreateSuccess"));
     } catch {
       toast.error(t("newUi.sidebar.snippets.folderCreateFailed"));

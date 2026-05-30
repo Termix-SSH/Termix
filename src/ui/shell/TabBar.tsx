@@ -381,7 +381,9 @@ export function TabBar({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {tabIcon(tab.type)}
                     <span className="truncate">
-                      {tab.type === "dashboard" ? t("nav.dashboard") : tab.label}
+                      {tab.type === "dashboard"
+                        ? t("nav.dashboard")
+                        : tab.label}
                     </span>
                   </div>
                   {tab.type !== "dashboard" && (

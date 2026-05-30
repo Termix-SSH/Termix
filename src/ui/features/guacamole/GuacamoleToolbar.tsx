@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 interface GuacamoleToolbarProps {
   displayRef: React.RefObject<GuacamoleDisplayHandle>;
   protocol: "rdp" | "vnc" | "telnet";
-  onReconnect: () => void;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -108,7 +107,6 @@ function TipIconBtn({
 export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   displayRef,
   protocol,
-  onReconnect,
 }) => {
   const { t } = useTranslation();
   const [position, setPosition] = useState({ x: 0, y: 12 });

@@ -121,7 +121,7 @@ export type Host = {
   telnetUser?: string;
   telnetPassword?: string;
 
-  guacamoleConfig?: Record<string, any>;
+  guacamoleConfig?: Record<string, unknown>;
   forceKeyboardInteractive?: boolean;
 };
 

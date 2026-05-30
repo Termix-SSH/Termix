@@ -230,7 +230,11 @@ export function C2STunnelPresetManager(): React.ReactElement {
   function toggleTunnel(index: number) {
     setOpenTunnels((current) => {
       const next = new Set(current);
-      next.has(index) ? next.delete(index) : next.add(index);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
       return next;
     });
   }

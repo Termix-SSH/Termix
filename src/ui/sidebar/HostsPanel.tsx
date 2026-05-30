@@ -102,7 +102,12 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
     if (!ok) return false;
   }
   if (filters.authType.length > 0) {
-    if (!filters.authType.includes(host.authType as FilterState["authType"][number])) return false;
+    if (
+      !filters.authType.includes(
+        host.authType as FilterState["authType"][number],
+      )
+    )
+      return false;
   }
   if (filters.protocol.length > 0) {
     const ok =
@@ -562,7 +567,9 @@ export function HostsPanel({
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuLabel>{t("hosts.filterStatusGroup")}</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {t("hosts.filterStatusGroup")}
+                  </DropdownMenuLabel>
                   {(["online", "offline", "pinned"] as const).map((val) => (
                     <DropdownMenuCheckboxItem
                       key={val}
@@ -570,23 +577,35 @@ export function HostsPanel({
                       onCheckedChange={() => handleFilterToggle("status", val)}
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {t(`hosts.filter${val.charAt(0).toUpperCase() + val.slice(1)}`)}
+                      {t(
+                        `hosts.filter${val.charAt(0).toUpperCase() + val.slice(1)}`,
+                      )}
                     </DropdownMenuCheckboxItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t("hosts.filterAuthGroup")}</DropdownMenuLabel>
-                  {(["password", "key", "credential", "none", "opkssh"] as const).map((val) => (
+                  <DropdownMenuLabel>
+                    {t("hosts.filterAuthGroup")}
+                  </DropdownMenuLabel>
+                  {(
+                    ["password", "key", "credential", "none", "opkssh"] as const
+                  ).map((val) => (
                     <DropdownMenuCheckboxItem
                       key={val}
                       checked={filterState.authType.includes(val)}
-                      onCheckedChange={() => handleFilterToggle("authType", val)}
+                      onCheckedChange={() =>
+                        handleFilterToggle("authType", val)
+                      }
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {t(`hosts.filterAuth${val.charAt(0).toUpperCase() + val.slice(1)}`)}
+                      {t(
+                        `hosts.filterAuth${val.charAt(0).toUpperCase() + val.slice(1)}`,
+                      )}
                     </DropdownMenuCheckboxItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t("hosts.filterProtocolGroup")}</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {t("hosts.filterProtocolGroup")}
+                  </DropdownMenuLabel>
                   {(
                     [
                       ["ssh", "Ssh"],
@@ -598,14 +617,18 @@ export function HostsPanel({
                     <DropdownMenuCheckboxItem
                       key={val}
                       checked={filterState.protocol.includes(val)}
-                      onCheckedChange={() => handleFilterToggle("protocol", val)}
+                      onCheckedChange={() =>
+                        handleFilterToggle("protocol", val)
+                      }
                       onSelect={(e) => e.preventDefault()}
                     >
                       {t(`hosts.filterProtocol${key}`)}
                     </DropdownMenuCheckboxItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t("hosts.filterFeaturesGroup")}</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {t("hosts.filterFeaturesGroup")}
+                  </DropdownMenuLabel>
                   {(
                     [
                       ["terminal", "Terminal"],
@@ -617,7 +640,9 @@ export function HostsPanel({
                     <DropdownMenuCheckboxItem
                       key={val}
                       checked={filterState.features.includes(val)}
-                      onCheckedChange={() => handleFilterToggle("features", val)}
+                      onCheckedChange={() =>
+                        handleFilterToggle("features", val)
+                      }
                       onSelect={(e) => e.preventDefault()}
                     >
                       {t(`hosts.filterFeature${key}`)}
@@ -626,12 +651,16 @@ export function HostsPanel({
                   {allTags.length > 0 && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel>{t("hosts.filterTagsGroup")}</DropdownMenuLabel>
+                      <DropdownMenuLabel>
+                        {t("hosts.filterTagsGroup")}
+                      </DropdownMenuLabel>
                       {allTags.map((tag) => (
                         <DropdownMenuCheckboxItem
                           key={tag}
                           checked={filterState.tags.includes(tag)}
-                          onCheckedChange={() => handleFilterToggle("tags", tag)}
+                          onCheckedChange={() =>
+                            handleFilterToggle("tags", tag)
+                          }
                           onSelect={(e) => e.preventDefault()}
                         >
                           {tag}
@@ -660,7 +689,12 @@ export function HostsPanel({
         className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
       >
         <SidebarTree
-          children={hostTree ? applyFilters(sortHostTree(hostTree, sortKey), filterState).children : []}
+          children={
+            hostTree
+              ? applyFilters(sortHostTree(hostTree, sortKey), filterState)
+                  .children
+              : []
+          }
           onOpenTab={onOpenTab}
           onEditHost={onEditHost}
           onShareHost={(host) => setShareModalHost(host)}

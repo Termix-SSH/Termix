@@ -93,7 +93,7 @@ function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
   };
 }
 
-interface HostConfig {
+export interface TerminalHostConfig {
   id?: number;
   instanceId?: string;
   restoredSessionId?: string | null;
@@ -110,7 +110,7 @@ interface HostConfig {
   [key: string]: unknown;
 }
 
-interface TerminalHandle {
+export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
   fit: () => void;
@@ -125,7 +125,7 @@ type HostKeyVerificationData = Omit<
 >;
 
 interface SSHTerminalProps {
-  hostConfig: HostConfig;
+  hostConfig: TerminalHostConfig;
   isVisible: boolean;
   title?: string;
   showTitle?: boolean;
@@ -203,8 +203,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       "no_keyboard" | "auth_failed" | "timeout"
     >("no_keyboard");
     const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
-    const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
-      useState(false);
+    const [, setKeyboardInteractiveDetected] = useState(false);
     const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
     const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
     const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
@@ -222,7 +221,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
-    const currentHostConfigRef = useRef<HostConfig | null>(null);
+    const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
 
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;
@@ -233,7 +232,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
     // Consumed on first connectToHost call so retries don't re-attempt a stale session
-    const pendingRestoredSessionIdRef = useRef<string | null>(hostConfig.restoredSessionId ?? null);
+    const pendingRestoredSessionIdRef = useRef<string | null>(
+      hostConfig.restoredSessionId ?? null,
+    );
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -1484,7 +1485,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             sessionIdRef.current = msg.sessionId;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: msg.sessionId }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: msg.sessionId,
+                }).catch(() => {});
               });
             }
           } else if (msg.type === "sessionAttached") {
@@ -1520,7 +1523,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             wasSessionExpiredRef.current = true;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: null }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: null,
+                }).catch(() => {});
               });
             }
             if (webSocketRef.current) {
@@ -2139,8 +2144,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isMountedRef.current = true;
 
       const currentHostId = hostConfig.id;
-      const currentInstanceId = hostConfig.instanceId;
-
       return () => {
         if (!isMountedRef.current) {
           return;

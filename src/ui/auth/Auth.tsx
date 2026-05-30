@@ -253,7 +253,9 @@ export function Auth({ onLogin }: AuthProps) {
   useEffect(() => {
     try {
       localStorage.setItem("rememberMe", rememberMe.toString());
-    } catch {}
+    } catch {
+      // Ignore storage failures; auth state still works for the current session.
+    }
   }, [rememberMe]);
 
   useEffect(() => {
