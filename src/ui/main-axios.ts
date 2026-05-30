@@ -3,17 +3,7 @@ import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
-import type {
-  SSHHost,
-  SSHHostData,
-  TunnelConfig,
-  TunnelStatus,
-  TunnelConnection,
-  C2STunnelPreset,
-  FileManagerFile,
-  FileManagerShortcut,
-  ProxyNode,
-} from "@/types/index";
+import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -66,14 +56,6 @@ import {
   type LogContext,
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
-
-interface FileManagerOperation {
-  name: string;
-  path: string;
-  isSSH: boolean;
-  sshSessionId?: string;
-  hostId: number;
-}
 
 export type ServerStatus = {
   status: "online" | "offline";
@@ -1311,254 +1293,31 @@ export async function testProxyConnection(options: {
 }
 
 // ============================================================================
-// TUNNEL MANAGEMENT
-// ============================================================================
+export {
+  getTunnelStatuses,
+  subscribeTunnelStatuses,
+  getTunnelStatusByName,
+  connectTunnel,
+  disconnectTunnel,
+  cancelTunnel,
+  getC2STunnelPresets,
+  createC2STunnelPreset,
+  updateC2STunnelPreset,
+  deleteC2STunnelPreset,
+} from "@/api/tunnel-api";
 
-export async function getTunnelStatuses(): Promise<
-  Record<string, TunnelStatus>
-> {
-  try {
-    const response = await tunnelApi.get("/tunnel/status");
-    return response.data || {};
-  } catch (error) {
-    handleApiError(error, "fetch tunnel statuses");
-  }
-}
+export {
+  getFileManagerRecent,
+  addFileManagerRecent,
+  removeFileManagerRecent,
+  getFileManagerPinned,
+  addFileManagerPinned,
+  removeFileManagerPinned,
+  getFileManagerShortcuts,
+  addFileManagerShortcut,
+  removeFileManagerShortcut,
+} from "@/api/file-manager-metadata-api";
 
-export function subscribeTunnelStatuses(
-  onStatuses: (statuses: Record<string, TunnelStatus>) => void,
-  onError?: () => void,
-): () => void {
-  const baseURL = (tunnelApi.defaults.baseURL || "").replace(/\/$/, "");
-  const source = new EventSource(`${baseURL}/tunnel/status/stream`, {
-    withCredentials: true,
-  });
-
-  source.addEventListener("statuses", (event) => {
-    try {
-      onStatuses(JSON.parse(event.data) as Record<string, TunnelStatus>);
-    } catch {
-      onError?.();
-    }
-  });
-
-  source.onerror = () => {
-    onError?.();
-  };
-
-  return () => source.close();
-}
-
-export async function getTunnelStatusByName(
-  tunnelName: string,
-): Promise<TunnelStatus | undefined> {
-  const statuses = await getTunnelStatuses();
-  return statuses[tunnelName];
-}
-
-export async function connectTunnel(
-  tunnelConfig: TunnelConfig,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await tunnelApi.post("/tunnel/connect", tunnelConfig);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "connect tunnel");
-  }
-}
-
-export async function disconnectTunnel(
-  tunnelName: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await tunnelApi.post("/tunnel/disconnect", { tunnelName });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "disconnect tunnel");
-  }
-}
-
-export async function cancelTunnel(
-  tunnelName: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await tunnelApi.post("/tunnel/cancel", { tunnelName });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "cancel tunnel");
-  }
-}
-
-export async function getC2STunnelPresets(): Promise<C2STunnelPreset[]> {
-  try {
-    const response = await authApi.get("/c2s-tunnel-presets");
-    return response.data || [];
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      return [];
-    }
-    handleApiError(error, "fetch client tunnel presets");
-  }
-}
-
-export async function createC2STunnelPreset(data: {
-  name: string;
-  config: TunnelConnection[];
-  platform?: string;
-  computerName?: string;
-}): Promise<C2STunnelPreset> {
-  try {
-    const response = await authApi.post("/c2s-tunnel-presets", data);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "create client tunnel preset");
-  }
-}
-
-export async function updateC2STunnelPreset(
-  id: number,
-  data: Partial<{
-    name: string;
-    config: TunnelConnection[];
-    platform: string;
-    computerName: string;
-  }>,
-): Promise<C2STunnelPreset> {
-  try {
-    const response = await authApi.put(`/c2s-tunnel-presets/${id}`, data);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update client tunnel preset");
-  }
-}
-
-export async function deleteC2STunnelPreset(
-  id: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete(`/c2s-tunnel-presets/${id}`);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "delete client tunnel preset");
-  }
-}
-
-// ============================================================================
-// FILE MANAGER METADATA (Recent, Pinned, Shortcuts)
-// ============================================================================
-
-export async function getFileManagerRecent(
-  hostId: number,
-): Promise<FileManagerFile[]> {
-  try {
-    const response = await sshHostApi.get(
-      `/file_manager/recent?hostId=${hostId}`,
-    );
-    return response.data || [];
-  } catch {
-    return [];
-  }
-}
-
-export async function addFileManagerRecent(
-  file: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post("/file_manager/recent", file);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add recent file");
-  }
-}
-
-export async function removeFileManagerRecent(
-  file: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete("/file_manager/recent", {
-      data: file,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "remove recent file");
-  }
-}
-
-export async function getFileManagerPinned(
-  hostId: number,
-): Promise<FileManagerFile[]> {
-  try {
-    const response = await sshHostApi.get(
-      `/file_manager/pinned?hostId=${hostId}`,
-    );
-    return response.data || [];
-  } catch {
-    return [];
-  }
-}
-
-export async function addFileManagerPinned(
-  file: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post("/file_manager/pinned", file);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add pinned file");
-  }
-}
-
-export async function removeFileManagerPinned(
-  file: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete("/file_manager/pinned", {
-      data: file,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "remove pinned file");
-  }
-}
-
-export async function getFileManagerShortcuts(
-  hostId: number,
-): Promise<FileManagerShortcut[]> {
-  try {
-    const response = await sshHostApi.get(
-      `/file_manager/shortcuts?hostId=${hostId}`,
-    );
-    return response.data || [];
-  } catch {
-    return [];
-  }
-}
-
-export async function addFileManagerShortcut(
-  shortcut: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.post("/file_manager/shortcuts", shortcut);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add shortcut");
-  }
-}
-
-export async function removeFileManagerShortcut(
-  shortcut: FileManagerOperation,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await sshHostApi.delete("/file_manager/shortcuts", {
-      data: shortcut,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "remove shortcut");
-  }
-}
-
-// ============================================================================
 // SSH FILE OPERATIONS
 // ============================================================================
 
