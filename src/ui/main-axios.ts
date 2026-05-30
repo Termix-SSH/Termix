@@ -3236,97 +3236,17 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
 }
 
 // ============================================================================
-// COMMAND HISTORY API
-// ============================================================================
+export {
+  saveCommandToHistory,
+  getCommandHistory,
+  deleteCommandFromHistory,
+  clearCommandHistory,
+} from "@/api/command-history-api";
 
-export async function saveCommandToHistory(
-  hostId: number,
-  command: string,
-): Promise<{ id: number; command: string; executedAt: string }> {
-  try {
-    const response = await authApi.post("/terminal/command_history", {
-      hostId,
-      command,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "save command to history");
-  }
-}
-
-export async function getCommandHistory(
-  hostId: number,
-  limit: number = 100,
-): Promise<string[]> {
-  try {
-    const response = await authApi.get(`/terminal/command_history/${hostId}`, {
-      params: { limit },
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch command history");
-  }
-}
-
-export async function deleteCommandFromHistory(
-  hostId: number,
-  command: string,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await authApi.post("/terminal/command_history/delete", {
-      hostId,
-      command,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "delete command from history");
-  }
-}
-
-export async function clearCommandHistory(
-  hostId: number,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await authApi.delete(
-      `/terminal/command_history/${hostId}`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "clear command history");
-  }
-}
-
-// ============================================================================
-// OIDC ACCOUNT LINKING
-// ============================================================================
-
-export async function linkOIDCToPasswordAccount(
-  oidcUserId: string,
-  targetUsername: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await authApi.post("/users/link-oidc-to-password", {
-      oidcUserId,
-      targetUsername,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "link OIDC account to password account");
-  }
-}
-
-export async function unlinkOIDCFromPasswordAccount(
-  userId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await authApi.post("/users/unlink-oidc-from-password", {
-      userId,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "unlink OIDC from password account");
-  }
-}
+export {
+  linkOIDCToPasswordAccount,
+  unlinkOIDCFromPasswordAccount,
+} from "@/api/oidc-account-api";
 
 export type {
   GuacamoleTokenRequest,
@@ -3385,118 +3305,24 @@ export {
   getContainerStats,
 } from "@/api/docker-api";
 
-export interface DashboardLayout {
-  cards: Array<{
-    id: string;
-    enabled: boolean;
-    order: number;
-    panel?: "main" | "side";
-    height?: number | null;
-  }>;
-  mainWidthPct?: number;
-}
+export {
+  getDashboardPreferences,
+  saveDashboardPreferences,
+  type DashboardLayout,
+} from "@/api/dashboard-preferences-api";
 
-export async function getDashboardPreferences(): Promise<DashboardLayout> {
-  const response = await dashboardApi.get("/dashboard/preferences");
-  return response.data;
-}
-
-export async function saveDashboardPreferences(
-  layout: DashboardLayout,
-): Promise<{ success: boolean }> {
-  const response = await dashboardApi.post("/dashboard/preferences", layout);
-  return response.data;
-}
-
-// ============================================================================
-// OPEN TABS API
-// ============================================================================
-
-export interface OpenTabRecord {
-  id: string;
-  userId: string;
-  tabType: string;
-  hostId: number | null;
-  label: string;
-  tabOrder: number;
-  backendSessionId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface OpenTabSyncPayload {
-  id: string;
-  tabType: string;
-  hostId?: number | null;
-  label: string;
-  tabOrder: number;
-  backendSessionId?: string | null;
-}
-
-export interface OpenTabUpsertPayload {
-  id: string;
-  tabType: string;
-  hostId?: number | null;
-  label: string;
-  tabOrder: number;
-  backendSessionId?: string | null;
-}
-
-export interface ActiveSessionInfo {
-  sessionId: string;
-  hostId: number;
-  hostName: string;
-  tabInstanceId: string | null;
-  isConnected: boolean;
-  createdAt: number;
-}
-
-export async function getOpenTabs(): Promise<OpenTabRecord[]> {
-  const response = await authApi.get("/open-tabs");
-  return response.data;
-}
-
-export async function syncOpenTabs(tabs: OpenTabSyncPayload[]): Promise<void> {
-  await authApi.put("/open-tabs", { tabs });
-}
-
-export async function deleteOpenTab(instanceId: string): Promise<void> {
-  await authApi.delete(`/open-tabs/${instanceId}`);
-}
-
-export async function patchOpenTab(
-  instanceId: string,
-  updates: Partial<
-    Pick<OpenTabRecord, "label" | "tabOrder" | "backendSessionId">
-  >,
-): Promise<void> {
-  await authApi.patch(`/open-tabs/${instanceId}`, updates);
-}
-
-export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {
-  await authApi.post("/open-tabs", tab);
-}
-
-export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
-  const response = await authApi.get("/open-tabs/active-sessions");
-  return response.data;
-}
-
-// ============================================================================
-// USER PREFERENCES API
-// ============================================================================
-
-export interface UserPreferences {
-  reopenTabsOnLogin: boolean;
-}
-
-export async function getUserPreferences(): Promise<UserPreferences> {
-  const response = await authApi.get("/user-preferences");
-  return response.data;
-}
-
-export async function saveUserPreferences(
-  prefs: Partial<UserPreferences>,
-): Promise<void> {
-  await authApi.put("/user-preferences", prefs);
-}
+export {
+  getOpenTabs,
+  syncOpenTabs,
+  deleteOpenTab,
+  patchOpenTab,
+  addOpenTab,
+  getActiveSessions,
+  getUserPreferences,
+  saveUserPreferences,
+  type OpenTabRecord,
+  type OpenTabSyncPayload,
+  type OpenTabUpsertPayload,
+  type ActiveSessionInfo,
+  type UserPreferences,
+} from "@/api/open-tabs-api";
