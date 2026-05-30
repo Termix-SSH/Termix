@@ -62,6 +62,20 @@ export function normalizeTunnelName(
   return `${hostId}::${tunnelIndex}::${displayName}::${sourcePort}::${endpointHost}::${endpointPort}`;
 }
 
+export function getTunnelMode(
+  tunnelConfig: TunnelConfig,
+): "local" | "remote" | "dynamic" {
+  return tunnelConfig.mode || tunnelConfig.tunnelType || "remote";
+}
+
+export function getTunnelScope(tunnelConfig: TunnelConfig): "s2s" | "c2s" {
+  return tunnelConfig.scope || "s2s";
+}
+
+export function getTunnelBindHost(tunnelConfig: TunnelConfig): string {
+  return tunnelConfig.bindHost || "127.0.0.1";
+}
+
 export function parseTunnelName(tunnelName: string): {
   hostId?: number;
   tunnelIndex?: number;
