@@ -33,13 +33,13 @@ import {
   Pencil,
 } from "lucide-react";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
-import type { Host } from "@/types/ui-types";
+import type { Host, TabType } from "@/types/ui-types";
 
 interface CommandPaletteProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hosts: Host[];
-  onOpenTab: (type: any, label?: string, pendingEvent?: string) => void;
+  onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -53,7 +53,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   rdp: <Monitor className="size-3.5" />,
 };
 
-const ACTIVITY_TAB_TYPE: Record<string, string> = {
+const ACTIVITY_TAB_TYPE: Record<string, TabType> = {
   terminal: "terminal",
   file_manager: "files",
   server_stats: "stats",
@@ -64,7 +64,11 @@ const ACTIVITY_TAB_TYPE: Record<string, string> = {
   rdp: "rdp",
 };
 
-function getSshActions(host: Host) {
+function getSshActions(host: Host): {
+  type: TabType;
+  icon: React.ElementType;
+  label: string;
+}[] {
   const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
   return [
     host.enableTerminal !== false && {
@@ -81,7 +85,7 @@ function getSshActions(host: Host) {
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
     metricsEnabled && { type: "stats", icon: Activity, label: "Stats" },
   ].filter(Boolean) as {
-    type: string;
+    type: TabType;
     icon: React.ElementType;
     label: string;
   }[];
@@ -302,7 +306,7 @@ export function CommandPalette({
                       onSelect={() =>
                         handleAction(() =>
                           onOpenTab(
-                            ACTIVITY_TAB_TYPE[item.type] as any,
+                            ACTIVITY_TAB_TYPE[item.type],
                             item.hostName,
                           ),
                         )
@@ -388,7 +392,7 @@ export function CommandPalette({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAction(() =>
-                                      onOpenTab(type as any, host.name),
+                                      onOpenTab(type, host.name),
                                     );
                                   }}
                                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"

@@ -405,7 +405,7 @@ export function NetworkGraphCard({
           randomize: true,
           componentSpacing: 100,
           nodeOverlap: 20,
-        } as any)
+        })
         .run();
     } else {
       cyRef.current.fit();
@@ -719,7 +719,7 @@ export function NetworkGraphCard({
       onOpenInNewTab();
     } else {
       addTab({
-        type: "network_graph" as any,
+        type: "network_graph",
         title: t("dashboard.networkGraph"),
       });
     }
