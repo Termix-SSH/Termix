@@ -44,6 +44,7 @@ import {
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
+import type { SSHHostData } from "@/types/index";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
@@ -858,7 +859,11 @@ export function SidebarTree({
   function toggleFolder(name: string) {
     setOpenFolders((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
       return next;
     });
   }
@@ -866,7 +871,11 @@ export function SidebarTree({
   function toggleSelect(id: string) {
     setSelectedHostIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -888,7 +897,7 @@ export function SidebarTree({
 
   async function handleDuplicateHost(host: Host) {
     try {
-      await createSSHHost({
+      const duplicateHost: SSHHostData = {
         name: `${host.name} (copy)`,
         ip: host.ip,
         port: host.port,
@@ -945,7 +954,8 @@ export function SidebarTree({
         statsConfig: host.statsConfig,
         guacamoleConfig: host.guacamoleConfig ?? null,
         terminalConfig: host.terminalConfig ?? null,
-      } as any);
+      };
+      await createSSHHost(duplicateHost);
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {

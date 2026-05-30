@@ -399,7 +399,7 @@ export function FileManagerGrid({
         });
       }
     },
-    [dragState.type, dragState.counter],
+    [dragState.type],
   );
 
   const handleDragOver = useCallback(
@@ -600,7 +600,7 @@ export function FileManagerGrid({
 
       setDragState({ type: "none", files: [], counter: 0 });
     },
-    [onUpload, onDownload, dragState],
+    [onUpload, dragState],
   );
 
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {

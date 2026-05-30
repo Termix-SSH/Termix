@@ -93,7 +93,7 @@ function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
   };
 }
 
-interface HostConfig {
+export interface TerminalHostConfig {
   id?: number;
   instanceId?: string;
   restoredSessionId?: string | null;
@@ -110,7 +110,7 @@ interface HostConfig {
   [key: string]: unknown;
 }
 
-interface TerminalHandle {
+export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
   fit: () => void;
@@ -125,7 +125,7 @@ type HostKeyVerificationData = Omit<
 >;
 
 interface SSHTerminalProps {
-  hostConfig: HostConfig;
+  hostConfig: TerminalHostConfig;
   isVisible: boolean;
   title?: string;
   showTitle?: boolean;
@@ -221,7 +221,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
-    const currentHostConfigRef = useRef<HostConfig | null>(null);
+    const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
 
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;

@@ -35,7 +35,11 @@ export function SshToolsPanel({
   function toggleTab(id: string) {
     setSelectedTabIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -51,7 +55,7 @@ export function SshToolsPanel({
   function broadcast(data: string) {
     for (const tabId of selectedTabIds) {
       const tab = terminalTabs.find((t) => t.id === tabId);
-      (tab?.terminalRef?.current as any)?.sendInput?.(data);
+      tab?.terminalRef?.current?.sendInput?.(data);
     }
   }
 
