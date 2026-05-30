@@ -844,7 +844,7 @@ export function AppShell({
     const id = requestAnimationFrame(() => {
       tabs.forEach((tab) => {
         if (!tab.terminalRef) return;
-        const ref = tab.terminalRef.current as any;
+        const ref = tab.terminalRef.current;
         ref?.fit?.();
         ref?.notifyResize?.();
       });

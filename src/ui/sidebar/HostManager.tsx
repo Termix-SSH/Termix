@@ -72,17 +72,26 @@ import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, Credential } from "@/types/ui-types";
 import { useTabsSafe } from "@/shell/TabContext";
 
+type RawSSHHost = SSHHostWithStatus & {
+  hasKey?: boolean;
+  hasKeyPassword?: boolean;
+};
+type HostQuickAction = Host["quickActions"][number];
+type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
+type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
+
 function sshHostToHost(h: SSHHostWithStatus): Host {
-  const parseJson = (v: any) => {
+  const host = h as RawSSHHost;
+  const parseJson = <T,>(v: unknown): T | undefined => {
     if (!v) return undefined;
     if (typeof v === "string") {
       try {
-        return JSON.parse(v);
+        return JSON.parse(v) as T;
       } catch {
         return undefined;
       }
     }
-    return v;
+    return v as T;
   };
   return {
     id: String(h.id),
@@ -98,8 +107,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     tags: h.tags ?? [],
     authType: h.authType,
     password: h.password,
-    hasKey: !!(h as any).hasKey || !!(typeof h.key === "string" && h.key),
-    hasKeyPassword: !!(h as any).hasKeyPassword || !!h.keyPassword,
+    hasKey: !!host.hasKey || !!(typeof h.key === "string" && h.key),
+    hasKeyPassword: !!host.hasKeyPassword || !!h.keyPassword,
     key: typeof h.key === "string" ? h.key : undefined,
     keyPassword: h.keyPassword,
     keyType: h.keyType,
@@ -133,12 +142,12 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     vncUser: h.vncUser,
     telnetUser: h.telnetUser,
     telnetPassword: h.telnetPassword ?? "",
-    quickActions: (h.quickActions ?? []).map((a: any) => ({
+    quickActions: (h.quickActions ?? []).map((a: HostQuickAction) => ({
       name: a.name,
       snippetId: String(a.snippetId),
     })),
     serverTunnels: parseJson(h.tunnelConnections) ?? [],
-    jumpHosts: (parseJson(h.jumpHosts) ?? []).map((j: any) => ({
+    jumpHosts: (parseJson<HostJumpHost[]>(h.jumpHosts) ?? []).map((j) => ({
       hostId: String(j.hostId ?? j.hostid ?? j),
     })),
     portKnockSequence: parseJson(h.portKnockSequence) ?? [],
@@ -378,16 +387,10 @@ function HostEditor({
       socks5Port: host?.socks5Port ?? 1080,
       socks5Username: host?.socks5Username ?? "",
       socks5Password: host?.socks5Password ?? "",
-      socks5ProxyMode: ((host?.socks5ProxyChain as any[])?.length > 0
+      socks5ProxyMode: ((host?.socks5ProxyChain ?? []).length > 0
         ? "chain"
         : "single") as "single" | "chain",
-      socks5ProxyChain: ((host?.socks5ProxyChain as any[]) ?? []) as {
-        host: string;
-        port: number;
-        type: string;
-        username: string;
-        password: string;
-      }[],
+      socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
       enableTerminal: host?.enableTerminal ?? true,
       enableFileManager: host?.enableFileManager ?? false,
       enableDocker: host?.enableDocker ?? false,
