@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { SettingRow } from "@/components/section-card";
-import { RefreshCw, Settings, Shield, Trash2 } from "lucide-react";
+import { Database, RefreshCw, Settings, Shield, Trash2 } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 
 type GeneralSettingsSectionProps = {
@@ -449,6 +449,97 @@ export function AdminOidcSettingsSection({
             <RefreshCw className="size-3" />
             {oidcSaving ? t("admin.saving") : t("common.save")}
           </Button>
+        </div>
+      </div>
+    </AccordionSection>
+  );
+}
+
+type DatabaseSectionProps = {
+  open: boolean;
+  onToggle: () => void;
+  importFile: File | null;
+  setImportFile: Dispatch<SetStateAction<File | null>>;
+  exportLoading: boolean;
+  importLoading: boolean;
+  handleExportDatabase: () => void;
+  handleImportDatabase: () => void;
+};
+
+export function AdminDatabaseSection({
+  open,
+  onToggle,
+  importFile,
+  setImportFile,
+  exportLoading,
+  importLoading,
+  handleExportDatabase,
+  handleImportDatabase,
+}: DatabaseSectionProps) {
+  const { t } = useTranslation();
+
+  return (
+    <AccordionSection
+      label={t("admin.sectionDatabase")}
+      icon={<Database className="size-3.5" />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="flex flex-col gap-3 pt-3">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium">
+            {t("admin.exportDatabase")}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.exportDatabaseDesc")}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand mt-1"
+            onClick={handleExportDatabase}
+            disabled={exportLoading}
+          >
+            {exportLoading ? t("admin.exporting") : t("admin.export")}
+          </Button>
+        </div>
+        <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <span className="text-xs font-medium">
+            {t("admin.importDatabase")}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            {importFile
+              ? t("admin.importDatabaseSelected", { name: importFile.name })
+              : t("admin.importDatabaseDesc")}
+          </span>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="relative">
+              <input
+                type="file"
+                accept=".sqlite,.db"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="pointer-events-none text-xs"
+              >
+                {importFile ? t("admin.changeFile") : t("admin.selectFile")}
+              </Button>
+            </div>
+            {importFile && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                onClick={handleImportDatabase}
+                disabled={importLoading}
+              >
+                {importLoading ? t("admin.importing") : t("admin.import")}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </AccordionSection>

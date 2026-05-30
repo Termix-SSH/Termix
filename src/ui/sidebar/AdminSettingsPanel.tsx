@@ -53,7 +53,6 @@ import {
   Activity,
   AlertCircle,
   Copy,
-  Database,
   Eye,
   EyeOff,
   KeyRound,
@@ -71,6 +70,7 @@ import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import {
+  AdminDatabaseSection,
   AdminGeneralSettingsSection,
   AdminOidcSettingsSection,
 } from "./AdminSettingsSections";
@@ -1112,71 +1112,16 @@ export function AdminSettingsPanel() {
         </div>
       </AccordionSection>
 
-      {/* Database */}
-      <AccordionSection
-        label={t("admin.sectionDatabase")}
-        icon={<Database className="size-3.5" />}
+      <AdminDatabaseSection
         open={openSection === "database"}
         onToggle={() => toggle("database")}
-      >
-        <div className="flex flex-col gap-3 pt-3">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium">
-              {t("admin.exportDatabase")}
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.exportDatabaseDesc")}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand mt-1"
-              onClick={handleExportDatabase}
-              disabled={exportLoading}
-            >
-              {exportLoading ? t("admin.exporting") : t("admin.export")}
-            </Button>
-          </div>
-          <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-            <span className="text-xs font-medium">
-              {t("admin.importDatabase")}
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {importFile
-                ? t("admin.importDatabaseSelected", { name: importFile.name })
-                : t("admin.importDatabaseDesc")}
-            </span>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".sqlite,.db"
-                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="pointer-events-none text-xs"
-                >
-                  {importFile ? t("admin.changeFile") : t("admin.selectFile")}
-                </Button>
-              </div>
-              {importFile && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={handleImportDatabase}
-                  disabled={importLoading}
-                >
-                  {importLoading ? t("admin.importing") : t("admin.import")}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </AccordionSection>
+        importFile={importFile}
+        setImportFile={setImportFile}
+        exportLoading={exportLoading}
+        importLoading={importLoading}
+        handleExportDatabase={handleExportDatabase}
+        handleImportDatabase={handleImportDatabase}
+      />
 
       {/* API Keys */}
       <AccordionSection
