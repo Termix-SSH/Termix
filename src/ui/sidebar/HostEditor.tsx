@@ -13,11 +13,8 @@ import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
   Activity,
-  Box,
   Copy,
-  FolderSearch,
   Globe,
-  LayoutDashboard,
   Monitor,
   Network,
   MousePointerClick,
@@ -45,23 +42,21 @@ import {
   disconnectTunnel,
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
-import type { SSHHost, SSHHostData, TunnelStatus } from "@/types";
+import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
-
-type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
-type HostAuthType = Host["authType"];
-type HostCursorStyle = NonNullable<Host["terminalConfig"]>["cursorStyle"];
-type HostBellStyle = NonNullable<Host["terminalConfig"]>["bellStyle"];
-type HostBackspaceMode = NonNullable<Host["terminalConfig"]>["backspaceMode"];
-type HostFastScrollModifier = NonNullable<
-  Host["terminalConfig"]
->["fastScrollModifier"];
-type SnippetListItem = {
-  id: number;
-  name?: string;
-  title?: string;
-};
-type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
+import {
+  buildHostEditorPayload,
+  createHostEditorForm,
+  mapSnippetResponse,
+  type HostAuthType,
+  type HostBellStyle,
+  type HostBackspaceMode,
+  type HostCursorStyle,
+  type HostFastScrollModifier,
+  type HostProtocols,
+} from "./HostEditorData";
+import { HostDockerTab, HostFilesTab } from "./HostEditorFeatureTabs";
+import { HostStatsTab } from "./HostEditorStatsTab";
 
 export function HostEditor({
   host,
@@ -78,12 +73,7 @@ export function HostEditor({
   activeTab: string;
   onBack: () => void;
   onSave: (saved: SSHHost) => void;
-  protocols: {
-    enableSsh: boolean;
-    enableRdp: boolean;
-    enableVnc: boolean;
-    enableTelnet: boolean;
-  };
+  protocols: HostProtocols;
   onProtocolChange: (p: Partial<typeof protocols>) => void;
   onTabChange: (tab: string) => void;
   hosts: Host[];
@@ -91,133 +81,7 @@ export function HostEditor({
 }) {
   const { t } = useTranslation();
   const { setPreviewTerminalTheme } = useTabsSafe();
-  const [form, setForm] = useState(() => {
-    const rawTheme = host?.terminalConfig?.theme;
-    const normalizedTheme =
-      !rawTheme ||
-      ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
-        rawTheme,
-      )
-        ? "termix"
-        : TERMINAL_THEMES[rawTheme]
-          ? rawTheme
-          : "termix";
-    return {
-      name: host?.name ?? "",
-      ip: host?.ip ?? "",
-      username: host?.username ?? "",
-      sshPort: host?.sshPort ?? host?.port ?? 22,
-      rdpPort: host?.rdpPort ?? 3389,
-      vncPort: host?.vncPort ?? 5900,
-      telnetPort: host?.telnetPort ?? 23,
-      authType: host?.authType ?? "password",
-      password: host?.password ?? "",
-      key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
-      keyPassword: host?.hasKeyPassword
-        ? "existing_key_password"
-        : (host?.keyPassword ?? ""),
-      keyType: host?.keyType ?? "auto",
-      keySubTab: "paste" as "paste" | "upload",
-      credentialId: host?.credentialId ?? "",
-      overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
-      folder: host?.folder ?? "",
-      tags: host?.tags ?? ([] as string[]),
-      tagInput: "",
-      notes: host?.notes ?? "",
-      pin: host?.pin ?? false,
-      macAddress: host?.macAddress ?? "",
-      useSocks5: host?.useSocks5 ?? false,
-      socks5Host: host?.socks5Host ?? "",
-      socks5Port: host?.socks5Port ?? 1080,
-      socks5Username: host?.socks5Username ?? "",
-      socks5Password: host?.socks5Password ?? "",
-      socks5ProxyMode: ((host?.socks5ProxyChain ?? []).length > 0
-        ? "chain"
-        : "single") as "single" | "chain",
-      socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
-      enableTerminal: host?.enableTerminal ?? true,
-      enableFileManager: host?.enableFileManager ?? false,
-      enableDocker: host?.enableDocker ?? false,
-      enableTunnel: host?.enableTunnel ?? false,
-      defaultPath: host?.defaultPath ?? "/",
-      forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-      fontSize: host?.terminalConfig?.fontSize ?? 14,
-      fontFamily:
-        host?.terminalConfig?.fontFamily ?? "Caskaydia Cove Nerd Font Mono",
-      theme: normalizedTheme,
-      cursorStyle: (host?.terminalConfig?.cursorStyle ?? "bar") as
-        | "block"
-        | "underline"
-        | "bar",
-      cursorBlink: host?.terminalConfig?.cursorBlink ?? true,
-      scrollback: host?.terminalConfig?.scrollback ?? 10000,
-      letterSpacing: host?.terminalConfig?.letterSpacing ?? 0,
-      lineHeight: host?.terminalConfig?.lineHeight ?? 1.0,
-      bellStyle: (host?.terminalConfig?.bellStyle ?? "none") as
-        | "none"
-        | "sound"
-        | "visual"
-        | "both",
-      rightClickSelectsWord:
-        host?.terminalConfig?.rightClickSelectsWord ?? false,
-      fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ??
-        "alt") as "alt" | "ctrl" | "shift",
-      fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
-      minimumContrastRatio: host?.terminalConfig?.minimumContrastRatio ?? 1,
-      backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
-        | "normal"
-        | "control-h",
-      startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
-      moshCommand: host?.terminalConfig?.moshCommand ?? "",
-      agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
-      autoMosh: host?.terminalConfig?.autoMosh ?? false,
-      autoTmux: host?.terminalConfig?.autoTmux ?? false,
-      sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
-      sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
-      keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
-      keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
-      environmentVariables:
-        host?.terminalConfig?.environmentVariables ??
-        ([] as { key: string; value: string }[]),
-      serverTunnels: host?.serverTunnels ?? ([] as Host["serverTunnels"]),
-      jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
-      portKnockSequence:
-        host?.portKnockSequence ??
-        ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
-      quickActions:
-        host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
-      rdpUser: host?.rdpUser ?? "",
-      rdpPassword: host?.rdpPassword ?? "",
-      domain: host?.domain ?? "",
-      security: host?.security ?? "",
-      ignoreCert: host?.ignoreCert ?? false,
-      vncPassword: host?.vncPassword ?? "",
-      vncUser: host?.vncUser ?? "",
-      telnetUser: host?.telnetUser ?? "",
-      telnetPassword: host?.telnetPassword ?? "",
-      guacamoleConfig: host?.guacamoleConfig ?? {},
-      statsConfig: host?.statsConfig ?? {
-        statusCheckEnabled: true,
-        statusCheckInterval: 60,
-        useGlobalStatusInterval: true,
-        metricsEnabled: true,
-        metricsInterval: 30,
-        useGlobalMetricsInterval: true,
-        enabledWidgets: [
-          "cpu",
-          "memory",
-          "disk",
-          "network",
-          "uptime",
-          "system",
-          "login_stats",
-          "processes",
-          "ports",
-          "firewall",
-        ],
-      },
-    };
-  });
+  const [form, setForm] = useState(() => createHostEditorForm(host));
 
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
@@ -234,18 +98,7 @@ export function HostEditor({
 
   useEffect(() => {
     getSnippets()
-      .then((res) => {
-        const snippetRes = res as SnippetResponse;
-        setSnippets(
-          (Array.isArray(snippetRes)
-            ? snippetRes
-            : (snippetRes.snippets ?? [])
-          ).map((s) => ({
-            id: s.id,
-            name: s.name ?? s.title ?? `Snippet ${s.id}`,
-          })),
-        );
-      })
+      .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
   }, []);
 
@@ -258,125 +111,10 @@ export function HostEditor({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const tags = form.tags;
-      const data = {
-        connectionType: protocols.enableSsh
-          ? "ssh"
-          : protocols.enableRdp
-            ? "rdp"
-            : protocols.enableVnc
-              ? "vnc"
-              : "telnet",
-        name: form.name,
-        ip: form.ip,
-        port: protocols.enableSsh
-          ? Number(form.sshPort)
-          : protocols.enableRdp
-            ? Number(form.rdpPort)
-            : protocols.enableVnc
-              ? Number(form.vncPort)
-              : Number(form.telnetPort),
-        username: form.username,
-        folder: form.folder,
-        tags,
-        pin: form.pin,
-        authType: form.authType,
-        password: form.password || null,
-        key: form.key === "existing_key" ? undefined : form.key || null,
-        keyPassword:
-          form.keyPassword === "existing_key_password"
-            ? undefined
-            : form.keyPassword || null,
-        keyType: form.keyType !== "auto" ? form.keyType : null,
-        credentialId: form.credentialId ? Number(form.credentialId) : null,
-        overrideCredentialUsername: form.overrideCredentialUsername,
-        notes: form.notes,
-        macAddress: form.macAddress || null,
-        enableTerminal: form.enableTerminal,
-        enableTunnel: form.enableTunnel,
-        enableFileManager: form.enableFileManager,
-        enableDocker: form.enableDocker,
-        defaultPath: form.defaultPath || "/",
-        useSocks5: form.useSocks5,
-        socks5Host:
-          form.socks5ProxyMode === "single" ? form.socks5Host || null : null,
-        socks5Port:
-          form.socks5ProxyMode === "single" ? form.socks5Port || null : null,
-        socks5Username:
-          form.socks5ProxyMode === "single"
-            ? form.socks5Username || null
-            : null,
-        socks5Password:
-          form.socks5ProxyMode === "single"
-            ? form.socks5Password || null
-            : null,
-        socks5ProxyChain:
-          form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
-        enableSsh: protocols.enableSsh,
-        enableRdp: protocols.enableRdp,
-        enableVnc: protocols.enableVnc,
-        enableTelnet: protocols.enableTelnet,
-        sshPort: Number(form.sshPort),
-        rdpPort: Number(form.rdpPort),
-        vncPort: Number(form.vncPort),
-        telnetPort: Number(form.telnetPort),
-        forceKeyboardInteractive: form.forceKeyboardInteractive,
-        rdpUser: form.rdpUser || null,
-        rdpPassword: form.rdpPassword || null,
-        rdpDomain: form.domain || null,
-        rdpSecurity: form.security || null,
-        rdpIgnoreCert: form.ignoreCert,
-        vncPassword: form.vncPassword || null,
-        vncUser: form.vncUser || null,
-        telnetUser: form.telnetUser || null,
-        telnetPassword: form.telnetPassword || null,
-        jumpHosts: form.jumpHosts,
-        portKnockSequence: form.portKnockSequence,
-        tunnelConnections: form.serverTunnels,
-        quickActions: form.quickActions.map((a) => ({
-          name: a.name,
-          snippetId: Number(a.snippetId),
-        })),
-        statsConfig: form.statsConfig,
-        guacamoleConfig:
-          (protocols.enableRdp ||
-            protocols.enableVnc ||
-            protocols.enableTelnet) &&
-          Object.keys(form.guacamoleConfig).length > 0
-            ? form.guacamoleConfig
-            : null,
-        terminalConfig: protocols.enableSsh
-          ? {
-              theme: form.theme,
-              cursorBlink: form.cursorBlink,
-              cursorStyle: form.cursorStyle,
-              fontSize: Number(form.fontSize),
-              fontFamily: form.fontFamily,
-              scrollback: Number(form.scrollback),
-              letterSpacing: Number(form.letterSpacing),
-              lineHeight: Number(form.lineHeight),
-              bellStyle: form.bellStyle,
-              rightClickSelectsWord: form.rightClickSelectsWord,
-              fastScrollModifier: form.fastScrollModifier,
-              fastScrollSensitivity: Number(form.fastScrollSensitivity),
-              minimumContrastRatio: Number(form.minimumContrastRatio),
-              backspaceMode: form.backspaceMode,
-              startupSnippetId: form.startupSnippetId ?? null,
-              moshCommand: form.moshCommand || null,
-              agentForwarding: form.agentForwarding,
-              autoMosh: form.autoMosh,
-              autoTmux: form.autoTmux,
-              sudoPasswordAutoFill: form.sudoPasswordAutoFill,
-              sudoPassword: form.sudoPassword || null,
-              keepaliveInterval: Number(form.keepaliveInterval),
-              keepaliveCountMax: Number(form.keepaliveCountMax),
-              environmentVariables: form.environmentVariables,
-            }
-          : null,
-      };
+      const data = buildHostEditorPayload(form, protocols);
       const saved = host
-        ? await updateSSHHost(Number(host.id), data as SSHHostData)
-        : await createSSHHost(data as SSHHostData);
+        ? await updateSSHHost(Number(host.id), data)
+        : await createSSHHost(data);
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       setPreviewTerminalTheme(null);
       onSave(saved);
@@ -2145,323 +1883,15 @@ export function HostEditor({
         )}
 
         {activeTab === "docker" && (
-          <SectionCard
-            title={t("hosts.dockerIntegration")}
-            icon={<Box className="size-3.5" />}
-          >
-            <div className="flex flex-col gap-4 py-3">
-              <SettingRow
-                label={t("hosts.enableDockerMonitor")}
-                description={t("hosts.enableDockerMonitorDesc")}
-              >
-                <FakeSwitch
-                  checked={form.enableDocker}
-                  onChange={(v) => setField("enableDocker", v)}
-                />
-              </SettingRow>
-            </div>
-          </SectionCard>
+          <HostDockerTab form={form} setField={setField} />
         )}
 
         {activeTab === "files" && (
-          <SectionCard
-            title={t("hosts.fileManager")}
-            icon={<FolderSearch className="size-3.5" />}
-          >
-            <div className="flex flex-col gap-4 py-3">
-              <SettingRow
-                label={t("hosts.enableFileManagerMonitor")}
-                description={t("hosts.enableFileManagerMonitorDesc")}
-              >
-                <FakeSwitch
-                  checked={form.enableFileManager}
-                  onChange={(v) => setField("enableFileManager", v)}
-                />
-              </SettingRow>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hosts.defaultPathLabel")}
-                </label>
-                <Input
-                  placeholder="/"
-                  value={form.defaultPath}
-                  onChange={(e) => setField("defaultPath", e.target.value)}
-                />
-                <span className="text-[10px] text-muted-foreground">
-                  {t("hosts.fileManagerPathHint")}
-                </span>
-              </div>
-            </div>
-          </SectionCard>
+          <HostFilesTab form={form} setField={setField} />
         )}
 
         {activeTab === "stats" && (
-          <>
-            <SectionCard
-              title={t("hosts.statusChecksLabel")}
-              icon={<Activity className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-0 py-1">
-                <SettingRow
-                  label={t("hosts.enableStatusChecks")}
-                  description={t("hosts.enableStatusChecksDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.statsConfig.statusCheckEnabled}
-                    onChange={(v) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        statusCheckEnabled: v,
-                      })
-                    }
-                  />
-                </SettingRow>
-                <SettingRow
-                  label={t("hosts.useGlobalInterval")}
-                  description={t("hosts.useGlobalIntervalDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.statsConfig.useGlobalStatusInterval}
-                    onChange={(v) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        useGlobalStatusInterval: v,
-                      })
-                    }
-                  />
-                </SettingRow>
-                {form.statsConfig.statusCheckEnabled &&
-                  !form.statsConfig.useGlobalStatusInterval && (
-                    <SettingRow
-                      label={t("hosts.checkIntervalS")}
-                      description={t("hosts.checkIntervalDesc")}
-                    >
-                      <Input
-                        type="number"
-                        value={form.statsConfig.statusCheckInterval}
-                        onChange={(e) =>
-                          setField("statsConfig", {
-                            ...form.statsConfig,
-                            statusCheckInterval: Number(e.target.value),
-                          })
-                        }
-                        className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </SettingRow>
-                  )}
-              </div>
-            </SectionCard>
-            <SectionCard
-              title={t("hosts.metricsCollectionLabel")}
-              icon={<Server className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-0 py-1">
-                <SettingRow
-                  label={t("hosts.enableMetricsLabel")}
-                  description={t("hosts.enableMetricsDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.statsConfig.metricsEnabled}
-                    onChange={(v) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        metricsEnabled: v,
-                      })
-                    }
-                  />
-                </SettingRow>
-                <SettingRow
-                  label={t("hosts.useGlobalMetrics")}
-                  description={t("hosts.useGlobalMetricsDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.statsConfig.useGlobalMetricsInterval}
-                    onChange={(v) =>
-                      setField("statsConfig", {
-                        ...form.statsConfig,
-                        useGlobalMetricsInterval: v,
-                      })
-                    }
-                  />
-                </SettingRow>
-                {form.statsConfig.metricsEnabled &&
-                  !form.statsConfig.useGlobalMetricsInterval && (
-                    <SettingRow
-                      label={t("hosts.metricsIntervalS")}
-                      description={t("hosts.metricsIntervalDesc2")}
-                    >
-                      <Input
-                        type="number"
-                        value={form.statsConfig.metricsInterval}
-                        onChange={(e) =>
-                          setField("statsConfig", {
-                            ...form.statsConfig,
-                            metricsInterval: Number(e.target.value),
-                          })
-                        }
-                        className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </SettingRow>
-                  )}
-              </div>
-            </SectionCard>
-            <SectionCard
-              title={t("hosts.visibleWidgets")}
-              icon={<LayoutDashboard className="size-3.5" />}
-            >
-              <div className="flex flex-col gap-0 py-1">
-                {[
-                  {
-                    id: "cpu",
-                    label: t("hosts.cpuUsageLabel"),
-                    desc: t("hosts.cpuUsageDesc"),
-                  },
-                  {
-                    id: "memory",
-                    label: t("hosts.memoryLabel"),
-                    desc: t("hosts.memoryDesc"),
-                  },
-                  {
-                    id: "disk",
-                    label: t("hosts.storageLabel"),
-                    desc: t("hosts.storageDesc"),
-                  },
-                  {
-                    id: "network",
-                    label: t("hosts.networkLabel"),
-                    desc: t("hosts.networkDesc"),
-                  },
-                  {
-                    id: "uptime",
-                    label: t("hosts.uptimeLabel"),
-                    desc: t("hosts.uptimeDesc"),
-                  },
-                  {
-                    id: "system",
-                    label: t("hosts.systemInfoLabel"),
-                    desc: t("hosts.systemInfoDesc"),
-                  },
-                  {
-                    id: "login_stats",
-                    label: t("hosts.recentLoginsLabel"),
-                    desc: t("hosts.recentLoginsDesc"),
-                  },
-                  {
-                    id: "processes",
-                    label: t("hosts.topProcessesLabel"),
-                    desc: t("hosts.topProcessesDesc"),
-                  },
-                  {
-                    id: "ports",
-                    label: t("hosts.listeningPortsLabel"),
-                    desc: t("hosts.listeningPortsDesc"),
-                  },
-                  {
-                    id: "firewall",
-                    label: t("hosts.firewallLabel"),
-                    desc: t("hosts.firewallDesc"),
-                  },
-                ].map((w) => (
-                  <SettingRow key={w.id} label={w.label} description={w.desc}>
-                    <FakeSwitch
-                      checked={form.statsConfig.enabledWidgets.includes(w.id)}
-                      onChange={(v) => {
-                        const widgets = v
-                          ? [...form.statsConfig.enabledWidgets, w.id]
-                          : form.statsConfig.enabledWidgets.filter(
-                              (x) => x !== w.id,
-                            );
-                        setField("statsConfig", {
-                          ...form.statsConfig,
-                          enabledWidgets: widgets,
-                        });
-                      }}
-                    />
-                  </SettingRow>
-                ))}
-              </div>
-            </SectionCard>
-            <SectionCard
-              title={t("hosts.quickActionsLabel")}
-              icon={<Zap className="size-3.5" />}
-              action={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                  onClick={() =>
-                    setField("quickActions", [
-                      ...form.quickActions,
-                      { name: "", snippetId: "" },
-                    ])
-                  }
-                >
-                  <Plus className="size-3 mr-1" /> {t("hosts.addActionBtn")}
-                </Button>
-              }
-            >
-              <div className="flex flex-col gap-3 py-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("hosts.quickActionsToolbar")}
-                </p>
-                {form.quickActions.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
-                    <Zap className="size-6" />
-                    <span className="text-xs">{t("hosts.noQuickActions")}</span>
-                  </div>
-                )}
-                {form.quickActions.map((a, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
-                  >
-                    <Input
-                      className="h-7 text-xs flex-1"
-                      placeholder={t("hosts.buttonLabel")}
-                      value={a.name}
-                      onChange={(e) => {
-                        const updated = [...form.quickActions];
-                        updated[i] = { ...updated[i], name: e.target.value };
-                        setField("quickActions", updated);
-                      }}
-                    />
-                    <select
-                      className="h-7 text-xs flex-1 border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
-                      value={a.snippetId}
-                      onChange={(e) => {
-                        const updated = [...form.quickActions];
-                        updated[i] = {
-                          ...updated[i],
-                          snippetId: e.target.value,
-                        };
-                        setField("quickActions", updated);
-                      }}
-                    >
-                      <option value="">
-                        {t("hosts.selectSnippetPlaceholder")}
-                      </option>
-                      {snippets.map((s) => (
-                        <option key={s.id} value={String(s.id)}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() =>
-                        setField(
-                          "quickActions",
-                          form.quickActions.filter((_, idx) => idx !== i),
-                        )
-                      }
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          </>
+          <HostStatsTab form={form} setField={setField} snippets={snippets} />
         )}
 
         {activeTab === "rdp" && (
