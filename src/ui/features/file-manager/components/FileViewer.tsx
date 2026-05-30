@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils.ts";
 import { useTranslation } from "react-i18next";

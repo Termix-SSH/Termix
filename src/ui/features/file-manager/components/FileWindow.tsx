@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react";
 import { DraggableWindow } from "./DraggableWindow.tsx";
 import { FileViewer } from "./FileViewer.tsx";

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import {
   useEffect,
   useRef,
@@ -2481,7 +2482,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         });
       });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {

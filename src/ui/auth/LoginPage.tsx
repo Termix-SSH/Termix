@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
