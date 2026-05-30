@@ -816,6 +816,7 @@ export function AdminSettingsPanel() {
         open={linkAccountOpen}
         onOpenChange={setLinkAccountOpen}
         linkAccountTarget={linkAccountTarget}
+        setUsers={setUsers}
       />
     </div>
   );
