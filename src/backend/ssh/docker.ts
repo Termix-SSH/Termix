@@ -526,6 +526,10 @@ app.use(authManager.createAuthMiddleware());
 const CONTAINER_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
 const DOCKER_TIMESTAMP_RE = /^[0-9T:.Z+-]+$/;
 
+function getRequestUserId(req: express.Request): string | undefined {
+  return (req as AuthenticatedRequest).userId;
+}
+
 app.param("containerId", (req, res, next, value) => {
   if (!CONTAINER_ID_RE.test(value)) {
     return res.status(400).json({ error: "Invalid container ID" });
@@ -575,7 +579,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     socks5Password,
     socks5ProxyChain,
   } = req.body;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
@@ -1629,7 +1633,7 @@ app.post("/docker/ssh/disconnect", async (req, res) => {
  */
 app.post("/docker/ssh/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     sshLogger.error("TOTP verification rejected: no authenticated user", {
@@ -1821,7 +1825,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
  */
 app.post("/docker/ssh/connect-warpgate", async (req, res) => {
   const { sessionId } = req.body;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     sshLogger.error("Warpgate verification rejected: no authenticated user", {
@@ -2004,7 +2008,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
  */
 app.post("/docker/ssh/keepalive", async (req, res) => {
   const { sessionId } = req.body;
-  const userId = (req as AuthenticatedRequest).userId;
+  const userId = getRequestUserId(req);
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
@@ -2090,7 +2094,7 @@ app.get("/docker/ssh/status", async (req, res) => {
  */
 app.get("/docker/validate/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2222,7 +2226,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 app.get("/docker/containers/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const all = req.query.all !== "false";
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2323,7 +2327,7 @@ app.get("/docker/containers/:sessionId", async (req, res) => {
  */
 app.get("/docker/containers/:sessionId/:containerId", async (req, res) => {
   const { sessionId, containerId } = req.params;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -2418,7 +2422,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/start",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2518,7 +2522,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/stop",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2618,7 +2622,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/restart",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2718,7 +2722,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/pause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2818,7 +2822,7 @@ app.post(
   "/docker/containers/:sessionId/:containerId/unpause",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -2923,7 +2927,7 @@ app.delete(
   async (req, res) => {
     const { sessionId, containerId } = req.params;
     const force = req.query.force === "true";
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -3051,7 +3055,7 @@ app.get("/docker/containers/:sessionId/:containerId/logs", async (req, res) => {
   const timestamps = req.query.timestamps === "true";
   const since = req.query.since as string;
   const until = req.query.until as string;
-  const userId = (req as unknown as { userId: string }).userId;
+  const userId = getRequestUserId(req);
 
   if (!userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -3160,7 +3164,7 @@ app.get(
   "/docker/containers/:sessionId/:containerId/stats",
   async (req, res) => {
     const { sessionId, containerId } = req.params;
-    const userId = (req as unknown as { userId: string }).userId;
+    const userId = getRequestUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });

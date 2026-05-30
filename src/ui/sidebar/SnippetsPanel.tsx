@@ -501,6 +501,18 @@ type AccessRecord = {
   expiresAt: string | null;
 };
 
+type SnippetPayload = Omit<Snippet, "id" | "order">;
+type RawSnippet = SnippetPayload & {
+  id: number;
+  order?: number | null;
+};
+type RawSnippetFolder = {
+  id: number;
+  name: string;
+  color?: string | null;
+  icon?: FolderIconId | null;
+};
+
 function ShareSnippetDialog({
   snippet,
   onClose,
@@ -525,7 +537,7 @@ function ShareSnippetDialog({
       .then(([usersData, rolesData, accessData]) => {
         setUsers(
           (usersData?.users || []).map((u) => ({
-            id: u.id,
+            id: u.userId,
             username: u.username,
           })),
         );
@@ -545,8 +557,7 @@ function ShareSnippetDialog({
         targetRoleId: targetType === "role" ? parseInt(targetId) : undefined,
       });
       toast.success(t("newUi.sidebar.snippets.shareSuccess"));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const accessData = (await getSnippetAccess(snippet.id)) as any;
+      const accessData = await getSnippetAccess(snippet.id);
       setAccessList(accessData.accessList || []);
       setTargetId("");
     } catch {
@@ -559,8 +570,7 @@ function ShareSnippetDialog({
     try {
       await revokeSnippetAccess(snippet.id, accessId);
       toast.success(t("newUi.sidebar.snippets.revokeSuccess"));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const accessData = (await getSnippetAccess(snippet.id)) as any;
+      const accessData = await getSnippetAccess(snippet.id);
       setAccessList(accessData.accessList || []);
     } catch {
       toast.error(t("newUi.sidebar.snippets.revokeFailed"));
@@ -972,9 +982,8 @@ export function SnippetsPanel({
 
     getSnippets()
       .then((data) => {
-        const arr = Array.isArray(data) ? data : [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapped: Snippet[] = arr.map((s: any) => ({
+        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
+        const mapped: Snippet[] = arr.map((s) => ({
           id: s.id,
           name: s.name,
           description: s.description,
@@ -988,9 +997,8 @@ export function SnippetsPanel({
 
     getSnippetFolders()
       .then((data) => {
-        const arr = Array.isArray(data) ? data : [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapped: SnippetFolder[] = arr.map((f: any) => ({
+        const arr: RawSnippetFolder[] = Array.isArray(data) ? data : [];
+        const mapped: SnippetFolder[] = arr.map((f) => ({
           id: f.id,
           name: f.name,
           color: f.color ?? FOLDER_COLORS[0],
@@ -1020,15 +1028,13 @@ export function SnippetsPanel({
   ) {
     try {
       if (id !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await apiUpdateSnippet(id, data as any);
+        await apiUpdateSnippet(id, data);
         updateSnippets((prev) =>
           prev.map((s) => (s.id === id ? { ...s, ...data } : s)),
         );
         toast.success(t("newUi.sidebar.snippets.updateSuccess"));
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const created = (await apiCreateSnippet(data as any)) as any;
+        const created = await apiCreateSnippet(data);
         updateSnippets((prev) => [
           ...prev,
           {
