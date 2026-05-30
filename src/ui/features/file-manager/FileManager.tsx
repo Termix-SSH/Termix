@@ -25,12 +25,7 @@ import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
-import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
-import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
-import { CompressDialog } from "./components/CompressDialog.tsx";
-import { SudoPasswordDialog } from "./SudoPasswordDialog.tsx";
+import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import {
   Upload,
   FolderPlus,
@@ -65,7 +60,6 @@ import {
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
-import type { LogEntry } from "@/types/connection-log.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import {
   listSSHFiles,
@@ -97,50 +91,13 @@ import {
   getServerMetricsById,
 } from "@/main-axios.ts";
 import type { SidebarItem } from "./FileManagerSidebar.tsx";
-
-interface FileManagerProps {
-  initialHost?: SSHHost | null;
-  onClose?: () => void;
-}
-
-type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
-
-type SSHConnectionError = Error & {
-  connectionLogs?: ConnectionLogPayload[];
-  requires_totp?: boolean;
-  requires_warpgate?: boolean;
-  sessionId?: string;
-  prompt?: string;
-  url?: string;
-  securityKey?: string;
-  status?: string;
-  reason?: "no_keyboard" | "auth_failed" | "timeout";
-};
-
-interface CreateIntent {
-  id: string;
-  type: "file" | "directory";
-  defaultName: string;
-  currentName: string;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (bytes === undefined || bytes === null) return "-";
-  if (bytes === 0) return "0 B";
-
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  const formattedSize =
-    size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
-  return `${formattedSize} ${units[unitIndex]}`;
-}
+import type {
+  CreateIntent,
+  FileManagerProps,
+  PendingSudoOperation,
+  SSHConnectionError,
+} from "./file-manager-types.ts";
+import { formatFileSize } from "./file-manager-utils.ts";
 
 function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
@@ -247,11 +204,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   );
 
   const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
-  const [pendingSudoOperation, setPendingSudoOperation] = useState<
-    | { type: "delete"; files: FileItem[] }
-    | { type: "navigate"; path: string }
-    | null
-  >(null);
+  const [pendingSudoOperation, setPendingSudoOperation] =
+    useState<PendingSudoOperation | null>(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -2967,63 +2921,32 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         </div>
       </div>
 
-      <CompressDialog
-        open={compressDialogFiles.length > 0}
-        onOpenChange={(open) => !open && setCompressDialogFiles([])}
-        fileNames={compressDialogFiles.map((f) => f.name)}
-        onCompress={handleCompress}
-      />
-
-      <TOTPDialog
-        isOpen={totpRequired}
-        prompt={totpPrompt}
-        onSubmit={handleTotpSubmit}
-        onCancel={handleTotpCancel}
-        backgroundColor="var(--bg-canvas)"
-      />
-
-      <WarpgateDialog
-        isOpen={warpgateRequired}
-        url={warpgateUrl}
-        securityKey={warpgateSecurityKey}
-        onContinue={handleWarpgateContinue}
-        onCancel={handleWarpgateCancel}
-        onOpenUrl={handleWarpgateOpenUrl}
-        backgroundColor="var(--bg-canvas)"
-      />
-
-      {currentHost && (
-        <SSHAuthDialog
-          isOpen={showAuthDialog}
-          reason={authDialogReason}
-          onSubmit={handleAuthDialogSubmit}
-          onCancel={handleAuthDialogCancel}
-          hostInfo={{
-            ip: currentHost.ip,
-            port: currentHost.port,
-            username: currentHost.username,
-            name: currentHost.name,
-          }}
-          backgroundColor="var(--bg-canvas)"
-        />
-      )}
-
-      <PermissionsDialog
-        file={permissionsDialogFile}
-        open={permissionsDialogFile !== null}
-        onOpenChange={(open) => {
-          if (!open) setPermissionsDialogFile(null);
-        }}
-        onSave={handleSavePermissions}
-      />
-
-      <SudoPasswordDialog
-        open={sudoDialogOpen}
-        onOpenChange={(open) => {
-          setSudoDialogOpen(open);
-          if (!open) setPendingSudoOperation(null);
-        }}
-        onSubmit={handleSudoPasswordSubmit}
+      <FileManagerDialogs
+        compressDialogFiles={compressDialogFiles}
+        setCompressDialogFiles={setCompressDialogFiles}
+        handleCompress={handleCompress}
+        totpRequired={totpRequired}
+        totpPrompt={totpPrompt}
+        handleTotpSubmit={handleTotpSubmit}
+        handleTotpCancel={handleTotpCancel}
+        warpgateRequired={warpgateRequired}
+        warpgateUrl={warpgateUrl}
+        warpgateSecurityKey={warpgateSecurityKey}
+        handleWarpgateContinue={handleWarpgateContinue}
+        handleWarpgateCancel={handleWarpgateCancel}
+        handleWarpgateOpenUrl={handleWarpgateOpenUrl}
+        currentHost={currentHost}
+        showAuthDialog={showAuthDialog}
+        authDialogReason={authDialogReason}
+        handleAuthDialogSubmit={handleAuthDialogSubmit}
+        handleAuthDialogCancel={handleAuthDialogCancel}
+        permissionsDialogFile={permissionsDialogFile}
+        setPermissionsDialogFile={setPermissionsDialogFile}
+        handleSavePermissions={handleSavePermissions}
+        sudoDialogOpen={sudoDialogOpen}
+        setSudoDialogOpen={setSudoDialogOpen}
+        setPendingSudoOperation={setPendingSudoOperation}
+        handleSudoPasswordSubmit={handleSudoPasswordSubmit}
       />
       <ConnectionLog
         isConnecting={isReconnecting || isLoading}
