@@ -259,7 +259,7 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
     } catch {
       /* ignore */
     }
-  }, [host?.id]);
+  }, [host]);
 
   useEffect(() => {
     fetchHost();
@@ -282,7 +282,7 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
     logActivity("tunnel", sshHost.id, name).catch(() => {
       activityLoggedRef.current = false;
     });
-  }, [sshHost?.id]);
+  }, [sshHost]);
 
   const handleAction = async (
     action: "connect" | "disconnect" | "cancel",

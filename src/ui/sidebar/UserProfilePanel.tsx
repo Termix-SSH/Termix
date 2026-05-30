@@ -158,6 +158,27 @@ function AccordionSection({
   );
 }
 
+type ApiErrorLike = {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+};
+
+function apiErrorMessage(error: unknown, fallback: string) {
+  return (error as ApiErrorLike).response?.data?.error || fallback;
+}
+
+type CreatedProfileApiKey = {
+  id: string;
+  name: string;
+  token?: string;
+  tokenPrefix?: string;
+  createdAt?: string;
+  expiresAt?: string | null;
+};
+
 function NewApiKeyDialog({
   open,
   onOpenChange,
@@ -166,7 +187,7 @@ function NewApiKeyDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onAdd: (key: any) => void;
+  onAdd: (key: CreatedProfileApiKey) => void;
   userId: string;
 }) {
   const { t } = useTranslation();
@@ -300,10 +321,9 @@ function PasswordChangeSection({
       setNewPw("");
       setConfirmPw("");
       onLogout?.();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(
-        e?.response?.data?.error ||
-          t("newUi.sidebar.userProfile.passwordUpdateFailed"),
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.passwordUpdateFailed")),
       );
     }
   }
@@ -531,7 +551,7 @@ export function UserProfilePanel({
         setVersionStatus(info.status ?? "up_to_date");
       })
       .catch(() => {});
-  }, []);
+  }, [t]);
 
   function handleAccentChange(value: string) {
     setAccentColor(value);
@@ -582,10 +602,9 @@ export function UserProfilePanel({
       setTotpEnabled(true);
       setTotpStep("backup");
       toast.success(t("newUi.sidebar.userProfile.totpEnabledSuccess"));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(
-        e?.response?.data?.error ||
-          t("newUi.sidebar.userProfile.totpInvalidCode"),
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpInvalidCode")),
       );
     } finally {
       setTotpLoading(false);
@@ -604,10 +623,9 @@ export function UserProfilePanel({
       setShowDisableTotp(false);
       setDisableTotpInput("");
       toast.success(t("newUi.sidebar.userProfile.totpDisabledSuccess"));
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(
-        e?.response?.data?.error ||
-          t("newUi.sidebar.userProfile.totpDisableFailed"),
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpDisableFailed")),
       );
     } finally {
       setTotpLoading(false);
@@ -634,9 +652,9 @@ export function UserProfilePanel({
       await deleteAccount(deletePassword);
       await logoutUser().catch(() => {});
       window.location.reload();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(
-        e?.response?.data?.error || t("newUi.sidebar.userProfile.deleteFailed"),
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.deleteFailed")),
       );
       setDeleteLoading(false);
     }

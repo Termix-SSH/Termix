@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";

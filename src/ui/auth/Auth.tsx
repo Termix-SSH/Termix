@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";

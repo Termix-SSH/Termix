@@ -75,6 +75,39 @@ import type { Role } from "@/main-axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 
+type AdminUser = {
+  id: string;
+  username: string;
+  isAdmin: boolean;
+  isOidc: boolean;
+  passwordHash?: string;
+};
+
+type AdminSession = {
+  id: string;
+  userId: string;
+  username?: string;
+  deviceType: string;
+  deviceInfo: string;
+  createdAt: string;
+  expiresAt: string;
+  lastActiveAt: string;
+  isRevoked?: boolean;
+  isCurrentSession?: boolean;
+};
+
+type ApiErrorLike = {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+};
+
+function apiErrorMessage(error: unknown, fallback: string) {
+  return (error as ApiErrorLike).response?.data?.error || fallback;
+}
+
 function AdminToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button
@@ -160,7 +193,7 @@ export function AdminSettingsPanel() {
 
   // Edit user dialog
   const [editUserOpen, setEditUserOpen] = useState(false);
-  const [editUserTarget, setEditUserTarget] = useState<any | null>(null);
+  const [editUserTarget, setEditUserTarget] = useState<AdminUser | null>(null);
   const [editUserLoading, setEditUserLoading] = useState(false);
   const [editUserRoles, setEditUserRoles] = useState<UserRole[]>([]);
   const [editUserRolesLoading, setEditUserRolesLoading] = useState(false);
@@ -192,8 +225,8 @@ export function AdminSettingsPanel() {
   const [exportLoading, setExportLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
@@ -215,11 +248,21 @@ export function AdminSettingsPanel() {
         .catch(() => {})
         .finally(() => setEditUserRolesLoading(false));
     }
-  }, [editUserOpen, editUserTarget?.id]);
+  }, [editUserOpen, editUserTarget]);
 
   function loadUsers() {
     getUserList()
-      .then(({ users: u }) => setUsers(u))
+      .then(({ users: u }) =>
+        setUsers(
+          u.map((user) => ({
+            id: user.userId,
+            username: user.username,
+            isAdmin: user.is_admin,
+            isOidc: user.is_oidc,
+            passwordHash: user.password_hash,
+          })),
+        ),
+      )
       .catch(() => {});
   }
 
@@ -438,8 +481,8 @@ export function AdminSettingsPanel() {
           : "",
       });
       toast.success(t("admin.oidcSaved"));
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("admin.oidcSaveFailed"));
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e, t("admin.oidcSaveFailed")));
     } finally {
       setOidcSaving(false);
     }
@@ -481,25 +524,27 @@ export function AdminSettingsPanel() {
       setNewUsername("");
       setNewPassword("");
       loadUsers();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("admin.createUserFailed"));
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e, t("admin.createUserFailed")));
     } finally {
       setCreateUserLoading(false);
     }
   }
 
-  async function handleToggleAdmin(user: any) {
+  async function handleToggleAdmin(user: AdminUser) {
     setEditUserLoading(true);
     try {
       if (user.isAdmin) {
         await removeAdminStatus(user.id);
-        setEditUserTarget((prev: any) => ({ ...prev, isAdmin: false }));
+        setEditUserTarget((prev) =>
+          prev ? { ...prev, isAdmin: false } : prev,
+        );
         setUsers((prev) =>
           prev.map((u) => (u.id === user.id ? { ...u, isAdmin: false } : u)),
         );
       } else {
         await makeUserAdmin(user.id);
-        setEditUserTarget((prev: any) => ({ ...prev, isAdmin: true }));
+        setEditUserTarget((prev) => (prev ? { ...prev, isAdmin: true } : prev));
         setUsers((prev) =>
           prev.map((u) => (u.id === user.id ? { ...u, isAdmin: true } : u)),
         );
@@ -532,8 +577,8 @@ export function AdminSettingsPanel() {
       toast.success(
         t("admin.deleteUserSuccess", { username: editUserTarget.username }),
       );
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("admin.deleteUserFailed"));
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e, t("admin.deleteUserFailed")));
     } finally {
       setEditUserLoading(false);
     }
@@ -558,8 +603,8 @@ export function AdminSettingsPanel() {
       setNewRoleDescription("");
       toast.success(t("admin.createRoleSuccess", { name: displayName }));
       loadRoles();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("admin.createRoleFailed"));
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e, t("admin.createRoleFailed")));
     } finally {
       setCreateRoleLoading(false);
     }
@@ -587,8 +632,8 @@ export function AdminSettingsPanel() {
       setNewKeyUserId("");
       setNewKeyExpiry("");
       toast.success(t("admin.apiKeyCreatedSuccess", { name: created.name }));
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || t("admin.apiKeyCreateFailed"));
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e, t("admin.apiKeyCreateFailed")));
     } finally {
       setNewKeyLoading(false);
     }
@@ -604,7 +649,7 @@ export function AdminSettingsPanel() {
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/export`
+        ? `${window.configuredServerUrl}/database/export`
         : isDev
           ? `http://localhost:30001/database/export`
           : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/export`;
@@ -656,7 +701,7 @@ export function AdminSettingsPanel() {
           window.location.hostname === "127.0.0.1");
 
       const apiUrl = isElectron()
-        ? `${(window as any).configuredServerUrl}/database/import`
+        ? `${window.configuredServerUrl}/database/import`
         : isDev
           ? `http://localhost:30001/database/import`
           : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/import`;
@@ -1145,10 +1190,9 @@ export function AdminSettingsPanel() {
                             username: user.username,
                           }),
                         );
-                      } catch (e: any) {
+                      } catch (e: unknown) {
                         toast.error(
-                          e?.response?.data?.error ||
-                            t("admin.deleteUserFailed"),
+                          apiErrorMessage(e, t("admin.deleteUserFailed")),
                         );
                       }
                     }}

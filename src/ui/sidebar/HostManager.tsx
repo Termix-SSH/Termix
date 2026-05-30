@@ -70,6 +70,7 @@ import {
 import type { SSHHostWithStatus } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
+import type { SSHHost, SSHHostData, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 
 type RawSSHHost = SSHHostWithStatus & {
@@ -79,6 +80,30 @@ type RawSSHHost = SSHHostWithStatus & {
 type HostQuickAction = Host["quickActions"][number];
 type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
 type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
+type HostAuthType = Host["authType"];
+type HostCursorStyle = NonNullable<Host["terminalConfig"]>["cursorStyle"];
+type HostBellStyle = NonNullable<Host["terminalConfig"]>["bellStyle"];
+type HostBackspaceMode = NonNullable<Host["terminalConfig"]>["backspaceMode"];
+type HostFastScrollModifier = NonNullable<
+  Host["terminalConfig"]
+>["fastScrollModifier"];
+type CredentialAuthType = Credential["type"];
+type CredentialWithCertificate = Credential & { certPublicKey?: string };
+type RawCredential = {
+  id: number | string;
+  name: string;
+  username: string;
+  authType?: string;
+  description?: string | null;
+  folder?: string | null;
+  tags?: string[];
+};
+type SnippetListItem = {
+  id: number;
+  name?: string;
+  title?: string;
+};
+type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   const host = h as RawSSHHost;
@@ -333,7 +358,7 @@ function HostEditor({
   host: Host | null;
   activeTab: string;
   onBack: () => void;
-  onSave: (saved: any) => void;
+  onSave: (saved: SSHHost) => void;
   protocols: {
     enableSsh: boolean;
     enableRdp: boolean;
@@ -451,7 +476,7 @@ function HostEditor({
       vncUser: host?.vncUser ?? "",
       telnetUser: host?.telnetUser ?? "",
       telnetPassword: host?.telnetPassword ?? "",
-      guacamoleConfig: host?.guacamoleConfig ?? ({} as Record<string, any>),
+      guacamoleConfig: host?.guacamoleConfig ?? {},
       statsConfig: host?.statsConfig ?? {
         statusCheckEnabled: true,
         statusCheckInterval: 60,
@@ -478,20 +503,25 @@ function HostEditor({
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
 
-  const setGuacField = (key: string, value: any) =>
+  const setGuacField = (key: string, value: unknown) =>
     setField("guacamoleConfig", { ...form.guacamoleConfig, [key]: value });
 
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
-  const [tunnelStatuses, setTunnelStatuses] = useState<Record<string, any>>({});
+  const [tunnelStatuses, setTunnelStatuses] = useState<
+    Record<string, TunnelStatus>
+  >({});
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
 
   useEffect(() => {
     getSnippets()
-      .then((res: any) => {
-        const arr = Array.isArray(res) ? res : (res?.snippets ?? []);
+      .then((res) => {
+        const snippetRes = res as SnippetResponse;
         setSnippets(
-          arr.map((s: any) => ({
+          (Array.isArray(snippetRes)
+            ? snippetRes
+            : (snippetRes.snippets ?? [])
+          ).map((s) => ({
             id: s.id,
             name: s.name ?? s.title ?? `Snippet ${s.id}`,
           })),
@@ -626,8 +656,8 @@ function HostEditor({
           : null,
       };
       const saved = host
-        ? await updateSSHHost(Number(host.id), data as any)
-        : await createSSHHost(data as any);
+        ? await updateSSHHost(Number(host.id), data as SSHHostData)
+        : await createSSHHost(data as SSHHostData);
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       setPreviewTerminalTheme(null);
       onSave(saved);
@@ -1036,10 +1066,7 @@ function HostEditor({
                             placeholder="1080"
                             value={form.socks5Port}
                             onChange={(e) =>
-                              setField(
-                                "socks5Port",
-                                Number(e.target.value) as any,
-                              )
+                              setField("socks5Port", Number(e.target.value))
                             }
                           />
                         </div>
@@ -1351,7 +1378,7 @@ function HostEditor({
                     placeholder="22"
                     value={form.sshPort}
                     onChange={(e) =>
-                      setField("sshPort", Number(e.target.value) as any)
+                      setField("sshPort", Number(e.target.value))
                     }
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
@@ -1373,7 +1400,7 @@ function HostEditor({
                         <button
                           key={m}
                           onClick={() => {
-                            setField("authType", m as any);
+                            setField("authType", m as HostAuthType);
                           }}
                           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                         >
@@ -1523,9 +1550,7 @@ function HostEditor({
                         </label>
                         <select
                           value={form.keyType}
-                          onChange={(e) =>
-                            setField("keyType", e.target.value as any)
-                          }
+                          onChange={(e) => setField("keyType", e.target.value)}
                           className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                         >
                           <option value="auto">{t("hosts.keyTypeAuto")}</option>
@@ -1693,7 +1718,7 @@ function HostEditor({
                       max={24}
                       step={1}
                       value={[form.fontSize]}
-                      onValueChange={([v]) => setField("fontSize", v as any)}
+                      onValueChange={([v]) => setField("fontSize", v)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1703,7 +1728,10 @@ function HostEditor({
                     <select
                       value={form.cursorStyle}
                       onChange={(e) =>
-                        setField("cursorStyle", e.target.value as any)
+                        setField(
+                          "cursorStyle",
+                          e.target.value as HostCursorStyle,
+                        )
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -1728,9 +1756,7 @@ function HostEditor({
                       max={10}
                       step={0.5}
                       value={[form.letterSpacing]}
-                      onValueChange={([v]) =>
-                        setField("letterSpacing", v as any)
-                      }
+                      onValueChange={([v]) => setField("letterSpacing", v)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1747,7 +1773,7 @@ function HostEditor({
                       max={2.0}
                       step={0.1}
                       value={[form.lineHeight]}
-                      onValueChange={([v]) => setField("lineHeight", v as any)}
+                      onValueChange={([v]) => setField("lineHeight", v)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1757,7 +1783,7 @@ function HostEditor({
                     <select
                       value={form.bellStyle}
                       onChange={(e) =>
-                        setField("bellStyle", e.target.value as any)
+                        setField("bellStyle", e.target.value as HostBellStyle)
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -1775,7 +1801,10 @@ function HostEditor({
                     <select
                       value={form.backspaceMode}
                       onChange={(e) =>
-                        setField("backspaceMode", e.target.value as any)
+                        setField(
+                          "backspaceMode",
+                          e.target.value as HostBackspaceMode,
+                        )
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -1825,7 +1854,7 @@ function HostEditor({
                     max={100000}
                     step={1000}
                     value={[form.scrollback]}
-                    onValueChange={([v]) => setField("scrollback", v as any)}
+                    onValueChange={([v]) => setField("scrollback", v)}
                   />
                 </div>
                 <SettingRow
@@ -1953,7 +1982,10 @@ function HostEditor({
                     <select
                       value={form.fastScrollModifier}
                       onChange={(e) =>
-                        setField("fastScrollModifier", e.target.value as any)
+                        setField(
+                          "fastScrollModifier",
+                          e.target.value as HostFastScrollModifier,
+                        )
                       }
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -1979,7 +2011,7 @@ function HostEditor({
                       step={1}
                       value={[form.fastScrollSensitivity]}
                       onValueChange={([v]) =>
-                        setField("fastScrollSensitivity", v as any)
+                        setField("fastScrollSensitivity", v)
                       }
                     />
                   </div>
@@ -2029,10 +2061,7 @@ function HostEditor({
                       type="number"
                       value={form.keepaliveInterval}
                       onChange={(e) =>
-                        setField(
-                          "keepaliveInterval",
-                          Number(e.target.value) as any,
-                        )
+                        setField("keepaliveInterval", Number(e.target.value))
                       }
                       className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
@@ -2045,10 +2074,7 @@ function HostEditor({
                       type="number"
                       value={form.keepaliveCountMax}
                       onChange={(e) =>
-                        setField(
-                          "keepaliveCountMax",
-                          Number(e.target.value) as any,
-                        )
+                        setField("keepaliveCountMax", Number(e.target.value))
                       }
                       className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
@@ -2157,7 +2183,7 @@ function HostEditor({
                                   } else {
                                     await connectTunnel({
                                       name: tunnelName,
-                                      mode: tun.mode as any,
+                                      mode: tun.mode,
                                       sourceHostId: Number(host.id),
                                       tunnelIndex: i,
                                       hostName: host.name,
@@ -2735,7 +2761,7 @@ function HostEditor({
                     placeholder="3389"
                     value={form.rdpPort}
                     onChange={(e) =>
-                      setField("rdpPort", Number(e.target.value) as any)
+                      setField("rdpPort", Number(e.target.value))
                     }
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
@@ -3521,7 +3547,7 @@ function HostEditor({
                     placeholder="5900"
                     value={form.vncPort}
                     onChange={(e) =>
-                      setField("vncPort", Number(e.target.value) as any)
+                      setField("vncPort", Number(e.target.value))
                     }
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
@@ -3895,7 +3921,7 @@ function HostEditor({
                     placeholder="23"
                     value={form.telnetPort}
                     onChange={(e) =>
-                      setField("telnetPort", Number(e.target.value) as any)
+                      setField("telnetPort", Number(e.target.value))
                     }
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
@@ -4144,7 +4170,7 @@ function CredentialEditorView({
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
-  onSave: (saved: any) => void;
+  onSave: (saved: Record<string, unknown>) => void;
 }) {
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
@@ -4157,7 +4183,8 @@ function CredentialEditorView({
     value: credential?.value ?? "",
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
-    certPublicKey: (credential as any)?.certPublicKey ?? "",
+    certPublicKey:
+      (credential as CredentialWithCertificate | null)?.certPublicKey ?? "",
   }));
   const { t } = useTranslation();
   const [generatingKey, setGeneratingKey] = useState(false);
@@ -4326,7 +4353,9 @@ function CredentialEditorView({
                 {["password", "key"].map((m) => (
                   <button
                     key={m}
-                    onClick={() => setCredField("type", m as any)}
+                    onClick={() =>
+                      setCredField("type", m as CredentialAuthType)
+                    }
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                   >
                     {m === "key"
@@ -4711,10 +4740,10 @@ export function HostManager({
   useEffect(() => {
     reloadHosts();
     getCredentials()
-      .then((res: any) => {
+      .then((res) => {
         const arr = Array.isArray(res) ? res : [];
         setCredentials(
-          arr.map((c: any) => ({
+          (arr as RawCredential[]).map((c) => ({
             id: String(c.id),
             name: c.name,
             username: c.username,
@@ -5009,10 +5038,10 @@ export function HostManager({
                               if (newName && newName !== folder) {
                                 try {
                                   await renameCredentialFolder(folder, newName);
-                                  const res = (await getCredentials()) as any;
+                                  const res = await getCredentials();
                                   const arr = Array.isArray(res) ? res : [];
                                   setCredentials(
-                                    arr.map((c: any) => ({
+                                    (arr as RawCredential[]).map((c) => ({
                                       id: String(c.id),
                                       name: c.name,
                                       username: c.username,
@@ -5172,14 +5201,28 @@ export function HostManager({
                                   );
                                   setEditingCredential({
                                     ...cred,
-                                    value: (full as any).hasKey
+                                    value: (
+                                      full as CredentialWithCertificate & {
+                                        hasKey?: boolean;
+                                        hasKeyPassword?: boolean;
+                                      }
+                                    ).hasKey
                                       ? "existing_key"
-                                      : ((full as any).password ?? ""),
-                                    passphrase: (full as any).hasKeyPassword
+                                      : ((
+                                          full as CredentialWithCertificate & {
+                                            password?: string;
+                                          }
+                                        ).password ?? ""),
+                                    passphrase: (
+                                      full as CredentialWithCertificate & {
+                                        hasKeyPassword?: boolean;
+                                      }
+                                    ).hasKeyPassword
                                       ? "existing_key_password"
                                       : "",
                                     certPublicKey:
-                                      (full as any).certPublicKey ?? "",
+                                      (full as CredentialWithCertificate)
+                                        .certPublicKey ?? "",
                                   });
                                 } catch {
                                   setEditingCredential(cred);

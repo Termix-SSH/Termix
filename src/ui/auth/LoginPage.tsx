@@ -80,7 +80,7 @@ export function Auth({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
-  const isInElectronWebView = () => {
+  const isInElectronWebView = useCallback(() => {
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
     }
@@ -92,7 +92,7 @@ export function Auth({
       return true;
     }
     return false;
-  };
+  }, []);
 
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",
@@ -211,7 +211,7 @@ export function Auth({
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });
-  }, []);
+  }, [isInElectronWebView]);
 
   useEffect(() => {
     getPasswordLoginAllowed()
