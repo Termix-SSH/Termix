@@ -33,114 +33,24 @@ import { registerServerStatsSettingsRoutes } from "./server-stats-settings-route
 import { registerServerStatsViewerRoutes } from "./server-stats-viewer-routes.js";
 import { createJumpHostChain } from "./server-stats-jump-hosts.js";
 import {
+  createConnectionLog,
+  isTcpPingEnabled,
+  supportsMetrics,
+} from "./server-stats-helpers.js";
+import {
+  cleanupMetricsSession,
+  getSessionKey,
+  metricsSessions,
+  pendingTOTPSessions,
+  scheduleMetricsSessionCleanup,
+  type MetricsViewer,
+} from "./server-stats-sessions.js";
+import {
   authFailureTracker,
   metricsCache,
   pollingBackoff,
   requestQueue,
 } from "./server-stats-state.js";
-
-function supportsMetrics(host: SSHHostWithCredentials): boolean {
-  const connectionType = host.connectionType || "ssh";
-  if (connectionType !== "ssh") return false;
-  if (host.authType === "none" || host.authType === "opkssh") return false;
-  return true;
-}
-
-function isTcpPingEnabled(statsConfig: StatsConfig): boolean {
-  return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
-}
-
-function createConnectionLog(
-  type: "info" | "success" | "warning" | "error",
-  stage: ConnectionStage,
-  message: string,
-  details?: Record<string, unknown>,
-): Omit<LogEntry, "id" | "timestamp"> {
-  return {
-    type,
-    stage,
-    message,
-    details,
-  };
-}
-
-interface MetricsSession {
-  client: Client;
-  isConnected: boolean;
-  lastActive: number;
-  timeout?: NodeJS.Timeout;
-  activeOperations: number;
-  hostId: number;
-  userId: string;
-}
-
-interface PendingTOTPSession {
-  client: Client;
-  finish: (responses: string[]) => void;
-  config: ConnectConfig;
-  createdAt: number;
-  sessionId: string;
-  hostId: number;
-  userId: string;
-  prompts?: Array<{ prompt: string; echo: boolean }>;
-  totpPromptIndex?: number;
-  resolvedPassword?: string;
-  totpAttempts: number;
-}
-
-interface MetricsViewer {
-  sessionId: string;
-  userId: string;
-  hostId: number;
-  lastHeartbeat: number;
-}
-
-const metricsSessions: Record<string, MetricsSession> = {};
-const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
-
-function cleanupMetricsSession(sessionId: string) {
-  const session = metricsSessions[sessionId];
-  if (session) {
-    if (session.activeOperations > 0) {
-      statsLogger.warn(
-        `Deferring metrics session cleanup - ${session.activeOperations} active operations`,
-        {
-          operation: "cleanup_deferred",
-          sessionId,
-          activeOperations: session.activeOperations,
-        },
-      );
-      scheduleMetricsSessionCleanup(sessionId);
-      return;
-    }
-
-    try {
-      session.client.end();
-    } catch {
-      // expected
-    }
-    clearTimeout(session.timeout);
-    delete metricsSessions[sessionId];
-  }
-}
-
-function scheduleMetricsSessionCleanup(sessionId: string) {
-  const session = metricsSessions[sessionId];
-  if (session) {
-    if (session.timeout) clearTimeout(session.timeout);
-
-    session.timeout = setTimeout(
-      () => {
-        cleanupMetricsSession(sessionId);
-      },
-      30 * 60 * 1000,
-    );
-  }
-}
-
-function getSessionKey(hostId: number, userId: string): string {
-  return `${userId}:${hostId}`;
-}
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -2562,8 +2472,8 @@ app.post("/metrics/connect-totp", async (req, res) => {
 
 registerServerStatsViewerRoutes(app, {
   fetchHostById,
-  supportsMetrics,
-  parseStatsConfig: (statsConfig) =>
+  supportsMetrics: (host: SSHHostWithCredentials) => supportsMetrics(host),
+  parseStatsConfig: (statsConfig: SSHHostWithCredentials["statsConfig"]) =>
     pollingManager.parseStatsConfig(statsConfig),
   updateHeartbeat: (viewerSessionId) =>
     pollingManager.updateHeartbeat(viewerSessionId),
